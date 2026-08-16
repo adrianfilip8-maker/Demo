@@ -49,6 +49,37 @@
  * nothing at all about light. It also cannot tell you whether the dust READS — that is a
  * capture's question, and per KNOWN_ISSUES §367 FX is one of the few systems that renders live
  * in a shot, so a capture can answer it.
+ *
+ * ── THE FIGURE BOX IS A PROXY, AND ON THIS POSE IT IS WRONG IN BOTH DIRECTIONS ───────────────
+ * `boxOf` projects an upright 0.62 x 1.80 m box. `dive_impact` is a SLAM: a crouched, sprawling
+ * pose that is wider than a stance and shorter than one. Measured against the shipped frame
+ * (`shots/fxrim-impact/impact-{A-ship,S-nosly}.png`, src tree 2b06133ddf675387 — the figure is
+ * the pixels that vanish when the character root is hidden, taken at the |dL| > 12 plateau which
+ * is stable from 12 through 48):
+ *
+ *              x            rows        w x h
+ *   proxy box  583..697     202..451    115 x 249      <- what this tool computes
+ *   measured   502..699     303..498    197 x 195      <- what the renderer draws
+ *
+ * So the proxy is **83 px too narrow, 54 px too tall, and its crown sits 101 px above his head.**
+ * It is not a silhouette and must never be quoted as one.
+ *
+ * **This changes a verdict, and the verdict is this file's.** FIGURE SWALLOWED divides the
+ * ring/subject box overlap by the subject's own box area, so it inherits the proxy's error
+ * whole: on the proxy the ring covers **44.2%** of him and passes the 55% bar; on the measured
+ * figure it covers **80.6%** and does not. `impact` is admitted on that bar by an artefact of
+ * the box. The `sly only N px tall` bar is unaffected — 195 px clears 110 either way.
+ *
+ * Not silently repaired, for two reasons. Re-scoring a shipped shot against a rule it now fails
+ * is a decision about the shot, not about the tool, and §141.1 says a bar is not re-scoped by
+ * whoever happens to be holding the file. And the obvious repair — CPU-skin the pose and project
+ * it, which `charvis.mjs` already has the machinery for — **does not currently agree with the
+ * renderer**: the skinned `dive_impact` extent comes out x 528..727 / rows 292..499, the right
+ * width and height but shifted ~26 px (~0.22 m) in +x against the measured figure, and the cause
+ * is not the clip's root motion (0, -0.6885, +0.1). The ring reproduces its certificate exactly
+ * through the same camera, so the projection is sound and the disagreement is in the character's
+ * model-to-world placement. Wiring in a second wrong number would be worse than labelling the
+ * first. See KNOWN_ISSUES §379.4's round-17 report.
  */
 import { SHOTS } from '../src/core/Shots.js';
 import { TUNE as FX_TUNE } from '../src/fx/Particles.js';
@@ -98,6 +129,9 @@ function score(name, c) {
      one silhouette) — here the two subjects are SUPPOSED to overlap, and the question is
      whether the figure survives it. Scored as the fraction of Sly's own box the ring covers. */
   const area = (b) => (b ? (b.x1 - b.x0) * (b.y1 - b.y0) : 0);
+  /* Computed on the PROXY box, and that is not a detail: see the header. On `impact` the same
+     ratio against the measured figure is 80.6%, which does not pass. The number below is what
+     this tool can compute; it is not what the renderer draws. */
   const swallowed = sly && ring ? overlapArea(sly, ring) / Math.max(1, area(sly)) : 0;
   if (swallowed > 0.55) faults.push(`FIGURE SWALLOWED — the ring covers ${(swallowed * 100).toFixed(0)}% of Sly's box`);
 
@@ -134,7 +168,7 @@ function score(name, c) {
 
   console.log(`\n── ${name}`);
   console.log(`   cam ${c.pos.map((v) => v.toFixed(2)).join(', ')} -> ${c.target.join(', ')} · fov ${c.fov} · tod ${c.tod}`);
-  if (sly) console.log(`   sly    rows ${sly.y0.toFixed(0)}..${sly.y1.toFixed(0)} (${slyH.toFixed(0)} px) · margins l${ms.l.toFixed(0)} r${ms.r.toFixed(0)} t${ms.t.toFixed(0)} b${ms.b.toFixed(0)} · ${slyClear ? 'clear' : 'OCCLUDED'}`);
+  if (sly) console.log(`   sly    rows ${sly.y0.toFixed(0)}..${sly.y1.toFixed(0)} (${slyH.toFixed(0)} px) · margins l${ms.l.toFixed(0)} r${ms.r.toFixed(0)} t${ms.t.toFixed(0)} b${ms.b.toFixed(0)} · ${slyClear ? 'clear' : 'OCCLUDED'}   [UPRIGHT-BOX PROXY, not a silhouette — see header]`);
   if (ring) console.log(`   ring   ${(ring.x1 - ring.x0).toFixed(0)} x ${(ring.y1 - ring.y0).toFixed(0)} px · margins l${mr.l.toFixed(0)} r${mr.r.toFixed(0)} t${mr.t.toFixed(0)} b${mr.b.toFixed(0)} · ${ringClear ? 'clear' : 'OCCLUDED'}`);
   if (scuff) console.log(`   scuff  ${(scuff.x1 - scuff.x0).toFixed(0)} x ${(scuff.y1 - scuff.y0).toFixed(0)} px · margins l${mk.l.toFixed(0)} r${mk.r.toFixed(0)} t${mk.t.toFixed(0)} b${mk.b.toFixed(0)}`);
   if (dust) console.log(`   dust   margins l${md.l.toFixed(0)} r${md.r.toFixed(0)} t${md.t.toFixed(0)} b${md.b.toFixed(0)}`);

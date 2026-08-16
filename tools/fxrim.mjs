@@ -76,14 +76,119 @@ const SHOT = process.argv[2] || 'impact';
 const OUT = process.env.SANDS_OUT || `shots/fxrim-${SHOT}`;
 mkdirSync(OUT, { recursive: true });
 
+/**
+ * ── The per-BATCH arms, and why they are batches and not emitters ───────────────────────────
+ * §379.1 is a claim about particles as a class, and round 16 measured exactly one sprite. The
+ * other three staged by `_stageImpact` need their own footprints, and the only non-perturbing
+ * lever is `Batch.mesh.visible` — `_fold()`'s own comment guarantees it survives, because it
+ * "only ever re-shows a mesh *it* hid, so an external `mesh.visible = false` (the A/B
+ * harnesses' apply step) survives the next update instead of being fought over".
+ *
+ * `this.batches` is keyed by BATCH, not by emitter, and `dive_dust` and `dive_debris` both draw
+ * into `dust` — so that arm isolates the PAIR and is reported as the pair. The alternative,
+ * poking `EMITTERS[name].count` to zero through the documented harness seam, was rejected: it
+ * requires re-running `_stageShot`, which re-draws the RNG for every other emitter too, so the
+ * diff would carry their differences as well as the removed one. A lever that perturbs the
+ * control is not a lever.
+ *
+ * Each arm records the live instance count of every batch, so "this population was empty" can
+ * never be mistaken for "this population carries no ink" (§211.1).
+ */
 const ARMS = [
-  { tag: 'A-ship',     crease: null, hull: 'on',     fx: true,  sly: true  },
-  { tag: 'B-nocrease', crease: 0,    hull: 'on',     fx: true,  sly: true  },
-  { tag: 'C-noink',    crease: 0,    hull: 'layers', fx: true,  sly: true  },
-  { tag: 'N-nofx',     crease: null, hull: 'on',     fx: false, sly: true  },
-  { tag: 'S-nosly',    crease: null, hull: 'on',     fx: true,  sly: false },
-  { tag: 'Z-null',     crease: null, hull: 'on',     fx: true,  sly: true  },
+  { tag: 'A-ship',     crease: null, hull: 'on',     fx: true,  sly: true,  batch: null },
+  { tag: 'B-nocrease', crease: 0,    hull: 'on',     fx: true,  sly: true,  batch: null },
+  { tag: 'C-noink',    crease: 0,    hull: 'layers', fx: true,  sly: true,  batch: null },
+  { tag: 'N-nofx',     crease: null, hull: 'on',     fx: false, sly: true,  batch: null },
+  { tag: 'S-nosly',    crease: null, hull: 'on',     fx: true,  sly: false, batch: null },
+  { tag: 'P-noring',   crease: null, hull: 'on',     fx: true,  sly: true,  batch: 'ring'  },
+  { tag: 'P-nodust',   crease: null, hull: 'on',     fx: true,  sly: true,  batch: 'dust'  },
+  { tag: 'P-nospark',  crease: null, hull: 'on',     fx: true,  sly: true,  batch: 'spark' },
+  { tag: 'Z-null',     crease: null, hull: 'on',     fx: true,  sly: true,  batch: null },
 ];
+
+/**
+ * ── SANDS_CENSUS=1: the hull half of §379.1, asked of the scene graph instead of the pixels ──
+ *
+ * §379.4's rim measurement settles the CREASE treatment and deliberately says nothing about the
+ * HULL one, because the only pixel-side locator for a hero silhouette is the hull's own
+ * footprint and measuring hull ink on it is circular.
+ *
+ * The hull question does not need pixels. `buildOutlineShell` stamps `mesh.userData.slyShell`
+ * on every mesh it inks and `shell.userData.slyOutline` on the shell itself, and those two
+ * markers are the hull system's own record of what it has done. So: walk the shipped scene,
+ * enumerate every shell, report which subtree each one belongs to, and separately report every
+ * mesh under `fx.root` with whether it carries the marker. No stub, no reimplementation of the
+ * gate, no threshold — the hull system is simply asked what it inked.
+ *
+ * `Outline.inkAudit()` was written for exactly this and **is never called anywhere in `src/`** —
+ * exported, and referenced only in comments (`Outline.js:55`, `KayKit.js:403`). That is the
+ * §357.1 shape once more, so it is invoked here through the page's own module rather than
+ * reimplemented, when it can be reached; the marker census below does not depend on it.
+ *
+ * Captures no PNGs. Boot, probe, release — the lock is held for as short a time as possible.
+ */
+if (process.env.SANDS_CENSUS === '1') {
+  let ctree = null;
+  const census = await withGame({
+    width: 1280, height: 720, quality: 'high', timeout: 900000,
+    onLocked: () => { ctree = treeState(); },
+  }, async ({ page }) => {
+    await page.evaluate(async (s) => { await window.__GAME.setShot(s, { dt: 0 }); }, SHOT);
+    return page.evaluate(() => {
+      const eng = window.__ENGINE;
+      const fx = eng.get('fx');
+      const fxRoot = fx?.root ?? eng.scene.getObjectByName('fx') ?? null;
+
+      /* Every shell in the scene, and which subtree owns it. `slyOutline` is the marker
+         `buildOutlineShell` puts on the shell; `slyShell` is the back-pointer on the host. */
+      const shells = [];
+      eng.scene.traverse((o) => {
+        if (!o.userData?.slyOutline) return;
+        const chain = [];
+        for (let p = o; p; p = p.parent) chain.push(p.name || p.type);
+        shells.push({ mat: o.material?.name ?? null, chain: chain.slice(0, 6).join(' < ') });
+      });
+
+      /* Every mesh under the FX root, and whether the hull system inked it. */
+      const fxMeshes = [];
+      fxRoot?.traverse?.((o) => {
+        if (!o.isMesh) return;
+        fxMeshes.push({
+          name: o.name || o.type,
+          mat: Array.isArray(o.material) ? o.material.map((m) => m?.name).join(',') : (o.material?.name ?? null),
+          instanced: !!o.isInstancedMesh || !!o.geometry?.isInstancedBufferGeometry,
+          shell: !!o.userData?.slyShell,
+          outlineDecl: Array.isArray(o.material)
+            ? o.material.map((m) => m?.userData?.outline ?? null)
+            : (o.material?.userData?.outline ?? null),
+        });
+      });
+      const underFx = new Set();
+      fxRoot?.traverse?.((o) => underFx.add(o));
+      return {
+        fxRootFound: !!fxRoot,
+        shells: shells.length,
+        shellsUnderFx: shells.filter((s) => s.chain.includes(' < fx')).length,
+        shellSample: shells.slice(0, 4),
+        fxMeshes,
+        fxMeshCount: fxMeshes.length,
+        fxInked: fxMeshes.filter((m) => m.shell).length,
+      };
+    });
+  });
+  console.log(`census · shot ${SHOT} · tree ${ctree?.src} (HEAD ${ctree?.head})`);
+  console.log(`fx root found      ${census.fxRootFound}`);
+  console.log(`meshes under fx    ${census.fxMeshCount}`);
+  console.log(`  of those, inked  ${census.fxInked}   <- hull shells the system built for FX`);
+  console.log(`shells in scene    ${census.shells}  (under fx: ${census.shellsUnderFx})`);
+  for (const s of census.shellSample) console.log(`  shell ${s.mat}  ${s.chain}`);
+  for (const m of census.fxMeshes) {
+    console.log(`  fxmesh ${String(m.name).padEnd(18)} instanced ${String(m.instanced).padEnd(5)} shell ${String(m.shell).padEnd(5)} outlineDecl ${JSON.stringify(m.outlineDecl)}`);
+  }
+  writeFileSync(`${OUT}/census.json`, JSON.stringify({ shot: SHOT, tree: ctree, ...census }, null, 2));
+  console.log(`\n→ ${OUT}/census.json`);
+  process.exit(0);
+}
 
 let tree = null;
 const got = await withGame({
@@ -122,6 +227,19 @@ const got = await withGame({
       const slyRoot = eng.get('character')?.root ?? null;
       if (slyRoot) slyRoot.visible = arm.sly;
 
+      /* Batches: restore every one, then hide this arm's. Live counts recorded for all of them
+         so an empty population can never be read as an un-inked one. */
+      const live = {};
+      let batchFound = false;
+      if (fx?.batches?.forEach) {
+        fx.batches.forEach((b, name) => {
+          if (!b?.mesh) return;
+          live[name] = b.geometry?.instanceCount ?? b._used ?? null;
+          if (live[name] > 0) b.mesh.visible = true;
+          if (arm.batch && name === arm.batch) { b.mesh.visible = false; batchFound = true; }
+        });
+      }
+
       await window.__GAME.step(3, 0);
       eng.renderFrame(0);
       const src = eng.canvas;
@@ -134,6 +252,7 @@ const got = await withGame({
           inkStrength: postfx.tune.inkStrength, hullDefeat: arm.hull, hulls,
           fxRootFound: !!fxRoot, fxVisible: fxRoot ? fxRoot.visible : null,
           slyRootFound: !!slyRoot, slyVisible: slyRoot ? slyRoot.visible : null,
+          batchHidden: arm.batch ?? null, batchFound, live,
         },
         png: c.toDataURL('image/png'),
       };
@@ -142,14 +261,33 @@ const got = await withGame({
   return { arms: out, renderer: info.renderer, warnings: info.warnings };
 });
 
+/* ── PER-ARM tree stamping (§398, applied to this tool) ──────────────────────────────────────
+   The first version of this file stamped `treeState()` ONCE, in `onLocked`, and wrote it onto
+   every arm. That is precisely the defect §398 landed in `critic.mjs` and it bit here: a lane
+   edited `src/player/Moveset.js` around the round-17 run and the artefact could not say whether
+   any arm straddled it. One stamp per run says the tree was X when the run began; it cannot say
+   which frame existed before the edit and which after.
+   Under `SANDS_NO_HMR=1` the page is bundled once at boot, so a later edit almost certainly
+   never reaches any arm — but "almost certainly" is the reasoning this project refuses, and the
+   whole point of a stamp is to make the question answerable instead of arguable. */
 const rows = [];
+let straddled = false;
 for (const r of got.arms) {
   const file = `${OUT}/${SHOT}-${r.tag}.png`;
   const buf = Buffer.from(r.png.split(',')[1], 'base64');
   writeFileSync(file, buf);
   const sha = createHash('sha256').update(buf).digest('hex').slice(0, 16);
-  rows.push({ shot: SHOT, arm: r.tag, file, sha, applied: r.applied, tree });
-  console.log(`${r.tag.padEnd(11)} ${sha}  ink ${r.applied.inkStrength}  hull ${r.applied.hullDefeat} (${r.applied.hulls} shells)  fx ${r.applied.fxVisible}`);
+  const now = treeState();
+  const moved = tree?.src && now.src !== tree.src;
+  if (moved) straddled = true;
+  rows.push({ shot: SHOT, arm: r.tag, file, sha, applied: r.applied, tree: now, treeAtLock: tree, treeMoved: !!moved });
+  console.log(`${r.tag.padEnd(11)} ${sha}  ink ${r.applied.inkStrength}  hull ${r.applied.hullDefeat} (${r.applied.hulls} shells)  fx ${r.applied.fxVisible}`
+    + (moved ? `  §186 TREE MOVED ${tree.src} → ${now.src}` : ''));
+}
+if (straddled) {
+  console.log(`\n!! §186: src/** moved while this set was capturing. The arms are UNATTRIBUTABLE`);
+  console.log(`   as a set — re-take in a quiet window, or score only questions that cannot turn`);
+  console.log(`   on the files that moved, and say which in the write-up.`);
 }
 writeFileSync(`${OUT}/arms.json`, JSON.stringify({
   shot: SHOT, at: new Date().toISOString(), tree, renderer: got.renderer,

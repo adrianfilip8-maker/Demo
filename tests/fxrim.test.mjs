@@ -41,7 +41,7 @@ import { SHOTS } from '../src/core/Shots.js';
 import { Particles, TUNE as FX_TUNE } from '../src/fx/Particles.js';
 import { TUNE as TOON_TUNE } from '../src/render/ToonMaterial.js';
 import { TUNE as POSTFX_TUNE } from '../src/render/PostFX.js';
-import { W, H, camFor, discOf, project } from '../tools/framelib.mjs';
+import { W, H, SLY, camFor, discOf, project, boxOf, overlapArea } from '../tools/framelib.mjs';
 import { BAND_R, bandOfPolyline, bandOfPixels, boundaryOf, stamp, countOf, density }
   from '../tools/fxrimlib.mjs';
 
@@ -247,6 +247,64 @@ test('T5: density is a fraction of the REGION, and ink outside it cannot raise t
   assert.ok(edge.length > 0, '§211.1: the boundary is empty');
   assert.ok(edge.length < countOf(blob) / 2,
     `boundaryOf returned ${edge.length} of ${countOf(blob)} pixels — that is the body, not its rim`);
+});
+
+/* ══════════════ T7 — the FIGURE SWALLOWED verdict rests on an upright-box proxy ══ */
+
+/**
+ * Sly's figure in the shipped `impact` frame, MEASURED.
+ *
+ * Read off `shots/fxrim2-impact/impact-{A-ship,S-nosly}.png` at src tree `2b06133ddf675387`:
+ * the pixels that vanish when the character root is hidden, taken at the |dL| > 12 plateau.
+ * Pinned rather than recomputed because recomputing needs the capture, and a test that skips
+ * itself when an artefact is absent is a test that is usually absent. The plateau is the
+ * evidence it is a boundary and not a threshold: 502..699 at cuts 12, 24 AND 48.
+ *
+ * Not a substitute for the capture — a recorded measurement with its provenance beside it,
+ * exactly as this project records pre-registered numbers.
+ */
+const MEASURED_FIGURE = { x0: 502, x1: 699, y0: 303, y1: 498 };
+
+test('T7: `impact` passes FIGURE SWALLOWED on the proxy box and fails it on the real figure', () => {
+  /* `boxOf` projects an upright 0.62 x 1.80 m box. `dive_impact` is a crouched, sprawling slam,
+     so the proxy is 83 px too narrow and 54 px too tall — and FIGURE SWALLOWED divides the ring
+     overlap by the subject's own box AREA, so it inherits that error whole.
+
+     This arm is not a request to re-score the shot; §141.1 says that is not the tool-holder's
+     call. It is here so the gap cannot close silently: if someone widens `SLY`, restages the
+     shot, or moves the ring, the two ratios stop straddling the bar and this goes red, which is
+     the moment a human should look. */
+  const src = readFileSync(new URL('../tools/impactframe.mjs', import.meta.url), 'utf8');
+  const barM = src.match(/swallowed\s*>\s*([0-9.]+)/);
+  assert.ok(barM, 'impactframe no longer states a FIGURE SWALLOWED bar this arm can read');
+  const BAR = Number(barM[1]);
+  assert.ok(BAR > 0 && BAR < 1, `parsed a nonsense swallowed bar: ${BAR}`);
+
+  const shot = SHOTS.impact;
+  const { out } = stageImpact();
+  const proxy = boxOf(CAM, ...shot.player.pos, SLY);
+  const ring = discOf(CAM, out.point.x, out.point.y, out.point.z, out.radius);
+  assert.ok(proxy && ring, '§211.1: nothing projected');
+
+  const area = (b) => (b.x1 - b.x0) * (b.y1 - b.y0);
+  const proxyRatio = overlapArea(proxy, ring) / area(proxy);
+  const realRatio = overlapArea(MEASURED_FIGURE, ring) / area(MEASURED_FIGURE);
+
+  assert.ok(proxyRatio <= BAR,
+    `the proxy ratio is now ${(100 * proxyRatio).toFixed(1)}%, past the ${100 * BAR}% bar — impactframe `
+    + 'already faults this shot, so the "admitted by an artefact of the box" claim is stale');
+  assert.ok(realRatio > BAR,
+    `CALIBRATION FAILED: on the measured figure the ring covers only ${(100 * realRatio).toFixed(1)}%, `
+    + `inside the ${100 * BAR}% bar — the proxy is no longer flattering the composition and the `
+    + 'warning in Shots.js and impactframe.mjs should be withdrawn rather than left standing');
+
+  /* And the height bar is NOT affected — stated so nobody withdraws more than the evidence
+     supports. 195 px of real figure clears 110 as comfortably as the proxy's 249 does. */
+  const hM = src.match(/slyH\s*<\s*(\d+)/);
+  assert.ok(hM, 'impactframe no longer states a figure-height bar');
+  assert.ok(MEASURED_FIGURE.y1 - MEASURED_FIGURE.y0 > Number(hM[1]),
+    `the measured figure is ${MEASURED_FIGURE.y1 - MEASURED_FIGURE.y0} px tall, under the ${hM[1]} px bar — `
+    + 'the height verdict is affected too and Shots.js says it is not');
 });
 
 /* ═══════════════════════ T6 — the build the measurement describes ══ */

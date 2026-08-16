@@ -658,6 +658,30 @@ export const SHOTS = {
        scuff  517 x 264 px · margins l381 r381 t318 b137
        ellipse ratio 0.511 (bar 0.22) · the ring covers 44% of Sly's box (bar 55%)
 
+     THE `sly` LINE ABOVE IS AN UPRIGHT-BOX PROXY AND NOT A SILHOUETTE. It is `boxOf` on a
+     0.62 x 1.80 m standing box. `dive_impact` is a slam — crouched and sprawling, wider than a
+     stance and shorter than one — so the proxy is wrong in both directions. Measured off the
+     shipped frame (`shots/fxrim-impact/impact-{A-ship,S-nosly}.png` at src tree
+     2b06133ddf675387; the figure is the pixels that vanish when the character root is hidden,
+     read at the |dL| > 12 plateau, stable from 12 through 48):
+
+       sly (MEASURED)  x 502..699 · rows 303..498 · 197 x 195 px
+
+     The proxy is 83 px too narrow, 54 px too tall, and its crown sits 101 px above his head.
+     The ring and scuff numbers are unaffected and were re-derived exactly (362 x 181 px at 720
+     rim samples; the 360 above is the 24-segment chord sag).
+
+     ONE ADMISSION BAR TURNS ON THIS. `impactframe`'s FIGURE SWALLOWED divides the ring/subject
+     overlap by the subject's box area, so it inherits the proxy's error: 44.2% on the proxy,
+     **80.6% on the measured figure, against a 55% bar.** This shot passes that bar because the
+     box is too small, not because the ring leaves the figure room. The `sly N px tall` bar is
+     unaffected (195 px clears 110 either way), as are ellipse ratio, cropping and occlusion.
+
+     LEFT AS A FLAG, NOT REPAIRED. Re-scoring a shipped shot against a rule it now fails is a
+     decision about the shot rather than about the tool (§141.1), and the obvious fix — CPU-skin
+     the pose, which `charvis.mjs` already does — currently disagrees with the renderer by ~26 px
+     in x on this pose for reasons nobody has run down. See `tools/impactframe.mjs`'s header.
+
      Chosen over three other candidates that also passed every bar, by a stated tiebreak rather
      than by taste: the product of the ring reading as a RING (the ellipse ratio) and the figure
      reading as a FIGURE (its pixel height). Those pull opposite ways — elevation rounds the

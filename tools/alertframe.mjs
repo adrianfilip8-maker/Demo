@@ -321,10 +321,20 @@ if (shotArg >= 0) {
  */
 if (args.includes('--search')) {
   const P = SHOTS.alert.player.pos, G = SHOTS.alert.guard, G2 = SHOTS.alert.guard2;
+  /* THE SAME POINTS `score()` TESTS, and that is not a detail. The first version of this sweep
+     probed chest at +0.9 / +1.0 while `score()` probes +1.2 and the mark at +1.55, so it
+     admitted 158 cells whose chest was clear and whose head was not — and 111 of them then
+     reported SLY OCCLUDED in the very scores the sweep had pre-filtered for visibility. Two
+     probes of "the same thing" at different points, disagreeing, which is the cast-origin
+     lesson `tests/traversal.test.mjs`'s header spells out, committed here by the person who
+     had just finished reading it. A pre-filter that does not ask the scorer's question is not
+     a pre-filter, it is a second opinion. */
   const subj = [
-    { x: P[0], y: P[1] + 0.9, z: P[2] },
-    { x: G[0], y: G[1] + 1.0, z: G[2] },
-    { x: G2[0], y: G2[1] + 1.0, z: G2[2] },
+    { x: P[0], y: P[1] + 1.2, z: P[2] },
+    { x: G[0], y: G[1] + 1.2, z: G[2] },
+    { x: G[0], y: G[1] + MARK_Y, z: G[2] },
+    { x: G2[0], y: G2[1] + 1.2, z: G2[2] },
+    { x: G2[0], y: G2[1] + MARK_Y, z: G2[2] },
   ];
   /* Aim at the centroid of the three, at chest height: the shot frames a relationship, so the
      subject of the camera is the group rather than any one of them. */
@@ -342,7 +352,7 @@ if (args.includes('--search')) {
         const cam = { position: new THREE.Vector3(x, y, z) };
         if (!subj.every((t) => clear(cam, t))) continue;
         cells++;
-        for (const fov of [40, 46, 52]) {
+        for (const fov of [34, 40, 46, 52, 60, 68]) {
           const c = {
             pos: [x, y, z], target: tgt, fov, tod: SHOTS.alert.tod,
             player: SHOTS.alert.player, guard: G, guard2: G2,

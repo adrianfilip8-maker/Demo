@@ -546,6 +546,90 @@ for (const T of [0.5, 1, 2, 4, 8, 16, 32, 64]) {
 }
 
 
+
+/* ── PER-POPULATION: the other three sprites §379.1 is also a claim about ────────────────────
+ *
+ * Round 16 measured `dive_ring` and said so. §379.1 is a claim about PARTICLES, and one sprite
+ * is one sprite. These arms hide one BATCH at a time, so `A − P-noX` is exactly the pixels that
+ * population draws and `boundaryOf` of it is that population's silhouette — the same statistic
+ * and the same floor control as the rim, with the locus supplied by a diff instead of by
+ * `discOf`.
+ *
+ * ── A soft cloud has no unambiguous silhouette, and that is handled rather than hidden ───────
+ * A ring has a rim. A dust cloud fades to zero alpha at its edge, so "the boundary" depends on
+ * where you cut the mask, and any single cut would be a number somebody chose. The cut is
+ * therefore SWEPT: if the ink answer is the same at every cut from half a level to 24, the
+ * ambiguity does not reach the conclusion. If it were not, the honest report would be that the
+ * method does not transfer to a cloud — which was a live possibility going in.
+ *
+ * `dust` carries BOTH `dive_dust` and `dive_debris` (`Emitters.js`: same batch), so that row is
+ * the pair and is labelled as the pair. `spark` carries `dive_spark` and also every ember and
+ * fire in frame; the live instance counts recorded per arm say what was actually in each.
+ */
+const POPS = [
+  { tag: 'P-noring',  label: 'ring  (dive_ring)' },
+  { tag: 'P-nodust',  label: 'dust  (dive_dust + dive_debris)' },
+  { tag: 'P-nospark', label: 'spark (dive_spark + any fires)' },
+];
+const havePops = POPS.every((p) => existsSync(`${DIR}/${SHOT}-${p.tag}.png`));
+if (!havePops) {
+  console.log('\n(no P-* batch arms in this set — per-population section skipped)');
+} else {
+  for (const p of POPS) IM[p.tag] = readPNG(`${DIR}/${SHOT}-${p.tag}.png`);
+
+  console.log('\n── PER-POPULATION ─────────────────────────────────────────────────────────────');
+  if (meta?.arms) {
+    for (const p of POPS) {
+      const a = meta.arms.find((r) => r.arm === p.tag);
+      const live = a?.applied?.live ?? {};
+      const key = p.tag.replace('P-no', '');
+      console.log(`  ${p.label.padEnd(34)} batch "${key}" live instances at capture: ${live[key] ?? '?'}`
+        + `${a?.applied?.batchFound === false ? '   !! BATCH NOT FOUND — the lever did nothing' : ''}`);
+    }
+  }
+
+  console.log('\n  crease-ink peak (median L) on each population\'s own silhouette, by where the');
+  console.log('  mask is cut — samples touching the hero are excluded exactly as the rim\'s are');
+  console.log('   population                          cut  locus  clear  creaseL  allinkL   fxL');
+  const popRows = [];
+  for (const p of POPS) {
+    for (const cut of [0.5, 4, 12, 24]) {
+      const m = new Uint8Array(W * H);
+      let n = 0;
+      for (let i = 0; i < W * H; i++) if (delta(IM['A-ship'], IM[p.tag], i) > cut) { m[i] = 1; n++; }
+      if (!n) { console.log(`   ${p.label.padEnd(34)} ${String(cut).padEnd(4)} EMPTY MASK — population drew nothing`); continue; }
+      const locus = boundaryOf(m);
+      const clear = locus.filter(([x, y]) => !touchesHero(x + 0.5, y + 0.5, R0 + 1)).map(([x, y]) => [x + 0.5, y + 0.5]);
+      if (!clear.length) { console.log(`   ${p.label.padEnd(34)} ${String(cut).padEnd(4)} ${String(locus.length).padStart(5)}      0  entirely behind the hero`); continue; }
+      const c = peaks(clear, creaseAmt, R0), ink = peaks(clear, inkAmt, R0), fxp = peaks(clear, fxAmt, R0);
+      popRows.push({ pop: p.label, cut, n, locus: locus.length, clear: clear.length, c, ink, fxp });
+      console.log(`   ${p.label.padEnd(34)} ${String(cut).padEnd(4)} ${String(locus.length).padStart(5)} ${String(clear.length).padStart(6)} `
+        + `${quant(c, 0.5).toFixed(2).padStart(8)} ${quant(ink, 0.5).toFixed(2).padStart(8)} ${quant(fxp, 0.5).toFixed(2).padStart(6)}`);
+    }
+  }
+
+  /* Same bars as the rim, applied population by population. The floor control and the hero
+     probe are the ones already computed above — one null and one positive for the whole set. */
+  console.log(`\n  against the same controls: floor median ${med(main.floorC).toFixed(2)} L (p90 ${BAR.toFixed(2)}), hero ${med(main.heroC).toFixed(2)} L`);
+  let allQuiet = true, anyEmpty = false;
+  for (const p of POPS) {
+    const rows2 = popRows.filter((r) => r.pop === p.label);
+    if (!rows2.length) { anyEmpty = true; continue; }
+    const worst = Math.max(...rows2.map((r) => quant(r.c, 0.5)));
+    const loud = Math.max(...rows2.map((r) => quant(r.fxp, 0.5)));
+    const quiet = worst <= VERDICT_BAR;
+    if (!quiet) allQuiet = false;
+    console.log(`   ${p.label.padEnd(34)} worst-cut crease ${worst.toFixed(3)} L · FX loudness ${loud.toFixed(1)} L · `
+      + `${quiet ? 'NO INK at any cut' : 'CARRIES INK'}`);
+  }
+  console.log(anyEmpty
+    ? '\n  At least one population drew nothing; that row is not evidence either way.'
+    : (allQuiet
+      ? '\n  §379.1 holds for every staged population, not just the ring: none of the four sprites\n'
+        + '  carries crease ink on its own silhouette, at any cut of the mask that defines it.'
+      : '\n  At least one population DOES carry crease ink. §379.1 is not general — see the rows above.'));
+}
+
 /* ── §colour: what the ink actually measures as, reported not used ──────────────────────── */
 
 const fam = (m, name) => {
