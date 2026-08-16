@@ -69,17 +69,16 @@ function stubEngine() {
 }
 
 /**
- * Floor at y = 0, plus optionally the solid half-space `z <= wall.z, y <= wall.top` and a
- * registry of point affordances for `afford()`.
+ * Floor at y = 0, plus optionally the solid block `z <= wall.z, y <= wall.top` — a climbable +z
+ * face with a walkable lid — and a registry of point affordances for `afford()`.
  *
- * The wall clamp in `capsuleSweep` uses a STRICT inequality on purpose: a capsule resting
- * exactly on `wall.z + radius` must not report a hit, or the vertical sweep — which passes the
- * same z through — would read the wall as a floor and kill every climb.
+ * `capsuleSweep` resolves by which face the motion CROSSED, using `from`, never by testing the
+ * end point against the solid. See the note inside it: the point-in-solid version produced a
+ * convincing fake engine bug.
  */
 function stubCollision({ points = [], wall = null } = {}) {
   const sweep = { hit: false, position: new THREE.Vector3(), normal: new THREE.Vector3(0, 1, 0), distance: 0 };
   const gnd = { hit: false, y: 0, normal: new THREE.Vector3(0, 1, 0), tag: 'ground', material: 'stone', rec: { id: 'floor' } };
-  const inWall = (p) => wall && p.y <= wall.top;
   return {
     ready: true, fallback: false,
     SLOPE: { walkable: 50 * Math.PI / 180, wall: 70 * Math.PI / 180 },
@@ -87,13 +86,31 @@ function stubCollision({ points = [], wall = null } = {}) {
       const r = radius ?? TUNE.radius;
       sweep.position.copy(to); sweep.normal.set(0, 1, 0); sweep.hit = false;
       if (to.y < 0) { sweep.position.y = 0; sweep.hit = true; }
-      if (inWall(sweep.position) && sweep.position.z < wall.z + r) {
-        sweep.position.z = wall.z + r; sweep.hit = true; sweep.normal.set(0, 0, 1);
+      if (wall) {
+        /* SWEPT, not point-in-solid: which face the capsule crossed is decided from `from`, and
+           that distinction is load-bearing rather than pedantic. A point test resolves by final
+           position, so the 0.76 m step-down probe `_moveHorizontal` fires after a mantle — which
+           starts on the lid and ends inside the block — came out as "you are inside the +z face"
+           and shoved Sly back out sideways. That produced a perfect mantle/fall/re-grab loop and
+           looked exactly like an engine bug for as long as it took to trace. It was this
+           function. */
+        const side = wall.z + r;
+        if (from.z >= side - 1e-9 && sweep.position.z < side && sweep.position.y < wall.top) {
+          sweep.position.z = side; sweep.hit = true; sweep.normal.set(0, 0, 1);
+        }
+        if (from.y >= wall.top - 1e-9 && sweep.position.y < wall.top && sweep.position.z <= wall.z) {
+          sweep.position.y = wall.top; sweep.hit = true; sweep.normal.set(0, 1, 0);
+        }
       }
       sweep.distance = sweep.position.distanceTo(from);
       return sweep;
     },
-    groundCheck(pos, _r, maxDist) { gnd.y = 0; gnd.hit = pos.y <= maxDist + 1e-4; return gnd; },
+    groundCheck(pos, _r, maxDist) {
+      // Standing ON the block counts as ground, so a ladder can top out onto something.
+      gnd.y = (wall && pos.z <= wall.z) ? wall.top : 0;
+      gnd.hit = pos.y - gnd.y <= maxDist + 1e-4;
+      return gnd;
+    },
     raycast(o, d, maxDist) {
       if (wall && d.z < -0.5 && o.y <= wall.top) {
         const dist = o.z - wall.z;
@@ -398,18 +415,21 @@ const PITCH = 2.10;
 const launchV = () => TUNE.jumpV0 * TUNE.wallJumpUp;
 const apexOf = (v) => (v * v) / (2 * -TUNE.gravity);
 
-function ladderWall({ rungs = 10, pitch = PITCH, z = -10, holds = true } = {}) {
+function ladderWall({ rungs = 10, pitch = PITCH, z = -10, holds = true, top = 40, lines = null } = {}) {
   const batter = 0.105, nz = 1 / Math.hypot(batter, 1);
   const rec = { id: 'pylon-face', handholds: null };
   const list = [];
-  for (let i = 0; i < rungs; i++) {
-    list.push({
-      id: `notch-${i}`, point: V(0, pitch * (i + 1), z), normal: V(0, batter * nz, nz),
-      mesh: null, rung: i, pitch, face: 'south',
-    });
-  }
+  const cols = lines || [{ x: 0, y0: pitch, n: rungs }];
+  cols.forEach((col, ci) => {
+    for (let i = 0; i < (col.n ?? rungs); i++) {
+      list.push({
+        id: `notch-${ci}-${i}`, point: V(col.x, col.y0 + i * pitch, z), normal: V(0, batter * nz, nz),
+        mesh: null, rung: i, pitch, face: 'south',
+      });
+    }
+  });
   if (holds) rec.handholds = list;
-  return { wall: { z, top: 40, rec }, rec, list };
+  return { wall: { z, top, rec }, rec, list };
 }
 
 /**
@@ -422,10 +442,10 @@ function ladderWall({ rungs = 10, pitch = PITCH, z = -10, holds = true } = {}) {
  * and a release cannot cut anything: release on the first frame of the hold, press on the
  * second. That is exactly what a player does — you land on a notch and press jump again.
  */
-async function climb({ holds = true, rungs = 10, frames = 600 } = {}) {
-  const { wall, rec } = ladderWall({ rungs, holds });
+async function climb({ holds = true, rungs = 10, frames = 600, top = 40, lines = null, startX = 0 } = {}) {
+  const { wall, rec } = ladderWall({ rungs, holds, top, lines });
   const { engine, c } = await makeSim({ wall });
-  c.position.set(0, 0, -8.0);
+  c.position.set(startX, 0, -8.0);
   c.grounded = true;
   const caught = [];
   let prev = null, onRung = 0;
@@ -491,7 +511,8 @@ test('wallClimb: an authored ladder is climbed rung by rung, and never downward'
     assert.ok(ys[i] >= ys[i - 1], `rung ${i} (y ${ys[i]}) is below rung ${i - 1} (y ${ys[i - 1]})`);
   }
   assert.ok(distinct.length >= 5, `only ${distinct.length} distinct rungs taken`);
-  assert.equal(Math.max(...ys), PITCH * RUNGS, 'the ascent did not reach the top rung');
+  assert.ok(Math.abs(Math.max(...ys) - PITCH * RUNGS) < 1e-9,
+    `the ascent reached ${Math.max(...ys)}, not the top rung ${PITCH * RUNGS}`);
   const gained = Math.max(...ys) - Math.min(...ys);
   console.log(`[wallClimb] holds ON:  ${up.caught.length} catches over ${distinct.length} distinct rungs, ` +
               `y ${Math.min(...ys).toFixed(2)} → ${Math.max(...ys).toFixed(2)} (+${gained.toFixed(2)} m)`);
@@ -621,6 +642,258 @@ test('wallClimb: the shipped level\'s own holds satisfy every contract this stat
   const top = Math.max(...holds.map((h) => h.point.y));
   console.log(`\n[wallClimb] level: ${holds.length} holds on ${laddered.length} rec(s), |n.y| max ${maxNy.toFixed(4)}, ` +
               `top rung y ${top.toFixed(2)} (+apex ${(top + apex).toFixed(2)})\n            ${spans.join('\n            ')}`);
+});
+
+/* ---------------------------------------------------------------------- */
+/* 6a — two ladders on one face                                            */
+/* ---------------------------------------------------------------------- */
+
+test('wallClimb: two ladders can never be reachable at once, so "nearest" is never ambiguous', async () => {
+  /* The question "what does nearest mean when two ladders overlap" turns out to have a
+     geometric answer rather than a policy one, and the answer is that the case cannot arise.
+     `enter` parks the hand `radius + 0.05` = 0.39 m off the face plane the holds are published
+     on, so of the `reach` sphere only √(reach² − 0.39²) is left for lateral offset. Two ladders
+     further apart than that can never both be in reach; two ladders closer than that are, by
+     `sameLine`'s half-pitch rule, one ladder. The gap between those two numbers is where the
+     ambiguity would live, and it is empty. */
+  const R = TUNE.radius + launchV() / 30;
+  const standoff = TUNE.radius + 0.05;
+  const lateralBudget = Math.sqrt(R * R - standoff * standoff);
+  const sameLineCut = PITCH * 0.5;
+  console.log(`\n[wallClimb] lateral reach budget ${lateralBudget.toFixed(3)} m · ` +
+              `sameLine cut ${sameLineCut.toFixed(3)} m`);
+  assert.ok(sameLineCut > lateralBudget,
+    `two ladders ${lateralBudget.toFixed(3)}..${sameLineCut.toFixed(3)} m apart would be both reachable AND distinct`);
+
+  // …and the shipped level is nowhere near even the loose bound.
+  const { Architecture } = await import('../src/world/Architecture.js');
+  const engine = {
+    scene: new THREE.Scene(), warnings: [], debug: {}, quality: 'high',
+    get() { return null; }, has() { return false; }, warn() {}, on() { return () => {}; },
+    emit() {}, registerCollider() {},
+  };
+  const A = new Architecture(engine);
+  await A.init();
+  const holds = A.api.handholds || [];
+  const lines = new Map();
+  for (const h of holds) {
+    const k = h.id.replace(/-\d+$/, '');
+    (lines.get(k) || lines.set(k, []).get(k)).push(h);
+  }
+  let closest = Infinity;
+  const keys = [...lines.keys()];
+  for (let i = 0; i < keys.length; i++) {
+    for (let j = i + 1; j < keys.length; j++) {
+      for (const a of lines.get(keys[i])) for (const b of lines.get(keys[j])) {
+        closest = Math.min(closest, Math.hypot(a.point.x - b.point.x, a.point.z - b.point.z));
+      }
+    }
+  }
+  console.log(`[wallClimb] level has ${keys.length} ladders; closest lateral approach ${closest.toFixed(3)} m`);
+  assert.ok(closest > sameLineCut, `two shipped ladders come within ${closest.toFixed(3)} m — inside the sameLine cut`);
+});
+
+test('wallClimb: one ladder lives on one rec, and the climb commits to the line it started on', async () => {
+  /* `find` searches only the rec `probeWall` resolved, because `enter` marks THAT rec — taking a
+     hold off a neighbouring rec would spend the wrong face. That makes "one ladder, one rec" an
+     authoring contract, so it is asserted against the shipped level rather than left as folklore. */
+  const { Architecture } = await import('../src/world/Architecture.js');
+  const recs = [];
+  const engine = {
+    scene: new THREE.Scene(), warnings: [], debug: {}, quality: 'high',
+    get() { return null; }, has() { return false; }, warn() {}, on() { return () => {}; },
+    emit() {}, registerCollider(mesh, opts) { recs.push({ mesh, ...opts }); },
+  };
+  const A = new Architecture(engine);
+  await A.init();
+  const owner = new Map();
+  for (const r of recs) for (const h of r.handholds || []) {
+    const k = h.id.replace(/-\d+$/, '');
+    if (!owner.has(k)) owner.set(k, new Set());
+    owner.get(k).add(r);
+  }
+  for (const [k, set] of owner) {
+    assert.equal(set.size, 1, `ladder ${k} is split across ${set.size} collision recs — rungs on the others are unreachable`);
+  }
+  console.log(`[wallClimb] ${owner.size} ladders, each on exactly one rec`);
+
+  // And behaviourally: with two well-separated lines authored on one rec, the ascent stays on
+  // the one it started on rather than hopping across.
+  const up = await climb({
+    lines: [{ x: 0, y0: PITCH, n: 8 }, { x: 4.0, y0: PITCH * 1.5, n: 8 }],
+    startX: 0, frames: 600,
+  });
+  const xs = [...new Set(up.caught.map((h) => h.point.x))];
+  assert.deepEqual(xs, [0], `the ascent wandered between lines at x ${xs.join(', ')}`);
+  assert.ok(up.caught.length >= 5, `only caught ${up.caught.length} rungs on the chosen line`);
+  console.log(`[wallClimb] two lines authored, ${up.caught.length} catches, all on x ${xs[0]}`);
+});
+
+/* ---------------------------------------------------------------------- */
+/* 6b — a hold that moves out from under Sly                               */
+/* ---------------------------------------------------------------------- */
+
+test('wallClimb: a hold that moves out from under Sly drops him rather than stranding him', async () => {
+  /* `update` pins velocity to zero and never calls `move()`, so before this check a rec that
+     slid away left Sly frozen in mid-air holding a hold that was no longer there. Handholds are
+     authored static world points and every laddered rec in the game is a static proxy, so this
+     is a contract being made explicit, not a bug being fixed — but "undefined" is not an
+     acceptable answer for a state you can be inside of. */
+  const { wall } = ladderWall({ rungs: 6 });
+  const { engine, c } = await makeSim({ wall });
+  c.position.set(0, 0, -8.0);
+  c.grounded = true;
+  let entered = -1, moved = -1, left = -1;
+  run(engine, c, 300, (i, inp) => {
+    inp.move.y = 1;
+    if (entered < 0) inp.hold('jump'); else inp.let_go('jump');
+  }, (i) => {
+    if (entered < 0 && c.stateName === 'wallClimb') { entered = i; return; }
+    if (entered >= 0 && moved < 0 && i === entered + 3) {
+      // The rec slides 2 m along the face, taking every hold with it.
+      for (const h of wall.rec.handholds) h.point.x += 2.0;
+      moved = i;
+    }
+    if (moved >= 0 && left < 0 && c.stateName !== 'wallClimb') left = i;
+  });
+  assert.ok(entered >= 0, 'never got onto a rung');
+  assert.ok(left > 0, 'Sly was still holding a hold that had moved 2 m away');
+  assert.ok(left - moved <= 2, `took ${left - moved} frames to notice the hold had gone`);
+  console.log(`\n[wallClimb] hold moved at f${moved}, released at f${left} (${left - moved} frame(s))`);
+});
+
+/* ---------------------------------------------------------------------- */
+/* 6c — the summit is a destination                                        */
+/* ---------------------------------------------------------------------- */
+
+test('wallClimb: the top rung delivers onto the summit instead of hovering', async () => {
+  /* The coordinator's call: the ladder is allowed to top out at the pylon summit. That makes the
+     top rung a destination, and a destination has to hand over. It does so through machinery
+     that already exists — `LedgeHang` is priority 88, well above `wallClimb` 79, so the lip gets
+     first refusal on every frame of the launch off the last rung. No new code; what is asserted
+     is that the handover actually happens rather than the climb settling into the
+     jump-fall-recatch cycle the previous round's monotonicity arm had to be softened for. */
+  const RUNGS = 6;
+  const TOPY = PITCH * RUNGS;                 // last rung
+  /* The lip sits 0.40 m above the top rung, which is the shipped relationship: the pylon's last
+     rung is y 25.20 and its deck is 25.6. That number is what makes the summit a landing rather
+     than a grab — a launch from the top rung carries the FEET to `TOPY − hangReach + apex` =
+     TOPY + 0.667, clearing a 0.40 m lip by 0.267 m, so Sly simply arrives on top and no ledge
+     tech is needed. (Authored higher it becomes a `LedgeHang` catch instead, which also works
+     but only inside the one-frame window where `velocity.y` has fallen under that state's 1.5
+     gate — worth knowing, and worth the world lane keeping the deck within 0.667 m of the last
+     rung so the arrival is the robust kind.) */
+  const LIP = 0.40;
+  const feetApex = TOPY - TUNE.hangReach + apexOf(launchV());
+  assert.ok(feetApex > TOPY + LIP, 'the test geometry does not actually clear the lip');
+  const up = await climb({ rungs: RUNGS, top: TOPY + LIP, frames: 700 });
+  assert.ok(up.c.grounded, `ended airborne in "${up.c.stateName}" at y ${up.c.position.y.toFixed(2)}`);
+  assert.ok(up.c.position.z < -10, `ended at z ${up.c.position.z.toFixed(2)} — never got over the lip`);
+  assert.ok(Math.abs(up.c.position.y - (TOPY + LIP)) < 0.2,
+    `ended at y ${up.c.position.y.toFixed(2)}, not on the summit ${(TOPY + LIP).toFixed(2)}`);
+  console.log(`[wallClimb] summit: feet apex ${feetApex.toFixed(3)} vs lip ${(TOPY + LIP).toFixed(2)} — ` +
+              `landed at y ${up.c.position.y.toFixed(2)}, z ${up.c.position.z.toFixed(2)}, ` +
+              `state "${up.c.stateName}", grounded ${up.c.grounded}`);
+});
+
+test('wallClimb: a topless ladder settles rather than gaining height forever', async () => {
+  /* The other half of the summit question. If a level ever authors a ladder with nothing at the
+     top, the recovery re-catch turns into an indefinite jump-fall-recatch cycle. That is not an
+     exploit — it gains no height, which is what this asserts — but it is worth pinning, because
+     "bounded" is the property that makes the recovery safe to keep. */
+  const RUNGS = 4;
+  const up = await climb({ rungs: RUNGS, top: 400, frames: 900 });
+  const ys = up.caught.map((h) => h.point.y);
+  const top = Math.max(...ys);
+  assert.ok(Math.abs(top - PITCH * RUNGS) < 1e-9, `caught a rung above the ladder: ${top}`);
+  assert.ok(up.c.position.y < top + apexOf(launchV()) + 0.2,
+    `climbed to y ${up.c.position.y.toFixed(2)}, past the top rung plus one apex`);
+  console.log(`[wallClimb] topless: ${up.caught.length} catches, highest rung ${top.toFixed(2)}, ` +
+              `final y ${up.c.position.y.toFixed(2)} (bound ${(top + apexOf(launchV())).toFixed(2)})`);
+});
+
+/* ====================================================================== */
+/* 7 — the rope question, settled by measurement                           */
+/* ====================================================================== */
+
+test('rope: a sagging rope is our rail with a curved spline, not a mechanic we lack', async () => {
+  /* `Scripts/rope.gd` and `Scripts/auto_rope_path.gd` (NoahChase/Sly-Cooper--A-Thief-in-Godot,
+     HEAD 6479957, /home/user/ref-godot; **licence: none stated** — no LICENSE, no COPYING, no
+     licence section, no README, verified in that tree; fan work derived from Sucker Punch/Sony).
+     Nothing is pasted; what is taken here is a decision NOT to build something, and this arm is
+     the evidence for it.
+       · `rope.gd` moves no player at all — it lerps a Path3D's control points between a taut set
+         and a sagged set. It is a deformer, i.e. world/FX geometry, not a moveset state.
+       · `auto_rope_path.gd`'s traverse is `progress_ratio += delta / (length / 5.0) * prog_mult`
+         — a constant 5 m/s along a spline while the stick is held, with direction taken from the
+         player's FACING. Ours takes direction from momentum (`velocity · tangent`) and adds a
+         term theirs does not have at all: `advance()`'s `speed += gravity · tangent.y · dt`.
+     So the claim under test is that a rope needs no new state, because a rail on a catenary
+     already behaves like one. */
+  const A = V(-10, 8, -6), B = V(10, 8, -6), SAG = 3.0;
+  const pts = [];
+  for (let i = 0; i <= 20; i++) {
+    const t = i / 20;
+    pts.push(V(A.x + (B.x - A.x) * t, 8 - SAG * Math.cos((t - 0.5) * Math.PI), -6));
+  }
+  const spline = new THREE.CatmullRomCurve3(pts);
+  const rec = { id: 'rope', mesh: { userData: { spline } } };
+  const uOf = (p) => {
+    let bu = 0, bd = Infinity;
+    for (let i = 0; i <= 120; i++) { const u = i / 120; const d = spline.getPointAt(u).distanceTo(p); if (d < bd) { bd = d; bu = u; } }
+    return bu;
+  };
+  const points = [{ tag: 'rail', rec, point: (p) => spline.getPointAt(uOf(p)), t: uOf, tangent: V(1, 0, 0) }];
+
+  async function ride({ slack = false, frames = 420 } = {}) {
+    const { engine, c } = await makeSim({ points });
+    const s = spline.getPointAt(0.08);
+    c.position.set(s.x, s.y + 0.5, s.z);
+    c.velocity.set(0, -1, 0);
+    c.grounded = false;
+    c.sm.set('fall');
+    const tr = [];
+    run(engine, c, frames, () => {}, (i) => {
+      if (slack && i === 1) c.rail.speed = 0;        // the one lever: mount energy
+      tr.push({ st: c.stateName, u: c.rail.u, sp: c.rail.speed, y: c.position.y });
+    });
+    return tr.filter((t) => t.st.startsWith('rail'));
+  }
+
+  // 1. Gravity along the spline is real: he runs DOWN into the sag and is slowed climbing out.
+  const free = await ride();
+  const spMax = Math.max(...free.map((t) => t.sp));
+  const spEnd = free[free.length - 1].sp;
+  const yMin = Math.min(...free.map((t) => t.y));
+  console.log(`\n[rope] ${spline.getLength().toFixed(2)} m rope, ${SAG.toFixed(1)} m sag · ` +
+              `speed ${free[0].sp.toFixed(2)} → ${spMax.toFixed(2)} at the bottom → ${spEnd.toFixed(2)} on the far side · ` +
+              `dipped to y ${yMin.toFixed(2)}`);
+  assert.ok(spMax > free[0].sp + 3, `no downhill acceleration: ${free[0].sp.toFixed(2)} → ${spMax.toFixed(2)}`);
+  assert.ok(spEnd < spMax - 3, `no uphill deceleration: peaked ${spMax.toFixed(2)}, ended ${spEnd.toFixed(2)}`);
+  assert.ok(yMin < 8 - SAG + 0.2, `never reached the bottom of the sag (${yMin.toFixed(2)})`);
+
+  // 2. With the mount energy removed he settles INTO the sag and swings — a rope, not a grind.
+  const slack = await ride({ slack: true, frames: 600 });
+  let rev = 0;
+  for (let i = 1; i < slack.length; i++) {
+    if (Math.sign(slack[i].sp) !== Math.sign(slack[i - 1].sp) && Math.abs(slack[i].sp) > 0.05) rev++;
+  }
+  const states = [...new Set(slack.map((t) => t.st))].sort();
+  console.log(`[rope] mount energy 0 → ${states.join(' + ')}, u ${Math.min(...slack.map((t) => t.u)).toFixed(3)}..` +
+              `${Math.max(...slack.map((t) => t.u)).toFixed(3)}, ${rev} pendulum reversal(s), ` +
+              `${slack.length}/600 frames still on the rope`);
+  assert.ok(rev >= 1, 'never swung back — the sag is not behaving like a rope');
+  assert.ok(slack.length > 500, `fell off after ${slack.length} frames`);
+  assert.deepEqual(states, ['railSlide', 'railWalk'], 'the slide/walk handoff did not track the swing');
+
+  /* 3. …and the ONE thing that separates the two is not a state, it is a constant.
+     `RailSlide.enter` calls `mount(c, a, TUNE.railSpeed)`, forcing every mount to at least
+     9.5 m/s, which is exactly enough to crest this sag every time — arm 1 never swings, arm 2
+     only swings because the test removed that floor by hand. A rope wants the floor to come
+     from the affordance instead. That is a one-line change and it is NOT made here: no rope is
+     authored in the level, and landing a knob nothing sets is the mirror of the `handholds`
+     situation MOVEMENT has just spent two rounds fixing from the other side. */
+  assert.ok(TUNE.railSpeed > 8, 'railSpeed is no longer the mount floor this arm is about');
 });
 
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {

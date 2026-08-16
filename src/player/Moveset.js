@@ -501,6 +501,7 @@ class WallClimb extends State {
     this._hold = null;      // the rung being held
     this._pick = null;      // what `canEnter` found, handed to `enter`
     this._left = null;      // the rung just released — see `spent()`
+    this._line = null;      // the ladder this ascent is committed to — see `find()`
   }
 
   /**
@@ -528,21 +529,62 @@ class WallClimb extends State {
     return true;
   }
 
-  /** Nearest takeable rung on the wall `w`, or null. Null on every un-laddered rec in the game. */
+  /**
+   * Are two holds rungs of the SAME ladder? Purely geometric, so it needs no id convention and
+   * survives a level that names its holds differently.
+   *
+   * Lateral separation under half a pitch. The numbers on the shipped pylon say that separates
+   * cleanly with an order of magnitude to spare: consecutive rungs of one ladder drift
+   * horizontally by 0.259 m (0.136 m of `masonryShell` opening scale plus 0.221 m of
+   * `proxyBattered` batter over one 2.10 m rise), while the two authored ladders are 3.5 m apart
+   * at their closest. Half-pitch is 1.05 m — four times the intra-ladder drift, a third of the
+   * inter-ladder gap.
+   */
+  sameLine(a, b) {
+    if (!a || !b) return false;
+    const p = a.pitch || b.pitch || 0;
+    if (!(p > 0)) return false;
+    return Math.hypot(a.point.x - b.point.x, a.point.z - b.point.z) < p * 0.5;
+  }
+
+  /**
+   * Nearest takeable rung on the wall `w`, or null. Null on every un-laddered rec in the game.
+   *
+   * **"Nearest" is not enough once a face carries two ladders**, which is the case today — all
+   * 23 of the level's holds sit on ONE rec, in two staggered lines half a pitch apart in height.
+   * Plain nearest-by-distance lets an ascent zig-zag between the two lines, which is a route the
+   * designer did not author and which reads as the climb wandering. So the rule is:
+   *
+   *     prefer the nearest reachable rung ON THE LINE SLY IS ALREADY CLIMBING;
+   *     fall back to the nearest reachable rung anywhere only when that line has run out.
+   *
+   * Committing to a line is what makes it a route, and stepping across when your line ends is
+   * what stops the commitment becoming a dead end. The reference reaches for the same idea from
+   * the other direction — `wall_notch.gd` gates its chain on `player.last_target != target_point`
+   * — but keys it on object identity, which cannot express "the next rung up the same niche".
+   *
+   * Only the rec `probeWall` actually resolved is searched, and that is deliberate: `enter`
+   * marks THAT rec, so taking a hold from a neighbouring rec would spend the wrong face and put
+   * `wallSpent` out of step with what Sly is holding. The cost is a stated authoring contract —
+   * **one ladder must live on one rec** — which `tests/traversal.test.mjs` asserts against the
+   * shipped level rather than leaving as folklore.
+   */
   find(c, w) {
     const holds = w.rec?.handholds;
     if (!holds || !holds.length) return null;
     const R = this.reach();
     const handY = c.position.y + TUNE.hangReach;
-    let best = null, bd = Infinity;
+    let best = null, bd = Infinity, online = null, od = Infinity;
     for (let i = 0; i < holds.length; i++) {
       const h = holds[i];
       if (!h || !h.point) continue;
       if (this.spent(h, handY, c, R)) continue;
       const d = Math.hypot(h.point.x - c.position.x, h.point.y - handY, h.point.z - c.position.z);
-      if (d <= R && d < bd) { bd = d; best = h; }
+      if (d > R) continue;
+      if (d < bd) { bd = d; best = h; }
+      if (this._line && this.sameLine(h, this._line) && d < od) { od = d; online = h; }
     }
-    return best;
+    return online || best;
   }
 
   canEnter(c) {
@@ -562,6 +604,7 @@ class WallClimb extends State {
     if (!h) { c.sm.request('fall'); return; }
     this._hold = h;
     this._left = null;
+    this._line = h;                   // the ladder this ascent is committed to — see `find`
     _a.set(h.normal?.x ?? c.wall.nx, 0, h.normal?.z ?? c.wall.nz);
     if (_a.lengthSq() < 1e-6) _a.set(-c.faceDir.x, 0, -c.faceDir.z);
     _a.normalize();
@@ -611,7 +654,18 @@ class WallClimb extends State {
       c.position.z += _a.z * 0.06;
       return 'fall';
     }
-    // The face going away underneath a hold means the level changed; do not hang on nothing.
+    /* A hold is an authored point in world space, not a socket on a body — `EgyptLevel` builds
+       each one as a plain `Vector3` and every laddered rec in the game is a static proxy. What
+       was undefined until now is what happens if that stops being true, because `update` pins
+       velocity to zero and never calls `move()`: a rec that slid out from under Sly would leave
+       him hanging on nothing, frozen, with the wall gone. These two checks make that case
+       *defined* rather than merely unlikely — the hand drifting further than `reach` from the
+       hold, or the face no longer being there at all, both let go. A hold that moves drops you;
+       it does not carry you and it does not strand you. */
+    const R = this.reach();
+    if (Math.hypot(h.point.x - c.position.x,
+                   h.point.y - (c.position.y + TUNE.hangReach),
+                   h.point.z - c.position.z) > R) return 'fall';
     _b.set(-_a.x, 0, -_a.z);
     if (!c.probeWall(_b).ok) return 'fall';
 
