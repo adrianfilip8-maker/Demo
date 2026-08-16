@@ -188,10 +188,20 @@ export const SHOTS = {
      verify it and this was going to be read as a null in `hero` and mistaken for a missing lean.
 
      The excursion under test is the spine's lateral S — hips +0.045 → chest +0.082 → head
-     +0.046, i.e. 3.7 cm out on the lower segment and 3.6 cm back on the upper. At `hero`'s
-     87-97 px/m that is **3.2-3.6 px against a ~2.5 px ink hull at a 70° view**: the excursion is
-     the width of the line drawn over it, so `hero` returns a null whether or not the lean exists.
-     The same 3.7 cm at this framing's density is ~13.5 px, which a per-row centroid can resolve.
+     +0.046, i.e. 3.7 cm out on the lower segment and 3.6 cm back on the upper. `hero` sees it
+     at **view 73°, 295 px** (`tools/charview.mjs`, H=1.7 m, 900 rows → 173.5 px/m), and a
+     73° bearing foreshortens the frontal plane to cos 73° ≈ 0.29, so 3.7 cm arrives as
+     **~1.8 px against a ~2.5 px ink hull**: the excursion is NARROWER than the line drawn over
+     it, and `hero` returns a null whether or not the lean exists.
+
+     At this framing — view 33°, 619 px → 364 px/m, frontal factor 0.84 — the same 3.7 cm is
+     **~11 px**, 4.4× the hull, which a per-row centroid can resolve.
+
+     Numbers re-derived 2026-08-15 (§345, §359). They were previously quoted as "87-97 px/m →
+     3.2-3.6 px", which omitted the foreshortening entirely and made the excursion sound
+     comparable to the hull rather than narrower than it — two errors partly cancelling, so the
+     conclusion below was right and understated. Re-derive from `charview`, not from this
+     comment: the framing has moved before and the arithmetic is one command.
 
      **This is `sly-closeup` translated down 0.30 m and nothing else.** Same lens (fov 38), same
      bearing, same distance, same yaw 5.24, same player position — only the height follows

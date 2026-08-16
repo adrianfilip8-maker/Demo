@@ -482,9 +482,21 @@ const PERCH = P({
 
      **Stale number corrected:** this note used to say the `hero` camera looks from 172°,
      almost dead behind, and at 55 px. `Shots.js` was reframed since (KNOWN_ISSUES §7) and
-     `tools/charview.mjs` now measures `hero` at **view 70°, 166 px** — a three-quarter, not a
-     back view. The sweep here still reads well from 70°, so the pose stands; but anything
-     re-derived from "172°" is being derived from a camera that no longer exists. */
+     `tools/charview.mjs` then measured `hero` at **view 70°, 166 px** — a three-quarter, not a
+     back view. The sweep here still reads well from that bearing, so the pose stands; but
+     anything re-derived from "172°" is being derived from a camera that no longer exists.
+
+     **AND THAT CORRECTION WENT STALE TOO.** Measured 2026-08-15, `hero` is **view 73°, 295 px**
+     (`node tools/charview.mjs`, H=1.7 m, 900 rows). This file quotes four different `hero`
+     heights — 166 px here and at the `[-30,30,-30]` note, 185 px in the tail-chain note, 120 px
+     in the `[-20,30,130]` note — and **none of them is current**. They are left as written on
+     purpose: each was true when its argument was made, and rewriting them would falsify the
+     record of what was measured when. What they are NOT is a source to compute from.
+
+     The rule, since this is now the second correction on the same line and §345 caught the
+     bearing drifting a third time: **quote the instrument, not the number.** `charview` needs no
+     renderer and runs in about a second. Any pixel figure in this file older than the last
+     `Shots.js` reframe should be treated as history. */
   /* **Re-aimed off a silhouette render at the real `hero` azimuth.** The sweep above put the
      tail out to his left, and from 70° round that projects as a level horizontal sausage
      running off the side of the frame — the "giant croissant" / "horizontal sausage tail" the
