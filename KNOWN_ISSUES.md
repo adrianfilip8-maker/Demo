@@ -29748,3 +29748,118 @@ argument that leaned on it stronger — and a citation that happens to argue in 
 still a citation you have to be able to produce. The 30 px mark bar is therefore left exactly
 where it was set rather than loosened to match its now-wider justification (§141.1: a bar is
 re-scoped when nothing depends on the answer, and `alert` now ships against this one).
+
+## §397 — "Cannot be measured" was a claim about two more files, and it was wrong again
+
+Round 13 of the world lane, straight down §395's own ranked list. §393.2 said of `Vegetation` and
+`Water` that they "take `this` and read `terrain.tune` / `terrain.tex()` / `terrain.mat()`
+unguarded, so there is no way to boot either without a Terrain". **That is true.** The inference
+everybody drew from it — that they therefore could not be measured — is the same inference §395
+retired for KayKit one round earlier, and it fails the same way.
+
+**You boot the Terrain.** It has carried its own headless canvas since a missing `document` cost it
+the entire sand mesh (`Terrain.js:704-729`). The whole chain builds in plain Node in ~2.2 s with
+**zero warnings**, and both children run their real `init()` against a real parent.
+`tests/vegwater.test.mjs` is the first instrument to exercise either: 12 arms.
+
+The generalised rule, now twice-earned: **"cannot be constructed standalone" is a fact about a
+file; "cannot be measured" is a claim laid on top of it, and it is the one claim that, believed,
+guarantees nothing downstream of it gets checked.**
+
+### §397.1 TUNE names an intent; the level ships half of it
+
+| constant | states | delivers |
+|---|---|---|
+| `palmCount` | 74 | **37** |
+| `papyrusClumps` | 58 | **28** |
+| `tuftCount` | 900 | 900 |
+
+`palmCount` is a CAP applied by `_scatterPalms`'s closing `slice`, and the scatter only ever offers
+74 candidates — 44 bank + 22 dune + 8 framing — of which about half are rejected for standing in
+the Nile or on a slip face. **The cap has never once bound.** The palm comment said "one silhouette
+repeated 74 times", quoting the constant as if it were the outcome. `tuftCount` hitting its number
+exactly is what makes the other two legible as a shortfall rather than a convention.
+
+### §397.2 One of the eight hand-placed framing palms is thrown away in silence
+
+The eight are "placed by eye for the `hero`, `courtyard` and `dunes` cameras". `(36, 46)` sits on a
+dune flank of slope **0.625** against `push`'s 0.55 limit, so it is dropped. The nearest palm that
+does land is **15.76 m** away — a hole in the frame, not a near miss. The other seven land within
+1.36 m of their named coordinate.
+
+Nothing reports this. `push` returns without a word and no counter downstream distinguishes
+"rejected" from "never offered". **An authored placement discarded by a filter should say so**, and
+this is the second round running in which the defect was silence rather than arithmetic.
+
+### §397.3 The phantom at the origin was never removed — it was re-tagged
+
+The trunk comment reads: *"`misc` keeps every trunk solid in the BVH and registers no affordance."*
+First half true, and it is the half that matters — `BVH.js:326-333`'s `TriangleSoup` walks
+`o.count` and applies each instance matrix, so all 37 trunks are real triangles in a 47,196-triangle
+soup, confirmed by probing twelve palm positions rather than inferred from the total.
+
+**Second half false.** `Collision._addBoxEntry` is tag-agnostic, and the world box it is handed
+comes from `Collision.js:902-906` — `geometry.boundingBox` times the mesh's *own* `matrixWorld`,
+which for an InstancedMesh describes one instance at the group origin. Measured:
+
+```
+misc affordance   0.7 x  7.4 x 0.7 m at origin   instances actually span  120 x 23 x 186 m
+misc affordance   0.9 x  9.0 x 0.9 m at origin                            131 x 26 x 166 m
+misc affordance   1.0 x 11.0 x 1.7 m at origin                            168 x 21 x 254 m
+```
+
+The 11.0 m box is the same ~11 m the comment already describes from the `pole` era. **The tag
+changed and the phantom changed shape with it — spline to box — but it never left.** It is inert
+today for two contingent reasons: nothing in `src/` queries `afford('misc')`, and solidity comes
+from the BVH rather than the hash. Collision warns about synthesised bounds for line tags and is
+silent for box tags, so nothing has ever mentioned it.
+
+### §397.4 Two palm trunks grow through each other, and there is no spacing rule
+
+`_scatterPalms` filters on water and on slope and on **nothing else**. Whether two palms
+interpenetrate is left to the seed, which is fixed. Measured over 666 pairs with each variant's own
+base radius scaled per instance: **one pair overlaps, by 0.133 m** (centres 0.820 m, combined trunk
+width 0.953 m).
+
+The bar is derived and the first attempt at it was not: a hand-picked 0.9 m centre-to-centre
+minimum failed on HEAD at 0.820 m. Trunk *surface* clearance is the quantity that means something —
+zero is touching, negative is interpenetrating, and no tuning enters. Pinned rather than barred:
+one pair in 666, and whether a forked clump is wrong needs a frame.
+
+### §397.5 The wall penetrations §395.5 held are now decided
+
+§395.5 held four KayKit colliders inside Architecture `wall` proxies because `proxy:wall` is general
+`BufferGeometry` that *might* be non-convex, leaving a face-normal SAT able only to bound the answer.
+Both halves are settled:
+
+- **All 75 wall proxies are convex**, to a worst vertex-outside-plane of 2.2e-16 m. The two that are
+  not `BoxGeometry` are 10-triangle, 5-plane convex prisms.
+- The axis set is now complete — face normals **plus every edge-edge cross product**. This was not
+  bookkeeping: the deepest penetration moved from 1.0087 m to **1.0027 m** because an edge-cross
+  axis gave a tighter bound.
+
+So the four are real, at **1.003 / 0.759 / 0.731 / 0.097 m**, and pinned. Round 12's two negatives
+also survive the stronger test (self-pair 1.018 m clear, crate-to-pole 0.200 m clear). The lesson is
+about the shape of the earlier hold: **a test that is sound in only one direction can still be the
+right thing to ship, provided the report says which direction** — and the fix was to complete the
+test, not to argue about the finding.
+
+### §397.6 A census that silently inspected 16 of 18
+
+`tools/shotsee.mjs` regexed `Shots.js` for `name: { pos: [...], target: [...], fov: N`, which needs
+the three keys adjacent and in order. **Any entry with a comment between its brace and its `pos:`
+was dropped** — `guard` carries a nine-line note there and had never once been counted, and
+`impact` arrived while this round was in flight. The tool printed "against 16 shots" and looked
+complete.
+
+Fixed at the root: the shot table is now **imported**, not parsed, so the failure mode is gone
+rather than patched, and an entry without a usable `pos`/`target`/`fov` is a **hard error naming
+the entry** instead of a silent drop. It now reports 18 of 18. Neither missing shot sees a KayKit
+prop, so no published number was wrong — which is precisely why it survived: **a silent census
+error is invisible exactly when it is cheapest to fix.**
+
+That fix also retired a claim in `KayKit.js`. "`interior` is the only shot with a prop inside 25 m"
+is now false three ways: `interior` 8.09 m, `alert` 23.35 m, `sly-key` 24.99 m. Two of those
+cameras landed after the sentence was written and `sly-key` is 13 mm inside the bar — **a claim
+other files retired rather than one that was wrong when made**, which is the more common way a
+comment dies and the harder one to catch. The gap it exists to convey survives: 15.3 m.

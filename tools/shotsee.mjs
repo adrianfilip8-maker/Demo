@@ -17,21 +17,46 @@
  * That caveat is load-bearing here. §203.1 retired a projection instrument for predicting 29x
  * where the render delivered 0.75x, so this one is scoped deliberately narrowly: use it to rule
  * placements OUT before paying for a capture, never to rule them in.
+ *
+ * ── the shot list is IMPORTED, not parsed, and that is a bug fix ──────────────────────────────
+ * This used to regex `Shots.js` for `name: { pos: [...], target: [...], fov: N`. That pattern
+ * needs the three keys adjacent and in order, so **any entry with a comment between its brace and
+ * its `pos:` was silently dropped** — `guard` carries a nine-line note there and had never once
+ * been counted. The header above still says "36–51 m" partly because of numbers produced by a
+ * census that was quietly inspecting fewer shots than it printed. KNOWN_ISSUES §211.1 is the rule
+ * this broke: an instrument must assert what it inspected. Importing the module removes the
+ * failure mode rather than patching the pattern, and the count is asserted below regardless.
  */
 import { readFileSync } from 'node:fs';
+import { SHOTS as SHOT_TABLE } from '../src/core/Shots.js';
 
 const ROOT = new URL('..', import.meta.url);
 const ASPECT = 16 / 9;
 const EYE = 0.8;              // sample a prop around its middle rather than its foot
 
-const shotsSrc = readFileSync(new URL('src/core/Shots.js', ROOT), 'utf8');
 const kaykitSrc = readFileSync(new URL('src/world/KayKit.js', ROOT), 'utf8');
 
-/* Shots.js entries: `name: { pos: [...], target: [...], fov: N`  (quoted names too). */
+/* Every entry must yield a camera. A shot that cannot be read is a HARD ERROR: dropping it is
+   how this tool came to report 16 of 18 while printing a total that looked complete. */
 const SHOTS = [];
-for (const m of shotsSrc.matchAll(
-  /(?:^|\n)\s*'?([a-zA-Z][\w-]*)'?:\s*\{\s*pos:\s*\[([^\]]+)\],\s*target:\s*\[([^\]]+)\],\s*fov:\s*([\d.]+)/g)) {
-  SHOTS.push({ name: m[1], pos: m[2].split(',').map(Number), tgt: m[3].split(',').map(Number), fov: +m[4] });
+const unreadable = [];
+for (const [name, s] of Object.entries(SHOT_TABLE)) {
+  if (!Array.isArray(s?.pos) || s.pos.length !== 3 || !s.pos.every(Number.isFinite)
+    || !Array.isArray(s?.target) || s.target.length !== 3 || !s.target.every(Number.isFinite)
+    || !Number.isFinite(s?.fov)) {
+    unreadable.push(name);
+    continue;
+  }
+  SHOTS.push({ name, pos: s.pos.slice(), tgt: s.target.slice(), fov: s.fov });
+}
+if (unreadable.length) {
+  console.error(`shotsee: ${unreadable.length} of ${Object.keys(SHOT_TABLE).length} shots have no `
+    + `usable pos/target/fov and would have been skipped silently: ${unreadable.join(', ')}`);
+  process.exit(1);
+}
+if (SHOTS.length !== Object.keys(SHOT_TABLE).length) {
+  console.error(`shotsee: read ${SHOTS.length} of ${Object.keys(SHOT_TABLE).length} shots`);
+  process.exit(1);
 }
 
 const block = kaykitSrc.slice(kaykitSrc.indexOf('const PLACEMENTS'));

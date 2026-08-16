@@ -368,8 +368,15 @@ export class Vegetation {
     for (const m of [barkMat, frondMat, reedMat, tuftMat]) this._addWind(m);
 
     /* --- palms ----------------------------------------------------------- */
-    // Three trunk/crown variants, instanced — one silhouette repeated 74 times reads as
-    // wallpaper, three with per-instance scale and rotation reads as a grove.
+    /* Three trunk/crown variants, instanced — one silhouette repeated across the whole grove
+       reads as wallpaper, three with per-instance scale and rotation reads as a grove.
+     *
+     * This line used to say "repeated 74 times", quoting `TUNE.palmCount`. **The level ships 37
+     * palms, not 74** (`tests/vegwater.test.mjs`). `palmCount` is a CAP applied by the `slice` at
+     * the end of `_scatterPalms`, and the scatter only ever offers 74 candidates — 44 bank + 22
+     * dune + 8 framing — of which roughly half are rejected for standing in the Nile or on a slip
+     * face. The cap has therefore never once bound, and the constant names an intent rather than
+     * an outcome. Same shape one field down: `papyrusClumps: 58` delivers **28**. */
     const trunkVariants = [], crownVariants = [];
     for (let v = 0; v < 3; v++) {
       const h = 9 * [0.82, 1.0, 1.22][v];
@@ -414,12 +421,32 @@ export class Vegetation {
         this.group.add(im);
       }
 
-      // Trunks are SOLID but deliberately not `pole`: an InstancedMesh's bounds ignore its
-      // instances, so a line-affordance tag here made Collision synthesise a phantom
-      // climbable spline at the group origin — ~11 m of mountable air on the courtyard
-      // walking route (see progress/records/NOTE-void-and-poles.md §2b). `misc` keeps every
-      // trunk solid in the BVH and registers no affordance. Real palm climbing, if wanted,
-      // needs one collider per palm spot with an authored 2-point spline from _scatterPalms.
+      /* Trunks are SOLID but deliberately not `pole`: an InstancedMesh's bounds ignore its
+       * instances, so a line-affordance tag here made Collision synthesise a phantom climbable
+       * spline at the group origin — ~11 m of mountable air on the courtyard walking route
+       * (see progress/records/NOTE-void-and-poles.md §2b).
+       *
+       * `misc` keeps every trunk solid in the BVH. That half is true and it is the half that
+       * matters: `BVH.js:326-333`'s `TriangleSoup` walks `o.count` and applies each instance
+       * matrix, so all 37 trunks are real triangles in the 47,196-triangle soup.
+       *
+       * **"and registers no affordance" was false.** `Collision._addBoxEntry` is tag-agnostic —
+       * every rec with a finite world box gets a box affordance, `misc` included — and the world
+       * box comes from `Collision.js:902-906`, which is `geometry.boundingBox` times the mesh's
+       * OWN `matrixWorld` and ignores instance matrices exactly as this comment says. Measured
+       * (`tests/vegwater.test.mjs`): three `misc` box affordances sit at the world origin, sized
+       * 0.7 x 7.4 x 0.7, 0.9 x 9.0 x 0.9 and 1.0 x 11.0 x 1.7 m, while the instances they stand
+       * for span 119 x 23 x 186, 131 x 26 x 166 and 168 x 22 x 254 m.
+       *
+       * So the phantom at the origin was never removed — the TAG changed and the phantom changed
+       * shape with it, from a climbable spline to an inert box. It is inert for two reasons and
+       * both are contingent: nothing in `src/` queries `afford('misc')`, and solidity comes from
+       * the BVH rather than the hash. Note the 11.0 m box is the same ~11 m this comment already
+       * describes, which is the tell that the mechanism is untouched. Collision warns about this
+       * for line tags and is silent for box tags, so nothing reports it.
+       *
+       * Real palm climbing, if wanted, still needs one collider per palm spot with an authored
+       * 2-point spline from `_scatterPalms` — and so would any future `misc` affordance query. */
       this.engine.registerCollider(trunks, { tag: 'misc', material: 'wood' });
     }
 
@@ -499,8 +526,18 @@ export class Vegetation {
     for (let i = 0; i < 22; i++) {
       push(rand.range(-180, 150), rand.range(-140, 150));
     }
-    // Framing palms: these are placed by eye for the `hero`, `courtyard` and `dunes`
-    // cameras, not scattered. They sit just outside the paving on the approach side.
+    /* Framing palms: these are placed by eye for the `hero`, `courtyard` and `dunes`
+     * cameras, not scattered. They sit just outside the paving on the approach side.
+     *
+     * SEVEN OF THE EIGHT SURVIVE. `(36, 46)` sits on a dune flank of slope 0.625, and `push`
+     * rejects anything over 0.55, so it is dropped — silently, because `push` returns without
+     * saying anything and nothing downstream counts what it refused. Measured, the nearest palm
+     * that does land is 15.76 m away, so this is a hole in the frame rather than a near miss
+     * (`tests/vegwater.test.mjs`). The other seven land within 1.36 m of their named coordinate.
+     *
+     * It is left in place rather than moved: whether that gap matters is a look question about
+     * three specific frames, and this lane has not rendered one. What was wrong was only ever
+     * the silence — an authored placement that a filter throws away should say so. */
     for (const [x, z] of [[-33, 44], [-38, 30], [36, 46], [31, 62], [-30, 70], [42, 24], [-44, 12], [46, 68]]) {
       push(x + rand.jitter(1.6), z + rand.jitter(1.6));
     }

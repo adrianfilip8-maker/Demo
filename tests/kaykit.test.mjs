@@ -55,21 +55,62 @@ const worldVerts = (mesh) => {
   for (let i = 0; i < p.count; i++) out.push(v.fromBufferAttribute(p, i).applyMatrix4(mesh.matrixWorld).clone());
   return out;
 };
-const faceAxes = (mesh) => {
+/** Distinct world-space face normals AND distinct world-space edge directions. */
+const axesOf = (mesh) => {
   const g = mesh.geometry, p = g.attributes.position, idx = g.index;
-  const n = idx ? idx.count : p.count, set = [];
-  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  const n = idx ? idx.count : p.count;
+  const normals = [], edges = [];
   const nm = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  const wa = new THREE.Vector3(), wb = new THREE.Vector3(), wc = new THREE.Vector3();
+  const add = (arr, v) => {
+    if (v.lengthSq() < 1e-12) return;
+    v.normalize();
+    if (!arr.some((s) => Math.abs(s.dot(v)) > 0.9999)) arr.push(v.clone());
+  };
   for (let i = 0; i < n; i += 3) {
     const i0 = idx ? idx.getX(i) : i, i1 = idx ? idx.getX(i + 1) : i + 1, i2 = idx ? idx.getX(i + 2) : i + 2;
     a.fromBufferAttribute(p, i0); b.fromBufferAttribute(p, i1); c.fromBufferAttribute(p, i2);
-    const ax = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a));
-    if (ax.lengthSq() < 1e-12) continue;
-    ax.applyMatrix3(nm).normalize();
-    if (!set.some((s) => Math.abs(s.dot(ax)) > 0.9999)) set.push(ax);
+    wa.copy(a).applyMatrix4(mesh.matrixWorld);
+    wb.copy(b).applyMatrix4(mesh.matrixWorld);
+    wc.copy(c).applyMatrix4(mesh.matrixWorld);
+    const nrm = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a));
+    if (nrm.lengthSq() > 1e-12) add(normals, nrm.applyMatrix3(nm));
+    add(edges, new THREE.Vector3().subVectors(wb, wa));
+    add(edges, new THREE.Vector3().subVectors(wc, wb));
+    add(edges, new THREE.Vector3().subVectors(wa, wc));
   }
-  return set;
+  return { normals, edges };
 };
+
+/**
+ * Is this mesh a convex polyhedron? Every vertex on or behind every face plane.
+ *
+ * This is the precondition that makes `separation()` decide rather than merely bound, and round 12
+ * held a finding for want of it: the wall proxies were assumed possibly-non-convex, so a reported
+ * penetration could not be trusted. Measured, all 75 of them are convex to 2.2e-16 m.
+ */
+function convexity(mesh) {
+  const g = mesh.geometry, p = g.attributes.position, idx = g.index;
+  const n = idx ? idx.count : p.count;
+  const verts = [], v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) verts.push(v.fromBufferAttribute(p, i).clone());
+  const planes = [];
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  for (let i = 0; i < n; i += 3) {
+    const i0 = idx ? idx.getX(i) : i, i1 = idx ? idx.getX(i + 1) : i + 1, i2 = idx ? idx.getX(i + 2) : i + 2;
+    a.fromBufferAttribute(p, i0); b.fromBufferAttribute(p, i1); c.fromBufferAttribute(p, i2);
+    const nrm = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a));
+    if (nrm.lengthSq() < 1e-14) continue;
+    nrm.normalize();
+    const d = nrm.dot(a);
+    if (planes.some((q) => q.n.dot(nrm) > 0.9999 && Math.abs(q.d - d) < 1e-5)) continue;
+    planes.push({ n: nrm, d });
+  }
+  let worst = 0;
+  for (const pl of planes) for (const vv of verts) worst = Math.max(worst, vv.dot(pl.n) - pl.d);
+  return { convex: worst <= 1e-5, worst, planes: planes.length };
+}
 const span = (vs, ax) => {
   let lo = Infinity, hi = -Infinity;
   for (const v of vs) { const d = v.dot(ax); if (d < lo) lo = d; if (d > hi) hi = d; }
@@ -78,21 +119,27 @@ const span = (vs, ax) => {
 /**
  * Signed separation: > 0 is a gap in metres, <= 0 is a penetration depth.
  *
- * WHICH WAY THIS IS UNSOUND, because it decides what the arms below may conclude. The axis set is
- * face normals only — a complete SAT for two convex polyhedra also needs the edge-edge cross
- * products. Omitting them can only cause a separating axis to be MISSED, never invented, so:
+ * FULL SAT — face normals of both bodies plus every edge-edge cross product. Round 12 used face
+ * normals alone, which is sound in one direction only: a missed axis can hide a gap but cannot
+ * invent one, so `> 0` proved disjointness while `<= 0` proved nothing. That asymmetry is exactly
+ * what forced a real finding to be held for a round. With the edge axes in, and with `convexity()`
+ * asserted on both bodies, the test decides in both directions.
  *
- *     result > 0   ->  the two solids are provably disjoint          (sound, safe to seal on)
- *     result <= 0  ->  they may or may not overlap                   (conservative)
- *
- * A1 and A2 assert absence, so they lean on the sound direction and can only ever over-report.
- * That is also why A-CALIB may state flatly that the two AABB hits are artifacts: a positive gap
- * was found for both, and a found axis is proof.
+ * It is not free — it changed an answer. The barrel at (−11.5, 2.5) scored −1.0087 m under face
+ * normals and −1.0027 m under the full set, because an edge-cross axis gave a tighter bound.
  */
 function separation(mA, mB) {
   const va = worldVerts(mA), vb = worldVerts(mB);
+  const A = axesOf(mA), B = axesOf(mB);
+  const axes = [...A.normals, ...B.normals];
+  for (const e of A.edges) {
+    for (const f of B.edges) {
+      const c = new THREE.Vector3().crossVectors(e, f);
+      if (c.lengthSq() > 1e-10) axes.push(c.normalize());
+    }
+  }
   let best = -Infinity;
-  for (const ax of [...faceAxes(mA), ...faceAxes(mB)]) {
+  for (const ax of axes) {
     const [a0, a1] = span(va, ax), [b0, b1] = span(vb, ax);
     const sep = Math.max(a0 - b1, b0 - a1);
     if (sep > best) best = sep;
@@ -280,9 +327,14 @@ test('A2 CALIBRATION: a collider planted inside a pole IS caught', () => {
   plant.updateMatrixWorld(true);
 
   const sep = separation(plant, pole.mesh);
-  const real = Math.min(...KK.map((r) => separation(r.mesh, pole.mesh)));
+  /* the true margin, over every crate against every pole — round 12 printed the minimum against
+     ONE pole here and called it "the nearest shipped crate", which read as a global figure and
+     was not one. The real tightest pair is an order of magnitude closer. */
+  const poles = OTHER.filter((r) => r.opts?.tag === 'pole');
+  let real = Infinity;
+  for (const r of KK) for (const p of poles) real = Math.min(real, separation(r.mesh, p.mesh));
   console.log(`  A2 calib: a crate planted at "${pole.mesh.name}"'s centre scores ${sep.toFixed(3)} m; `
-    + `the nearest shipped crate to that pole is ${real.toFixed(3)} m clear`);
+    + `the tightest shipped crate-to-pole pair in the level is ${real.toFixed(3)} m clear`);
   assert.ok(sep <= 0, `a crate planted inside a pole scored ${sep.toFixed(3)} m, which A2 would ACCEPT`);
   assert.ok(real > 0, 'the shipped level should already be on the clear side of this lever');
 });
@@ -315,6 +367,49 @@ test('A-CALIB: the AABB screen A1/A2 refuse to trust is the one that reports ove
     'the AABB screen now reports nothing, so this arm no longer demonstrates that AABB and exact '
     + 'disagree — A1/A2 keep their value but this calibration has gone dead and must be re-derived');
   assert.equal(exactSelf + exactPole, 0, 'A1/A2 disagree with themselves');
+});
+
+test('A3: the four crates buried in colonnade walls — held in round 12, decided here', () => {
+  /* ROUND 12 HELD THIS AND SAID WHY: `proxy:wall` is general `BufferGeometry` and might be
+     non-convex, so a face-normal SAT could only bound the answer, not give it. Both halves of
+     that are now settled — the axis set is complete (see `separation`) and convexity is measured
+     rather than assumed, below — so the penetrations are real numbers and are pinned.
+
+     It is a PIN, not a bar. Two solids overlapping do not make a hole: the player cannot enter
+     either, and nothing here claims a crate half-inside a colonnade wall is wrong. What the pin
+     buys is that the depth cannot grow, or a fifth appear, without somebody saying so. Whether
+     the visible art clips needs a frame, and this lane has not rendered one. */
+  const walls = OTHER.filter((r) => r.opts?.tag === 'wall');
+  assert.ok(walls.length > 0, 'inspected 0 wall proxies — Architecture did not boot');
+
+  /* the precondition, asserted rather than assumed */
+  let nonConvex = 0, worstDev = 0;
+  for (const w of walls) {
+    const cv = convexity(w.mesh);
+    if (!cv.convex) nonConvex++;
+    worstDev = Math.max(worstDev, cv.worst);
+  }
+  console.log(`  A3: ${walls.length} wall proxies, ${nonConvex} non-convex, worst vertex-outside-plane ${worstDev.toExponential(2)} m`);
+  assert.equal(nonConvex, 0,
+    `${nonConvex} wall proxies are non-convex, so \`separation()\` no longer decides against them `
+    + 'and the depths below revert to bounds — this arm must go back to being a held finding');
+
+  const kAabb = KK.map((r) => aabbOf(r.mesh));
+  const hits = [];
+  for (let i = 0; i < KK.length; i++) {
+    for (const w of walls) {
+      if (!kAabb[i].intersectsBox(aabbOf(w.mesh))) continue;
+      const sep = separation(KK[i].mesh, w.mesh);
+      if (sep <= 0) hits.push({ at: KK[i].mesh.position.clone(), depth: -sep, type: w.mesh.geometry.type });
+    }
+  }
+  hits.sort((a, b) => b.depth - a.depth);
+  console.log(`  A3: ${hits.length} crate-into-wall penetrations — `
+    + hits.map((h) => `${h.depth.toFixed(3)} m @(${h.at.x.toFixed(1)}, ${h.at.z.toFixed(1)})`).join(' · '));
+  assert.equal(hits.length, 4, 'the number of KayKit colliders inside a wall proxy has changed');
+  assert.ok(Math.abs(hits[0].depth - 1.003) < 0.005, `deepest is ${hits[0].depth.toFixed(3)} m, recorded 1.003 m`);
+  assert.ok(Math.abs(hits[3].depth - 0.097) < 0.005, `shallowest is ${hits[3].depth.toFixed(3)} m, recorded 0.097 m`);
+  assert.ok(hits[0].depth < 1.1, 'a crate has gone deeper into a wall than anything measured so far');
 });
 
 /* ============================ 3. the comments, re-derived ============================ */
@@ -379,18 +474,37 @@ test('C2: the framing claims in the camera banner are still true', () => {
   /* "of the thirty above, `interior` is far and away the nearest shot, at 8.09 m" */
   const [cInterior] = claim(/`interior` is\s*\n?\s*\*?\s*far and away the nearest shot, at ([\d.]+) m/, 'interior nearest');
   agrees(interior.d, cInterior, 0.02, 'interior nearest');
+  /* "then 15.3 m of nothing" — the gap, read from the banner. Round 12 asserted a hand-picked
+     `> 12` bar here; two cameras (`alert`, `impact`) have landed since and the gap closed from
+     16.4 m to 15.26 m, so the bar held but told nobody the number had moved. Reading the stated
+     gap instead means the next camera that narrows it has to come through this arm. */
   const others = Object.keys(SHOTS).filter((s) => s !== 'interior').map((s) => nearest(s).d);
   const runnerUp = Math.min(...others);
-  assert.ok(runnerUp - interior.d > 12,
-    `the banner claims a gap between interior and everything else; the runner-up is now `
-    + `${runnerUp.toFixed(2)} m against interior's ${interior.d.toFixed(2)} m`);
+  const [cGap] = claim(/interior at [\d.]+ m, then ([\d.]+) m of nothing/, 'the interior gap');
+  console.log(`  C2: nearest non-interior shot is ${runnerUp.toFixed(2)} m; gap ${(runnerUp - interior.d).toFixed(2)} m`);
+  agrees(runnerUp - interior.d, cGap, 0.05, 'the gap between interior and the next camera');
+  /* and the three the banner names as inside 25 m, so a fourth cannot appear unremarked */
+  const inside = Object.keys(SHOTS).filter((s) => nearest(s).d < 25).sort();
+  assert.deepEqual(inside, ['alert', 'interior', 'sly-key'],
+    `the set of shots with a player-30 prop inside 25 m is now ${inside.join(', ')}; the banner names `
+    + 'interior, alert and sly-key');
   /* "`temple` has ONE in its cone, at 35.2 m" */
   const [cTemple] = claim(/`temple` has ONE in its cone, at ([\d.]+) m/, 'temple distance');
   assert.equal(temple.n, 1, `temple sees ${temple.n} of the thirty, comment says ONE`);
   agrees(temple.d, cTemple, 0.06, 'temple\'s one prop');
-  /* "`sly-key`'s nearest is 24.99 m", the near-miss the banner records as a rounding coin-flip */
-  const [cKey] = claim(/`sly-key`'s nearest is ([\d.]+) m/, 'sly-key nearest');
+  /* the three the banner names as inside 25 m, each re-derived from the distance it states */
+  const [cAlert] = claim(/`alert`\s*\n?\s*\*?\s*([\d.]+) m, `sly-key`/, 'alert nearest');
+  const [cKey] = claim(/`sly-key` ([\d.]+) m\./, 'sly-key nearest');
+  agrees(nearest('alert').d, cAlert, 0.02, 'alert nearest');
   agrees(nearest('sly-key').d, cKey, 0.02, 'sly-key nearest');
+  /* "over the eighteen canonical cameras that exist today" — the census must match Shots.js.
+     This is the claim that went stale twice in two rounds without anybody noticing, so it is
+     the one most worth wiring to the source of truth. */
+  const words = { sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20 };
+  const wm = /over the (\w+) canonical/.exec(KAYKIT_SRC);
+  assert.ok(wm && words[wm[1]] !== undefined, 'the banner no longer names a shot count in words');
+  assert.equal(words[wm[1]], Object.keys(SHOTS).length,
+    `the banner says ${wm[1]} canonical cameras, Shots.js has ${Object.keys(SHOTS).length}`);
   /* "`courtyard` has all thirty in its cone" — the count half of a sentence whose range half was
      wrong. The range is pinned in C3 against the set it actually describes. */
   assert.equal(courtyard.n, 30, `courtyard sees ${courtyard.n} of the thirty, comment says all thirty`);
