@@ -29307,3 +29307,79 @@ misconfigured voice would still pass**: the ledger closed the "loud bed" hole (�
 "played but inaudible" one. The A/B pair the protocol describes **does not exist yet** — described,
 not built, *"because building an arm nobody can score is the shape of work this project has learned
 to avoid."*
+
+---
+
+## §392 — The "strict" spire beat is not strict, and the gate everyone reasoned about is not the gate
+
+### §392.1 Driven, and the spec is contradicted in the way it invited
+
+Route A (east pinnacle) works: `poleClimb@0 → jump@113 → toTarget@114 → spireLand@126`, **7 of 9
+double-jump timings landing**. The two failures — dj = **+6 and +10** — are a narrow dead window
+right after acquisition where the double jump fires *during* the `toTarget` lock and breaks it,
+dropping to `fall`.
+
+Route B (obelisk, the one specified as strict) works too — **9 of 9 timings, including the bare
+hop.** §390.2 recorded that the bare hop *must* fail, missing by 1.090 m against `catch` 1.008, and
+that this was authored so the assist *"forgives the timing of the move; it does not replace the
+move."*
+
+**It does not fail, and magnetism is not what catches it.** The ordering is the evidence:
+`spireLand@278` fires **before** `toTarget@288`. Verified at source here:
+
+```
+Controller.js:193   spireGrab: 3.4
+Moveset.js:1435     return a.point.y <= c.position.y + 1.0 && a.distance <= TUNE.spireGrab;
+```
+
+**`SpireLand.canEnter` carries its own opportunistic grab at 3.4 m, which entirely subsumes the
+magnet's 1.008 m `catch`.** From the hop apex the eye sits ~0.61 m from the tip — well inside 3.4.
+
+So the design rule in §390.2 is **true about the magnet and irrelevant to the outcome.** The
+`deliberately NOT rescued` comment in `EgyptLevel.js` describes a gate that does not gate. **If the
+intent is that the bare hop must miss, `spireGrab` is the number that decides it, not `catch`** —
+and that is a `Controller.TUNE` constant, not a level one, so the level cannot author strictness
+this way at all.
+
+**A caveat the lane raised against its own evidence:** `peakY` is useless here, because
+`SpireLand.enter` snaps `position` to the tip, so a landing manufactures its own apex reading. The
+`spireLand`-before-`toTarget` ordering is the real evidence.
+
+### §392.2 A stated limit of the §388 pre-check, found by exceeding it
+
+Two failures on the way, both the lane's own, and both instructive:
+
+- **`hookSwing@0` on the first Route B attempt.** It pressed `interact` to mount the pole from the
+  kiosk lintel — where a hook ring sits inside `hookGrab` 9.0. **E is overloaded and the hook wins.**
+  The fix was to drop `interact` entirely and let the pole auto-grab.
+- **Descending the pole instead of climbing it.** `poleClimb@21 → move@51`: mounted, then slid
+  straight back down. **`PoleClimb` reads `wishRaw`, the raw stick — not camera-relative `wishDir`**
+  — and a world-space steering vector fed it `wishRaw.z = −0.76`, which is the descend input.
+
+> Both are the same shape as the `wallRun` miss two rounds ago: **a state's input contract differs
+> from the one the approach used.** My round-9 pre-check would have caught neither, because both are
+> about what `update()` does, not what `canEnter` demands — which is a real limit of that tool worth
+> stating.
+
+That is the sharpest thing in the report. §388 was built to answer *"could any input sequence from
+here satisfy this precondition"*, and it does — but **a state can be enterable and still unusable
+because its `update()` reads a different input than the approach supplies.** The pre-check is a gate
+on entry, not on operation, and nothing currently checks the second thing.
+
+### §392.3 Route C is not reproduced, and nothing is claimed
+
+From the specified start, walking −X with and without crouch, `crawl` never fires; Sly walks to
+x = −22.44 past the mouth at y 0.70. The lane's probes disagree with the spec **and with each
+other** about that floor — `groundCheck` from y = 20 returns **13.50** there, from y = 90 it
+returned ≈0.0 earlier, and the vent spans y −0.50…0.10.
+
+**It could not settle which, so it claimed nothing.** `crawl` remains reached-by-placement only.
+That is the correct outcome and it is the fourth time this session a probe's *cast origin* changed
+its answer (§378.5, §386.2, §389.5, here) — all four resolving to the same rule: **a stance is a
+capsule, not a point, and a ray hit is not a stance.**
+
+### §392.4 None of it is landed
+
+Routes A and B are stable and worth landing as arms — with the dj = +6/+10 dead window and the
+`spireGrab`-subsumes-`catch` finding as the assertions. Route C should not be landed until the floor
+question is settled. **All of this round is scratch, and scratch gets eaten** (§366.1).
