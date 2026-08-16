@@ -29383,3 +29383,73 @@ capsule, not a point, and a ray hit is not a stance.**
 Routes A and B are stable and worth landing as arms — with the dj = +6/+10 dead window and the
 `spireGrab`-subsumes-`catch` finding as the assertions. Route C should not be landed until the floor
 question is settled. **All of this round is scratch, and scratch gets eaten** (§366.1).
+
+## §393 — A comment that promised a guarantee the collision layer never offered
+
+Round 11 of the world lane: a six-file read (`KayKit` / `Decals` / `Statues` / `Terrain` /
+`Vegetation` / `Water`) looking for claims in comments that the code does not keep. Two findings,
+both re-verified at source here before landing, both now written back into the files they belong to
+rather than left in this ledger. Landed as `b542c55`.
+
+### §393.1 Two thirds of a tag rationale was false, and it was cited to a stale line
+
+`KayKit.js`'s crate registration carried a rationale for `misc`: that it blocks *"without `wall`'s
+wall-run semantics (`Controller.js:583`), `ledge`'s grabbability or `pole`'s climbability — none of
+which a crate should offer."*
+
+`Controller.js:583` is `this._frame = 0;` — an unrelated field initialiser. That is the tell, and it
+is the second stale line citation this session (§392.1 found the first). **A line number in a comment
+is an assertion with a shelf life, and nothing in this project checks it.**
+
+The substance is worse than the citation. `probeWall` has exactly two tag references in its body:
+
+```
+Controller.js:909   if (r.tag === 'ground' && Math.abs(r.normal.y) > TUNE.wallNormalMax) return w;
+Controller.js:914   w.tag = r.tag || 'wall';
+```
+
+`:909` is the flat-ground special case; `:914` **records** the tag onto the affordance, it does not
+filter on it. Everything else gates on the surface normal. `probeLedge` is the same shape. Driven on
+a real `Controller` against a real `Collision`, one synthetic box per tag:
+
+```
+wall / misc / ledge   wallRun 38 frames, wallCling 83, apex 2.90   IDENTICAL
+wall / misc / ledge   ledgeClimb 18 frames                          IDENTICAL
+```
+
+**A KayKit crate is wall-runnable and ledge-grabbable, exactly like a temple wall.** Only the third
+claim survives: `PoleClimb.canEnter` goes through `afford('pole')`, which *is* tag-filtered.
+
+**Nothing was changed on the strength of it.** The tag is still correct — `misc` is what stops a
+barrel being FLOOR, which was the original bug — and whether a 1 m crate should be wall-runnable is
+a MOVEMENT question about normal-gated affordances, not a WORLD question about tags. The comment now
+says what is true. This is the §357.1 shape once more (**machinery wired at one end only**): the
+tag reaches the solidity check and never reaches the traversal probes, and a comment filled the gap
+with a guarantee.
+
+### §393.2 The missing-module hole is bigger than TERRAIN
+
+Every offline harness in this project builds a subset of MANIFEST. §382 established that omitting
+Terrain gives plausible wrong numbers. The audit found the blast radius is larger than one module:
+
+```
+Terrain.js:487   this.vegetation = new Vegetation(engine, this);
+Terrain.js:488   this.water      = new Water(engine, this);
+```
+
+**Vegetation and Water are sub-modules of Terrain, not MANIFEST entries.** They take `this` and read
+`terrain.tune` / `terrain.tex()` / `terrain.mat()` unguarded, so there is no way to boot either
+without a Terrain — and a harness that skips TERRAIN silently drops **five colliders**: ground 1,
+water 1, misc 3. A note to that effect now sits at the construction site.
+
+And one module is invisible to every Node instrument in the project regardless: `KayKit.js:180` is
+`new THREE.TextureLoader().loadAsync(...)`, which needs `document`. **KayKit cannot be booted
+headless at all.** That is why the false claim in §393.1 survived to round 11 — it is the one world
+module no instrument has ever exercised, and it is the one that produced the bad comment.
+
+### §393.3 The rule
+
+Three sessions of instrument errors keep landing on the same sentence, and this adds the fourth
+form of it: *a harness missing a module returns plausible numbers.* The specific addition here is
+that **module boundaries in MANIFEST are not the same as construction boundaries in the code**, so
+"I booted the modules I need" is not a statement a harness author can check from MANIFEST alone.
