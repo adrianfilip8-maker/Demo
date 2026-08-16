@@ -3869,3 +3869,156 @@ test('CameraRig: which framing every state actually gets, and the entries nothin
     `only ${usedFramings.size} distinct framings are reachable — the resolver is not discriminating, ` +
     'so the dead-set above is a statement about the prober rather than about the table');
 });
+
+/* ====================================================================== */
+/* 25 — standing still does not travel, and a face too steep still sheds   */
+/* ====================================================================== */
+
+/**
+ * A single infinite inclined plane, `y = x·tan(deg)`, whose `capsuleSweep` clips leftover motion
+ * into the contact plane **exactly as `Collision.capsuleSweep` does**. That last part is the
+ * point: a friendlier stub would resolve the landing cleanly and the arm would prove nothing.
+ */
+function rampCollision(deg) {
+  const rad = deg * Math.PI / 180;
+  const t = Math.tan(rad);
+  const n = new THREE.Vector3(-Math.sin(rad), Math.cos(rad), 0);
+  const surfY = (x) => x * t;
+  const WALK = Math.cos(50 * Math.PI / 180);
+  return {
+    ready: true, fallback: false, recs: [],
+    SLOPE: { walkable: 50 * Math.PI / 180, wall: 70 * Math.PI / 180 },
+    WALKABLE_COS: WALK,
+    capsuleSweep(from, to) {
+      const res = { hit: false, position: to.clone(), normal: n.clone(), distance: 0, toi: 1,
+                    slid: false, tag: 'ground', material: 'stone', rec: { id: 'ramp' } };
+      if (to.y >= surfY(to.x) - 1e-6) return res;
+      const f0 = from.y - surfY(from.x), f1 = to.y - surfY(to.x);
+      let tHit = f0 > 0 ? f0 / (f0 - f1) : 0;
+      tHit = Math.max(0, Math.min(1, tHit));
+      const hit = from.clone().lerp(to, tHit);
+      res.hit = true; res.toi = tHit;
+      const left = to.clone().sub(hit);
+      const d = left.dot(n);
+      if (d < 0) left.addScaledVector(n, -d);          // the real layer's clip, reproduced
+      res.position.copy(hit).add(left);
+      if (res.position.y < surfY(res.position.x)) res.position.y = surfY(res.position.x);
+      res.distance = hit.distanceTo(from);
+      return res;
+    },
+    groundCheck(pos, _r, maxDist) {
+      const y = surfY(pos.x), dy = pos.y - y;
+      return { hit: dy <= maxDist + 1e-4 && dy > -1.0, y, normal: n.clone(), slope: rad,
+               walkable: Math.cos(rad) >= WALK, tag: 'ground', material: 'stone',
+               rec: { id: 'ramp' }, distance: Math.abs(dy) };
+    },
+    raycast(o, d, maxDist) {
+      if (d.y < -0.5) {
+        const y = surfY(o.x);
+        if (o.y - y >= 0 && o.y - y <= maxDist) {
+          return { hit: true, point: V(o.x, y, o.z), normal: n.clone(), distance: o.y - y, tag: 'ground', rec: { id: 'ramp' } };
+        }
+      }
+      return { hit: false };
+    },
+    overlap() { return []; }, query() { return []; }, nearest() { return null; },
+  };
+}
+
+test('slopes: standing still does not travel, and a face too steep to stand on still sheds', async () => {
+  /* `_moveVertical` had the same shape as the ground snap — `position.copy(r.position)` on a
+   * purely vertical request — and gravity re-contacts the surface every single frame, so every
+   * frame donated a little downhill. Standing still with NO INPUT on a 3–15° grade in the real
+   * level travelled a mean of 0.2816 m and a maximum of **2.1644 m** in 90 frames.
+   *
+   * ── Why the gate is walkability, and why that restores intent rather than choosing it ───────
+   * The clip is not always wrong. On a face too steep to stand on it IS the shedding mechanism,
+   * and it must survive. The discriminator is the one the collision layer already publishes, so
+   * nothing new is invented: `WALKABLE_COS`, the 50° limit in `Collision.TUNE`.
+   *
+   * The level cannot test the steep half. **It contains no unwalkable ground at all** — sweeping
+   * it, the steepest face is 47.9° against that 50° limit — so a gate resting on level geometry
+   * would be resting on geometry that does not exist. Hence this synthetic ramp, and hence its
+   * `capsuleSweep` reproducing the real layer's clip rather than a friendlier one.
+   *
+   * What the gate changed in the level, stated rather than buried: 15–50° faces used to shed a
+   * standing character 27/40 at a mean drop of 0.4179 m, and now shed 0/40. Every one of those
+   * grades is authored walkable, so the drift had been making them behave as terrain they were
+   * not. That is the authored intent restored, and it is a real behaviour change either way. */
+  const angles = [10, 25, 40, 49, 55, 65];
+  const rows = [];
+  for (const deg of angles) {
+    const engine = stubEngine();
+    const c = new Controller(engine);
+    await c.init();
+    c.col = rampCollision(deg);
+    c._colReal = c.col; c._calibrated = true; c._bindCollision = () => {};
+    c.teleport(V(0, 0.05, 0), Math.PI);
+    c._needSpawnSnap = false;
+    for (let i = 0; i < 3; i++) {
+      engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+      engine.time = i * DT; c.update(DT, i * DT);
+    }
+    const p0 = c.position.clone();
+    for (let i = 0; i < 90; i++) {
+      engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+      engine.time = i * DT; c.update(DT, i * DT);
+    }
+    const d = c.position.clone().sub(p0);
+    rows.push({ deg, walkable: Math.cos(deg * Math.PI / 180) >= c.col.WALKABLE_COS,
+                drop: -d.y, downhill: -d.x, grounded: c.grounded });
+  }
+  console.log('\n[ramp] deg  walkable   drop(m)   downhill(m)  grounded');
+  for (const r of rows) {
+    console.log(`  ${String(r.deg).padStart(3)}     ${r.walkable ? 'yes' : 'NO '}     ${r.drop.toFixed(4)}     ${r.downhill.toFixed(4)}      ${r.grounded}`);
+  }
+  const stand = rows.filter((r) => r.walkable);
+  const shed = rows.filter((r) => !r.walkable);
+  assert.ok(stand.length >= 3 && shed.length >= 2, 'the ramp sweep lost one of its two populations');
+
+  /* (1) A character given no input does not move. */
+  for (const r of stand) {
+    assert.ok(Math.abs(r.downhill) < 0.01,
+      `standing on a ${r.deg}° WALKABLE ramp travelled ${r.downhill.toFixed(4)} m downhill with no ` +
+      'input — the vertical mover is importing the contact-plane clip again');
+    assert.ok(Math.abs(r.drop) < 0.01, `and descended ${r.drop.toFixed(4)} m on a grade he should stand on`);
+  }
+
+  /* (2) THE GATE. A face too steep to stand on still sheds him, and this is the half that a
+     careless widening of the discriminator would silently destroy. Pre-gate these read
+     55° -> 0.4193 m drop / 0.2866 m downhill and 65° -> 0.5111 / 0.2336; the gate must leave
+     them alone, not merely leave them non-zero. */
+  for (const r of shed) {
+    assert.ok(r.drop > 0.25,
+      `a ${r.deg}° face dropped a standing character only ${r.drop.toFixed(4)} m in 1.5 s — it has ` +
+      'stopped shedding. Do NOT widen the walkability gate to make this pass; the gate is the fix.');
+    assert.ok(Math.abs(r.downhill) > 0.1,
+      `a ${r.deg}° face moved him only ${r.downhill.toFixed(4)} m downhill — shedding is degrading`);
+    assert.equal(r.grounded, false, `a ${r.deg}° face left him GROUNDED — it is unwalkable by its own limit`);
+  }
+
+  /* (3) THE LEVER, and it is the one that makes (1) mean anything. "Does not travel" is satisfied
+     perfectly by a character who cannot move at all, so the same ramp, same stub, must carry him
+     when he is actually asked to walk. Without this the arm passes on a frozen Sly. */
+  const engine = stubEngine();
+  const c = new Controller(engine);
+  await c.init();
+  c.col = rampCollision(10);
+  c._colReal = c.col; c._calibrated = true; c._bindCollision = () => {};
+  c.teleport(V(0, 0.05, 0), Math.PI);
+  c._needSpawnSnap = false;
+  for (let i = 0; i < 3; i++) {
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
+  }
+  const q0 = c.position.clone();
+  for (let i = 0; i < 60; i++) {
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 1;
+    engine.time = i * DT; c.update(DT, i * DT);
+  }
+  const travelled = c.position.clone().sub(q0).length();
+  console.log(`[ramp] lever: 60 frames of forward stick on the 10° ramp moved him ${travelled.toFixed(3)} m`);
+  assert.ok(travelled > 1.0,
+    `asked to walk, he moved ${travelled.toFixed(3)} m — a character who cannot move also never ` +
+    'drifts, so the standing assertions above would pass on a frozen Sly and prove nothing');
+});

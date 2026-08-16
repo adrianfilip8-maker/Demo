@@ -1372,7 +1372,38 @@ export class Controller {
     _to.copy(this.position).add(_disp);
     const r = this._sweep(this.position, _to);
     if (!r.hit) { this.position.copy(_to); return; }
-    this.position.copy(r.position);
+
+    /* Landing on ground he can STAND on seats him vertically; landing on a face he cannot stand
+     * on lets the resolve carry him. Same defect as the ground snap, opposite correct answer, and
+     * the discriminator is the one the collision layer already publishes.
+     *
+     * `capsuleSweep` clips leftover motion into the contact plane, so a purely vertical fall onto
+     * a TILTED plane resolves with a downhill horizontal component. On a wall or an overhang that
+     * is the whole point — it is how a steep face sheds you. On a walkable grade it is a defect:
+     * standing still with no input on a 3-15 deg slope travelled a mean of 0.2816 m and a maximum
+     * of 2.1644 m in 90 frames, because gravity re-contacts the surface every frame and every
+     * contact donates a little downhill.
+     *
+     * Gating on walkability restores the AUTHORED intent rather than choosing a new one: this
+     * level contains no unwalkable ground at all — the steepest sampled face is 47.9 deg against
+     * a 50 deg limit — so every grade the drift was sliding him down was authored standable.
+     * The shedding half therefore cannot be tested on this level at all, and is verified on a
+     * synthetic 55/65 deg ramp instead; see the arm.
+     *
+     * The bound is the same idiom as the snap: descend by time-of-impact, never further than the
+     * resolve actually achieved vertically, because `hit` is also set when DEPENETRATION pushed
+     * the capsule clear without the sweep contacting anything (and sets `toi = 1`). */
+    const wcos = Number.isFinite(this.col.WALKABLE_COS)
+      ? this.col.WALKABLE_COS
+      : Math.cos(this.col.SLOPE?.walkable ?? (50 * Math.PI / 180));
+    if (v.y < 0 && r.normal.y >= wcos) {
+      const fall = Math.abs(_disp.y);
+      const byToi = fall * r.toi;
+      const byResolve = Math.max(0, this.position.y - r.position.y);
+      this.position.y -= Math.min(byToi, byResolve);
+    } else {
+      this.position.copy(r.position);
+    }
     /* The landing-impact bug documented on TUNE.landBeat lives on this line: `v.y` is the true
        arrival speed and zeroing it here is what leaves `_probeGround` nothing to measure. Left
        as-is on purpose — see that note; the fix is not landable without re-deriving `landHard`. */
