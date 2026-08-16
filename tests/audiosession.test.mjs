@@ -7,6 +7,10 @@ import * as THREE from 'three';
 import { OfflineCtx, rms, peak, centroid } from './webaudio.mjs';
 import { Audio, TUNE } from '../src/audio/Audio.js';
 import { SECTION_NAMES } from '../src/audio/Music.js';
+import { SPACES } from '../src/audio/Reverb.js';
+
+/** Just the wet levels, for the space-transition log line. */
+const SPACES_WET = Object.fromEntries(Object.entries(SPACES).map(([k, v]) => [k, v.wet]));
 
 /**
  * audiosession — the capture pipeline this project has never had for sound.
@@ -355,4 +359,169 @@ test('the session is diffable — a stable fingerprint over the shipped render',
     writeFileSync(DUMP, buf);
     console.log(`  wrote ${DUMP} (${(buf.length / 1024).toFixed(0)} kB, ${SESSION}s mono ${SR}Hz)`);
   }
+});
+
+/* ═══════════════════════════════════ round 12 — the three gaps the session did not cover ══
+ *
+ * Two of these ask BEHAVIOURAL questions — did the right cue fire at the right rung, did the
+ * room change when the player walked into the tomb — and behavioural questions do not need a
+ * render. Driving the frames is nearly free; `ctx.render()` is the expensive part and it is
+ * superlinear (3 s : 1.6 s, 6 s : 3.4 s, 12 s : 12.1 s). So these drive and observe, and only
+ * the spectral question below renders. Measuring the right quantity is also the cheap one here,
+ * which is not usually the way round.
+ */
+
+/** Drive the shipped module through a timeline without rendering. Returns what it did. */
+function drive(beats, seconds, { listener } = {}) {
+  const w = makeWorld();
+  const ctx = new OfflineCtx(SR);
+  const audio = new Audio(w.engine);
+  audio.init();
+  audio.unlock(ctx);
+  const played = [];
+  const realPlay = audio.play.bind(audio);
+  audio.play = (n, o) => { const v = realPlay(n, o); played.push({ n, ok: !!v, t: ctx.currentTime }); return v; };
+
+  const DT = 1 / 60;
+  const trace = [];
+  let next = 0;
+  for (let f = 0; f * DT <= seconds; f++) {
+    const t = f * DT;
+    ctx.currentTime = t;
+    w.engine.time = t;
+    while (next < beats.length && beats[next].at <= t) { beats[next].act(w, audio); next++; }
+    const p = listener ? listener(t) : w.player.position;
+    audio.setListener(p, w.player.faceDir, new THREE.Vector3(0, 1, 0));
+    audio.update(DT, t);
+    trace.push({ t, section: audio._section, space: audio._space, alert: audio._alert });
+  }
+  assert.equal(next, beats.length, `only ${next} of ${beats.length} beats fired`);
+  return { audio, world: w, played, trace };
+}
+
+test('the alert ladder climbs and comes back down, in cues and in the score', () => {
+  /* The ladder is the one part of the audio design with a pre-registered suite behind it
+     (`ALERT_FOR_STATE` → `SECTION_FOR_ALERT`), and nothing has ever heard it. The DESCENT
+     matters as much as the climb: a stealth game that can only escalate tells the player the
+     room never becomes safe again. `sectionDebounce` is 1.6 s, so each rung gets 1.8 s. */
+  const RUNGS = ['patrol', 'suspicious', 'searching', 'chase', 'searching', 'suspicious', 'patrol'];
+  const beats = RUNGS.map((state, i) => ({
+    at: 0.4 + i * 1.8,
+    act: (w) => {
+      w.guards.list[0].state = state;
+      w.engine.emit('guardAlert', { state, level: state === 'chase' ? 1 : 0.5, pos: w.guards.list[0].position });
+    },
+  }));
+  const { trace, played } = drive(beats, 0.4 + RUNGS.length * 1.8 + 0.5);
+
+  /* The score must reach the top and come back. `_wantSection` maps rung → section through
+     SECTION_FOR_ALERT, and `alert`/`chase` are the two that only a real escalation reaches. */
+  const sections = [...new Set(trace.map((r) => r.section))];
+  const alerts = trace.map((r) => r.alert);
+  const peakAlert = Math.max(...alerts);
+  const endAlert = alerts[alerts.length - 1];
+  console.log(`  ladder: sections visited ${sections.join(' → ')}; alert peaked ${peakAlert}, ended ${endAlert}`);
+
+  assert.equal(peakAlert, 3, `the ladder peaked at rung ${peakAlert}, not chase`);
+  assert.ok(endAlert < peakAlert, `the ladder never came down (ended at ${endAlert} of ${peakAlert})`);
+  assert.ok(sections.includes('chase'), `the score never reached chase; visited ${sections.join(', ')}`);
+  assert.ok(sections.length >= 3, `the score only visited ${sections.length} section(s) across a full ladder`);
+  for (const s of sections) assert.ok(SECTION_NAMES.includes(s), `unknown section "${s}"`);
+
+  /* And the cues. The ladder is not only a music change — `_onGuardAlert` fires a sting and a
+     vocal per rung, and those are the part a player actually localises. */
+  const names = new Set(played.filter((p) => p.ok).map((p) => p.n));
+  const ladderCues = ['alert_sting', 'search_call', 'guard_shout', 'guard_grunt', 'guard_confused'];
+  const heard = ladderCues.filter((n) => names.has(n));
+  console.log(`  ladder cues heard: ${heard.join(', ') || '(none)'}`);
+  assert.ok(heard.length >= 2,
+    `a full ascent and descent fired only ${heard.length} of the ladder's ${ladderCues.length} cues (${heard.join(', ')})`);
+});
+
+test('walking into the tomb changes the room, and walking out changes it back', () => {
+  /* The only bar on this list that asks whether the game sounds like ONE PLACE rather than a
+     set of cues. `_autoSpace` reads the listener against §8.1's coordinate contract and needs
+     two agreeing samples 0.35 s apart, so a doorway cannot flap. Driven by moving the listener,
+     not by calling setSpace — the routing under test is the automatic one. */
+  const COURT = new THREE.Vector3(0, 1, 20);      // z in (-16, 36), |x| < 30, y < 20  → courtyard
+  const TOMB = new THREE.Vector3(0, -9, -66);     // y < -3 and z < -50                → tomb
+  const path = (t) => (t < 2.0 ? COURT : t < 5.0 ? TOMB : COURT);
+  const { trace, audio } = drive([], 7.5, { listener: path });
+
+  const spaceAt = (t) => trace.find((r) => r.t >= t)?.space;
+  const seq = [];
+  for (const r of trace) if (seq[seq.length - 1] !== r.space) seq.push(r.space);
+  console.log(`  spaces: ${seq.join(' → ')} (wet ${seq.map((s) => SPACES_WET[s]).join(' → ')})`);
+
+  assert.equal(spaceAt(1.5), 'courtyard', 'did not start in the courtyard');
+  assert.equal(spaceAt(4.5), 'tomb', `walked into the tomb and the room stayed "${spaceAt(4.5)}"`);
+  assert.equal(spaceAt(7.0), 'courtyard', `walked back out and the room stayed "${spaceAt(7.0)}"`);
+  assert.equal(audio.reverb.space, 'courtyard', 'the ReverbRack did not follow the listener back');
+
+  /* MUST FIRE: the vote is what stops a doorway flapping, so a single sample in the tomb must
+     NOT switch the room. Without this the test above passes on an implementation with no
+     hysteresis at all, which is the bug `_autoSpace` was written to prevent. */
+  const blip = (t) => (t > 2.0 && t < 2.2 ? TOMB : COURT);
+  const flap = drive([], 4.0, { listener: blip });
+  const flapped = [...new Set(flap.trace.map((r) => r.space))];
+  assert.deepEqual(flapped, ['courtyard'],
+    `a 0.2 s dip into the tomb changed the room to ${flapped.join('/')} — the two-sample vote is not holding`);
+});
+
+test('every class of cue reaches the room, and the send level follows the published formula', () => {
+  /* §383.1 established from source that no class sits outside the reverb: positional voices send
+     at `wet × (0.35 + 0.9k)` and flat ones at `wet × 0.28`. I have flagged that as a source
+     reading for three rounds because `webaudio.mjs` renders Convolver as a pass-through.
+     ROUTING AND TAIL ARE DIFFERENT CLAIMS and only the tail needs a convolution: `OfflineCtx
+     .render(seconds, node)` takes any node, so rendering `audio.reverb.input` measures exactly
+     what reached the send. The tail stays unsettleable here; the routing does not.
+
+     Ratios throughout, so `wet`, the space, the recipe's own gain and everything downstream all
+     cancel — the only thing under test is `_placeVoice`'s two branches. */
+  const sendOf = (payload, seconds = 0.9) => {
+    const w = makeWorld();
+    const ctx = new OfflineCtx(SR);
+    const audio = new Audio(w.engine);
+    audio.init(); audio.unlock(ctx);
+    w.engine.emit('shot', { name: 'isolate' });
+    audio.score?.stop?.(0);
+    const DT = 1 / 60;
+    for (let f = 0; f * DT <= 0.3; f++) {
+      const t = f * DT; ctx.currentTime = t; w.engine.time = t;
+      if (f === 6) w.engine.emit('landed', { force: 11, surface: 'stone', ...payload });
+      audio.setListener(w.player.position, w.player.faceDir, new THREE.Vector3(0, 1, 0));
+      audio.update(DT, t);
+    }
+    return { send: rms(ctx.render(seconds, audio.reverb.input)), mix: rms(ctx.render(seconds)) };
+  };
+
+  const near = sendOf({ pos: new THREE.Vector3(0, 0, 20) });                 // dist 0   → k 0
+  const far = sendOf({ pos: new THREE.Vector3(0, 0, -15) });                 // dist 35  → k 0.5
+  const flat = sendOf({});                                                   // no position → flat
+  console.log(`  send rms — near ${near.send.toFixed(6)} · far ${far.send.toFixed(6)} · flat ${flat.send.toFixed(6)}`);
+  console.log(`  send/mix — near ${(near.send / near.mix).toFixed(4)} · flat ${(flat.send / flat.mix).toFixed(4)}`);
+
+  /* 1. NO CLASS IS OUTSIDE THE ROOM. This is the §383.1 claim, and it is the half that matters:
+        a flat cue that never reached the send would sit on top of the picture the way an
+        un-inked sprite does. */
+  for (const [label, r] of [['near', near], ['far', far], ['flat', flat]]) {
+    assert.ok(r.send > 1e-6, `a "${label}" cue put nothing into the reverb send — it is outside the room`);
+  }
+
+  /* 2. The level SCALES WITH DISTANCE. A constant send would give a ratio of 1.0; the published
+        formula gives (0.35 + 0.45)/0.35 = 2.29 before the air shelf, which cuts the top end at
+        distance and pulls a broadband ratio down. 1.5 is comfortably between the two and cannot
+        be reached by a send that does not move. */
+  const distRatio = far.send / near.send;
+  console.log(`  far/near send ratio ${distRatio.toFixed(3)} (formula predicts 2.29 pre-shelf, a constant send would give 1.00)`);
+  assert.ok(distRatio > 1.5,
+    `the send barely moved with distance (${distRatio.toFixed(3)}×) — it is not tracking (0.35 + 0.9k)`);
+
+  /* 3. Flat cues send LESS than a near positional one, per 0.28 vs 0.35. Same recipe both times —
+        `flat` is `def.flat || !pos`, so omitting the position is what flips the branch, and
+        nothing else about the sound changes. */
+  const flatRatio = flat.send / near.send;
+  console.log(`  flat/near send ratio ${flatRatio.toFixed(3)} (formula predicts 0.28/0.35 = 0.80)`);
+  assert.ok(flatRatio > 0.5 && flatRatio < 1.0,
+    `a flat cue sent ${flatRatio.toFixed(3)}× a near positional one; the formula says 0.80`);
 });

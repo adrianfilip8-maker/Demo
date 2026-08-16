@@ -29113,3 +29113,103 @@ tips are scenery with a state attached, deliberately: they stand on walkable gro
 it cast from y 60 and found the aisle roof at 13.50 rather than the hall floor. Re-probed from each
 vent's own height, the entrance is standable 1.28 m away. The other three vents are **interior
 segments of one tunnel**, so "no external approach" is correct for them rather than a defect.
+
+---
+
+## §390 — CORRECTION to §389.6: a missing factor of two, and the comment was right all along
+
+### §390.1 The arithmetic
+
+§389.6 recorded the spire beat as *"a **1.525 m rise** against a 1.50 m gap"*, and the obelisk as
+*"0.075 m short of the bare hop, covered by `catch` 1.008"*. Both are wrong, from one error:
+
+```
+Controller.TUNE.gravity = -24        PoleClimb top hop = jumpV0 x 0.55 = 6.05 m/s
+
+v^2 / (2g)  = 6.05^2 / 48  = 0.7626 m    ← correct
+v^2 /  g    = 6.05^2 / 24  = 1.5251 m    ← what was reported
+```
+
+**A missing factor of two in `v²/2g`.** Verified at source here. After apex-hang trim the rise is
+**0.67 m**, so:
+
+```
+pinnacles  1.50 m gap  — bare hop misses by 0.83 m   INSIDE  catch 1.008
+obelisk    1.60 m gap  — bare hop misses by 1.090 m  OUTSIDE catch 1.008, deliberately
+```
+
+**Both beats are hop + double jump**, not a bare hop. §389.6's handover would have had the traversal
+lane driving the wrong input sequence.
+
+### §390.2 The near-miss that matters more than the arithmetic
+
+I asked whether the obelisk's gap was *authored or accidental* — whether a designer had chosen a gap
+the bare move cannot clear because the assist is reliable, or whether it had drifted there.
+
+**It is authored, the authoring expression says so (`ob.h - 1.6`), and the comment beside it was
+already more accurate than the report:**
+
+> `PoleClimb`'s top hop … fires at `jumpV0 × 0.55` = 6.05 m/s from the pole top at 20.4, and apex
+> hang trims that to a **0.67 m rise** — it peaks at y 21.07, **0.93 m under** the 22 m tip. The beat
+> is hop + double jump, and the error is the double jump's timing. 6 of 9 timings land the tip with
+> magnetism, 1 without it, and the bare hop — which misses by 1.090 m against a catch of 1.008 — is
+> **deliberately NOT rescued.** The assist forgives the timing of the move; it does not replace the
+> move.
+
+The lane's own words on what nearly happened:
+
+> **I'd have smoothed a correct comment if I'd acted on my own figure.**
+
+That is the failure the question prevented. A wrong number in a report is cheap; a wrong number
+used to "correct" a right comment destroys the record. **The defence was asking why, not asking
+whether** — "is this authored or accidental" forced a re-derivation that "is this number right"
+would not have.
+
+*The assist forgives the timing of the move; it does not replace the move* is also the clearest
+statement of magnetism's design rule anywhere in this project.
+
+### §390.3 Instrument error eleven, caught by a clock
+
+The traversal lane's first two pre-check sweeps returned **0/480 for both states**, and it nearly
+reported that as the strong finding — *no envelope anywhere on the level satisfies the precondition*.
+Two stacked causes:
+
+- `afford()` memoises on `c._frame`, which only advances inside `update()`. The sweep never called
+  `update()`, so **every position got one cached affordance.**
+- `_bindCollision()` also only runs inside `update()`, so `c.col` was still `FLAT` — **the entire
+  sweep ran against a world with no colliders in it.**
+
+Same species as the missing `Terrain` (§382.1). **What caught it was not re-reading the logic:**
+
+> 0.5 s for 480 seeds against a ~37,000-call envelope each is about **33 ns per call**, which is not
+> a number a BVH query can produce.
+
+**An implausible runtime as the detection method** is new to this session's list and it is a good
+one — it catches a class of error that inspection does not, because the code reads correctly and
+only the physics of the machine says otherwise. The landed `feasibleFrom()` was never affected: it
+settles 6 frames first, which is exactly what binds collision.
+
+### §390.4 Both lanes now rank their own work last
+
+Asked what they would look at next with nothing assigned, both put their most heavily instrumented
+work at the bottom. The world lane's list:
+
+```
+1  nothing in src/world/ has ever been rendered — the largest open risk, and not a code change
+2  six of fourteen files no instrument has touched: Terrain, Vegetation, Water, Decals,
+   Statues, KayKit — Terrain came up once, incidentally, and only because its absence broke
+   someone else's harness
+3  the magnetism registry's other twelve targets, proven by an offline ballistic instrument
+   plus one controller test — the same class of evidence that said 9/9 three times
+4  api.route's eleven waypoints are a literal nothing checks against the built geometry;
+   §8.1's hall-front cornice coordinate is already stale by 1.76 m in y, found by accident
+5  the handhold ladder and pylon ascent — measured to death, driven, cross-checked
+6  the clue bottles and the rope — proven on-route and boardable, two instrument corrections each
+```
+
+> **The vertical route is in good shape and is the most heavily instrumented thing in the level; the
+> risk has moved to the parts nobody assigned anyone.**
+
+That is the second lane in two rounds to rank its own headline work last, unprompted, and it points
+at the same conclusion the FX lane reached from the other side: **what has been examined is fine, and
+the exposure is in what nobody looked at.**
