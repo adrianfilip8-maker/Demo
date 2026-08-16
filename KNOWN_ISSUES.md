@@ -31445,6 +31445,30 @@ lanes' edits are still sitting there afterwards exactly as they were; and the `g
 step is a real check rather than a formality — it is where you find out your edit script matched
 an anchor inside somebody else's section.
 
+**Addendum — a near-miss that this procedure does not yet prevent, and the two lines that do.**
+
+Following the recipe above *still* lost two sections, and it was caught by a coordinator's review
+rather than by the `git diff --cached` step that exists to catch it. The mechanism is worth the
+lines because it is not specific to this file:
+
+- The edit was applied to the base by **line number** — `base[:31437]` — computed against a copy
+  pulled minutes earlier. Two lanes appended in that window (§407.2b, §411.12) and HEAD moved
+  **twice** mid-procedure, so an index computed against the old base silently addressed a different
+  range of the new one. The `--cached` diff did show the foreign deletions; they were skimmed past
+  while reading for one's own lines, which is how a verification step degrades into a formality.
+- **Locate your own section by its HEADER, never by line number.** Find its `## §NNN` line, scan
+  forward to the next `## §`, splice that range. That is immune to insertions above *or* below,
+  which is the only kind of change a concurrent lane makes here.
+- **Re-read the base from HEAD immediately before `hash-object`, and re-check `git rev-parse HEAD`
+  immediately before `git commit`.** The gap between those two is the whole exposure.
+
+And one step missing from the recipe entirely: **afterwards, restore the working copy.**
+`update-index` deliberately does not touch the working tree, so once the commit lands, the file on
+disk is still your pre-merge buffer — now missing your own commit *and* every other lane's. The
+next lane to take a base from the working tree inherits that, and the loss propagates instead of
+ending. `git checkout -- KNOWN_ISSUES.md` after the commit, having first checked `git diff` shows
+only deletions of your own superseded text.
+
 ### §411.14 The whiskers are not firing on empty space. Nothing is firing — the boom is still climbing back.
 
 §411.11 asked why the boom is cut where a ray along it hits nothing, and answered "the whiskers".
@@ -32040,6 +32064,18 @@ timing I took while diagnosing was contended. `uptime` before concluding anythin
 through `_sweep` and missed the one that does not: the method of enumeration had a blind spot
 shaped exactly like the caller it missed. The static scan has no such shape — it looks for the
 *call*, not for the caller's habits — and it is four lines.
+
+And the sharper form, which is the one that generalises past this function:
+
+> **A census that enumerates by memory of an abstraction misses exactly the callers that bypass
+> it.**
+
+That is not bad luck, it is entailment. The wrapper is the thing you remember, because remembering
+it is what the wrapper is *for*; so the caller you lose is the one that went around it — and a
+caller goes around a wrapper precisely when it wants none of what the wrapper provides. The set you
+forget and the set that opted out of your invariants are **the same set**. `_calibrate` bypassed
+`_sweep`, so it did not get `_sweep`'s `toi` defaulting, its `softFail`, or its origin
+compensation; that is why it was worth finding, and it is the same reason it was invisible.
 
 The same correction applies to the measurement. "0 in 305" was a sample, reported as a census.
 Publishing `sweepHit` turned the same question into a count over 21,595 sweeps for the cost of one
