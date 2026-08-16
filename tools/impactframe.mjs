@@ -492,7 +492,16 @@ if (args.includes('--search')) {
   console.log(assertAzimuthFree());
 
   const t0 = Date.now();
+  /* ── SURVIVORS ARE COUNTED IN FULL AND RETAINED IN PART ─────────────────────────────────
+     The first run of this sweep accumulated every clean camera. At the rate the progress lines
+     showed — 374 clean out of 384 occlusion tests — the domain yields tens of thousands, each an
+     object holding two arrays, and the process died without printing a summary. So the COUNT is
+     exact and the RETENTION is bounded: `keep` holds the best `KEEP` by rank, and the tally
+     below reports the true total. A ranked shortlist is all a re-stage needs; a full dump of
+     equivalent cameras is not evidence of anything. */
+  const KEEP = 200;
   const survivors = [];
+  let cleanTotal = 0, worstKept = -Infinity;
   let geomCells = 0, geomPass = 0, azTested = 0;
   const faultTally = new Map();
   const tally = (fs) => { for (const f of fs) {
@@ -508,7 +517,7 @@ if (args.includes('--search')) {
         geomCells++;
         if (geomCells % 500 === 0) {
           console.log(`   … ${geomCells} cells · ${geomPass} geometric survivors · ${azTested} occlusion tests`
-            + ` · ${survivors.length} clean · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+            + ` · ${cleanTotal} clean · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
         }
         const base = {
           pos: [AT[0] + d, hh, AT[2]], target: [AT[0], 0.6, AT[2]], fov, tod: 0.78, player: P,
@@ -525,7 +534,17 @@ if (args.includes('--search')) {
           };
           azTested++;
           const r = score('', cand, { quiet: true });
-          if (!r.faults.length) survivors.push({ ...cand, d, hh, azDeg, ...r });
+          if (!r.faults.length) {
+            cleanTotal++;
+            if (survivors.length < KEEP || r.rank > worstKept) {
+              survivors.push({ pos: cand.pos, fov, d, hh, azDeg, rank: r.rank, flat: r.flat, slyH: r.slyH });
+              if (survivors.length > KEEP) {
+                survivors.sort((x, y) => y.rank - x.rank);
+                survivors.length = KEEP;
+                worstKept = survivors[KEEP - 1].rank;
+              }
+            }
+          }
           else tally(r.faults);
         }
       }
@@ -533,7 +552,7 @@ if (args.includes('--search')) {
   }
   survivors.sort((x, y) => y.rank - x.rank);
   console.log(`\n══ SEARCH · ${geomCells} (d,h,fov) cells -> ${geomPass} geometric survivors`
-    + ` x ${AZ_N} azimuths = ${azTested} occlusion tests · ${survivors.length} clean`
+    + ` x ${AZ_N} azimuths = ${azTested} occlusion tests · ${cleanTotal} clean`
     + ` · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   console.log(`   domain: distance 5-22 m by 0.5, height 1-12 m by 0.25, ${AZ_N} azimuths, 6 lenses,`
     + ` target fixed at the contact`);
@@ -542,7 +561,7 @@ if (args.includes('--search')) {
   for (const [f, k] of [...faultTally.entries()].sort((x, y) => y[1] - x[1]).slice(0, 12)) {
     console.log(`     ${String(k).padStart(7)}  ${f}`);
   }
-  console.log(`\n   top survivors by rank (ellipse ratio x figure height):`);
+  console.log(`\n   top survivors by rank (ellipse ratio x figure height) — ${cleanTotal} clean, ${survivors.length} retained:`);
   for (const s of survivors.slice(0, 15)) {
     console.log(`     rank ${s.rank.toFixed(1).padStart(6)} · d ${String(s.d).padStart(4)} m h ${String(s.hh).padStart(5)} m az ${String(s.azDeg).padStart(5)}° fov ${String(s.fov).padStart(2)}`
       + ` · ellipse ${s.flat.toFixed(3)} · sly ${s.slyH.toFixed(0)} px`
@@ -556,13 +575,13 @@ if (args.includes('--search')) {
       domain: 'd 5-22 by 0.5, h 1-12 by 0.25, az 0-360 by 7.5, fov [26,30,34,38,44,50]',
       bars: { edge: EDGE, figureSlop: FIGURE_PLACEMENT_SLOP, ellipse: 0.22, slyPx: 110 },
       extents: { SLY_SLAM, DUST, RING_R_DRAWN, RING_R_DECLARED, SCUFF_R },
-      survivors: survivors.length,
+      survivorsTotal: cleanTotal, retained: survivors.length,
       rejections: [...faultTally.entries()].sort((x, y) => y[1] - x[1]),
       top: survivors.slice(0, 40),
     }, null, 2));
     console.log(`\n   -> progress/records/impact-search.json`);
   } catch (e) { console.log(`   (could not persist: ${e.message})`); }
-  process.exit(survivors.length ? 0 : 1);
+  process.exit(cleanTotal ? 0 : 1);
 }
 
 /**

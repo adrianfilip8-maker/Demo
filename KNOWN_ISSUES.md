@@ -31318,7 +31318,16 @@ geometry rather than the boom length. Left for the camera lane with the mechanis
 
 ---
 
-## §411 — The fourth instance, and the first where the vacuity was in the SAMPLING
+## §414 — The fourth instance, and the first where the vacuity was in the SAMPLING
+
+> **Renumbered from §411.** The world lane pushed its own §411 first (`e1d9e71`); mine landed
+> second (`489c484`) and collides. The rule this settles, since it is the second collision this
+> session (§394/§395 was the first): **on a shared append-only ledger with concurrent lanes, the
+> section number is claimed by the first PUSH, not by the first draft, and the later author
+> renumbers.** Renumbering the earlier one would invalidate citations that were already correct
+> when they were written. Commit messages `489c484`, `ecdd0ff`, `b062024` and `2fdfbfe` cite this
+> as §411 and cannot be corrected (§314, never rewrite pushed history) — they mean §414. No code
+> cites it, which is why moving mine is the cheap side.
 
 §407 (a bar no camera could pass), §408.3 (a bar no frame could fail, entailed by its neighbour),
 §409 (a predicate that could not say "no" on one path). Three defects, three lanes, one shape: a
