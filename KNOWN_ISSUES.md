@@ -27374,3 +27374,100 @@ vocabulary was correctly invisible. Wrong for the two continuous emitters — `r
 live sprites and `skid_scuff` 27.5 at steady state. They are not single-frame illegible, they are
 illegible **unstaged**, for exactly the reason braziers were dark before `_prerollFires` existed.
 `_prerollContinuous()` is commissioned.
+
+---
+
+## §371 — The instrument is wrong more often than the engine is
+
+Four instrument errors in one session, three of them producing a confident false finding before
+they were caught. Recording them together because the pattern is now the session's dominant one and
+it is more useful than any of them individually.
+
+```
+1. Quaternion.angleTo reported 4.2e-8 rad of drift on a camera the rig provably never touched —
+   2*acos(|dot|) on a unit quaternion against ITSELF. §366.6.
+2. A framing bar of 34% of frame width, invented on the spot, failed a good candidate and sent me
+   restaging in the wrong direction. The shipped median is 11.1%. §368.3.
+3. A traversal harness resolved `capsuleSweep` as point-in-solid instead of swept, so the 0.76 m
+   step-down probe after a mantle — which starts on the lid and ends inside the block — read as
+   "you are inside the +z face" and shoved Sly sideways. Produced a perfect, reproducible
+   mantle -> fall -> re-grab loop that was chased as a `LedgeClimb` bug.
+4. I grouped handholds by exact x to count ladders. The face is BATTERED, so every rung has a
+   different x: 23 "ladders" instead of 2, and a separation of 2.116 m instead of 3.598 m.
+```
+
+Every one of them was more convincing than the truth. (3) is the sharpest: the loop was perfectly
+reproducible and the engine was fine. The lane found it by refusing to accept a bug it could not
+explain — which is the only defence there is.
+
+This sits alongside the earlier family — peak-for-area (§346), ramp-for-`sh` (§342.2),
+near-black-count-for-edge-strength, and a negative grep declaring a tail spring chain absent that
+had been there all along (twice). **The measurement being wrong is the base case, not the
+exception.**
+
+### §371.1 Traversal round 3 — hardening, and one rule that is deliberately inert
+
+`69518ac`. All three numbers re-derived here before the work was described as done:
+
+```
+lateral budget   sqrt(reach 0.685^2 - standoff 0.39^2) = 0.5631 m   lane said 0.563   agree
+summit clear     TOPY+0.667 over a 0.40 m lip          = 0.2670 m   lane said 0.267   agree
+ladder gap       largest x gap between the two niches  = 3.597 m    lane said 3.598   agree
+```
+
+**Two ladders on one face cannot both be in reach, and it is geometry rather than policy.** `enter`
+parks the hand `radius + 0.05` = 0.39 m off the face plane, leaving only 0.563 m of the 0.685 m
+reach sphere for lateral offset. Two ladders further apart than that can never both be reachable;
+two closer are one ladder. The shipped pair are 3.598 m apart — impossible by a factor of 6.4.
+
+The lane still added the line-continuity preference asked for, and then said plainly that it is
+**"correct and provably inert today"** rather than implying it was doing work. That is the right
+way to report a rule that cannot currently fire.
+
+Genuinely fixed: a **moving rec** was undefined — `update` pins velocity to zero and never calls
+`move()`, so a rec sliding away left Sly frozen holding nothing. A hand-to-hold drift check now
+releases him in 1 frame at 2 m of displacement.
+
+**The summit is a landing**, measured against the shipped 25.20 → 25.6 relationship: a launch
+carries the feet to `TOPY − hangReach + apex` = TOPY + 0.667, clearing a 0.40 m lip by 0.267 m.
+Passed to WORLD as an authoring contract: keep a deck within **0.667 m** of the last rung and
+arrival is a plain landing; author it higher and it becomes a `LedgeHang` catch, which works but
+only inside the one-frame window where `velocity.y` falls under that state's 1.5 gate.
+
+### §371.2 The rope — refused, and the refusal is the finding
+
+`rope.gd` moves no player at all: it lerps a Path3D's control points between taut and sagged sets.
+It is a **deformer**, not a state. `auto_rope_path.gd`'s traverse is a flat `5.0 m/s` while the
+stick is held, with direction taken from the player's **facing**.
+
+Ours takes direction from **momentum** and carries a term theirs does not have —
+`advance()`'s `speed += gravity · tangent.y · dt`. Run on a 21.07 m catenary with 3 m of sag, the
+**shipped rail already is a rope**: mounts at 9.66 m/s, accelerates to **14.07 m/s** at the bottom,
+is slowed to **6.54 m/s** climbing out, and dips to exactly the low point.
+
+The only difference is a constant. `RailSlide.enter` calls `mount(c, a, TUNE.railSpeed)`, forcing
+every mount to ≥ 9.5 m/s — exactly enough to crest that sag every time. Without the floor the same
+rope behaves like one: settles into the sag, **swings (1 reversal)**, stays on for 600/600 frames,
+and the `railSlide ↔ railWalk` handoff tracks the swing unaided.
+
+**A rope is one line — the mount floor coming from the affordance rather than from `TUNE.railSpeed`
+— and nothing else.** The lane did not land it, because no rope is authored anywhere and shipping a
+knob nothing sets is the exact mirror of the `handholds` situation it had just spent two rounds
+fixing from the other end. The authoring shape is routed to WORLD: a `rail` proxy with a catenary
+spline plus a per-rec mount speed.
+
+Two things separated out correctly: sag deformation is **purely visual** and belongs to FX/world,
+and an under-slung hand-over-hand rope would need a clip `Clips.js` does not have (`rail_walk` and
+`balance_idle` only) — **a clip gap, not a mechanic gap**.
+
+### §371.3 Commissioned — prove every state can be left
+
+Four states with no exit were found by hand, out of **38 in `buildMoveset()`**, and only on the
+ones the reference happened to have a counterpart for. The other 34 have never been asked.
+
+The generalisation is now commissioned: drive every state headlessly and answer, for each, what
+exits it, under what input, in how many frames. Two shapes to call out if they appear — a state
+reachable only from a state that cannot be left (dead in a way no grep finds), and a state whose
+only exit is `jump`, which the hook and both swings all had and which reads as fine right up until
+the player is holding something that swallows jump. An exit that exists but is absurd is a finding,
+not a pass.
