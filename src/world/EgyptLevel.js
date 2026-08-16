@@ -246,12 +246,28 @@ const NOTCH = {
   /** How far the corbel stands proud of the wall's own face plane, m. */
   out: 0.17,
   width: 0.74,
-  /** `Controller.TUNE.height` 1.80 × 0.55 — the height `probeWall` fires its ray from, so a
-   *  target's feet sit this far below the rung its hands are on. Hardcoded rather than imported
-   *  for the same reason `MAG.catchJump` is: `src/world/` does not depend on `src/player/`. */
-  chest: 0.99,
-  /** Capsule standoff from the face. `radius` 0.34 + `wallProbe` 0.40 = 0.74 m of probe reach,
-   *  of which `radius` is spent not being inside the stone — this is the middle of that window. */
+  /**
+   * How far below its rung the acquisition point puts Sly's FEET: `Controller.TUNE.hangReach`,
+   * so his hand lands exactly on the hold.
+   *
+   * This was 0.99 — `height × 0.55`, the height `probeWall` fires its ray from — and that was
+   * wrong for a reason worth keeping. It put the hand 0.57 m ABOVE the rung, and `WallClimb
+   * .find()` measures hold-to-HAND against `reach()` = `radius + jumpV0·wallJumpUp/30` =
+   * 0.6847 m. hypot(0.55, 0.57) = **0.7921 m**, so `find()` returned null at the one point the
+   * whole route is entered from and the climb state could not fire. Measured, not reasoned:
+   * the real `Controller` flown at the real level took **0 of 23 rungs**.
+   */
+  drop: 1.56,
+  /**
+   * Standoff from the face plane, and it is pinned between three inequalities rather than
+   * chosen. Upper bound `WallClimb.reach()` 0.6847 (the hand must be able to find the hold).
+   * Lower bound is NOT `radius` 0.34: the face is battered, so it leans out toward Sly as it
+   * descends, and the binding point is his feet a whole `hangReach` below the hand — the capsule
+   * is only clear of the stone at `radius + batter × hangReach` = 0.34 + 0.105 × 1.56 =
+   * **0.5038 m**. 0.55 sits in a window 0.18 m wide, clearing the wall by 0.046 and the reach by
+   * 0.135. `probeWall`, firing 0.57 m below the rung where the face is 0.060 m nearer, sees
+   * 0.490 m against its 0.74 m reach.
+   */
   standoff: 0.55,
 };
 
@@ -520,7 +536,7 @@ function swingTarget(A, id, x, y, z, volume = MAG.volume) {
 function notchTarget(A, id, mesh, hold) {
   const pt = new THREE.Vector3(
     hold.point.x,
-    hold.point.y - NOTCH.chest,
+    hold.point.y - NOTCH.drop,
     hold.point.z + Math.sign(hold.normal.z || 1) * NOTCH.standoff,
   );
   /* The collider carries the same point the target does — `tests/level.test.mjs` asserts the
@@ -544,7 +560,20 @@ function notchTarget(A, id, mesh, hold) {
     volume: MAG.volume,
     catch: MAG.catchJump,
     group: 'notch',
-    arrive: 'wallCling',
+    /**
+     * `wallClimb`, and it was `wallCling` until the loop was walked with the real controller.
+     *
+     * `wallCling` was the only wall state that existed when this was authored; `WallClimb`
+     * (priority 79) landed afterwards in `4aaedeb`. Handing off to the cling is not merely
+     * suboptimal, it **terminates the route**: `WallCling.update`'s only jump exit is
+     * `'wallJump'`, and `WallJump.enter` throws Sly off the face at `wallJumpOut` 7.2 m/s — 3.1 m
+     * clear of the wall by its own apex — where no hold is within `WallClimb.find()`'s 0.685 m.
+     * Flown for 1400 frames with the stick held into the face and jump mashed, the shipped
+     * chain was `toTarget → wallCling → wallJump → doubleJump → fall`, taking **0 of 23 rungs**.
+     * `WallClimb`'s jump goes straight UP the face instead (`velocity.set(-n·0.9, 10.34, -n·0.9)`
+     * — a light press *into* the stone), which is what makes the ladder a ladder.
+     */
+    arrive: 'wallClimb',
     mesh,
     userData: { kind: 'notch', rung: hold.rung, hold: hold.id },
   });

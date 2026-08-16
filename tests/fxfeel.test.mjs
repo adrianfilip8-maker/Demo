@@ -507,7 +507,7 @@ test('the new dust emitters stay inside the palette', () => {
 
 import fs from 'node:fs';
 import * as THREE from 'three';
-import { pinnedAffordance, Particles } from '../src/fx/Particles.js';
+import { pinnedAffordance, Particles, STAGE_LATENCY } from '../src/fx/Particles.js';
 
 const PARTICLES_SRC = fs.readFileSync(new URL('../src/fx/Particles.js', import.meta.url), 'utf8');
 
@@ -739,7 +739,9 @@ test('T8: the alert shot stages the top rung, and the ladder contrast when there
         get: (k) => (k === 'movement' ? { position: V(0, 0, 0) }
           : k === 'guards' && guards ? { list: guards } : null),
       },
-      _emit: (n, p) => calls.push({ n, x: +p.x.toFixed(3), y: +p.y.toFixed(3), z: +p.z.toFixed(3) }),
+      _emit: (n, p, opt) => calls.push({
+        n, x: +p.x.toFixed(3), y: +p.y.toFixed(3), z: +p.z.toFixed(3), age: opt?.age ?? 0,
+      }),
     };
     const out = Particles.prototype._stageAlert.call(self);
     return { calls, out };
@@ -770,11 +772,69 @@ test('T8: the alert shot stages the top rung, and the ladder contrast when there
       `"${c.n}" was emitted at (0,1,0) — the position scratch was clobbered by _emit`);
   }
 
-  /* The burst train: the capture latency after Debug.setShot's second rebase is not something
-     this pass could measure (§186 held the lock), so each rung is emitted as several back-dated
-     ticks and is readable whichever latency is real. */
-  const spots = two.calls.filter((c) => c.n === 'alert_spot');
-  assert.ok(spots.length >= 3, `top rung staged as ${spots.length} tick(s); a single tick bets the frame on one latency`);
+  /* ── The ages, re-derived here rather than restated ────────────────────────────────────
+     The capture latency is settled: `Debug.js` runs applyShot → step(14) → applyShot → step(3)
+     → capture, so the operative distance is 3 frames after the SECOND staging — `STAGE_LATENCY`.
+     But there are TWO capture paths: the shipping one at dt = 1/60 (+STAGE_LATENCY) and the A/B
+     one §195 requires to pass dt = 0 (+0). The staging cannot tell them apart, so each age must
+     be judged on the WORSE of the two, and this recomputes that from the shader's own curves. */
+  const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const ink = (d, u) => {
+    const sz = d.size[0] + (d.size[1] - d.size[0]) * Math.pow(u, d.sizeExp);
+    return sz * sz * meanOf(d.alpha) * ss(0, Math.max(d.fadeIn, 1e-3), u) * Math.pow(Math.max(1 - u, 0), d.fadeOut);
+  };
+  const worstFrac = (name, age) => {
+    const d = EMITTERS[name], life = meanOf(d.life);
+    let best = 0;
+    for (let u = 0; u < 1; u += 0.0005) best = Math.max(best, ink(d, u));
+    return Math.min(ink(d, (age + STAGE_LATENCY) / life), ink(d, age / life)) / best;
+  };
+
+  /* One tick per emitter per staging. The burst train was a hedge against not knowing the
+     latency; knowing it, three ticks is just three times the particles. */
+  for (const n of ['alert_spot', 'alert_spot_spark', 'alert_search']) {
+    const ticks = two.calls.filter((c) => c.n === n);
+    assert.equal(ticks.length, 1, `${n} staged as ${ticks.length} ticks; the latency is known, one is enough`);
+  }
+
+  let aged = 0;
+  for (const c of two.calls) {
+    const d = EMITTERS[c.n];
+    /* `_emit` drops any particle whose sampled life is <= age, so an age past the SHORTEST life
+       silently thins the population instead of aging it. */
+    assert.ok(c.age < d.life[0],
+      `${c.n} staged at age ${c.age}s, past its shortest life ${d.life[0]}s — _emit would drop part of the burst`);
+
+    /* **The arm that matters, and it must fire.** At age exactly 0 a sprite whose fadeIn is a
+       fraction of life has `smoothstep(0, fadeIn, 0) === 0` — alpha zero, nothing rendered — on
+       the dt = 0 path where the clock never advances. `alert_spot_spark` is the case: staging it
+       at 0 would put an additive spark in every A/B capture that draws literally nothing. */
+    assert.ok(worstFrac(c.n, 0) < worstFrac(c.n, c.age) || c.age === 0,
+      `${c.n} gains nothing from its staged age — check the derivation`);
+    if (d.fadeIn > 0) {
+      assert.ok(c.age > 0,
+        `${c.n} is staged at age 0 and has a fade-in, so it renders NOTHING on the dt = 0 A/B path`);
+    }
+    aged++;
+  }
+  assert.equal(aged, two.calls.length, 'did not check every staged emission');
+
+  /* The puffs must land near their own optimum on BOTH paths; the spark provably cannot (its
+     ink peaks 4 ms after birth and the live path is already 50 ms past it), so it is held to
+     the weaker bar of "visible", not "optimal". */
+  for (const n of ['alert_spot', 'alert_search']) {
+    const c = two.calls.find((x) => x.n === n);
+    const f = worstFrac(n, c.age);
+    console.log(`  T8: ${n} age ${c.age}s -> ${(f * 100).toFixed(1)}% of peak ink, worst of both capture paths`);
+    assert.ok(f > 0.9, `${n} at age ${c.age}s is only ${(f * 100).toFixed(1)}% of its peak on the worse path`);
+  }
+  const sp = two.calls.find((x) => x.n === 'alert_spot_spark');
+  const spf = worstFrac('alert_spot_spark', sp.age);
+  console.log(`  T8: alert_spot_spark age ${sp.age}s -> ${(spf * 100).toFixed(1)}% (its peak is 4 ms after birth; unreachable at a 50 ms latency)`);
+  assert.ok(spf > 0.25, `the staged spark is at ${(spf * 100).toFixed(1)}% of peak — too dim to be the ladder's only light`);
+  /* CALIBRATION: the bar must reject the naive answer. */
+  assert.ok(worstFrac('alert_spot_spark', 0) < 0.25,
+    'calibration failed: age 0 passes the spark visibility bar, so the bar cannot catch the dt=0 blank');
 
   /* One guard → top rung only. Two marks with one guard under them would be a lie about the
      scene, and this is the arm that proves the second rung is conditional rather than always-on. */
@@ -803,4 +863,63 @@ test('T8: an unknown shot name still stages nothing extra', () => {
   }
   assert.ok(!/name === 'alert'[\s\S]*name === 'combat'/.test(body),
     'the alert branch was inserted before combat, changing an existing shot\'s staging order');
+});
+
+test('T7: the smash mark is probed onto a real surface, never guessed onto one', () => {
+  /* A decal is painted ON something. `smash()` is handed a break POINT, in the air at the
+     prop's middle, so defaulting the plane to UP puts a horizontal disc in mid-air the moment a
+     prop breaks against a wall — which reads as a renderer bug, not as an effect. */
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const run = (opts, collision) => {
+    const decals = [];
+    const warns = [];
+    Particles.prototype.smash.call({
+      engine: { get: (k) => (k === 'collision' ? collision : null), warn: (m) => warns.push(m) },
+      _emit: () => {},
+      decal: (n, p, nrm, o) => decals.push({
+        n, p: [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)],
+        nrm: [+nrm.x.toFixed(2), +nrm.y.toFixed(2), +nrm.z.toFixed(2)], size: o.size,
+      }),
+    }, V(0, 1.4, 0), opts);
+    return { decals, warns };
+  };
+  const floorAt = (y, nrm = V(0, 1, 0)) => ({
+    raycast: () => ({ hit: true, distance: 1.4 - y, point: V(0, y, 0), normal: nrm }),
+  });
+  const nothingBelow = { raycast: () => ({ hit: false }) };
+
+  /* 1. Caller names the plane -> it wins, at the break point. WORLD knows which face took it. */
+  const named = run({ material: 'stone', normal: V(1, 0, 0) }, floorAt(0));
+  assert.equal(named.decals.length, 1, 'a named normal did not produce a mark');
+  assert.deepEqual(named.decals[0].nrm, [1, 0, 0], 'the caller\'s normal was overridden by the probe');
+  assert.deepEqual(named.decals[0].p, [0, 1.4, 0], 'a named normal should mark at the break point');
+
+  /* 2. No normal -> probe down, and take the surface's OWN position and tilt. A plinth top and
+        a sloped dune both come out right; UP at the break height would not. */
+  const probed = run({ material: 'stone' }, floorAt(0.35, V(0, 0.94, 0.34)));
+  assert.equal(probed.decals.length, 1, 'the probe found a surface and drew no mark');
+  assert.deepEqual(probed.decals[0].p, [0, 0.35, 0], 'the mark was not moved onto the surface it found');
+  assert.deepEqual(probed.decals[0].nrm, [0, 0.94, 0.34], 'the mark did not take the surface tilt');
+
+  /* 3. Nothing below -> NO mark, and one warning. This is the wall case, and the arm that
+        proves the probe is not just decorating the old guess: a mid-air disc must not appear. */
+  const air = run({ material: 'stone' }, nothingBelow);
+  assert.equal(air.decals.length, 0, 'drew a mark with no surface under it — the mid-air disc is back');
+  assert.equal(air.warns.length, 1, `expected exactly one warning, got ${air.warns.length}`);
+  assert.match(air.warns[0], /normal/, 'the warning does not tell the caller what to pass');
+
+  /* 4. …but only ONCE per session, or a shelf of jars broken over a ledge floods the log. */
+  const self = {
+    engine: { get: () => nothingBelow, warn() { this.n = (this.n || 0) + 1; } },
+    _emit: () => {}, decal: () => {},
+  };
+  for (let i = 0; i < 5; i++) Particles.prototype.smash.call(self, V(0, 1.4, 0), { material: 'stone' });
+  assert.equal(self.engine.n, 1, `warned ${self.engine.n} times across 5 breaks; it must warn once`);
+
+  /* 5. No COLLISION at all (headless, early boot) -> fall back to the floor rather than dropping
+        the mark. That is a world with nothing to probe, not a break in mid-air. */
+  const headless = run({ material: 'stone' }, null);
+  assert.equal(headless.decals.length, 1, 'dropped the mark with no collision module to ask');
+  assert.deepEqual(headless.decals[0].nrm, [0, 1, 0], 'headless fallback did not use the floor plane');
+  assert.equal(headless.warns.length, 0, 'warned about a missing normal when there was nothing to probe');
 });

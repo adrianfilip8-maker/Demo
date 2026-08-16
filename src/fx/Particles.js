@@ -458,6 +458,12 @@ export const TUNE = {
   sparkleNearBoost: 12,     // metres at which a marker starts brightening for the player
   sparkleTags: ['hook', 'spire', 'rail', 'pole'],
 
+  /* How far below a break `smash()` looks for the surface to paint its mark on when the caller
+     names no normal. 2.5 m is taller than anything this vocabulary is for — a canopic jar is
+     0.5 m and a stele about 2 — so a break with no surface within it was not standing on one,
+     and gets no decal rather than one floating at the break height. */
+  smashProbe: 2.5,
+
   /* crest streaming */
   crestProbeEvery: 17,      // frames between terrain crest probes
   crestRings: [26, 58],
@@ -1517,6 +1523,55 @@ const _inh = new THREE.Vector3();
    every particle at (0,1,0) — and `_stageAlert` emits six times from one position, which is
    exactly the shape that trap is waiting for. §237, one file over. */
 const _stg = new THREE.Vector3();
+
+/**
+ * The `alert` shot's two marks, and the ages that make them land at capture.
+ *
+ * ── The latency, settled ──────────────────────────────────────────────────────────────────
+ * `Debug.js` runs `applyShot` → `step(SETTLE_FRAMES=14)` → `applyShot` → `step(SETTLE_FRAMES_2=3)`
+ * → capture, and `Shots.js:564` is the only `emit('shot')`. So **`_stageShot` runs TWICE per
+ * capture**, and the operative distance is the 3 frames after the *second* one — 0.0500 s at the
+ * default `dt = 1/60`. The 17-frame / 0.28 s figure in `_prerollFires`' note is the distance from
+ * the FIRST staging and is not a valid particle age for anything `_stageShot` emits, because
+ * `_stageShot` rebases the clock (`this._t0 = engine.time; this._t = 0`) on every call — the
+ * second invocation resets the basis the first one's particles were aging on.
+ *
+ * ── Why these are not simply 0.05 ─────────────────────────────────────────────────────────
+ * `age` back-dates birth, so a particle emitted at `age = A` is `A + latency` old in the frame.
+ * The right A is the one that puts the sprite at its most legible, and legibility here is the
+ * shader's own `sz(u)^2 * alpha(u)` (PARTICLE_VERT: `sz = mix(size0, size1, u^sizeExp)`,
+ * `alpha = peak * smoothstep(0, fadeIn, u) * (1-u)^fadeOut`) — projected ink, the same quantity
+ * `fxfeel` T3 scores emitters on, evaluated at an instant instead of at birth.
+ *
+ * ── And why they are a minimax, not a maximum ─────────────────────────────────────────────
+ * There are **two** capture paths and the staging cannot tell them apart: the shipping one at
+ * `dt = 1/60` (+0.0500 s) and the A/B one that §195 requires to pass `dt = 0` (+0.0000 s, the
+ * clock stands still while the frames still render). So each age below maximises the WORSE of
+ * the two, not the better. Swept at 1 ms over the shader curves:
+ *
+ *   alert_spot        age 0.212 s → 99.6% of its own peak ink on BOTH paths
+ *   alert_search      age 0.182 s → 99.4% on both
+ *   alert_spot_spark  age 0.002 s → 44.4% worst case (55.3% at dt=0)
+ *
+ * The spark is the one that cannot be fixed by aging: its ink peaks 4 ms after birth (size ramps
+ * 0.09 → 0.02 m and `fadeIn` is 2% of a 0.19 s life), so a 50 ms latency is already past it and
+ * no age recovers that. What the 2 ms buys is the thing that matters — **at `age = 0` it is
+ * literally invisible on the `dt = 0` path**, because `smoothstep(0, fadeIn, 0)` is exactly 0.
+ * A staged additive spark that renders nothing in every A/B run is §357.1 wearing a new hat, and
+ * it is what the obvious "just pass 0.05" answer would have shipped.
+ *
+ * NOT VERIFIED BY CAPTURE — §186. These are the shader's published curves evaluated in Node,
+ * not pixels, and `tests/fxfeel.test.mjs` T8 re-derives them from `EMITTERS` rather than
+ * restating the constants.
+ */
+/* Exported because `tests/fxfeel.test.mjs` T8 re-derives the three ages above from this plus
+   the emitter curves, rather than restating them. A constant nothing reads is the defect this
+   pass exists to remove; this one is the test's input. */
+export const STAGE_LATENCY = 3 / 60;
+const STAGE_RUNGS = [
+  { entry: ALERT_LADDER.chase, scale: 1.15, age: 0.212, sparkAge: 0.002 },
+  { entry: ALERT_LADDER.searching, scale: 1.0, age: 0.182, sparkAge: 0 },
+];
 const _col = new THREE.Color();
 const _viewM = new THREE.Matrix4();
 const _ndc = new THREE.Vector3();
@@ -1524,6 +1579,7 @@ const _ndc = new THREE.Vector3();
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const _size = new THREE.Vector2();
 const UP = new THREE.Vector3(0, 1, 0);
+const DOWN = new THREE.Vector3(0, -1, 0);
 
 const lin = (hex, out) => out.setHex(hex, THREE.SRGBColorSpace);
 
@@ -2579,13 +2635,55 @@ export class Particles {
     this._emit(R.dust, _v3, { dir: UP, scale: s * 0.9, color0: R.dustCol[0], color1: R.dustCol[1] });
     if (R.spark) this._emit(R.spark, _v3, { dir, scale: s * 0.8 });
 
-    /* The mark, on the surface it broke against rather than on the prop's own normal: a decal
-       floating at a jar's centre height is a decal on nothing. The caller's `normal` wins when
-       it has one (WORLD knows which face took the hit); otherwise the floor. */
-    this.decal(R.decal, _v3, opts.normal || UP, {
-      size: (R.decal === 'scorch' ? 1.1 : 1.9) * s,
-      alpha: R.decal === 'scorch' ? 0.55 : 0.4,
-    });
+    /* ── The mark, and the plane it lies in ────────────────────────────────────────────────
+       A decal is a thing painted ON a surface, and `smash()` is handed a break POINT, which is
+       in the air at the prop's middle. The first version defaulted the plane to `UP` when the
+       caller gave no normal, and that is wrong in a way a critic reads as a renderer bug: a
+       prop broken against a wall at chest height gets a horizontal disc hanging in mid-air.
+
+       So the default is probed, not assumed. COLLISION already answers this question — it is
+       the same move `_standoff` makes to recover the wall orientation PROPS drops — and its
+       raycast returns the hit `point` and `normal`, so the mark lands on the surface actually
+       under the break, tilted to match it. A plinth top, a stair tread and a sloped dune all
+       come out right, and none of them would from `UP` at the break height.
+
+       If nothing is below within `TUNE.smashProbe`, **no decal is drawn at all.** That is the
+       whole point of doing this defensively rather than loudly: a break in mid-air (over a
+       ledge, off a rope) genuinely has no surface to mark, and inventing one is worse than
+       omitting it — the debris and the puff still carry the event. The warning fires once per
+       session so a caller that never passes a normal AND always breaks props off the ground
+       finds out, without a break-per-frame log.
+
+       `r.point`/`r.normal` are read immediately: COLLISION's result is pooled and the next
+       raycast reuses it (`_standoff` records the same hazard). */
+    let plane = opts.normal || null;
+    let at = _v3;
+    if (!plane) {
+      const col = this.engine.get('collision');
+      const r = col?.raycast ? col.raycast(_v3, DOWN, TUNE.smashProbe) : null;
+      if (r?.hit) {
+        at = _v2.copy(r.point);
+        plane = r.normal.lengthSq() > 1e-8 ? r.normal : UP;
+      } else if (col?.raycast) {
+        if (!this._warnedSmashPlane) {
+          this._warnedSmashPlane = true;
+          this.engine.warn('fx: smash() found no surface within ' + TUNE.smashProbe + ' m below a '
+            + 'break and drew no mark. Pass `normal` when the prop breaks against a wall — a '
+            + 'decal needs a plane, and guessing one puts it in mid-air.');
+        }
+      } else {
+        /* No COLLISION at all (headless, early boot). Fall back to the floor rather than
+           dropping the mark: this is the world with no surfaces to ask about, not a break in
+           mid-air, and the old behaviour is the right one when there is nothing to probe. */
+        plane = UP;
+      }
+    }
+    if (plane) {
+      this.decal(R.decal, at, plane, {
+        size: (R.decal === 'scorch' ? 1.1 : 1.9) * s,
+        alpha: R.decal === 'scorch' ? 0.55 : 0.4,
+      });
+    }
     return true;
   }
 
@@ -3217,23 +3315,15 @@ export class Particles {
       return _stg.set(p.x + (i === 0 ? 1.6 : -1.9), p.y + 1.55, p.z + (i === 0 ? -2.4 : -3.1));
     };
 
-    const rungs = [
-      { entry: ALERT_LADDER.chase, scale: 1.15 },     // rung 3 — alert_spot + alert_spot_spark
-      { entry: ALERT_LADDER.searching, scale: 1.0 },  // rung 2 — alert_search, for the contrast
-    ];
-    for (let i = 0; i < rungs.length; i++) {
+    for (let i = 0; i < STAGE_RUNGS.length; i++) {
       /* Only stage the second rung when there is a second guard to hang it on. Two marks in
          mid-air with one guard under them would be a lie about the scene. */
       if (i === 1 && near.length < 2) break;
       const at = place(near[i], i);
       if (!at) break;
-      const { entry, scale } = rungs[i];
-      const TICKS = 3, SPAN = 0.36;
-      for (let k = 0; k < TICKS; k++) {
-        const age = (k / TICKS) * SPAN;
-        this._emit(entry.emitter, at, { dir: UP, scale, age });
-        if (entry.spark) this._emit(entry.spark, at, { dir: UP, scale, age });
-      }
+      const { entry, scale, age, sparkAge } = STAGE_RUNGS[i];
+      this._emit(entry.emitter, at, { dir: UP, scale, age });
+      if (entry.spark) this._emit(entry.spark, at, { dir: UP, scale, age: sparkAge });
       const rec = at.clone();
       if (i === 0) out.rung3 = rec; else out.rung2 = rec;
     }
