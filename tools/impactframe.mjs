@@ -65,7 +65,8 @@
  */
 import { SHOTS } from '../src/core/Shots.js';
 import { TUNE as FX_TUNE } from '../src/fx/Particles.js';
-import { RING_R_CROP, RING_R_DECLARED, summary as ringSummary } from './ringextent.mjs';
+import { RING_R_CROP, RING_R_DECLARED, ringPlaneY, RING_PLANE_LIFT, summary as ringSummary }
+  from './ringextent.mjs';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import {
   W, H, provenance, camFor, project, plateOf, discOf, margins, clear, assertOccluded,
@@ -265,9 +266,19 @@ function score(name, c, { quiet = false, stopEarly = false, skipClear = false } 
   const sly = plateOf(cam, px, py, pz, SLY_SLAM);
   const dust = plateOf(cam, px, py, pz, DUST);
   const scuff = discOf(cam, px, py + 0.02, pz, SCUFF_R, DISC_SEG);
-  const ring = discOf(cam, px, py + 0.06, pz, RING_R_DRAWN, DISC_SEG);
+  /* ── THE SIXTH TERM: THE RING IS NOT DRAWN ON THE PLANE IT IS STAGED ON ───────────────────
+     `_stageImpact` puts it at `p.y + 0.06`, and every consumer has projected it there. But
+     `PARTICLE_VERT` computes `p = aP0 + aV0 * dc`, and for PLANAR sprites `aV0` holds the plane
+     NORMAL — so with drag 0, `dc = age` and the ring is drawn `STAGED_AGE` metres along its own
+     normal. 0.148 m off the floor, not 0.06.
+
+     Registered as load-bearing rather than repaired: the `ring` batch ships SOFT, and the soft
+     term fades a sprite by its stand-off from the surface behind it, so the drift supplies 59%
+     of the ring's own stand-off. Removing it dims the largest sprite in the game by 2.50x at
+     every radius. That is a look decision, not a cleanup. See `ringextent.mjs`. */
+  const ring = discOf(cam, px, ringPlaneY(py), pz, RING_R_DRAWN, DISC_SEG);
   /* Display only — never gates. Computed only when it will be printed. */
-  const ringDecl = quiet ? null : discOf(cam, px, py + 0.06, pz, RING_R_DECLARED, DISC_SEG);
+  const ringDecl = quiet ? null : discOf(cam, px, ringPlaneY(py), pz, RING_R_DECLARED, DISC_SEG);
 
   const faults = [];
   if (!sly) faults.push('SLY BEHIND LENS');
@@ -300,7 +311,7 @@ function score(name, c, { quiet = false, stopEarly = false, skipClear = false } 
   if (skipClear) return { faults, rank: flat * slyH, flat, slyH };
 
   const slyClear = clear(cam, { x: px, y: py + 0.5, z: pz });
-  const ringClear = clear(cam, { x: px, y: py + 0.06, z: pz });
+  const ringClear = clear(cam, { x: px, y: ringPlaneY(py), z: pz });
   if (!slyClear) faults.push('SLY OCCLUDED by architecture');
   if (!ringClear) faults.push('RING OCCLUDED by architecture');
 
@@ -318,7 +329,7 @@ function score(name, c, { quiet = false, stopEarly = false, skipClear = false } 
     console.log(`\n── ${name}`);
     console.log(`   cam ${c.pos.map((v) => v.toFixed(2)).join(', ')} -> ${c.target.join(', ')} · fov ${c.fov} · tod ${c.tod}`);
     if (sly) console.log(`   sly    ${(sly.x1 - sly.x0).toFixed(0)} x ${slyH.toFixed(0)} px · margins l${ms.l.toFixed(0)} r${ms.r.toFixed(0)} t${ms.t.toFixed(0)} b${ms.b.toFixed(0)} · ${slyClear ? 'clear' : 'OCCLUDED'}   [measured plate; edge floor ${EDGE}+${FIGURE_PLACEMENT_SLOP} px]`);
-    if (ring) console.log(`   ring   ${(ring.x1 - ring.x0).toFixed(0)} x ${(ring.y1 - ring.y0).toFixed(0)} px · margins l${mr.l.toFixed(0)} r${mr.r.toFixed(0)} t${mr.t.toFixed(0)} b${mr.b.toFixed(0)} · ${ringClear ? 'clear' : 'OCCLUDED'}   [DRAWN r${RING_R_DRAWN.toFixed(2)}m; _stageImpact declares ${RING_R_DECLARED.toFixed(2)}m]`);
+    if (ring) console.log(`   ring   ${(ring.x1 - ring.x0).toFixed(0)} x ${(ring.y1 - ring.y0).toFixed(0)} px · margins l${mr.l.toFixed(0)} r${mr.r.toFixed(0)} t${mr.t.toFixed(0)} b${mr.b.toFixed(0)} · ${ringClear ? 'clear' : 'OCCLUDED'}   [DRAWN r${RING_R_DRAWN.toFixed(2)}m on plane y${ringPlaneY(py).toFixed(3)} (staged 0.06 + ${RING_PLANE_LIFT.toFixed(3)} normal drift); _stageImpact declares ${RING_R_DECLARED.toFixed(2)}m]`);
     if (scuff) console.log(`   scuff  ${(scuff.x1 - scuff.x0).toFixed(0)} x ${(scuff.y1 - scuff.y0).toFixed(0)} px · margins l${mk.l.toFixed(0)} r${mk.r.toFixed(0)} t${mk.t.toFixed(0)} b${mk.b.toFixed(0)}`);
     if (dust) console.log(`   dust   ${(dust.x1 - dust.x0).toFixed(0)} x ${(dust.y1 - dust.y0).toFixed(0)} px · margins l${md.l.toFixed(0)} r${md.r.toFixed(0)} t${md.t.toFixed(0)} b${md.b.toFixed(0)}   [measured plate]`);
     /* TIEBREAK, and it is a tiebreak rather than a bar — say which is which. The bars above
