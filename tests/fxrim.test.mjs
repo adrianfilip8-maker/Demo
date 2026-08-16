@@ -42,7 +42,7 @@ import { EMITTERS, ALERT_LADDER } from '../src/fx/Emitters.js';
 import { Particles, TUNE as FX_TUNE } from '../src/fx/Particles.js';
 import { TUNE as TOON_TUNE } from '../src/render/ToonMaterial.js';
 import { TUNE as POSTFX_TUNE } from '../src/render/PostFX.js';
-import { W, H, SLY, camFor, discOf, project, boxOf, overlapArea } from '../tools/framelib.mjs';
+import { W, H, SLY, camFor, discOf, project, boxOf, plateOf, overlapArea } from '../tools/framelib.mjs';
 import { inkAudit, buildOutlineShell } from '../src/render/Outline.js';
 import { BAND_R, bandOfPolyline, bandOfPixels, boundaryOf, stamp, countOf, density }
   from '../tools/fxrimlib.mjs';
@@ -251,62 +251,139 @@ test('T5: density is a fraction of the REGION, and ink outside it cannot raise t
     `boundaryOf returned ${edge.length} of ${countOf(blob)} pixels — that is the body, not its rim`);
 });
 
-/* ══════════════ T7 — the FIGURE SWALLOWED verdict rests on an upright-box proxy ══ */
+/* ══════════════ T7 — the FIGURE SWALLOWED bar was a predicate carrying no information ══ */
 
 /**
  * Sly's figure in the shipped `impact` frame, MEASURED.
  *
  * Read off `shots/fxrim2-impact/impact-{A-ship,S-nosly}.png` at src tree `2b06133ddf675387`:
- * the pixels that vanish when the character root is hidden, taken at the |dL| > 12 plateau.
- * Pinned rather than recomputed because recomputing needs the capture, and a test that skips
- * itself when an artefact is absent is a test that is usually absent. The plateau is the
- * evidence it is a boundary and not a threshold: 502..699 at cuts 12, 24 AND 48.
+ * the pixels that vanish when the character root is hidden. The plateau is the evidence it is a
+ * boundary and not a threshold — 502..699 at cuts 8, 12, 24, 32, 48 AND 64.
  *
- * Not a substitute for the capture — a recorded measurement with its provenance beside it,
- * exactly as this project records pre-registered numbers.
+ * Pinned rather than recomputed because recomputing needs the capture, and a test that skips
+ * itself when an artefact is absent is a test that is usually absent.
  */
 const MEASURED_FIGURE = { x0: 502, x1: 699, y0: 303, y1: 498 };
 
-test('T7: `impact` passes FIGURE SWALLOWED on the proxy box and fails it on the real figure', () => {
-  /* `boxOf` projects an upright 0.62 x 1.80 m box. `dive_impact` is a crouched, sprawling slam,
-     so the proxy is 83 px too narrow and 54 px too tall — and FIGURE SWALLOWED divides the ring
-     overlap by the subject's own box AREA, so it inherits that error whole.
+/** The quad `dive_ring` actually draws (§405). `_stageImpact` returns 1.50 m; this is 2.69x it. */
+const RING_R_DRAWN = 0.5 + (6.25 - 0.5) * Math.pow(0.088 / 0.34, 0.36);
 
-     This arm is not a request to re-score the shot; §141.1 says that is not the tool-holder's
-     call. It is here so the gap cannot close silently: if someone widens `SLY`, restages the
-     shot, or moves the ring, the two ratios stop straddling the bar and this goes red, which is
-     the moment a human should look. */
-  const src = readFileSync(new URL('../tools/impactframe.mjs', import.meta.url), 'utf8');
-  const barM = src.match(/swallowed\s*>\s*([0-9.]+)/);
-  assert.ok(barM, 'impactframe no longer states a FIGURE SWALLOWED bar this arm can read');
-  const BAR = Number(barM[1]);
-  assert.ok(BAR > 0 && BAR < 1, `parsed a nonsense swallowed bar: ${BAR}`);
+/** `impactframe`'s measured figure plate — the world extent that reproduces 197 x 195 px. */
+const SLY_SLAM = { w: 1.565, yLo: -0.746, yHi: 1.106 };
 
-  const shot = SHOTS.impact;
-  const { out } = stageImpact();
-  const proxy = boxOf(CAM, ...shot.player.pos, SLY);
-  const ring = discOf(CAM, out.point.x, out.point.y, out.point.z, out.radius);
-  assert.ok(proxy && ring, '§211.1: nothing projected');
-
+/**
+ * This arm previously asserted that `impact` passed FIGURE SWALLOWED on the proxy box and failed
+ * it on the real figure, so the gap between the two "could not close silently". **The gap did not
+ * close — the bar was withdrawn, because it was shown to be unpassable by any camera (§407.1).**
+ *
+ * That is exactly the moment the old arm existed to force, and it forced it: it went red, a human
+ * looked, and what the looking found was that the metric it sealed was degenerate. So the arm is
+ * rewritten to seal the finding rather than the withdrawn bar.
+ *
+ * **The seal is now a computation, not a text match.** The old arm read the bar out of the tool's
+ * source with a regex, which could only ever check that a number was written down. This runs the
+ * shipped `discOf` and `plateOf` over a ladder of camera elevations and demonstrates the property
+ * itself: coverage saturates and stays saturated, so no threshold placed on it can discriminate.
+ */
+test('T7: ring/figure box coverage saturates at 100%, so no bar on it can discriminate', () => {
+  const AT = SHOTS.impact.player.pos;
   const area = (b) => (b.x1 - b.x0) * (b.y1 - b.y0);
-  const proxyRatio = overlapArea(proxy, ring) / area(proxy);
-  const realRatio = overlapArea(MEASURED_FIGURE, ring) / area(MEASURED_FIGURE);
 
-  assert.ok(proxyRatio <= BAR,
-    `the proxy ratio is now ${(100 * proxyRatio).toFixed(1)}%, past the ${100 * BAR}% bar — impactframe `
-    + 'already faults this shot, so the "admitted by an artefact of the box" claim is stale');
-  assert.ok(realRatio > BAR,
-    `CALIBRATION FAILED: on the measured figure the ring covers only ${(100 * realRatio).toFixed(1)}%, `
-    + `inside the ${100 * BAR}% bar — the proxy is no longer flattering the composition and the `
-    + 'warning in Shots.js and impactframe.mjs should be withdrawn rather than left standing');
+  const SCUFF_R = 3.4 * FX_TUNE.impactScale / 2;
 
-  /* And the height bar is NOT affected — stated so nobody withdraws more than the evidence
-     supports. 195 px of real figure clears 110 as comfortably as the proxy's 249 does. */
+  /* A ladder of cameras at one distance and azimuth, walking up in elevation. */
+  const ladder = [];
+  for (const h of [1, 2, 3, 4, 6, 8, 10, 12, 16]) {
+    const a = Math.PI / 4;
+    const cam = camFor({
+      pos: [AT[0] + Math.cos(a) * 12, h, AT[2] + Math.sin(a) * 12],
+      target: [AT[0], 0.6, AT[2]], fov: 38,
+    });
+    const fig = plateOf(cam, ...AT, SLY_SLAM);
+    const ring = discOf(cam, AT[0], AT[1] + 0.06, AT[2], RING_R_DRAWN);
+    const scuff = discOf(cam, AT[0], AT[1] + 0.02, AT[2], SCUFF_R);
+    assert.ok(fig && ring && scuff, `§211.1: nothing projected at h ${h}`);
+    ladder.push({
+      h, cover: overlapArea(fig, ring) / area(fig), figH: fig.y1 - fig.y0,
+      flat: (scuff.y1 - scuff.y0) / Math.max(1, scuff.x1 - scuff.x0),
+    });
+  }
+  assert.equal(ladder.length, 9, '§211.1: the ladder is empty');
+
+  /* CALIBRATION — the ladder must be LIVE. If the cameras did not really differ, coverage would
+     be constant for a reason that says nothing about the metric. The figure's pixel height is a
+     quantity from the same projections that DOES respond, so its spread proves the ladder moved
+     and isolates the constancy below as a property of the coverage metric alone. Without this,
+     the arm below is "a constant equals a constant" and would pass on a broken projection. */
+  const heights = ladder.map((r) => r.figH);
+  const spread = Math.max(...heights) - Math.min(...heights);
+  assert.ok(spread > 50,
+    `CALIBRATION FAILED: figure height varies by only ${spread.toFixed(1)} px across the ladder, so `
+    + 'the cameras are not meaningfully different and the coverage result below is vacuous');
+
+  /* THE FINDING, stated as the two bars rather than as a height.
+     §407.1's claim is not "coverage is 100% above 4 m" — that is an artefact of where this
+     particular ladder crosses over, and pinning it invites exactly the post-hoc threshold move
+     §141.1 forbids. The claim is that the two bars are JOINTLY UNSATISFIABLE: every camera that
+     passes the ellipse bar fails the withdrawn coverage bar. That is the property that makes the
+     coverage bar unpassable, and it is what this asserts. */
+  const ELLIPSE_BAR = 0.22, WITHDRAWN_COVER_BAR = 0.55;
+  const readsAsRing = ladder.filter((r) => r.flat >= ELLIPSE_BAR);
+  assert.ok(readsAsRing.length >= 5,
+    `§211.1: only ${readsAsRing.length} ladder cameras clear the ellipse bar; nothing to test`);
+  for (const r of readsAsRing) {
+    assert.ok(r.cover > WITHDRAWN_COVER_BAR,
+      `at h ${r.h} m the ring reads as a ring (ellipse ${r.flat.toFixed(3)}) AND covers only `
+      + `${(100 * r.cover).toFixed(1)}% of the figure — that camera passes both bars, so they are `
+      + 'no longer jointly unsatisfiable and §407.1\'s withdrawal should be revisited');
+  }
+
+  /* And the metric really does saturate — it does not merely run high. A quantity pinned at its
+     own ceiling cannot rank the survivors it admits, which is the second half of why no bar on
+     it works. */
+  assert.ok(ladder.filter((r) => r.cover === 1).length >= 4,
+    'coverage never reaches exactly 100% on this ladder, so the saturation claim in §407.1 needs '
+    + 're-deriving even though the bars may still be unsatisfiable');
+
+  /* And the withdrawn bar must stay withdrawn. Reinstating a threshold on a saturated metric is
+     the defect §407 records, so this fails if one reappears in the tool. */
+  const src = readFileSync(new URL('../tools/impactframe.mjs', import.meta.url), 'utf8');
+  assert.ok(!/swallowed\s*>\s*[0-9.]/.test(src),
+    'a FIGURE SWALLOWED bar has been reinstated in impactframe.mjs. It is unpassable: 0 of 727,608 '
+    + 'swept cameras cleared it together with the ellipse bar. See §407.1 before restoring it');
+
+  /* The height bar is NOT affected — stated so nobody withdraws more than the evidence supports.
+     195 px of measured figure clears 110 as comfortably as the proxy's 249 did. */
   const hM = src.match(/slyH\s*<\s*(\d+)/);
   assert.ok(hM, 'impactframe no longer states a figure-height bar');
   assert.ok(MEASURED_FIGURE.y1 - MEASURED_FIGURE.y0 > Number(hM[1]),
-    `the measured figure is ${MEASURED_FIGURE.y1 - MEASURED_FIGURE.y0} px tall, under the ${hM[1]} px bar — `
-    + 'the height verdict is affected too and Shots.js says it is not');
+    `the measured figure is ${MEASURED_FIGURE.y1 - MEASURED_FIGURE.y0} px tall, under the ${hM[1]} px bar`);
+});
+
+/**
+ * The companion §407.2 asks for: a constant derived from a measurement must reproduce it.
+ *
+ * `SLY_SLAM` was documented as "the measured pixels converted back through this shot's own
+ * camera" and was never converted back — it projected to 236 x 245 px against a measurement of
+ * 197 x 195. A comment cannot check itself; this can.
+ */
+test('T7b: impactframe\'s figure plate reproduces the pixels it was derived from', () => {
+  const cam = camFor({ pos: [5.4, 4.4, -2.6], target: [0.0, 0.6, -8.0], fov: 38 });
+  const p = plateOf(cam, 0, 0, -8, SLY_SLAM);
+  assert.ok(p, '§211.1: the figure plate did not project');
+
+  const wantW = MEASURED_FIGURE.x1 - MEASURED_FIGURE.x0;
+  const wantH = MEASURED_FIGURE.y1 - MEASURED_FIGURE.y0;
+  assert.ok(Math.abs((p.x1 - p.x0) - wantW) <= 1 && Math.abs((p.y1 - p.y0) - wantH) <= 1,
+    `the plate projects ${(p.x1 - p.x0).toFixed(1)} x ${(p.y1 - p.y0).toFixed(1)} px against a measured `
+    + `${wantW} x ${wantH} — §407.2: a constant derived from a measurement must reproduce it`);
+
+  /* MUST FIRE: the old constant, kept as a lever. If the check above passes on 1.31 x 1.30 too,
+     it is not measuring what it claims and the 20% error that cost a bar would slip through. */
+  const old = plateOf(cam, 0, 0, -8, { w: 1.31, yLo: 0, yHi: 1.30 });
+  assert.ok(Math.abs((old.y1 - old.y0) - wantH) > 1,
+    'CALIBRATION FAILED: the superseded 1.31 x 1.30 m box also reproduces the measured figure, so '
+    + 'this arm cannot tell a right constant from a wrong one');
 });
 
 /* ════════ T8 — the hull half of §379.1, asked of the shipped audit rather than of pixels ══ */
