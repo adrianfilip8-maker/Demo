@@ -923,3 +923,168 @@ test('T7: the smash mark is probed onto a real surface, never guessed onto one',
   assert.deepEqual(headless.decals[0].nrm, [0, 1, 0], 'headless fallback did not use the floor plane');
   assert.equal(headless.warns.length, 0, 'warned about a missing normal when there was nothing to probe');
 });
+
+/* ══════════════════════════ T9/T10 — staging is an instrument, and instruments get checked ══
+ *
+ * These build REAL `Batch` objects through the shipped private factory. `Batch`'s constructor
+ * is pure three.js — InstancedBufferGeometry plus ShaderMaterial, no renderer and no GL — so
+ * the ring buffer under test is the one that ships rather than a model of it, and the
+ * populations below are read off `_used` exactly as `commit()` does.
+ */
+
+import { BATCH_CAPACITY as CAP } from '../src/fx/Particles.js';
+import { Decals } from '../src/fx/Decals.js';
+import { rng as makeRng } from '../src/core/Rand.js';
+
+const VEC = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+
+function fxHost({ guards = 2, playerState = 'idle', velocity = VEC(9, 0, 0) } = {}) {
+  const list = [{ position: VEC(3, 0, -4) }, { position: VEC(-6, 0, -8) }].slice(0, guards);
+  const host = {
+    engine: {
+      warn: () => {}, time: 0, camera: new THREE.PerspectiveCamera(),
+      get: (k) => (k === 'movement' ? { position: VEC(), faceDir: VEC(0, 0, 1), velocity, speed: 9 }
+        : k === 'guards' && guards ? { list } : null),
+    },
+    root: new THREE.Group(),
+    shared: {
+      wind: { value: VEC() }, lightTint: { value: new THREE.Color() },
+      ambTint: { value: new THREE.Color() }, atlas: { value: null },
+      depth: { value: null }, maskPass: { value: 0 },
+    },
+    batches: new Map(), _t: 0, _t0: 0, rand: makeRng(1), _density: () => 1,
+    stats: { spawned: 0, bursts: 0 }, _playerState: playerState,
+    _updateWind: () => {}, _prerollFires: () => {}, _prerollCrests: () => {},
+    sparkles: null, _motesBuilt: 0, _sparkleTimer: 0, emitters: [],
+    decal(n, p, nm, o) { return this.decals.add(n, p, nm, o); },
+  };
+  for (const m of ['_batch', '_emit', '_clearStaged', '_stageShot', '_stageAlert', '_stageImpact',
+    '_prerollContinuous', '_emitPlayerCont', '_onCaneHit', 'smash']) host[m] = Particles.prototype[m];
+  host.decals = new Decals(host.engine, { atlas: null, capacity: 96 });
+  for (const [name, capacity] of Object.entries(CAP)) host._batch(name, { capacity, defines: [] });
+  host._batch('ambientProbe', { capacity: 460, loop: true, defines: ['LOOP'] });
+  const amb = host.batches.get('ambientProbe');
+  amb._used = 460; amb.geometry.instanceCount = 460;   // ambient fields are pre-populated
+  return host;
+}
+const oneShotPop = (h) => [...h.batches].filter(([n]) => n !== 'ambientProbe')
+  .reduce((a, [, b]) => a + b._used, 0) + h.decals._used;
+
+test('T9: a second staging REPLACES the first — the capture is one population, not two', () => {
+  /* Debug.js runs applyShot → step(14) → applyShot → step(3) → capture, and `_stageShot`
+     rebases `_t` to 0 on BOTH calls, so the first staging's particles are re-born at the origin
+     under the second's instead of aging out. Every staged effect reached the film at 2x
+     coincident density, and alpha composites as 1-(1-a)^2, which is not a factor anyone can
+     divide back out. */
+  let inspected = 0;
+  for (const shot of ['alert', 'impact', 'combat', 'traversal']) {
+    const once = fxHost(); once._stageShot(shot);
+    const twice = fxHost(); twice._stageShot(shot); twice._stageShot(shot);
+    const a = oneShotPop(once), b = oneShotPop(twice);
+    assert.ok(a > 0, `"${shot}" staged nothing at all — the test is inspecting an empty branch`);
+    assert.equal(b, a, `"${shot}" staged twice holds ${b} sprites against ${a} for once — the double staging is back`);
+    /* Ambient fields are GPU-resident populations with no birth event; clearing them would
+       empty the air out of the very frame this is fixing. */
+    assert.equal(twice.batches.get('ambientProbe')._used, 460, 'the clear ate a looping ambient field');
+    inspected++;
+  }
+  assert.equal(inspected, 4, 'did not inspect every staged shot');
+
+  /* CALIBRATION, and it must fire: without the clear the count has to double, or this test
+     would pass just as well on a build that never had the bug. */
+  const probe = fxHost();
+  probe._stageShot('combat');
+  const single = oneShotPop(probe);
+  probe._t = 0; probe.rand = makeRng(1);
+  probe._stageAlert.call(probe);            // any second staging without a clear in front of it
+  assert.ok(oneShotPop(probe) > single,
+    'calibration failed: staging twice without clearing did not raise the population, so the ' +
+    'idempotency assertion above cannot tell a fixed build from a broken one');
+});
+
+test('T9: the impact branch stages all four dive emitters, aged so none of them is blank', () => {
+  const h = fxHost(); const out = h._stageImpact();
+  assert.ok(out?.point, '_stageImpact returned no position for the shot author to frame');
+  assert.ok(out.radius > 0, '_stageImpact reported no radius');
+  /* Four emitters across three batches plus two decals — the six catalogue entries that were
+     unreachable in every canonical capture. */
+  assert.ok(h.batches.get('ring')._used >= 1, 'no dive_ring: the largest sprite in the game');
+  assert.ok(h.batches.get('dust')._used > 0, 'no dive_dust / dive_debris');
+  assert.ok(h.batches.get('spark')._used > 0, 'no dive_spark');
+  assert.equal(h.decals._used, 2, `expected the crack and the scuff, got ${h.decals._used} decals`);
+
+  /* Every staged age must be inside the emitter's SHORTEST life, or `_emit` silently drops part
+     of the burst instead of aging it; and every one must be non-zero, because at age 0 the
+     shader's smoothstep(0, fadeIn, 0) is exactly zero and the sprite renders NOTHING on the
+     dt = 0 capture path §195 mandates for A/B arms. */
+  const ages = [];
+  const rec = fxHost();
+  rec._emit = (n, p, o) => { ages.push([n, o?.age ?? 0]); };
+  rec._stageImpact.call(rec);
+  assert.equal(ages.length, 4, `impact staged ${ages.length} emitters, expected 4`);
+  for (const [n, age] of ages) {
+    const d = EMITTERS[n];
+    assert.ok(age > 0, `${n} staged at age 0 — it renders nothing on the dt = 0 path`);
+    assert.ok(age < d.life[0], `${n} aged ${age}s past its shortest life ${d.life[0]}s`);
+  }
+  console.log(`  T9: impact -> ${ages.map(([n, a]) => `${n}@${a}s`).join(', ')}`);
+});
+
+test('T10: the continuous preroll reproduces the steady state, and stays inside the budget', () => {
+  /* `rail_spark` and `skid_scuff` were invisible in captures not because a still cannot show
+     them but because nothing back-ran them — the same gap `_prerollFires` closed for braziers.
+     Steady state is `rate * meanCount * meanLife`; the preroll issues `rate * maxLife` ticks and
+     lets `_emit`'s own `age >= life` guard do the mortality. */
+  let inspected = 0;
+  for (const [state, c] of Object.entries(CONTINUOUS)) {
+    const def = EMITTERS[c.emitter];
+    const expected = c.rate * meanOf(def.count) * meanOf(def.life);
+    const h = fxHost({ playerState: state });
+    const ticks = h._prerollContinuous();
+    const live = oneShotPop(h);
+    console.log(`  T10: ${state.padEnd(10)} ${ticks} ticks -> ${live} live (steady state ${expected.toFixed(1)})`);
+    assert.ok(ticks > 0, `"${state}" issued no ticks`);
+    assert.ok(live > 0, `"${state}" prerolled nothing — the emitter is still invisible in stills`);
+    /* Within 40% of the analytic steady state: the draw is random, so this is a sanity band,
+       not an equality — but a preroll that produced a third or triple the population would mean
+       the tick derivation is wrong. */
+    assert.ok(live > expected * 0.6 && live < expected * 1.4,
+      `"${state}" prerolled ${live} against a steady state of ${expected.toFixed(1)}`);
+    /* And it must fit: one population now, because T9 removed the doubling. */
+    const cap = BATCH_CAPACITY[def.batch];
+    assert.ok(live < cap * T2_SHARE,
+      `"${state}" preroll reaches ${live}, past the ${cap * T2_SHARE} quarter-share of ${def.batch}`);
+    inspected++;
+  }
+  assert.equal(inspected, Object.keys(CONTINUOUS).length, 'did not inspect every continuous state');
+
+  /* A state with no continuous effect must produce nothing — the arm that proves the preroll is
+     driven by the state and is not simply always firing. */
+  const idle = fxHost({ playerState: 'idle' });
+  assert.equal(idle._prerollContinuous(), 0, 'prerolled a state that owns no continuous emitter');
+  assert.equal(oneShotPop(idle), 0, 'an idle preroll still put sprites in the frame');
+
+  /* A stationary player is a contact effect with no contact. Same gate gameplay uses. */
+  const still = fxHost({ playerState: 'railSlide', velocity: VEC(0, 0, 0) });
+  still._prerollContinuous();
+  assert.equal(oneShotPop(still), 0, 'prerolled a grind for a player who is not moving');
+});
+
+test('T10: a back-dated contact effect is laid along the travel, not piled at one point', () => {
+  /* The difference between a stationary emitter and a moving one, and the reason
+     `_prerollFires`\' approach cannot be copied verbatim: a grind\'s sparks read BECAUSE they
+     trail the shoe. Spawn every back-dated tick at the player\'s current position and they knot
+     up at a single point, which is the opposite of the effect. */
+  const seen = [];
+  const h = fxHost({ playerState: 'railSlide' });
+  h._emit = (n, p, o) => seen.push({ x: p.x, age: o?.age ?? 0 });
+  h._prerollContinuous.call(h);
+  assert.ok(seen.length > 2, `only ${seen.length} ticks to inspect`);
+  const spread = Math.max(...seen.map((s) => s.x)) - Math.min(...seen.map((s) => s.x));
+  console.log(`  T10: ${seen.length} back-dated ticks span ${spread.toFixed(2)} m of travel at 9 m/s`);
+  assert.ok(spread > 1.0, `back-dated ticks span only ${spread.toFixed(2)} m — they are piling up at the contact point`);
+  /* And in the right direction: older ticks sit further back along +X travel, i.e. at lower x. */
+  const oldest = seen.reduce((a, b) => (a.age > b.age ? a : b));
+  const newest = seen.reduce((a, b) => (a.age < b.age ? a : b));
+  assert.ok(oldest.x < newest.x, 'the oldest spark is ahead of the newest — the trail runs the wrong way');
+});

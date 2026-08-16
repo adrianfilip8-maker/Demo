@@ -458,6 +458,12 @@ export const TUNE = {
   sparkleNearBoost: 12,     // metres at which a marker starts brightening for the player
   sparkleTags: ['hook', 'spire', 'rail', 'pole'],
 
+  /* Size of the staged Cane Slam, in units of a normal one (`_onDiveImpact` divides the
+     caller's radius by 1.2 to get the same quantity). Slightly over life-size: this shot
+     exists to put the largest effect in the game in front of a critic, and a slam the player
+     would read as heavy is the honest version of that, not a record-breaking one. */
+  impactScale: 1.25,
+
   /* How far below a break `smash()` looks for the surface to paint its mark on when the caller
      names no normal. 2.5 m is taller than anything this vocabulary is for — a canopic jar is
      0.5 m and a stele about 2 — so a break with no surface within it was not standing on one,
@@ -1568,6 +1574,18 @@ const _stg = new THREE.Vector3();
    the emitter curves, rather than restating them. A constant nothing reads is the defect this
    pass exists to remove; this one is the test's input. */
 export const STAGE_LATENCY = 3 / 60;
+/**
+ * The Cane Slam's four components and the ages that make each land at capture, derived by the
+ * same minimax over `{dt = 1/60, dt = 0}` as `STAGE_RUNGS`. Ordered ring-first so the biggest
+ * sprite is written before the batch can be pressured by the smaller ones.
+ */
+const STAGE_IMPACT = [
+  ['dive_ring', 0.088],
+  ['dive_dust', 0.279],
+  ['dive_debris', 0.012],
+  ['dive_spark', 0.002],
+];
+
 const STAGE_RUNGS = [
   { entry: ALERT_LADDER.chase, scale: 1.15, age: 0.212, sparkAge: 0.002 },
   { entry: ALERT_LADDER.searching, scale: 1.0, age: 0.182, sparkAge: 0 },
@@ -3169,7 +3187,7 @@ export class Particles {
     for (let i = 0; i < r.ticks; i++) this._emitPlayerCont(cfg.emitter, mv);
   }
 
-  _emitPlayerCont(name, mv) {
+  _emitPlayerCont(name, mv, age = 0) {
     const v = mv.velocity;
     const sp = v ? Math.hypot(v.x, v.z) : 0;
     /* Both effects are contact effects: below a walking pace there is no scrape and no
@@ -3178,6 +3196,14 @@ export class Particles {
 
     _v3.copy(mv.position);
     _v3.y += 0.05;
+    /* `age` back-dates a tick for `_prerollContinuous`, and a back-dated contact effect has to
+       be placed where the contact WAS, not where it is. This is the whole difference between a
+       stationary emitter and a moving one: `_prerollFires` can spawn every back-dated tick at
+       one point because a brazier does not travel, but a grind's sparks read *because* they
+       trail behind the shoe. Spawn them all at the player's current position and they pile
+       into a single knot, which is the opposite of the effect. Zero in gameplay, where the
+       contact really is here and now. */
+    if (age > 0) { _v3.x -= v.x * age; _v3.z -= v.z * age; }
 
     // Travel direction, and its opposite: debris leaves the contact patch backwards.
     _v2.set(v.x / sp, 0, v.z / sp);
@@ -3188,11 +3214,11 @@ export class Particles {
          sparks, not a puff. */
       _dir.set(-_v2.x, 0.42, -_v2.z).normalize();
       _v3.addScaledVector(_v2, this.rand.jitter(0.10));
-      this._emit(name, _v3, { dir: _dir, inherit: _inh.set(v.x * 0.18, 0, v.z * 0.18) });
+      this._emit(name, _v3, { dir: _dir, age, inherit: _inh.set(v.x * 0.18, 0, v.z * 0.18) });
     } else {
       /* Scuff dust: a radial ground puff that carries with the slide. `inherit` is what
          makes it trail the foot instead of blooming symmetrically around a moving point. */
-      this._emit(name, _v3, { dir: UP, inherit: _inh.set(v.x * 0.34, 0, v.z * 0.34) });
+      this._emit(name, _v3, { dir: UP, age, inherit: _inh.set(v.x * 0.34, 0, v.z * 0.34) });
     }
   }
 
@@ -3255,6 +3281,7 @@ export class Particles {
     this.sparkles?.preroll(0.25);  // staged shots only by construction (_stageShot); RESULT-fxcluster B re-run
     this._prerollFires();
     this._prerollCrests();
+    this._prerollContinuous();
     this._motesBuilt = -1;          // re-seat the dust against whatever this shot is lit by
     if (name === 'combat') {
       _v3.set(0, 1.28, 2.05);
@@ -3275,7 +3302,101 @@ export class Particles {
       if (p) { _v3.copy(p); _v3.y += 0.9; this._emit('coin_sparkle', _v3, { count: 2 }); }
     } else if (name === 'alert') {
       this._stageAlert();
+    } else if (name === 'impact') {
+      this._stageImpact();
     }
+  }
+
+  /**
+   * Stage the Cane Slam — the loudest thing in the catalogue, and unseen until now.
+   *
+   * `dive_ring`'s peak projected ink is **104x `alert_spot`'s**, which makes it the largest
+   * single sprite in the game by a factor of 7.6 over the next one (`land_ring`, 13.7x), and
+   * `dive_dust` carries 68.7x once its count of 19 is included. Four emitters and two decal
+   * uses were unreachable in every canonical capture; this branch is all six of them. A hero
+   * move's whole meaning is the frozen instant of impact, which is exactly what a still is
+   * good for — see the triage in the round-3 report for why the footsteps are not here.
+   *
+   * ── Why this does not simply call `_onDiveImpact` ─────────────────────────────────────────
+   * That is the gameplay path and it emits at age 0, which is correct when a clock is running
+   * and catastrophic when one is not: at `age = 0` the shader's `smoothstep(0, fadeIn, u)` is
+   * exactly zero, so on the `dt = 0` capture path §195 mandates for A/B arms every one of these
+   * four sprites renders **nothing at all**. Each is therefore staged with its own minimax age,
+   * derived the same way `STAGE_RUNGS` is — maximise the worse of the two capture paths:
+   *
+   *   dive_ring   0.088 s -> 97.6% of its own peak ink   (0% at age 0)
+   *   dive_dust   0.279 s -> 99.7%                       (0% at age 0)
+   *   dive_debris 0.012 s -> 84.6%                       (0% at age 0)
+   *   dive_spark  0.002 s -> 42.8%                       (0% at age 0)
+   *
+   * `dive_spark`, like `alert_spot_spark`, peaks a few milliseconds after birth and cannot be
+   * recovered at a 50 ms latency; the age buys it visibility, not optimality. Every age is
+   * under its emitter's SHORTEST life so `_emit` drops none of the population.
+   *
+   * The two decals are placed at the contact, not aged — `Decals` has its own `hold` ramp and
+   * no fade-in, so a mark is full strength the moment it lands.
+   *
+   * @returns {{point: THREE.Vector3, radius: number}} where the impact was staged, so the shot
+   *   author can frame it. Same contract as `_stageAlert`.
+   */
+  _stageImpact() {
+    const mv = this.engine.get('movement');
+    const p = mv?.position;
+    /* Under his feet, a little forward: a slam lands where he lands, and the camera for this
+       shot will be looking at the ring rather than at him. Fixed offset when MOVEMENT is
+       absent so the branch is never a no-op. */
+    if (p) _stg.set(p.x, p.y + 0.06, p.z);
+    else _stg.set(0, 0.06, 0);
+
+    const s = TUNE.impactScale;
+    for (const [name, age] of STAGE_IMPACT) this._emit(name, _stg, { dir: UP, scale: s, age });
+    this.decal('crack', _stg, UP, { size: 2.2 * s, life: 30, alpha: 0.75 });
+    this.decal('scuff', _stg, UP, { size: 3.4 * s, life: 24, alpha: 0.5 });
+    return { point: _stg.clone(), radius: 1.2 * s };
+  }
+
+  /**
+   * Back-run whichever player-state continuous emitter is active, so a staged still shows the
+   * stream instead of the first frame of one.
+   *
+   * ── The gap this closes ───────────────────────────────────────────────────────────────────
+   * `rail_spark` and `skid_scuff` were two of the 22 emitters unreachable in any canonical
+   * capture, and unlike the footsteps they are **not** single-frame illegible. At steady state
+   * they carry 9.8 and 27.5 live sprites — a spray trailing a grind and a cloud under a plant-
+   * and-reverse, which is exactly what a rail screenshot looks like in the games this is
+   * measured against. They were missing for the same reason braziers were dark before
+   * `_prerollFires` existed: a staged frame is 3 frames old, and a continuous emitter has
+   * produced almost nothing by then. Nobody back-ran them.
+   *
+   * ── Why the tick count is derived and not chosen ──────────────────────────────────────────
+   * Ticks are `rate * maxLife` spread uniformly over `maxLife`, which reproduces the steady
+   * state exactly and needs no tuning constant: at equilibrium the live population is precisely
+   * the particles emitted within one lifetime, aged uniformly across it. The mortality comes
+   * free and correct — `_emit` already drops any particle whose sampled life is <= its age
+   * (`if (age >= life) continue`), so ticks older than a short-lived draw are culled by the
+   * same rule that would have killed them in flight. Nothing here has to know that
+   * `rail_spark` lives 0.16-0.34 s; the catalogue says so and this reads it.
+   *
+   * ── Budget, measured AFTER the double-staging fix ─────────────────────────────────────────
+   * This runs inside `_stageShot`, which now clears before staging, so the cost is one
+   * population and not two. Held by `tests/fxfeel.test.mjs` T9 against the same quarter-share
+   * `CONTINUOUS` already reserves.
+   *
+   * @returns {number} sprites' worth of ticks issued, 0 when no continuous state is active.
+   */
+  _prerollContinuous() {
+    const c = CONTINUOUS[this._playerState];
+    if (!c) return 0;
+    const def = EMITTERS[c.emitter];
+    const mv = this.engine.get('movement');
+    if (!def || !mv?.position) return 0;
+    const span = def.life[1];
+    const ticks = Math.max(1, Math.round(c.rate * span));
+    /* Oldest first, so the ring buffer holds the youngest sprites if it ever wraps — the same
+       ordering `_prerollFires` uses, and for the same reason: what is nearest the contact is
+       what the eye reads. */
+    for (let k = ticks; k >= 1; k--) this._emitPlayerCont(c.emitter, mv, (k / ticks) * span);
+    return ticks;
   }
 
   /**
