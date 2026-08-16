@@ -28222,3 +28222,109 @@ shipped `railSpeed` floor would give 11.08 m/s and carry him over every time.
 
 That floor is exactly what `mountSpeed: 0` declines, so the traversal lane's one line (§371.2, landed
 `2e34297`) is now the difference between a rail and a rope **on a rope you can actually get onto.**
+
+---
+
+## §381 — The ink fix is mostly built already, by someone solving the opposite problem
+
+§379 registered the hypothesis and named two routes. Costed, and the result changes what the
+`impact` capture is deciding: **not "is this worth building" but "should we turn on what exists".**
+
+### §381.1 Route A — make particles write depth. REJECTED.
+
+The code already argues against it in its own words (`Particles.js:1800`: *"don't write depth from
+additive particles — nor alpha ones"*). Four concrete breakages:
+
+1. **Destroys order-independence of the additive batches.** Additive blending is commutative, which
+   is exactly why `spark` (700) and `ring` (48) are correct with no sorting. `depthWrite` makes them
+   order-dependent — the property that makes them cheap is the property you would give up.
+2. **Alpha batches get mutual hard cutouts.** Sprites draw in ring-buffer order, not depth order, so
+   a 900-sprite dust cloud punches holes in itself and **the holes migrate as the ring cycles**.
+3. **The `SOFT` fade inverts.** `TUNE.softDepth 0.55` fades a sprite as it nears geometry by reading
+   the depth texture; put particles *in* that texture and they fade against each other.
+4. It feeds back into `_copyDepth`/`depthRT`, the source those same shaders sample.
+
+**And it was never the right target.** The goal is that the *edge pass* sees particles, not that
+particles occlude. Those are separable.
+
+### §381.2 Route A′ — the union-silhouette buffer already exists, and it is wired backwards
+
+`PREREG-fxink2` built a complete FX coverage pass. Verified at source here:
+
+```
+Particles.js:791, 903, 1023   uniform float uFxMaskPass   — every FX shader carries it
+Particles.js:820, 931, 1104   the branch that writes its own opacity, occlusion-tested
+                              against the opaque scene depth, into a full-res 8-bit target
+PostFX.js:2054                renders the pass
+PostFX.js:1537-1538           if ( uFxInkCut > 0.0 ) line *= 1.0 - clamp( uFxInkCut * ... )
+PostFX.js:594                 fxInkCut: 0.0            ← it ships OFF
+```
+
+It exists to do the **inverse** of what §379 wants: it *erases* ink under FX, because a dust cloud in
+front of a wall should not wear the wall's line. **Generating ink *from* FX is the same texture and
+one added term** — a gradient of the coverage field adding a line where coverage transitions,
+alongside the existing subtractive one.
+
+Containment was already measured at **87–100%, `combat` exactly 100%**. Costs:
+
+```
+draw calls   ≤ 13 meshes, fewer after _fold() hides empty ones — ≤ 5.2% of §1's 250 budget
+memory       one 1280x720x4 target = 3.7 MB, ~1% of the 350 MB texture budget
+composite    one extra uFxMask fetch neighbourhood; the texture is already bound
+FILL         UNBOUNDED without a frame — a second rasterisation of the highest-overdraw
+             layer in the renderer. This is the number that decides it.
+```
+
+**One refinement that is both cheaper and more correct:** `beginMaskPass()` switches *every* FX
+material, but an ink pass should cover the **alpha-blended batches only** — `dust`, `smoke`, decals.
+**You do not ink a spark**: additive sprites are light, not matter, and inking one draws a line
+around a glow.
+
+**The risk anyone turning this on inherits:** `RESULT-fxink2` is `DO NOT SHIP` on a **validity
+failure, not a refutation** — `V2` fired on all 55 rows *including the inert controls*, because the
+runner never populated `maskFlag`. A bar that fails on its own controls is measuring the instrument.
+The mechanism has never been scored clean.
+
+### §381.3 Route B — inverted hull on a billboard. REJECTED on the image, not the cost.
+
+A camera-facing quad's normals point at the lens, so extruding along them moves the quad toward or
+away from the camera and produces **no screen-space margin at all**. Zero ink.
+
+The billboard equivalent *is* trivially available — the vertex shader already builds the quad from
+`corner.x/corner.y`. It is still wrong, and for a reason worth keeping:
+
+> **It inks each sprite separately. 900 dust puffs with individual 2.5 px rings is chainmail, not
+> cel shading.** Real cel animation inks the silhouette of the *cloud*.
+
+Per-sprite outlining produces the wrong image at any cost. Defensible for a handful of large alpha
+sprites — one smoke plume, `dive_ring` — which is a different, smaller feature.
+
+### §381.4 Both flagged §378 items closed
+
+**`W2`'s FAIL stands, by 164×.** The mask was recoverable — `PREREG-tombdim2.md:133` names the
+population outright, VAULT `[560, 10, 900, 90]`. Every choice deliberately generous (max launch
+speed, max count, max additive alpha, warmest ramp point, turbulence added):
+
+```
+VAULT 27,200 px · embers reaching it ≤ 9 sprites, 20.6 px · coverage 0.0758%
+upper bound on the doubled term  P ≤ 0.053     W2 needs P ≥ 8.7 to flip
+```
+
+**And the lane caught itself mid-analysis.** Its first attempt used `torch_smoke`, which rises 2.85 m
+and falls 36 px short — a clean miss it would have reported. `embers` rise **6.01 m** (negative
+gravity, low drag, 2.8 s life) and land inside the rect. It also correctly used `embers` rather than
+`ember`, because the split is its own Round 1 change and **postdates the capture**.
+
+**`H1` is effectively immune.** GOLD 3.147% coverage against VAULT 2.960% — nearly equal, so the
+contribution to the *difference* cancels: `|ΔL(GOLD) − ΔL(VAULT)| ≤ 0.103 L`, of which the
+un-doubling delta is **0.051 L against a measured +16.4 — at most 0.31% of the bar.**
+
+### §381.5 What this changes about the capture
+
+The `impact` test (§379.4, task #26) was framed as deciding whether a hypothesis is worth acting on.
+It now decides something cheaper: **whether to turn on a pass that already exists, scope it to the
+alpha batches, and add one term to a shader that already samples the texture.**
+
+That is worth knowing *before* the capture rather than after — and it is the second time this
+session that the answer to "what would this cost" was "someone already built most of it for another
+reason".
