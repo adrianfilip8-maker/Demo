@@ -62,8 +62,15 @@
  * catalogue is not what is drawn, for three reasons none of which is postfx:
  *
  *   1. `_emit`: `const s = R.range(0.8, 1.25) * scale`. A PER-PARTICLE random size factor. The
- *      drawn `sz` is a RANDOM VARIABLE on [3.23, 5.04] m, and 4.035 is only its midpoint.
- *      This capture drew 1.343x and 1.213x, for sz 4.335 m and 3.917 m.
+ *      drawn `sz` is a RANDOM VARIABLE on [3.228, 5.043] m. This capture drew factors 1.0744
+ *      and 0.9707, for sz 4.335 m and 3.917 m.
+ *
+ *      CORRECTION to this file's own first telling of it (f40e51d called 4.035 the midpoint of
+ *      that range, and it is not — the midpoint and the mean are both 4.135). 4.035 m is the
+ *      value at a jitter factor of EXACTLY 1.0, which is the 44th percentile of one draw: it
+ *      is what you get by leaving the jitter out, which is precisely how it was derived. With
+ *      two particles the expected WIDEST is 4.438 m. Fixed forward per §314, and it is the
+ *      §407.2 rule turned on my own commit message: a claim about a number gets checked.
  *   2. TWO live `dive_ring` instances against `count: [1, 1]` — same birth, same life, same
  *      point, independent size draws. What is on the floor is the UNION, so its outer edge is
  *      a MAX of two draws rather than one.
