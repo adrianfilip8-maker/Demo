@@ -223,10 +223,17 @@ export class Input {
     this.look = { x: 0, y: 0 };
     /** Accumulated wheel delta for this frame. */
     this.zoom = 0;
-    /** Normalised movement intent in camera space, length ≤ 1. */
+    /**
+     * Normalised movement intent in camera space, length ≤ 1. Digital sources (keys, d-pad) give
+     * a unit vector; a stick gives its own magnitude after the deadzone and `moveFloor`.
+     *
+     * There is deliberately no companion `moveAnalog` flag saying which device produced it. The
+     * first draft of this file had one, and it was **read by nothing** — the exact defect
+     * `Controller.js` keeps a register of (`c.pole`, `lastWallRec`, `spireLaunch`, `hitWall`).
+     * `wishMag` already carries everything gameplay needs, and a prompt that wants to say
+     * "Space / A" should ask `describe(action)`, which is device-agnostic and always right.
+     */
     this.move = { x: 0, y: 0 };
-    /** True when `move` came from a stick this frame rather than from keys or the d-pad. */
-    this.moveAnalog = false;
 
     this.sensitivity = 0.0022;
     this.invertY = false;
@@ -391,8 +398,10 @@ export class Input {
     this._onMouseDown = (e) => {
       if (!this.enabled) return;
       /* The click that acquires pointer lock is a *focus* click. It used to also swing the cane,
-         so every return from the pause menu started with an attack. */
-      if (!this.locked && e.button === 0) { this.requestLock(); this._lockClick = true; return; }
+         so every return from the pause menu started with an attack. Only swallowed when a lock
+         was actually requested — in an environment with no Pointer Lock API `locked` never
+         becomes true, and swallowing unconditionally would mean the cane never swings at all. */
+      if (!this.locked && e.button === 0 && this.requestLock()) { this._lockClick = true; return; }
       for (const [action, btn] of Object.entries(this._mouse)) {
         if (e.button === btn) this._press(action, 'mouse');
       }
@@ -471,8 +480,13 @@ export class Input {
 
   _releaseSource(src) {
     const s = this._src[src];
-    if (!s || s.size === 0) return;
+    if (!s) return;
     for (const a of [...s]) this._release(a, src);
+    /* `_padHeld` is the pad's own memory of which actions are past the press threshold, and it
+       must not outlive the hold set: `_padButtons` skips an action whose state has not *changed*,
+       so a stale `_padHeld` entry would leave a physically-held button reading as released until
+       the player let go of it and pressed again. */
+    if (src === 'pad') this._padHeld.clear();
   }
 
   /**
@@ -482,14 +496,16 @@ export class Input {
    */
   _dropAllHeld() {
     for (const src of SOURCES) this._releaseSource(src);
-    this._padHeld.clear();
     this._lockClick = false;
     this._pressedAt.clear();
   }
 
+  /** Returns true when a lock was actually asked for, so the caller can swallow that click. */
   requestLock() {
-    if (this.locked) return;
-    this.canvas.requestPointerLock?.();
+    if (this.locked) return false;
+    if (typeof this.canvas?.requestPointerLock !== 'function') return false;
+    this.canvas.requestPointerLock();
+    return true;
   }
 
   releaseLock() { document.exitPointerLock?.(); }
@@ -570,7 +586,7 @@ export class Input {
     let x = ax[PAD_AXES.moveX] || 0;
     let y = ax[PAD_AXES.moveY] || 0;
     const len = Math.hypot(x, y);
-    if (len <= dz) return false;
+    if (len <= dz) return;
     // Normalise first so a square-gated stick can't report 1.41 on the diagonal, then re-apply
     // the remapped magnitude. This is the honest reading of `normalized() * pressure`.
     const t = Math.min(1, (len - dz) / (1 - dz));
@@ -580,7 +596,6 @@ export class Input {
     // `move.y` is +forward; the stick reports +down on axis 1.
     this.move.x = x;
     this.move.y = -y;
-    return true;
   }
 
   /**
@@ -667,6 +682,12 @@ export class Input {
       : (Number.isFinite(this.engine?.dt) ? Math.max(0, this.engine.dt) : 1 / 60);
     this.clock += step;
 
+    /* Pad buttons FIRST, so a d-pad press taken this frame is already in `_down` when the
+       digital vector is folded below — otherwise the d-pad would lag the keyboard by a frame and
+       the stick would win a direction the player pushed on the pad. */
+    const gp = (this.padEnabled && this.enabled) ? this._findPad() : null;
+    if (gp) this._padButtons(gp);
+
     let x = 0, y = 0;
     if (this.down('left')) x -= 1;
     if (this.down('right')) x += 1;
@@ -675,17 +696,12 @@ export class Input {
     const len = Math.hypot(x, y);
     if (len > 1) { x /= len; y /= len; }
     this.move.x = x; this.move.y = y;
-    this.moveAnalog = false;
 
-    if (this.padEnabled && this.enabled) {
-      const gp = this._findPad();
-      if (gp) {
-        this._padButtons(gp);
-        // The stick only wins when the keys are quiet: a d-pad press arrives through `_press` and
-        // is already in `move` above at full magnitude, which is what a d-pad should give.
-        if (len < 1e-6) this.moveAnalog = this._padStick(gp);
-        this._padLook(gp);
-      }
+    if (gp) {
+      // The stick only wins when keys and d-pad are quiet: both of those are digital and give a
+      // full-magnitude intent, which is what a discrete direction should mean.
+      if (len < 1e-6) this._padStick(gp);
+      this._padLook(gp);
     }
   }
 

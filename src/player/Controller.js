@@ -36,6 +36,27 @@ export const TUNE = {
   crouchSpeed: 1.7,
   crawlSpeed:  1.15,
   tiptoeSpeed: 1.5,
+  /* ---- accel / decel. Both compared against the reference and both DELIBERATELY UNCHANGED;
+     the comparison is recorded because "we looked and decided not to" is worth more than silence.
+
+     Ours is a flat cap in `accelerate()`: 0 → 7.2 m/s in 0.189 s over 0.682 m, and 7.2 → 0 in
+     0.277 s over 0.997 m. `slyrepos/godot`'s `Scripts/player__sly.gd` uses a *speed-dependent*
+     step instead — `move_toward(v, target, clamp(1 - h_vel/SPEED, 0.15, 0.75))` per 60 Hz frame,
+     i.e. 45 m/s² off the mark falling to 9 m/s² as it approaches top speed. Simulated at their
+     numbers that is 0 → 4.0 m/s in 0.183 s, essentially the same *duration* as ours but a very
+     different shape: 2.4× the initial bite and a soft top-out. Their decel is `lerp(v, 0, 0.25)`
+     per frame — exponential, τ 57.9 ms — which scaled to our 7.2 m/s stops inside **0.475 m**
+     against our 0.997 m. **Ours slides 2.10× further to a stop.** That is a real difference in how
+     heavy Sly reads, and the honest answer is that it is a feel decision of the same class as
+     `landHard` below: `tests/level.test.mjs` mirrors `accelerate` term-for-term in its offline
+     ballistic instrument (`arcMin`, the `worst < 0.30 m` agreement assertion), so changing the
+     curve is a coordinated change across MOVEMENT and that test, not a constant edit. Written up
+     rather than smuggled in.
+
+     One thing that IS worth saying against the reference: its own speed factor reads
+     `Vector3(velocity.x, 0, velocity.y).length()` — `velocity.y`, not `.z`. Its acceleration
+     curve is therefore keyed off vertical speed on one axis. That is a bug in the source, not a
+     design, and it is why none of its constants are imported here. ---- */
   accel:       38,
   decel:       26,
   airControl:  0.55,    // fraction of ground accel available in the air
@@ -52,6 +73,20 @@ export const TUNE = {
   jumpCut:      0.45,   // releasing Space cuts vy by 55% (§6)
   apexHang:     0.72,   // vy ×0.72 per 60 Hz frame while |vy| < apexWindow — the float
   apexWindow:   2.2,
+  /* ---- coyote + jump buffer. Both measured against the reference, both kept. ---------------
+     `coyote` 0.110 s is a *time*, and that is the one place this file is unambiguously better
+     than `slyrepos/godot`'s `Scripts/player__sly.gd`: theirs counts **frames**
+     (`const coyote_time_max = 5`, plus a `floor_grace_time = 0.25` second stage), so its
+     forgiveness is 83 ms at 60 Hz and 35 ms at 144 Hz — the same player gets less help on the
+     better machine. Measured here on the shipped controller: a ground jump is granted for a lead
+     of **0..6 frames = 117 ms** after the floor goes away, which is 0.110 s plus the frame the
+     `_preTimers`/`_probeGround` ordering costs, and it is the same 117 ms at any frame rate.
+
+     `jumpBufferMs` 140 is a *game*-time window and, since this change, is actually measured on
+     the game clock — `Input.buffered` used to run on `performance.now()`. Measured on a fall that
+     arrives at 10.000 m/s: the buffer reaches **8 frames / 1.333 m of approach** at `timeScale` 1
+     on either clock, but under Thief-o-Vision (`visionScale` 0.35) the wall clock reached only
+     **0.477 m** against the game clock's **1.371 m**. See the header of `src/core/Input.js`. ---- */
   coyote:       0.110,
   jumpBufferMs: 140,
   ledgeSnap:    0.45,   // horizontal assist toward a ledge a jump would just miss
@@ -474,7 +509,17 @@ export class Controller {
     this.airTime = 0;
     this.coyote = 99;
     this.airJumps = 1;         // jumps left after leaving the ground
-    this.jumpHeld = false;
+    /* `jumpHeld` used to live here — assigned every frame in `_readInput` and **read by nothing**,
+       in `src/`, `tests/` or `tools/`. Same shape as `c.pole`, `lastWallRec`, `spireLaunch` and
+       `hitWall`: machinery wired at one end. Removed rather than given an invented consumer.
+       The obvious one — a level-triggered jump cut, "cut the arc on the first frame the button is
+       not held" instead of `applyJumpCut`'s edge on `released('jump')` — was written, measured and
+       **rejected**: with no `launch()` call of its own, `WallJump` shares the latch, and a hook
+       release taken while the button is up (`HookSwing` never calls `applyJumpCut`, so the latch
+       survives the whole swing) had its `hookUpKick` cut by 55%. The real hole the level trigger
+       was meant to plug — a release lost because focus went away without a keyup — is closed at
+       source instead, in `Input._dropAllHeld`. Anything that wants the held state should ask
+       `c.down('jump')`, which is where it came from. */
     this.wallRunUsed = 0;      // wall runs since last ground contact
     /* The wall face already spent this airborne period — rec plus its outward XZ normal, which
        together name a *face* rather than a body. See TUNE.wallFaceDot and `wallSpent`. */
@@ -492,6 +537,21 @@ export class Controller {
     this._capOff = 0;          // capsuleSweep origin convention offset, calibrated once
     this._calibrated = false;
     this._needSpawnSnap = true;
+    /* ── The write-only register. Kept up to date on purpose, because this file's characteristic
+       defect is machinery wired at one end and the only defence is a list somebody maintains.
+       Every field below is written by this file and read by **nothing** in `src/`, `tests/` or
+       `tools/` (verified, not assumed). None of them is a shipping bug the way `c.pole` and
+       `lastWallRec` were — they are inert rather than half-running — so none is given an invented
+       consumer here:
+
+         lastHitNormal  `_slide`         the normal of the last contact this frame
+         lastHitTag     `_slide`         its surface tag — the obvious consumer is FX/AUDIO
+                                         picking a scrape sound, which is not MOVEMENT's call
+         hitWall        `_slide`         set when a contact normal is wall-ish
+         spireLaunch    `SpireLand`      set on the tip's jump exit, cleared by `_preTimers`
+
+       `hitCeiling`, by contrast, IS read — `WallRun.update` returns 'fall' on it — which is why
+       it is not on this list and is the shape the others should be brought to. ── */
     this.lastHitNormal = new THREE.Vector3(0, 1, 0);
     this.lastHitTag = '';
     this.hitWall = false;
@@ -525,7 +585,8 @@ export class Controller {
     this._baseClip = '';
     this._assistUsed = false;
     this._bounceReq = 0;
-    this._hurtReq = null;
+    /* `_hurtReq` used to sit here. It was never written and never read — not half-wired, wired at
+       neither end. `hurt()` sets the velocity itself and calls `sm.request('hurt')`. Deleted. */
     this._placeholder = null;
     this._disposed = false;
 
@@ -659,6 +720,19 @@ export class Controller {
     else _fwd.normalize();
     _rgt.crossVectors(_fwd, UP).normalize();
 
+    /**
+     * `inp.move` is already the finished analog intent: keys and the d-pad give a digital unit
+     * vector, a stick gives its magnitude after `Input`'s radial deadzone and `moveFloor`
+     * (see `INPUT_TUNE`). Nothing here re-shapes it — one response curve, in one file.
+     *
+     * Worth stating because it is load-bearing for the rest of the moveset: `moveFloor` 0.25 is
+     * the *smallest* magnitude a live stick can produce, and every raw-axis verb in Moveset.js
+     * sits above it by construction — `PoleClimb`'s climb/descend at |wishRaw.z| > 0.3,
+     * `PoleSwing`'s spin at |wishRaw.x| > 0.3, `LedgeHang`'s shimmy at |wishRaw.x| > 0.4 and its
+     * drop/climb at |wishRaw.z| > 0.5. So the floor can never *trigger* a traversal verb; the
+     * only predicates it crosses are the `wishMag > 0.12` "is he moving at all" ones, which is
+     * exactly the family it exists to make decisive.
+     */
     const mx = inp.move.x, my = inp.move.y;
     this.wishRaw.set(mx, 0, my);
     this.wishDir.set(0, 0, 0).addScaledVector(_rgt, mx).addScaledVector(_fwd, my);
@@ -666,14 +740,18 @@ export class Controller {
     this.wishMag = Math.min(1, len);
     if (len > 1e-5) this.wishDir.multiplyScalar(1 / len);
     else this.wishDir.set(0, 0, 0);
-
-    this.jumpHeld = inp.down('jump');
   }
 
   down(a) { return !!this.input?.down(a); }
   pressed(a) { return !!this.input?.pressed(a); }
   released(a) { return !!this.input?.released(a); }
-  /** Peek the jump buffer — safe inside canEnter, which may not lead to a transition. */
+  /**
+   * Peek the jump buffer — safe inside canEnter, which may not lead to a transition.
+   *
+   * `jumpBufferMs` is **game** milliseconds. `Input` accumulates its own clock from the engine's
+   * scaled `dt`, so this window is the same kind of number as `TUNE.coyote`, `hangLock`,
+   * `poleLockout`, `spireLockout` and every `sm.time` gate — it was the only one that was not.
+   */
   jumpBuffered() { return !!this.input?.bufferedPeek('jump', TUNE.jumpBufferMs); }
   /** Consume it. Only ever called from enter(), so a jump is spent exactly once. */
   takeJump() { return !!this.input?.buffered('jump', TUNE.jumpBufferMs); }
@@ -1508,6 +1586,12 @@ export class Controller {
     // resolvers to re-run rather than answer from a memo taken before the jump.
     this.lock.frame = -1; this.lock.ok = false; this.lock.body = null;
     this.pick.frame = -1; this.pick.ok = false; this.pick.body = null;
+    /* …and a buffered press is positional in exactly the same way. `jumpBufferMs` is 140 ms of
+       game time, the shot harness steps frames by hand, and `sm.set('idle')` two lines below is
+       immediately followed by a poll in which `Jump.canEnter` would happily take a press the
+       player made before the teleport, somewhere else. Optional-called so a stub input (the one
+       in `tests/level.test.mjs` and `tests/targets.test.mjs`) without the method is a no-op. */
+    this.input?.clearBuffer?.();
     this.height = TUNE.height;
     this.sm.set('fall');
     this.sm.set('idle');
