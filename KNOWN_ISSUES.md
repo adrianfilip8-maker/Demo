@@ -26503,3 +26503,79 @@ observations survive checking and the confident single-source diagnoses do not.*
 failing to read, the compressed value range and the unsculpted colossi were each found by more than
 one observer and each verified. The two claims that fell — an undecided ink model (§361.5) and the
 caster-set bug here — were each asserted once, with conviction, by one critic.
+
+---
+
+## §363 — a deletion audit, and TWO of my own errors caught inside it
+
+Asked to delete what is no longer relevant without touching anything that may be referenced later.
+Net result is small and deliberately so: **~105 MB removed, nothing referenced, nothing tracked** —
+and the audit turned up two mistakes of mine that are worth more than the disk it freed.
+
+### §363.1 What was removed, and the test each one passed
+
+```
+dist/                     69 MB   gitignored (.gitignore:2), 0 tracked, regenerable by `vite build`
+shots/{cap1,char7,char8,fx0,fx1,tx3,uvfix}
+                          36 MB   0 tracked, 0 references anywhere in the repo
+```
+
+The reference test was a word-boundary search over `KNOWN_ISSUES.md`, `AGENTS.md`, `README.md`,
+`progress/`, `src/`, `tools/`, `tests/` and `staging/` across `.md .mjs .js .json .txt .log .sh`.
+It matters that this is stricter than it looks: a **path**-only search (`shots/NAME`) wrongly cleared
+`fx8`, `item1` and `r4`, and a **substring** search wrongly flagged `cap1` on the string `cap120`.
+Both passes were needed.
+
+**Kept despite looking dead**, each for a specific citation:
+
+```
+shots/fx4    52 MB   src/fx/Particles.js:3288 cites "fx4's night.noshaft" in a shipped correction
+shots/fx8   9.7 MB   KNOWN_ISSUES.md + progress/records/fx9.mjs
+shots/item1  49 MB   critic10postfx/verdict-run2.json + its analyser
+shots/r4    7.2 MB   KNOWN_ISSUES.md (§358) + README.md
+```
+
+`fx4` is the one that matters: 52 MB, invisible to the path search, and only caught because a source
+comment in shipped `src/` cites it as evidence. **There is no disk pressure here — 23 GB free, 39%
+used — so nothing about this task justified risk.**
+
+### §363.2 ERROR ONE — I concluded evidence was lost by measuring a rolled-back repo
+
+Mid-audit `progress/records/guardcone1/` showed 12 frames, zero tracked, and `git log --all` over the
+path returned nothing. I concluded the 49-frame capture behind §348/§349/§352 had been destroyed,
+wrote a commit saying so, and stated that "untracked files survive" was a runbook error of mine.
+
+**All of it was false.** Rollback nine had reverted the local repo to `de3080d`, and every command I
+used to check — `git log --all`, `git ls-tree origin/…`, `HEAD` — reads the LOCAL object store,
+**including the stale `origin/` ref**. After `git fetch` + `reset --hard origin/…` the directory has
+**66 tracked files** and every frame §349 and §352 analysed is present.
+
+§325 already says this in as many words: *"origin/… is a LOCAL cache that reverts with .git; ALWAYS
+fetch before concluding the remote lost anything."* I wrote that sentence, cited it after rollbacks
+six, seven and eight, and then walked straight past it because this task started with a file survey
+instead of a fetch. **The only thing that stopped the false claim reaching origin was that the push
+was rejected as non-fast-forward.** Not judgement — luck.
+
+### §363.3 ERROR TWO — I deleted 12 tracked files
+
+Of the eleven directories my reference test cleared, four (`geo0`, `it1`, `probe3`, `probe4`)
+contained **committed** files: 12 in total, including `probe4`'s six-arm A/B set. I had tested every
+candidate for *references* and never once for *tracked status* — despite having run
+`git ls-files shots/ | wc -l` earlier and seen 73.
+
+Recovered in full with `git checkout --`, verified back to zero deletions, suite 549/0. The tracked
+half of the criterion is now explicit: **being committed is itself a claim that something is worth
+keeping, independent of whether any prose happens to cite it.**
+
+### §363.4 The rule this leaves
+
+Before deleting anything in this repo, three tests, all of them:
+
+1. **`git fetch` first.** Every conclusion about what exists is void until the local `.git` is known
+   to be current. This is §325 and it has now cost twice.
+2. **`git ls-files <path>`** — tracked means keep, full stop, no reference check needed.
+3. **Word-boundary reference search over the whole repo including `src/`** — path-form and
+   bare-name both, because each missed real citations the other caught.
+
+**Not claimed:** that the ~105 MB freed was worth this. It was not — the disk was never short. What
+the exercise was worth is §363.2 and §363.3, and both were free only because they were caught.
