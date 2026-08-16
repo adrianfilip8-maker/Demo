@@ -153,18 +153,24 @@ const where = (m, k) => [...(m.get(k) || [])].join(', ');
  *                  is the destructive reading of an ambiguous phrase. So the subscription staying
  *                  here is the correct end state, not a loose end. `binocucomState`, its mirror
  *                  image, sits in `DEAD_PUBLICATIONS` for the same reason.
- *   guardLost      Superseded, not missing. The guards publish `guardAlert` with a `state`, and the
- *   guardSound     audio agent rebuilt its whole ladder on it (§219). These three are the names it
- *   guardSpotted   used before that, still subscribed in `Audio.js:1240-1242`. Publishing them would
- *                  give the audio ladder two disagreeing sources of truth. The right fix is to
- *                  delete the three listeners, which is an `Audio.js` change with an owner.
+ *
+ * ── The guard trio was deleted from here, and that is what fixing a DECISION line looks like ────
+ * `guardLost`, `guardSound` and `guardSpotted` were the names the audio ladder used before §219
+ * rebuilt it on `guardAlert`'s `state`. This entry said the right fix was to **delete the three
+ * listeners**, not to publish them — publishing would have given the ladder two disagreeing
+ * sources of truth. The FX/audio lane did exactly that in `Audio.js`, so the lines are gone.
+ *
+ * Worth noting how the census behaved: deleting the listeners turned it RED, because
+ * `no ABANDONED event is quietly revived` asserts each of these is still *subscribed* before
+ * asserting it is unpublished (§211.1 — otherwise the check passes by inspecting nothing the day
+ * one is renamed). A register that only fails in one direction rots silently; this one made the
+ * successful fix as loud as the failure would have been.
  */
-const DEAD_BY_DECISION = ['binocucom', 'guardLost', 'guardSound', 'guardSpotted'];
+const DEAD_BY_DECISION = ['binocucom'];
 
 /**
  * Dead because nobody has built the other half yet. **This** is the to-do list.
  *
- *   clue              `Audio.js:1252` has a sting for finding a clue. Nothing in the game is a clue.
  *   objective         the HUD renders an objective card and `HUD.init` sets the only one that ever
  *                     appears, by direct call. The event is the hook a mission script would use.
  *   propSmashed       FX and AUDIO both draw a prop breaking — chips, puff, contact mark, and a
@@ -183,7 +189,14 @@ const DEAD_BY_DECISION = ['binocucom', 'guardLost', 'guardSound', 'guardSpotted'
  *   unregisterTarget  `Controller.js:378` can drop a magnetism target; nothing ever asks it to. The
  *                     `registerTarget` counterpart IS published (§223), so this is half a pair.
  *
- * ── Three lines were deleted from here, which is what fixing one looks like ─────────────────────
+ * ── `clue` was deleted from here, which is what closing an UNBUILT line looks like ──────────────
+ * `Audio.js` had a built, tested `clue_bottle` sting and a live `on('clue')` subscriber, and
+ * **nothing in the game was a clue** — `PropKit.clueBottle()` was exported and never imported.
+ * The world lane placed the bottles (`Props.js:668`, kind `'clue'`) and PICKUPS now publishes
+ * `clue` on collection (`Pickups.js:361`). Geometry, sound, listener and publisher: four halves
+ * of two pairs, and the last one was one line.
+ *
+ * ── Three more lines were deleted from here, which is the same thing at larger scale ────────────
  * `damage`, `health` and `hurt` were the largest entry the census ever produced: **the player had
  * no health system at all**, so the HUD's pip row, hit flash, vignette punch and shake were wired
  * to a number nothing could move, and the guards' whole alert ladder ended in an animation. That is
@@ -195,10 +208,10 @@ const DEAD_BY_DECISION = ['binocucom', 'guardLost', 'guardSound', 'guardSpotted'
  * does. That is the property that makes the register worth trusting, and the only way to keep it is
  * to actually delete lines when they stop being true.
  */
-const DEAD_UNBUILT = ['clue', 'objective', 'prompt', 'propSmashed', 'unregisterTarget'];
+const DEAD_UNBUILT = ['objective', 'prompt', 'propSmashed', 'unregisterTarget'];
 
 const DEAD_SUBSCRIPTIONS = [...DEAD_BY_DECISION, ...DEAD_UNBUILT];
-if (DEAD_SUBSCRIPTIONS.length !== 9) throw new Error('DEAD_SUBSCRIPTIONS miscounted');
+if (DEAD_SUBSCRIPTIONS.length !== 5) throw new Error('DEAD_SUBSCRIPTIONS miscounted');
 if (DEAD_BY_DECISION.some((k) => DEAD_UNBUILT.includes(k))) throw new Error('an event is in both buckets');
 
 /**
