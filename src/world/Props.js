@@ -580,8 +580,28 @@ export class Props {
         place(cloth, { x, y: 9.6, z: L.pylon.z + 3.55 });
         this._push('cloth', cloth);
 
-        // Masts are climbable — a banner pole by a pylon is a legitimate route up.
-        this._pole(x, 0, L.pylon.z + 3.4, 11);
+        /* ── These masts used to be climbable, and retiring that is the point ─────────────
+         * The line that stood here read "Masts are climbable — a banner pole by a pylon is a
+         * legitimate route up", and it was TRUE WHEN IT WAS WRITTEN. These were the only way up
+         * this face. `EgyptLevel.notchLadder` is now the way up this face, and two routes up one
+         * elevation is what the ladder's own rule refuses — the two niches are a staggered pair
+         * read as a single climbing line, never a choice. These are not even a pair with it:
+         * 11 m against a 26 m ascent, dead-ending two thirds short, on `poleClimb` at priority
+         * **82** against `wallClimb`'s **79**.
+         *
+         * Driven, that was not theoretical. From standable sand at the west niche's foot the
+         * approach spent **506 frames in `poleClimb` and took 0 of 26 rungs** — `poleMount` is
+         * 1.9 m and the walk-in passes 1.90 m from the mast at x 8.6 with the facing dot at 0.43
+         * against a 0.4 gate. It cannot be fixed by moving them: the pair is 4.4 m apart and
+         * clearing a 2 m corridor needs 5.8 m of separation, which puts one mast on the tower's
+         * centre line and the other off its face.
+         *
+         * So the collider goes and the mast stays. Geometry, banner, height, 4.4 m spacing and
+         * the flanking-the-gate reading are all untouched — this removes `_pole`'s registration
+         * and nothing else. Authorised as a pin move, 272 → 268, `pole` 17 → 13: a seal is a pin
+         * and not a ceiling, so moving it DOWN without a reason would be the same failure as
+         * moving it up. The reason is that the level replaced this route, not that it was in the
+         * way. */
       }
     }
   }

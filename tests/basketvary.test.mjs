@@ -164,8 +164,29 @@ test('P-A1: a rope coil is set dress and carries no gameplay volume', () => {
      P-A1b above is the direct form of this claim and is the one to trust; this remains as a
      broad drift check on the level's total mass. When somebody re-scopes it — and it should be
      re-scoped, at a moment when it is not blocking anyone — P-A1b is the successor that means
-     the seal loses nothing. */
-  assert.equal(REG.length, 272, 'collider registrations unchanged by this seal');
+     the seal loses nothing.
+
+     ── 272 → 268, and the reason, because a pin moved without one is worthless ────────────────
+     The four banner masts on the entry pylon's south face lost their `poleProxy` (KNOWN_ISSUES
+     §382.5). They keep their geometry, their banners and their flanking-the-gate reading; only
+     the collider goes, so this is `pole` 21 → 17 and every other tag byte-identical — checked
+     against the histogram, not inferred from the total.
+
+     Why it is a retirement rather than a convenience: their authoring comment read *"a banner
+     pole by a pylon is a legitimate route up"*, and that was TRUE WHEN WRITTEN. They were the
+     route up that face. The 26-rung ladder is now the route up that face, and two routes up one
+     elevation is what EgyptLevel's own rule refuses — *"one route per face; two ladders are a
+     staggered pair read as a single climbing line, never a choice."* These two are not even a
+     pair: one is 11 m and dead-ends a third of the way up a 26 m ascent while outranking the
+     move the player is performing (`PoleClimb` 82 against `WallClimb` 79), and driving proved
+     it — 506 frames in `poleClimb`, 0 of 26 rungs, before the entry was moved.
+
+     The rule this earns, and it is the reason this note is long: **a seal is not a ceiling, it
+     is a pin.** Moving it DOWNWARD without a recorded reason is the same failure as moving it
+     upward, and it is the easier one to commit because removing a collider feels like tidying.
+     The lane that made this change flagged it as needing the same conversation as an addition
+     before it made it, which is why the change is here at all. */
+  assert.equal(REG.length, 268, 'collider registrations unchanged by this seal');
   assert.equal(P.stats.decals, 46, 'contact decals unchanged by this seal');
   assert.equal(P._fx.length, 24, 'fx emitters unchanged');
   assert.equal(P._lights.length, 24, 'lights unchanged');

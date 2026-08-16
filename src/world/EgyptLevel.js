@@ -1431,32 +1431,22 @@ function entryPylons(A) {
          jump (a further 2.0419) reaches with 1.35 m to spare, and `volume` 3.30 opens the
          trigger well before that. It is also the rung the two staggered ladders are furthest
          apart at the bottom, so the mark is unambiguous about which line it starts. */
-      /* ── The mouth is on the EAST niche, and that is a collision decision ─────────────
-       * It was on the west niche (rung 1, y 4.20) for three rounds and **the approach to it
-       * could not be driven**. Walking north into the face at x ≈ 10.9 — the only way to reach a
-       * west-niche entry — takes the player between the two banner masts, and `PoleClimb`
-       * (priority 82, above `WallClimb`'s 79) needs only `poleMount` 1.9 m and
-       * `dot(wishDir, dirToPole) > 0.4`. Driven from standable sand: **506 frames in `poleClimb`
-       * and 0 of 26 rungs.** Round 5 moved the masts to clear the ladder's *cling line* (2.05 m)
-       * and that was the wrong corridor — the one that decides the route is the walk-in on the
-       * ground, and there the mast at x 8.6 comes within 1.90 m of a player who drifts half a
-       * metre, with the facing dot at 0.43 and rising.
-       *
-       * The masts cannot be moved far enough to fix it: they are a pair 4.4 m apart and clearing
-       * a 2 m-wide corridor at x 10.9 needs one at ≤ 8.0 and the other at ≥ 13.8, which is 5.8 m
-       * apart. Widening them puts one on the tower's centre line and the other off its face.
-       *
-       * So the entry moves instead. The east niche sits at x ≈ 17.2 at this height — **4.2 m
-       * from the nearer mast**, more than twice `poleMount`, with no mast between it and the
-       * open sand it is approached from. Rung 1 (y 5.25) rather than rung 0: the point sits
-       * `drop` 1.56 below its rung, so rung 0 would put it at y 1.59, which a running player
-       * crosses while still grounded — and `TargetField.acquire` refuses a grounded player
-       * unless the spec says `fromGround`. From 3.69 a jump (apex 2.52) into a double jump
-       * (2.04 more) has 1.27 m of margin. Both niches keep all their rungs; only the authored
-       * acquisition moved, and `WallClimb.find()`'s line commitment then carries the ascent up
-       * the east line, which since round 5 tops at the same 26.25 as the west. */
-      const mouthHold = holds.find((h) => h.id === 'notch-pylon-e-e-1') || holds[1];
-      notchTarget(A, 'notch-pylon-e-mouth', face, mouthHold);
+      /* The mouth is the WEST niche's rung 1 (y 4.20). Rung 1 and not rung 0 because the point
+         sits `drop` 1.56 below its rung: rung 0 would put it at y 1.11, low enough that a
+         running player crosses it while still grounded, and `TargetField.acquire` refuses a
+         grounded player unless the spec says `fromGround`. From 2.64 a jump (apex 2.52) into a
+         double jump (2.04 more) arrives with margin, and the nearest standable sand is 2.47 m
+         away — the closest foothold to any hold on this face.
+         ── It spent one round on the EAST niche and that was a workaround, now reverted ──
+         The east move was made because a driven approach spent 506 frames in `poleClimb` and
+         took 0 of 26 rungs, which was read as the west entry being unreachable. It was not:
+         that run was the long walk from spawn, and a run STARTING at the west niche's foot
+         climbed 12 rungs to the deck both before and after. The interception was the banner
+         masts on the walk-in, and those have since lost their `poleProxy` (see `Props._banners`),
+         so the cause is gone. Re-driven from six starts with the masts retired: 12 rungs and
+         y 32.70 from three of them, 1–2 rungs off-axis from the rest, none failing outright.
+         A workaround kept after its cause is removed is an unexplained decision in the level. */
+      notchTarget(A, 'notch-pylon-e-mouth', face, holds[1]);
     }
 
     /* Sand drift on the north (leeward) face. */
