@@ -1417,7 +1417,30 @@ function entryPylons(A) {
      * surface at that height is z 34.723, so **those two brackets are buried and never drawn.**
      * Two of twenty-six. The alternative was drawing them on the cavetto's face 0.48 m off their
      * own hold, which is the promise-kept-elsewhere defect this file keeps refusing. A collider
-     * on the cornice was authorised for this and turned out not to be needed. */
+     * on the cornice was authorised for this and turned out not to be needed.
+     *
+     * ── THE WHOLE LOOP, DRIVEN IN CHAINED SEGMENTS ───────────────────────────────────────
+     * Every leg below is a real `Controller` against a real `Collision`, each starting where the
+     * previous one ACTUALLY ended rather than where it was meant to. Static walks over this
+     * route have been wrong three times; none of these numbers comes from one.
+     *
+     *   spawn → foot   4 legs around the tower's EAST side, arriving (12.3, 0.38, 38.3).
+     *                  It must go round: the tower fills x 8.5…19.5, z 31…37, so any leg from
+     *                  the courtyard (z < 34) to the sand behind it at those x is a wall — which
+     *                  is why an earlier straight-line attempt read as "cannot cross the
+     *                  courtyard" and was a pathing failure, not a level defect.
+     *   foot → deck    12 rungs, peak y 31.30, grounded on the deck at (12.3, 28.95, 34.0).
+     *   on the deck    stick released, 10 s: stays at y 28.92, never falls. It is a place to
+     *                  stand, not a ledge you slide off.
+     *   deck → y 9     `pylon-drop` mounted, descends 28.92 → 9.00, grounded on the y 9 circuit
+     *                  at frame 134, **0 frames of `hookSwing`**, and walks it in both
+     *                  directions to z −7.4 and z +12.3.
+     *   y 9 → spawn    walks out and down to (0.5, 0.00, 30.0), grounded.
+     *
+     * One correction worth keeping: an earlier driven run reported the hook chain stealing this
+     * descent and never reaching the y 9 circuit, and that was **the instrument, not the level**
+     * — it held a stale aim point after the rail ended and flew the player into the chain. The
+     * geometric claim it "refuted" was right. A bad instrument lies in both directions. */
     const face = A.proxy(K.proxyBattered(p.w, p.d, deckY - 0.36, B, A._proxyMat(), { capTop: false }),
       { tag: 'wall', material: 'stone', climbable: true, batter: B, handholds: holds.length ? holds : null },
       { x: cx, y: 0, z: p.z });

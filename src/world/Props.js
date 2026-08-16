@@ -919,18 +919,6 @@ export class Props {
     this.engine.registerCollider(m, { tag: 'ground', material: 'wood' });
   }
 
-  _pole(x, y, z, h) {
-    const g = new THREE.CylinderGeometry(0.12, 0.12, h, 6);
-    const m = new THREE.Mesh(g, this._invisible());
-    m.position.set(x, y + h / 2, z);
-    m.visible = false;
-    m.userData.spline = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(x, y, z), new THREE.Vector3(x, y + h, z),
-    ]);
-    this.group.add(m);
-    this.engine.registerCollider(m, { tag: 'pole', material: 'wood', climbable: true });
-  }
-
   _hazard(x, y, z, r) {
     const g = new THREE.SphereGeometry(r, 6, 4);
     const m = new THREE.Mesh(g, this._invisible());
