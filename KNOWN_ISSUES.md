@@ -27749,3 +27749,84 @@ unreachable through play is dead content that no grep and no exit-census can fin
 
 Also untested: `combatStrafe` and `pickpocket` ran against a stationary stub guard, so a mark that
 walks away mid-state is uncovered.
+
+---
+
+## §376 — REFUTED: the 113% figure is not a doubling artefact, and a months-old capture confirms the latency
+
+### §376.1 My hypothesis was wrong, and wrong by category
+
+§370.3 suggested `cane_flash`'s recorded *"113% of frame height before the ceiling landed"* might be
+an artefact of staged additive doubling — *"exactly the shape that produces a combat frame hotter
+than gameplay ever is"*. Re-derived, and it could not have been:
+
+```
+diameter / frameHeight = sz · P11 / d          ← PARTICLE_VERT's own uMaxSize clamp identity
+```
+
+**That identity contains no term for count, alpha or blending.** Additive doubling changes
+brightness; it cannot change extent, because geometry does not care how many times you draw it. The
+113% is an *extent* measurement and was never exposed. Verified here rather than accepted:
+
+```
+P11 = 1/tan(20°) = 2.7475   d = 4.906 m   frame 720 px
+emission  sz = 1.5 × 1.35 = 2.025 m  →  frac 1.1340  =  817 px     the shipped figure, intact
+```
+
+What the doubling *did* move is brightness, by exactly 2×: `combat`'s additive staging summed
+**105.40 alpha-units** and is now 52.70 (`cane_spark` 25 × 2.0 dominating; `cane_debris` excluded,
+the `dust` batch is `additive: false`). The verdict that figure drove — adding `flashMaxH` — was
+reached from the geometry, so it stands.
+
+### §376.2 A capture taken months ago confirms this week's latency derivation
+
+The better result, and it fell out sideways. The note's *measured* corroboration — the halo on
+`goldlobe1/combat.base.png` at ~660 px — is the number I would have expected to be inflated, since
+it came off a real staged frame. It is not, for the same reason, and it agrees with the geometric
+prediction at the 3-frame latency to **0.32%**:
+
+```
+u = STAGE_LATENCY 0.05 / life 0.11 = 0.4545
+sz = mix(2.025, 0.675, 0.4545^1.6) = 1.6427 m  →  frac 0.9199 = 662 px
+recorded measurement                              frac 0.9170 ≈ 660 px
+```
+
+And the decisive half: `cane_flash` lives **0.11 s**, so at the 17-frame reading (0.283 s) it is
+dead at `u = 2.58` — **there would have been nothing on that frame to measure at all.**
+
+So a capture taken months ago, for an unrelated purpose, independently corroborates the 3-frame
+latency derived from `Debug.js`'s call sequence this week (§369.4). Two instruments that share no
+machinery agreeing to 0.32% is the strongest confirmation anything in this lineage has had.
+
+### §376.3 A new audit class, unswept
+
+> any historical number measured off a staged frame that **depends on brightness rather than
+> extent** is a doubled measurement.
+
+`cane_flash` was the one I named and it turned out to be immune. Nobody has swept for the ones that
+are not. `cane_ring` remains the standing second suspect at frac 1.89 and is deliberately unclamped
+(PLANAR rings are exempt by construction); the fix halves its energy but not its extent. Open.
+
+### §376.4 A dormant rule went live, and the assertion that caught it was on the PREMISE
+
+§371.1 recorded the traversal lane's `sameLine()` rule as *"correct and provably inert today"* —
+two ladders 3.598 m apart against a 0.563 m reach budget, impossible by 6.4×. The world lane's
+in-flight level work has now put two ladders **0.130 m** apart, well inside it.
+
+```
+tests/traversal.test.mjs:666
+  "two shipped ladders come within 0.130 m — inside the sameLine cut"
+```
+
+The rule is now **live, load-bearing, and never exercised against real data** — it decides which
+ladder Sly climbs when both are in reach.
+
+**Why this was caught at all is the transferable part.** The lane did not merely test the behaviour;
+it asserted **the reason the rule was inert**. A test on the premise fails the moment the premise
+stops holding, which is exactly when a dormant rule becomes dangerous and exactly when a test on the
+behaviour would still pass. That is a better test than the one I asked for, and it is the second
+time this session a lane has improved on its brief by refusing to state something more strongly than
+it could support.
+
+Routed to both lanes; the world lane decides first whether 0.130 m is authored or accidental,
+because that determines whether the assertion changes or the geometry does.
