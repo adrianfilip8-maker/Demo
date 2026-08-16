@@ -30007,3 +30007,60 @@ That is §370/§373 territory reporting itself from inside a live run, which is 
 the artefact is for. Not acted on here — this set was a calibration of the stamping and nothing
 else — but it is the first time that warning has been read off a capture rather than reasoned about
 from `Debug.js`.
+
+## §400 — The rollback landed again, §325's runbook worked, and it ate one in-flight capture
+
+Fifth recorded container rollback. The working tree reverted to `de3080d` (§327-era, **309 commits
+back**) and killed the FX lane's §379.4 ink-test capture, which had held the lock for minutes and
+produced nothing.
+
+**Zero durable loss, verified rather than assumed.** `git fetch` showed `origin` at `adee6ed` —
+byte-for-byte the last commit pushed before the restart — and the delta was exactly 309. §325's
+runbook ran clean in about two minutes:
+
+```
+git checkout -- src/ tests/
+move untracked pre-rollback copies aside
+git merge --ff-only FETCH_HEAD
+```
+
+The operational rule §325 states is the reason: **push every fold the moment it exists.** Ten
+commits went out across this stretch, none of them batched, and every one survived. Nothing that
+was committed has ever been lost to a rollback in this project; everything that was in flight has
+always been lost.
+
+### §400.1 Three things that do NOT survive, and only one of them was known
+
+- **In-flight captures.** Known — five for five now.
+- **Sub-agents.** All three lanes were running and all three are gone, with their transcripts. A
+  lane mid-round loses the round, not just the process.
+- **The task list.** It rolled back to a state from §198-era, showing items long since closed as
+  open and one closed item as `in_progress`. **The repository is the only authoritative record.**
+  A task list restored from a rollback is actively misleading — it does not merely lack recent
+  entries, it asserts stale ones — and anything reconciled from it rather than from `git log`
+  will be wrong in a direction that looks plausible.
+
+### §400.2 CORRECTION: the suite is 710, not the 711 I committed
+
+`adee6ed`'s message says "Suite 709 -> 711". On the recovered tree, which is that exact commit with
+a clean status, the suite is **710** — deterministically, with the per-file counts summing to 710
+and no file contributing zero. `tests/traversal.test.mjs` is 44 arms both live and as committed;
+`tests/decalstat.test.mjs` is 16 both ways.
+
+Two hypotheses tested and both refuted, recorded so nobody re-runs them:
+
+- *An arm conditional on an untracked artefact I moved aside during recovery.* Restoring every
+  moved file and re-running gives **710**. (It also overwrote four tracked PNGs with stale
+  pre-rollback copies, which `git status` caught and `git checkout -- progress/` undid — worth
+  noting because "restore the untracked files" is a step in a runbook that can silently damage
+  tracked ones.)
+- *An uncommitted arm the world lane added to `decalstat` after I committed it at 16.* Its
+  committed and live counts are both 16.
+
+I cannot reproduce 711 and I am not going to invent an explanation for it. The count in that
+commit message is one too high; this is the correction. **Third wrong test count I have written
+into a commit message this session** (§374 recorded the first two, 8-written-as-9 and
+27-written-as-26), and the pattern is now clear enough to name: I have been reading the count off
+a run that was still settling, or off a working tree a lane was still writing to, and stating it
+as a property of the commit. A count belongs to a tree, and the tree it belongs to is the one that
+is clean.
