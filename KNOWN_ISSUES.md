@@ -30485,3 +30485,127 @@ spent that effort on a fiction I had created.
 the environment doing it.** The verification manoeuvre that needed it — "commit lane A's work
 alone, so stash lanes B and C" — stops being necessary the moment every lane lands its own work.
 The protocol change removes the reason I was reaching for the stash at all.
+
+---
+
+## §407 — The bar that could not be passed, and the two extents that were never measured
+
+The `impact` re-stage was dispatched on a simple premise: `impactframe` now scores against measured
+extents, the shipped shot fails, so find a camera that passes. **The shot cannot be re-staged,
+because one of the bars it must pass is unsatisfiable by any camera, and the reason is that the bar
+does not measure what its name says.**
+
+### §407.1 FIGURE SWALLOWED is a tautology — 0 of 727,608 cameras
+
+Swept the whole plausible camera domain around the impact point at (0, 0, -8): distance 3–30 m in
+0.5 m steps, height 0.5–20 m in 0.25 m steps, 24 azimuths, 7 lenses from 26 to 60 mm-equivalent.
+**727,608 cameras.** Scored against the two bars `impactframe` gates on:
+
+```
+  ellipse ratio >= 0.22 : 605,304
+  ring covers <= 55%    :  50,680
+  BOTH                  :       0
+```
+
+Not "few". **Zero.** And the shape of the failure is the finding, not the count. Holding distance
+at 12 m and azimuth at 45° and walking the camera up:
+
+```
+   h  1 m  elev  4.8°  ellipse 0.083  ring covers  44.8%  sly 138 px
+   h  2 m  elev  9.5°  ellipse 0.166  ring covers  72.2%  sly 135 px
+   h  3 m  elev 14.0°  ellipse 0.245  ring covers  88.1%  sly 131 px
+   h  4 m  elev 18.4°  ellipse 0.320  ring covers 100.0%  sly 126 px
+   h  8 m  elev 33.7°  ellipse 0.559  ring covers 100.0%  sly  97 px
+   h 16 m  elev 53.1°  ellipse 0.802  ring covers 100.0%  sly  51 px
+```
+
+`impactframe`'s own comment states the trade it believes it is ranking:
+
+> They pull opposite ways, which is the entire difficulty of this frame: elevation rounds the ring
+> and shrinks the man.
+
+**They do not pull opposite ways. They move together.** Elevation rounds the ring *and* drives
+coverage to 100%. The ranking composite `flat * slyH` was ordering survivors of a trade-off that
+does not exist, and there were never any survivors to order.
+
+**Why it is structural.** `swallowed` divides the ring/figure *bounding-box* overlap by the
+figure's box area. The ring is an **annulus 8 m across, and the figure stands in its hole.** Asking
+whether the figure's box is inside the rectangle that bounds the ring is asking whether a man
+standing in the middle of a circle is inside that circle's bounding square. Past ~18° of elevation
+the answer is 100% and stays there — a metric that returns the same value across the entire
+admissible domain cannot gate and cannot rank, because it carries no information.
+
+The only region where it reads under 55% is below ~10° of elevation, where the far rim drops under
+the figure's head — **exactly the edge-on frame the other bar exists to forbid.** The pair is not
+merely unsatisfiable, it is contradictory by construction.
+
+**This is not §141.1.** That rule forbids moving a threshold after seeing which side a result
+landed on, and it stands. The claim here is not that 55% is too strict — it is that the quantity
+being compared to 55% is constant over every camera worth considering, which is a defect in the
+*metric*, provable without reference to any candidate. The distinction matters, and it is the
+distinction that keeps §141.1 from having a loophole shaped like "the measurement was degenerate":
+**a bar may be replaced when it is shown to carry no information, never when it is merely failed.**
+The 727,608-cell sweep is what turns that from an assertion into a demonstration.
+
+### §407.2 And `SLY_SLAM` never reproduced the measurement it was named for
+
+`impactframe`'s header says of the figure's world extent:
+
+> The metres below are the measured pixels converted back through this shot's own camera, so the
+> bar now scores the figure the renderer draws.
+
+**It is false, and I wrote it.** `SLY_SLAM = 1.31 x 1.30 m` projected through `impact`'s own camera
+gives **236 x 245 px**. The measured figure — `A-ship` minus `S-nosly`, the |dL| plateau stable from
+8 through 64 — is **197 x 195 px**. The constant overshoots by 20% in both axes and was never once
+projected back to check.
+
+This is §401 exactly, from the same hand, four sections later: *a verification asserted in a comment
+and never run.* The previous instance cost the `alert` shot. §401.4 says a calibration with one arm
+is half a calibration; this adds the companion, and it is cheaper than any of them:
+
+> **§407.2 — A constant derived from a measurement must be projected back and shown to reproduce
+> it.** One line, in the tool, printed every run. A derivation is a claim about a number, and an
+> unchecked claim about a number is how both of these got in.
+
+The cause is a shape error, not arithmetic. `boxOf` builds a **ground-anchored cube**, whose widest
+corners are the *near-bottom* ones — much closer to the lens than the subject's centre — so a box
+sized by the naive depth-at-centre formula fans out well past the silhouette. On an upright figure
+the error is small. On `dive_impact`, a crouched sprawl seen from a low camera, it is 20%.
+
+### §407.3 The dust extent was minted by a rename
+
+When `RING_R` was split into `RING_R_DECLARED` and `RING_R_DRAWN` (§405), the dust cloud's model —
+`boxOf(..., { w: RING_R * 2, h: DUST_H })` — was rebound to `RING_R_DRAWN`, silently widening it
+from 3.0 m to **8.07 m**. Nothing measured that. It followed a variable name.
+
+Measured instead, from `shots/fxrim2-impact/impact-P-nodust.png` against `A-ship` (the `dust` batch
+carries `dive_dust` and `dive_debris` both, and is reported as the pair):
+
+```
+   drawn dust   x 404..930 (526 px)   rows 248..521 (274 px)     plateau stable |dL| 4..16
+   tool's model                       ~1498 px wide              2.85x too wide
+```
+
+Converted at the cloud's own depth: **half-width 2.44 m, spanning −0.82 m to +1.48 m** about the
+contact point. Cross-checked against the recipe rather than substituted for it — `dive_dust` at
+speed ≤ 7.5 m/s under drag 3.4 travels `v·(1−e^{−kt})/k` = 1.35 m by its staged age of 0.279 s, and
+the puffs reach 1.70 m of half-extent, so the population's outer edge sits at ≤ 3.05 m in the worst
+draw against 2.44 m measured. The recipe bounds the measurement and the measurement lands inside it;
+neither is quoted as the other.
+
+Three of the five faults the tool reported against the shipped shot — `dust CROPPED l`, `r`, `b` —
+were artefacts of that rename. They are withdrawn.
+
+### §407.4 What survives
+
+Two of the five faults are real and were measured independently:
+
+- **`ring CROPPED b by 102 px`** — the drawn quad is 4.035 m of half-extent (§405), and the shipped
+  camera crops it. Confirmed in the frame: `P-noring` puts the ring's light at x 0..1272, rows
+  216..719, **clipped on three edges**. A 4.035 m disc projects x 112..1168; a 5.0 m disc projects
+  x −53..1333. So the lit region reads as an effective ~5 m radius — the quad plus bloom spill —
+  and the quad alone already runs off the bottom.
+- **The figure is 197 x 195 px**, which clears the 110 px bar on any reading.
+
+`impact` is therefore still not shippable, but for **one** reason rather than five, and the reason
+is the ring's crop. The re-stage remains open; what it is blocked on is a bar that can be passed.
