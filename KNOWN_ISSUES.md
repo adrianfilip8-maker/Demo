@@ -29863,3 +29863,76 @@ is now false three ways: `interior` 8.09 m, `alert` 23.35 m, `sly-key` 24.99 m. 
 cameras landed after the sentence was written and `sly-key` is 13 mm inside the bar — **a claim
 other files retired rather than one that was wrong when made**, which is the more common way a
 comment dies and the harder one to catch. The gap it exists to convey survives: 15.3 m.
+
+## §398 — A rule whose violations leave no trace in the evidence is not a rule
+
+§186 says never edit `src/**` while a capture holds the lock. This round the FX lane took a
+capture, two other lanes edited `src/world/**` and `src/core/**` during it, and **nothing in the
+resulting artefact recorded that it had happened.** The lane only knew because it had hashed the
+tree by hand, before and after, on a hunch. It voided its own run and reported the gap rather than
+scoring the frames — which is the right call and is also the reason the gap is now visible.
+
+### §398.1 One stamp, taken after everything
+
+`tools/critic.mjs` wrote a single `commit: {sha, dirty}` into the manifest, taken **after the last
+shot**. That cannot attribute a frame to a build:
+
+- `dirty: true` says only that *something* was uncommitted at the end, not which files, not when,
+  and not which shots straddled the change.
+- A set that captured six shots across an edit landing between the second and third reports
+  exactly what a set captured entirely before it reports.
+
+`canegold3.mjs` has stamped `srcTreeBefore` / `srcTreeAfter` since §296 and states the convention
+properly — *a mid-run edit does not invalidate a capture by itself, but an unstamped one is
+unfalsifiable* — and that stamping **never reached the critic path**, which is the path every
+review set in this project comes through. §357.1 again: the machinery existed at one end.
+
+### §398.2 What is now recorded, and what it is allowed to conclude
+
+`critic.mjs` takes `treeHash()` at boot and again immediately after each PNG is written, so
+`srcTree` on a manifest entry means *the tree as it stood when this frame existed*. Per shot, not
+per run, because attribution is the entire point: a set where one frame straddles an edit and five
+do not should say **which one**. A straddled set also writes `TREE-MOVED.md` into its own
+directory, because the first thing anyone does with a review set is open the folder, and a warning
+that lives only in a scrollback is a warning nobody has.
+
+The hash moved to `tools/_srctree.mjs` and `canegold3.mjs` now imports it, verified byte-identical
+against the implementation it replaced on the live tree before the line was deleted. That check is
+the point of extracting rather than copying: **a stamp written before the move has to stay
+comparable with one written after**, or the convention is worthless across tools.
+
+**What a moved tree does NOT prove.** The bundler reads the tree at boot, so an edit landing
+mid-run has probably not reached the page — especially under `SANDS_NO_HMR=1`, where the page loads
+once. The wording in `TREE-MOVED.md` is deliberate about this: it does not say the frames are
+wrong, it says the set is **unattributable**, which is a different and sufficient problem. A frame
+that cannot be tied to a build cannot carry a verdict, because the reader has no way to check the
+claim against the code that produced it.
+
+### §398.3 The instruction that caused it was mine, and it was ambiguous
+
+I wrote: *"the capture lock is free … so if the test needs a real capture, **take it; tell me
+first** if you are about to, so I keep the other two lanes off `src/**`."*
+
+That sentence contains both a grant and a gate, in that order, and the lane read the grant. It was
+right to: "take it" is permission, and the clause that follows reads as a courtesy rather than a
+precondition. **A precondition written after the permission is not a precondition.** The lane
+followed the instruction as written and the instruction was wrong.
+
+The repair is not a better-worded instruction. It is that the artefact now records the violation
+whether or not anyone announced anything — which is the same move as every other repair this
+session: replace a convention people are trusted to follow with a measurement that fires by itself.
+
+### §398.4 Captures are not blocked in this environment, and something in the ledger implied they were
+
+Worth recording plainly because several rounds have been planned around the opposite belief.
+Playwright resolves to `chromium-1234`, which is absent; only `chromium-1194` is installed. But
+`harness.mjs:98` already honours `CHROME_PATH`, so no tooling change is needed:
+
+```
+CHROME_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome node tools/critic.mjs <shots> --label X
+```
+
+That gives WebGL 2.0 over SwiftShader and renders the canonical set. It is **slow** — a cold boot
+plus the first shot of a ~2M-triangle scene runs well past the four-minute timeout I first gave it,
+which is a fact about the rasteriser and not a fault. The capture half of §379.4 was never blocked
+by this container.
