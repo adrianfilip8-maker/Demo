@@ -30433,3 +30433,55 @@ for `undefined` exactly as for `0`.
 
 **Converting a one-ended piece of machinery back into a live check by declaring data, rather than by
 writing code, is the cheapest repair of this class the project has found.**
+
+## §406 — DECIDED: push the moment it exists. Lanes commit their own work.
+
+The traversal lane flagged a conflict it correctly declined to resolve on its own, and the owner
+has ruled: **push the moment it exists.**
+
+### §406.1 The conflict, and what it cost
+
+Two rules pointed opposite ways and both were mine:
+
+- *"Do not commit or push — report and I will land it."* Every lane, every round. It bought me
+  verification before anything entered history, and it caught real things: a red arm mid-write, a
+  cropped mark, two counts I had overstated.
+- **§325/§400: push every fold the moment it exists.** Committed work has never been lost in this
+  project. In-flight work always is — six occurrences.
+
+Round 20 is what the collision costs. `CameraRig.right` sat uncommitted through a `src/**` hold
+and then a verification pass — roughly two hours — because both instructions were being followed
+correctly, and it was taken. **The lane doing the most careful work is the one the protocol
+exposes most**, because care takes time and the protocol charges for time.
+
+### §406.2 The rule now
+
+**Every lane commits and pushes its own work, immediately, as soon as a result exists.** Not at the
+end of a round, not after a report, not after my review. My verification moves *after* the push,
+where it belongs — a wrong commit can be corrected forward (§314), and a lost one cannot be
+corrected at all.
+
+What does **not** change, because none of it was the problem:
+
+- **Suite green before a push that claims a result.** If the suite is red because the round is
+  mid-flight, push anyway and say so in the subject line — `wip:` — so nobody mistakes an
+  in-flight tree for a verified one. **An accurate label costs nothing; a lost round costs a
+  round.**
+- `git commit --only <explicit paths>` (§311). Never `git add -A` (§240). A lane that sweeps up
+  another lane's dirty files has published work it has not verified, and this branch has had four
+  lanes dirty at once.
+- Never rewrite pushed history (§314). Fix forward.
+- Commit trailers, `--no-gpg-sign`, the designated branch only.
+- §186 still holds: no `src/**` edit while a capture holds the lock.
+
+### §406.3 And a failure of mine that this also fixes
+
+While isolating one lane's work for verification I ran `git stash push` on paths **another lane was
+actively editing**. Its edits vanished mid-round; it diagnosed a container rollback, reported a
+sixth occurrence, and reconstructed the round from its scratchpad. Every number reproduced — but it
+spent that effort on a fiction I had created.
+
+**Stashing files a running agent is editing destroys work in a way that is indistinguishable from
+the environment doing it.** The verification manoeuvre that needed it — "commit lane A's work
+alone, so stash lanes B and C" — stops being necessary the moment every lane lands its own work.
+The protocol change removes the reason I was reaching for the stash at all.
