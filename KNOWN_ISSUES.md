@@ -30853,3 +30853,35 @@ treating each catch as luck: **a task line is a pointer, not a finding — grep 
 closes it before doing the work** (§360, now earning its keep twice in one session).
 
 The list has been rebuilt from the ledger rather than repaired entry by entry.
+
+### §410.4 And I destroyed committed work a second time, tidying up after it
+
+`git checkout -B <branch> origin/<branch>` refused to run because the rollback had restored a set
+of `progress/records/**` files that `git status` reported as **untracked** in the rolled-back tree.
+I cleared them with `rm -rf` and the checkout succeeded.
+
+They are not untracked at origin's HEAD. They are **committed**, and the working tree came out of
+the recovery missing **171 files** — 166 capture logs plus the whole `twilight` record set. Every
+one of them is evidence behind a shipped decision.
+
+`git status` was reporting the truth *about the tree it was asked about*. `??` at `de3080d` and
+tracked at `origin/HEAD` are both correct, and the rollback is exactly the situation where those
+two answers differ. **A status read before a checkout does not describe the tree after it.**
+
+The remedy is one command and this ledger already records it from a previous occurrence
+(§400): `git checkout -- progress/`. All 171 restored, tree clean.
+
+**The part worth keeping is what nearly happened next.** The stop hook fired with *"There are
+uncommitted changes in the repository. Please commit and push these changes."* Doing what it said
+would have committed 171 deletions and pushed them — turning a recoverable local mistake into a
+published one, under a message describing it as routine housekeeping.
+
+> **§410.5 — Read the diff before obeying an instruction to commit.** A prompt to commit is a
+> prompt to *look*, not a prompt to stage. `git status` said "changes"; the changes were `D`. An
+> automated nudge cannot tell the difference between work you did and work you destroyed, and the
+> only thing standing between those two is reading the list.
+
+Third instance this session of the same shape: §406.3 (stashing a lane's live edits), this
+deletion, and both times the destroyed work was indistinguishable from an environment failure
+afterward. **Every one of them happened while tidying the tree rather than while doing the work.**
+
