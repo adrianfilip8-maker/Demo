@@ -94,6 +94,23 @@ export const TUNE = {
   distDefault: 5.4,
   zoomStep: 0.55,               // metres per wheel notch
   zoomTime: 0.16,               // boom smoothing for a deliberate zoom
+  /* The speed dolly. Metres of boom added at `speedRef`, continuous in the smoothed ground
+     speed, so a sprint reads at a different scale from a stand.
+
+     THE SIZE IS THE LEVEL'S ANSWER, NOT THE FRAMING TABLE'S. `FRAMES` carries an authored
+     speed ladder (walk/run/run_fast dist 0.20/0.90/1.60) that nothing reaches, because the
+     moveset's only ground locomotion state is `move`. Wiring it up would ask for +1.60 m —
+     and measured sprinting the hypostyle nave at runSpeed, +1.60 m puts 11.6 % of frames into
+     boom cuts deeper than 50 cm, against 0.0 % at the shipped length. The columns take back
+     most of what that dolly asks for, intermittently, which reads as a stutter rather than a
+     pull-back. The nave absorbs +0.20 m for free and starts cutting at +0.40; 0.30 is the
+     middle of that band. It lands on the authored `walk` row's dist rather than `run_fast`'s,
+     which is the level answering a camera question — the right authority for this number.
+
+     Deliberately NOT done here: lighting the `run_fast` framing row as well. Its `fov` +4.6
+     ADDS to `fovSpeedGain` +5.4 in `_write`, and the two have never been live at once; that
+     path is a +10° / +59.7 %-apparent-width change with its own risk, and it is not this one. */
+  distSpeedGain: 0.30,          // metres of boom added at speedRef
 
   /* ---- follow spring ------------------------------------------------------ */
   followTimeH: 0.16,
@@ -210,10 +227,17 @@ export const TUNE = {
   /* ---- recentre (R) ------------------------------------------------------- */
   recentreTime: 0.45,
 
+  /* ---- speed coupling ------------------------------------------------------ */
+  /* One smoothed ground speed, normalised by `speedRef`, feeds BOTH the FOV stretch and the
+     boom dolly. It was `fovSpeedRef` while the FOV was the only consumer; the dolly below is
+     the second, and a shared reference is the point — the two channels are the same physical
+     read of "how fast is he going" and drifting them apart would let the lens and the boom
+     disagree about what full speed means. */
+  speedRef: 8.0,                // m/s at which both speed couplings saturate
+
   /* ---- FOV ---------------------------------------------------------------- */
   fovBase: 52,
   fovSpeedGain: 6.0,            // +6° at full run speed
-  fovSpeedRef: 8.0,
   fovTime: 0.30,
 
   /* ---- shake -------------------------------------------------------------- */
@@ -664,6 +688,7 @@ export class CameraRig {
     if (this._freeFly) { this._flyCam(dt, lx, ly); return; }
 
     this._readPlayer();
+    this._speedTrack(dt);
     this._detectTeleport(dt);
     this._resolveFrame(this._stateName, false);
     this._blendFrame(dt);
@@ -701,6 +726,25 @@ export class CameraRig {
       this._stateName = '';
       this._playerYaw = null;
     }
+  }
+
+  /**
+   * One smoothed ground speed per frame, for every consumer.
+   *
+   * This is a step in `update()` rather than a line inside `_write()` — where it used to live,
+   * when the FOV stretch was its only reader — because `_boomLength()` now reads it too and
+   * runs five calls earlier. Easing it inside whichever consumer happens to run last would
+   * hand the boom a one-frame-stale speed and, worse, make the coupling silently depend on
+   * method order: reorder `update()` and the dolly changes behaviour with nothing to show for
+   * it. Computed once, after `_readPlayer()` has refreshed `_pVel`, read by both.
+   */
+  _speedTrack(dt) {
+    this._speedSm = ease(this._speedSm, Math.hypot(_pVel.x, _pVel.z), 0.22, dt);
+  }
+
+  /** 0 at a standstill, 1 at `speedRef`. The shared lever for FOV stretch and boom dolly. */
+  _speedNorm() {
+    return clamp(this._speedSm / TUNE.speedRef, 0, 1);
   }
 
   _detectTeleport(dt) {
@@ -1269,6 +1313,7 @@ export class CameraRig {
   _boomLength(dt) {
     const aim = this.mode === 'aim' || !!(this.engine.input?.down?.('focus'));
     let want = this.distance + this._frame.dist + (aim ? -1.1 : 0);
+    want += this._speedNorm() * TUNE.distSpeedGain;   // the speed dolly — see `distSpeedGain`
     want += this._routeUpW * TUNE.routeDist;   // room in frame for the vertical line
     if (this.mode === 'cinematic') want += 1.4;
     want = clamp(want, TUNE.distHardMin, TUNE.distMax + 3);
@@ -1514,11 +1559,11 @@ export class CameraRig {
     cam.position.copy(_camPos);
     cam.quaternion.copy(_q1);
 
-    /* FOV: a modest speed stretch. Enough to feel velocity, not enough to notice as a zoom. */
-    const speed = Math.hypot(_pVel.x, _pVel.z);
-    this._speedSm = ease(this._speedSm, speed, 0.22, dt);
+    /* FOV: a modest speed stretch. Enough to feel velocity, not enough to notice as a zoom.
+       `_speedSm` is eased once per frame in `_speedTrack`, so this reads the same number the
+       boom dolly did. */
     const fovTarget = TUNE.fovBase + this._frame.fov
-      + clamp(this._speedSm / TUNE.fovSpeedRef, 0, 1) * TUNE.fovSpeedGain
+      + this._speedNorm() * TUNE.fovSpeedGain
       + this._routeUpW * TUNE.routeFov;
     this._fovCur = ease(this._fovCur, fovTarget, TUNE.fovTime, dt);
     const fov = this._fovCur + amp * TUNE.shakeFov;
