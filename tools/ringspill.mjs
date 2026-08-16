@@ -41,6 +41,37 @@
  * So the model here is per-pixel: intersect each pixel's ray with the sprite's own plane, take
  * the quad coordinates, and sample the SHIPPED atlas — `buildAtlas` is imported and run, not
  * re-implemented — against `PARTICLE_FRAG`'s own discard. Nothing is fitted.
+ *
+ * ── RESULT, and the hypothesis it kills ─────────────────────────────────────────────────────
+ * **Bloom contributes nothing.** `(A − P) − (G − PG)` is exactly zero at all 921,600 pixels and
+ * in all three channels — not close, identical. The reason is visible in the arms: the WHOLE
+ * bloom pass moves 11 px of this frame, at x 44..51 rows 11..20, and its contribution is the
+ * same with the ring and without it (0 px differ). At `bloomThreshold 2.20 / knee 0.30` the
+ * feed onset is 1.90 scene, and at this shot's tod 0.78 nothing on the floor reaches it. The
+ * ring's own additive radiance is ~0.14 at its brightest. It never enters the pyramid.
+ *
+ * So §407.4's "the quad plus bloom spill — an effective ~5 m radius" is false in its second
+ * half, and the light that reaches past the model is not postfx at all: with `chroma` at 0.0
+ * and bloom defeated, FXAA's ~2 px is the only spatial pass left, and the reach is 64 px.
+ *
+ * ── AND THE RESIDUE IS A SIZE, NOT A HALO, WHICH IS A DIFFERENT KIND OF ANSWER ───────────────
+ * The per-azimuth boundary is the measurement a bbox cannot give. Unprojected onto the sprite's
+ * own plane, over the 12 azimuths whose rays stay inside the frame all the way out:
+ *
+ *   measured / model    min 1.093   median 1.115   max 1.131
+ *
+ * A halo is additive and lands OUTSIDE a shape; this is multiplicative and reproduces the
+ * shape. The measured boundary carries the ring texture's own angular wobble — it peaks at
+ * 40-60° and dips at 0°/90° exactly where the model does — so it IS this sprite, drawn larger.
+ * And at azimuth 0 and 90 the model is QUAD-limited at 4.035 m while the measurement reads
+ * 4.54 and 4.47 m: light outside the quad's own geometry, which no texture and no postfx can
+ * put there. The quad is bigger than `sz = 4.035` says.
+ *
+ * How much bigger is stated as a ratio and not yet as a cause: 4.035 x 1.115 = 4.50 m, and
+ * `mix(0.5, 6.25, u^0.36)` reaches that at u = 0.365, i.e. an age of 0.124 s against the 0.088
+ * s `STAGE_IMPACT` asks for. `tools/ringprobe.mjs` reads the instance attributes the GPU was
+ * handed rather than inferring them from a ratio — the arms also report `ring live 2` where
+ * `dive_ring` has `count: [1,1]`, and one measurement should settle both.
  */
 import { readPNG } from './png.mjs';
 import { readFileSync, existsSync } from 'node:fs';
@@ -102,6 +133,19 @@ if (meta?.arms) {
       + (A.sha === Z.sha ? 'IDENTICAL, the renderer is deterministic and every mask below is signal'
         : '!! DIFFERENT — two renders of one state disagree, and no mask below can be trusted'));
   } else console.log('\nNULL CONTROL  Z-null not in this run — no verdict on determinism');
+
+  /* THE LEVER CONTROL, and the whole comparison is void without it. `G−PG` collapsing onto the
+     sprite proves "bloom was the spill" only if bloom was ON in the other pair — a
+     `bloomIntensity` lever that did nothing would produce the identical collapse and would be
+     read as a confirmation. §211.1's shape: an inert lever and a null result look the same.
+     So the bloom arms are required to DIFFER from the shipped ones, and it is asserted from
+     the shas rather than assumed from the uniform. */
+  const G = meta.arms.find((r) => r.arm === 'G-nobloom');
+  if (A && G) {
+    console.log(`LEVER CONTROL A-ship ${A.sha} vs G-nobloom ${G.sha} — `
+      + (A.sha !== G.sha ? 'DIFFERENT, bloomIntensity = 0 changed the frame and the lever is live'
+        : '!! IDENTICAL — the bloom lever did nothing, and no verdict below about bloom is supported'));
+  } else console.log('LEVER CONTROL G-nobloom not in this run — no verdict on the bloom lever');
 }
 
 const lum = (im) => {
@@ -272,7 +316,46 @@ for (const [lo, hi] of BANDS) {
     + cells.map((c) => `${String(c.n).padStart(8)} px ${c.mean.toFixed(1).padStart(6)} L`).join('  '));
 }
 
+/* ═══ THE OUTER BOUNDARY, AZIMUTH BY AZIMUTH, IN THE SPRITE'S OWN PLANE ══════════════════
+ * A bbox cannot tell a disc from a square from two overlapping quads. This walks outward along
+ * each azimuth in the sprite's plane and reports the last lit pixel, against what the model
+ * says is drawn there. The quad's own limit is `sz / max(|cos|,|sin|)` — so if the measurement
+ * is the quad, four flat chords appear at exactly `sz` in the axis directions and nowhere else,
+ * and that is a shape no disc and no postfx halo can imitate.
+ */
 const [ON, OFF] = results;
+console.log(`\n── THE LIT BOUNDARY PER AZIMUTH, unprojected onto the sprite's plane ───────────`);
+console.log(`   (azimuth 0 = +t1 = world −Z; the quad's own limit is sz/max(|cos|,|sin|))\n`);
+console.log(`    az   model draws to   quad allows   MEASURED |dL|>4    measured/model`);
+const _w = new THREE.Vector3();
+const azRows = [];
+for (let deg = 0; deg < 360; deg += 10) {
+  const a = deg * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
+  const quadLimit = sz / Math.max(Math.abs(ca), Math.abs(sa));
+  let modelR = 0, measR = 0, offEdge = false;
+  for (let r = 0.05; r < 9.0; r += 0.01) {
+    _w.copy(P).addScaledVector(t1, ca * r).addScaledVector(t2, sa * r);
+    const v = _w.clone().project(cam);
+    const px = Math.round((v.x * 0.5 + 0.5) * W), py = Math.round((-v.y * 0.5 + 0.5) * H);
+    if (px < 0 || px >= W || py < 0 || py >= H) { offEdge = true; break; }
+    if (r <= quadLimit && texAlpha(ca * r / sz, sa * r / sz) >= T_MIN) modelR = r;
+    if (Math.abs(ON.dL[py * W + px]) > 4) measR = r;
+  }
+  azRows.push({ deg, modelR, quadLimit, measR, offEdge });
+  console.log(`   ${String(deg).padStart(3)}°   ${modelR.toFixed(3).padStart(9)} m   ${quadLimit.toFixed(3).padStart(9)} m   `
+    + `${measR.toFixed(3).padStart(9)} m${offEdge ? ' (ran off frame)' : '          '}   `
+    + `${modelR > 0 ? (measR / modelR).toFixed(3) : '—'}`);
+}
+const inFrame = azRows.filter((r) => !r.offEdge && r.modelR > 0);
+if (inFrame.length) {
+  const ratios = inFrame.map((r) => r.measR / r.modelR).sort((a, b) => a - b);
+  console.log(`\n   of ${azRows.length} azimuths, ${inFrame.length} stay inside the frame all the way out.`);
+  console.log(`   measured / model on those:  min ${ratios[0].toFixed(3)}  median ${ratios[ratios.length >> 1].toFixed(3)}  max ${ratios[ratios.length - 1].toFixed(3)}`);
+  const chord = inFrame.filter((r) => Math.abs(r.measR - r.quadLimit) < 0.06);
+  console.log(`   azimuths where the measured edge sits ON THE QUAD's limit (±0.06 m): ${chord.length} of ${inFrame.length}`
+    + (chord.length ? `  — ${chord.map((r) => `${r.deg}°`).join(' ')}` : ''));
+}
+
 console.log(`\n── VERDICT ─────────────────────────────────────────────────────────────────────`);
 console.log(`   the ring's light, bloom ON   ${ON.total} px   outside its own quad: ${ON.outside}`);
 console.log(`   the ring's light, bloom OFF  ${OFF.total} px   outside its own quad: ${OFF.outside}`);
