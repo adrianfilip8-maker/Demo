@@ -26199,3 +26199,59 @@ suggested by the image and **not established by the numbers**.
 
 *Not claimed:* that the redness is fixed. Nothing here was measured against any bar, and keyprobe1's
 1.18–1.27 is a reading, not a verdict.
+
+---
+
+## §359 — retiring r12: what actually dies, what survives, and the naming collision that will trap the next reader
+
+§358 established that `shots/r12/` is unreconstructible and its figures unattributable. That is
+correct and it is not a licence to void everything the frames were ever used for. This section
+draws the line, because the careless reading — "r12 is retired, so §336 is dead" — is **wrong**,
+and the over-correction would discard a result that is still sound.
+
+### §359.1 The rule
+
+**An ABSOLUTE figure measured on a `shots/r12/*` frame is unattributable.** You cannot say which
+build produced it, so it cannot be compared against any other capture, cited as a level, or used
+to seal or score a bar. §336's headline `R/G 3.74` on the courtyard terminator is the load-bearing
+instance, and it is the one that carried through §341, §342, §342.1 and §342.2.
+
+**A WITHIN-FRAME structural claim survives.** It does not depend on knowing which build rendered
+the frame — only that the frame exists and is internally consistent, and both remain true of a
+dirty-tree render. The frame is still a frame; what it has lost is its address, not its contents.
+
+### §359.2 What this rescues, concretely
+
+**§336's decisive control STANDS.** Its AgX refutation is the observation that on
+`shots/r12/courtyard.png`, cool (190–240°) and warm (300–30°) populations *coexist at identical
+display luminance inside one frame* — 46/47 % at display L 65, 34/64 % at L 70, 29/64 % at L 75 —
+and that the display transform is a per-pixel function of colour with no shot, surface or spatial
+input, so it cannot manufacture two populations at one L. **That argument never references the
+build.** It compares the frame against itself. An unreconstructible tree cannot weaken it, and
+§358 should not be read as having done so.
+
+So the item's *classification* — a SHADING defect, not a display-transform artefact — survives
+r12's retirement intact. Its *magnitude* does not.
+
+### §359.3 The naming collision, which is a live trap
+
+**`staging2 r12` and `shots/r12/` are different artifacts that share a label.**
+
+```
+staging2 r12   a RUN NUMBER in the staging2 series (r9, r11, r12), §195.4,
+               written to progress/records/staging2*      — NOT affected by §358
+shots/r12/     a ROSTER RENDER by tools/shot.mjs, 2026-08-13T23:46,
+               commit 0525d5e + dirty                     — the retired one
+```
+
+Grepping the ledger for `r12` returns both, plus `char12` as substring noise. **Grep the path
+`shots/r12`, never the bare label.** §195.4's 3,700× clock-leak result is about the staging run
+and stands entirely; nothing in §358 or here touches it.
+
+### §359.4 Not claimed
+
+That any specific §341/§342.x conclusion is void — only that figures sourced from r12 frames
+cannot serve as levels. Several of those sections argue structurally too, and each needs reading
+against §359.1 on its own terms rather than being retired in a batch. The audit trail stays; no
+historical section is edited. What has changed is that a reader who reaches one of those numbers
+now has a section telling them what it can and cannot be used for.
