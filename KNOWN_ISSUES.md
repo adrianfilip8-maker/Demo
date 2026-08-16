@@ -26670,3 +26670,68 @@ not worth a swap. **Note also that `rim_light.gdshader` is buggy**: `rim = max(d
 pixels. Its own credit line points at `godotshaders.com/shader/pixel-perfect-outline-shader/`
 (author "axilirate") — that shader has a stated third-party origin and its licence is that site's,
 NOT this repository's none-stated status. Recorded because the two must not be conflated.
+
+---
+
+## §365 — integration continued: on every system we have already built, the reference is BEHIND us
+
+§364 said the scripts were the value. Working through them, that needs qualifying: the scripts are
+valuable **only where they cover ground this project has not built**. On three systems checked in
+detail, importing the reference would be a **regression**, and the third check is the one that nearly
+went wrong.
+
+### §365.1 Ink — already refuted at §364.4
+`outline.gdshader` is an inverted hull with screen-constant width. `Outline.js` is an inverted hull
+with screen-constant width **plus** a depth-scaled width term (`edgeNearMul`/`edgeFarMul`/`edgeNearZ`)
+the Godot one has no equivalent of.
+
+### §365.2 Tail — and I got this wrong first, by grepping instead of reading
+
+`Scripts/sly_tail_ik.gd` is a follow-the-leader chain: nine hardcoded `@onready` node paths, fixed
+lerp weights 0.45 → 0.40 → … → 0.10 on position and rotation, `_physics_process` each frame. No
+spring, no damping model, no length constraint, no gravity, no velocity coupling.
+
+`Rig.js:tailLayer()` is a **constrained spring chain**: semi-implicit Euler; per-segment stiffness
+falloff (`tailStiff * tailStiffFall^i`) AND damping falloff (`tailDamp * 0.94^i`); hip-velocity drag
+clamped at `tailWhipMax`; yaw-rate spin sweeping the tail on a turn; gravity sag growing as `f²`
+toward the tip; a **hard length constraint** so the tail bends but never stretches; and it targets the
+**authored pose**, so clip keys still read and the spring only adds lag, overshoot and whip.
+
+It also carries something the reference has no notion of: **analytic steady-state seeding**. Seeding
+at the authored tip needed ~240 frames at dt 1/60 to settle, and `Debug.setShot` freezes then steps
+14+3 — so every character capture rendered a tail ~22 mm short, varying with frame count, i.e. a
+nondeterministic silhouette on the half of the silhouette that *is* tail (§35). The seed solves the
+rest position in closed form instead.
+
+**My error, recorded because the method matters:** I first grepped for
+`tailChain|secondary|follow.*tail|tailLag|springTail`, got nothing, and concluded this project had
+**no tail secondary motion at all**. It has had a full spring chain the whole time; my grep simply
+used none of its actual names. One `sed` of the file settled it. A negative grep is not evidence of
+absence — it is evidence about the words you guessed.
+
+### §365.3 Guard detection
+
+`Scripts/spotlight_detection.gd`: an `Area3D` plus a raycast, setting `player_detected = true/false`,
+with a lost-detection timer. **Binary.**
+
+`Patrol.js`: a graduated suspicion meter — `gain`/`drain`/`ceiling`, a separate `hearCap` for audio,
+stealth multipliers (`sneakGain 0.40`, `crouchGain 0.55`), light-level input, last-known-position
+memory, and a banded UI readout sharing `NUMERIC_BANDS` with the HUD. Plus an entire sealed
+measurement lineage over the cone itself (§348–§354).
+
+### §365.4 What this changes about "integrate everything"
+
+The reference repo's value is **not** as code to import into systems that exist here. It is:
+
+1. **Mechanics this project does not have** — `pole.gd`, `hook_swing.gd`, `rope.gd`,
+   `auto_rope_path.gd`, `wall_notch.gd`, `bounce_pad.gd`. This is where the franchise critic's
+   *"zero vertical route"* lives, and it is the one area where the reference is genuinely ahead
+   because we simply have not built it. Both running lanes have the list.
+2. **A design cross-check** — reading how someone else scoped a Sly mechanic is worth the time even
+   when the code is worse.
+3. The character mesh, already taken and already recorded.
+
+**NOT claimed:** that everything unexamined is also behind us — `pole.gd`, `hook_swing.gd` and
+`wall_notch.gd` have not been read line-by-line yet, and the traversal gap is real. Claimed only that
+three-for-three on the systems we have built is a strong enough prior to stop treating "integrate
+everything" as the goal, and to treat *"find what we do not have"* as the goal instead.
