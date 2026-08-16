@@ -93,10 +93,14 @@ function siteOf(from, to, height) {
   if (height === 0) return 'CameraRig._sweep (boom)';
   const st = new Error().stack.split('\n');
   for (let i = 2; i < st.length; i++) {
-    const m = /at (?:async )?(?:Object\.)?([A-Za-z_$][\w$.]*)/.exec(st[i]);
+    const m = /at (?:async )?([A-Za-z_$][\w$.]*)/.exec(st[i]);
     if (!m) continue;
-    const n = m[1].replace(/^Controller\./, '');
-    if (n === 'capsuleSweep' || n === '_sweep' || n === 'siteOf') continue;
+    /* Frames arrive QUALIFIED — `Object.capsuleSweep`, `collision.capsuleSweep`,
+       `Controller._sweep` — so these must be suffix tests. Written as exact equality first, which
+       silently matched nothing and lumped all 6,412 sweeps under one name: an attribution that
+       cannot attribute, reported as a census. */
+    if (/(^|\.)(capsuleSweep|_sweep|siteOf)$/.test(m[1])) continue;
+    const n = m[1].replace(/^[A-Za-z_$][\w$]*\./, '');
     if (n === '_moveHorizontal') return (to.y - from.y) > 0 ? '_moveHorizontal step-up probe' : '_moveHorizontal ground snap';
     return n;
   }
@@ -142,10 +146,17 @@ let routes = 0, frames = 0, jumps = 0;
 recording = true;
 for (let x = -40; x <= 40; x += GRID) {
   for (let z = -40; z <= 40; z += GRID) {
-    const g = collision.groundCheck(V(x, 90, z), TUNE.radius, 300);
-    if (!g?.hit) continue;
+    /* Read the height out as a NUMBER before anything else queries the collision layer.
+       `groundCheck` hands back a POOLED result from a ring of six, and one `c.update()` spends
+       far more than six ground queries, so holding `g` across the direction loop and reading
+       `g.y` on the second pass reads whatever the pool has since put there — `resetGround` sets
+       `y = -Infinity`, which teleports the character to -Infinity and the walk never returns.
+       This cost me two runs that looked like the box being slow, which it also was. */
+    const g0 = collision.groundCheck(V(x, 90, z), TUNE.radius, 300);
+    if (!g0?.hit) continue;
+    const gy = g0.y;
     for (const [mx, my] of DIRS) {
-      reset(V(x, g.y + 0.05, z));
+      reset(V(x, gy + 0.05, z));
       for (let i = 0; i < 3; i++) { engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0; engine.time = i * DT; c.update(DT, i * DT); }
       if (!c.grounded) continue;
       routes++;

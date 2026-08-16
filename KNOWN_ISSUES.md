@@ -31673,6 +31673,34 @@ the step-up probe is among them at 3. A second run over 9,450 frames gives 134 i
 is not rare and it is not confined to one lip. §409.2's *"nowhere in ordinary locomotion"* was an
 artefact of sampling one site for 305 sweeps.
 
+**The rate is strongly sample-dependent and the headline must be read with that attached.** Three
+runs of the same tool over the same level: **1 in 76** (10 m grid, 45 frames), **1 in 202** (10 m,
+30), **1 in 1,282** (20 m, 20). Coarser starts and shorter routes spend proportionally less time in
+the creases and lips where a resolve pushes the capsule into geometry, so the spread is real signal
+about *where* the class lives, not noise. §409.2's instinct that it is geometry-specific was
+therefore half right; what was wrong was the leap from "rare in my sample" to "absent from ordinary
+locomotion", when the sample was one site and the walk was 305 sweeps.
+
+Everything in the table above is reproduced exactly by `node tools/sweepcensus.mjs --grid 10
+--frames 45` — the same 174 routes, 21,595 sweeps and 283 reports, and the same `_calibrate` push of
+0.0026 m — so the figures in this section are a committed instrument's output rather than a number
+copied out of a scratch script.
+
+**And building that instrument produced two bugs worth more than the tool.** Both are this
+section's own subject, wearing the costume of a measurement:
+
+- It held the **pooled** `groundCheck` result across a loop that re-queried collision. The ring is
+  six deep and one controller frame spends far more than six ground queries, so the second pass read
+  whatever the pool had since put there — `resetGround` writes `y = -Infinity`, which teleported the
+  character to negative infinity and the walk never returned. It looked exactly like the box being
+  slow, which it also was, and that is why it survived two diagnoses.
+- The stack attribution was written with exact-equality frame matching (`n === 'capsuleSweep'`) when
+  V8 hands back **qualified** names (`Object.capsuleSweep`, `collision.capsuleSweep`). It matched
+  nothing, so every one of 6,412 sweeps was filed under a single name and the census printed one
+  row. **An attribution that cannot attribute, reporting a total as a breakdown** — a green-looking
+  instrument that had quietly lost the only distinction it existed to draw, which is §409.3 exactly,
+  committed by the author of §409.3 while writing §412.
+
 ### §412.3 So why was only one site ever damaged — the enumeration, with the answer per caller
 
 Because of **how each caller reads the result**, which is a structural property and not a fact
