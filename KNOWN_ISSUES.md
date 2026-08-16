@@ -32116,6 +32116,26 @@ reads the catalogue and not one of them reads the draw.** T3 re-derives loudness
 `EMITTERS`; the ledger quotes T3; the catalogue is the source both consult. Their agreement is
 not three witnesses, it is one witness quoted three times.
 
+**And the census is worse than three.** The figures `0.00366 / 0.01852 / 0.06014 / 0.21529`
+appear, all derived from `EMITTERS` and none from a frame:
+
+```
+  KNOWN_ISSUES.md:18812   this ledger
+  KNOWN_ISSUES.md:29740   this ledger, again
+  tools/alertframe.mjs:182 and :250            a tool's header, twice
+  tests/fxfeel.test.mjs   T3, recomputed live
+  src/fx/Particles.js:3731-3734                THE FILE CONTAINING THE DEFECT
+```
+
+That last one is the sharpest statement of the whole section. `Particles.js`'s own header writes
+out `rung 2 alert_search 6.0 x 0.55 x 0.135^2 = 0.06014` and `rung 3 alert_spot 9.5 x 0.74 x
+0.175^2 = 0.21529` — where **6.0 and 9.5 are `meanOf([5,7])` and `meanOf([8,11])`, the declared
+midpoints** — while `_emit`, three hundred lines below it in the same file, drew 6.499 and 9.999.
+The source states, in its own comment, the value its own code does not produce.
+
+So it is not six documents agreeing. It is the catalogue's INTENT, copied six times, one of the
+copies sitting inside the function that contradicts it. Nothing in the set is an observation.
+
 ### §415.3 The generalisation
 
 > **§415 — When a test, a catalogue and a ledger agree, check whether any of them has ever
