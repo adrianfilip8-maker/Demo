@@ -101,7 +101,7 @@ const NGON_BOUND = 1 - Math.cos(Math.PI / DISC_SEG);   // 1.52e-4
 const REF = {
   pos: [5.4, 4.4, -2.6], target: [0.0, 0.6, -8.0], fov: 38,
   at: [0, 0, -8],
-  src: 'shots/fxrim2-impact, src tree 2b06133ddf675387',
+  src: 'shots/fxrim5-impact, src tree 357c52b23a6ff1f5',
 };
 
 /* ── MEASURED EXTENTS ───────────────────────────────────────────────────────────────────────
@@ -109,23 +109,32 @@ const REF = {
  * across thresholds rather than at a chosen one.
  *
  *   arm         plateau        drawn extent                    what it is
- *   S-nosly     |dL| 8..64     x 502..699, rows 303..498       the figure
- *   P-nodust    |dL| 4..16     x 404..930, rows 248..521       dive_dust + dive_debris
- *   P-noring    |dL| 4..64     x 0..1272,  rows 216..719       the ring's light, clipped l/r/b
+ *   S-nosly     plateau 16..64  x 501..700, rows 304..497      the figure
+ *   P-nodust    NO PLATEAU      x 366..834, rows 239..501      dive_dust + dive_debris (|dL|>2)
+ *   P-noring    NO PLATEAU      x 123..1135, rows 244..719     the ring's light, clipped l/r/b
  *
  * The impact point (0, 0, -8) projects to px 640.0, py 423.8 in that camera, which is what
  * converts these to world extents about the contact. */
 const MEASURED = {
-  sly:  { x0: 502, x1: 699, y0: 303, y1: 498 },
-  dust: { x0: 404, x1: 930, y0: 248, y1: 521 },
+  /* RE-MEASURED on shots/fxrim5-impact by `tools/armextent.mjs`, which detects the plateau
+     rather than reading a chosen threshold. Deltas from the fxrim2 record: sly moved <= 1 px on
+     every bound; dust's right edge came IN by 97 px and its top went UP by 9 px, which is the
+     RNG re-draw the `count` fix caused (every emitter staged after a shrunk burst sees a
+     different slice of the stream) and not a change in what the cloud is. */
+  sly:  { x0: 501, x1: 700, y0: 304, y1: 497 },   // plateau |dL| 16..64
+  /* THE DUST HAS NO PLATEAU — its bbox moves at every threshold from 2 to 64, because a 19-puff
+     cloud has no hard edge. So there is no "the" extent, and the number recorded here is the
+     WIDEST signal level (|dL| > 2). For a CONTAINMENT check that is the strict direction: the
+     plate is required to cover the most the cloud ever lights, not an average of it. */
+  dust: { x0: 366, x1: 834, y0: 239, y1: 501 },   // |dL| > 2, no plateau exists
 };
 
-/* The figure, as a camera-facing plate. 197 x 195 px at the reference camera's depth.
+/* The figure, as a camera-facing plate. 199 x 193 px at the reference camera's depth.
  *
  * NOT ground-anchored: the measured figure spans 121 px above the contact point's projection
  * and 74 px below it. A slam reaches under the contact plane, and the pose's own root motion
  * is (0, -0.6885, +0.1). Modelling it from the ground up put its crown 101 px above his head. */
-const SLY_SLAM = { w: 1.565, yLo: -0.746, yHi: 1.106 };
+const SLY_SLAM = { w: 1.5807, yLo: -0.7382, yHi: 1.0945 };
 
 /* The dust cloud, likewise. Half-width 2.44 m, -0.82 to +1.48 m about the contact.
  *
@@ -140,7 +149,29 @@ const SLY_SLAM = { w: 1.565, yLo: -0.746, yHi: 1.106 };
  * 1.70 m of half-extent, so the population's outer edge is at <= 3.05 m in the worst draw
  * against 2.44 m measured. The recipe bounds the measurement and the measurement lands inside
  * it. Neither number is quoted as the other. */
-const DUST = { w: 4.878, yLo: -0.989, yHi: 1.569 };
+/* ── AND THIS WAS A MEASUREMENT OF ONE RNG DRAW WEARING A BOUND'S CLOTHES (§415.2b) ─────────
+ * `w 4.878` was the drawn cloud on ONE capture — half-width 2.44 m — and it failed containment
+ * by 4 px against the very next one, because `sz` and the burst size are RNG draws and the
+ * `count` fix moved the stream. That is exactly the `RING_R_DRAWN` error, in a constant derived
+ * two hours after the section naming it, and §407.3 had ALREADY computed the recipe bound
+ * correctly — carrying the size jitter, "the puffs reach 1.70 m of half-extent" — beside the
+ * fitted number. The correct derivation and the wrong constant sat in adjacent paragraphs with
+ * nothing forcing them to meet.
+ *
+ * Bounded over the WHOLE DRAW instead, from the shader's own expressions with every term
+ * carried — `disc` spread lift ∈ [0, cone] so the vertical component is at most
+ * `cone/sqrt(1+cone²)`, drag integral `dc`, gravity, turbulence (`aDyn.z * age`, y scaled 0.6),
+ * spawn jitter, and the size ramp at the jitter's supremum 1.25 — over BOTH emitters that draw
+ * into this batch:
+ *
+ *     dive_dust    sz_max 1.703   half-width 3.270   yHi 2.124   yLo -1.959
+ *     dive_debris  sz_max 0.187   half-width 0.405   yHi 0.413   yLo -0.308
+ *
+ * Same reasoning as `RING_R_CROP` and the same payoff: a camera that clears this clears EVERY
+ * draw, so the bar is monotone-safe and no re-stage can be invalidated by an RNG re-draw. It
+ * projects to margins l204 r204 t178 b112 — uncropped — so bounding rather than fitting costs
+ * no verdict, and the ring remains this shot's only crop. */
+const DUST = { w: 6.5404, yLo: -1.9586, yHi: 2.1244 };
 
 /* ── THE RING'S EXTENT HAS FIVE TERMS AND THIS TOOL KNEW ABOUT ONE ──────────────────────────
  * `_stageImpact` returns 1.50 m; §405 corrected that to 4.035 m; **both are wrong, and the
