@@ -542,3 +542,70 @@ test('T2: the drawn portal frames are 62 % under sand — the burial is the whol
   assert.equal(clear, null,
     `the dune now drops to the hall floor at z ${clear}, so the mouth has daylight and this arm is stale`);
 });
+
+test('T3: the burial is the PYRAMID PLATEAU, applied after the mask that exists to stop it', () => {
+  /* T1 and T2 measure the burial. This arm names its cause, because "cut the dune back" is not
+     actionable until you know which term put it there, and two plausible candidates are wrong:
+
+       `drift`      the exterior sand ramp — returns 0 inside the pad rect (`outsideRect` really
+                    does return 0 inside; I checked the function rather than its docstring).
+       `paveDrift`  the thin sheet over the paving edge — capped at `padLip` 0.30 m, and the
+                    burial reaches 1.17 m. It cannot be the source and is not.
+
+     The cause is `pyramidPlateau`. Its weight is `1 - smoothstep(r, r + 110, d)` with
+     `r = halfBase * 1.3`, so pyr1 (halfBase 82, baseY 6.5) still has weight at **d = 186.8 m** —
+     which is where the hall's north-west corner stands. And it is applied as
+     `h = lerp(h, baseY, w)` AFTER `h *= 1 - cm`, so the complex mask whose entire job is to hold
+     the complex flush at y = 0 is overridden two lines later. `approachRidge` on the line above
+     is weighted `* (1 - cm)` and behaves; the plateau is not.
+
+     The control is what makes this attribution rather than correlation: the hall's two north
+     corners have identical pad geometry, mirrored in x. The WEST one is 186.8 m from pyr1 and
+     inside the falloff; the EAST one is 222.1 m away and outside it. West reads 1.17 m of sand,
+     east reads flush. Nothing about `drift`, `paveDrift` or the mask distinguishes them. */
+  const SRC = readFileSync(new URL('../src/world/Terrain.js', import.meta.url), 'utf8');
+  const m = /\{ x: (-?[\d.]+), z: (-?[\d.]+), h: [\d.]+, halfBase: ([\d.]+), baseY: ([\d.]+)/.exec(SRC);
+  assert.ok(m, 'could not read the first PYRAMIDS entry out of Terrain.js — re-anchor this arm');
+  const [px, pz, halfBase, baseY] = m.slice(1).map(Number);
+  const fall = /const t = 1 - smoothstep\(r, r \+ (\d+), d\);/.exec(SRC);
+  assert.ok(fall, 'the plateau falloff is no longer `smoothstep(r, r + N, d)`');
+  const reach = Number(fall[1]);
+  const r0 = halfBase * 1.3;
+  const wAt = (x, z) => {
+    const d = Math.hypot(x - px, z - pz);
+    const s = Math.max(0, Math.min(1, (d - r0) / reach));
+    return 1 - s * s * (3 - 2 * s);
+  };
+
+  const WEST = [-24, -52], EAST = [24, -52];
+  const hw = T.heightAt(...WEST), he = T.heightAt(...EAST);
+  const ww = wAt(...WEST), we = wAt(...EAST);
+  console.log(`  T3: pyr1 (${px}, ${pz}) halfBase ${halfBase} baseY ${baseY} · plateau reaches `
+    + `${(r0 + reach).toFixed(1)} m`);
+  console.log(`  T3: hall NW d ${Math.hypot(WEST[0] - px, WEST[1] - pz).toFixed(1)} m -> weight ${ww.toFixed(3)} · sand ${hw.toFixed(3)}`);
+  console.log(`  T3: hall NE d ${Math.hypot(EAST[0] - px, EAST[1] - pz).toFixed(1)} m -> weight ${we.toFixed(3)} · sand ${he.toFixed(3)}`);
+
+  assert.ok(ww > 0.05, `the plateau weight at the hall's NW corner is ${ww.toFixed(3)} — if it has fallen `
+    + 'to zero the plateau no longer reaches the temple and this attribution is stale');
+  assert.equal(we, 0, `the hall's NE corner now carries plateau weight ${we.toFixed(3)}, so it is no longer `
+    + 'the control this arm rests on and the comparison proves nothing');
+
+  /* the prediction: lerping the flush height toward baseY by that weight reproduces the burial.
+     The east corner supplies the flush reference, since it is the same geometry with weight 0. */
+  const predicted = he + (baseY - he) * ww;
+  console.log(`  T3: lerp(flush ${he.toFixed(3)}, baseY ${baseY}, w ${ww.toFixed(3)}) = ${predicted.toFixed(3)} `
+    + `against a measured ${hw.toFixed(3)} — ${(100 * Math.abs(predicted - hw) / hw).toFixed(1)} % apart`);
+  assert.ok(Math.abs(predicted - hw) / hw < 0.08,
+    `the plateau lerp predicts ${predicted.toFixed(3)} m and the field returns ${hw.toFixed(3)} m. They agreed `
+    + 'to within 3 % when this was measured; if they have diverged, some OTHER term is now '
+    + 'contributing and the single-cause attribution here is wrong');
+
+  /* THE FIX THIS ARM IS WAITING FOR, stated so it is not re-derived: weight the plateau by the
+     complex mask, exactly as `approachRidge` already is —
+         h = lerp(h, _plateau[0], _plateau[1] * (1 - cm));
+     One line, no new constant, and it leaves the plateau untouched outside the complex because
+     `cm` is 0 there. Held while a capture holds the lock (§186). */
+  assert.match(SRC, /h = lerp\(h, _plateau\[0\], _plateau\[1\]\);/,
+    'the plateau lerp has changed. If it is now mask-weighted, this defect is fixed — retire T1, '
+    + 'T2 and T3 together and pin the exposed hall floor instead of the buried one');
+});
