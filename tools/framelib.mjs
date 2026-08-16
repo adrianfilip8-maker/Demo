@@ -90,6 +90,13 @@ export function boxOf(cam, x, y, z, dims) {
  * upright box would over-report its vertical extent by the box's height and under-report the
  * near/far spread that perspective gives a disc seen from a low camera. Sampled around the rim
  * rather than corner-projected, because a circle's silhouette is not its bounding square.
+ *
+ * ── `rim` is the samples, not a second projection ───────────────────────────────────────────
+ * The returned object also carries `rim`, the `segments` projected rim points this already
+ * computed, in order. `tools/fxrim.mjs` measures ink *along* the ring rather than inside its
+ * box, and the one thing that must not happen is a consumer re-deriving the same circle with
+ * its own loop — that is a second copy of the recipe, and the copy is the one that goes stale
+ * when `discOf` changes. Existing consumers read `x0/x1/y0/y1` and are unaffected.
  */
 export function discOf(cam, x, y, z, r, segments = 24) {
   const pts = [];
@@ -102,6 +109,7 @@ export function discOf(cam, x, y, z, r, segments = 24) {
   return {
     x0: Math.min(...pts.map((p) => p.px)), x1: Math.max(...pts.map((p) => p.px)),
     y0: Math.min(...pts.map((p) => p.py)), y1: Math.max(...pts.map((p) => p.py)),
+    rim: pts,
   };
 }
 
