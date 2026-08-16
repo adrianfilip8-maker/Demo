@@ -65,6 +65,47 @@ const vColA = (def, u) => {
   return def.alpha[0] * smooth(0, Math.max(def.fadeIn, 1e-3), u) * Math.pow(Math.max(1 - u, 0), def.fadeOut);
 };
 
+
+/**
+ * The drawn alpha of a ring over its life, and where it peaks.
+ *
+ * `drawn = authored fade x SOFT`, and SOFT is `clamp((sceneZ - vViewZ)/uSoftness, 0, 1)` — the
+ * sprite faded by its stand-off from the surface behind it. `driftRate` is metres per second of
+ * travel along the plane normal: **0 is the shipped static lift, 1 is the old bug** (PARTICLE_VERT
+ * integrating aV0 as a velocity with drag 0, so dc = age).
+ *
+ * Exported because `tests/fxrim.test.mjs` T12 asserts the peak moves back, and a test that
+ * re-implemented this would be checking its own copy rather than the tool's (§ the framelib rule:
+ * a second copy is a second thing to keep true).
+ */
+export function drawnAlphaCurve({ driftRate = 0, lift = STAGE_LIFT + AGE_DIVE, rFrac = 0.86 } = {}) {
+  const def = EMITTERS.dive_ring;
+  const cam = camFor(SHOTS.impact);
+  const life = def.life[0];
+  const n = new THREE.Vector3(0, 1, 1e-4).normalize();
+  const t1 = new THREE.Vector3().crossVectors(n, new THREE.Vector3(1, 0, 0)).normalize();
+  const t2 = new THREE.Vector3().crossVectors(n, t1);
+  const viewZ = (w) => -w.clone().applyMatrix4(cam.matrixWorldInverse).z;
+  const rows = [];
+  let peak = { a: -1, u: 0 };
+  for (let u = 0.005; u <= 1.0; u += 0.005) {
+    const age = u * life;
+    const sz = szOf(def, Math.max(age, 1e-4), 1.0, TUNE.impactScale);
+    const y = lift + driftRate * age;
+    const r = sz * rFrac;
+    const p = new THREE.Vector3(0, y, -8).addScaledVector(t1, r * Math.SQRT1_2).addScaledVector(t2, r * Math.SQRT1_2);
+    const d = p.clone().sub(cam.position).normalize();
+    const floor = cam.position.clone().addScaledVector(d, (0 - cam.position.y) / d.y);
+    const soft = Math.min(1, Math.max(0, (viewZ(floor) - viewZ(p)) / RING_SOFTNESS));
+    const a = vColA(def, u) * soft;
+    rows.push({ u, age, soft, a });
+    if (a > peak.a) peak = { a, u, age };
+  }
+  return { rows, peak, life };
+}
+
+
+if (process.argv[1] && process.argv[1].endsWith('ringdrift.mjs')) {
 console.log(`ringdrift · every PLANAR sprite travels along its own normal at 1 m/s (dc = age at drag 0)`);
 console.log(`read from source: ring softness ${RING_SOFTNESS} · dive_ring age ${AGE_DIVE} · cane_ring age ${AGE_CANE}`);
 console.log(`                  staged lift ${STAGE_LIFT} m · _onCaneHit heavy ${HEAVY}\n`);
@@ -205,4 +246,5 @@ console.log('\n── B. THE BRIGHTENING: the drawn alpha is NOT monotone after 
   console.log(`   — so every staged still is unchanged to the pixel, and only MOTION differs.`);
   console.log(`   static-lift curve peaks at u ${peakS.u.toFixed(3)} against the drifted ${peakD.u.toFixed(3)}: the ramp is gone`);
   console.log(`   and the opacity is kept. That is the option the two measurements above point at.`);
+}
 }

@@ -40,6 +40,7 @@ import { readFileSync } from 'node:fs';
 import { SHOTS } from '../src/core/Shots.js';
 import { EMITTERS, ALERT_LADDER } from '../src/fx/Emitters.js';
 import { rng } from '../src/core/Rand.js';
+import { drawnAlphaCurve } from '../tools/ringdrift.mjs';
 import { Particles, TUNE as FX_TUNE } from '../src/fx/Particles.js';
 import { TUNE as TOON_TUNE } from '../src/render/ToonMaterial.js';
 import { TUNE as POSTFX_TUNE } from '../src/render/PostFX.js';
@@ -714,4 +715,62 @@ test('T11: _emit draws an integer count on [count0, count1], both ends inclusive
   assert.ok(!/Math\.round\(\s*R\.range\(\s*def\.count/.test(code),
     '_emit is back to Math.round(R.range(count0, count1 + 0.999)) — every emitter in the '
     + 'catalogue can exceed its declared maximum again');
+});
+
+/* ═════ T12 — a PLANAR sprite stands off its surface, it does not fly off it ═══════════════ */
+
+test('T12: the PLANAR lift is constant, and every staged still still reproduces', () => {
+  /* `PARTICLE_VERT` integrated `aV0` as a velocity, and for a PLANAR sprite `aV0` is the PLANE
+   * NORMAL — `_emit`'s own comment says so one line above the write. With drag 0 that made
+   * `dc = age`, so every ring flew off its own surface at 1 m/s: `land_ring` reached 0.42 m,
+   * 13.1% of its own radius, and `cane_ring`'s normal is the swing direction so it left the
+   * struck point sideways. Repaired by applying the stand-off ONCE at emit (`PLANAR_LIFT`).
+   *
+   * BOTH ARMS, and they pull in opposite directions, which is the point:
+   *   1. the drawn alpha peak must come BACK to the authored fade-in, and a planted drift must
+   *      push it back out — a check that only asserted "peaks early" would pass a build with no
+   *      SOFT pass at all;
+   *   2. every staged still must reproduce, so the repair costs no shot certificate. */
+
+  /* ── arm 1: the peak, computed by the TOOL rather than by a copy of it ─────────────────── */
+  const staticPeak = drawnAlphaCurve({ driftRate: 0 }).peak;
+  const driftedPeak = drawnAlphaCurve({ driftRate: 1, lift: 0.06 }).peak;
+  assert.ok(staticPeak.u <= 0.06,
+    `with the shipped constant lift the drawn alpha peaks at u ${staticPeak.u.toFixed(3)} — the `
+    + 'authored curve peaks at the end of its 0.02 fade-in and falls from there, so a late peak '
+    + 'means the stand-off is growing with age again');
+  assert.ok(driftedPeak.u > 0.2,
+    `a planted 1 m/s drift peaks at u ${driftedPeak.u.toFixed(3)}, which is not late — this arm `
+    + 'cannot tell a fixed lift from a growing one, so arm 1 above proves nothing');
+  assert.ok(driftedPeak.u > staticPeak.u * 3,
+    'the planted drift does not move the peak materially later than the shipped lift');
+
+  /* ── arm 2: the staged stills, pinned to the STAGE_* tables they must match ────────────── */
+  const src = readFileSync(new URL('../src/fx/Particles.js', import.meta.url), 'utf8');
+  const liftBlk = src.match(/const PLANAR_LIFT = \{([\s\S]*?)\};/);
+  assert.ok(liftBlk, 'Particles.js no longer states a PLANAR_LIFT table');
+  const lifts = {};
+  for (const m of liftBlk[1].matchAll(/(\w+):\s*([\d.]+)/g)) lifts[m[1]] = Number(m[2]);
+  assert.ok(Object.keys(lifts).length >= 3, `§211.1: parsed only ${Object.keys(lifts).length} lifts`);
+
+  /* Each staged PLANAR emitter's lift MUST equal its own staged age, because that is the offset
+     the old drift reached there — which is what makes the staged frame reproduce. If a staged age
+     is edited and its lift is not, the frame moves silently. This arm is that alarm. */
+  const diveAge = Number(src.match(/\['dive_ring',\s*([\d.]+)\]/)[1]);
+  const caneAge = Number(src.match(/cane_ring:\s*([\d.]+)/)[1]);
+  assert.equal(lifts.dive_ring, diveAge,
+    `PLANAR_LIFT.dive_ring is ${lifts.dive_ring} but STAGE_IMPACT stages it at ${diveAge} — the `
+    + 'impact still no longer reproduces the frame its certificate was measured on');
+  assert.equal(lifts.cane_ring, caneAge,
+    `PLANAR_LIFT.cane_ring is ${lifts.cane_ring} but STAGE_CANE stages it at ${caneAge} — the `
+    + 'combat still no longer reproduces the frame its certificate was measured on');
+
+  /* And the shader must not be integrating the normal again. */
+  const vert = src.slice(src.indexOf('const PARTICLE_VERT'), src.indexOf('const PARTICLE_FRAG'));
+  const planarBranch = vert.slice(vert.indexOf('#elif defined( PLANAR )'), vert.indexOf('#else', vert.indexOf('#elif defined( PLANAR )')));
+  assert.ok(planarBranch.length > 0, 'PARTICLE_VERT no longer has a PLANAR position branch');
+  const code = planarBranch.replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.ok(!/aV0\s*\*\s*dc/.test(code),
+    'the PLANAR position branch integrates aV0 again — the plane normal is being used as a '
+    + 'velocity and every ring is flying off its surface at 1 m/s');
 });

@@ -699,6 +699,15 @@ void main() {
     // already faded out.
     vec3 q = aP0 * uBox + ( uWind * aTime.w + aV0 ) * ( uTime + seed * 37.0 );
     p = mod( q - uBoxOrigin, uBox ) + uBoxOrigin;
+  #elif defined( PLANAR )
+    /* PLANAR sprites do not travel. aV0 holds their PLANE NORMAL — _emit's own comment at the
+       write site says so — and this line used to read "p = aP0 + aV0 * dc", integrating that
+       normal as a velocity. With drag 0 that is dc = age, so every ground ring flew off its own
+       surface at exactly 1 m/s: land_ring reached 0.42 m, 13.1% of its own radius, and
+       cane_ring's normal is the SWING direction so it left the struck point sideways. The
+       stand-off a decal needs is now applied ONCE, into aP0 at emit time (see PLANAR_LIFT),
+       which is a constant offset rather than a function of age. */
+    p = aP0 + uWind * aTime.w * age;
   #else
     p = aP0 + aV0 * dc + uWind * aTime.w * age;
     p.y -= 0.5 * aDyn.x * age * age;
@@ -1681,6 +1690,31 @@ const STAGE_CANE = {
 };
 const STAGE_ARC = 0.003;
 const STAGE_COIN = 0.074;
+
+/**
+ * How far a PLANAR sprite stands off the surface it marks, in metres along its own normal.
+ *
+ * Applied ONCE in `_emit`. Before this existed, `PARTICLE_VERT` integrated `aV0` — which for a
+ * PLANAR sprite is the plane NORMAL — as a velocity, so every ring flew off its surface at
+ * 1 m/s and reached `life` metres by the end of its life. The stand-off is real and needed (see
+ * `_emit`'s comment: the `SOFT` pass erases a sprite lying exactly on its surface); the DRIFT
+ * was not.
+ *
+ * Each value is the offset the drift reached at that emitter's own staged age, so every staged
+ * still reproduces to within 0.3% and no shot certificate moves. Derived, and the derivation is
+ * checked every run by `tests/fxrim.test.mjs` T12 against the `STAGE_*` tables below — if a
+ * staged age is edited and its lift is not, that arm goes red rather than the frame silently
+ * moving.
+ */
+const PLANAR_LIFT = {
+  dive_ring: 0.088,   // = STAGE_IMPACT's dive_ring age
+  cane_ring: 0.045,   // = STAGE_CANE.cane_ring
+  /* No shot stages a landing, so this one has no still pinning it. Set to the same fraction of
+     its own life that `dive_ring` takes of its (0.088/0.34 = 0.259), which is the only defensible
+     thing to do with a value nothing measures: 0.259 * 0.42 = 0.109. INTERPOLATED, NOT MEASURED,
+     and the moment a shot stages `land_ring` this should be re-derived from that staging. */
+  land_ring: 0.109,
+};
 
 const STAGE_IMPACT = [
   ['dive_ring', 0.088],
@@ -3153,8 +3187,36 @@ export class Particles {
       p[idx * 3 + 2] = position.z + (jit ? R.jitter(jit) : 0);
 
       if (def.batch === 'ring') {
-        // PLANAR: aV0 is the plane normal, not a velocity.
+        /* PLANAR: aV0 is the plane normal, not a velocity — and PARTICLE_VERT now honours that
+         * instead of integrating it. The stand-off a decal needs from the surface it marks is
+         * applied HERE, once, as a constant offset along that normal.
+         *
+         * WHY A STAND-OFF IS NEEDED AT ALL. The `ring` batch ships `SOFT`, whose term is
+         * `a *= clamp((sceneZ - vViewZ) / uSoftness, 0, 1)` with `uSoftness` 0.9 — the sprite is
+         * faded by how far it stands off the surface behind it, so a ring lying exactly ON the
+         * floor is erased by the very pass that is supposed to soften its contact. The drift was
+         * accidentally supplying 59% of `dive_ring`'s stand-off and 2.50x of its opacity, so
+         * removing it without replacing it would have dimmed the largest sprite in the game by
+         * 2.5x. Measured in `tools/ringdrift.mjs`, not assumed.
+         *
+         * WHY THE VALUES ARE WHAT THEY ARE. Each is the offset the drift happened to reach at
+         * that emitter's own staged age, so every `STAGE_*` still reproduces to within 0.3% and
+         * no shot certificate moves. That is a continuity requirement, not a physical one: these
+         * are look constants and the staged frames are what pins them. `land_ring` is the one
+         * value with no staged still behind it — no shot stages a landing — so it takes the same
+         * fraction of its life that `dive_ring` takes of its own, and this comment is the record
+         * that it is interpolated rather than measured (§211.1).
+         *
+         * WHAT THIS CHANGED IN MOTION, which is the whole point: the drawn alpha of a ring is
+         * `authored fade x SOFT`, and with a growing stand-off that product peaked at u 0.380
+         * with a 1.919x RISE — a shockwave brightening over the first 38% of its life. With a
+         * constant stand-off the peak returns to u 0.035, reproducing the authored curve to
+         * 0.4%. Nobody chose the ramp; it was a plane normal being integrated as a velocity. */
         v[idx * 3 + 0] = _dir.x; v[idx * 3 + 1] = _dir.y; v[idx * 3 + 2] = _dir.z;
+        const lift = PLANAR_LIFT[name] ?? 0;
+        p[idx * 3 + 0] += _dir.x * lift;
+        p[idx * 3 + 1] += _dir.y * lift;
+        p[idx * 3 + 2] += _dir.z * lift;
       } else {
         const sp = R.range(spd0, spd1) * speedScale;
         v[idx * 3 + 0] = dx * sp + (opts?.inherit ? opts.inherit.x : 0);
