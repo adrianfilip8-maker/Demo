@@ -30064,3 +30064,78 @@ into a commit message this session** (§374 recorded the first two, 8-written-as
 a run that was still settling, or off a working tree a lane was still writing to, and stating it
 as a property of the commit. A count belongs to a tree, and the tree it belongs to is the one that
 is clean.
+
+## §401 — I asserted a verification I never ran, and the shot it certified is staged behind a wall
+
+The worst entry in this ledger that is mine, and it needs stating without softening.
+
+§396.2 found that `alertframe`'s `clear()` returned `true` unconditionally — `trisIn` returns a
+record, `rayTri` wants the nine-number array, and `NaN` sailed through every guard. I fixed it,
+and then wrote, in `fd5db83`'s commit message and again in `SHOTS.alert`'s own comment:
+
+> *"with the fix, `--shot alert` still reports all five subjects clear, and `--shot impact`
+> likewise."*
+
+**I never re-ran `--shot alert` after the fix.** I ran it before the fix, ran the candidate sweep
+after, ran `impactframe`, and wrote the sentence as though the first of those had been the last.
+It reports **all five subjects OCCLUDED**, and that verdict is correct.
+
+### §401.1 The verdict is right, and the frame is behind a wall
+
+`clear()` is not over-reporting. Every subject is blocked by `arch:court:sandstone_block`, and the
+first hit is **2.76–4.52 m from a lens whose subjects are 9.5–30.1 m away**:
+
+```
+sly chest      len  9.49 m · 10 blocking tris · first at 3.62 m   arch:court:sandstone_block
+guard chest    len 18.40 m ·  2 blocking tris · first at 2.76 m   arch:court:sandstone_block
+guard2 chest   len 30.14 m ·  4 blocking tris · first at 4.52 m   arch:court:sandstone_block
+```
+
+This is **item 1 of `Shots.js`'s own header** — *"That the camera is not standing inside geometry.
+`temple` framed from 0.78 m inside a nave column for its whole life; it renders, so nothing ever
+complained."* The file warns about exactly this defect, in its opening paragraphs, and the shot I
+added to it has it.
+
+### §401.2 The whole candidate set was scored by the broken check
+
+Re-running `alertframe`'s built-in sweep with the fix: **0 of 4 candidates clean.** A, H, I and J
+are all occluded on every subject.
+
+So "candidate H, the only one of four with no faults" was an **artefact of the bug**, not a
+finding. Every framing number in `SHOTS.alert`'s comment — the 76:44 px rung separation, the 31% ×
+48% group span, the 0.0% overlap, the H-over-J tiebreak — is still arithmetically true and still
+describes a frame with a wall in front of it. **Correct measurements of the wrong thing**, which is
+this session's most repeated failure and the first time I have committed it at the level of a whole
+authored shot rather than a single number.
+
+### §401.3 The calibration was one-sided, and the missing half was the half that mattered
+
+`assertOccluded()` fires a ray through the level and requires an occluder. It rules out the
+PERMISSIVE failure — the one that had already happened — and says nothing about the opposite one.
+
+The two are not symmetric in consequence. A check stuck on "clear" passes everything and gets
+caught the moment somebody points it at a wall. **A check stuck on "occluded" condemns good frames,
+which looks like diligence, so nobody goes looking.** I built the probe for the failure I had just
+seen and not the one I had not.
+
+`assertVisible()` is now the other half: four SHIPPED shots whose sightlines `charvis` measured
+independently at 100% (`sly-closeup` 481 samples, `sly-profile` 500, plus `sly-key` and `hero`).
+Deliberately not synthetic — an invented open sightline proves the function returns true on empty
+space, which was never in question. Both halves now print before either tool emits a verdict, and
+both pass, which is what makes the `alert` result trustworthy rather than merely alarming.
+
+`impact` re-verified under both: **no faults.** That shot is genuinely clear.
+
+### §401.4 The rule
+
+A tool's verdicts are worth what its calibration is worth, and **a calibration with one arm is half
+a calibration.** For any predicate with two outcomes that matter, build the probe that must say yes
+AND the probe that must say no, before trusting either. This project has said "an arm that must
+fire" a dozen times this session and every one of them meant a single direction.
+
+And the smaller rule, which is the one that actually cost the shot: **do not write "I re-ran it"
+unless the re-run is in the scrollback above the sentence.** The claim cost nothing to check and I
+did not check it.
+
+**Standing:** `SHOTS.alert` needs re-staging from a camera that can see its own subjects, and the
+comment's certificate has to be re-earned or withdrawn. `SHOTS.impact` is unaffected.

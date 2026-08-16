@@ -24,6 +24,7 @@
 import * as THREE from 'three';
 import { execFileSync } from 'node:child_process';
 import { buildLevel, trisIn, rayTri } from './lvl.mjs';
+import { SHOTS } from '../src/core/Shots.js';
 
 export const W = 1280, H = 720;
 
@@ -179,6 +180,42 @@ export function assertOccluded() {
     ? 'clear() CALIBRATED — a ray across the level reports an occluder'
     : 'clear() IS BROKEN — a ray straight through the level reports NO occluder; every '
       + '"clear" this tool prints is vacuous';
+}
+
+/**
+ * Prove `clear()` can say YES — the half that was missing, and its absence cost a shot.
+ *
+ * `assertOccluded()` alone only rules out the permissive failure. It says nothing about the
+ * opposite one, and the two are not symmetric in consequence: a check stuck on "occluded"
+ * condemns good frames, which looks like diligence rather than a bug, so nobody goes looking.
+ *
+ * The probe is four SHIPPED shots whose visibility was measured independently by `charvis` —
+ * `sly-closeup` and `sly-profile` at 100% of 481 and 500 samples with no occluder at all, plus
+ * `sly-key` and `hero`. If `clear()` calls any of those occluded it is over-reporting, and no
+ * verdict it gives is worth anything. Deliberately not synthetic: a made-up open sightline
+ * proves the function returns true on empty space, which was never in question — what has to be
+ * demonstrated is that it returns true on a real, cluttered level where a frame is known good.
+ *
+ * **Why this exists at all.** `alertframe --shot alert` reported all five subjects clear before
+ * the `rayTri` argument bug was fixed, and I recorded in a commit and in `SHOTS.alert`'s own
+ * comment that it "still reports all five clear" after the fix. I never re-ran it. It reports
+ * all five OCCLUDED, and that verdict is correct — see §401. One probe of a pair is not a
+ * calibration, it is half of one, and the missing half was the half that mattered.
+ */
+export function assertVisible() {
+  const KNOWN_CLEAR = ['sly-closeup', 'sly-profile', 'sly-key', 'hero'];
+  const bad = [];
+  for (const name of KNOWN_CLEAR) {
+    const s = SHOTS[name];
+    if (!s?.player?.pos) continue;
+    const cam = camFor(s);
+    const [x, y, z] = s.player.pos;
+    if (!clear(cam, { x, y: y + 0.9, z })) bad.push(name);
+  }
+  return bad.length === 0
+    ? `clear() CALIBRATED — ${KNOWN_CLEAR.length} charvis-verified sightlines all read clear`
+    : `clear() IS OVER-REPORTING — ${bad.join(', ')} read as occluded, and charvis measured them `
+      + '100% visible; every "OCCLUDED" this tool prints is suspect';
 }
 
 /**

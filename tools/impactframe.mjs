@@ -54,7 +54,7 @@ import { SHOTS } from '../src/core/Shots.js';
 import { TUNE as FX_TUNE } from '../src/fx/Particles.js';
 import {
   W, H, SLY, provenance, camFor, boxOf, discOf, overlapArea, margins, clear, assertOccluded,
-  groundColumn, groundUnder,
+  assertVisible, groundColumn, groundUnder,
 } from './framelib.mjs';
 
 const S = FX_TUNE.impactScale;
@@ -67,6 +67,7 @@ console.log(`impactScale ${S} · scuff r${SCUFF_R.toFixed(2)} m · ring r${RING_
 /* Every `clear` verdict below depends on a ray test that silently returned "visible" for the
    whole life of `alertframe`. Prove it can say no before printing a single one. */
 console.log(assertOccluded());
+console.log(assertVisible());
 
 function score(name, c) {
   const cam = camFor(c);

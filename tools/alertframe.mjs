@@ -49,7 +49,14 @@ import { SHOTS } from '../src/core/Shots.js';
    disagreeing about where a point lands, and two copies is how that happens. */
 import {
   W, H, SLY, GUARD, provenance, camFor, project, boxOf, overlapArea, margins, clear,
+  assertOccluded, assertVisible,
 } from './framelib.mjs';
+
+/* Both halves, before a single verdict prints. `clear()` answered "clear" unconditionally for
+   this tool's whole life (§396.2), and the one-sided calibration that caught it could not have
+   caught the opposite failure — which is what actually bit this shot (§401). */
+console.log(assertOccluded());
+console.log(assertVisible());
 
 const MARK_Y = 1.55;              // Particles.js _onGuardAlert
 const MARK_R = 0.55;              // the mark's own radius, so "in frame" means all of it
