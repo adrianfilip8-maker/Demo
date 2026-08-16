@@ -3573,9 +3573,28 @@ export class Particles {
    *     the only one that puts light into the frame and therefore the only one that has to
    *     survive AgX. If the top rung does not read after the tonemap, nothing below it can —
    *     testing the quiet end first would prove nothing about the loud one, but not vice versa.
-   *  2. It is the loudest by the ladder's own score (count [8,11], alpha [0.62,0.86],
-   *     size0 0.175 → `loudness` 0.0177, against rung 0's 0.00073 — a 24x span), so it is the
-   *     rung most likely to be legible at whatever resolution the critic views.
+   *  2. It is the loudest by the ladder's own score. `fxfeel` T3 defines that score, and it is
+   *     the ONE the four-rung "reads apart" claim is registered against —
+   *     `meanOf(count) * meanOf(alpha) * size[0]^2` — with a ≥1.6x step required between
+   *     adjacent rungs. Recomputed from the shipped catalogue:
+   *
+   *         rung 0  alert_clear   2.5 x 0.26 x 0.075^2 = 0.00366
+   *         rung 1  alert_notice  4.0 x 0.42 x 0.105^2 = 0.01852     5.07x
+   *         rung 2  alert_search  6.0 x 0.55 x 0.135^2 = 0.06014     3.25x
+   *         rung 3  alert_spot    9.5 x 0.74 x 0.175^2 = 0.21529     3.58x
+   *
+   *     — a **58.8x span** rung 0 to rung 3, so the top rung is the one most likely to be
+   *     legible at whatever resolution the critic views.
+   *
+   *     CORRECTION (§396.4). This line previously read "`loudness` 0.0177, against rung 0's
+   *     0.00073 — a 24x span". Both figures are wrong and the span with them. They reproduce
+   *     from no formula: a sweep of 1296 combinations over count/alpha/size0/size1/life/meanSize
+   *     at six exponents found NOTHING within 6% of both. Nor is the catalogue to blame — the
+   *     alpha ranges this comment quotes have been unchanged since `9a0126e`, 570 commits
+   *     before the comment was written, and the inputs it quotes match the catalogue exactly.
+   *     They were simply miscomputed by hand and then propagated: the same pair reached
+   *     `tools/alertframe.mjs`'s header. Corrected here with the arithmetic shown so the next
+   *     reader can check it in one line rather than trust it.
    *  3. Its `col0` #ff3a22 is the ladder's maximum hue separation from sunlit sandstone, and it
    *     is the vision cone's own `colAlert`, so the frame shows the puff and the cone agreeing
    *     rather than two languages for one state.
