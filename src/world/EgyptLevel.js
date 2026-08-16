@@ -292,11 +292,11 @@ const NOTCH = {
  * the plane `Controller.probeWall` reports, so a consumer comparing a contact against a hold is
  * comparing like with like. The corbel is what the player sees; the point is where the hold is.
  */
-function notchLadder(A, { id, zone, cx, cz, w, d, batter, a, rungs, y0 }) {
+function notchLadder(A, { id, zone, cx, cz, w, d, batter, a, ys }) {
   const specs = [];
   const nz = 1 / Math.hypot(batter, 1);
-  for (let i = 0; i < rungs; i++) {
-    const y = y0 + i * NOTCH.pitch;
+  for (let i = 0; i < ys.length; i++) {
+    const y = ys[i];
     const oScale = (w - 2 * batter * y) / w;      // masonryShell's own opening scaling
     const x = cx + a * oScale;
     const zf = cz + d / 2 - batter * y;           // proxyBattered's +Z plane at this height
@@ -623,7 +623,46 @@ function doorFrame(A, zone, mat, { halfW, y0, y1, z, r = 0.26, x = 0 }) {
  * purely so it could carry `userData.spline`, which cost a draw call in the colour pass and
  * three more in the shadow cascades — for a 14 cm tube whose shadow is a thread.
  */
-function rail(A, name, pts, matKey = 'granite_pink', r = 0.16, zone = 'court') {
+/**
+ * A catenary between two anchors — the curve a rope actually hangs in, which is not the curve a
+ * Catmull-Rom through hand-placed waypoints gives you.
+ *
+ * `y = a·cosh(x/a)`, with `a` solved for the requested mid-span sag by bisection: sag is
+ * `a·(cosh(L/2a) − 1)`, monotonically decreasing in `a`, so 60 halvings put it well inside
+ * float precision. Endpoints are level here, which is the case this level has; a skewed
+ * catenary would need the full two-parameter solve and there is nothing asking for one.
+ *
+ * Why it matters, and it is not the look: the traversal lane measured a rider on a 21.07 m
+ * catenary with 3 m of sag **accelerating from 9.66 to 14.07 m/s into the dip and being slowed
+ * to 6.54 m/s climbing out the far side — rope physics, out of the shipped rail code, with no
+ * new mechanic.** A polyline of waypoints does not produce that; the second derivative has to be
+ * right along the whole span or the rider gets a sequence of flat runs and corners.
+ */
+function catenary(a0, b0, sag, seg = 24) {
+  const A0 = new THREE.Vector3(...a0), B0 = new THREE.Vector3(...b0);
+  const L = Math.hypot(B0.x - A0.x, B0.z - A0.z);
+  if (!(sag > 1e-4) || L < 1e-4) return [a0, b0];
+  let lo = 1e-3, hi = 1e4;
+  for (let i = 0; i < 60; i++) {
+    const m = (lo + hi) / 2;
+    if (m * (Math.cosh(L / (2 * m)) - 1) > sag) lo = m; else hi = m;
+  }
+  const a = (lo + hi) / 2;
+  const out = [];
+  for (let i = 0; i <= seg; i++) {
+    const t = i / seg;
+    const x = (t - 0.5) * L;
+    const dip = a * (Math.cosh(x / a) - Math.cosh(L / (2 * a)));   // 0 at both ends, −sag at mid
+    out.push([
+      A0.x + (B0.x - A0.x) * t,
+      A0.y + (B0.y - A0.y) * t + dip,
+      A0.z + (B0.z - A0.z) * t,
+    ]);
+  }
+  return out;
+}
+
+function rail(A, name, pts, matKey = 'granite_pink', r = 0.16, zone = 'court', rec = null) {
   const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)), false, 'catmullrom', 0.35);
   // 8 radial segments, not 5: a rail is a hero traversal affordance seen at arm's length in
   // `traversal`, and a pentagonal tube has five flat faces and no terminator.
@@ -633,11 +672,11 @@ function rail(A, name, pts, matKey = 'granite_pink', r = 0.16, zone = 'court') {
   const size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
   const proxy = A.proxy(
     new THREE.BoxGeometry(Math.max(0.3, size.x), Math.max(0.3, size.y), Math.max(0.3, size.z)),
-    { tag: 'rail', material: matKey === 'rope_fibre' ? 'cloth' : 'metal' },
+    { tag: 'rail', material: matKey === 'rope_fibre' ? 'cloth' : 'metal', ...(rec || {}) },
     { x: mid.x, y: mid.y, z: mid.z });
   proxy.userData.spline = curve;
   proxy.name = `rail:${name}`;
-  A.api.rails.push({ name, curve });
+  A.api.rails.push({ name, curve, ...(rec || {}) });
   return curve;
 }
 
@@ -1307,19 +1346,72 @@ function entryPylons(A) {
      * so the mismatch has never mattered; it does now. */
     const holds = [];
     if (sx > 0) {
-      /* y0 2.10 = one pitch off the paving, so the first rung is inside a plain standing jump
-         (apex jumpV0²/2g = 2.52 m). The +3.4 niche is offset half a pitch — see NOTCH. */
+      /* First rung one pitch off the paving, so it is inside a plain standing jump (apex
+         jumpV0²/2g = 2.52 m). The +3.4 niche is offset half a pitch — see NOTCH.
+         `ys` is an explicit list rather than a count, and that is not decoration: the east line
+         needs a SHORT final step, and a uniform-pitch generator cannot express one. */
+      const P = NOTCH.pitch;
+      const up = (n, first) => Array.from({ length: n }, (_, i) => first + i * P);
       holds.push(...notchLadder(A, {
         id: 'notch-pylon-e-w', zone: 'court', cx, cz: p.z, w: p.w, d: p.d, batter: B,
-        a: -3.4, rungs: 12, y0: NOTCH.pitch,
+        a: -3.4, ys: up(12, P),                       // 2.10 … 25.20
       }));
+      /* The east line closes with 24.15 → 25.20, a 1.05 m half-pitch step, so both niches finish
+         at the same height and which line `WallClimb.find()` commits you to stops being a thing
+         anyone has to reason about — `find()` cannot cross between them (3.5 m apart at the top
+         against its 0.685 m reach), so a difference there would be one you could not correct.
+         Free: a short step is under the 2.2274 m apex the pitch is derived against, not over it.
+         **It must be emitted INTO this ladder, not as its own.** Authored as a separate
+         `notchLadder` call it took the id family `notch-pylon-e-e-top`, and
+         `tests/traversal.test.mjs` groups ladders by `id.replace(/-\d+$/, '')` — so one physical
+         line read as two ladders **0.130 m apart**, inside `WallClimb.find()`'s 0.563 m lateral
+         budget. That silently activated the traversal lane's `sameLine()` tie-break, which they
+         had shipped and documented as provably inert because the real ladders are 3.598 m apart.
+         A rung in the wrong id family is a rule turned on in another file. */
       holds.push(...notchLadder(A, {
         id: 'notch-pylon-e-e', zone: 'court', cx, cz: p.z, w: p.w, d: p.d, batter: B,
-        a: 3.4, rungs: 11, y0: NOTCH.pitch * 1.5,
+        a: 3.4, ys: [...up(11, P * 1.5), P * 12],     // 3.15 … 24.15, then 25.20
       }));
     }
 
-    /* Battered wall-run faces. atan(0.105) = 6.0 deg off vertical -> 84 deg slope, still `wall`. */
+    /* Battered wall-run faces. atan(0.105) = 6.0 deg off vertical -> 84 deg slope, still `wall`.
+     *
+     * ── What the `− 0.4` turned out to be for, and the defect it leaves ───────────────────
+     * The proxy is built to `ph − 0.4` — the cornice's springing line, not the tower's height —
+     * and that is deliberate and correct: `K.cornice` is a flared cavetto that grows from
+     * 5.62 × 0.62 m at its base to 9.12 × 4.12 m at the deck, and a battered box (which
+     * *narrows* as it rises) cannot approximate it in any direction. So the collider stops where
+     * the cornice begins. The drawn `masonryShell` is built to the full `ph`, running its last
+     * 0.4 m up BEHIND the cornice so the springing has stone behind it rather than a slot —
+     * measured, that top course sits inside the cornice's own footprint by 0.031 m in both axes,
+     * so it is buried and never rendered as an exposed face.
+     *
+     * None of that is the bug. The bug is the **cap**: `proxyBattered` closes its top, leaving an
+     * invisible floor at 25.60 — the springing line of a 3.32 m cornice that occupies
+     * y 25.60…28.92 right there. Round 3 reported this as Sly standing "0.40 m into the drawn
+     * top course" and that was too kind by an order of magnitude: the cornice flares outward as
+     * it rises and reaches his standing z of ~34.7 at y 26.21, so from mid-shin upward **his
+     * torso and head are inside gilded stone** for the second or so he is perched there. Nothing
+     * could reach that surface before the handhold ladder existed, which is why it never cost
+     * anything.
+     *
+     * ── AND IT STAYS, BECAUSE THE ALTERNATIVE IS A BROKEN ROUTE ───────────────────────────
+     * Dropping the cap is geometrically safe — the frustum's top face is
+     * `max(0.4, w − 2·batter·h)` = 5.6240 × 0.6240 and the deck's own `groundProxy` is
+     * `p.w − 2·B·(ph − 0.4)` = **5.6240 × 0.6240, bit-identical**, sitting directly above it, so
+     * no hole is opened. It was built, flown, and reverted, because without that perch **the
+     * ascent cannot reach the deck at all**. Measured on the real controller from either line's
+     * top rung at 25.20: hands peak at **27.47 with no double jump and 27.75 with one — 1.45 and
+     * 1.17 m under the 28.92 lip.** Probing a `WallClimb` that re-granted `airJumps` on launch
+     * (the one-line change that would be the obvious fix) moves it to 27.75 and no further.
+     * The gap is structural: a launch lifts the hands `2.2274` m from a hold, the top hold can be
+     * no higher than the collider that carries it (25.60), and the nearest thing above is the
+     * cornice lip at 28.56. 25.20 + 2.2274 = 27.43 does not reach it and no rung placed lower can.
+     *
+     * So the perch is load-bearing and the trade is: a one-second pose inside a cavetto, or an
+     * ascent that ends in mid-air. Kept, deliberately, and written up rather than chosen quietly.
+     * Closing it properly needs a collider on the cornice itself — which is where Sly should be
+     * standing — and that is one registration against a sealed total of 272. Reported. */
     const face = A.proxy(K.proxyBattered(p.w, p.d, ph - 0.4, B, A._proxyMat()),
       { tag: 'wall', material: 'stone', climbable: true, batter: B, handholds: holds.length ? holds : null },
       { x: cx, y: 0, z: p.z });
