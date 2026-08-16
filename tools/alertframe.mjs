@@ -320,7 +320,16 @@ if (shotArg >= 0) {
  * scorer, no second set of bars.
  */
 if (args.includes('--search')) {
-  const P = SHOTS.alert.player.pos, G = SHOTS.alert.guard, G2 = SHOTS.alert.guard2;
+  /* `ALERT_SLY=x,z` overrides the stand, because the stand is a variable of the search and not
+     a constant of it. The shipped stand is the ROOT CAUSE of this shot's occlusion: at
+     (-9.5, 20.5) a `sandstone_worn` block sits 1.07 m from Sly and cuts his line to `guard2`
+     entirely — the two subjects cannot see each other, let alone share a lens. Sweeping cameras
+     against a stand that is itself wrong is how the first two sweeps returned 0 of 158 and 0 of
+     148 and told me to widen the lens. */
+  const SLY_OVERRIDE = process.env.ALERT_SLY?.split(',').map(Number);
+  const P = SLY_OVERRIDE ? [SLY_OVERRIDE[0], 0, SLY_OVERRIDE[1]] : SHOTS.alert.player.pos;
+  const G = SHOTS.alert.guard, G2 = SHOTS.alert.guard2;
+  if (SLY_OVERRIDE) console.log(`  (stand overridden to ${P[0]}, ${P[2]})`);
   /* THE SAME POINTS `score()` TESTS, and that is not a detail. The first version of this sweep
      probed chest at +0.9 / +1.0 while `score()` probes +1.2 and the mark at +1.55, so it
      admitted 158 cells whose chest was clear and whose head was not — and 111 of them then
@@ -338,10 +347,16 @@ if (args.includes('--search')) {
   ];
   /* Aim at the centroid of the three, at chest height: the shot frames a relationship, so the
      subject of the camera is the group rather than any one of them. */
+  /* `/ subj.length`, and it was `/ 3` — a hard-coded divisor left behind when the subject list
+     grew from three points to five to match `score()`'s probe heights. It aimed the camera at
+     (-29.17, 2.23, 14.50), which is outside the level, and SIXTEEN candidates still scored clean
+     against it: the bars are all relative to the frame, so a wrong aim that happens to leave the
+     group inside the frustum passes every one of them. A constant that does not follow its data
+     is the same defect as a comment that does not follow its code, and it is quieter. */
   const tgt = [
-    subj.reduce((a, s) => a + s.x, 0) / 3,
-    subj.reduce((a, s) => a + s.y, 0) / 3,
-    subj.reduce((a, s) => a + s.z, 0) / 3,
+    subj.reduce((a, s) => a + s.x, 0) / subj.length,
+    subj.reduce((a, s) => a + s.y, 0) / subj.length,
+    subj.reduce((a, s) => a + s.z, 0) / subj.length,
   ];
   const found = [];
   const TALLY = new Map();
@@ -355,7 +370,7 @@ if (args.includes('--search')) {
         for (const fov of [34, 40, 46, 52, 60, 68]) {
           const c = {
             pos: [x, y, z], target: tgt, fov, tod: SHOTS.alert.tod,
-            player: SHOTS.alert.player, guard: G, guard2: G2,
+            player: { ...SHOTS.alert.player, pos: P }, guard: G, guard2: G2,
           };
           const f = score(`x${x} y${y} z${z} fov${fov}`, c, true, TALLY);
           if (f === 0) found.push({ x, y, z, fov });
