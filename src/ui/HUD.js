@@ -140,10 +140,24 @@ const CONTROLS = [
  * ── KNOWN HAZARD, deliberately NOT worked around here ─────────────────────────────────────────
  * The retirement is WHOLESALE and this table has five entries MOVEMENT does not currently
  * announce. `tests/eventbus.test.mjs` names the consequence in advance: *"the first module to
- * publish this silently kills every contextual verb in the game"*. It is live as of this writing —
- * `Controller._pushPrompt` publishes `prompt`, and its own comment says *"Only pickpocket marks
- * are announced. A prompt for hook/rail/pole would be nice and is left out deliberately"* because
- * `afford()` costs a BVH `nearest()` per tag.
+ * publish this silently kills every contextual verb in the game"*.
+ *
+ * **The hazard is LATENT, not live, and this paragraph used to say the opposite.** It read *"It is
+ * live as of this writing — `Controller._pushPrompt` publishes `prompt`"*. That was written during
+ * the window in which the movement lane briefly did publish it; the lane reverted, and the comment
+ * did not follow. Three independent instruments agree that nothing publishes `prompt` today: a grep
+ * across `src/` for a bare emit of that name finds nothing, `_pushPrompt` does not exist in `src/`
+ * at all (and `git log -S` says it has never existed in `Controller.js`), and
+ * `tests/eventbus.test.mjs` carries `prompt` in `DEAD_UNBUILT` with the suite green. `progress/records/ui/NOTE-ui-audit.md:220`
+ * records the revert in as many words: *"That lane has since reverted, and the suite is green
+ * again."*
+ *
+ * So `_sawPrompt` is never set, the fallback below is what is actually running the contextual verb
+ * in the shipped game, and deleting it on the belief that MOVEMENT has taken over would remove all
+ * five verbs. The reason MOVEMENT declined the traversal prompts still stands and is still the
+ * reason a handover has to be designed rather than assumed: `afford()` costs a BVH `nearest()` per
+ * tag, and its own comment reads *"Only pickpocket marks are announced. A prompt for hook/rail/pole
+ * would be nice and is left out deliberately"*.
  *
  * A per-channel handover (MOVEMENT owns the pocket, the HUD keeps traversal — one
  * `collision.query` covers all five tags and is cheaper than the per-tag `nearest()` MOVEMENT
@@ -158,6 +172,52 @@ const AFF_VERB = {
 };
 const AFF_TAGS = Object.keys(AFF_VERB);
 const AFF_RANGE = 4.4;
+
+/**
+ * `wall` is NOT in that table, and the 19 authored handholds do not change that. DECLINED, with
+ * the measurements, so the next reader does not have to re-derive them.
+ *
+ * `world/EgyptLevel.js` now authors real handholds — discrete points on a face, reachable as
+ * `hit.rec.handholds` off a `collision.query()` hit. That is a genuine tag where `climbable: true`
+ * was not. Three separate things still say the prompt must stay silent, and only the first is a
+ * matter of timing:
+ *
+ * **1. There is no verb.** `buildMoveset()` ships `WallRun`, `WallCling` and `WallJump` and no
+ * wall climb; KNOWN_ISSUES §357.2 declined a sustained one as *"not a gap"* rather than *"not yet
+ * done"*, and left MOVEMENT an exact contract (a `WallClimb` at priority 79) for if it is ever
+ * wanted. Every entry in `AFF_VERB` is a promise that pressing E does something. Printing a keycap
+ * for an input with no state behind it is a lie the player tests immediately, and it is worse than
+ * silence — a prompt that does nothing teaches him to distrust the ones that do.
+ *
+ * **2. The query returns a BODY and a handhold is a POINT, so `AFF_RANGE` cannot express it.**
+ * Measured off a headless build of the shipped level (`Architecture` + `buildEgyptLevel` in plain
+ * Node, the same way `tests/level.test.mjs` boots it), not estimated:
+ *
+ *     19 handholds, two staggered ladders of 10 and 9, y 2.100 m → 21.000 m, all on one face
+ *     the single rec carrying them has a world box of 11.00 × 25.60 × 6.00 m
+ *     of 35,272 sampled standing positions within AFF_RANGE 4.4 of that BODY,
+ *       only 33.5% are within 4.4 m of any actual hold
+ *       distance to the nearest hold at a firing position: median 5.47 m, p90 8.58 m, max 10.61 m
+ *
+ * So two firings in three would announce a hold the player cannot reach, and the median miss is
+ * larger than the range itself. **No value of `AFF_RANGE` fixes that**, because the number being
+ * compared is a distance to a 25.6 m box. A correct implementation has to iterate `rec.handholds`
+ * and measure to the points — a different shape of test, not a different constant, and one that
+ * belongs next to the state that consumes it rather than in a stand-in.
+ *
+ * **3. The table this would join is scheduled for demolition.** `_tickAffordancePrompt` retires
+ * itself WHOLESALE the first time anything publishes a prompt (see the note above). Building a
+ * wall branch into it spends work on a component designed to be deleted, and adds a sixth verb to
+ * the five that would be lost with it.
+ *
+ * One number in the same commit IS new information and is also declined here: `hit.length`. The
+ * approach rail is 31.77 m and pylon-summit is 15.18 m (measured off the same build), and today
+ * they prompt identically. But metres in this HUD already mean one thing — `_tickGoal` writes
+ * `N m` for the distance to an objective — and a second, unrelated `N m` beside a verb would make
+ * the player relate two numbers that have nothing to do with each other. A rail's extent is
+ * something he can see. `length` is real information for a route TELEGRAPH (the camera already
+ * reaches for `userData.spline`), not for a keycap.
+ */
 
 /**
  * The pocket, when nobody else is announcing it.
@@ -212,7 +272,6 @@ export class HUD {
     this._coinsShown = 0;
     this.health = 5;
     this.healthMax = 5;
-    this._charmP = -1;          // 0..1 toward the next lucky charm; −1 = no next charm to buy
     this.binocOn = false;
     this.tovOn = false;
     this.pauseOn = false;
@@ -608,6 +667,35 @@ export class HUD {
 
     on('thiefVision', (v) => this.thiefVision(!!v));
     on('thiefTargets', (list) => this._onTargets(list));
+    /**
+     * DELIBERATELY UNWIRED. Do not give this a publisher — read §242 before you try.
+     *
+     * The pair looks exactly like the charm-progress defect and it is not one. `binocucom` has two
+     * subscribers (here and `Audio.js:1261`, which would play the fully built, test-covered
+     * `Sfx.js:742` sting) and no publisher; `binocucom()` at the bottom of this file emits
+     * `binocucomState`, which has no subscribers. A single added emit of `binocucom` from that
+     * method closes both halves and makes the gadget audible.
+     *
+     * **That is the trap.** Owner instruction, 2026-08-08: *"Abandon the Binocucom goal for this
+     * project"* (KNOWN_ISSUES §242) — no further work on it, by any agent. §242 also records why
+     * the code was NOT deleted: "abandon the goal" is not "remove the code". So a subscriber with
+     * no publisher is the CORRECT END STATE here, not a loose end.
+     *
+     * `tests/eventbus.test.mjs` enforces it in the publishing direction — `binocucom` sits in
+     * `DEAD_BY_DECISION`, and `no ABANDONED event is quietly revived` asserts `!published.has(evt)`.
+     * Its comment predicts this exact edit: *"the next agent handed the failure output closes the
+     * Binocucom's `binocucom`/`binocucomState` pair in good faith against an explicit owner
+     * instruction to stop (§242)"*. Adding the emit turns that test RED, and the red is right.
+     *
+     * If the owner reverses §242, the change is three lines and all three are needed together:
+     * publish `binocucom` from `binocucom()`, move the name out of `DEAD_BY_DECISION`, and drop
+     * `binocucomState` from `DEAD_PUBLICATIONS` if it is retired at the same time.
+     *
+     * One practical warning, learned by doing it: the census scrapes SOURCE TEXT, so a comment that
+     * quotes an emit call verbatim is counted as a publisher. Writing the pattern out in prose here
+     * turned two census assertions red without a line of code changing. Name events in comments the
+     * way this one does — the bare word, never inside a quoted call.
+     */
     on('binocucom', (v) => this.binocucom(!!v));
     on('guardAlert', (p) => this._onGuardAlert(p));
     on('objective', (p) => {
@@ -747,10 +835,15 @@ export class HUD {
     if (lost) this._hitFx(prev - v);
   }
 
-  /** Take damage: pips, flash, vignette punch and a shake in one call. */
-  damage(amount = 1) {
-    this.setHealth(this.health - Math.max(1, Math.round(num(amount, 1))), this.healthMax);
-  }
+  /* `damage(amount)` — a public "take a pip off, with the flash and the shake" convenience — was
+     removed here. It had ZERO callers in `src/`, `tests/`, `tools/` and `index.html` (checked by
+     name, not guessed: `grep -rn "\.damage("` across all four), and calling it was the §247 defect
+     in method form. `setHealth` is driven by the `health` event and nothing else, on purpose —
+     see the long note in `_wire` — because only `PlayerHealth` knows whether a hit was refused by
+     i-frames or eaten by a charm. A method that deducts a pip on request cannot know either, so
+     every use of it would have desynced the row from the truth until the next publish, having
+     already fired the flash and the shake for a hit that may never have landed. Keeping a dead
+     method whose only possible use is a bug is keeping a trap. */
 
   /**
    * Progress toward the next lucky charm, drawn INTO the pip it is going to become.
@@ -795,7 +888,11 @@ export class HUD {
       if (!path) continue;                       // a lit pip is finished art and carries no stroke
       path.style.strokeDashoffset = i === next ? String(Math.round((1 - p) * 1000) / 10) : '100';
     }
-    this._charmP = p;
+    /* No `this._charmP = p` here. It was written last round "for tests and debug", nothing ever
+       read it, and an audit of this file for one-ended machinery found it on the first pass — a
+       field assigned and never read is the same defect as an event published and never heard,
+       just inside one object instead of across the bus. The row IS the state; the tests read the
+       row. */
   }
 
   /**
@@ -822,6 +919,9 @@ export class HUD {
     // world marks stay — reading guard states through the optics is what it is for.
     this.root.dataset.binoc = v ? '1' : '0';
     if (v) this._flash(0.32, 130);
+    /* NOT `binocucom` — see the note on the subscription in `_wire`. This name has no subscribers
+       and `binocucom` has no publisher, and both halves of that are §242's recorded end state
+       rather than a naming slip to tidy up. `tests/eventbus.test.mjs` fails in both directions. */
     this.engine.emit('binocucomState', v);
   }
 
