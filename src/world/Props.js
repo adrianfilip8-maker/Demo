@@ -545,8 +545,33 @@ export class Props {
   _banners() {
     const R = this.rng;
     for (const sx of [-1, 1]) {
+      /* ── Shifted 1.4 m inboard, and it is a collision decision, not a composition one ──
+       * These masts are `pole` colliders 11 m tall standing 0.4 m off the pylon's south face —
+       * the face the handhold ladder now climbs. Measured against the ladder's own cling line,
+       * the mast at the old x 11.4 sat **0.70 m** from it, well inside `Controller.TUNE
+       * .poleMount` 1.9 m, and `PoleClimb` is priority **82** against `WallClimb`'s **79**.
+       *
+       * Nothing went wrong in the sim — 0 frames on a pole during the ascent, identical rungs
+       * with and without PROPS loaded — but the only thing separating them is `PoleClimb
+       * .canEnter`'s facing gate: it needs `dot(wishDir, dirToPole) > 0.4`, and a climber holds
+       * the stick INTO the wall at −Z while the mast is behind him at +Z. That is a directional
+       * accident. A player who lets the stick swing while airborne near y 0…11 — which is every
+       * player, sometimes — is one sign flip away from a `poleClimb` outranking the `wallClimb`
+       * he is performing, on an 11 m mast that dead-ends a third of the way up a 26 m route.
+       *
+       * A level should not depend on an input gate to keep two climbable objects apart when it
+       * can simply not put them in the same 0.7 m of air.
+       *
+       * 1.4 m inboard, to x 13.0 and 8.6. Solved rather than picked: the pair moves together, so
+       * shifting outboard buys clearance on the inner mast and spends it on the outer one, and
+       * the minimum over both masts against all thirteen cling positions is a real optimum.
+       * Measured — offset 1.2 → **1.881 m (inside)**; **offset 1.4 → 2.048 m**; offset 1.6 →
+       * 1.950; offset 1.8 → 1.752 (inside again). 2.048 clears `poleMount` by 0.148 m, so the
+       * geometry decides it and the facing gate is a second line of defence rather than the only
+       * one. The 4.4 m spacing, the height, the banner and the flanking-the-gate reading are all
+       * unchanged, and this draws no `rng`, so no block downstream moves. */
       for (let i = 0; i < 2; i++) {
-        const x = sx * (L.pylon.x - 2.6 - i * 4.4);
+        const x = sx * (L.pylon.x - 1.0 - i * 4.4);
         const mast = bannerMast({ rng: R, h: 11 });
         mast.transform(matrixOf({ x, y: 0, z: L.pylon.z + 3.4 }));
         this._absorb(mast);

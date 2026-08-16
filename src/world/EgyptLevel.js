@@ -1386,32 +1386,38 @@ function entryPylons(A) {
      * measured, that top course sits inside the cornice's own footprint by 0.031 m in both axes,
      * so it is buried and never rendered as an exposed face.
      *
-     * None of that is the bug. The bug is the **cap**: `proxyBattered` closes its top, leaving an
-     * invisible floor at 25.60 — the springing line of a 3.32 m cornice that occupies
-     * y 25.60…28.92 right there. Round 3 reported this as Sly standing "0.40 m into the drawn
-     * top course" and that was too kind by an order of magnitude: the cornice flares outward as
-     * it rises and reaches his standing z of ~34.7 at y 26.21, so from mid-shin upward **his
-     * torso and head are inside gilded stone** for the second or so he is perched there. Nothing
-     * could reach that surface before the handhold ladder existed, which is why it never cost
-     * anything.
+     * None of that was the bug. The bug was the **cap** plus the **height**: `proxyBattered`
+     * closed its top at 25.60, leaving an invisible floor at the springing line of a 3.32 m
+     * cornice occupying y 25.60…28.92 right there. Round 3 called this Sly standing "0.40 m into
+     * the drawn top course" and that was too kind by an order of magnitude — the cavetto flares
+     * outward as it rises and reaches his standing z of ~34.7 at y 26.21, so from mid-shin up
+     * **his torso and head were inside gilded stone**, at the one perch the whole ascent
+     * depended on. Nothing could reach that surface before the handhold ladder existed.
      *
-     * ── AND IT STAYS, BECAUSE THE ALTERNATIVE IS A BROKEN ROUTE ───────────────────────────
-     * Dropping the cap is geometrically safe — the frustum's top face is
-     * `max(0.4, w − 2·batter·h)` = 5.6240 × 0.6240 and the deck's own `groundProxy` is
-     * `p.w − 2·B·(ph − 0.4)` = **5.6240 × 0.6240, bit-identical**, sitting directly above it, so
-     * no hole is opened. It was built, flown, and reverted, because without that perch **the
-     * ascent cannot reach the deck at all**. Measured on the real controller from either line's
-     * top rung at 25.20: hands peak at **27.47 with no double jump and 27.75 with one — 1.45 and
-     * 1.17 m under the 28.92 lip.** Probing a `WallClimb` that re-granted `airJumps` on launch
-     * (the one-line change that would be the obvious fix) moves it to 27.75 and no further.
-     * The gap is structural: a launch lifts the hands `2.2274` m from a hold, the top hold can be
-     * no higher than the collider that carries it (25.60), and the nearest thing above is the
-     * cornice lip at 28.56. 25.20 + 2.2274 = 27.43 does not reach it and no rung placed lower can.
+     * ── The fix is two changes to THIS proxy and no new collider ──────────────────────────
+     *   · **`capTop: false`** — there is no floor at the springing any more. Safe rather than a
+     *     hole: the deck's own `groundProxy` covers the identical column (the frustum's top face
+     *     is `max(0.4, w − 2·batter·h)` and the deck is `p.w − 2·B·(ph − 0.4)`, which for the
+     *     old height were bit-identical at 5.6240 × 0.6240), and the deck box sits above it.
+     *   · **height `ph − 0.4` → `deckY − 0.36` (28.56)**, so the climbable face continues to the
+     *     cornice's own lip instead of stopping under it. The extension is battered *inward*
+     *     while the cavetto flares *outward*, so every added triangle is strictly inside the
+     *     drawn cornice — the collider gains no silhouette it did not have.
      *
-     * So the perch is load-bearing and the trade is: a one-second pose inside a cavetto, or an
-     * ascent that ends in mid-air. Kept, deliberately, and written up rather than chosen quietly.
-     * Closing it properly needs a collider on the cornice itself — which is where Sly should be
-     * standing — and that is one registration against a sealed total of 272. Reported. */
+     * That buys the two rungs at 26.25, and those are what close the route. Measured on the real
+     * controller: the old top rung at 25.20 put the hands at **27.47 (27.75 with a double jump)
+     * against a 28.92 lip — short by 1.45 m**, and probing a `WallClimb` that re-granted
+     * `airJumps` moved it to 27.75 and no further, because the gap was structural: a launch
+     * lifts the hands 2.2274 m and the top hold could be no higher than the collider carrying it.
+     * From 26.25 the hands make 28.48, and `Controller.probeLedge` accepts a lip up to
+     * **hands + 0.62** (line 987) — so 28.92 is caught with 0.18 m to spare. Flown: **13 rungs,
+     * lands on the deck, peak y 32.70**, with no perch inside the cornice anywhere in the run.
+     *
+     * THE PRICE, and it is real: the two 26.25 corbels sit at z 34.244 while the cavetto's outer
+     * surface at that height is z 34.723, so **those two brackets are buried and never drawn.**
+     * Two of twenty-six. The alternative was drawing them on the cavetto's face 0.48 m off their
+     * own hold, which is the promise-kept-elsewhere defect this file keeps refusing. A collider
+     * on the cornice was authorised for this and turned out not to be needed. */
     const face = A.proxy(K.proxyBattered(p.w, p.d, deckY - 0.36, B, A._proxyMat(), { capTop: false }),
       { tag: 'wall', material: 'stone', climbable: true, batter: B, handholds: holds.length ? holds : null },
       { x: cx, y: 0, z: p.z });
@@ -1989,15 +1995,34 @@ function hypostyleHall(A) {
    * thing that stops it being a rope. Step on at whatever speed you arrive with and let the
    * curve do the rest.
    *
-   * ── Sag 1.5 m is a clearance, not a taste ────────────────────────────────────────────────
-   * Measured by casting down from 200 samples along the curve against the built level: the
-   * binding obstacle is not mid-span, it is the **first nave column capital at (−6.8, ·, −22.9),
-   * y 11.90**, which the span passes almost directly over. Clearance under the rope there runs
-   * 0.71 m at the old 0.40 m sag, 0.33 at 1.5, 0.16 at 2.0, and **0.02 at 2.5 — touching**.
-   * 1.5 m keeps a third of a metre of daylight over the capital while still dropping the low
-   * point to y 11.25, which by `v² = v0² + 2gΔh` turns a 2.4 m/s step-on into 8.8 m/s at the
-   * bottom and back — the pendulum, inside the geometry the hall already has. */
-  rail(A, 'hall-cable', catenary([-8.4, 12.75, -20.5], [8.4, 12.75, -45.5], 1.5, 32),
+   * ── THE ENDS MOVED, BECAUSE THE ROPE HAD NOWHERE TO GET ON ───────────────────────────────
+   * Authored at (−8.4, 12.75, −20.5)…(8.4, 12.75, −45.5) it had the defect §1's lower hook chain
+   * had: **both ends tied to nothing.** Measured against every standable surface in the hall, the
+   * nearest place a player could stand to the old curve was **2.39 m** away — the great-doorway
+   * cornice, at almost exactly its height — with `TUNE.railMount` at 1.35. So there was no
+   * boarding point anywhere on it, and the 2.4 m/s step-on this comment's arithmetic assumed
+   * corresponded to nothing a player could do; every approach was a jump across a gap.
+   *
+   * Both ends now land on the surfaces the route already uses. The south end sits on the great
+   * doorway's cornice `ledge` (x −6…6, z −19…−15, top 12.70) — which is §8.1 step 3's own
+   * landing, where the hook chain puts you — so the rope is boarded by walking to the edge and
+   * stepping on: **nearest stand 0.00 m**, inside `railMount` with the whole margin to spare.
+   * The north end lands on the east aisle roof (`ground` y 13.50, x 11…23).
+   *
+   * ── Sag 1.0 m is a clearance, not a taste ────────────────────────────────────────────────
+   * Re-derived on the new 31.54 m span by casting down from 200 samples: the binding obstacle is
+   * a nave column capital at (6.4, ·, −38.0). Clearance under the rope there is **0.49 m at sag
+   * 1.0 and 0.08 m at 1.5**. Larger sags read as *more* clearance and are not — once the curve
+   * sinks below a capital the downward ray stops hitting it and the metric jumps, which is a
+   * property of the instrument, not of the rope. 1.0 m it is.
+   *
+   * The ends are 0.70 m apart in height, so the low point is y 12.02 and the ride is asymmetric:
+   * by `v² = v0² + 2gΔh` a 2.4 m/s step-on off the south cornice reaches **6.20 m/s** at the
+   * bottom, and cresting the 1.38 m climb to the north anchor needs **8.14 m/s** there — so he
+   * does not crest, he swings back, which is the rope. The shipped `TUNE.railSpeed` floor would
+   * give him 11.08 m/s at the bottom and carry him over every time; that floor is exactly what
+   * `mountSpeed: 0` declines. */
+  rail(A, 'hall-cable', catenary([-5.8, 12.70, -19.0], [11.3, 13.40, -45.5], 1.0, 32),
     'rope_fibre', 0.085, 'hall', { mountSpeed: 0, rope: true });
 
   /* Pinnacles on the aisle roof: the §8.1 spire tips at (±16, 21, −50). */
