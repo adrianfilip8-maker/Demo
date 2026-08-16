@@ -55,23 +55,32 @@
  * and bloom defeated, FXAA's ~2 px is the only spatial pass left, and the reach is 64 px.
  *
  * ── AND THE RESIDUE IS A SIZE, NOT A HALO, WHICH IS A DIFFERENT KIND OF ANSWER ───────────────
- * The per-azimuth boundary is the measurement a bbox cannot give. Unprojected onto the sprite's
- * own plane, over the 12 azimuths whose rays stay inside the frame all the way out:
+ * The per-azimuth boundary is the measurement a bbox cannot give. Against the CATALOGUE sprite
+ * the measured boundary ran 1.115x too far (median over the 12 azimuths whose rays stay in
+ * frame), with light 0.5 m outside the quad's own geometry at azimuth 0 and 90 — and a halo
+ * cannot do that. `tools/ringprobe.mjs` then read the attributes the GPU was handed, and the
+ * catalogue is not what is drawn, for three reasons none of which is postfx:
  *
- *   measured / model    min 1.093   median 1.115   max 1.131
+ *   1. `_emit`: `const s = R.range(0.8, 1.25) * scale`. A PER-PARTICLE random size factor. The
+ *      drawn `sz` is a RANDOM VARIABLE on [3.23, 5.04] m, and 4.035 is only its midpoint.
+ *      This capture drew 1.343x and 1.213x, for sz 4.335 m and 3.917 m.
+ *   2. TWO live `dive_ring` instances against `count: [1, 1]` — same birth, same life, same
+ *      point, independent size draws. What is on the floor is the UNION, so its outer edge is
+ *      a MAX of two draws rather than one.
+ *   3. `p = aP0 + aV0 * dc` in PARTICLE_VERT, where `aV0` holds the PLANE NORMAL for PLANAR
+ *      sprites (`_emit`'s own comment says so) and drag 0 makes `dc = age`. The ground ring
+ *      floats 0.088 m above the ground.
  *
- * A halo is additive and lands OUTSIDE a shape; this is multiplicative and reproduces the
- * shape. The measured boundary carries the ring texture's own angular wobble — it peaks at
- * 40-60° and dips at 0°/90° exactly where the model does — so it IS this sprite, drawn larger.
- * And at azimuth 0 and 90 the model is QUAD-limited at 4.035 m while the measurement reads
- * 4.54 and 4.47 m: light outside the quad's own geometry, which no texture and no postfx can
- * put there. The quad is bigger than `sz = 4.035` says.
+ * With those read rather than derived, the model reproduces the frame:
  *
- * How much bigger is stated as a ratio and not yet as a cause: 4.035 x 1.115 = 4.50 m, and
- * `mix(0.5, 6.25, u^0.36)` reaches that at u = 0.365, i.e. an age of 0.124 s against the 0.088
- * s `STAGE_IMPACT` asks for. `tools/ringprobe.mjs` reads the instance attributes the GPU was
- * handed rather than inferring them from a ratio — the arms also report `ring live 2` where
- * `dive_ring` has `count: [1,1]`, and one measurement should settle both.
+ *   468,482 of 468,589 lit px  (100.0%) land on the drawn sprite
+ *             1 px  inside the quad on transparent texture
+ *           106 px  (0.02%) outside the quad at all — FXAA's ~2 px, and the only postfx left
+ *   per azimuth, measured / model:  min 0.977  median 0.987  max 1.002
+ *
+ * The measurement sits a hair INSIDE the model, which is the right side: the model's boundary
+ * is `PARTICLE_FRAG`'s discard at texel alpha 0.0042, and a fragment that faint moves the
+ * composite by less than the 4 L the mask needs. Nothing is left over.
  */
 import { readPNG } from './png.mjs';
 import { readFileSync, existsSync } from 'node:fs';
@@ -168,9 +177,49 @@ const AGE = 0.088;                                   // STAGE_IMPACT
 const SCALE = 1.25;                                  // TUNE.impactScale
 const u = AGE / E.life[0];
 const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-const sz = (E.size[0] * SCALE) + ((E.size[1] * SCALE) - (E.size[0] * SCALE)) * Math.pow(u, E.sizeExp);
+/* The CATALOGUE size — what §405, §407, `impactframe` and `Particles.js`'s own comment all
+   quote. Kept so the measured one can be printed against it, never used as the model. */
+const szCat = (E.size[0] * SCALE) + ((E.size[1] * SCALE) - (E.size[0] * SCALE)) * Math.pow(u, E.sizeExp);
 const vAlpha = E.alpha[0] * smoothstep(0, Math.max(E.fadeIn, 1e-3), u) * Math.pow(Math.max(1 - u, 0), E.fadeOut);
 const T_MIN = 0.004 / vAlpha;                        // PARTICLE_FRAG: `if (a < 0.004) discard`
+
+/**
+ * ── THE INSTANCES, READ OFF THE BUFFERS RATHER THAN DERIVED ─────────────────────────────────
+ * `shots/ringprobe-<shot>/probe.json` is `tools/ringprobe.mjs`'s read of the attributes the GPU
+ * was handed. Three terms live in there that no derivation of this sprite has ever carried:
+ *
+ *   1. `_emit`: `const s = R.range(0.8, 1.25) * scale` — a PER-PARTICLE random size factor. The
+ *      catalogue's `size` is not the drawn ramp; it is the drawn ramp's expectation over a
+ *      1.5625x-wide uniform draw. `sz` is therefore a RANDOM VARIABLE on [0.8, 1.25] x scale,
+ *      not a constant, and every "the ring is 4.035 m" in this repo is its midpoint.
+ *   2. There are TWO live `dive_ring` instances against `count: [1, 1]`, both born at −0.088 s
+ *      at the same point, with independently drawn size factors. What is on the floor is the
+ *      UNION of two rings, so the visible extent is a MAX of two draws, not one.
+ *   3. `p = aP0 + aV0 * dc` in PARTICLE_VERT, with `aV0` holding the PLANE NORMAL for PLANAR
+ *      sprites — `_emit`'s own comment says so. dive_ring has drag 0, so `dc = age`, and the
+ *      ring floats `age` metres along its own normal: 0.088 m above the floor it is a decal on.
+ *
+ * With no probe on disk the model falls back to the catalogue and says so. It cannot silently
+ * become a derivation again.
+ */
+const probePath = `shots/ringprobe-${SHOT}/probe.json`;
+const probe = existsSync(probePath) ? JSON.parse(readFileSync(probePath, 'utf8')) : null;
+const INSTANCES = [];
+if (probe?.batches?.ring?.rows?.length) {
+  const uT = probe.batches.ring.uTime, uS = probe.batches.ring.uSizeScale;
+  for (const r of probe.batches.ring.rows) {
+    const age = uT - r.birth, uu = age / Math.max(r.life, 1e-4);
+    if (age < 0 || uu >= 1) continue;
+    INSTANCES.push({
+      i: r.i, age, u: uu,
+      sz: (r.size0 + (r.size1 - r.size0) * Math.pow(uu, r.sizeExp)) * uS,
+      p: r.p, ramp: [r.size0, r.size1],
+    });
+  }
+}
+const FROM_PROBE = INSTANCES.length > 0;
+if (!FROM_PROBE) INSTANCES.push({ i: 0, age: AGE, u, sz: szCat, p: [0, 0.06, -8], ramp: [E.size[0] * SCALE, E.size[1] * SCALE] });
+const sz = Math.max(...INSTANCES.map((s) => s.sz));  // the widest live ring — the outer boundary
 
 const tileX = TILE.RING % 4, tileY = Math.floor(TILE.RING / 4);
 function texAlpha(cx, cy) {
@@ -184,10 +233,12 @@ function texAlpha(cx, cy) {
 }
 
 const cam = camFor(SHOTS[SHOT]);
-const P = new THREE.Vector3(0, 0.06, -8);            // _stageImpact: player y + 0.06
 const n = new THREE.Vector3(0, 1, 1e-4).normalize(); // PARTICLE_VERT, aV0 = UP
 const t1 = new THREE.Vector3().crossVectors(n, new THREE.Vector3(1, 0, 0)).normalize();
 const t2 = new THREE.Vector3().crossVectors(n, t1);
+/* `p = aP0 + aV0 * dc`, and for PLANAR `aV0` IS the normal. drag 0 -> dc = age. */
+for (const s of INSTANCES) s.P = new THREE.Vector3(...s.p).addScaledVector(n, s.age);
+const P = INSTANCES.reduce((a, b) => (b.sz > a.sz ? b : a)).P;   // the widest ring's plane
 
 /** Per-pixel: ray -> the sprite's plane -> quad coords -> the shipped atlas. */
 const MODEL = new Float32Array(W * H);
@@ -200,14 +251,22 @@ for (let y = 0; y < H; y++) {
     _d.copy(_v).sub(cam.position).normalize();
     const denom = _d.dot(n);
     if (Math.abs(denom) < 1e-9) continue;
-    const t = _q.copy(P).sub(cam.position).dot(n) / denom;
-    if (t <= 0) continue;                            // the plane is behind the lens here
-    _q.copy(cam.position).addScaledVector(_d, t).sub(P);
-    const cx = _q.dot(t1) / sz, cy = _q.dot(t2) / sz;
-    if (cx < -1 || cx > 1 || cy < -1 || cy > 1) continue;
+    /* Every live instance, at its own plane and its own half-extent. The batch draws them all
+       and additive blending unions them, so the drawn footprint is the union, not any one. */
+    let bestA = 0, inQuad = false;
+    for (const s of INSTANCES) {
+      const t = _q.copy(s.P).sub(cam.position).dot(n) / denom;
+      if (t <= 0) continue;                          // this plane is behind the lens here
+      _q.copy(cam.position).addScaledVector(_d, t).sub(s.P);
+      const cx = _q.dot(t1) / s.sz, cy = _q.dot(t2) / s.sz;
+      if (cx < -1 || cx > 1 || cy < -1 || cy > 1) continue;
+      inQuad = true;
+      const a = texAlpha(cx, cy);
+      if (a > bestA) bestA = a;
+    }
+    if (!inQuad) continue;
     QUAD[y * W + x] = 1; quadPx++;
-    const a = texAlpha(cx, cy);
-    if (a >= T_MIN) { MODEL[y * W + x] = a; modelPx++; }
+    if (bestA >= T_MIN) { MODEL[y * W + x] = bestA; modelPx++; }
   }
 }
 const bboxOf = (test) => {
@@ -219,8 +278,14 @@ const bboxOf = (test) => {
   return { x0, x1, y0, y1, n: n2 };
 };
 const mb = bboxOf((i) => MODEL[i] > 0), qb = bboxOf((i) => QUAD[i]);
-console.log(`\n── THE SPRITE, from the catalogue and the shipped atlas ────────────────────────`);
-console.log(`dive_ring  u ${u.toFixed(4)}  sz ${sz.toFixed(4)} m (quad ${(2 * sz).toFixed(3)} m across, corners at ${(sz * Math.SQRT2).toFixed(3)} m)`);
+console.log(`\n── THE SPRITE ──────────────────────────────────────────────────────────────────`);
+console.log(`catalogue says  mix(${(E.size[0] * SCALE).toFixed(3)}, ${(E.size[1] * SCALE).toFixed(3)}, u^${E.sizeExp}) at u ${u.toFixed(4)}  =  sz ${szCat.toFixed(4)} m`);
+console.log(`the buffers say ${FROM_PROBE ? `${INSTANCES.length} live instance(s), read from ${probePath}` : 'NO PROBE ON DISK — falling back to the catalogue, and this model is a derivation'}`);
+for (const s of INSTANCES) {
+  console.log(`   #${s.i}  ramp ${s.ramp[0].toFixed(3)}..${s.ramp[1].toFixed(3)}  ->  sz ${s.sz.toFixed(4)} m`
+    + `   ${(s.sz / szCat).toFixed(4)}x the catalogue   plane y ${s.P.y.toFixed(4)} (staged ${s.p[1].toFixed(3)} + ${s.age.toFixed(3)} m of normal drift)`);
+}
+console.log(`widest live ring  sz ${sz.toFixed(4)} m (quad ${(2 * sz).toFixed(3)} m across, corners at ${(sz * Math.SQRT2).toFixed(3)} m)`);
 console.log(`vCol.a ${vAlpha.toFixed(4)} · frag discards below texel alpha ${T_MIN.toFixed(5)}`);
 console.log(`atlas window: quad uv [0,1] -> painter |U| <= 0.8904, so painter r -> world r * ${(sz / 0.8904).toFixed(4)} m`);
 console.log(`  the QUAD's raster, in frame   x ${qb.x0}..${qb.x1}  rows ${qb.y0}..${qb.y1}   ${qb.n} px`);
