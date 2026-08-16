@@ -2200,6 +2200,97 @@ test('crawl: the vent column, enumerated rather than cast — and one aperture t
   assert.ok(sawCrawl, 'crawl no longer engages even from inside the vent volume');
 });
 
+/* ====================================================================== */
+/* 15 — the ledge shimmy is inverted                                       */
+/* ====================================================================== */
+
+test('ledgeHang: stick RIGHT shimmies Sly LEFT — the raw-stick idiom is sign-inverted', async () => {
+  /* §393 flagged `ledgeHang` as an unexamined raw-stick reader that I had judged correct **on
+   * inspection**, in a file whose own header records that inspection missed all four instrument
+   * errors catalogued there. Put under load, the inspection was wrong.
+   *
+   * ── The measurement ─────────────────────────────────────────────────────────────────────
+   * Real level ledges, not a synthetic box (the census showed that probing without the affordance
+   * hides everything behind an `afford()` gate). 252 candidate hang poses across the `ledge` recs,
+   * 26 of which `ledgeHang` accepts; hold stick RIGHT for 45 frames and measure displacement
+   * against Sly's own right vector — `(cos yaw, 0, -sin yaw)`, which is the convention
+   * `WallRun.enter` already uses to decide which side a wall is on.
+   *
+   *     shimmied at all      23/26      mean displacement 0.621 m
+   *     moved to HIS RIGHT    0
+   *     moved to HIS LEFT    23
+   *
+   * ── Why ─────────────────────────────────────────────────────────────────────────────────
+   * The step is taken along `_b = up × n = (nz, 0, -nx)`. Sly hangs facing the wall, so his yaw is
+   * `atan2(-nx, -nz)` and his right vector is `(-nz, 0, nx)` — which is exactly `-_b`. So
+   * `sh = +1` moves along his left. The corroborating tell is the clip: the same branch plays
+   * `ledge_shimmy_r` while moving left, so the animation and the motion already disagree with each
+   * other, which is what makes this a sign error rather than a deliberate convention.
+   *
+   * ── Camera independence, which is the part §393 asked about ─────────────────────────────
+   * `wishRaw` is the raw stick, so this is invariant under camera yaw — the inversion is the same
+   * at 0°, 90°, 180° and −90°. The raw idiom is not itself the defect; the sign is. A
+   * camera-relative reader would have been wrong in a camera-dependent way instead.
+   *
+   * **Reported, not fixed.** Flipping it is a one-character `Moveset.js` change with a design
+   * question attached — whether the clip or the motion is the thing that is backwards — and this
+   * is an instrument round. This arm pins the CURRENT behaviour so it reddens the moment someone
+   * corrects it, and the failure message says which way to take the result. */
+  const { engine, c, collision } = await realWorld();
+  hardReset(engine, c, V(0, 0, 30));
+  for (let i = 0; i < 4; i++) {
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
+  }
+  const spots = [];
+  for (const r of collision.recs.filter((x) => x.tag === 'ledge')) {
+    const g = r.mesh.geometry;
+    if (!g) continue;
+    g.computeBoundingBox();
+    const bb = g.boundingBox.clone().applyMatrix4(r.mesh.matrixWorld);
+    for (const [ux, uz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) for (const s of [0.25, 0.5, 0.75]) {
+      const px = ux !== 0 ? (bb.min.x + bb.max.x) / 2 + ux * ((bb.max.x - bb.min.x) / 2 + 0.45)
+                          : bb.min.x + (bb.max.x - bb.min.x) * s;
+      const pz = uz !== 0 ? (bb.min.z + bb.max.z) / 2 + uz * ((bb.max.z - bb.min.z) / 2 + 0.45)
+                          : bb.min.z + (bb.max.z - bb.min.z) * s;
+      spots.push({ px, pz, ux, uz, top: bb.max.y });
+    }
+    if (spots.length > 240) break;
+  }
+  let entered = 0, right = 0, left = 0, total = 0;
+  for (const s of spots) {
+    c.position.set(s.px, s.top - TUNE.hangReach + 0.4, s.pz);
+    c.grounded = false; c._frame++;
+    if (!c.probeLedge(V(-s.ux, 0, -s.uz)).ok) continue;
+    hardReset(engine, c, V(s.px, s.top - TUNE.hangReach + 0.4, s.pz));
+    c.position.set(s.px, s.top - TUNE.hangReach + 0.4, s.pz);
+    c.grounded = false; c._needSpawnSnap = false; c._frame++;
+    c.probeLedge(V(-s.ux, 0, -s.uz));
+    c.sm.set('ledgeHang');
+    if (c.stateName !== 'ledgeHang') continue;
+    entered++;
+    const p0 = c.position.clone(), yaw0 = c.yaw;
+    for (let i = 0; i < 45; i++) {
+      engine.input.beginFrame(DT); engine.input.move.x = 1; engine.input.move.y = 0;
+      engine.time = i * DT; c.update(DT, i * DT);
+      if (c.stateName !== 'ledgeHang') break;
+    }
+    const d = c.position.clone().sub(p0);
+    if (d.length() <= 0.02) continue;
+    total++;
+    const rv = new THREE.Vector3(Math.cos(yaw0), 0, -Math.sin(yaw0));
+    if (d.dot(rv) > 0) right++; else left++;
+  }
+  console.log(`\n[shimmy] ${entered} hang poses entered ledgeHang; ${total} moved on stick RIGHT`);
+  console.log(`[shimmy] to his right: ${right}   to his left: ${left}`);
+  assert.ok(entered >= 10, `only ${entered} hang poses entered ledgeHang — the sample is too small to conclude`);
+  assert.ok(total >= 10, `only ${total} of ${entered} shimmied at all — cannot judge direction`);
+  assert.equal(right, 0,
+    `${right} of ${total} shimmies now go to Sly's RIGHT on stick RIGHT. If the sign was corrected in ` +
+    'Moveset.js this is the fix landing — invert this arm to assert right===total and drop the left check.');
+  assert.equal(left, total, `${left} of ${total} went left; the inversion is no longer uniform`);
+});
+
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {
   /* `wall_notch.gd` commits on `elif player.direction:` — a hold acts when it is being reached
      for. Fly past the face with no stick input and nothing may take control. */
