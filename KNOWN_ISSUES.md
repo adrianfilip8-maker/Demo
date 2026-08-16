@@ -30345,3 +30345,91 @@ across (`mix(0.4, 5, u^0.36)` at `u = 0.088/0.34`, × `scale 1.25`) against the 
 **Even a 4 m flat quad does not account for that extent.** This is a concrete, measured instance of
 §379.2's *"washes"* complaint, it is a different question from ink, and part of it is unexplained.
 Registered here so the next round starts from a number rather than from the complaint.
+
+## §405 — The 521,510 px was the sprite: `dive_ring` is drawn 2.69× the size everything reads
+
+§404.4 registered an unexplained residue and asked the next round to start from a number. It did,
+and the answer is that no downstream subsystem was ever involved.
+
+```
+sz = mix(0.5, 6.25, (0.088/0.34)^0.36) = 4.035 m half-extent  ->  an 8.07 m quad
+_stageImpact returns 1.50 m and calls it "the ring's own reach"          2.69x
+```
+
+`PARTICLE_VERT`'s `corner` spans [−1, 1], so the half-extent **is** `sz`, and the shader exempts
+`PLANAR` from the `uMaxSize` screen ceiling by construction. Verified independently here from the
+emitter's own data.
+
+**Measured, not eliminated.** Four mechanisms were plausible — additive blend against bloom,
+`PLANAR` billboard sizing, a mip/filter halo, or the sprite simply being bigger than anyone
+thought — and the efficient move would have been to test them in order. Unprojecting every pixel
+the `ring` batch lights onto the impact plane answered all four at once, and produced a radius
+profile nobody had:
+
+```
+1.50 m  <- what everything reads      +19.7 L    the dim inner shoulder
+3.00-4.50 m                           +58..77 L  the bright annulus
+4.75-5.00 m                           cutoff, matching sz
+```
+
+An 8 m additive quad lying flat under a low camera projects its corners to (−40, 418), (1320, 418),
+(640, 1224) — off three edges. That is the entire 521,510 px. **Bloom, mips and blend order are not
+implicated and were never needed.**
+
+### §405.1 It corrects §402's own headline, and strengthens it
+
+The rim in §402 was measured at **1.50 m** — which this round shows is the dim inner *shoulder*,
+not the ring. `CAL-A` passed because the locus **was** on the sprite, just not at its visible edge.
+
+That is a calibration probe being **right about the wrong question**, and it is the subtlest failure
+in this family: the probe fired, the control was genuinely on the subject, and the number it
+returned described a different part of it. Neither `assertOccluded`-style calibration nor a
+must-fire arm can catch it, because nothing was broken.
+
+Re-swept every radius from 0.75 m to 5.75 m: **crease-ink median is 0.00 L at all 21 radii**,
+straight across the annulus. Past 5.0 m the circles fall on bare paving and their p90 tail matches
+the floor control's — an internal consistency check nobody planned. §379.1 survives and is better
+founded than when it was first reported.
+
+### §405.2 A second admission bar on the same frame, flipping the same way
+
+```
+RING CROPPED at 1.50 m   margins l460 r460 t341 b198   no fault    <- the certificate
+RING CROPPED at 4.035 m  margins l112 r112 t249 b-102  CROPPED     <- the drawn ring
+                                                       18.5% of the rim off-frame
+```
+
+`impact` now has **two** admission bars that pass on a proxy number and fail on the measured one —
+this and §404's FIGURE SWALLOWED at 44.2% against 80.6%. Both flagged, neither repaired, both
+correctly left to the owner: three consumers and a shipped seal read `_stageImpact`'s 1.50 m, so
+which number it should return is a decision about the shot rather than about the emitter (§141.1).
+
+**The pattern is now the finding.** A shot's certificate is only as good as the extents its tool was
+handed, and this project has minted two of those extents from recipes rather than from what is
+drawn. Anything that reports a subject's size should say whether it measured the drawing or read a
+declaration.
+
+### §405.3 On §379.2's "washes", stated carefully
+
+The largest sprite in the game adds a median **11.3 L**, up to 88 L, of additive light across
+**56.6% of the frame**. In the lane's own words, which are the right ones:
+
+> a **plausible mechanism** for the complaint, and **not evidence that the complaint is about
+> this**.
+
+§379.3's boundary holds. Closing it needs eyes.
+
+### §405.4 The dead export, wired up without touching it
+
+`Outline.inkAudit()` was exported and called nowhere (§404.1). It is now reachable without a single
+change to the audit: the six FX material sites behind all 14 meshes declare
+`userData: { outline: 0 }` — the shipped vocabulary for *"this surface does not take a line"* — so
+the audit reads them as **`refused`** rather than **`missing`**.
+
+That encodes §381.3's actual decision, which existed only in prose (*"900 dust puffs with individual
+2.5 px rings is chainmail, not cel shading"*), and does not pre-empt §381.2's coverage-pass route,
+which builds no shell. Inert for rendering by construction: `userData.outline > 0` was already false
+for `undefined` exactly as for `0`.
+
+**Converting a one-ended piece of machinery back into a live check by declaring data, rather than by
+writing code, is the cheapest repair of this class the project has found.**
