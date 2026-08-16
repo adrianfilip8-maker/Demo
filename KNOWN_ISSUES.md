@@ -28623,3 +28623,112 @@ through the real bus into an offline context and dumped as a wav.
 
 **This project has never had one.** Until it does, every audio decision here is made the way all of
 this session's were: by reading.
+
+---
+
+## §385 — Both lanes retracted a finding of their own, and geometry lost to driving a third time
+
+### §385.1 `wallClimb` unreachable is RETRACTED, on a harness that models the real world
+
+`realWorld()` now builds **terrain → architecture → props → collision** in MANIFEST order, and
+**asserts nothing silently drops** — which is the actual defence, because a harness missing a module
+does not fail, it returns plausible numbers.
+
+```
+old harness   248 colliders,   4,026 tris
+new harness   273 colliders, 115,676 tris
+```
+
+With the desert present, the entry has **886 standable cells within 8 m, nearest 3.51 m on the
+correct side** — not 7.48 m on the far side of the pylon (§382.1). Driving the eight nearest,
+**3 of 8 reach `wallClimb`**, one via `toTarget@35 → wallClimb@49`. The arm now drives rather than
+measuring distance.
+
+The lane declined to read anything into 3-of-8: one fixed take-off timing across all starts,
+deliberately untuned, *"a floor on robustness, not a fragility claim."* Both re-checks I asked for
+survive — the ground/air set is still reachable from spawn in the full world, and `land` is still
+**8/24 take-off phases**, unchanged, which is what a missing floor predicts since it can only make
+reachability harder.
+
+**Scope note worth keeping:** the *exit* census still runs on purpose-built per-state worlds, and
+that is correct rather than an oversight — one world per state is what stops a hook in range from
+answering a question asked about a rail. Only the reachability round needed the real level.
+
+### §385.2 The entry never needed to move, and the round-6 finding conflated two runs
+
+§382.3 recorded the banner masts stealing the approach — 506 frames in `poleClimb`, 0 of 26 rungs —
+and the entry moving to the east niche as the fix. **Driven from the foot, before the masts were
+touched:**
+
+```
+(10.9, 38.1)  12 rungs, y 32.70      (10.9, 39.1)  12 rungs, y 32.70
+(10.9, 40.5)  12 rungs, y 32.70      (8.9,  39.1)  0 rungs — the only failure
+```
+
+**The west entry drove to the deck before anything was changed.** The 506-frame result came from
+`fullloop2.mjs` — the long walk from spawn — and the climbing results from `drive.mjs` starting at
+the foot. The round-6 report presented them as one finding; they were two different runs.
+
+The mast interception was real, but it was **on the walk-in**, and moving the mouth 6 m east never
+addressed it. The mouth is back on the west niche (verified: `notch-pylon-e-mouth` at
+10.87, 2.64, 37.11, lowest rung `notch-pylon-e-w-0` at y 2.10, 26 holds), with the full history at
+the site so the reversal is not a silent flip-flop.
+
+**Asking "did the entry still need to move?" is what surfaced this.** The change had already
+shipped, the suite was green, and nobody would have looked again.
+
+### §385.3 Geometry said 9/9 for the third time, and driving disagreed for the third time
+
+The return half is now driven in **chained segments, each starting where the previous actually
+ended** rather than where it was supposed to:
+
+```
+S1  ascent           12 rungs, peak 31.30, GROUNDED on the deck at (12.3, 28.95, 34.0)
+S2  deck → pylon-drop  rail mounted, railSlide 87 frames, y 28.92 → 8.00
+S3  from S2's real end (20.2, 12.78, 26.5) → (21.6, 1.81, 26.0)
+S4  → (0.5, 0.00, 30.0) grounded — spawn reached
+```
+
+**And it corrects another geometric claim.** Hop 8 of the old walk said *"pylon-drop terminus lands
+on the y 9 ledge circuit, drop 0.25 m"*. Driven, **he never reaches the y 9 circuit at all** —
+`hookSwing` runs for 576 frames during S2 because the courtyard hook chain intercepts the descent
+and carries him off before the rail's terminus. The loop closes deck → spawn, but **not by the path
+that was recorded.**
+
+That is three separate occasions now (§372.3, §382.3, here) where a static walk reported 9/9 on a
+route that does something else. **The static walk should be retired as evidence.**
+
+### §385.4 The material payloads, with one refusal and one honest gap
+
+Eight of nine sourced from `rec.material` and verified **against the real level** rather than by
+construction:
+
+```
+ledgeGrab  stone   ← AUDIO's step_cloth was 2.17x off
+spireLand  stone   ← AUDIO's step_metal was 1.79x off
+railMount  metal AND cloth   ← the rope case is live and now distinguishable
+hookGrab   metal (bronze rings)    poleMount / caneSlam / landed  stone
+```
+
+**An implementation detail that matters:** `nearest()` does return `material`, but
+`Controller.afford()` **drops it when memoising into its slot** — so `a.rec.material` is the source
+that works and `a.material` is not.
+
+**`caneHit` refused**, per the routed caveat, and the reasoning is right: `Combo.swing` fires on the
+*wind-up*, before and independently of connecting, so there is no hit in scope. Sourcing it from
+`groundMaterial` would voice the floor rather than the thing struck — **the same class of error
+`ledgeGrab → step_cloth` already is.** A surfaced impact needs a hit event from whatever resolves
+the strike, which is COMBAT's to publish.
+
+**`wallRun`/`wallJump` are verified by construction, not measurement**, and flagged as such: they
+read `c.wall.rec?.material` and `probeWall` only reports `ok` with a rec in hand, but neither event
+could be made to fire in a driven run. *"Given how often 'structurally identical, therefore fine'
+has been wrong this session, I'm flagging it rather than counting it."*
+
+### §385.5 The pattern, in the lane's own words
+
+> Nine instrument errors, and the eight I caught were all *inside* the harness — logic I could
+> re-read. This one was a module that was never there, and there is nothing to re-read: the code
+> runs, the probe returns, the numbers look like numbers. The defence isn't more care, it's a
+> different question — **what is this world missing?** — asked before trusting any of it. That's now
+> encoded as an assertion rather than a habit, which is the only form that survives me.
