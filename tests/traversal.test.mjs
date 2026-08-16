@@ -1355,7 +1355,7 @@ test('reach: land is reachable only on some sub-frame phases — the landImpact 
   assert.ok(hits < tried, 'land now fires on every phase — the landImpact race is fixed, update this arm');
 });
 
-test('reach: wallClimb climbs the shipped ladder, but its authored entry is out of range', async () => {
+test('reach: wallClimb is reachable through play from the authored entry', async () => {
   const { engine, c, arch, collision } = await realWorld();
   const holds = (arch.api.handholds || []).slice().sort((a, b) => a.point.y - b.point.y);
   assert.ok(holds.length > 0, 'the level authored no handholds — nothing to test reachability of');
@@ -1383,11 +1383,14 @@ test('reach: wallClimb climbs the shipped ladder, but its authored entry is out 
               `y ${Math.min(...caught).toFixed(2)} -> ${Math.max(...caught).toFixed(2)}`);
   assert.ok(caught.length >= 5, `only caught ${caught.length} rungs on the shipped ladder`);
 
-  /* 2. The entry. The ladder is not meant to be walked to — there is an authored magnetism
-        target at its foot, `notch-pylon-e-mouth`, `arrive: 'wallClimb'`. So the question is not
-        "is there floor under it" (my first pass asked that, with an acceptance window that
-        rejected any surface ABOVE the rung's hang height, and got a wrong answer). The question
-        is whether a player can get inside the target's `volume` from anywhere they can stand.
+  /* 2. The entry. This arm has been wrong twice and both errors are worth keeping.
+        First it asked "is there floor under the rung", with an acceptance window that rejected
+        any surface ABOVE the rung's hang height — so it discarded the real approach. Then it
+        decided standability from a `groundCheck` hit, which on an 84-degree battered face
+        returns a y for a wall. Both fixed below: standability is decided by DRIVING.
+        The third error was not in this arm at all — the harness built `Architecture` and not
+        `Terrain`, so the desert sand this approach stands on did not exist, and the nearest
+        "standable" ground was on the far side of the pylon. See `realWorld()`.
 
         "Can stand" is decided by DRIVING, not by `groundCheck`: the battered pylon face is an 84°
         slope and `groundCheck` reports a `y` for it, so a hit is not a foothold. Teleport, settle
@@ -1405,24 +1408,44 @@ test('reach: wallClimb climbs the shipped ladder, but its authored entry is out 
     }
     return (c.grounded && Math.abs(c.position.y - g.y) < 1.5) ? { x, y: c.position.y, z } : null;
   };
-  let nearest = null;
-  for (let dx = -12; dx <= 12; dx += 1) for (let dz = -12; dz <= 12; dz += 1) {
+  const cells = [];
+  for (let dx = -8; dx <= 8; dx += 0.5) for (let dz = -8; dz <= 8; dz += 0.5) {
     const s = standable(M.point.x + dx, M.point.z + dz);
     if (!s) continue;
     s.d = Math.hypot(s.x - M.point.x, s.y - M.point.y, s.z - M.point.z);
-    if (!nearest || s.d < nearest.d) nearest = s;
+    cells.push(s);
   }
-  const vol = M.volume ?? TUNE.magVolume;
+  cells.sort((a, b) => a.d - b.d);
   console.log(`\n[reach] entry target ${M.id} at ${M.point.toArray().map((v) => v.toFixed(2)).join(',')} ` +
-              `arrive=${M.arrive} volume=${vol} catch=${M.catch ?? TUNE.magCatch}`);
-  console.log(`[reach] nearest STANDABLE ground: ${nearest ? `(${nearest.x.toFixed(1)}, ${nearest.y.toFixed(2)}, ${nearest.z.toFixed(1)}) at ${nearest.d.toFixed(2)} m` : 'none within 12 m'}`);
-  if (nearest) {
-    console.log(`[reach] acquisition needs the player within volume ${vol} m; the gap is ` +
-                `${(nearest.d - vol).toFixed(2)} m of ${nearest.d > vol ? 'unreachable' : 'reachable'} air`);
+              `arrive=${M.arrive} volume=${M.volume ?? TUNE.magVolume}`);
+  console.log(`[reach] ${cells.length} standable cells within 8 m; nearest ` +
+              `${cells.length ? `(${cells[0].x.toFixed(1)}, ${cells[0].y.toFixed(2)}, ${cells[0].z.toFixed(1)}) at ${cells[0].d.toFixed(2)} m` : 'none'}`);
+  assert.ok(cells.length > 0, 'no standable ground within 8 m of the authored entry');
+
+  /* And now DRIVE it, which is the only step that answers the question. Distance to the target
+     is not reachability: it does not know about the pylon, the masts, or which state wins the
+     contact. One fixed take-off timing across the nearest starts — deliberately not tuned per
+     start, so the number below is a floor on robustness rather than a best case. */
+  let reached = 0;
+  const tried = Math.min(8, cells.length);
+  for (const s of cells.slice(0, tried)) {
+    const dx = M.point.x - s.x, dz = M.point.z - s.z, l = Math.hypot(dx, dz) || 1;
+    hardReset(engine, c, V(s.x, s.y + 0.05, s.z), Math.atan2(dx, dz));
+    let got = false;
+    for (let i = 0; i < 420 && !got; i++) {
+      engine.input.beginFrame(DT);
+      engine.input.move.x = dx / l; engine.input.move.y = -dz / l;
+      if (i >= 26 && i < 32) engine.input.hold('jump');
+      else if (c.stateName === 'wallClimb') engine.input.hold('jump');
+      else engine.input.let_go('jump');
+      engine.time = i * DT; c.update(DT, i * DT);
+      if (c.stateName === 'wallClimb') got = true;
+    }
+    if (got) reached++;
   }
-  /* Reported, not asserted, in both directions: asserting "unreachable" would land red the day
-     the world lane adds an approach, which is the outcome we want. What IS asserted is the pair
-     that makes the report mean anything — the ladder exists, and the state climbs it. */
+  console.log(`[reach] wallClimb entered from ${reached}/${tried} of the nearest standable starts, ` +
+              `one fixed take-off timing`);
+  assert.ok(reached > 0, 'the authored ladder entry could not be driven into from any standable ground');
   assert.ok(holds.length >= 10, 'the ladder shrank; the reachability question has changed');
 });
 
