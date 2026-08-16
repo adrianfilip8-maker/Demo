@@ -2122,6 +2122,84 @@ test('census: the contract prober detects a state nothing else reads (calibratio
   assert.ok(!r.stick.includes('wishDir'), 'prober reported a wishDir read the canary never made');
 });
 
+/* ====================================================================== */
+/* 14 — Route C: the vent column, settled by enumeration                   */
+/* ====================================================================== */
+
+test('crawl: the vent column, enumerated rather than cast — and one aperture that does not fit', async () => {
+  /* The open question from §392, and the test case for the defences in this file's header.
+   * Two `groundCheck` casts of the same column disagreed (13.50 from y=20, ~0.0 from y=90) and I
+   * could not say which was right. A cast cannot answer it; **a histogram can**, because it has
+   * no origin to be fooled by. Enumerating every collider whose world bounding box contains the
+   * column resolves it in one pass, and the answer corrects me: there IS a `proxy:ground` deck at
+   * y 12.50..13.50 over that column, so the y=20 cast was right about its own origin — I had
+   * conflated two different columns, at x -19.3 and x -21.0.
+   *
+   * The finding this turned up is not about the floor at all. */
+  const { engine, c, collision } = await realWorld();
+  const worldBox = (m) => {
+    m.updateWorldMatrix(true, false);
+    const g = m.geometry;
+    if (!g) return null;
+    g.computeBoundingBox();
+    return g.boundingBox.clone().applyMatrix4(m.matrixWorld);
+  };
+  const column = (x, z, pad = 0.4) => {
+    const out = [];
+    for (const r of collision.recs) {
+      const b = worldBox(r.mesh);
+      if (!b) continue;
+      if (x >= b.min.x - pad && x <= b.max.x + pad && z >= b.min.z - pad && z <= b.max.z + pad) {
+        out.push({ tag: r.tag, name: String(r.mesh.name || '-').slice(0, 22), lo: b.min.y, hi: b.max.y });
+      }
+    }
+    return out.sort((a, b) => b.hi - a.hi);
+  };
+  const hits = column(-20.0, -49.4);
+  console.log('\n[vent] column (-20.0, ·, -49.4), every collider whose box contains it:');
+  for (const h of hits) console.log(`  ${h.tag.padEnd(7)} ${h.name.padEnd(22)} y ${h.lo.toFixed(2)}..${h.hi.toFixed(2)}`);
+  assert.ok(hits.length > 3, 'the column enumeration found almost nothing — check the world build');
+  assert.ok(hits.some((h) => h.tag === 'vent'), 'no vent in the column this route is about');
+  // The deck that made one cast disagree with the other. Named, so "which floor" is never a guess.
+  assert.ok(hits.some((h) => h.tag === 'ground' && h.hi > 12 && h.hi < 15),
+    'the y~13.5 deck is gone — the cast-origin disagreement in the header no longer reproduces here');
+
+  /* THE FINDING: a stance is a capsule, not a point. The small vent's aperture is 0.60 m of
+     clear height; `TUNE.crawlHeight` is 0.64. **The crawl capsule is 0.04 m taller than the hole
+     it is meant to go through.** A ray fits, a point fits, and the state's own capsule does not.
+     Reported, not fixed — `crawlHeight` is a Controller constant and the vent is level geometry,
+     so which of the two is wrong is not this lane's call. */
+  const vents = hits.filter((h) => h.tag === 'vent').map((h) => ({ ...h, aperture: h.hi - h.lo }));
+  for (const v of vents) {
+    console.log(`[vent] aperture ${v.aperture.toFixed(2)} m vs crawlHeight ${TUNE.crawlHeight} -> ` +
+                `${v.aperture < TUNE.crawlHeight ? 'CAPSULE DOES NOT FIT' : 'fits'}`);
+  }
+  const tight = vents.filter((v) => v.aperture < TUNE.crawlHeight);
+  assert.ok(tight.length > 0,
+    'no vent is tighter than the crawl capsule any more — the aperture finding is fixed, retire this');
+
+  /* And the reachability half, stated to the same standard as everywhere else in this file:
+     standing in the vent volume, `crawl` engages. Walking in from x -19.3 along the rising floor
+     (0.73 at x -18 up to 1.01 at x -24) it does not — `inVent()` stays false for the whole
+     traverse even though the walk passes through the same x the standing probe succeeds at. I
+     cannot account for that difference and am not claiming a route from it. */
+  const floorAt = (x, z, from = 5) => {
+    const g = collision.groundCheck(V(x, from, z), TUNE.radius, 300);
+    return g?.hit ? g.y : null;
+  };
+  const y1 = floorAt(-21.0, -49.4);
+  hardReset(engine, c, V(-21.0, (y1 ?? 0) + 0.05, -49.4));
+  let ventFrames = 0, sawCrawl = false;
+  for (let i = 0; i < 120; i++) {
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
+    if (c.inVent()) ventFrames++;
+    if (c.stateName === 'crawl') sawCrawl = true;
+  }
+  console.log(`[vent] standing at (-21.0, ${(y1 ?? 0).toFixed(2)}, -49.4): crawl=${sawCrawl}, inVent ${ventFrames}/120 frames`);
+  assert.ok(sawCrawl, 'crawl no longer engages even from inside the vent volume');
+});
+
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {
   /* `wall_notch.gd` commits on `elif player.direction:` — a hold acts when it is being reached
      for. Fly past the face with no stick input and nothing may take control. */
