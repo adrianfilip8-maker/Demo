@@ -491,3 +491,155 @@ test('the new dust emitters stay inside the palette', () => {
   assert.deepEqual(strays, [], `new emitters use colours outside PAL and the cone ramp: ${strays.join(', ')}`);
   console.log(`  palette: ${inspected} colour slots checked across ${NEW_ALL.length} emitters`);
 });
+
+/* ══════════════════════════════════════════════ T5 — machinery wired at BOTH ends (§357.1) ══
+ *
+ * §357.1 — "machinery wired at one end only — a guard that exists is not a guard that runs" —
+ * has recurred four-plus times in this project. A dead-machinery audit of `src/fx` and
+ * `src/audio` found two more instances of it in the FX catalogue's own data, and the two tests
+ * below exist so that fixing them cannot quietly come undone.
+ *
+ * Both read `src/fx/Particles.js` as TEXT as well as importing from it. That is deliberate and
+ * is the same instrument `tests/pickups.test.mjs` uses on its three subscribers: importing a
+ * symbol proves it EXISTS, and existing is precisely the half of the bug that was never in
+ * doubt. Only the call site proves it RUNS.
+ */
+
+import fs from 'node:fs';
+import * as THREE from 'three';
+import { pinnedAffordance, Particles } from '../src/fx/Particles.js';
+
+const PARTICLES_SRC = fs.readFileSync(new URL('../src/fx/Particles.js', import.meta.url), 'utf8');
+
+test('T6a: both ember grades are reachable, and the cup is quieter than the bed', () => {
+  /* The defect: `ember` (a wall torch's cup) and `embers` (a brazier's bed) were both authored,
+     the difference was documented at `Emitters.js:684-690`, and `_fireTick` asked for `embers`
+     unconditionally — so `ember` had zero call sites in all of `src/` and every sconce in the
+     game threw a brazier's sparks. */
+  const cup = EMITTERS.ember;
+  const bed = EMITTERS.embers;
+  assert.ok(cup, 'EMITTERS.ember is missing — the wall-torch ember grade');
+  assert.ok(bed, 'EMITTERS.embers is missing — the brazier ember grade');
+
+  /* END ONE: the data says they differ. Scored on the same `loudness` the alert ladder uses
+     (count x alpha x size^2), so "quieter" means the same thing here as it does there. */
+  const cupScore = loudness(cup);
+  const bedScore = loudness(bed);
+  console.log(`  T6a: ember(cup)=${cupScore.toFixed(5)} < embers(bed)=${bedScore.toFixed(5)}`);
+  assert.ok(
+    bedScore > cupScore,
+    `a brazier's bed (${bedScore.toFixed(5)}) must throw more than a sconce's cup ` +
+      `(${cupScore.toFixed(5)}) — otherwise the two grades are a distinction with no difference`,
+  );
+  assert.ok(
+    maxOf(bed.life) > maxOf(cup.life),
+    'Emitters.js documents the bed as "coarser and longer-lived" than the cup; its life is not longer',
+  );
+
+  /* END TWO: `_fireTick` actually routes them apart. Without this the assertions above pass on
+     a catalogue whose second entry is never emitted, which IS the shipped defect.
+
+     RUN it rather than grep it. `_fireTick` touches only `h.name`, `h.position`, `h.scale`,
+     `this._emit` and a module-scope scratch vector, so `Particles.prototype._fireTick.call()`
+     on a two-field stub executes the real shipped line with no renderer, no canvas and no
+     atlas — and a text match would go green on a comment or red on a reformat. */
+  const fired = (name) => {
+    const calls = [];
+    Particles.prototype._fireTick.call(
+      { _emit: (n) => calls.push(n) },
+      { name, position: new THREE.Vector3(1, 2, 3), scale: 1 },
+      0,
+    );
+    return calls;
+  };
+
+  /* Every name FIRE_NAMES resolves as a composite, split by what PROPS means by it:
+     `Props.js:607` spawns `embers` for a brazier, `Props.js:619` spawns `torch_smoke` for a
+     wall sconce, and `_seedOrphanTorches` spawns `torch`. */
+  const BEDS = ['embers', 'brazier'];
+  const CUPS = ['torch', 'torch_smoke', 'fire'];
+  let routed = 0;
+  for (const name of BEDS) {
+    const calls = fired(name);
+    assert.ok(calls.includes('embers'), `a bed ("${name}") did not emit 'embers': ${calls.join()}`);
+    assert.ok(!calls.includes('ember'), `a bed ("${name}") emitted the cup grade: ${calls.join()}`);
+    routed++;
+  }
+  for (const name of CUPS) {
+    const calls = fired(name);
+    assert.ok(calls.includes('ember'), `a cup ("${name}") did not emit 'ember': ${calls.join()}`);
+    assert.ok(!calls.includes('embers'), `a cup ("${name}") emitted the bed grade: ${calls.join()}`);
+    routed++;
+  }
+  assert.equal(routed, BEDS.length + CUPS.length, 'did not route every fire name');
+  console.log(`  T6a: ${BEDS.length} bed names -> embers, ${CUPS.length} cup names -> ember`);
+
+  /* Every fire still emits its other three components whichever grade it takes — the routing
+     must not have cost a sconce its core, body or smoke. */
+  for (const name of [...BEDS, ...CUPS]) {
+    const calls = fired(name);
+    for (const part of ['fire_core', 'fire_body', 'torch_smoke']) {
+      assert.ok(calls.includes(part), `"${name}" lost its ${part}: ${calls.join()}`);
+    }
+  }
+});
+
+test('T6b: the sparkle guard rejects box affordances, and _updateSparkles actually calls it', () => {
+  /* §2.1.6's diamond marks a place. `Collision.query()` resolves a rec three ways
+     (`Collision.js:832/846/857`) and only two of them are places: a spline point slides ALONG
+     its rail, an authored point does not move, and a box's "closest point" tracks the player —
+     measured at |Δpoint|/|Δplayer| = 1.000 at p90 for `ledge` and `wall` and at the median for
+     `ground`, on the shipped level built headless. `pinnedAffordance` is what keeps a box out
+     of the field if WORLD ever widens `TUNE.sparkleTags`. */
+  const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+  const rec = (userData) => ({ rec: { mesh: { userData } }, point: V() });
+
+  const accepted = [
+    ['authored point (hook, spire)', rec({ point: V(1, 2, 3) })],
+    /* The result field WORLD added to `query()` — authoritative, and the only thing that sees
+       a pole whose curve COLLISION synthesised but could not write back. */
+    ['query() spline result field (rail, pole)', { ...rec({}), spline: { getPoint: () => V() }, length: 12 }],
+    ['userData.spline fallback (older query() shape)', rec({ spline: { getPoint: () => V() } })],
+  ];
+  const rejected = [
+    ['bare box (ledge, wall, ground, vent)', rec({})],
+    ['point that is not a Vector3', rec({ point: { x: 1, y: 2, z: 3 } })],
+    ['spline without getPoint', rec({ spline: {} })],
+    ['result-field spline without getPoint', { ...rec({}), spline: {}, length: 0 }],
+    ['no userData at all', { rec: { mesh: {} }, point: V() }],
+    ['no mesh', { rec: {}, point: V() }],
+    ['no rec', { point: V() }],
+    ['nothing', null],
+  ];
+
+  let inspected = 0;
+  for (const [what, e] of accepted) {
+    assert.ok(pinnedAffordance(e), `pinnedAffordance rejected a pinned affordance: ${what}`);
+    inspected++;
+  }
+  /* The arm that MUST fire. A guard that accepts everything is indistinguishable from no
+     guard, and would pass the accept arm above trivially. */
+  for (const [what, e] of rejected) {
+    assert.ok(!pinnedAffordance(e), `pinnedAffordance ACCEPTED an unpinned affordance: ${what}`);
+    inspected++;
+  }
+  assert.equal(inspected, accepted.length + rejected.length, 'did not inspect every case');
+  console.log(`  T6b: ${accepted.length} pinned accepted, ${rejected.length} unpinned rejected`);
+
+  /* END TWO. The guard exists; this is the half that says it runs. */
+  const upd = PARTICLES_SRC.slice(PARTICLES_SRC.indexOf('  _updateSparkles(dt, t) {'));
+  assert.ok(upd.startsWith('  _updateSparkles'), 'could not find _updateSparkles in Particles.js');
+  const body = upd.slice(0, upd.indexOf('\n  }'));
+  assert.ok(
+    /pinnedAffordance\(e\)/.test(body),
+    '_updateSparkles no longer consults pinnedAffordance — a box tag added to sparkleTags ' +
+      'would draw diamonds that slide with the player:\n' + body,
+  );
+  /* And that skipping an entry cannot silently truncate the field: the loop must bound on
+     marks placed, not on how far down the query list it has walked. */
+  assert.ok(
+    /marked\s*<\s*sp\.capacity/.test(body),
+    '_updateSparkles bounds its loop by list index rather than by markers placed, so skipped ' +
+      'box entries would eat the sparkle budget',
+  );
+});

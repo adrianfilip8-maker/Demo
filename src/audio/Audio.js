@@ -217,7 +217,15 @@ export const TUNE = {
   airShelfDb: -11,        // high-shelf cut applied at max distance (air absorption)
   airShelfHz: 3200,
   musicSend: 0.10,        // the score gets a touch of the room, never a wash
-  sfxDuck: 0.45,          // default sidechain depth for impacts
+  /* `sfxDuck: 0.45` lived here, commented "default sidechain depth for impacts", and **nothing
+     ever read it**: the only duck in the play path is `if (def.duck) this.duckMusic(def.duck)`
+     (line ~700), which takes the per-sound value or ducks not at all. So the "default" was a
+     number describing a fallback that does not exist, and the nine sounds that declare their
+     own `duck` in Sfx.js (0.16 … 0.55) were always the whole story. Removed rather than wired:
+     applying it as a real fallback would sidechain the score under *every* sound including
+     footsteps, which is a mix change no one can hear-test while §186 holds the capture lock.
+     Recorded instead of deleted silently, so the next reader knows the fallback was considered
+     and declined rather than overlooked. */
   duckAttack: 0.04,
   duckRelease: 0.5,
   thiefMusic: 0.34,       // music level while Thief-o-Vision is up

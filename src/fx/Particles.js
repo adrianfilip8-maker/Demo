@@ -546,6 +546,16 @@ const MAX_SHAFTS = 6;
  */
 const FIRE_NAMES = new Set(['torch', 'brazier', 'embers', 'fire', 'torch_smoke']);
 
+/**
+ * Of those, the ones that are a **bed** of fire rather than a **cup** of it.
+ *
+ * This set already existed as an inline predicate in `_handle` (`name === 'embers' || name
+ * === 'brazier'`), where it chose the 1.35 scale. Hoisted because `_fireTick` now needs the
+ * same distinction for the ember grade, and two copies of "is this a brazier" is how the two
+ * answers eventually disagree.
+ */
+const BED_NAMES = new Set(['embers', 'brazier']);
+
 /* ── shared GLSL ───────────────────────────────────────────────────────────────────────── */
 
 const SHAFT_GLSL = /* glsl */`
@@ -1710,6 +1720,70 @@ class Batch {
    SparkleField — the blue diamond markers on every traversal affordance.
    ========================================================================================= */
 
+/**
+ * Is this `Collision.query()` result a place, or is it just the nearest bit of a box?
+ *
+ * §2.1.6's diamond marks a **thing you can grab**. That only works if the point stays put,
+ * and whether it does is not a property of the tag — it is a property of how COLLISION
+ * resolved the collider into an affordance. `Collision._buildAffordances` has three routes
+ * (`Collision.js:832 / 846 / 857`), taken in that order:
+ *
+ *   `userData.spline`  → AFF_SPLINE, closest point ON the curve   — pinned to the rail
+ *   `userData.point`   → AFF_POINT,  the authored point           — pinned to the hook/tip
+ *   neither            → AFF_BOX,    closest point on the world AABB — **pinned to nothing**
+ *
+ * A box affordance's "point" is the nearest point on its surface to the query position, so it
+ * *tracks the player*. Measured on the shipped level built headless (`Architecture` +
+ * `buildEgyptLevel`, 248 colliders, every rec fed to a real `Collision`), stepping the query
+ * point 1.00 m at six player-plausible stations and recording |Δpoint| / |Δplayer| per rec:
+ *
+ *   tag       n    mean   median    p90     max      route
+ *   hook     32   0.000    0.000   0.000   0.000     POINT
+ *   spire    11   0.000    0.000   0.000   0.000     POINT
+ *   pole     59   0.000    0.000   0.000   0.000     SPLINE
+ *   rail     18   0.037    0.000   0.213   0.453     SPLINE  ← slides ALONG the rail: correct
+ *   ledge   246   0.175    0.000   1.000   1.000     BOX
+ *   wall    212   0.130    0.000   1.000   1.000     BOX
+ *   ground  133   0.579    1.000   1.000   1.000     BOX
+ *
+ * 1.000 means the marker moved exactly as far as the player did — the diamond glues itself to
+ * his feet and slides. The four shipped `TUNE.sparkleTags` are the four that never do that,
+ * which is not a coincidence and was never written down. Compounding it, `_updateSparkles`
+ * keys one marker per *rec*, and a `ledge` collider on this level has a median horizontal
+ * extent of 6.8 m and a maximum of 48.2 m — so a box tag would also draw one diamond for a
+ * 48 m terrace instead of one per grab point.
+ *
+ * Hence the guard rather than a fixed tag whitelist: WORLD owns which tags exist and is
+ * publishing new route metadata through `query()`, and this lets a new tag be added to
+ * `sparkleTags` **safely** — if its recs carry a point or a spline it marks, and if they are
+ * boxes it is skipped instead of smearing. On the level as it stands the guard is exactly
+ * zero-delta: all 39 recs across the four sparkle tags resolve POINT or SPLINE and all 209
+ * others resolve BOX, with no misclassification either way (same headless build).
+ *
+ * `userData` is public Three.js data — the same class of public read `_startBeds` and
+ * `_trackGuards` already do in AUDIO — so this reaches into no module's internals.
+ */
+export function pinnedAffordance(e) {
+  if (!e) return false;
+  /* Spline half: prefer COLLISION's own **result** field. `query()` now returns `spline` (and
+     `length`) per hit, non-null exactly when the affordance resolved AFF_SPLINE — which is the
+     authoritative answer, because a pole registered with `userData.top`/`bottom` and no curve
+     has one *synthesised* in `_buildAffordances`, and the write-back of that curve into
+     `userData.spline` is a best-effort side effect inside a `try` (frozen userData is tolerated
+     and silently skipped). Reading the result field cannot miss those; reading the authoring
+     field can. `userData.spline` stays as the fallback so this still discriminates correctly
+     against the older `query()` shape rather than failing closed on every rail. */
+  if (e.spline && typeof e.spline.getPoint === 'function') return true;
+  const ud = e.rec?.mesh?.userData;
+  if (!ud) return false;
+  if (ud.spline && typeof ud.spline.getPoint === 'function') return true;
+  /* Point half has no result-field equivalent: `slot.point` is populated for all three routes,
+     so it cannot tell an authored hook from the nearest corner of a wall. `userData.point` is
+     the only thing that distinguishes them, and unlike the spline it is never synthesised
+     without also being written back (`_buildAffordances` assigns before `_addPointEntry`). */
+  return !!(ud.point && ud.point.isVector3);
+}
+
 class SparkleField {
   /* `shared` carries the FX coverage-mask uniform (PREREG-fxink2); it is the only reason this
      constructor takes the bag at all, so it is optional and falls back to the shipped 0. */
@@ -2467,7 +2541,7 @@ export class Particles {
     h.alive = true;
     h.accum = 0;
     h._stood = false;          // handles come out of a pool; the standoff probe is per-fire
-    h.scale = opts.scale ?? (name === 'embers' || name === 'brazier' ? 1.35 : 1);
+    h.scale = opts.scale ?? (BED_NAMES.has(name) ? 1.35 : 1);
     h.opts = opts;
     h.kind = fire ? 'fire' : 'single';
     // A fire at rate 1 spawns one 0.3 s core sprite a second, i.e. it is *out* two thirds of
@@ -2478,11 +2552,39 @@ export class Particles {
     return h;
   }
 
-  /** One tick of a fire: core, body, embers, smoke. `age` back-dates it (see `_prerollFires`). */
+  /**
+   * One tick of a fire: core, body, embers, smoke. `age` back-dates it (see `_prerollFires`).
+   *
+   * **The ember grade is chosen here, and until now it never was.** `Emitters.js` has carried
+   * two of them since the catalogue was written — `ember` for a wall torch's cup, `embers`,
+   * "coarser and longer-lived", for a brazier's bed, with the reason spelled out at its
+   * definition (`Emitters.js:684-690`). `_fireTick` asked for `embers` unconditionally, so
+   * `ember` had **zero call sites anywhere in `src/`** and every sconce in the game threw a
+   * brazier's sparks. §357.1 in its purest form: the distinction was authored, documented and
+   * never reached — a catalogue entry is not a catalogue entry that runs.
+   *
+   * Two things follow from fixing it, and the second is the one that matters to the critics:
+   *
+   *  · **Budget.** Steady-state live sparks per fire, `rate x meanCount x meanLife x density`
+   *    at `TUNE.fireRate` 7/s and the 1.6 density ceiling — the same arithmetic `CONTINUOUS`
+   *    uses in Emitters.js. `embers` (count [2,3], life [1.4,2.8]) is 7 x 2.5 x 2.1 x 1.6 =
+   *    58.8; `ember` (count [1,2], life [1.1,2.2]) is 7 x 1.5 x 1.65 x 1.6 = 27.7. So every
+   *    wall torch hands back ~31 slots of the `spark` batch's 700. FIRE_NAMES above records
+   *    sixteen of them (six tomb, ten hall), i.e. this *lowers* spark pressure, and a change
+   *    that improves the frame budget cannot be the cause of a future overflow.
+   *  · **Read.** A sconce and a floor brazier stop being the same recipe at two scales. The
+   *    standing critic complaint on props is "generic-modern" / "reads as a plastic toolbox",
+   *    and identical particle output from two visibly different objects is one of the ways a
+   *    scene earns that: the FX layer was asserting they are the same kind of fire.
+   *
+   * Not verifiable by capture (§186 holds the lock), so it is held by `tests/fxfeel.test.mjs`
+   * instead — the cup must stay strictly quieter than the bed on the same loudness score the
+   * alert ladder uses, and `_fireTick` must be shown to route the two names apart.
+   */
   _fireTick(h, age) {
     _v3.copy(h.position);
     this._emit('fire_core', _v3, { scale: h.scale, age });
-    this._emit('embers', _v3, { scale: h.scale, dir: UP, age });
+    this._emit(BED_NAMES.has(h.name) ? 'embers' : 'ember', _v3, { scale: h.scale, dir: UP, age });
     _v3.y += 0.16 * h.scale;
     this._emit('fire_body', _v3, { scale: h.scale, dir: UP, age });
     _v3.y += 0.30 * h.scale;
@@ -3661,15 +3763,17 @@ export class Particles {
     const col = engine.get('collision');
     const list = col?.query ? col.query(focus, TUNE.sparkleRadius, TUNE.sparkleTags) : null;
     sp.begin();
-    if (list && list.length) {
-      for (let i = 0; i < list.length && i < sp.capacity; i++) {
+    if (list) {
+      let marked = 0;
+      for (let i = 0; i < list.length && marked < sp.capacity; i++) {
         const e = list[i];
-        if (!e?.point) continue;
+        if (!e?.point || !pinnedAffordance(e)) continue;
         // A stable key per affordance so the marker keeps its phase between refreshes.
         const key = (e.rec?.mesh?.id ?? i) * 8191 + (e.tag ? e.tag.length : 0);
         const lift = e.tag === 'spire' ? 0.34 : e.tag === 'hook' ? 0.0 : 0.22;
         const scale = e.tag === 'spire' ? 1.25 : e.tag === 'hook' ? 1.15 : 1.0;
         sp.mark(e.point.x, e.point.y + lift, e.point.z, key, scale, t);
+        marked++;
       }
     }
     sp.end();
