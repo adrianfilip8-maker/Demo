@@ -26977,3 +26977,137 @@ them. Not that the art verdicts were wrong. Not that gameplay is broken; only th
 never been evidence about it either way. And the inventory is exhaustive **over the grep terms
 listed in §367.1** — a module suppressing itself by some other mechanism would not appear here,
 and a negative grep is evidence about the words you guessed (§365-era lesson, learned twice).
+
+---
+
+## §368 — The four-lane round: what four agents found that a single pass had missed for months
+
+Four lanes, exclusive write scopes, briefed with §365 ("the reference is behind us — find what we
+LACK") and §357.1 ("machinery wired at one end only"). Every load-bearing number below was
+re-derived here before the lane's work was committed; where my re-derivation disagreed with the
+report it is said so.
+
+### §368.1 The headline: this project shipped four traversal states you could not leave
+
+`a3c2309`. Not tuning questions — **states with no exit**, all four surviving to today:
+
+```
+hook   HookSwing.update returns 'fall'; the machine sets fall and re-polls the SAME frame with
+       position unadvanced, so canEnter's fly-through clause is satisfied by construction.
+       MEASURED: 12 grabs, 11 releases over 240 frames, ring distance pinned at 2.200 m.
+       Both courtyard hook chains were traps.
+rail   advance() clamps u, parks Sly on the end point, returns 'fall'; auto-engage retakes him.
+       MEASURED: welded at x 4.15 for 168 frames, 337 railMount events in 3 s, sm.frameSwitches
+       saturated at its 4-pass ceiling every frame. Only jump escaped.
+jump   HookSwing and PoleSwing swallowed it — the Roll shape again. Frames +0..+10 dropped.
+arrive ToTarget's handoff probe stood in `null`, whose sm.group falls back to 'ground', so
+       LedgeHang and WallCling — both opening on (grounded || group !== 'air') — answered no
+       unconditionally.
+```
+
+Verified here rather than accepted: the hook arm now reads 1 grab / 1 release with Sly departing
+to 24.6 m, and the rail-end arm reads a single railMount with railSlide 12 / fall 37 / land 12 /
+move 119 — he rides off the end and runs on.
+
+**Why none of this was ever caught is §367.** `Controller.js:641` returns before `sm.update`, so
+`Moveset.js` has never contributed a pixel to any capture, and no critic round could have seen a
+hook that will not let go.
+
+### §368.2 The fifth §357.1, caught before it shipped rather than after
+
+`45ae504`. §353 asked for `Health.purse` to be published. The lane published it — and found that
+`bank()`'s `_publish()` sat inside `if (gained)`, so the bus heard about the purse only at the
+two instants a charm completes, which are the two instants the purse resets to zero. **A correct
+consumer built on top of that would have observed nothing but 0 forever.** Publishing the field
+without noticing would have been the fifth instance of the pattern, shipped by the very task
+raised to close the fourth.
+
+The cap sentinel is worth keeping: `charmProgress` returns **−1** at `maxCharms`, because the
+clamp parks the purse at `charmCoins - 1` and so `purse/charmCoins` sits at 0.99 for the rest of
+the run — "one coin away" from a charm that cannot be bought. 1.0 would say "one is arriving".
+Both are lies, and only the module owning the clamp can say so without a second copy of it.
+
+### §368.3 Two claims refuted by measurement — one mine, one a lane's
+
+**The lane's:** the WORLD lane's comment claimed `arch._colliders` was unchanged and it was not.
+I built Architecture+Props against a detached HEAD worktree and against the working tree with the
+sealed test's own instrumented `registerCollider`, and diffed the tag histograms: `pole` 21 → 22,
+every other tag identical. One stray pole, tripping `basketvary` P-A1 (272 → 273). **`pole` is
+the highest-weighted ROUTE tag** (`ROUTE_WEIGHT.pole = 1.0`), so a stray one is not invisible —
+`tests/camera.test.mjs` shows a pole drives the UP channel to 0.893 and opens the lens. The lane
+removed it rather than re-pinning the seal, which is the correct move under §141.1 and was
+already done before my message arrived.
+
+**Mine:** authoring the two-subject `alert` frame, I invented a "group must span ≥34% of frame
+width" bar with nothing behind it, failed a candidate at 21%, and went off restaging in the wrong
+direction — moving the guard *closer* to Sly, which shrinks the angular span rather than growing
+it. `tools/alertframe.mjs --calibrate` derives the bar from the shipped set instead:
+
+```
+15 shots staging a visible character · width 2.8% .. 45.7% · MEDIAN 11.1%
+the five character-sheet cameras cluster at 19.0-19.8%   <- deliberately framed to be read
+```
+
+So 34% was three times the median for a *single* subject. The honest bar is 20%, and on it the
+candidate I had rejected passes. Recorded because it is §141.1's failure mode taken *in advance*
+rather than after the fact, and worse in one respect: a threshold with no derivation cannot be
+argued with.
+
+Calibration also settled by measurement something previously only inferred: **the `guard` shot's
+staged player is behind the lens**, so that shot has never contained Sly.
+
+### §368.4 The FX audit, and the sharpest sentence of the round
+
+`76a46c4`. Twelve pieces of one-ended machinery in `src/fx` + `src/audio`. The lane's own summary
+of five of them:
+
+> `torch_whoosh`, `sand_shift`, `stone_grind`, `clue_bottle` and `binocucom` each have a **passing
+> test proving they make good sound**, and not one of them is ever played. The suite measures the
+> end that was never in doubt.
+
+`binocucom` is the shape in miniature: `HUD.js:825` emits `binocucomState`, which has zero
+subscribers; `HUD.js:611` and `Audio.js:1261` both subscribe to `binocucom`, which has no
+publisher. Two listeners, one publisher, and they do not share a name — so HUD subscribes to an
+event it never emits and its own external-control hook is unreachable.
+
+Also: **the reference has no live audio-playback code at all** — two sites across 44 `.gd` files,
+one of them commented out. There is no music state machine there to learn from. §364.3's audio
+exclusion is moot in practice as well as in law.
+
+### §368.5 DECIDED — the alert ladder gets a NEW shot, not a restaged one
+
+The FX lane found that **22 of 34 emitters (65%) are unreachable in every canonical capture**,
+including the entire stealth alert ladder and the entire traversal vocabulary. The ladder has a
+dedicated pre-registered suite (`fxfeel.test.mjs` T3, four rungs strictly increasing with a ≥1.6×
+step) and **zero pixels of evidence**. The lane correctly refused to act and escalated, because
+restaging changes what the evidence base means.
+
+**Decision: no existing shot is restaged. A twelfth shot, `alert`, is authored instead.**
+
+Restaging `guard` would break comparability with every sealed measurement built on it — the
+guard-cone lineage alone (§348–§354) is seven sections deep on that shot, and §141.1's discipline
+runs through those frames. A new shot costs nothing already spent. Split three ways by ownership:
+`Shots.js` and `Guard.js`'s `SHOT_POSE` are mine, `_stageShot` is the FX lane's.
+
+Candidate A is verified clean on `tools/alertframe.mjs` and is the staging to beat: camera
+(-4.0, 4.2, 26.5) → (-14.0, 2.0, 15.0), fov 46, tod 0.10, Sly at (-9.5, 0, 20.0), guard on
+`courtyard_ring` at (-18.0, 0, 16.0). Sly 195 px tall, guard 104 px, mark in frame at 460,369,
+zero overlap, all three clear of architecture, group spanning 21% of the width.
+
+**Not yet authored, deliberately.** The camera should frame what the FX branch actually fires,
+and that branch is being written now. Authoring the lens before knowing the subject is the order
+that produced the feet-below-the-edge defect three times.
+
+**Note for whoever runs the next critic round:** a twelfth shot makes a bare `node tools/critic.mjs`
+score twelve. The standing 4.2 baseline is over ten. Pass the ten names explicitly, or re-baseline
+deliberately — the same warning the `sly-profile` entry carries, and it has now been ignored once.
+
+### §368.6 What this round does NOT establish
+
+Nothing here was seen. No captures ran — three lanes were editing `src/**` throughout, which
+makes any capture unreconstructible and is correctly refused by the guard in `tools/shot.mjs`.
+Every claim above is source-level or headless-simulation evidence. The handhold tag is authored
+and **inert by design** (`api.handholds` is read by nothing; the moveset behaves identically with
+and without it). The route telegraph is proven to reach the lens and is not proven to read as
+*"climb here"* to a player. And the four traversal fixes are proven to release, not proven to feel
+good. §366.7 stands: feel is still measured by nothing.
