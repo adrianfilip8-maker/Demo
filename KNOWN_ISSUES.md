@@ -31275,6 +31275,47 @@ and the first where the vacuity was in the SAMPLING" below it. Both are in `HEAD
 renumbered either: mine is cited by §-number in commits already pushed, and the other is not mine to
 move. Flagging it for arbitration rather than silently resolving it.
 
+### §411.11 The hall camera is jammed off the nave centre-line, and the whiskers are doing it
+
+Routed. Measured with the corrected harness, and the camera's lateral wander was checked at
+**0.000 m on every lane before any magnitude was read** — §411.10's rule applied to the successor
+of the measurement that taught it.
+
+Sprinting the hall at `runSpeed`, boom cut past `2 * camRadius`:
+
+```
+lane x   mean cut   >2R %   mean boom   what cuts it
+   0      0.042      0.0 %    5.660     —
+   2      0.061      0.0 %    5.765     —
+   4      1.303     45.8 %    4.669     none:111  wall:19
+   8      5.526    100.0 %    0.582     pole:229  wall:55
+  12      2.295     61.6 %    3.681     none:106  wall:69
+  16      3.675     75.0 %    2.301     pole:139  none:72  wall:2
+```
+
+Lane 8 is the nave colonnade itself (columns at x ±8) and **0.582 m is `distHardMin` 0.55** — the
+camera is jammed inside Sly for the entire run. Lanes 4 and 12 are open floor between colonnades
+and are still cut on half their frames. Only the centre-line and one lane either side are clean.
+
+**The `none` column is the finding.** On roughly half the cut frames at lanes 4 and 12, a ray from
+the pivot along the boom direction hits nothing at all. The cuts are coming from the **whiskers**,
+not from anything actually blocking the view of the character: the ±0.38 m lateral and +0.30 m
+overhead probes are catching columns and architraves that the sightline itself clears. That is the
+whisker system doing exactly what it was built to do — *"the boom shortens continuously as a pillar
+approaches the sightline"* — at a density of pillars its tuning was never checked against.
+
+The dolly is neither the cause nor a meaningful contributor, and is still delivered on those lanes:
+
+```
+lane   >2R at gain 0   >2R at gain 0.30    mean boom 0 -> 0.30
+   0        0.0 %            0.0 %            5.400 -> 5.660
+   4       44.4 %           45.8 %            4.480 -> 4.669
+  12       58.8 %           61.6 %            3.586 -> 3.681
+```
+
+So the pre-existing condition dominates by an order of magnitude, and the lever is the whisker
+geometry rather than the boom length. Left for the camera lane with the mechanism named.
+
 ---
 
 ## §411 — The fourth instance, and the first where the vacuity was in the SAMPLING
