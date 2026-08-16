@@ -854,8 +854,14 @@ test('T8: the alert shot stages the top rung, and the ladder contrast when there
 test('T8: an unknown shot name still stages nothing extra', () => {
   /* The branch must be inert until the shot lands, and every existing shot must be untouched —
      restaging an existing one would break comparability with every sealed measurement on it. */
-  const src = PARTICLES_SRC.slice(PARTICLES_SRC.indexOf('  _stageShot(name) {'));
+  /* Matched on the method NAME, not its full signature: this assertion is about which shots
+     are branched on, and it must not go quietly vacuous the day an argument is added. A
+     `slice(-1)` on a failed indexOf is a body of one character that passes everything. */
+  const at = PARTICLES_SRC.search(/^ {2}_stageShot\(/m);
+  assert.ok(at > 0, 'could not find _stageShot in Particles.js — this test is inspecting nothing');
+  const src = PARTICLES_SRC.slice(at);
   const body = src.slice(0, src.indexOf('\n  }'));
+  assert.ok(body.length > 200, `_stageShot body scanned as ${body.length} chars — the slice is wrong`);
   assert.ok(/name === 'alert'/.test(body), '_stageShot has no alert branch');
   for (const shot of ['hero', 'temple', 'courtyard', 'dunes', 'interior', 'night', 'traversal', 'combat', 'guard', 'kaykit']) {
     const staged = (body.match(new RegExp(`name === '${shot}'`, 'g')) || []).length;
@@ -1087,4 +1093,111 @@ test('T10: a back-dated contact effect is laid along the travel, not piled at on
   const oldest = seen.reduce((a, b) => (a.age > b.age ? a : b));
   const newest = seen.reduce((a, b) => (a.age < b.age ? a : b));
   assert.ok(oldest.x < newest.x, 'the oldest spark is ahead of the newest — the trail runs the wrong way');
+});
+
+/* ═══════════════════════════════ T11 — the re-age, and what it was not allowed to change ══ */
+
+test('T11: every staged emission is aged past its fade-in, on both capture paths', () => {
+  /* `Engine.renderFrame(0)` sets `dt = 0` and `time += 0`, so on the A/B path §195 mandates the
+     FX clock never advances and a sprite staged at age 0 has `smoothstep(0, fadeIn, 0) === 0`
+     — alpha exactly zero, nothing drawn. This is the census for that, across every branch. */
+  const shots = ['combat', 'traversal', 'night', 'guard', 'alert', 'impact'];
+  let inspected = 0, blanks = [];
+  for (const shot of shots) {
+    const seen = [];
+    const h = fxHost();
+    h._emit = (n, p, o) => seen.push([n, o?.age ?? 0]);
+    h._stageShot(shot);
+    assert.ok(seen.length > 0, `"${shot}" staged no emitters at all`);
+    for (const [n, age] of seen) {
+      const d = EMITTERS[n];
+      if (!d) continue;
+      if (d.fadeIn > 0 && age <= 0) blanks.push(`${shot}/${n}`);
+      assert.ok(age < d.life[0],
+        `${shot}: ${n} aged ${age}s, past its shortest life ${d.life[0]}s — _emit drops part of the burst`);
+      inspected++;
+    }
+  }
+  assert.ok(inspected >= 12, `only ${inspected} staged emissions inspected`);
+  assert.deepEqual(blanks, [],
+    `staged at age 0 with a fade-in, so they render NOTHING on the dt = 0 path: ${blanks.join(', ')}`);
+  console.log(`  T11: ${inspected} staged emissions across ${shots.length} shots, none blank on either path`);
+});
+
+test('T11: the re-age moved ages and nothing else — gameplay and staging depict the same hit', () => {
+  /* The condition on the re-age was "ages only: no emitter swaps, no scale changes, no
+     additions". `_onCaneHit` is threaded rather than twinned precisely so this is checkable:
+     the same call with and without ages must differ in the age field and in nothing else. */
+  const capture = (ages) => {
+    const seen = [];
+    Particles.prototype._onCaneHit.call(
+      { engine: { get: () => ({ position: VEC(), faceDir: VEC(0, 0, 1) }) }, _emit: (n, p, o) => seen.push({ n, ...o }) },
+      3, VEC(1, 1, 1), VEC(0, 0, 1), ages,
+    );
+    return seen;
+  };
+  const play = capture(undefined);
+  const staged = capture({ cane_flash: 0.001, cane_ring: 0.045, cane_spark: 0.002, cane_debris: 0.079 });
+
+  assert.equal(staged.length, play.length, 'staging emits a different NUMBER of things than gameplay');
+  assert.ok(play.length === 4, `expected the four cane emitters, got ${play.length}`);
+  for (let i = 0; i < play.length; i++) {
+    const a = play[i], b = staged[i];
+    assert.equal(b.n, a.n, `emitter ${i} differs: gameplay "${a.n}", staged "${b.n}"`);
+    for (const k of Object.keys(a)) {
+      if (k === 'age') continue;
+      assert.deepEqual(b[k], a[k], `${a.n}.${k} differs between gameplay and staging — this was ages only`);
+    }
+    assert.equal(a.age ?? 0, 0, `gameplay ${a.n} is aged; only staging may be`);
+    assert.ok(b.age > 0, `staged ${b.n} is not aged`);
+  }
+  console.log(`  T11: 4 cane emitters, identical but for age (${staged.map((x) => x.age).join(', ')}s)`);
+});
+
+test('T11: a shot that asks for a continuous preroll and cannot get one says so', () => {
+  /* The delay-fuse trap: `_prerollContinuous` gates on ground speed, so a shot that poses the
+     player into a grind but leaves him at rest prerolls nothing and looks simply unstaged.
+     Silent no-ops in staging are what this whole pass has been about. */
+  const shotWith = (player) => ({ player });
+
+  /* 1. Named a state that owns no continuous emitter — a typo, and it must name the valid set. */
+  const typo = fxHost();
+  const warns = [];
+  typo.engine.warn = (m) => warns.push(m);
+  typo._stageShot('hero', shotWith({ fxState: 'railSlyde' }));
+  assert.equal(warns.length, 1, `expected one warning for an unknown fxState, got ${warns.length}`);
+  assert.match(warns[0], /railSlyde/, 'the warning does not name the state that was asked for');
+  assert.match(warns[0], /railSlide/, 'the warning does not list the valid states');
+
+  /* 2. Valid state, but the posed player is stationary — the actual delay fuse. MUST warn. */
+  const still = fxHost({ velocity: VEC(0, 0, 0) });
+  const w2 = [];
+  still.engine.warn = (m) => w2.push(m);
+  still._stageShot('hero', shotWith({ fxState: 'railSlide' }));
+  assert.equal(w2.length, 1, 'a stationary posed player asking for a grind preroll warned nothing');
+  assert.match(w2[0], /1\.2 m\/s|contact gate/, 'the warning does not explain the gate that stopped it');
+  assert.equal(oneShotPop(still), 0, 'prerolled a grind for a stationary player');
+
+  /* 3. Valid state, player moving — prerolls, and stays quiet. */
+  const ok = fxHost();
+  const w3 = [];
+  ok.engine.warn = (m) => w3.push(m);
+  ok._stageShot('hero', shotWith({ fxState: 'railSlide' }));
+  assert.deepEqual(w3, [], `a valid, moving preroll warned anyway: ${w3.join(' | ')}`);
+  assert.ok(oneShotPop(ok) > 0, 'a valid moving preroll produced nothing');
+
+  /* 4. A pose whose name happens to be a CONTINUOUS key is accepted without a new field. */
+  const byPose = fxHost();
+  byPose._stageShot('hero', shotWith({ pose: 'skid' }));
+  assert.ok(oneShotPop(byPose) > 0, 'a pose named exactly like a CONTINUOUS state did not preroll');
+
+  /* 5. A shot that says nothing stays silent and falls back to _playerState — the existing
+        ten shots must not start warning. */
+  const quiet = fxHost();
+  const w5 = [];
+  quiet.engine.warn = (m) => w5.push(m);
+  for (const n of ['hero', 'temple', 'courtyard', 'combat', 'traversal']) {
+    quiet._stageShot(n, { player: { pose: 'idle_confident' } });
+  }
+  assert.deepEqual(w5, [], `an ordinary shot now warns: ${w5.join(' | ')}`);
 });

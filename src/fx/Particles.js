@@ -1579,6 +1579,41 @@ export const STAGE_LATENCY = 3 / 60;
  * same minimax over `{dt = 1/60, dt = 0}` as `STAGE_RUNGS`. Ordered ring-first so the biggest
  * sprite is written before the batch can be pressured by the smaller ones.
  */
+/**
+ * Staging ages for the branches that already existed. **Ages only — nothing about what these
+ * shots depict has moved.** Same emitters, same positions, same scales, same counts.
+ *
+ * ── Why they were changed ─────────────────────────────────────────────────────────────────
+ * All six were staged at `age = 0`, and every one has a non-zero `fadeIn`. The shader's alpha
+ * is `peak * smoothstep(0, fadeIn, u) * (1-u)^fadeOut`, and `smoothstep(0, fadeIn, 0)` is
+ * exactly 0 — so on the `dt = 0` capture path that §195 requires for A/B arms (`Engine
+ * .renderFrame(0)` gives `dt = 0` and `time += 0`, i.e. the FX clock never advances) **every
+ * one of these rendered nothing at all.** Any seal taken that way compared two blank frames.
+ *
+ * ── Before and after, so a future diff against a pre-fix frame finds the reason here ──────
+ * % of each sprite's own peak projected ink (`sz(u)^2 * alpha(u)` from PARTICLE_VERT), on the
+ * two capture paths. Ages are the minimax over both, swept at 1 ms:
+ *
+ *   shot         emitter        was: dt=1/60 / dt=0     now: age      dt=1/60 & dt=0
+ *   combat       cane_flash        20.0%   /   0.0%     0.001 s          19.0%
+ *   combat       cane_ring         96.4%   /   0.0%     0.045 s          93.6%
+ *   combat       cane_spark        37.9%   /   0.0%     0.002 s          36.2%
+ *   combat       cane_debris       90.5%   /   0.0%     0.079 s          98.2%
+ *   traversal    cane_arc          62.9%   /   0.0%     0.003 s          60.7%
+ *   night/guard  coin_sparkle      58.3%   /   0.0%     0.074 s          89.8%
+ *
+ * Four of the six give up 1-3 points on the live path to buy the A/B path back; `cane_debris`
+ * and `coin_sparkle` gain on both. The trade is worth taking because 0% is not a measurement
+ * and 19% is — a verdict reached from two blank rectangles was already void, so there was no
+ * live comparison here to protect. Every age is under its emitter's SHORTEST life, so `_emit`
+ * drops none of the population.
+ */
+const STAGE_CANE = {
+  cane_flash: 0.001, cane_ring: 0.045, cane_spark: 0.002, cane_debris: 0.079,
+};
+const STAGE_ARC = 0.003;
+const STAGE_COIN = 0.074;
+
 const STAGE_IMPACT = [
   ['dive_ring', 0.088],
   ['dive_dust', 0.279],
@@ -2501,7 +2536,7 @@ export class Particles {
     on('propSmashed', (e) => this.smash(e?.pos || e?.position, e || {}));
     on('thiefVision', (v) => { this._thiefTarget = v ? 1 : 0; });
     on('timeOfDay', () => { this._motesBuilt = -1; });
-    on('shot', (e) => this._stageShot(e?.name));
+    on('shot', (e) => this._stageShot(e?.name, e?.shot));
     on('resize', () => this._resizeDepth());
     on('quality', () => this._resizeDepth());
   }
@@ -3074,7 +3109,7 @@ export class Particles {
     if (f > 1.1) this.decal('scuff', _v3, UP, { size: 1.4 + f, life: 5 });
   }
 
-  _onCaneHit(index, pos, dir) {
+  _onCaneHit(index, pos, dir, ages) {
     const mv = this.engine.get('movement');
     const p = pos || mv?.position;
     if (!p) return;
@@ -3086,10 +3121,15 @@ export class Particles {
     if (!pos) _v3.addScaledVector(_dir, 0.95);
 
     const heavy = index >= 3 ? 1.35 : 1.0;
-    this._emit('cane_flash', _v3, { scale: heavy });
-    this._emit('cane_ring', _v3, { dir: _dir, scale: heavy });
-    this._emit('cane_spark', _v3, { dir: _dir, scale: heavy, count: heavy });
-    this._emit('cane_debris', _v3, { dir: _dir, scale: heavy });
+    /* `ages` is null in gameplay and STAGE_CANE when a shot is being staged. Threading it
+       through the SAME call rather than writing a `_stageCombat` twin is deliberate: it makes
+       it structurally impossible for what `combat` depicts to drift from what the player sees,
+       which is the one thing the re-age was not allowed to change. */
+    const a = ages || null;
+    this._emit('cane_flash', _v3, { scale: heavy, age: a?.cane_flash ?? 0 });
+    this._emit('cane_ring', _v3, { dir: _dir, scale: heavy, age: a?.cane_ring ?? 0 });
+    this._emit('cane_spark', _v3, { dir: _dir, scale: heavy, count: heavy, age: a?.cane_spark ?? 0 });
+    this._emit('cane_debris', _v3, { dir: _dir, scale: heavy, age: a?.cane_debris ?? 0 });
   }
 
   /**
@@ -3243,7 +3283,7 @@ export class Particles {
    * photographer poses one. `combat` fires the cane hit a beat before the capture; the
    * traversal frame gets the cane's gold arc. Everything else is ambient and needs nothing.
    */
-  _stageShot(name) {
+  _stageShot(name, shot) {
     const mv = this.engine.get('movement');
     /* Rebase the clock and re-seed the stream before anything is emitted, so a staged shot
        does not inherit either the boot's duration or however many particles happened to be
@@ -3281,25 +3321,34 @@ export class Particles {
     this.sparkles?.preroll(0.25);  // staged shots only by construction (_stageShot); RESULT-fxcluster B re-run
     this._prerollFires();
     this._prerollCrests();
-    this._prerollContinuous();
+    /* Which continuous effect this shot wants, most explicit source first.
+       `_playerState` alone was the whole gate and is the wrong single source of truth for a
+       STAGED frame: it is learned from the `playerState` event, and a shot poses the character
+       directly through `SHOT_POSE` without necessarily emitting one. `shot.player.fxState` lets
+       an author say so outright; the pose name is accepted when it happens to match a
+       CONTINUOUS key exactly, which costs nothing and needs no new vocabulary. Loud from here
+       on: a staged shot that asked for a preroll and got nothing must say so. */
+    const posed = shot?.player?.fxState || shot?.player?.pose;
+    const wanted = CONTINUOUS[posed] ? posed : (shot?.player?.fxState || this._playerState);
+    this._prerollContinuous(wanted, !!shot?.player?.fxState);
     this._motesBuilt = -1;          // re-seat the dust against whatever this shot is lit by
     if (name === 'combat') {
       _v3.set(0, 1.28, 2.05);
       if (mv?.position) { _v3.copy(mv.position); _v3.y += 1.28; }
       _dir.set(0.30, 0.10, 0.95).normalize();
       _v3.addScaledVector(_dir, 1.05);
-      this._onCaneHit(3, _v3, _dir);
+      this._onCaneHit(3, _v3, _dir, STAGE_CANE);
       this.decal('crack', _v1.copy(_v3).setY((mv?.position?.y ?? 0) + 0.02), UP, { size: 2.6, life: 30, alpha: 0.7 });
     } else if (name === 'traversal') {
       const p = mv?.position;
       if (p) {
         _v3.copy(p); _v3.y += 1.1;
         _dir.set(-0.7, 0.35, -0.6).normalize();
-        this._emit('cane_arc', _v3, { dir: _dir, scale: 1.2 });
+        this._emit('cane_arc', _v3, { dir: _dir, scale: 1.2, age: STAGE_ARC });
       }
     } else if (name === 'night' || name === 'guard') {
       const p = mv?.position;
-      if (p) { _v3.copy(p); _v3.y += 0.9; this._emit('coin_sparkle', _v3, { count: 2 }); }
+      if (p) { _v3.copy(p); _v3.y += 0.9; this._emit('coin_sparkle', _v3, { count: 2, age: STAGE_COIN }); }
     } else if (name === 'alert') {
       this._stageAlert();
     } else if (name === 'impact') {
@@ -3384,12 +3433,38 @@ export class Particles {
    *
    * @returns {number} sprites' worth of ticks issued, 0 when no continuous state is active.
    */
-  _prerollContinuous() {
-    const c = CONTINUOUS[this._playerState];
-    if (!c) return 0;
+  _prerollContinuous(state = this._playerState, loud = false) {
+    const c = CONTINUOUS[state];
+    if (!c) {
+      /* A shot that NAMED a state we have no effect for is a typo, not a quiet no-op — the
+         author expected sparks and will get an unstaged-looking frame with nothing to read. */
+      if (loud && state) {
+        this.engine.warn(`fx: shot staged with fxState "${state}", which owns no continuous `
+          + `emitter. Valid states: ${Object.keys(CONTINUOUS).join(', ')}. No preroll ran.`);
+      }
+      return 0;
+    }
     const def = EMITTERS[c.emitter];
     const mv = this.engine.get('movement');
-    if (!def || !mv?.position) return 0;
+    if (!def || !mv?.position) {
+      if (loud) this.engine.warn(`fx: shot asked for the "${state}" preroll and MOVEMENT is absent`);
+      return 0;
+    }
+    /* **The trap this argument exists to close.** `_emitPlayerCont` gates on ground speed —
+       a contact effect with no contact emits nothing — so a shot that poses the player into a
+       grind but leaves him at rest prerolls zero sprites and looks simply unstaged. That is
+       §357.1 with a delay fuse: the machinery is present, correct, and silently produces
+       nothing, and it fires on whoever authors the first rail shot. Loud, not quiet. */
+    if (loud) {
+      const v = mv.velocity;
+      const sp = v ? Math.hypot(v.x, v.z) : 0;
+      if (sp < 1.2) {
+        this.engine.warn(`fx: shot asked for the "${state}" preroll but the posed player is `
+          + `moving at ${sp.toFixed(2)} m/s, under the 1.2 m/s contact gate — ${c.emitter} `
+          + 'emits nothing and the frame will look unstaged. Set a velocity on the pose.');
+        return 0;
+      }
+    }
     const span = def.life[1];
     const ticks = Math.max(1, Math.round(c.rate * span));
     /* Oldest first, so the ring buffer holds the youngest sprites if it ever wraps — the same
