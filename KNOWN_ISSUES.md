@@ -31210,3 +31210,188 @@ sampling. That is what a passing calibration should look like. **5e-16 was never
 
 Past the bound the message says the asymmetry is REAL — a subject no longer centred on the
 contact — rather than reporting a generic failure, because those are different repairs.
+
+## §410 — The `capsuleSweep` census, done properly: my own §409.2 was incomplete and its rate was wrong
+
+§409.2 called itself a census: *"Every consumer that reads `hit` from a capsule sweep, because a
+defect found by accident says nothing about its own blast radius."* It listed six consumers,
+measured one of them, and concluded the class was *"geometry-specific: it surfaced at one lip and
+nowhere in ordinary locomotion."*
+
+Commissioned to enumerate the callers properly, I found that the census had **missed a caller** and
+that its **one measurement was too small a sample to support its conclusion**. The conclusion — that
+only one site was ever damaged — survives both corrections, but not for the reason it gave.
+
+This entry is §409's own generalisation turned on §409: a census that can only report "the sites I
+happened to think of" is an enumeration too small for its question, which is the same shape as a
+flag too small for its answer set.
+
+### §410.1 The missed caller, and it is the worst-placed one
+
+The six in §409.2 are all reached through `Controller._sweep`, the wrapper. **`Controller._calibrate`
+(`src/player/Controller.js:697`) calls `col.capsuleSweep` directly**, and reads `hit` as a bare
+boolean:
+
+```js
+const r = col.capsuleSweep(_v1, _v2, TUNE.radius, TUNE.height, _sweepOpt);
+if (!r?.hit) return;
+const delta = r.position.y - floor;
+if (delta > TUNE.height * 0.30 && delta < TUNE.height * 0.75) this._capOff = TUNE.height * 0.5;
+```
+
+It is the highest-consequence bare read in the codebase and it was not on the list. Its answer is
+**latched**: `_capOff` offsets the origin of *every subsequent sweep* by 0.9 m, once, for the life
+of the binding. Every other site gets a fresh answer next frame.
+
+It is nevertheless safe, and by structure rather than by luck: the probe drops from `floor + 3.0`
+to `floor - 0.5` where `floor` came from `groundCheck`, so a 3.5 m descent that starts 3 m above
+known ground **must** cross it, and the sweep loop cannot come back empty. Measured on the real
+level it reports `sweepHit=true, depenHit=true, depenDepth=0.0026`, i.e. a genuine contact with
+skin-scale residual overlap, and `_capOff = 0`. An arm now pins that, and says in its own message
+that if the probe geometry ever stops guaranteeing the crossing the answer is the bound, not a
+wider acceptance window.
+
+*(Noted, not landed, because it is a different defect and this round is not its round:
+`_calibrate` sets `this._calibrated = true` on entry, so a probe that returns no hit at all latches
+"calibration done" with `_capOff = 0` and never retries. Currently unreachable for the same reason
+the above is safe.)*
+
+### §410.2 The rate, measured across every site instead of one
+
+§409.2 measured the step-up probe at **"0 depenetration-only hits in 305 sweeps"** and generalised
+from it. 305 was too small. `Collision.capsuleSweep` now publishes which path set `hit` (§410.3), so
+the count is exact rather than inferred; over 7,830 controller frames of real-level locomotion —
+174 routes, four compass directions from a 10 m grid, jumping on a cycle:
+
+```
+site                          calls   hit   sweep only   both   DEPEN-ONLY   max push
+_calibrate                        1     1            1      0            0     0.0000
+_moveHorizontal ground snap    1449  1449          946    503            0     0.0000
+_moveHorizontal step-up probe  1476    27           24      0            3     0.0043
+_moveVertical                  9925  2350          924   1360           66     0.1368
+_slide                         8739   405           53    138          214     0.2507
+ledgeAssist                       5     5            3      2            0     0.0000
+TOTAL                         21595                                    283
+```
+
+**283 depenetration-only reports in 21,595 sweeps — about 1 in 76 — at four of the six sites,** and
+the step-up probe is among them at 3. A second run over 9,450 frames gives 134 in 27,139. The class
+is not rare and it is not confined to one lip. §409.2's *"nowhere in ordinary locomotion"* was an
+artefact of sampling one site for 305 sweeps.
+
+### §410.3 So why was only one site ever damaged — the enumeration, with the answer per caller
+
+Because of **how each caller reads the result**, which is a structural property and not a fact
+about this level's geometry. That is a better reason than the one §409.2 gave, and it is the reason
+that will still hold when the geometry changes.
+
+```
+caller                          reads              distinguishes?   what it does when it cannot
+──────────────────────────────────────────────────────────────────────────────────────────────
+_moveHorizontal ground snap     hit + toi + pos    YES, by BOUND    descends min(drop·toi, resolve)
+_moveVertical                   hit + toi + n + p  YES, by BOUND    same bound, walkability-gated
+_slide                          position, normal   NOT NEEDED       copies position — a push-out IS
+                                                                    a contact here, and correct
+ledgeAssist                     hit + position     NOT NEEDED       rejects the candidate when the
+                                                                    resolve sits above the lip
+_moveHorizontal step-up probe   hit, BARE          NO               disables the step-up. FAIL-SAFE:
+                                                                    the direction is "don't lift",
+                                                                    never "drop him"
+_calibrate                      hit, BARE          NO               unreachable — see §410.1
+CameraRig._sweep                distance           NOT NEEDED       depen sets distance = totalLen,
+                                                                    so the boom shortens by exactly
+                                                                    one camPad (0.12 m), not a jam
+```
+
+Two read `toi`, and `toi = 1` on the depenetration path is the whole defect — both are bounded.
+Three read `position`, which is *correct under either meaning of `hit`*, because where the capsule
+ended up is a fact regardless of why it stopped. One is fail-safe. One is unreachable.
+
+The two flag side-effects `_slide` sets on a push-out — `hitWall`, `lastHitNormal`/`lastHitTag` —
+were checked rather than assumed: all three are **written and never read** (`Controller.js:514`
+records them as "machinery wired at one end"), so 214 push-outs setting them costs nothing.
+
+Guards were checked too, because a test comment claims `Collision.capsuleSweep` is shared with them.
+It is not: `Guard.js` uses `raycast` and `groundCheck`, and **neither depenetrates** — `_depenetrate`
+has exactly one call site, inside `capsuleSweep`. The class is confined to the player.
+
+### §410.4 The repair, and its blast radius, which is zero
+
+`hit` is a **disjunction**, and the repair is to publish its disjuncts rather than to widen the flag:
+
+```
+res.sweepHit    the sweep loop contacted geometry along the path
+res.depenHit    depenetration moved the capsule out of an overlap
+res.depenDepth  how far it pushed, in metres
+                                             hit === sweepHit || depenHit
+```
+
+`res.sweepHit = blocked` is assigned *before* the depenetration branch can flip `blocked`, which is
+the entire mechanism. All four quadrants exist on the real level and all four are pinned by an arm:
+clean contact `(T,F)`, open air `(F,F)`, depenetration-only `(F,T)`, and contact-with-residual-overlap
+`(T,T)` — the last one mattering because a caller that reads `depenHit` as "therefore not a real
+contact" would be wrong 1,360 times in 9,925 sweeps.
+
+**Blast radius: no caller changes, and no caller has to.** Nothing that reads `hit` changes meaning;
+the three fields are additive on a pooled object that already carried eight. `Controller._sweep`
+carries them through with `sweepHit` defaulting to `true` when the collision module predates the
+split, so `FLAT` and every test stub keep the behaviour they had. I did **not** convert any call
+site to read the new flags, because §410.3 is the argument that none needs to — the two that could
+be damaged are fixed by bound, and a bound is better than a flag: it is correct under *either*
+meaning, so it cannot be defeated by a third path being added to `capsuleSweep` later.
+
+The signature change I was told to price before landing — threading a reason code through every
+caller — is therefore **not proposed**. It would touch seven sites to give six of them information
+they demonstrably do not use.
+
+### §410.5 The arms, and what makes them able to fail
+
+Three arms, in `tests/traversal.test.mjs`:
+
+1. **The discriminator, four quadrants on the real collision layer.** The depenetration arm uses a
+   *zero-length* request, so the sweep loop breaks under `minSweep` without ever casting and any
+   `hit` can only have come from the push-out. `sweepHit` therefore cannot be a constant, an alias
+   of `hit`, or an alias of `!hit`, and the arm names each of those in its failure text.
+2. **The static enumeration.** A scan of `src/**` counts direct `capsuleSweep` invocations (3:
+   `_calibrate`, `Controller._sweep`, `CameraRig._sweep`) and `Controller`'s fan-out through
+   `_sweep` (5). **A new caller anywhere in `src` trips it.** This is the arm that makes this a
+   census of the codebase rather than of the walk — the walk can only see callers it happens to
+   run, and `CameraRig` never runs in it.
+3. **The summit lip as a minimal pair.** Both arms return `hit: true` *and* `toi: 1` — identical on
+   every field the pre-fix code read — differing only in where the sweep resolved. One must descend
+   `stepHeight + groundSnap` and one must not descend at all.
+
+   Both arms on the bar, and the second is the one that matters: *"a snap that has been deleted also
+   never drops him."* A third checks he actually walked, because a character pinned in place never
+   falls either. The same lever the ramp arm carries, for the same reason.
+
+A short real-level walk runs alongside them and checks one thing only: that no **uncensused** caller
+name reaches `capsuleSweep` during ordinary locomotion. It deliberately does **not** assert
+`depenOnly > 0`. The rate is ~1 in 76 sweeps, and a few hundred frames is too small a sample to make
+that a bar rather than a coin flip — which is the same error §409.2 made in the other direction, and
+committing it again inside the arm that corrects it would be a poor joke. The lever showing the
+class fires at all is the depenetration quadrant in arm 1, which is deterministic. The rate lives in
+`tools/sweepcensus.mjs` (~6 s on an idle box, `--grid` / `--frames` to resize), where re-measuring
+it costs one command and no lock.
+
+*Sizing note, recorded because it cost me two false diagnoses:* the walk was first written into the
+suite at 7,830 frames and appeared to hang. It was not hanging and the test runner was not at fault
+— the box was at **load average 8.8** with three other lanes running captures and suites, and every
+number I took while diagnosing was contended. `uptime` before concluding anything about performance.
+
+### §410.6 The generalisation
+
+> **An enumeration is a predicate too. "These are all the callers" is a claim that can be wrong in
+> exactly one direction, and reasoning cannot bound it — only the compiler can.**
+
+§409.2 was assembled by recalling consumers of a wrapper. That is why it found the six that go
+through `_sweep` and missed the one that does not: the method of enumeration had a blind spot
+shaped exactly like the caller it missed. The static scan has no such shape — it looks for the
+*call*, not for the caller's habits — and it is four lines.
+
+The same correction applies to the measurement. "0 in 305" was a sample, reported as a census.
+Publishing `sweepHit` turned the same question into a count over 21,595 sweeps for the cost of one
+assignment, and the count disagreed with the sample by two orders of magnitude while leaving the
+conclusion standing. **A conclusion that survives its evidence being corrected by 100× was resting
+on something other than that evidence** — here, on the structural argument in §410.3, which is the
+one worth keeping.

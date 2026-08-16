@@ -309,10 +309,25 @@ export class Collision {
    * remaining motion onto the contact plane, repeat up to TUNE.maxSlides times, then push
    * out of any residual overlap.
    *
-   * → { hit, position, normal, distance, tag, material, rec, toi, slid, contacts, normals }
+   * → { hit, sweepHit, depenHit, depenDepth, position, normal, distance, tag, material, rec,
+   *     toi, slid, contacts, normals }
    *   `position` is the resolved feet position; `distance` is how far along the original
    *   direction the capsule got before the first blocking contact; `normals` holds the
    *   deduped contact planes (clip your velocity against all of them).
+   *
+   * **`hit` is a disjunction, and these are its disjuncts.** It is set on two occasions that
+   * mean opposite things: the swept capsule CONTACTED geometry along its path (`sweepHit`), or
+   * DEPENETRATION pushed a capsule that was already overlapping back out without the sweep
+   * touching anything at all (`depenHit`, with `depenDepth` metres of push-out). On the second
+   * path `toi` is also set to 1 and `distance` to the full requested length, so a caller reading
+   * `hit` and trusting `toi` is told "you travelled the whole way" by a sweep that never moved.
+   * That dropped Sly off a wall-climb summit lip; see §409.
+   *
+   * `hit === sweepHit || depenHit`, so nothing that reads `hit` changes meaning. A caller that
+   * needs "did the swept path contact anything" — as opposed to "was I inside something" —
+   * must ask `sweepHit`, because `hit` cannot say no to that question. Both are also true at
+   * once when a real contact left residual overlap; that is ordinary and neither flag is a
+   * refutation of the other.
    */
   capsuleSweep(from, to, radius, height, opts, out) {
     const t0 = now();
@@ -409,7 +424,10 @@ export class Collision {
     this._depenetrate(px, py, pz, loY, hiY, r, allowOneWay);
     px = this._dpx; py = this._dpy; pz = this._dpz;
 
+    res.sweepHit = blocked;          // set by the sweep loop above, before depenetration can lie
     if (this._dpMoved > 1e-5) {
+      res.depenHit = true;
+      res.depenDepth = this._dpMoved;
       if (!blocked) {
         blocked = true;
         firstTri = this._dpTri;
@@ -1299,11 +1317,13 @@ function makeSweepResult() {
     hit: false, position: new THREE.Vector3(), normal: new THREE.Vector3(0, 1, 0),
     distance: 0, toi: 1, tag: '', material: '', rec: null,
     slid: false, contacts: 0, normals,
+    sweepHit: false, depenHit: false, depenDepth: 0,
   };
 }
 function resetSweep(r) {
   r.hit = false; r.distance = 0; r.toi = 1; r.tag = ''; r.material = '';
   r.rec = null; r.slid = false; r.contacts = 0;
+  r.sweepHit = false; r.depenHit = false; r.depenDepth = 0;
   r.normal.set(0, 1, 0);
 }
 

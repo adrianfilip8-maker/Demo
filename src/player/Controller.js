@@ -384,7 +384,7 @@ const TAGS_HAZARD = ['hazard'];
 const TAGS_VISION = ['hook', 'rail', 'pole', 'spire', 'ledge', 'vent'];
 
 /** My own copy of a sweep result — the module's pooled object may be reused mid-loop. */
-const _swRes = { hit: false, position: new THREE.Vector3(), normal: new THREE.Vector3(), distance: 0, toi: 1, tag: '', material: 'stone', rec: null };
+const _swRes = { hit: false, sweepHit: false, depenHit: false, depenDepth: 0, position: new THREE.Vector3(), normal: new THREE.Vector3(), distance: 0, toi: 1, tag: '', material: 'stone', rec: null };
 const _rayRes = { hit: false, point: new THREE.Vector3(), normal: new THREE.Vector3(), distance: 0, tag: '', rec: null };
 const _gndRes = { hit: false, y: 0, normal: new THREE.Vector3(0, 1, 0), slope: 0, tag: 'ground', material: 'stone', rec: null };
 
@@ -1460,6 +1460,14 @@ export class Controller {
          this rather than the resolved position, because the resolved position has already been
          slid along the contact plane and a snap must not travel. */
       _swRes.toi = Number.isFinite(r.toi) ? r.toi : 1;
+      /* WHY it hit, not just THAT it hit — §409. `hit` is the disjunction `sweepHit || depenHit`
+         and its two disjuncts demand opposite handling, so both are carried through rather than
+         collapsed here. A collision module that predates the split reports neither; `sweepHit`
+         then defaults to the safe reading (`true`, "the sweep contacted"), which is exactly what
+         every caller assumed before the split, so an old module keeps its old behaviour. */
+      _swRes.sweepHit = r.sweepHit === undefined ? true : !!r.sweepHit;
+      _swRes.depenHit = !!r.depenHit;
+      _swRes.depenDepth = Number.isFinite(r.depenDepth) ? r.depenDepth : 0;
       _swRes.tag = r.tag || '';
       _swRes.material = r.material || 'stone';
       _swRes.rec = r.rec || null;
@@ -1468,6 +1476,7 @@ export class Controller {
       _swRes.position.copy(to);
       _swRes.normal.set(0, 1, 0);
       _swRes.tag = ''; _swRes.rec = null; _swRes.distance = 0; _swRes.toi = 1;
+      _swRes.sweepHit = false; _swRes.depenHit = false; _swRes.depenDepth = 0;
     }
     return _swRes;
   }

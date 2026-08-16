@@ -4022,3 +4022,317 @@ test('slopes: standing still does not travel, and a face too steep to stand on s
     `asked to walk, he moved ${travelled.toFixed(3)} m — a character who cannot move also never ` +
     'drifts, so the standing assertions above would pass on a frozen Sly and prove nothing');
 });
+
+/* ========================================================================================== */
+/* §409 — the capsuleSweep census                                                             */
+/* ========================================================================================== */
+
+/**
+ * `Collision.capsuleSweep` sets `hit` on two occasions that mean opposite things: the swept
+ * capsule CONTACTED geometry, or DEPENETRATION pushed a capsule that was already overlapping
+ * back out without the sweep touching anything. On the second path it also sets `toi = 1` and
+ * `distance = totalLen`, so a caller reading `hit` and trusting `toi` is told "you travelled the
+ * whole way" by a sweep that never moved. That dropped Sly off a wall-climb summit lip.
+ *
+ * One site was fixed by bound (34295c5, bf076ce). This arm is about the CLASS: the layer now
+ * publishes `sweepHit` / `depenHit` — `hit` is their disjunction — and the caller set is pinned
+ * so a seventh caller cannot be added without being censused.
+ *
+ * The enumeration these arms defend, all of it measured on the real level below:
+ *
+ *   _moveHorizontal snap    reads hit + toi   BOUNDED by the resolve (34295c5)
+ *   _moveVertical           reads hit + toi   BOUNDED and walkability-gated (bf076ce)
+ *   _slide                  reads position    a push-out IS a contact here; correct either way
+ *   ledgeAssist             reads position    ditto, and rejects the candidate when unsure
+ *   _moveHorizontal step-up reads hit BARE    a depen report DISABLES the step — fail-safe
+ *   _calibrate              reads hit BARE    latched once; see the note on its arm below
+ *   CameraRig._sweep        reads distance    depen sets distance = totalLen, so the boom reads
+ *                                             "clear to the far end" minus one camPad, not a jam
+ */
+test('§409 census: capsuleSweep says WHY it hit, and every caller in src is enumerated', async () => {
+  const { engine, c, collision } = await realWorld();
+
+  /* ---- 1. the discriminator, all four quadrants on the REAL collision layer -------------- */
+  /* A flag that cannot say one of its answers is not a flag (§409.3), so `sweepHit` is shown
+     here to be neither constant, nor an alias of `hit`, nor an alias of `!hit`. */
+  const RAD = TUNE.radius, H = TUNE.height, OPT = { skipOneWay: false };
+  const g0 = collision.groundCheck(V(0, 90, 30), RAD, 300);
+  assert.ok(g0?.hit, 'no ground under the census probe point — the fixture moved');
+  const gy = g0.y;
+
+  const contact = collision.capsuleSweep(V(0, gy + 3, 30), V(0, gy - 0.5, 30), RAD, H, OPT);
+  const clear = collision.capsuleSweep(V(0, gy + 20, 30), V(0, gy + 19, 30), RAD, H, OPT);
+  // Zero-length request: the sweep loop breaks under `minSweep` without ever casting, so any
+  // `hit` here can ONLY have come from the push-out. Straddling the floor guarantees overlap.
+  const buried = V(0, gy - H * 0.5, 30);
+  const depen = collision.capsuleSweep(buried, buried.clone(), RAD, H, OPT);
+  // A real contact that ALSO leaves residual overlap — both disjuncts true at once, which is
+  // ordinary and must not be read as either one refuting the other.
+  const bothQ = collision.capsuleSweep(buried, V(buried.x, buried.y - 0.5, buried.z), RAD, H, OPT);
+
+  console.log(`\n[§409] contact  hit=${contact.hit} sweepHit=${contact.sweepHit} depenHit=${contact.depenHit} toi=${contact.toi.toFixed(3)}`);
+  console.log(`[§409] clear    hit=${clear.hit} sweepHit=${clear.sweepHit} depenHit=${clear.depenHit} toi=${clear.toi.toFixed(3)}`);
+  console.log(`[§409] depen    hit=${depen.hit} sweepHit=${depen.sweepHit} depenHit=${depen.depenHit} depth=${depen.depenDepth.toFixed(4)} toi=${depen.toi.toFixed(3)}`);
+  console.log(`[§409] both     hit=${bothQ.hit} sweepHit=${bothQ.sweepHit} depenHit=${bothQ.depenHit} depth=${bothQ.depenDepth.toFixed(4)}`);
+
+  assert.equal(contact.hit, true, 'a 3.5 m drop onto the floor did not report a hit');
+  assert.equal(contact.sweepHit, true, 'a genuine swept contact did not set sweepHit');
+  assert.equal(contact.depenHit, false, 'a clean landing 3 m above the floor reported a push-out');
+
+  assert.equal(clear.hit, false, 'a sweep through open air 20 m up reported a hit');
+  assert.equal(clear.sweepHit, false, 'sweepHit is set when nothing was hit at all');
+
+  // THE quadrant. This is the one that used to be indistinguishable from `contact`.
+  assert.equal(depen.hit, true, 'a capsule buried in the floor did not report a hit');
+  assert.equal(depen.sweepHit, false,
+    'a depenetration-ONLY result set sweepHit — the sweep cast nothing (zero-length request), so ' +
+    'this is `hit` wearing the costume of a contact again, which is the whole of §409');
+  assert.equal(depen.depenHit, true, 'the push-out that set `hit` did not set depenHit');
+  assert.ok(depen.depenDepth > 0.01, `push-out reported ${depen.depenDepth.toFixed(4)} m of depth`);
+  assert.equal(depen.toi, 1,
+    'the depenetration path no longer sets toi = 1 — if that changed, the two bounded call sites ' +
+    'are defending against a shape that no longer exists and should be re-derived, not deleted');
+
+  assert.equal(bothQ.sweepHit && bothQ.depenHit, true,
+    'a contact that left residual overlap must set BOTH — they are independent facts, not a ' +
+    'two-valued enum, and a caller that treats depenHit as "therefore not a real contact" is wrong');
+
+  /* ---- 2. every caller, statically, so an unexercised one cannot hide ------------------- */
+  /* The walk below can only see callers it happens to run. This scan sees all of them, which is
+     what makes this a census rather than a sample: a seventh caller anywhere under src/ trips it. */
+  const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
+  const walkDir = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => {
+    const p = path.join(d, e.name);
+    return e.isDirectory() ? walkDir(p) : (e.name.endsWith('.js') ? [p] : []);
+  });
+  const callers = [];
+  for (const f of walkDir(SRC)) {
+    const lines = readFileSync(f, 'utf8').split('\n');
+    lines.forEach((ln, i) => {
+      // an INVOCATION, not `typeof x.capsuleSweep === 'function'` and not the definition
+      if (/\.capsuleSweep\s*\(/.test(ln) && !/typeof/.test(ln)) {
+        callers.push(`${path.relative(SRC, f)}:${i + 1}`);
+      }
+    });
+  }
+  console.log(`[§409] direct capsuleSweep callers in src: ${callers.join(', ')}`);
+  assert.equal(callers.length, 3,
+    `${callers.length} direct capsuleSweep call sites in src (${callers.join(', ')}), and the ` +
+    '§409 census enumerated 3: Controller._calibrate, Controller._sweep, CameraRig._sweep. A new ' +
+    'one must be censused — does it distinguish a swept contact from a push-out, and what does it ' +
+    'do when it cannot? — and then this count updated, not the other way round.');
+  const byFile = callers.map((s) => s.split(':')[0]).sort();
+  assert.deepEqual(byFile, ['player/CameraRig.js', 'player/Controller.js', 'player/Controller.js'],
+    'a capsuleSweep caller appeared outside player/ — the census covered the player only because ' +
+    'that is where every caller was; guards use raycast/groundCheck, neither of which depenetrates');
+
+  // And the Controller's own fan-out: `_sweep` is the wrapper five consumers share.
+  const ctrl = readFileSync(path.join(SRC, 'player', 'Controller.js'), 'utf8');
+  const fanout = (ctrl.match(/this\._sweep\s*\(/g) || []).length;
+  assert.equal(fanout, 5,
+    `Controller routes ${fanout} consumers through _sweep; the census enumerated 5 (step-up probe, ` +
+    'ground snap, _moveVertical, _slide, ledgeAssist). A sixth must be censused before this number moves.');
+
+  /* ---- 3. the rate, on the real level, attributed ---------------------------------------- */
+  /* §409.2 measured the step-up probe at "0 depenetration-only hits in 305 sweeps" and concluded
+     the class was geometry-specific. 305 was too small a sample: over 7,830 controller frames the
+     class fires 283 times in 21,595 sweeps — about 1 in 76 — at four of the six sites. The
+     conclusion that only ONE site was damaged survives, but because of how the other five READ the
+     result (§410.3), not because the situation is rare.
+
+     The FULL census lives in `tools/sweepcensus.mjs`, which runs it in ~6 s outside the harness.
+     It is not run here: under the test runner the same walk costs minutes rather than seconds, and
+     the arm that actually guarantees completeness is the static scan above — it sees `CameraRig`,
+     which no controller walk ever reaches. What runs here is a short walk whose only jobs are to
+     show that no UNCENSUSED caller appears, and that the class does fire through real frames. */
+  const stats = new Map();
+  const realSweep = collision.capsuleSweep.bind(collision);
+  let recording = false;
+  /* Capture only the frames the attribution reads. Under the test runner the live stack is ~40
+     frames deep and `Error.stack` formats all of them, which turned a 6 s walk into minutes. */
+  const stackLimit = Error.stackTraceLimit;
+  collision.capsuleSweep = function (from, to, r, h, o, out) {
+    const res = realSweep(from, to, r, h, o, out);
+    if (recording) {
+      // Caller NAME from the stack (robust); the two sites inside `_moveHorizontal` are separated
+      // by the SHAPE of the request, because they ask opposite questions — up, versus down.
+      let fn = '?';
+      const st = new Error().stack.split('\n');
+      for (let i = 2; i < st.length; i++) {
+        const m = /at (?:async )?(?:Object\.)?([A-Za-z_$][\w$.]*)/.exec(st[i]);
+        if (!m) continue;
+        const n = m[1].replace(/^Controller\./, '');
+        if (n === 'capsuleSweep' || n === '_sweep') continue;
+        fn = n; break;
+      }
+      if (fn === '_moveHorizontal') fn = (to.y - from.y) > 0 ? '_moveHorizontal step-up' : '_moveHorizontal snap';
+      let e = stats.get(fn);
+      if (!e) { e = { calls: 0, depenOnly: 0, maxDepth: 0 }; stats.set(fn, e); }
+      e.calls++;
+      if (res.hit && !res.sweepHit) { e.depenOnly++; e.maxDepth = Math.max(e.maxDepth, res.depenDepth); }
+    }
+    return res;
+  };
+
+  const DIRS = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+  let routes = 0, frames = 0;
+  Error.stackTraceLimit = 6;
+  recording = true;
+  for (const [x, z] of [[0, 30], [0, 0], [-20, 20], [20, -20]]) {
+    const gq = collision.groundCheck(V(x, 90, z), TUNE.radius, 300);
+    if (!gq?.hit) continue;
+    for (const [mx, my] of DIRS) {
+      // The stub engine keeps every event and warning forever; over thousands of frames that
+      // buffer, not the physics, becomes the cost. Nothing here reads them.
+      engine.events.length = 0; engine.warnings.length = 0;
+      hardReset(engine, c, V(x, gq.y + 0.05, z));
+      for (let i = 0; i < 3; i++) {
+        engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+        engine.time = i * DT; c.update(DT, i * DT);
+      }
+      if (!c.grounded) continue;
+      routes++;
+      for (let i = 0; i < 24; i++) {
+        engine.input.beginFrame(DT);
+        engine.input.move.x = mx; engine.input.move.y = my;
+        // jump on a cycle so airborne motion, landings and ledgeAssist are all exercised
+        if (i % 12 === 5) engine.input.hold('jump'); else engine.input.let_go('jump');
+        engine.time = i * DT; c.update(DT, i * DT);
+        frames++;
+      }
+    }
+  }
+  recording = false;
+  Error.stackTraceLimit = stackLimit;
+  collision.capsuleSweep = realSweep;
+
+  let totalCalls = 0, totalDepen = 0;
+  console.log(`\n[§409] walk: ${routes} routes · ${frames} controller frames on the real level`);
+  console.log('[§409] site                      calls   depen-only   max push (m)');
+  for (const [s, e] of [...stats.entries()].sort()) {
+    totalCalls += e.calls; totalDepen += e.depenOnly;
+    console.log(`[§409]   ${s.padEnd(26)}${String(e.calls).padStart(5)}${String(e.depenOnly).padStart(13)}` +
+      `${e.maxDepth.toFixed(4).padStart(15)}`);
+  }
+  console.log(`[§409]   ${'TOTAL'.padEnd(26)}${String(totalCalls).padStart(5)}${String(totalDepen).padStart(13)}`);
+
+  assert.ok(frames > 200, `the walk only ran ${frames} frames — it is not exercising the level`);
+  const seen = [...stats.keys()].sort();
+  const ENUMERATED = ['_calibrate', '_moveHorizontal snap', '_moveHorizontal step-up',
+    '_moveVertical', '_slide', 'ledgeAssist'];
+  for (const s of seen) {
+    assert.ok(ENUMERATED.includes(s),
+      `an UNCENSUSED caller reached capsuleSweep during ordinary locomotion: "${s}". Enumerate it — ` +
+      'does it distinguish a swept contact from a push-out, and what does it do when it cannot? ' +
+      '§410.3 is the table it belongs in.');
+  }
+  for (const must of ['_moveHorizontal snap', '_moveHorizontal step-up', '_moveVertical', '_slide']) {
+    assert.ok(seen.includes(must), `"${must}" never swept in ${frames} frames — the attribution broke`);
+  }
+  /* Deliberately NOT asserting depenOnly > 0 on this short walk: the rate is ~1 in 76 sweeps and a
+     few hundred frames is too few to make that a reliable bar rather than a flaky one. The lever
+     that shows the class fires at all is the depenetration quadrant in part 1 above, which is
+     deterministic; the rate belongs to `tools/sweepcensus.mjs`, not to this suite. */
+
+  /* And the one that runs once, at bind time, whose answer is LATCHED into every later sweep. */
+  c._calibrated = false;
+  let cal = null;
+  const spy = collision.capsuleSweep.bind(collision);
+  collision.capsuleSweep = (...a) => (cal = spy(...a));
+  c._calibrate();
+  collision.capsuleSweep = realSweep;
+  console.log(`[§409] _calibrate: hit=${cal?.hit} sweepHit=${cal?.sweepHit} depenHit=${cal?.depenHit} -> _capOff=${c._capOff}`);
+  assert.equal(cal?.sweepHit, true,
+    'the origin-convention probe got a depenetration-only answer. It reads `hit` bare and LATCHES ' +
+    'the result into `_capOff` for every subsequent sweep, so this is the highest-consequence bare ' +
+    'read in the codebase; it is safe only because a 3.5 m drop that starts 3 m above known ground ' +
+    'must cross the floor. If that stops being true the probe needs the bound, not a wider window.');
+  assert.equal(c._capOff, 0, 'the base/centre calibration flipped — every sweep is now offset 0.9 m');
+});
+
+/**
+ * The summit lip, as a minimal pair. Both arms return `hit: true` AND `toi: 1` — identical on
+ * every field the pre-fix code read — and differ only in whether the sweep actually contacted
+ * anything, which shows up as the position it resolved to. One must descend and one must not.
+ */
+test('§409: the summit-lip pair — same hit, same toi, opposite correct answers', async () => {
+  const DROP = TUNE.stepHeight + TUNE.groundSnap;
+
+  /** Upward probes report clear (so the step-up runs); downward probes answer per `mode`. */
+  function lipCollision(mode) {
+    const res = { hit: false, sweepHit: false, depenHit: false, depenDepth: 0, toi: 1, distance: 0,
+      position: new THREE.Vector3(), normal: new THREE.Vector3(0, 1, 0), tag: 'ground', material: 'stone', rec: null };
+    const gnd = { hit: true, y: 0, normal: new THREE.Vector3(0, 1, 0), slope: 0, tag: 'ground', material: 'stone', rec: { id: 'lip' }, walkable: true };
+    return {
+      ready: true, fallback: false,
+      SLOPE: { walkable: 50 * Math.PI / 180, wall: 70 * Math.PI / 180 },
+      WALKABLE_COS: Math.cos(50 * Math.PI / 180),
+      capsuleSweep(from, to) {
+        res.hit = false; res.sweepHit = false; res.depenHit = false; res.depenDepth = 0;
+        res.toi = 1; res.normal.set(0, 1, 0); res.position.copy(to);
+        res.distance = from.distanceTo(to);
+        if (to.y >= from.y - 1e-9) return res;              // upward / level: clear
+        if (mode === 'depen') {
+          /* DEPENETRATION ONLY: the sweep contacted nothing, the capsule was already overlapping
+             and got pushed out, and the layer still says hit with toi = 1. He did not move. */
+          res.hit = true; res.depenHit = true; res.depenDepth = 0.02; res.toi = 1;
+          res.position.copy(from);
+        } else {
+          /* A GENUINE contact that happens to run the whole requested length. */
+          res.hit = true; res.sweepHit = true; res.toi = 1;
+          res.position.set(from.x, from.y - DROP, from.z);
+        }
+        return res;
+      },
+      groundCheck(pos) { gnd.y = pos.y - 0.02; return gnd; },
+      raycast() { return { hit: false }; },
+      overlap() { return []; },
+      nearest() { return null; },
+      query() { return []; },
+    };
+  }
+
+  async function run(mode) {
+    const engine = stubEngine();
+    const c = new Controller(engine);
+    await c.init();
+    c.col = lipCollision(mode);
+    c._colReal = c.col; c._calibrated = true; c._capOff = 0; c._bindCollision = () => {};
+    c.teleport(V(0, 10, 0), Math.PI);
+    c._needSpawnSnap = false;
+    c.grounded = true;
+    c.velocity.set(2, 0, 0);
+    const y0 = c.position.y;
+    c._moveHorizontal(DT);
+    return { descended: y0 - c.position.y, moved: Math.abs(c.position.x) };
+  }
+
+  const depen = await run('depen');
+  const real = await run('contact');
+  console.log(`\n[§409] summit lip — depenetration-only: descended ${depen.descended.toFixed(4)} m ` +
+    `(travelled ${depen.moved.toFixed(4)} m)`);
+  console.log(`[§409] summit lip — genuine contact:    descended ${real.descended.toFixed(4)} m ` +
+    `(travelled ${real.moved.toFixed(4)} m)`);
+  console.log(`[§409] the drop at stake: stepHeight + groundSnap = ${DROP.toFixed(4)} m`);
+
+  /* (1) The defect. A push-out reports `toi = 1`, which reads as "you travelled the whole way";
+     taking it at face value dropped Sly off the top of the ladder. The bound is `byResolve`, and
+     the resolve moved him nowhere, so the snap must move him nowhere. */
+  assert.ok(depen.descended < 0.01,
+    `a depenetration-only sweep dropped him ${depen.descended.toFixed(4)} m. The push-out resolved ` +
+    `to the position it started from, so the snap had no vertical distance to honour — this is the ` +
+    'summit lip, and `drop * toi` alone is what walks off it.');
+
+  /* (2) THE LEVER, and it is the whole reason (1) means anything: a snap that has been deleted,
+     or bounded to nothing, also never drops him. The same frame with a REAL contact — identical
+     `hit`, identical `toi`, differing only in where the sweep resolved — must re-seat him. */
+  assert.ok(Math.abs(real.descended - DROP) < 0.01,
+    `a genuine contact ${DROP.toFixed(4)} m below re-seated him by only ${real.descended.toFixed(4)} m — ` +
+    'the ground snap has stopped snapping, and with it (1) passes on a controller that can no ' +
+    'longer descend at all. Do not relax (1); the two arms are one bar.');
+
+  /* (3) And he must actually have walked, because a character pinned in place also never falls. */
+  assert.ok(depen.moved > 0.01 && real.moved > 0.01,
+    `he travelled ${depen.moved.toFixed(4)} / ${real.moved.toFixed(4)} m horizontally — the ` +
+    'horizontal slide is not running, so neither arm is testing the frame it claims to test');
+});
