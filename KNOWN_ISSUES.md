@@ -30275,3 +30275,73 @@ Every attach state, all the wall tech, `crawl`, `tiptoe`, `sneak`, `crouch`, `ro
 `pickpocket`, `dive`, `hurt`, `bounce`, `skid`, `paraglide` — driven by **exactly one file, and it
 is an instrument file**. Several are threadbare inside it: `bounce` 1 driven entry;
 `railWalk`/`roll`/`pickpocket`/`combatStrafe` 2; `skid`/`hurt` 3.
+
+## §404 — The hull half closed without pixels, and two corrections the lane made against itself
+
+### §404.1 The census answer, which needed no frame at all
+
+§379.4's hull question — does FX get inverted-hull treatment — was answered by walking the shipped
+scene and asking the hull system's **own bookkeeping** (`userData.slyShell` / `slyOutline`), rather
+than by measuring anything:
+
+```
+meshes under fx.root  14      of those carrying a hull shell  0
+shells in the scene   14      of those under fx.root          0
+every FX material's userData.outline                          null
+```
+
+The 14 shells are `slydlrig`, the cane, a guard and the gold props — hero geometry and hero props,
+exactly as §2.1 point 2 specifies. **No locator, no threshold, no frame.** Where a system keeps a
+register of what it has done, reading the register beats measuring the consequence.
+
+Two riders. §379.1's phrasing *"not meshes in the hull system"* is loose — an instanced quad **is**
+`isMesh`; what denies it a shell is that nothing ever offers them, plus `weldNormals` on a geometry
+with no position attribute. And FX materials declare **no** `outline` value at all, so the shipped
+audit would classify them as **`missing`** (a defect) rather than **`refused`** (a deliberate
+opt-out): the intent recorded in `Particles.js:1800`'s comment is nowhere the audit can see it.
+**`Outline.inkAudit()` is exported and called nowhere in `src/`** — §357.1's eighth instance,
+verified here — so whoever wires it up first receives 14 false defects on a system behaving as
+designed.
+
+### §404.2 Two corrections the lane made against its own committed numbers
+
+Both are the kind that only the person who took the measurement can catch, and both were reported
+unprompted:
+
+- **The round-16 figure extent, `x 356..841 / rows 277..614`, was the figure PLUS ITS CAST SHADOW.**
+  The figure alone is `x 502..699 / rows 303..498`. A silhouette measured by difference picks up
+  everything that vanishes with the subject, and a shadow vanishes with its caster.
+- **The "HERO" locus was 41% not Sly.** The census showed those 14 shells include a guard and the
+  gold props, so the positive control was *broader* than claimed rather than weaker — but it was
+  named "Sly's silhouette" in the tool, in the round-16 report and in the gate's own name.
+
+The second is the more instructive: **a control that is better than you claimed is still a control
+you have mislabelled**, and the mislabelling is what a later reader inherits. This is the same
+shape as §403's basis vector — a name that does not match its contents, agreeing with itself
+everywhere it is used.
+
+### §404.3 Three of four sprites, and the one that is HELD
+
+`dust` (`dive_dust` + `dive_debris`, 33 live) measures **0.00 L crease ink at every mask cut** — one
+compact 96,955 px blob at 100% dominance, so **the method transfers to a cloud** and the answer is
+invariant to where the mask is cut, which is exactly what the sweep existed to expose. `ring`'s mask
+locus is **refused** (`A − P-noring` is 56.6% of the frame, spanning full width to the bottom edge —
+the additive `PLANAR` quad, not the annulus), and is answered anyway by the geometric rim, which
+needs no diff. `dive_spark` is **HELD**: 875 px in 22 fragments across the upper left are braziers,
+and it is 14–18 of that batch's **259** live instances, not separable by any lever available here.
+
+A derived admissibility gate — area ≤ 25% of frame, largest component ≥ 80% — now makes a refused
+locus report as **held** rather than as a null. The first version reported all three as
+measurements and got two of them wrong. **A null and a refusal are different results and an
+instrument that cannot tell them apart will publish the wrong one.**
+
+### §404.4 The unexplained residue, which may be the bigger finding
+
+Hiding the `ring` batch **darkens 521,510 px** — median 11.3 L, p25 46.9 L, up to 88 L, full frame
+width down to the bottom edge. `dive_ring` is `additive` at `alpha 1.4` and stages **~4.03 m**
+across (`mix(0.4, 5, u^0.36)` at `u = 0.088/0.34`, × `scale 1.25`) against the **1.5 m** radius
+`_stageImpact` reports as "the ring's own reach".
+
+**Even a 4 m flat quad does not account for that extent.** This is a concrete, measured instance of
+§379.2's *"washes"* complaint, it is a different question from ink, and part of it is unexplained.
+Registered here so the next round starts from a number rather than from the complaint.
