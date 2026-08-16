@@ -344,7 +344,7 @@ class DiveAttack extends AirState {
     if (c.grounded) {
       c.oneShot('dive_impact');
       c.engine.emit('shake', TUNE.diveShake);
-      c.engine.emit('caneSlam', { pos: c.position, radius: TUNE.diveRadius });
+      c.engine.emit('caneSlam', { pos: c.position, radius: TUNE.diveRadius, material: c.groundMaterial });
       c.anim?.addImpulse?.({ bone: 'root', dir: DOWN, strength: 1, decay: 8 });
       c.landImpact = 0;
       return 'idle';
@@ -406,7 +406,7 @@ class WallRun extends State {
     this._side = dot2(this._nx, this._nz, _d.x, _d.z) < 0 ? 'r' : 'l';
     if (this._vertical) c.velocity.y = Math.max(c.velocity.y, TUNE.wallRunUp);
     c.oneShot(`wall_run_${this._side}`);
-    c.engine.emit('wallRun', { pos: c.position, normal: _c3 });
+    c.engine.emit('wallRun', { pos: c.position, normal: _c3, material: w.rec?.material });
   }
   update(c, dt) {
     if (c.pressed('jump') || c.jumpBuffered()) { c.wall.nx = this._nx; c.wall.nz = this._nz; return 'wallJump'; }
@@ -624,7 +624,7 @@ class WallClimb extends State {
     /* `ledgeGrab`, deliberately not a new event: `tests/eventbus.test.mjs` pins the exact
        publisher/subscriber census and a new name would land red. It is also the honest one —
        FX subscribes it as "the moment Sly catches something", which is precisely this. */
-    c.engine.emit('ledgeGrab', { pos: c.position });
+    c.engine.emit('ledgeGrab', { pos: c.position, material: c.wall.rec?.material });
   }
 
   update(c, dt) {
@@ -731,7 +731,7 @@ class WallJump extends State {
     c.airJumps = 1;          // the double jump comes back, so wall chains stay open
     c.wallRunUsed = 0;
     c.oneShot('wall_jump');
-    c.engine.emit('wallJump', { pos: c.position });
+    c.engine.emit('wallJump', { pos: c.position, material: c.wall.rec?.material });
   }
   update(c, dt) {
     c.applyJumpCut();
@@ -768,7 +768,7 @@ class LedgeHang extends State {
     c.attached = L.rec;
     c.airJumps = 1;
     c.oneShot('ledge_hang');
-    c.engine.emit('ledgeGrab', { pos: c.position });
+    c.engine.emit('ledgeGrab', { pos: c.position, material: L.rec?.material });
   }
   update(c, dt) {
     c.velocity.set(0, 0, 0);
@@ -916,7 +916,7 @@ class HookSwing extends State {
     c.velocity.addScaledVector(_a, -vr);
     c.grounded = false;
     c.oneShot('hook_grab');
-    c.engine.emit('hookGrab', { pos: c.anchor });
+    c.engine.emit('hookGrab', { pos: c.anchor, material: a?.rec?.material });
   }
   update(c, dt) {
     const L = TUNE.hookL;
@@ -1146,7 +1146,7 @@ class RailSlide extends RailBase {
     if (!a) { c.sm.request('fall'); return; }
     this.mount(c, a, TUNE.railSpeed);
     c.oneShot('rail_slide');
-    c.engine.emit('railMount', { pos: c.position });
+    c.engine.emit('railMount', { pos: c.position, material: a.rec?.material });
   }
   update(c, dt) {
     if (c.pressed('jump') || c.jumpBuffered()) return this.jumpOff(c);
@@ -1234,7 +1234,7 @@ class PoleClimb extends State {
     c.position.y = Math.min(Math.max(c.position.y, p.bottom + 0.05), p.top - 0.25);
     this.place(c);
     c.oneShot('pole_climb');
-    c.engine.emit('poleMount', { pos: c.position });
+    c.engine.emit('poleMount', { pos: c.position, material: a.rec?.material });
   }
   place(c) {
     const p = c.pole;
@@ -1443,7 +1443,7 @@ class SpireLand extends State {
     c.airJumps = 1;
     c.landImpact = 0;
     c.oneShot('spire_land');
-    c.engine.emit('spireLand', { pos: c.position });
+    c.engine.emit('spireLand', { pos: c.position, material: a?.rec?.material });
     c.engine.emit('shake', 0.08);
   }
   update(c, dt) {
@@ -1497,6 +1497,15 @@ class Combo extends State {
     const sp = TUNE.comboLunge[c.comboIndex - 1];
     c.velocity.x = _a.x * sp;
     c.velocity.z = _a.z * sp;
+    /* No `material` here, deliberately, and this is the one site of the ten that does not get it.
+       The other nine are *surface contacts* — a hand or a foot arriving on a rec whose `material`
+       COLLISION assigned — and each has that rec in scope at emit time. A cane swing is not a
+       contact with anything: `Combo.swing` fires on the wind-up, before and independently of
+       whether it connects, and there is no hit to read. Sourcing it from `groundMaterial` would
+       voice the floor Sly is standing on rather than the thing he hit, which is exactly the class
+       of error `ledgeGrab -> step_cloth` already is. A wrong material is worse than none, because
+       none is at least honestly a default. If AUDIO wants a surfaced impact it needs a *hit*
+       event from whatever resolves the strike, which is COMBAT's to publish, not MOVEMENT's. */
     c.engine.emit('caneHit', { index: c.comboIndex, pos: c.position, dir: _a });
     if (c.comboIndex === 3) c.engine.emit('shake', 0.16);
   }
