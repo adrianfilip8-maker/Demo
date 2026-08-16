@@ -18,11 +18,46 @@ import * as THREE from 'three';
  *     approaches the sightline, which is what actually removes the pop.
  *  4. **The harness owns the camera when `engine.debug.freeCam` is set.** We return before touching
  *     anything. The whole visual review loop depends on the canonical shots being untouched.
+ *  5. **The camera tells you where the level goes.** Staging a running character is only half the
+ *     job; a Sly camera also *telegraphs the route*. Two blind critics read the shipped frames as
+ *     "a correct Sly platforming camera" and, in the same breath, "zero vertical route — nothing
+ *     says climb here". §"route telegraph" below is the answer: the rig senses the traversal
+ *     affordances COLLISION already indexes and eases the framing toward them **on approach**,
+ *     before the state machine has anything to react to. A camera that only responds once you are
+ *     already on the pole has told you nothing you did not know.
  *
  * Coordinate convention (matches MOVEMENT's yaw, per AGENTS.md §8.1 "facing north = yaw π"):
  *   forward = (sin(yaw), 0, cos(yaw)).  `yaw` is the heading the camera *looks along*, so a camera
  *   sitting behind Sly has `camera.yaw === movement.yaw`. `pitch` is the camera's elevation above
  *   the pivot: positive = above, looking down.
+ *
+ * ──────────────────────────────────────────────────────────────────────────────────────────────
+ * REFERENCE & PROVENANCE
+ *
+ * Design was compared against `Scripts/camera_parent.gd` from
+ * <https://github.com/NoahChase/Sly-Cooper--A-Thief-in-Godot>, the fan-made Godot Sly project this
+ * repository already draws the character mesh from. **Licence: none stated** — that repository
+ * contains no LICENSE, no COPYING and no licence section; checked in its tree, not assumed. It is
+ * a fan work derived from Sucker Punch / Sony's Sly Cooper. The project owner's standing
+ * instruction is that this is not a legal obstacle here for reasons they have not disclosed; that
+ * is their call, and it is recorded plainly so nobody reading this file has to infer the status.
+ * The same source and the same status are recorded for the mesh in
+ * `public/assets/sly-godot/PROVENANCE.md`; this note is that note's sibling, not a new claim.
+ *
+ * Nothing here is a transcription — GDScript node-parenting has no analogue in a boom-and-pivot
+ * rig, so every line below was re-derived. What was *taken*, each cited at its use site:
+ *   · `pitch_adjust_spring = 0.015` and the shape around it (a very slow ambient pitch settle,
+ *     gated on the player actually travelling, targeted by an environment probe)  → `_ceilSettle`.
+ *   · `target.adj_fov → 85.0` from a 75.0 base (open the lens when there is something to attend
+ *     to)  → `TUNE.routeFov`, rescaled for our much longer base lens.
+ *   · `position_spring = 0.25 # if this value is too low, camera will move into walls` — read as
+ *     corroboration for rule 3, not adopted: we pull in at τ = 0.
+ * What was read and deliberately **not** taken:
+ *   · `rotation_spring = 0.15` — their yaw/pitch are low-passed at τ ≈ 205 ms. That is exactly the
+ *     thing rule 1 forbids. We disagree with the reference here, on purpose.
+ *   · `avg_distance` scaling of mouse sensitivity — it is initialised to 1 and never written in
+ *     that file, so the behaviour it describes does not actually occur; there was nothing to take.
+ * ──────────────────────────────────────────────────────────────────────────────────────────────
  */
 
 const DEG = Math.PI / 180;
@@ -48,6 +83,20 @@ export const TUNE = {
   maxFollowV: 16,
   pivotHeight: 1.42,            // Sly is 1.8 m; this frames chest/head, not feet
   headroom: 0.18,               // look slightly above the pivot so he sits under centre
+  /* Softness has to be *earned back*. τ=0.46 s is right for a stair and wrong for a climb: at a
+     4 m/s pole climb it parked the look-at 1.17 m under the goal (measured) and Sly drifted to
+     the top of frame — the softest possible way to lose the character. So the vertical time
+     constant degrades, but it takes TWO conditions to degrade it, because magnitude alone cannot
+     tell a climb from a jump: a 2.52 m jump peaks at 1.66 m of error, *larger* than the climb's.
+     What separates them is that a jump's error reverses — he comes back down — and a climb's does
+     not. So the gate is (error is large) AND (error has held one sign for a while). A jump's
+     entire ascent is 0.458 s and never reaches `followHoldFull`; a stair never reaches
+     `followErrSoft`. Self-limiting either way: paying the error off restores the damping. */
+  followErrSoft: 0.55,          // below this the full 0.46 s applies, untouched
+  followErrHard: 1.70,
+  followHoldMin: 0.35,          // seconds of one-signed vertical error before softness yields
+  followHoldFull: 1.10,         // …vs a 0.458 s jump ascent. The margin is the whole point
+  followStiffV: 0.40,           // followTimeV multiplier when fully stiffened → 0.184 s
 
   /* ---- velocity lead ------------------------------------------------------ */
   leadTime: 0.17,               // seconds of travel to lead by, ×frame.lead
@@ -64,11 +113,19 @@ export const TUNE = {
   camRadius: 0.34,              // sphere-cast radius; keeps the near plane out of stone
   camPad: 0.12,
   whisker: 0.38,                // lateral cast offset — sees the pillar before it occludes
+  whiskerUp: 0.30,              // and one overhead, for lintels and tomb ceilings
   distHardMin: 0.55,            // absolute floor; below this we're inside Sly
   recoverDelay: 0.22,           // hold before creeping back out (kills corner flicker)
   recoverTime: 0.62,            // slow on purpose
   recoverSpeed: 2.4,            // m/s cap while recovering
   collisionPoll: 0.5,           // seconds between re-checks for a late COLLISION module
+
+  /* ---- ceiling settle (adapted from camera_parent.gd, see the provenance note) ------------- */
+  ceilProbe: 3.2,               // metres of headroom we care about above the pivot
+  ceilPoll: 0.15,
+  ceilFlatten: 0.85,            // fraction of the positive pitch given up under a hard ceiling
+  ceilTau: 1.103,               // THEIR number: lerp 0.015/frame @60 Hz = -(1/60)/ln(0.985) s
+  ceilMoveMin: 0.6,             // their gate was `if camera_player.direction` — ours is "moving"
 
   /* ---- auto-yaw assist ---------------------------------------------------- */
   autoDelay: 1.2,               // no mouse for this long before we dare touch yaw
@@ -78,6 +135,37 @@ export const TUNE = {
   autoDeadzone: 4 * DEG,
   autoMinSpeed: 2.0,
   autoAirScale: 0.45,
+
+  /* ---- route telegraph ----------------------------------------------------- */
+  /* The critics' actual complaint, in constants. COLLISION already indexes every rail, pole,
+     hook, spire and ledge in the level (§4.6 `query`); this rig polls that index around the
+     player and eases the framing toward whatever route is in reach. Two independent channels,
+     because they answer two different questions:
+       · UP   — "how high does this go?"  lift the look-at, tip the orbit up, lengthen the boom.
+       · SIDE — "where does this line run?"  bias the yaw assist off the line's own heading so
+                the rail crosses the screen instead of vanishing to a point. */
+  routeRange: 9.5,              // sensing radius. Beyond this it is scenery, not a route
+  routeNear: 2.6,               // full proximity weight at or inside this
+  routePoll: 0.12,              // ~8 Hz. A route does not move; this does not need 60 Hz
+  routeScan: 6,                 // shape-resolve at most this many candidates per poll
+  routeRiseMin: 1.3,            // must climb this far above the look-at to be worth revealing
+  routeRiseFull: 4.5,           // …and this far for the full reveal
+  routeLift: 1.05,              // max metres the look-at rises toward the route's crest
+  routePitch: -8.5 * DEG,       // max orbit pitch added (negative = camera drops, looks up)
+  routeDist: 0.55,              // max metres added to the boom — room for a vertical line
+  /* camera_parent.gd opens the lens when a target wants attention: `target.adj_fov` → 85.0 from
+     a 75.0 base, +13%. Ours is +3% on a 52° base, because 13% of a 52° lens is +6.9° and at this
+     focal length that reads as a zoom rather than as attention. Structure theirs, number ours. */
+  routeFov: 1.6,
+  routeIn: 0.40,                // blend in
+  routeOut: 0.90,               // …and out more slowly. A reveal that snaps off reads as a bug
+  routeAheadBias: 0.55,         // a route behind you still counts, at 45% — never zero
+  routeLineMin: 0.35,           // horizontal fraction of the tangent before it counts as a "line"
+  routeLineFull: 0.80,
+  routeProfileAngle: 58 * DEG,  // how far off the line's own heading a profile view sits
+  routeYawMax: 40 * DEG,        // …clamped to this much deviation from "behind Sly", ever
+  routeYawRate: 0.55,           // rad/s ceiling — deliberately slower than autoRate
+  routeSideFlip: 0.35,          // hysteresis before the profile picks the other side (rad)
 
   /* ---- recentre (R) ------------------------------------------------------- */
   recentreTime: 0.45,
@@ -170,6 +258,46 @@ const STATE_RULES = [
 const CAM_SWEEP_OPTS = { ignoreTags: ['hazard', 'water', 'vent', 'rail', 'hook', 'spire'] };
 const SOLID_TAGS = ['ground', 'wall', 'ledge', 'pole'];
 
+/* ---- route telegraph tables ------------------------------------------------ */
+
+/** The traversal tags worth telegraphing. AGENTS.md §4.4 defines every one of them. */
+const ROUTE_TAGS = ['pole', 'hook', 'spire', 'rail', 'ledge'];
+
+/**
+ * How loudly each tag is worth announcing. `ledge` is last and quietest on purpose: it is the
+ * one tag the level is *made* of — every step and platform edge carries it — so it earns its
+ * reveal almost entirely through the rise gate rather than through the tag.
+ */
+const ROUTE_WEIGHT = { pole: 1.0, hook: 1.0, spire: 0.9, rail: 0.85, ledge: 0.55 };
+
+/**
+ * Once you are ON a route, FRAMES owns the shot and the telegraph gets out of the way — stacking
+ * a reveal on top of an authored framing double-tilts it. Two exceptions, both deliberate:
+ * `climb` and `ledge_hang` keep a fraction, because "how much further up does this go" is still
+ * a live question while you are climbing. Absent from this table means full strength.
+ */
+const ROUTE_SUPPRESS = {
+  rail_slide: 0, hook_swing: 0, balance: 0, spire: 0, dive: 0, glide: 0,
+  climb: 0.45, ledge_hang: 0.35,
+};
+
+/**
+ * Boom whiskers: [lateral × TUNE.whisker, vertical × TUNE.whiskerUp, authority].
+ *
+ * Authority is the fix for a measured defect. The whiskers exist so the boom shortens
+ * *continuously* as a pillar approaches the sightline — but applied at full authority a whisker
+ * clipping a column 38 cm off the sightline yanks the boom all the way in, which is a step, not a
+ * ramp: a slow orbit past a 1.2 m column stepped 2.03 m in one frame. At 0.55 the whisker can
+ * only ever claim half the shortening, so the column is met in two graded stages and the centre
+ * cast — the only one that is actually the sightline — keeps full authority over it.
+ */
+const WHISKERS = [
+  [0, 0, 1.00],
+  [1, 0, 0.55],
+  [-1, 0, 0.55],
+  [0, 1, 0.45],
+];
+
 /* ---------------------------------------------------------------------------- */
 /*  scratch — nothing in update() allocates                                     */
 /* ---------------------------------------------------------------------------- */
@@ -184,6 +312,11 @@ const _lookAt = new THREE.Vector3();
 const _from = new THREE.Vector3();
 const _to = new THREE.Vector3();
 const _off = new THREE.Vector3();
+const _crest = new THREE.Vector3();
+const _line = new THREE.Vector3();
+const _sa = new THREE.Vector3();
+const _sb = new THREE.Vector3();
+const _sc = new THREE.Vector3();
 const _m4 = new THREE.Matrix4();
 const _q1 = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
@@ -258,6 +391,8 @@ export class CameraRig {
 
     /* ---- follow ---- */
     this._pivotVel = new THREE.Vector3();
+    this._vErrSign = 0;
+    this._vErrHold = 0;
     this._boomWant = TUNE.distDefault;
     this._boomWantVel = 0;
     this._boomVel = 0;
@@ -297,6 +432,21 @@ export class CameraRig {
     /* ---- wall side probe ---- */
     this._wallSide = 0;
     this._wallProbeT = 0;
+
+    /* ---- route telegraph ---- */
+    this._routeT = 0;
+    this._routeUpRaw = 0;      // what the poll last found…
+    this._routeSideRaw = 0;
+    this._routeUpW = 0;        // …and the eased weights actually applied
+    this._routeSideW = 0;
+    this._routeLineYaw = 0;    // heading along the sensed line
+    this._routeSide = 1;       // which side of it we chose to sit, with hysteresis
+    this._routeTag = '';       // for the debug overlay and for reading a log
+
+    /* ---- ceiling settle ---- */
+    this._ceilT = 0;
+    this._ceilRaw = 0;
+    this._ceilW = 0;
 
     /* ---- collision ---- */
     this._collision = null;
@@ -397,15 +547,26 @@ export class CameraRig {
     this._pivotGoal(_goal, 1);
     this.pivot.copy(_goal);
     this._pivotVel.set(0, 0, 0);
+    this._vErrSign = 0;
+    this._vErrHold = 0;
     this._boomWant = clamp(this.distance + this._frame.dist, TUNE.distHardMin, TUNE.distMax + 3);
     this.boom = this._boomWant;
     this._boomVel = 0;
+    // Was missing, and it is not cosmetic: a stale `_boomWantVel` survives a re-seed and kicks
+    // the boom on the first frame after a teleport or a shot hand-back.
+    this._boomWantVel = 0;
     this._boomHold = 0;
     this._recovering = false;
     this._shakeAmp = 0; this._shakeDur = 0; this._shakeT = 0;
     this._fovCur = TUNE.fovBase + this._frame.fov;
     this._speedSm = 0;
     this._roll = 0;
+    this._sideSign = 0;
+    this._wallSide = 0;
+    this._routeUpRaw = 0; this._routeSideRaw = 0;
+    this._routeUpW = 0; this._routeSideW = 0;
+    this._routeT = 0; this._routeTag = '';
+    this._ceilRaw = 0; this._ceilW = 0; this._ceilT = 0;
     this._focusDur = 0;
     this._hadPlayer = true;
     this._prevPlayer.copy(_pPos);
@@ -447,11 +608,18 @@ export class CameraRig {
     this._detectTeleport(dt);
     this._resolveFrame(this._stateName, false);
     this._blendFrame(dt);
+    this._senseRoute(dt);
     this._orbit(dt, lx, ly, input);
+    /* `_focusBlend` moved above `_buildBasis`, and this is a fix rather than a tidy-up: it
+       writes `this.yaw`, and running it after the basis was built meant its yaw never reached
+       `this.forward` — so the boom direction, the occlusion cast and the written pose all used
+       the *previous* frame's heading and the focus pull took effect a frame late, against a
+       sightline that had already been cleared for somewhere else. */
+    this._focusBlend(dt);
     this._buildBasis(this.yaw);
+    this._ceilSettle(dt);
     this._follow(dt);
     this._boomLength(dt);
-    this._focusBlend(dt);
     this._write(dt);
   }
 
@@ -555,6 +723,225 @@ export class CameraRig {
     return hitR ? 1 : -1;
   }
 
+  /* ------------------------------------------------------- route telegraph -- */
+
+  /**
+   * Sense the route, then ease the two channels toward what was sensed.
+   *
+   * The sense is a poll, not a subscription: nothing needs to be published, no new event enters
+   * the bus, and a build with no COLLISION module (or a level with no traversal geometry) simply
+   * has both weights pinned at zero and behaves exactly as this rig did before. The eased weights
+   * are what everything downstream reads, so the 8 Hz poll never shows up as an 8 Hz staircase.
+   */
+  _senseRoute(dt) {
+    this._routeT -= dt;
+    if (this._routeT <= 0) {
+      this._routeT = TUNE.routePoll;
+      this._pickRoute();
+    }
+    /* On the route, FRAMES owns the shot. */
+    const sup = ROUTE_SUPPRESS[this._frameKey];
+    const gate = sup === undefined ? 1 : sup;
+    const upT = this._routeUpRaw * gate;
+    const sideT = this._routeSideRaw * gate;
+    this._routeUpW = ease(this._routeUpW, upT,
+      upT > this._routeUpW ? TUNE.routeIn : TUNE.routeOut, dt);
+    this._routeSideW = ease(this._routeSideW, sideT,
+      sideT > this._routeSideW ? TUNE.routeIn : TUNE.routeOut, dt);
+  }
+
+  /**
+   * One poll: ask COLLISION what traversal geometry is within `routeRange` and score it.
+   *
+   * Score = tag weight × proximity × how far ahead it is × how much it climbs. The rise term is
+   * the one that matters — it is what stops a level built out of `ledge` colliders from putting
+   * the camera into a permanent reveal, because a kerb has no rise and a parapet four metres up
+   * has all of it.
+   */
+  _pickRoute() {
+    this._routeUpRaw = 0;
+    this._routeSideRaw = 0;
+    this._routeTag = '';
+
+    const col = this._solidCollision();
+    if (!col || typeof col.query !== 'function') return;
+
+    let hits = null;
+    try { hits = col.query(_pPos, TUNE.routeRange, ROUTE_TAGS); }
+    catch (err) { this._breakCollision(err); return; }
+    if (!hits || hits.length === 0) return;
+
+    /* "Where am I going" — travel when he is moving, where the player is looking when he is not.
+       The second half is what lets a standing player pan onto a route and have it answer. */
+    const sp = Math.hypot(_pVel.x, _pVel.z);
+    const hx = sp > 1.0 ? _pVel.x / sp : this.forward.x;
+    const hz = sp > 1.0 ? _pVel.z / sp : this.forward.z;
+
+    const eyeY = _pPos.y + TUNE.pivotHeight;
+    let bestScore = 0, bestUp = 0, bestSide = 0, bestLineYaw = 0, bestTag = '';
+    // `hits` is sorted near→far and pooled by COLLISION — read it now, retain nothing from it.
+    const n = Math.min(hits.length, TUNE.routeScan);
+    for (let i = 0; i < n; i++) {
+      const h = hits[i];
+      const tag = h.tag || h.rec?.tag || '';
+      const w = ROUTE_WEIGHT[tag];
+      if (!w || !h.point) continue;
+
+      const d = Number.isFinite(h.distance) ? h.distance : _pPos.distanceTo(h.point);
+      const near = 1 - smoothstep(TUNE.routeNear, TUNE.routeRange, d);
+      if (near <= 0) continue;
+
+      const dx = h.point.x - _pPos.x, dz = h.point.z - _pPos.z;
+      const dh = Math.hypot(dx, dz);
+      // Dead ahead = 1, dead behind = -1. Behind is damped, never silenced: the only route in
+      // reach still deserves to be found, exactly as COLLISION's own `_facingPenalty` argues.
+      const ahead = dh > 0.4 ? (dx * hx + dz * hz) / dh : 1;
+      const facing = 1 - TUNE.routeAheadBias * (1 - ahead) * 0.5;
+      const base = w * near * facing;
+
+      /* The two ramps are deliberately NOT multiplied together. A pole has all the rise and no
+         line; a rail at chest height has all the line and no rise; both are routes and each
+         should drive its own channel at full strength. Tying the profile swing to the rise gate
+         (the first version of this did) made a long flat rail — the single most legible line in
+         the level — the one thing the camera refused to show you. */
+      const lineness = this._routeShape(h);      // fills _crest and _line
+      const riseRamp = smoothstep(TUNE.routeRiseMin, TUNE.routeRiseFull, _crest.y - eyeY);
+      const lineRamp = smoothstep(TUNE.routeLineMin, TUNE.routeLineFull, lineness);
+      const routeness = Math.max(riseRamp, lineRamp);
+      if (routeness <= 0) continue;            // a kerb: tagged `ledge`, but not a route
+
+      const score = base * routeness;
+      if (score <= bestScore) continue;
+      bestScore = score;
+      bestTag = tag;
+      bestUp = base * riseRamp;
+      bestSide = base * lineRamp;
+      bestLineYaw = lineRamp > 0 ? Math.atan2(_line.x, _line.z) : 0;
+    }
+
+    if (bestScore <= 0) return;
+    this._routeUpRaw = clamp(bestUp, 0, 1);
+    this._routeSideRaw = clamp(bestSide, 0, 1);
+    this._routeLineYaw = bestLineYaw;
+    this._routeTag = bestTag;
+  }
+
+  /**
+   * Resolve a query hit into a crest (`_crest`) and a horizontal line direction (`_line`, unit),
+   * returning how much of that line is horizontal — 0 for a pole, ~1 for a level rail.
+   *
+   * Everything read here is the **published** authoring contract of AGENTS.md §4.4:
+   * `mesh.userData.spline` for rails and poles, `mesh.userData.point` for hooks and spires.
+   * `userData.top` is not in that contract — ARCHITECTURE happens to author it on poles — so it
+   * is a bonus branch behind a finite check, never a requirement.
+   */
+  _routeShape(h) {
+    _crest.copy(h.point);
+    _line.set(0, 0, 0);
+    let line3 = 0;
+
+    const ud = h.rec && h.rec.mesh ? h.rec.mesh.userData : null;
+    const spline = ud && ud.spline && typeof ud.spline.getPoint === 'function' ? ud.spline : null;
+    if (spline) {
+      try {
+        spline.getPoint(0, _sa);
+        spline.getPoint(1, _sb);
+        spline.getPoint(0.5, _sc);           // an arched rail can crest between its ends
+        _crest.copy(_sa.y >= _sb.y ? _sa : _sb);
+        if (_sc.y > _crest.y) _crest.copy(_sc);
+        _line.set(_crest.x - h.point.x, _crest.y - h.point.y, _crest.z - h.point.z);
+        line3 = _line.length();
+      } catch { _crest.copy(h.point); _line.set(0, 0, 0); line3 = 0; }
+    } else if (ud && Number.isFinite(ud.top)) {
+      _crest.set(h.point.x, ud.top, h.point.z);
+    } else if (ud && ud.point && Number.isFinite(ud.point.y)) {
+      _crest.copy(ud.point);
+    }
+
+    /* Close to the crest the chord degenerates; the tangent at the joining point is the better
+       answer for "which way does this line run" and COLLISION hands it to us already. */
+    if (line3 < 0.30 && h.tangent) {
+      _line.copy(h.tangent);
+      line3 = _line.length();
+    }
+    if (line3 < 1e-4) { _line.set(0, 0, 0); return 0; }
+
+    const lh = Math.hypot(_line.x, _line.z);
+    _line.set(_line.x, 0, _line.z);
+    if (lh > 1e-4) _line.multiplyScalar(1 / lh);
+    return lh / line3;
+  }
+
+  /**
+   * The heading that puts the sensed line *across* the frame rather than end-on.
+   *
+   * A camera looking straight along a rail sees a dot. `routeProfileAngle` off the line's own
+   * heading is a three-quarter view: the rail sweeps away and its destination is legible, and the
+   * direction of travel is still readable — a full 90° profile shows the line beautifully and
+   * makes the controls unreadable, which is a bad trade in a game where W is camera-relative.
+   * Both signs are valid; we take the nearer, with hysteresis so it cannot flutter at the
+   * crossover, and the caller clamps how far this is allowed to drag the shot.
+   */
+  _routeProfileYaw() {
+    const a = wrapPi(this._routeLineYaw + TUNE.routeProfileAngle);
+    const b = wrapPi(this._routeLineYaw - TUNE.routeProfileAngle);
+    const da = Math.abs(wrapPi(a - this.yaw));
+    const db = Math.abs(wrapPi(b - this.yaw));
+    const want = da <= db ? 1 : -1;
+    if (want !== this._routeSide && Math.abs(da - db) > TUNE.routeSideFlip) this._routeSide = want;
+    return this._routeSide > 0 ? a : b;
+  }
+
+  /* ------------------------------------------------------- ceiling settle -- */
+
+  /**
+   * A slow ambient pitch settle driven by the headroom over the player.
+   *
+   * Adapted from `Scripts/camera_parent.gd` (licence: none stated — see the provenance note at
+   * the top of this file), which runs `pitch += (target_pitch - pitch) * pitch_adjust_spring`
+   * with `pitch_adjust_spring = 0.015` — τ = -(1/60)/ln(0.985) = 1.103 s — targeted from a
+   * floor-or-roof probe, and only `if camera_player.direction`, i.e. only while travelling.
+   *
+   * Three things are ours and had to be, and it is worth saying which:
+   *   · **The sign.** Their two targets are −0.125 and −0.375 rad on a node whose parenting I
+   *     cannot resolve without running Godot, so I did not copy a direction I could not verify.
+   *     Ours is derived from our own convention: under a ceiling the camera gives up its positive
+   *     (overhead) pitch and flattens toward level, which is the pose that fits in a corridor.
+   *   · **It never inverts.** `ceilFlatten` scales the pitch it already has toward 0 and stops
+   *     there, so a hard ceiling can flatten the shot but can never drive the camera into the
+   *     floor — which a fixed −21.5° offset added to a small pitch would.
+   *   · **It is a framing offset, not a write to `this.pitch`.** Theirs mutates the player's own
+   *     pitch. In this rig that is the mouse's channel and rule 1 says we do not touch it.
+   *
+   * The payoff is the same as theirs, and it is not cosmetic: pre-emptively flattening under a
+   * lintel is how the boom stops being *shoved* by one. The probe is cast from the pivot, which
+   * is player-anchored, so it cannot feed back into the camera pose it is adjusting.
+   */
+  _ceilSettle(dt) {
+    this._ceilT -= dt;
+    if (this._ceilT <= 0) {
+      this._ceilT = TUNE.ceilPoll;
+      this._ceilRaw = this._probeCeiling();
+    }
+    const moving = Math.hypot(_pVel.x, _pVel.z) > TUNE.ceilMoveMin ? 1 : 0;
+    this._ceilW = ease(this._ceilW, this._ceilRaw * moving, TUNE.ceilTau, dt);
+  }
+
+  _probeCeiling() {
+    const col = this._solidCollision();
+    if (!col || typeof col.raycast !== 'function') return 0;
+    _from.copy(this.pivot);
+    _off.set(0, 1, 0);
+    try {
+      const r = col.raycast(_from, _off, TUNE.ceilProbe, CAM_SWEEP_OPTS);
+      if (r && r.hit) {
+        const d = Number.isFinite(r.distance) ? r.distance : TUNE.ceilProbe;
+        return clamp(1 - d / TUNE.ceilProbe, 0, 1);
+      }
+    } catch (err) { this._breakCollision(err); }
+    return 0;
+  }
+
   /* ----------------------------------------------------------------- orbit -- */
 
   _orbit(dt, lx, ly, input) {
@@ -591,7 +978,7 @@ export class CameraRig {
       this.pitch = this._recentrePitchFrom + (TUNE.pitchDefault - this._recentrePitchFrom) * u;
       if (this._recentreT >= TUNE.recentreTime) this._recentreT = -1;
     } else if (!touched) {
-      this._autoYaw(dt);
+      this._yawAssist(dt);
     }
 
     this.pitch = clamp(this.pitch, TUNE.pitchMin, TUNE.pitchMax);
@@ -605,23 +992,46 @@ export class CameraRig {
   }
 
   /**
-   * Auto-yaw assist. Swings the camera behind Sly while he runs — but ONLY after the mouse has
+   * The yaw assist. **One controller, one target heading** — this used to be two.
+   *
+   * The base behaviour is unchanged: swing behind Sly while he runs, but ONLY after the mouse has
    * been still for `autoDelay`, and then faded in. Overlapping the player's own aim for even a
    * frame is the difference between "helpful" and "the camera is fighting me".
+   *
+   * The route telegraph then *bends that one target* toward a profile of the line, rather than
+   * pulling on `this.yaw` itself. That distinction is the whole reason this is a single function:
+   * two assists writing the same field is not a feature, it is a race — the winner would be
+   * whichever ran last, and neither would reach its target while the other was live.
+   *
+   * The gates are the existing ones, deliberately. The profile swing does not get a softer bar
+   * than the behind-swing already has, so the camera still never moves on its own while the
+   * player is standing still, and the mouse still cancels everything the instant it moves.
    */
-  _autoYaw(dt) {
+  _yawAssist(dt) {
     if (this.mode === 'aim') return;
     if (this._idleLook < TUNE.autoDelay) return;
     const speed = Math.hypot(_pVel.x, _pVel.z);
     if (speed < TUNE.autoMinSpeed) return;
 
-    const heading = Math.atan2(_pVel.x, _pVel.z);
-    const err = wrapPi(heading - this.yaw);
+    const behind = Math.atan2(_pVel.x, _pVel.z);
+    let target = behind;
+    let cap = TUNE.autoRate;
+
+    if (this._routeSideW > 0.02) {
+      /* Bend toward the line, then clamp the bend. `routeYawMax` is a hard promise: however the
+         rail is oriented, the assist never puts the camera more than 40° off Sly's heading, so
+         "camera-relative forward" never stops meaning roughly forward. */
+      const swing = clamp(wrapPi(this._routeProfileYaw() - behind), -TUNE.routeYawMax, TUNE.routeYawMax);
+      target = wrapPi(behind + swing * this._routeSideW);
+      cap = Math.min(cap, TUNE.routeYawRate);
+    }
+
+    const err = wrapPi(target - this.yaw);
     if (Math.abs(err) < TUNE.autoDeadzone) return;
 
     const fade = smoothstep(TUNE.autoDelay, TUNE.autoDelay + TUNE.autoFade, this._idleLook);
     const speedScale = clamp(speed / 6.0, 0, 1) * (this._grounded ? 1 : TUNE.autoAirScale);
-    const rate = Math.min(Math.abs(err) * TUNE.autoGain, TUNE.autoRate) * fade * speedScale;
+    const rate = Math.min(Math.abs(err) * TUNE.autoGain, cap) * fade * speedScale;
     const step = Math.sign(err) * rate * dt;
     this.yaw = wrapPi(this.yaw + (Math.abs(step) > Math.abs(err) ? err : step));
   }
@@ -644,6 +1054,10 @@ export class CameraRig {
     let y = _pPos.y + TUNE.pivotHeight + f.height;
     y += Math.min(1, climbing / TUNE.climbSpeed) * TUNE.climbLift;
     y -= Math.min(falling * TUNE.fallLeadTime, TUNE.fallLeadMax);
+    /* Route reveal. A *bounded* lift, not an aim at the crest: pointing the look-at at the top
+       of a 12 m pole would show the route beautifully and put Sly off the bottom of the frame,
+       which is the trade this whole file exists to refuse. One metre buys most of the read. */
+    y += this._routeUpW * TUNE.routeLift;
 
     out.set(_pPos.x, y, _pPos.z);
 
@@ -675,16 +1089,26 @@ export class CameraRig {
       const k = Math.max(0, eh - TUNE.deadzoneH) / eh;
       gx = p.x + ex * k; gz = p.z + ez * k;
     }
+    /* Vertical softness, earned back against the error it is producing. Both conditions have to
+       hold: the error must be large AND must have pointed the same way for long enough that it
+       cannot be an arc. `hard` is 0 through every stair and hop this rig was tuned around. */
     const ey = _goal.y - p.y;
     const ay = Math.abs(ey);
-    const gy = ay > 1e-6 ? p.y + ey * (Math.max(0, ay - TUNE.deadzoneV) / ay) : p.y;
+    const sign = ey > 1e-4 ? 1 : (ey < -1e-4 ? -1 : this._vErrSign);
+    if (sign !== this._vErrSign) { this._vErrSign = sign; this._vErrHold = 0; }
+    else this._vErrHold += dt;
+    const hard = smoothstep(TUNE.followErrSoft, TUNE.followErrHard, ay)
+      * smoothstep(TUNE.followHoldMin, TUNE.followHoldFull, this._vErrHold);
+    const dzV = TUNE.deadzoneV * (1 - 0.75 * hard);
+    const gy = ay > 1e-6 ? p.y + ey * (Math.max(0, ay - dzV) / ay) : p.y;
 
     const stiff = f.stiff;
     p.x = smoothDamp(p.x, gx, v.x, TUNE.followTimeH * stiff, dt, TUNE.maxFollowH); v.x = _sdVel;
     p.z = smoothDamp(p.z, gz, v.z, TUNE.followTimeH * stiff, dt, TUNE.maxFollowH); v.z = _sdVel;
     // Vertical gets its own, much longer time constant. This is the whole reason stairs and
-    // hops don't make the frame seasick.
-    p.y = smoothDamp(p.y, gy, v.y, TUNE.followTimeV * stiff, dt, TUNE.maxFollowV); v.y = _sdVel;
+    // hops don't make the frame seasick — see `followErrSoft` for why it is not a constant.
+    const timeV = TUNE.followTimeV * stiff * (1 - (1 - TUNE.followStiffV) * hard);
+    p.y = smoothDamp(p.y, gy, v.y, timeV, dt, TUNE.maxFollowV); v.y = _sdVel;
   }
 
   /* ------------------------------------------------------------------ boom -- */
@@ -696,12 +1120,18 @@ export class CameraRig {
     // Falling fast: tip down so the landing is on screen before you reach it.
     p += smoothstep(2, TUNE.fallPitchSpeed, falling) * TUNE.fallPitch;
     p += smoothstep(1, TUNE.climbSpeed, climbing) * TUNE.climbPitch;
+    // Route reveal: drop the camera and look up the line. Suppressed by the fall tip above by
+    // construction — you are not being shown a climb while you are plummeting off one.
+    p += this._routeUpW * TUNE.routePitch;
+    // Ceiling: give up overhead pitch, toward level and no further. Never inverts (see `_ceilSettle`).
+    if (this._ceilW > 0 && p > 0) p -= p * TUNE.ceilFlatten * this._ceilW;
     return clamp(p, TUNE.pitchMin, TUNE.pitchMax);
   }
 
   _boomLength(dt) {
     const aim = this.mode === 'aim' || !!(this.engine.input?.down?.('focus'));
     let want = this.distance + this._frame.dist + (aim ? -1.1 : 0);
+    want += this._routeUpW * TUNE.routeDist;   // room in frame for the vertical line
     if (this.mode === 'cinematic') want += 1.4;
     want = clamp(want, TUNE.distHardMin, TUNE.distMax + 3);
     this._boomWant = smoothDamp(this._boomWant, want, this._boomWantVel || 0, TUNE.zoomTime, dt);
@@ -740,35 +1170,63 @@ export class CameraRig {
   }
 
   /**
-   * Sphere-cast the sightline (AGENTS.md §4.6). Three casts: the boom itself plus a whisker
-   * either side. The whiskers are the trick — they notice an approaching column a fifth of a
-   * second before it crosses the sightline, so the boom shortens continuously instead of
-   * stepping, which is what stops the push-in reading as a glitch.
+   * Sphere-cast the sightline (AGENTS.md §4.6). Four casts: the boom itself, a whisker either
+   * side, and one overhead. The whiskers are the trick — they notice an approaching column a
+   * fifth of a second before it crosses the sightline, so the boom shortens continuously instead
+   * of stepping, which is what stops the push-in reading as a glitch.
+   *
+   * Two measured corrections to that idea live here, and the first is a defect I found by
+   * simulating a slow orbit past a 1.2 m column rather than by reading the code:
+   *
+   *  · **A whisker used to speak with the sightline's full authority.** The instant it clipped
+   *    the column, the boom was yanked to the whisker's distance even though the sightline was
+   *    still clear — a 2.03 m step in one frame, i.e. precisely the pop this design was written
+   *    to remove. `WHISKERS` now grades authority: an off-axis cast can only ever claim its share
+   *    of the shortening, so the column is met in stages and the centre cast finishes the job.
+   *  · **The overhead whisker is new.** The old set was lateral only, so a lintel or a tomb
+   *    ceiling was invisible until it crossed the sightline and then arrived all at once. It is
+   *    the same argument as the lateral pair, in the axis this level actually has ceilings in.
    */
   _castBoom(want, dir) {
     const col = this._solidCollision();
     if (!col) return want;
     let allowed = want;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < WHISKERS.length; i++) {
+      const w = WHISKERS[i];
       _from.copy(this.pivot);
-      if (i === 1) _from.addScaledVector(this.right, TUNE.whisker);
-      else if (i === 2) _from.addScaledVector(this.right, -TUNE.whisker);
+      if (w[0]) _from.addScaledVector(this.right, w[0] * TUNE.whisker);
+      if (w[1]) _from.y += w[1] * TUNE.whiskerUp;
       _to.copy(_from).addScaledVector(dir, want);
       const d = this._sweep(_from, _to, want);
-      if (d < allowed) allowed = d;
+      if (d >= want) continue;
+      const claim = want - (want - d) * w[2];
+      if (claim < allowed) allowed = claim;
     }
 
     /* Belt and braces: if the resulting point is still inside something (a cast can miss a
-       corner it starts flush against), step in until it isn't. */
+       corner it starts flush against), find the longest boom that isn't. Bisection rather than
+       the old fixed 0.45 m retreat — three 0.45 m steps resolve the same 1.35 m span to 45 cm
+       and put a visible jolt in the frame, five bisections resolve it to ~4 cm for the same
+       worst-case number of overlap queries, and this path only runs when we are already inside
+       geometry. */
     if (typeof col.overlap === 'function') {
-      for (let i = 0; i < 3; i++) {
-        _camPos.copy(this.pivot).addScaledVector(dir, allowed);
-        let hits = null;
-        try { hits = col.overlap(_camPos, TUNE.camRadius * 0.85, SOLID_TAGS); }
-        catch (err) { this._breakCollision(err); break; }
-        if (!hits || hits.length === 0) break;
-        allowed = Math.max(TUNE.distHardMin, allowed - 0.45);
-        if (allowed <= TUNE.distHardMin) break;
+      _camPos.copy(this.pivot).addScaledVector(dir, allowed);
+      let inside = false;
+      try {
+        const hits = col.overlap(_camPos, TUNE.camRadius * 0.85, SOLID_TAGS);
+        inside = !!(hits && hits.length);
+      } catch (err) { this._breakCollision(err); }
+      if (inside) {
+        let lo = TUNE.distHardMin, hi = allowed;
+        for (let i = 0; i < 5; i++) {
+          const mid = (lo + hi) * 0.5;
+          _camPos.copy(this.pivot).addScaledVector(dir, mid);
+          let hits = null;
+          try { hits = col.overlap(_camPos, TUNE.camRadius * 0.85, SOLID_TAGS); }
+          catch (err) { this._breakCollision(err); break; }
+          if (hits && hits.length) hi = mid; else lo = mid;
+        }
+        allowed = lo;
       }
     }
     return Math.max(TUNE.distHardMin, allowed);
@@ -920,7 +1378,8 @@ export class CameraRig {
     const speed = Math.hypot(_pVel.x, _pVel.z);
     this._speedSm = ease(this._speedSm, speed, 0.22, dt);
     const fovTarget = TUNE.fovBase + this._frame.fov
-      + clamp(this._speedSm / TUNE.fovSpeedRef, 0, 1) * TUNE.fovSpeedGain;
+      + clamp(this._speedSm / TUNE.fovSpeedRef, 0, 1) * TUNE.fovSpeedGain
+      + this._routeUpW * TUNE.routeFov;
     this._fovCur = ease(this._fovCur, fovTarget, TUNE.fovTime, dt);
     const fov = this._fovCur + amp * TUNE.shakeFov;
     if (Math.abs(fov - this._fovApplied) > 0.01) {
