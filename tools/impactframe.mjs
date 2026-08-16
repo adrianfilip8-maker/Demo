@@ -74,6 +74,17 @@ import {
 const S = FX_TUNE.impactScale;
 const SCUFF_R = 3.4 * S / 2;      // the widest ground mark: Particles._stageImpact
 
+/* ── `discOf`'s SEGMENT COUNT IS A BAR, NOT A DETAIL ────────────────────────────────────────
+ * `discOf` samples an INSCRIBED polygon, whose bounding box under-reports the circle's by
+ * `1 - cos(pi/n)` in the worst case. Under-reporting extent is the PERMISSIVE direction for a
+ * cropping test: it certifies "in frame" about a rim that is not.
+ *
+ * At the default 24 segments that bound is 8.56e-3 — **9 px on this shot's 1050 px ring**, a
+ * third of the 24 px edge floor. At 180 it is 1.52e-4, or 0.16 px. Chosen by where the error
+ * stops mattering against the bar it feeds, not by taste. */
+const DISC_SEG = 180;
+const NGON_BOUND = 1 - Math.cos(Math.PI / DISC_SEG);   // 1.52e-4
+
 /* ── THE REFERENCE CAMERA — PINNED, NOT READ FROM `SHOTS` ───────────────────────────────────
  * Every measured constant below is a count of pixels, and pixels only mean a world extent
  * through a specific camera. This is that camera: the one `shots/fxrim2-impact/` was captured
@@ -242,15 +253,16 @@ function columnAt(x, z, ceiling) {
  * out loud where the tally prints, because a histogram that looks exhaustive and is not would be
  * read as one.
  */
-function score(name, c, { quiet = false, stopEarly = false } = {}) {
+function score(name, c, { quiet = false, stopEarly = false, skipClear = false } = {}) {
   const cam = camFor(c);
   const [px, py, pz] = c.player.pos;
 
   const sly = plateOf(cam, px, py, pz, SLY_SLAM);
   const dust = plateOf(cam, px, py, pz, DUST);
-  const scuff = discOf(cam, px, py + 0.02, pz, SCUFF_R);
-  const ring = discOf(cam, px, py + 0.06, pz, RING_R_DRAWN);
-  const ringDecl = discOf(cam, px, py + 0.06, pz, RING_R_DECLARED);
+  const scuff = discOf(cam, px, py + 0.02, pz, SCUFF_R, DISC_SEG);
+  const ring = discOf(cam, px, py + 0.06, pz, RING_R_DRAWN, DISC_SEG);
+  /* Display only — never gates. Computed only when it will be printed. */
+  const ringDecl = quiet ? null : discOf(cam, px, py + 0.06, pz, RING_R_DECLARED, DISC_SEG);
 
   const faults = [];
   if (!sly) faults.push('SLY BEHIND LENS');
@@ -280,6 +292,7 @@ function score(name, c, { quiet = false, stopEarly = false } = {}) {
   if (slyH < 110) faults.push(`sly only ${slyH.toFixed(0)} px tall — a slam needs a body, not a token`);
 
   if (stopEarly && faults.length) return { faults, rank: 0, flat, slyH };
+  if (skipClear) return { faults, rank: flat * slyH, flat, slyH };
 
   const slyClear = clear(cam, { x: px, y: py + 0.5, z: pz });
   const ringClear = clear(cam, { x: px, y: py + 0.06, z: pz });
@@ -342,47 +355,130 @@ if (args.includes('--search')) {
   /**
    * Sweep the camera domain and keep the survivors.
    *
-   * The sweep is over the shot's actual free variables — where the lens is and how long it is —
-   * and nothing else: the impact point is fixed by the floor check, and the target is fixed at
-   * the contact so every candidate is framing the same event. Ranked by the stated composite,
-   * which orders survivors and admits none.
+   * ── THE DOMAIN IS THREE-DIMENSIONAL, NOT FOUR, AND THAT IS MEASURED ────────────────────────
+   * Every subject in this frame is centred on the contact point and the camera targets that same
+   * point, so orbiting the lens about the vertical axis through it maps the whole configuration
+   * onto itself. **Azimuth cannot change any projected quantity.** Measured, not assumed: across
+   * 24 azimuths at four (d, h, fov) triples, the ellipse ratio and the figure's pixel height are
+   * identical to 5e-16 and 3e-13 — floating-point noise, not agreement within a tolerance.
+   *
+   * The one thing azimuth DOES change is `clear()`, because the architecture is not rotationally
+   * symmetric about a point in the courtyard. So the sweep is:
+   *
+   *   1. geometry over (d, h, fov) at one azimuth   — 9,450 cells instead of 453,600
+   *   2. occlusion over azimuth, for geometric survivors only
+   *
+   * This is a symmetry, not a heuristic: step 1 rejects nothing that step 2 would have admitted,
+   * because the quantities it rejects on do not vary along the axis it collapses. The first
+   * version of this search swept all four axes and did not finish 453,600 cells in 1500 s.
+   *
+   * `assertAzimuthFree()` below re-derives that claim every run rather than trusting this
+   * comment. If someone adds a subject that is NOT centred on the contact — a guard, a prop, an
+   * off-centre decal — the symmetry breaks, the collapse starts hiding valid cameras, and
+   * nothing about the output would look wrong. That is the failure this tool exists to not have.
    */
+  const AZ_STEP = 7.5, AZ_N = Math.round(360 / AZ_STEP);
+
+  /**
+   * Prove the collapse is legitimate on THIS tree before relying on it.
+   *
+   * ── THE PROBE STEP MUST NOT DIVIDE INTO THE SEGMENT COUNT, AND MINE DID ────────────────────
+   * The first version of this check swept 24 azimuths at 15° against `discOf`'s default 24
+   * segments. It reported agreement to **5e-16** and I took that as confirmation. It is an
+   * artefact: 360/24 = 15, so rotating the camera by one step maps the polygon's sample set
+   * exactly onto itself. The same thing happens at 48 segments with 7.5° steps, and at 720 with
+   * 7.5° steps. **The probe was commensurate with the discretisation, so it compared each
+   * sample against itself and could only ever say "identical".**
+   *
+   * So the step below is deliberately non-commensurate — an odd fraction of a degree that shares
+   * no factor with 180 — and the criterion is the polygon's own worst-case bound rather than a
+   * tolerance chosen to pass. The true geometry IS exactly rotationally symmetric: every subject
+   * is centred on the contact and the camera targets it, so orbiting maps the configuration onto
+   * itself. Only the sampling breaks that, and only by `1 - cos(pi/n)`.
+   *
+   * If the spread ever exceeds that bound, the asymmetry is REAL — someone has added a subject
+   * that is not centred on the contact — and collapsing the azimuth axis would start hiding
+   * valid cameras with nothing in the output looking wrong.
+   */
+  function assertAzimuthFree() {
+    const STEP = 7.3;                    // shares no factor with 180; see above
+    const N = Math.floor(360 / STEP);
+    let worst = 0, worstAt = null;
+    for (const [d, hh, fov] of [[12, 3, 38], [8, 2, 44], [18, 6, 30], [6, 1.5, 50], [20, 10, 26]]) {
+      const vals = [];
+      for (let i = 0; i < N; i++) {
+        const a = i * STEP * Math.PI / 180;
+        const r = score('', {
+          pos: [AT[0] + Math.cos(a) * d, hh, AT[2] + Math.sin(a) * d],
+          target: [AT[0], 0.6, AT[2]], fov, tod: 0.78, player: P,
+        }, { quiet: true, skipClear: true });
+        vals.push([r.flat, r.slyH / Math.max(1, r.slyH), r.faults.length]);
+      }
+      for (const k of [0, 2]) {
+        const col = vals.map((v) => v[k]);
+        const sp = Math.max(...col) - Math.min(...col);
+        if (sp > worst) { worst = sp; worstAt = `${['ellipse', '', 'fault count'][k]} at d${d} h${hh} fov${fov}`; }
+      }
+    }
+    const bound = 2 * NGON_BOUND;
+    return worst <= bound
+      ? `azimuth-free CONFIRMED — geometry varies by ${worst.toExponential(1)} over ${N} `
+        + `non-commensurate azimuths x 5 triples, inside the ${DISC_SEG}-gon bound ${bound.toExponential(1)}`
+      : `*** AZIMUTH-FREE IS FALSE on this tree: ${worstAt} varies by ${worst.toExponential(2)}, past the `
+        + `${DISC_SEG}-gon discretisation bound ${bound.toExponential(2)}. That is a REAL asymmetry, not `
+        + 'sampling — some subject is no longer centred on the contact. Sweep all four axes. ***';
+  }
+  console.log(assertAzimuthFree());
+
   const t0 = Date.now();
   const survivors = [];
-  let n = 0, behind = 0;
+  let geomCells = 0, geomPass = 0, azTested = 0;
   const faultTally = new Map();
+  const tally = (fs) => { for (const f of fs) {
+    const key = f.replace(/ by [\d.]+ px/, ' by N px').replace(/ [\d.]+ px of /, ' N px of ')
+      .replace(/ratio [\d.]+/, 'ratio N').replace(/only [\d.]+/, 'only N')
+      .replace(/y [-\d.]+/g, 'y N').replace(/column: [^)]*/, 'column: …');
+    faultTally.set(key, (faultTally.get(key) ?? 0) + 1);
+  } };
+
   for (let d = 5; d <= 22; d += 0.5) {
     for (let hh = 1.0; hh <= 12; hh += 0.25) {
-      for (let azDeg = 0; azDeg < 360; azDeg += 7.5) {
-        for (const fov of [26, 30, 34, 38, 44, 50]) {
-          const a = azDeg * Math.PI / 180;
+      for (const fov of [26, 30, 34, 38, 44, 50]) {
+        geomCells++;
+        const base = {
+          pos: [AT[0] + d, hh, AT[2]], target: [AT[0], 0.6, AT[2]], fov, tod: 0.78, player: P,
+        };
+        const g = score('', base, { quiet: true, stopEarly: true, skipClear: true });
+        if (g.faults.length) { tally(g.faults); continue; }
+        geomPass++;
+        /* Geometry admits this (d, h, fov) at EVERY azimuth. Only occlusion can reject one. */
+        for (let i = 0; i < AZ_N; i++) {
+          const azDeg = i * AZ_STEP, a = azDeg * Math.PI / 180;
           const cand = {
             pos: [AT[0] + Math.cos(a) * d, hh, AT[2] + Math.sin(a) * d],
             target: [AT[0], 0.6, AT[2]], fov, tod: 0.78, player: P,
           };
-          n++;
-          const r = score('', cand, { quiet: true, stopEarly: true });
+          azTested++;
+          const r = score('', cand, { quiet: true });
           if (!r.faults.length) survivors.push({ ...cand, d, hh, azDeg, ...r });
-          else for (const f of r.faults) {
-            const key = f.replace(/ by [\d.]+ px/, '').replace(/ [\d.]+ px of /, ' N px of ')
-              .replace(/ratio [\d.]+/, 'ratio N').replace(/only [\d.]+/, 'only N')
-              .replace(/y [-\d.]+/g, 'y N').replace(/column: [^)]*/, 'column: …');
-            faultTally.set(key, (faultTally.get(key) ?? 0) + 1);
-          }
+          else tally(r.faults);
         }
       }
     }
   }
   survivors.sort((x, y) => y.rank - x.rank);
-  console.log(`\n══ SEARCH · ${n} cameras · ${survivors.length} with no faults · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
-  console.log(`   domain: distance 5-22 m, height 1-12 m, 48 azimuths, 6 lenses, target fixed at the contact`);
-  if (behind) console.log(`   ${behind} unusable (subject behind the lens)`);
-  console.log(`\n   why the rest were rejected (FIRST reason only — the ray casts are skipped once\n   a cheaper bar rejects a camera, so these are not exhaustive per camera):`);
+  console.log(`\n══ SEARCH · ${geomCells} (d,h,fov) cells -> ${geomPass} geometric survivors`
+    + ` x ${AZ_N} azimuths = ${azTested} occlusion tests · ${survivors.length} clean`
+    + ` · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  console.log(`   domain: distance 5-22 m by 0.5, height 1-12 m by 0.25, ${AZ_N} azimuths, 6 lenses,`
+    + ` target fixed at the contact`);
+  console.log(`\n   why the rest were rejected (FIRST reason only — the ray casts are skipped once\n`
+    + `   a cheaper bar rejects a camera, so these are not exhaustive per camera):`);
   for (const [f, k] of [...faultTally.entries()].sort((x, y) => y[1] - x[1]).slice(0, 12)) {
     console.log(`     ${String(k).padStart(7)}  ${f}`);
   }
   console.log(`\n   top survivors by rank (ellipse ratio x figure height):`);
-  for (const s of survivors.slice(0, 12)) {
+  for (const s of survivors.slice(0, 15)) {
     console.log(`     rank ${s.rank.toFixed(1).padStart(6)} · d ${String(s.d).padStart(4)} m h ${String(s.hh).padStart(5)} m az ${String(s.azDeg).padStart(5)}° fov ${String(s.fov).padStart(2)}`
       + ` · ellipse ${s.flat.toFixed(3)} · sly ${s.slyH.toFixed(0)} px`
       + ` · pos ${s.pos.map((v) => v.toFixed(2)).join(', ')}`);
@@ -390,7 +486,8 @@ if (args.includes('--search')) {
   try {
     mkdirSync('progress/records', { recursive: true });
     writeFileSync('progress/records/impact-search.json', JSON.stringify({
-      tree: provenance, when: new Date().toISOString(), swept: n,
+      tree: provenance, when: new Date().toISOString(),
+      geomCells, geomPass, azTested, azimuthFree: assertAzimuthFree(),
       domain: 'd 5-22 by 0.5, h 1-12 by 0.25, az 0-360 by 7.5, fov [26,30,34,38,44,50]',
       bars: { edge: EDGE, figureSlop: FIGURE_PLACEMENT_SLOP, ellipse: 0.22, slyPx: 110 },
       extents: { SLY_SLAM, DUST, RING_R_DRAWN, RING_R_DECLARED, SCUFF_R },
