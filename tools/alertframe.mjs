@@ -43,6 +43,7 @@
  * is a question for a capture, and per KNOWN_ISSUES §367 a capture is the one instrument that
  * *can* answer it — FX are among the few systems that do render live in a shot.
  */
+import * as THREE from 'three';
 import { SHOTS } from '../src/core/Shots.js';
 /* The five projection primitives live in `framelib.mjs` since `impactframe.mjs` was written
    and needed the identical five. The one thing that must never happen is two staging tools
@@ -88,7 +89,7 @@ const MARK_R = 0.55;              // the mark's own radius, so "in frame" means 
  * makes every argument here that leaned on it stronger rather than weaker — but a citation that
  * happens to argue in your favour is still a citation you have to be able to produce.
  */
-function score(name, c) {
+function score(name, c, quiet = false, tally = null) {
   const cam = camFor(c);
   const sly = boxOf(cam, c.player.pos[0], c.player.pos[1], c.player.pos[2], SLY);
   const grd = boxOf(cam, c.guard[0], c.guard[1], c.guard[2], GUARD);
@@ -197,6 +198,7 @@ function score(name, c) {
   if (!grd2Clear) faults.push('GUARD2 OCCLUDED');
   if (!mark2Clear) faults.push('MARK2 OCCLUDED');
 
+  if (!quiet) {
   console.log(`\n── ${name}`);
   console.log(`   cam ${c.pos.map((v) => v.toFixed(2)).join(', ')} -> ${c.target.map((v) => v.toFixed(2)).join(', ')} · fov ${c.fov} · tod ${c.tod ?? '-'}`);
   if (sly) console.log(`   sly    rows ${sly.y0.toFixed(0)}..${sly.y1.toFixed(0)} (${slyH.toFixed(0)} px) cols ${sly.x0.toFixed(0)}..${sly.x1.toFixed(0)} · margins l${ms.l.toFixed(0)} r${ms.r.toFixed(0)} t${ms.t.toFixed(0)} b${ms.b.toFixed(0)} · ${slyClear ? 'clear' : 'OCCLUDED'}`);
@@ -208,6 +210,8 @@ function score(name, c) {
   console.log(`   overlap ${(ovFrac * 100).toFixed(1)}% of the smaller subject · group spans ` +
     `${(spanW * 100).toFixed(0)}%w ${(spanH * 100).toFixed(0)}%h, centre ${(centreOff * 100).toFixed(0)}% off`);
   console.log(`   ${faults.length ? 'FAULTS: ' + faults.join(' · ') : 'no faults'}`);
+  }
+  if (tally) for (const f of faults) tally.set(f.replace(/ (by|only) .*/, ''), (tally.get(f.replace(/ (by|only) .*/, '')) || 0) + 1);
   return faults.length;
 }
 
@@ -300,6 +304,64 @@ if (shotArg >= 0) {
   if (!s) { console.error(`no shot "${name}" in SHOTS`); process.exit(2); }
   if (!s.guard) { console.error(`shot "${name}" has no \`guard\` field for this tool to frame`); process.exit(2); }
   process.exit(score(name, s) ? 1 : 0);
+}
+
+/**
+ * `--search` — where CAN a lens see all three subjects, and which of those frame well?
+ *
+ * Written because the four hand-authored candidates below were all scored by a `clear()` that
+ * returned true unconditionally (§396.2, §401), and every one of them re-scores as OCCLUDED on
+ * every subject. A hand-picked candidate set is only as good as the checker that admitted it, and
+ * this one admitted a camera standing behind `arch:court:sandstone_block`.
+ *
+ * So the search does the admission first and the framing second, which is the order that was
+ * wrong before: sweep camera cells, keep only those with a clear line to all three subjects, and
+ * score the survivors with the SAME `score()` the authored candidates go through — no second
+ * scorer, no second set of bars.
+ */
+if (args.includes('--search')) {
+  const P = SHOTS.alert.player.pos, G = SHOTS.alert.guard, G2 = SHOTS.alert.guard2;
+  const subj = [
+    { x: P[0], y: P[1] + 0.9, z: P[2] },
+    { x: G[0], y: G[1] + 1.0, z: G[2] },
+    { x: G2[0], y: G2[1] + 1.0, z: G2[2] },
+  ];
+  /* Aim at the centroid of the three, at chest height: the shot frames a relationship, so the
+     subject of the camera is the group rather than any one of them. */
+  const tgt = [
+    subj.reduce((a, s) => a + s.x, 0) / 3,
+    subj.reduce((a, s) => a + s.y, 0) / 3,
+    subj.reduce((a, s) => a + s.z, 0) / 3,
+  ];
+  const found = [];
+  const TALLY = new Map();
+  let cells = 0;
+  for (let x = -26; x <= 10; x += 2) {
+    for (let z = -6; z <= 34; z += 2) {
+      for (const y of [3.0, 4.2, 5.5, 7.0]) {
+        const cam = { position: new THREE.Vector3(x, y, z) };
+        if (!subj.every((t) => clear(cam, t))) continue;
+        cells++;
+        for (const fov of [40, 46, 52]) {
+          const c = {
+            pos: [x, y, z], target: tgt, fov, tod: SHOTS.alert.tod,
+            player: SHOTS.alert.player, guard: G, guard2: G2,
+          };
+          const f = score(`x${x} y${y} z${z} fov${fov}`, c, true, TALLY);
+          if (f === 0) found.push({ x, y, z, fov });
+        }
+      }
+    }
+  }
+  console.log(`\n${cells} camera cells see all three subjects · ${found.length} of those also frame clean`);
+  /* WHY they fail is the actionable half. A sweep that reports only a count tells you to widen
+     it; a sweep that reports which bar bit tells you whether widening can possibly help. */
+  const ranked = [...TALLY.entries()].sort((a, b) => b[1] - a[1]);
+  console.log('  fault frequency across the scored cells:');
+  for (const [k, n] of ranked.slice(0, 10)) console.log(`    ${String(n).padStart(4)}x  ${k}`);
+  for (const f of found.slice(0, 20)) console.log(`   pos [${f.x}, ${f.y}, ${f.z}] fov ${f.fov} -> target [${tgt.map((v) => v.toFixed(2)).join(', ')}]`);
+  if (!found.length) console.log('   nothing clean — widen the sweep or revisit the stands');
+  process.exit(found.length ? 0 : 1);
 }
 
 let clean = 0;
