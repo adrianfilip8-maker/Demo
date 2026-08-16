@@ -44,6 +44,7 @@
  * *can* answer it — FX are among the few systems that do render live in a shot.
  */
 import * as THREE from 'three';
+import { writeFileSync } from 'node:fs';
 import { SHOTS } from '../src/core/Shots.js';
 /* The five projection primitives live in `framelib.mjs` since `impactframe.mjs` was written
    and needed the identical five. The one thing that must never happen is two staging tools
@@ -89,7 +90,7 @@ const MARK_R = 0.55;              // the mark's own radius, so "in frame" means 
  * makes every argument here that leaned on it stronger rather than weaker — but a citation that
  * happens to argue in your favour is still a citation you have to be able to produce.
  */
-function score(name, c, quiet = false, tally = null) {
+function score(name, c, quiet = false, tally = null, rank = null) {
   const cam = camFor(c);
   const sly = boxOf(cam, c.player.pos[0], c.player.pos[1], c.player.pos[2], SLY);
   const grd = boxOf(cam, c.guard[0], c.guard[1], c.guard[2], GUARD);
@@ -212,6 +213,12 @@ function score(name, c, quiet = false, tally = null) {
   console.log(`   ${faults.length ? 'FAULTS: ' + faults.join(' · ') : 'no faults'}`);
   }
   if (tally) for (const f of faults) tally.set(f.replace(/ (by|only) .*/, ''), (tally.get(f.replace(/ (by|only) .*/, '')) || 0) + 1);
+  /* What the shot is FOR, exposed so a sweep can order its survivors by it. The bars decide
+     admission; this decides which admitted frame shows the ladder best, and it is the same
+     quantity H was chosen over J on: rung 3 against rung 2 in drawn pixels. Reported, never
+     used as a gate — `impactframe`'s sweep proved what happens when a composite is allowed to
+     admit (its calibration candidate ranked FIRST and cropped on six edges). */
+  if (rank) rank.last = { m3px, m2px, sep: m2px > 0 ? m3px / m2px : 0, spanW, spanH, slyH };
   return faults.length;
 }
 
@@ -360,6 +367,7 @@ if (args.includes('--search')) {
   ];
   const found = [];
   const TALLY = new Map();
+  const RANK = { last: null };
   let cells = 0;
   for (let x = -26; x <= 10; x += 2) {
     for (let z = -6; z <= 34; z += 2) {
@@ -372,8 +380,8 @@ if (args.includes('--search')) {
             pos: [x, y, z], target: tgt, fov, tod: SHOTS.alert.tod,
             player: { ...SHOTS.alert.player, pos: P }, guard: G, guard2: G2,
           };
-          const f = score(`x${x} y${y} z${z} fov${fov}`, c, true, TALLY);
-          if (f === 0) found.push({ x, y, z, fov });
+          const f = score(`x${x} y${y} z${z} fov${fov}`, c, true, TALLY, RANK);
+          if (f === 0) found.push({ x, y, z, fov, ...RANK.last });
         }
       }
     }
@@ -384,7 +392,15 @@ if (args.includes('--search')) {
   const ranked = [...TALLY.entries()].sort((a, b) => b[1] - a[1]);
   console.log('  fault frequency across the scored cells:');
   for (const [k, n] of ranked.slice(0, 10)) console.log(`    ${String(n).padStart(4)}x  ${k}`);
-  for (const f of found.slice(0, 20)) console.log(`   pos [${f.x}, ${f.y}, ${f.z}] fov ${f.fov} -> target [${tgt.map((v) => v.toFixed(2)).join(', ')}]`);
+  found.sort((a, b) => b.sep - a.sep);
+  writeFileSync(new URL('../progress/records/alertsearch.json', import.meta.url),
+    JSON.stringify({ stand: P, target: tgt, found }, null, 2));
+  console.log(`  ranked by rung separation (rung3 px : rung2 px) — the quantity this shot exists to show:`);
+  for (const f of found.slice(0, 12)) {
+    console.log(`   pos [${f.x}, ${f.y}, ${f.z}] fov ${f.fov}  sep ${f.sep.toFixed(2)}x `
+      + `(${f.m3px.toFixed(0)}:${f.m2px.toFixed(0)} px) · span ${(f.spanW * 100).toFixed(0)}%w ${(f.spanH * 100).toFixed(0)}%h · sly ${f.slyH.toFixed(0)} px`);
+  }
+  console.log(`  target [${tgt.map((v) => v.toFixed(2)).join(', ')}] · all ${found.length} written to progress/records/alertsearch.json`);
   if (!found.length) console.log('   nothing clean — widen the sweep or revisit the stands');
   process.exit(found.length ? 0 : 1);
 }
