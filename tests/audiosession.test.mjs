@@ -191,8 +191,21 @@ const SCRIPT = [
 const SESSION = 9.0;
 
 /** Render the whole scripted session through the shipped module. */
-function renderSession() {
+function renderSession({ forceMaterial = null } = {}) {
   const w = makeWorld();
+  /* The B arm, and the ONLY difference between the two renders. Intercepting at the bus rather
+     than editing the script is what makes "one field different, nothing else" true by
+     construction: every beat fires identically, the timeline is identical, the seed is
+     identical, and the single substitution happens on the payload in flight. */
+  if (forceMaterial) {
+    const realEmit = w.engine.emit.bind(w.engine);
+    w.engine.emit = (evt, payload) => realEmit(
+      evt,
+      payload && typeof payload === 'object' && 'material' in payload
+        ? { ...payload, material: forceMaterial }
+        : payload,
+    );
+  }
   const ctx = new OfflineCtx(SR);
   const audio = new Audio(w.engine);
   /* BOTH, in this order, and the order is the module's own: `init()` is where `_wireEngine` and
@@ -205,6 +218,33 @@ function renderSession() {
   audio.init();
   audio.unlock(ctx);                       // the documented offline entry — skips the track fetch
   assert.ok(audio.ready, 'the shipped audio graph did not build on the offline context');
+
+  /* ── The reclamation override, and why it is legitimate ────────────────────────────────
+     `Audio.update` reclaims a voice once its `end` passes, and `_release` calls `stop()` and
+     `disconnect()` on every source. In a live context that is a RESOURCE operation on samples
+     the device has already played. In this shim `stop()` with no argument stores `_stop =
+     undefined` and the source is erased from the WHOLE render — so reclamation becomes
+     retroactive and un-plays the past.
+
+     Left alone, a 9-second session renders its loops and its score and **not one of its
+     one-shot cues**, because every one of them is reclaimed before `render()` is called. That
+     is exactly what happened here: the fingerprint and the per-beat rms bars were measuring the
+     wind and brazier beds, and the B arm is what caught it — two sessions playing demonstrably
+     different recipes rendered to `mean |A−B| = 0.00e+0`.
+
+     So the harness overrides the one thing that is a renderer artefact and nothing else: the
+     bookkeeping still runs (the voice is freed, `_uncount` still fires, the pool still turns
+     over, `max`/`gap` still bite), and only the retroactive teardown of already-scheduled
+     sources is skipped. `renderContact` solves the same problem by driving only past the event;
+     a full session cannot, because it has to keep running. */
+  const realRelease = audio._release.bind(audio);
+  audio._release = (v) => {
+    if (!v.active) return;
+    const srcs = v.srcs;
+    v.srcs = [];                       // hide them from the teardown, keep them in the graph
+    try { realRelease(v); } finally { v.srcs = srcs.length ? [] : v.srcs; }
+    void srcs;
+  };
 
   /* The ledger. Wrapping the shipped `play` is the only way to know a cue was REACHED rather
      than that the window was loud; the bed clears an absolute threshold on its own. */
@@ -279,8 +319,12 @@ function window_(data, from, to) {
   return data.subarray(Math.max(0, (from * SR) | 0), Math.min(data.length, (to * SR) | 0));
 }
 
-let SESSION_CACHE = null;
-const session = () => (SESSION_CACHE ||= renderSession());
+const SESSION_CACHE = new Map();
+const session = (forceMaterial = null) => {
+  const k = forceMaterial || 'A';
+  if (!SESSION_CACHE.has(k)) SESSION_CACHE.set(k, renderSession({ forceMaterial }));
+  return SESSION_CACHE.get(k);
+};
 
 /* ══════════════════════════════════════════════════════════════════ the assertions ══ */
 
@@ -407,8 +451,13 @@ test('the session is diffable — a stable fingerprint over the shipped render',
   assert.equal(sig.length, BANDS);
   assert.ok(sig.some((s) => !s.startsWith('0.0000')), 'every band is silent — the fingerprint says nothing');
 
-  if (DUMP) {
-    /* Opt-in, so the suite writes nothing by default. `AUDIO_SESSION_WAV=path node --test …` */
+  /* No dump here — the deliverable is the blind PAIR written by the A/B test below, and a
+     third file in the directory a listener opens is one more thing to explain. */
+});
+
+/** Mono 16-bit PCM. The only thing here a listener can actually use. */
+function writeWav(path, data) {
+  {
     const n = data.length;
     const buf = Buffer.alloc(44 + n * 2);
     buf.write('RIFF', 0); buf.writeUInt32LE(36 + n * 2, 4); buf.write('WAVE', 8);
@@ -420,11 +469,11 @@ test('the session is diffable — a stable fingerprint over the shipped render',
       const v = Math.max(-1, Math.min(1, data[i]));
       buf.writeInt16LE((v < 0 ? v * 0x8000 : v * 0x7fff) | 0, 44 + i * 2);
     }
-    mkdirSync(dirname(DUMP), { recursive: true });
-    writeFileSync(DUMP, buf);
-    console.log(`  wrote ${DUMP} (${(buf.length / 1024).toFixed(0)} kB, ${SESSION}s mono ${SR}Hz)`);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, buf);
+    console.log(`  wrote ${path} (${(buf.length / 1024).toFixed(0)} kB, ${SESSION}s mono ${SR}Hz)`);
   }
-});
+}
 
 /* ═══════════════════════════════════ round 12 — the three gaps the session did not cover ══
  *
@@ -589,4 +638,156 @@ test('every class of cue reaches the room, and the send level follows the publis
   console.log(`  flat/near send ratio ${flatRatio.toFixed(3)} (formula predicts 0.28/0.35 = 0.80)`);
   assert.ok(flatRatio > 0.5 && flatRatio < 1.0,
     `a flat cue sent ${flatRatio.toFixed(3)}× a near positional one; the formula says 0.80`);
+});
+
+test('the A/B pair is comparable, differs, and renders blind for a listener', () => {
+  /* Task #27's second arm. B is the session with every contact's `material` forced to `stone` —
+     one field, substituted on the bus in flight, so the script, the timeline and the seed are
+     bit-identical between arms. This is the control for Q2's forced choice: not "is A better
+     than the old hardcoded guesses" (that would be a regression comparison against three
+     different recipes) but "**is material variety audible at all**", which is the question the
+     1.63× centroid spread cannot answer. */
+  const A = session();
+  const B = session('stone');
+
+  /* ── COMPARABILITY FIRST, because two arms that are not comparable are worse than one ──────
+     `step_*` recipes carry `max: 3` per NAME. In A the contacts spread across step_stone,
+     step_metal, step_cloth and step_wood; in B they all pile onto step_stone, so B could start
+     rejecting plays that A accepted — and then B would be quieter for a reason that has nothing
+     to do with material, which would invalidate the whole comparison. Measured, not assumed. */
+  const okOf = (r) => r.played.filter((p) => p.ok).length;
+  const rejOf = (r) => r.played.filter((p) => !p.ok).length;
+  console.log(`  A: ${okOf(A)} plays accepted, ${rejOf(A)} rejected · B: ${okOf(B)} accepted, ${rejOf(B)} rejected`);
+  assert.equal(okOf(A), okOf(B),
+    `A accepted ${okOf(A)} plays and B accepted ${okOf(B)} — B is hitting a per-name concurrency `
+    + 'cap A does not, so the two arms differ by more than one field and cannot be compared. '
+    + 'Widen the contact spacing in SCRIPT or ship A alone with this note.');
+  assert.equal(A.data.length, B.data.length, 'the two arms are different lengths');
+
+  /* ── AND THEY MUST DIFFER, or the B arm proves nothing ────────────────────────────────── */
+  const recipes = (r) => [...new Set(r.played.filter((p) => p.ok).map((p) => p.n))].sort();
+  const aOnly = recipes(A).filter((n) => !recipes(B).includes(n));
+  console.log(`  recipes only in A: ${aOnly.join(', ') || '(none)'}`);
+  assert.ok(aOnly.length >= 2,
+    `forcing every material to stone removed only ${aOnly.length} recipe(s) from the session — `
+    + 'the arms are nearly identical and a listener has nothing to choose between');
+
+  let diff = 0;
+  for (let i = 0; i < A.data.length; i++) diff += Math.abs(A.data[i] - B.data[i]);
+  const meanDiff = diff / A.data.length;
+  console.log(`  mean |A−B| ${meanDiff.toExponential(2)} over ${(A.data.length / SR).toFixed(1)}s`);
+  assert.ok(meanDiff > 1e-6, 'the two arms render identically — the material substitution did nothing');
+
+  if (DUMP) {
+    /* Blind by construction: the arm→file assignment is randomised per run and written to a key
+       the listener is not meant to open first. Nobody has to script anything — play 1, play 2,
+       answer, then read KEY.txt. That is the whole reason the forced choice is the right
+       question: it needs no expertise, only ears. */
+    const dir = DUMP.replace(/\/$/, '');
+    const flip = Math.random() < 0.5;
+    writeWav(`${dir}/session-1.wav`, flip ? B.data : A.data);
+    writeWav(`${dir}/session-2.wav`, flip ? A.data : B.data);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(`${dir}/KEY.txt`,
+      `audiosession task #27 — blind A/B\n\n`
+      + `session-1.wav = ${flip ? 'B' : 'A'}\nsession-2.wav = ${flip ? 'A' : 'B'}\n\n`
+      + `A = the session as it ships: each contact voiced by the material it actually struck.\n`
+      + `B = identical in every way except that every contact's material is forced to "stone".\n\n`
+      + `Q2: "Between 3 and 5 seconds the character touches five things. How many different\n`
+      + `     materials do you hear? Name them." Then: "Which recording has more variety in\n`
+      + `     what he is touching?"\n\n`
+      + `A null result is USEFUL and is pre-registered: if the two are indistinguishable, the\n`
+      + `material layer is real, measurable and inaudible — an instruction to raise its level,\n`
+      + `not a refutation. See the protocol block at the head of tests/audiosession.test.mjs.\n`);
+    console.log(`  wrote ${dir}/KEY.txt (blind assignment)`);
+  }
+});
+
+test('guards are heard by distance, and only the nearest few are heard at all', () => {
+  /* `_trackGuards` is the one path where the earshot cull and the voice budget do real work, and
+     it has never been exercised by anything. Drive-and-observe: the question is which guards
+     produced footfalls, which is a ledger question, not a spectral one. */
+  const far = TUNE.guardEarshot + 20;
+
+  /* Six guards: four inside earshot walking, one just outside, one far outside. Positions are
+     advanced by hand each frame so `_trackGuards`' distance-travelled footfall driver fires. */
+  const w = makeWorld();
+  const ctx = new OfflineCtx(SR);
+  const audio = new Audio(w.engine);
+  audio.init(); audio.unlock(ctx);
+  const heard = [];
+  const realPlay = audio.play.bind(audio);
+  audio.play = (n, o) => { const v = realPlay(n, o); if (v && n === 'guard_step') heard.push(o?.position); return v; };
+
+  const G = [
+    { id: 'near1', d: 6 }, { id: 'near2', d: 10 }, { id: 'near3', d: 14 }, { id: 'near4', d: 18 },
+    { id: 'near5', d: 22 }, { id: 'outside', d: far },
+  ].map((g, i) => ({ id: g.id, state: 'patrol', position: new THREE.Vector3(g.d, 0, 0), _d: g.d,
+    /* Staggered speeds, deliberately. Six guards marching at an identical pace cross
+       `TUNE.guardStride` on the SAME frame, and `guard_step`'s per-name concurrency cap then
+       rejects all but the first few — so a lockstep test measures the cap and reports it as the
+       nearest-few budget. Real patrols are not synchronised; this makes the cull and the budget
+       the things under test rather than an artefact of the script. */
+    speed: 1.4 + i * 0.37 }));
+  w.guards.list = G;
+
+  const DT = 1 / 60;
+  for (let f = 0; f * DT <= 6.0; f++) {
+    const t = f * DT;
+    ctx.currentTime = t; w.engine.time = t;
+    for (const g of G) g.position.z += g.speed * DT;      // each at its own pace
+    audio.setListener(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0));
+    audio.update(DT, t);
+  }
+
+  /* Which guards were audible, by the x they were standing at. */
+  const xs = [...new Set(heard.map((p) => Math.round(p.x)))].sort((a, b) => a - b);
+  console.log(`  guards heard at x = ${xs.join(', ')} (earshot ${TUNE.guardEarshot} m, budget ${TUNE.guardVoices} voices)`);
+  assert.ok(heard.length > 0, 'six walking guards produced no footsteps at all');
+  assert.ok(!xs.includes(Math.round(far)),
+    `a guard at ${far} m was audible past the ${TUNE.guardEarshot} m earshot cull`);
+  assert.ok(xs.length <= TUNE.guardVoices,
+    `${xs.length} guards were audible at once against a budget of ${TUNE.guardVoices} — the nearest-few cap is not holding`);
+  assert.ok(xs[0] <= 10, `the nearest guard (6 m) was not among those heard; heard ${xs.join(',')}`);
+});
+
+test('the ladder cues are not merely played — each one renders as sound', () => {
+  /* Closing the hole I left in the ladder bar: it asserts from the play ledger, so a cue fired
+     into a misconfigured voice would still pass. The ledger closed "the window was loud"; this
+     closes "played but inaudible". Isolated renders, ~0.3 s each, so it costs a fraction of a
+     session rather than a second one. */
+  const rung = (state) => {
+    const w = makeWorld();
+    const ctx = new OfflineCtx(SR);
+    const audio = new Audio(w.engine);
+    audio.init(); audio.unlock(ctx);
+    w.engine.emit('shot', { name: 'isolate' });
+    audio.score?.stop?.(0);
+    const names = [];
+    const realPlay = audio.play.bind(audio);
+    audio.play = (n, o) => { const v = realPlay(n, o); if (v) names.push(n); return v; };
+    const DT = 1 / 60;
+    for (let f = 0; f * DT <= 0.30; f++) {
+      const t = f * DT; ctx.currentTime = t; w.engine.time = t;
+      if (f === 6) {
+        w.guards.list[0].state = state;
+        w.engine.emit('guardAlert', { state, level: state === 'chase' ? 1 : 0.5, pos: w.guards.list[0].position });
+      }
+      audio.setListener(w.player.position, w.player.faceDir, new THREE.Vector3(0, 1, 0));
+      audio.update(DT, t);
+    }
+    return { names, rms: rms(ctx.render(1.4)) };
+  };
+
+  let checked = 0;
+  for (const state of ['suspicious', 'searching', 'chase']) {
+    const r = rung(state);
+    console.log(`  rung "${state}" → ${r.names.join(', ') || '(nothing)'}  rms ${r.rms.toFixed(6)}`);
+    assert.ok(r.names.length > 0, `rung "${state}" played nothing`);
+    assert.ok(r.rms > 1e-6,
+      `rung "${state}" played ${r.names.join(', ')} and rendered SILENCE (rms ${r.rms.toExponential(2)}) — `
+      + 'the cue reaches the voice and the voice makes no sound');
+    checked++;
+  }
+  assert.equal(checked, 3, 'did not check every rung');
 });
