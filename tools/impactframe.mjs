@@ -68,7 +68,7 @@ import { TUNE as FX_TUNE } from '../src/fx/Particles.js';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import {
   W, H, provenance, camFor, project, plateOf, discOf, margins, clear, assertOccluded,
-  assertVisible, groundColumn, groundUnder,
+  assertVisible, groundColumn,
 } from './framelib.mjs';
 
 const S = FX_TUNE.impactScale;
@@ -218,7 +218,31 @@ function assertExtents() {
 }
 console.log(assertExtents());
 
-function score(name, c, { quiet = false } = {}) {
+/* The impact point does not move across a sweep, so its ground column is one query answered
+   hundreds of thousands of times. Keyed on the point, not hoisted into a bare variable, so the
+   candidate set — which may stage elsewhere — still gets its own answer. */
+const _colCache = new Map();
+function columnAt(x, z, ceiling) {
+  const k = `${x},${z}`;
+  let e = _colCache.get(k);
+  if (!e) { e = { col: groundColumn(x, z) }; _colCache.set(k, e); }
+  return { col: e.col, g: e.col.find((y) => y <= ceiling) ?? null };
+}
+
+/**
+ * `stopEarly` skips the ray casts once a cheaper bar has already rejected the camera.
+ *
+ * This is short-circuit evaluation of the SAME predicates, not a pre-filter with its own
+ * thresholds — `alertframe`'s search swept clearance at y+0.9 while `score()` tested y+1.2 and
+ * admitted 158 cells that then reported OCCLUDED. Nothing here is scored by a different rule
+ * than the one that admits it; a camera that survives has had every check run against it.
+ *
+ * The one thing it costs is completeness of the REJECTION TALLY: a camera cropped at the edge is
+ * never tested for occlusion, so the tally reports first reasons rather than all reasons. Said
+ * out loud where the tally prints, because a histogram that looks exhaustive and is not would be
+ * read as one.
+ */
+function score(name, c, { quiet = false, stopEarly = false } = {}) {
   const cam = camFor(c);
   const [px, py, pz] = c.player.pos;
 
@@ -255,6 +279,8 @@ function score(name, c, { quiet = false } = {}) {
   const slyH = sly ? sly.y1 - sly.y0 : 0;
   if (slyH < 110) faults.push(`sly only ${slyH.toFixed(0)} px tall — a slam needs a body, not a token`);
 
+  if (stopEarly && faults.length) return { faults, rank: 0, flat, slyH };
+
   const slyClear = clear(cam, { x: px, y: py + 0.5, z: pz });
   const ringClear = clear(cam, { x: px, y: py + 0.06, z: pz });
   if (!slyClear) faults.push('SLY OCCLUDED by architecture');
@@ -265,8 +291,7 @@ function score(name, c, { quiet = false } = {}) {
      of this courtyard there is a terrace or a roof somewhere above, and a query that takes the
      topmost surface in the column answers about THAT — at (0, 30) it returns 18.12 while the
      paving the character stands on is at 0. */
-  const col = groundColumn(px, pz);
-  const g = groundUnder(px, pz, py + 1.0);
+  const { col, g } = columnAt(px, pz, py + 1.0);
   if (g === null) faults.push(`NO ARCHITECTURE FLOOR at or below y ${(py + 1).toFixed(2)} (column: ${col.map((v) => v.toFixed(2)).join(', ') || 'empty'}) — may be terrain, which this tool cannot see`);
   else if (Math.abs(g - py) > 0.25) faults.push(`FLOATING — floor is at y ${g.toFixed(2)}, the impact is staged at ${py.toFixed(2)}`);
 
@@ -336,7 +361,7 @@ if (args.includes('--search')) {
             target: [AT[0], 0.6, AT[2]], fov, tod: 0.78, player: P,
           };
           n++;
-          const r = score('', cand, { quiet: true });
+          const r = score('', cand, { quiet: true, stopEarly: true });
           if (!r.faults.length) survivors.push({ ...cand, d, hh, azDeg, ...r });
           else for (const f of r.faults) {
             const key = f.replace(/ by [\d.]+ px/, '').replace(/ [\d.]+ px of /, ' N px of ')
@@ -352,7 +377,7 @@ if (args.includes('--search')) {
   console.log(`\n══ SEARCH · ${n} cameras · ${survivors.length} with no faults · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   console.log(`   domain: distance 5-22 m, height 1-12 m, 48 azimuths, 6 lenses, target fixed at the contact`);
   if (behind) console.log(`   ${behind} unusable (subject behind the lens)`);
-  console.log(`\n   why the rest were rejected:`);
+  console.log(`\n   why the rest were rejected (FIRST reason only — the ray casts are skipped once\n   a cheaper bar rejects a camera, so these are not exhaustive per camera):`);
   for (const [f, k] of [...faultTally.entries()].sort((x, y) => y[1] - x[1]).slice(0, 12)) {
     console.log(`     ${String(k).padStart(7)}  ${f}`);
   }
