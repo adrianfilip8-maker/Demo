@@ -436,176 +436,243 @@ const ARCH = new Architecture(ARCH_ENGINE);
 await ARCH.init();
 for (const r of ARCH_REG) r.mesh.updateMatrixWorld(true);
 
-test('T1: the vent mouth is buried under the dune, and its height is not what makes it so', () => {
-  /* THE DIAGNOSIS THIS ARM WAS WRITTEN TO CORRECT. The mouth proxy at (-21, -0.2, -49.4) is
-     `BoxGeometry(2.2, 0.6, 1.9)` while `Controller.TUNE.crawlHeight` is 0.64, and the obvious
-     reading is that the aperture is 0.04 m too short for the capsule meant to pass through it.
-     Measured, that reading is wrong twice over:
+test('T1: the hypostyle hall floor is flush, and the plateau weight is the lever holding it there', () => {
+  /* THIS ARM RETIRES THREE. The old T1, T2 and T3 measured a burial — the hall floor under sand,
+     the portal frames 60.6 % submerged, and the `pyramidPlateau` lerp that caused it — and each
+     said in its own failure message that it should be retired rather than relaxed once the dune
+     was cut. It has been cut (`_plateau[1] * (1 - cm)`, matching `approachRidge` one line above),
+     all three went red on the same run, and this is the arm they asked for.
 
-       1. `vent` is a VOLUME tag. `Collision.overlap` tests volume recs as boxes and never as
-          triangles, and `Controller.inVent()` is a proximity test on the capsule BASE POINT
-          against a `radius + 0.05` = 0.39 m sphere. **No capsule ever has to fit through this
-          box.** Its height gates `Crawl.canEnter`, not passage, so comparing it to a capsule
-          height is comparing two things that never meet. A ceiling probe over the whole mouth
-          footprint reads OPEN — there is no solid aperture here at all.
+     Three arms measuring one defect from three angles is the right shape while you are hunting a
+     cause. It is the wrong shape afterwards, because all three then assert the SAME fact and a
+     future regression trips them together and reads as three problems. One arm, two directions.
 
-       2. The mouth is 0.761 m UNDER the walkable surface. The column at (-21, -49.4) is
-          sand 0.86 / hall paving 0.00, and the mouth's top face is at y 0.10. Raising it
-          0.6 -> 1.2 lifts the top to 0.40 — still 0.46 m below the sand. The proposed fix does
-          not reach, and would have looked like it landed because the arm that checks this did
-          not exist.
+     ── what makes this hold in BOTH directions ────────────────────────────────────────────────
+     A bar that only says "the hall is flush" is half an instrument. The hall would also read
+     flush if somebody deleted `pyramidPlateau` outright, or shortened its falloff until it no
+     longer reached the temple — and then the flushness would be an accident of the plateau's
+     absence rather than the mask doing its job, and the next person to lengthen the falloff would
+     re-bury the hall with nothing red to stop them. So the plateau weight is used as the LEVER:
 
-     What actually makes `inVent()` true today is the NEXT segment down, the 1.2 m sloped run at
-     z -54.5, whose top corner reaches y 0.59 — inside the 0.39 m sphere of a player standing on
-     0.86 m sand. It fires in a 0.5 m band at z -49.50..-49.75 and nowhere else. The mouth proxy
-     is inert: it contributes to nothing, at any height under 0.97 m. */
+       A  the shipped field is flush                                    (must PASS, known-good)
+       B  the same field with the mask weighting removed is NOT flush   (must FAIL, planted)
+       C  the plateau still carries weight at the hall corner           (else A is an accident)
+       D  the plateau still flattens its own pad at pyr2                (else it has been gutted)
+
+     B is not a synthetic violation. Inside the hall `complexMask` is exactly 1, so the masked
+     lerp contributes nothing and the shipped height IS the pre-plateau height; re-applying the
+     unmasked `lerp(h, baseY, w)` therefore reconstructs the field this branch shipped one commit
+     ago. Checked against that tree: 31.5 % of samples above y = 0 and a worst of 1.0501 m from
+     the reconstruction, against 31.5 % and 1.0501 m measured on the real pre-fix build, agreeing
+     everywhere to 1.3 cm (grid interpolation in `heightAt`, well under the 5.5 cm sink). A and B
+     run through the SAME predicate, so this is the §408.3 / §409.3 check applied to my own bar:
+     it is shown to be able to give both of its answers.
+
+     ── where the numbers come from (§141.1) ───────────────────────────────────────────────────
+     No threshold here was chosen after seeing the result.
+       *  the depth bar is `cm * 0.055`, READ OUT OF Terrain.js — the file's own statement of how
+          far under the paving the sand is held so it cannot z-fight. Sand that rises further has
+          consumed the whole margin the code allots it.
+       *  the fraction bar is the COURTYARD, surveyed live in this same run. It is the open-air
+          half of the same pad, the plateau never reached it, and it read 0.45 % above y = 0 both
+          before and after the fix. The hall must be no worse than twice its own control surface.
+          Pre-fix the hall was 31.5 % against that 0.45 % — a factor of 70, not a near miss.
+     Both bars are recomputed from source or from live control geometry, so they track the code
+     rather than freezing a number I happened to measure on one afternoon. */
+  const SRC = readFileSync(new URL('../src/world/Terrain.js', import.meta.url), 'utf8');
+  const PYR = [...SRC.matchAll(/\{ x: (-?[\d.]+), z: (-?[\d.]+), h: [\d.]+, halfBase: ([\d.]+), baseY: ([\d.]+)/g)]
+    .map((m) => m.slice(1).map(Number));
+  assert.equal(PYR.length, 2, 'the PYRAMIDS table is no longer two entries — re-anchor this arm');
+  const sinkM = /h -= cm \* ([\d.]+);/.exec(SRC);
+  const reachM = /const t = 1 - smoothstep\(r, r \+ (\d+), d\);/.exec(SRC);
+  const rmulM = /const r = p\.halfBase \* ([\d.]+);/.exec(SRC);
+  assert.ok(sinkM && reachM && rmulM,
+    'could not read the sink / plateau falloff / halfBase multiplier out of Terrain.js — the bars '
+    + 'in this arm are derived from those constants and must not silently fall back to literals');
+  const SINK = Number(sinkM[1]), REACH = Number(reachM[1]), RMUL = Number(rmulM[1]);
+
+  /* the plateau weight, reconstructed from the constants above rather than restated */
+  const wAt = (x, z) => {
+    let w = 0, y = 0;
+    for (const [px, pz, halfBase, baseY] of PYR) {
+      const r0 = halfBase * RMUL;
+      const s = Math.max(0, Math.min(1, (Math.hypot(x - px, z - pz) - r0) / REACH));
+      const t = 1 - s * s * (3 - 2 * s);
+      if (t > w) { w = t; y = baseY; }
+    }
+    return [y, w];
+  };
+
+  /* Sample once; every arm below is arithmetic on this. The footprint is EgyptLevel's own hall
+     paving field (`K.pavingField({ x0: -23, x1: 23, z0: -51, z1: -17, y: 0 })`), and the control
+     is the courtyard slab north of it. */
+  const survey = (x0, x1, z0, z1) => {
+    const pts = [];
+    for (let x = x0; x <= x1 + 1e-9; x += 0.5) {
+      for (let z = z0; z <= z1 + 1e-9; z += 0.5) {
+        const [by, w] = wAt(x, z);
+        pts.push({ x, z, h: T.heightAt(x, z), by, w });
+      }
+    }
+    return pts;
+  };
+  const HALL = survey(-23, 23, -51, -17);
+  const COURT = survey(-23, 23, -16, 30);
+  assert.ok(HALL.length > 1000 && COURT.length > 1000,
+    `surveyed ${HALL.length} hall / ${COURT.length} courtyard points — too few to say anything`);
+
+  /* ONE predicate, applied to every field below. `k` scales the plateau term back in:
+     k = 0 is the shipped, mask-weighted field; k = 1 is the unmasked field this branch shipped
+     before the fix. */
+  const plant = (p, k) => p.h + (p.by - p.h) * p.w * k;
+  const score = (pts, k) => {
+    let above = 0, worst = -Infinity;
+    for (const p of pts) {
+      const h = plant(p, k);
+      if (h > 0) above++;
+      if (h > worst) worst = h;
+    }
+    return { frac: above / pts.length, worst };
+  };
+
+  const court = score(COURT, 0);
+  const FRAC_BAR = 2 * court.frac;
+  const flush = (s) => s.frac <= FRAC_BAR && s.worst <= SINK;
+
+  const hall = score(HALL, 0);
+  console.log(`  T1: sink ${SINK} m · courtyard control ${(100 * court.frac).toFixed(2)} % above y=0, `
+    + `worst ${court.worst.toFixed(4)} m -> fraction bar ${(100 * FRAC_BAR).toFixed(2)} %`);
+  console.log(`  T1: hall ${HALL.length} pts · ${(100 * hall.frac).toFixed(2)} % above y=0 · `
+    + `worst ${hall.worst.toFixed(4)} m`);
+
+  /* the control surface has to be worth trusting before it can be a bar */
+  assert.ok(court.worst <= SINK,
+    `the COURTYARD is itself carrying ${court.worst.toFixed(3)} m of sand, over the ${SINK} m sink. `
+    + 'It is the reference this arm measures the hall against, so it cannot be used as one until '
+    + 'that is explained — the pad is buried, not just the hall');
+
+  /* ── A: known-good. The shipped field. ─────────────────────────────────────────────────── */
+  assert.ok(hall.worst <= SINK,
+    `the hall floor carries ${hall.worst.toFixed(3)} m of sand at (${HALL.reduce((a, p) => (plant(p, 0) > plant(a, 0) ? p : a)).x}, `
+    + `${HALL.reduce((a, p) => (plant(p, 0) > plant(a, 0) ? p : a)).z}), over the ${SINK} m the code sinks it by. `
+    + 'The dune is back inside the temple. Check the plateau lerp is still `* (1 - cm)` before '
+    + 'looking anywhere else — that is where it came from last time');
+  assert.ok(hall.frac <= FRAC_BAR,
+    `${(100 * hall.frac).toFixed(1)} % of the hall floor is above y = 0 against ${(100 * FRAC_BAR).toFixed(1)} % `
+    + `allowed by its own courtyard control (${(100 * court.frac).toFixed(2)} %). A broad shallow rise that `
+    + 'never breaks the sink bar is still sand over the paving');
+
+  /* ── B: planted. Same predicate, mask weighting removed. Must be REJECTED. ─────────────── */
+  const buried = score(HALL, 1);
+  console.log(`  T1: planted (mask weighting removed) · ${(100 * buried.frac).toFixed(1)} % above y=0 · `
+    + `worst ${buried.worst.toFixed(4)} m — the field this branch shipped at 5d53b3c was 31.5 % / 1.0501 m`);
+  assert.ok(!flush(buried),
+    'removing the mask weighting from the plateau leaves a field this arm still calls FLUSH. Then the '
+    + 'arm cannot see the defect it was written for and every green run above is uninformative — '
+    + 'the bars are too loose, or the plateau no longer reaches the hall at all (see the next arm)');
+
+  /* Where the boundary between A and B sits. REPORTED, NOT BARRED, and the reason is §408.3: any
+     assertion I could put here — "it flips somewhere", "it flips above 0" — is a strict logical
+     consequence of A passing and B failing, and a bar entailed by its neighbours is the exact
+     defect that arm was retired for. It earns its place as a number instead: it says how much of
+     the plateau this predicate can absorb before it objects, which is what tells you whether the
+     shipped field is comfortably inside the bar or sitting on it. */
+  let flip = null;
+  for (let k = 0.005; k <= 1.0001 && flip === null; k += 0.005) if (!flush(score(HALL, k))) flip = k;
+  console.log(`  T1: shipped is k = 0 and pre-fix was k = 1; the predicate first objects at `
+    + `k = ${flip?.toFixed(3) ?? 'never'} — so it absorbs ${((flip ?? 1) * 100).toFixed(1)} % of the `
+    + `plateau term before it fires`);
+  console.log(`  T1: headroom at k = 0 — depth ${hall.worst.toFixed(4)} / ${SINK} m bar, `
+    + `fraction ${(100 * hall.frac).toFixed(2)} / ${(100 * FRAC_BAR).toFixed(2)} %`);
+
+  /* ── C: the lever. The mask is only load-bearing while the plateau still reaches. ──────── */
+  const wMax = HALL.reduce((a, p) => Math.max(a, p.w), 0);
+  const nw = HALL.reduce((a, p) => (p.w > a.w ? p : a));
+  console.log(`  T1: plateau weight over the hall peaks at ${wMax.toFixed(3)} at (${nw.x}, ${nw.z}), `
+    + `d = ${Math.hypot(nw.x - PYR[0][0], nw.z - PYR[0][1]).toFixed(1)} m from pyr1`);
+  assert.ok(wMax > 0.05,
+    `the plateau's weight over the hall has fallen to ${wMax.toFixed(3)}. The floor may well be flush, but `
+    + 'it is no longer the complex mask holding it there — the plateau simply stopped reaching. That is '
+    + 'a different world from the one this arm certifies: lengthen the falloff again and the hall '
+    + 're-buries with nothing red. Re-derive this arm against whatever now bounds the plateau');
+
+  /* ── D: the far side. The plateau must still do the job it exists for. ────────────────── */
+  const [p2x, p2z, , p2base] = PYR[1];
+  const p2 = T.heightAt(p2x, p2z);
+  console.log(`  T1: pyr2 pad at (${p2x}, ${p2z}) reads ${p2.toFixed(3)} m against baseY ${p2base}`);
+  assert.ok(Math.abs(p2 - p2base) <= SINK,
+    `pyr2's own pad reads ${p2.toFixed(3)} m against a baseY of ${p2base}. The plateau exists to flatten `
+    + 'the ground its pyramids stand on, and masking it inside the complex must not have cost it that. '
+    + 'If this failed alongside a flush hall, the plateau was weakened rather than masked');
+});
+
+test('T2: cutting the dune made the vent mouth live, which it was not before', () => {
+  /* THIS ARM EXISTS BECAUSE OF THE FIX ABOVE, and it is separate from it because it is a
+     different invariant: T1 is about the hall floor, this is about whether the crawl route can
+     still be entered. Folding them together would make one arm assert two unrelated things.
+
+     §408.1 refused "open the aperture, 0.6 -> 1.2" on four measured grounds. Cutting the dune
+     dissolved two of them and REVERSED a third, and that is recorded here rather than quietly
+     dropped:
+
+       (1) `vent` is a VOLUME tag — `Collision.overlap` tests volume recs as boxes, never as
+           triangles, and `Controller.inVent()` is a proximity test on the capsule BASE point
+           against a `radius + 0.05` = 0.39 m sphere. No capsule ever passes through this box, so
+           its height was never an aperture.                                    STANDS, unchanged.
+       (2) the mouth is 0.759 m under the walkable surface                      GONE — the sand at
+           the mouth went from 0.859 m to -0.052 m, so there is no burial left to clear.
+       (3) `A.proxy` fixes the box CENTRE, so a 1.2 m mouth tops out at 0.40 and misses the
+           threshold by 0.07 m                                                  MOOT — the
+           threshold moved with the sand, from 0.47 to -0.44.
+       (4) "the mouth is inert regardless"                                      REVERSED. Its top
+           is at 0.100 against a -0.442 threshold: at its shipped 0.6 m height, the mouth now
+           satisfies `inVent()` on its own.
+
+     So the instruction's GOAL was reached without touching the geometry it named — by removing
+     the sand that was the actual cause. Ground (1) is why the resize would still have been the
+     wrong change, and it is the ground that never depended on the dune. This arm pins the result
+     so the entrance cannot silently go back to being unreachable. */
   const vents = ARCH_REG.filter((r) => r.opts?.tag === 'vent')
     .map((r) => ({ r, b: new THREE.Box3().setFromObject(r.mesh), h: r.mesh.geometry.parameters.height }));
-  assert.ok(vents.length > 0, 'inspected 0 vent proxies — Architecture did not boot');
   assert.equal(vents.length, 4, 'the vent chain is no longer four segments');
+  const PROBE = 0.39;   // Controller.inVent(): this.radius + 0.05
+
+  const live = [];
+  for (const v of vents) {
+    const p = v.r.mesh.position;
+    const sand = T.heightAt(p.x, p.z);
+    const thr = sand - PROBE;
+    if (v.b.max.y > thr) live.push({ z: p.z, top: v.b.max.y, sand, thr });
+  }
+  console.log(`  T2: ${live.length}/4 vent segments reach the inVent() probe: `
+    + live.map((l) => `z ${l.z.toFixed(1)} top ${l.top.toFixed(2)} vs thr ${l.thr.toFixed(2)}`).join(' · '));
+  assert.ok(live.length > 0,
+    'NO vent segment reaches the inVent() probe from the surface above it. The crawl route is '
+    + 'unreachable — nothing can make inVent() true and the whole branch is dead content');
 
   const mouth = vents.find((v) => Math.abs(v.r.mesh.position.z + 49.4) < 0.01);
   assert.ok(mouth, 'the vent mouth is no longer at z -49.4');
   const sand = T.heightAt(mouth.r.mesh.position.x, mouth.r.mesh.position.z);
-  const gap = sand - mouth.b.max.y;
-  console.log(`  T1: mouth top y ${mouth.b.max.y.toFixed(2)} (h ${mouth.h}) · sand ${sand.toFixed(3)} · `
-    + `buried by ${gap.toFixed(3)} m · a 1.2 m mouth would still be ${(gap - 0.3).toFixed(3)} m under`);
-  assert.ok(gap > 0,
-    'the vent mouth now breaks the sand surface. That is the fix this arm was written to ask for — '
-    + 'retire it and pin the new geometry instead of leaving it asserting a defect that is gone');
-  assert.ok(gap > 0.3,
-    `the mouth is only ${gap.toFixed(3)} m under the sand, so raising it to match its 1.2 m siblings `
-    + 'would now surface it and that IS the cheap fix — this arm exists to say when that becomes true');
+  console.log(`  T2: mouth top ${mouth.b.max.y.toFixed(3)} · sand ${sand.toFixed(3)} · `
+    + `threshold ${(sand - PROBE).toFixed(3)} · clearance ${(mouth.b.max.y - sand).toFixed(3)} m above sand`);
+  assert.ok(mouth.b.max.y > sand,
+    `the vent mouth is ${(sand - mouth.b.max.y).toFixed(3)} m under the sand again. That is the §408.2 `
+    + 'burial returning, and T1 above should have caught it first — if T1 is green and this is red, '
+    + 'the burial is local to the mouth and is NOT the plateau');
+  assert.ok(mouth.b.max.y > sand - PROBE,
+    `the mouth's top is at ${mouth.b.max.y.toFixed(2)} against a ${(sand - PROBE).toFixed(2)} m probe threshold, `
+    + 'so it no longer contributes to inVent() and the entrance rests entirely on the sloped run '
+    + 'behind it — which is the state §408.1 measured and called inert');
 
-  /* The number a height-only fix would have to reach, derived under the convention the CODE uses.
-     `A.proxy(geo, opts, { y })` fixes the box CENTRE, so growing the height grows it downward as
-     much as upward — half of every metre added is spent digging. The first version of this line
-     derived 0.97 m by holding the box FLOOR fixed, which is not what the call does, and it made a
-     1.2 m mouth look like it would clear. It does not: centre -0.2 plus half of 1.2 puts the top
-     at 0.40, and the threshold is sand - 0.39 = 0.47. It misses by 0.07 m — which is exactly the
-     kind of near-miss that reads as a fix in a diff and changes nothing in the game. */
-  const centreY = mouth.r.mesh.position.y;
-  const threshold = sand - 0.39;
-  const need = 2 * (threshold - centreY);
-  console.log(`  T1: centre held at y ${centreY} · top must reach ${threshold.toFixed(2)} · `
-    + `so a height-only fix needs >= ${need.toFixed(2)} m, and 1.2 m tops out at `
-    + `${(centreY + 0.6).toFixed(2)} — short by ${(threshold - centreY - 0.6).toFixed(2)} m`);
-  assert.ok(need > 1.2,
-    `a ${need.toFixed(2)} m mouth would now reach, so matching the 1.2 m siblings has become a real fix `
-    + 'and the recommendation recorded here is out of date');
-  assert.ok(centreY + 0.6 < threshold,
-    'a 1.2 m mouth now clears the inVent() threshold, so the cheap sibling-matching fix works and '
-    + 'this arm should be saying so instead of warning against it');
-
-  /* and the segment that is actually carrying the entrance */
-  const slope = vents.find((v) => Math.abs(v.r.mesh.position.z + 54.5) < 0.01);
-  assert.ok(slope, 'the sloped vent run is no longer at z -54.5');
-  assert.ok(slope.b.max.y > sand - 0.39,
-    `the sloped run's top is at ${slope.b.max.y.toFixed(2)} against a ${(sand - 0.39).toFixed(2)} m threshold — `
-    + 'if it has dropped below, NOTHING makes inVent() true at the entrance and the crawl is unreachable');
-});
-
-test('T2: the drawn portal frames are 62 % under sand — the burial is the whole assembly', () => {
-  /* The mouth proxy being low could be a proxy bug. The frames beside it exist "so the crawl reads
-     as built, not as a hole in the maths", they are authored from y = 0, and if they are under the
-     same sand then the authored intent was floor level and TERRAIN covered the lot. That is the
-     difference between a wrong number and a module boundary nobody measured across. */
-  const box = new THREE.Box3(new THREE.Vector3(-22.5, -1, -50.6), new THREE.Vector3(-19.4, 2.0, -48.4));
-  let below = 0, above = 0;
-  const names = {};
-  ARCH.root.updateMatrixWorld(true);
-  ARCH.root.traverse((o) => {
-    if (!o.isMesh || o.visible === false) return;
-    const g = o.geometry;
-    if (!g?.attributes?.position) return;
-    if (!g.boundingBox) g.computeBoundingBox();
-    if (!o.isInstancedMesh && !g.boundingBox.clone().applyMatrix4(o.matrixWorld).intersectsBox(box)) return;
-    const pos = g.attributes.position, v = new THREE.Vector3();
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
-      if (!box.containsPoint(v)) continue;
-      names[o.name] = (names[o.name] || 0) + 1;
-      if (v.y <= T.heightAt(v.x, v.z)) below++; else above++;
-    }
+  /* the planted direction: the arm must be able to say "unreachable". Drop every segment by the
+     burial the fix removed (0.911 m, sand 0.859 -> -0.052) and the entrance must go dark. */
+  const REBURY = 0.911;
+  const stillLive = vents.filter((v) => {
+    const p = v.r.mesh.position;
+    return (v.b.max.y - REBURY) > (T.heightAt(p.x, p.z) + REBURY) - PROBE;
   });
-  const frac = below / (below + above);
-  console.log(`  T2: ${below + above} drawn vertices in the mouth's box (${Object.keys(names).join(', ')}) — `
-    + `${(100 * frac).toFixed(1)} % under sand`);
-  assert.ok(below + above > 100, 'inspected too few drawn vertices to say anything');
-  assert.ok(frac > 0.4,
-    `only ${(100 * frac).toFixed(1)} % of the mouth's drawn geometry is under sand. If the dune has been `
-    + 'cut back, this defect is fixed and both T1 and T2 should be retired rather than relaxed');
-  /* and the dune never lets go of it: there is no z along the axis where the sand reaches y = 0 */
-  let clear = null;
-  for (let z = -46; z >= -60; z -= 0.25) if (clear === null && T.heightAt(-21, z) <= 0) clear = z;
-  console.log(`  T2: sand along x = -21 first reaches y <= 0 at z = ${clear ?? 'nowhere in -46..-60'}`);
-  assert.equal(clear, null,
-    `the dune now drops to the hall floor at z ${clear}, so the mouth has daylight and this arm is stale`);
-});
-
-test('T3: the burial is the PYRAMID PLATEAU, applied after the mask that exists to stop it', () => {
-  /* T1 and T2 measure the burial. This arm names its cause, because "cut the dune back" is not
-     actionable until you know which term put it there, and two plausible candidates are wrong:
-
-       `drift`      the exterior sand ramp — returns 0 inside the pad rect (`outsideRect` really
-                    does return 0 inside; I checked the function rather than its docstring).
-       `paveDrift`  the thin sheet over the paving edge — capped at `padLip` 0.30 m, and the
-                    burial reaches 1.17 m. It cannot be the source and is not.
-
-     The cause is `pyramidPlateau`. Its weight is `1 - smoothstep(r, r + 110, d)` with
-     `r = halfBase * 1.3`, so pyr1 (halfBase 82, baseY 6.5) still has weight at **d = 186.8 m** —
-     which is where the hall's north-west corner stands. And it is applied as
-     `h = lerp(h, baseY, w)` AFTER `h *= 1 - cm`, so the complex mask whose entire job is to hold
-     the complex flush at y = 0 is overridden two lines later. `approachRidge` on the line above
-     is weighted `* (1 - cm)` and behaves; the plateau is not.
-
-     The control is what makes this attribution rather than correlation: the hall's two north
-     corners have identical pad geometry, mirrored in x. The WEST one is 186.8 m from pyr1 and
-     inside the falloff; the EAST one is 222.1 m away and outside it. West reads 1.17 m of sand,
-     east reads flush. Nothing about `drift`, `paveDrift` or the mask distinguishes them. */
-  const SRC = readFileSync(new URL('../src/world/Terrain.js', import.meta.url), 'utf8');
-  const m = /\{ x: (-?[\d.]+), z: (-?[\d.]+), h: [\d.]+, halfBase: ([\d.]+), baseY: ([\d.]+)/.exec(SRC);
-  assert.ok(m, 'could not read the first PYRAMIDS entry out of Terrain.js — re-anchor this arm');
-  const [px, pz, halfBase, baseY] = m.slice(1).map(Number);
-  const fall = /const t = 1 - smoothstep\(r, r \+ (\d+), d\);/.exec(SRC);
-  assert.ok(fall, 'the plateau falloff is no longer `smoothstep(r, r + N, d)`');
-  const reach = Number(fall[1]);
-  const r0 = halfBase * 1.3;
-  const wAt = (x, z) => {
-    const d = Math.hypot(x - px, z - pz);
-    const s = Math.max(0, Math.min(1, (d - r0) / reach));
-    return 1 - s * s * (3 - 2 * s);
-  };
-
-  const WEST = [-24, -52], EAST = [24, -52];
-  const hw = T.heightAt(...WEST), he = T.heightAt(...EAST);
-  const ww = wAt(...WEST), we = wAt(...EAST);
-  console.log(`  T3: pyr1 (${px}, ${pz}) halfBase ${halfBase} baseY ${baseY} · plateau reaches `
-    + `${(r0 + reach).toFixed(1)} m`);
-  console.log(`  T3: hall NW d ${Math.hypot(WEST[0] - px, WEST[1] - pz).toFixed(1)} m -> weight ${ww.toFixed(3)} · sand ${hw.toFixed(3)}`);
-  console.log(`  T3: hall NE d ${Math.hypot(EAST[0] - px, EAST[1] - pz).toFixed(1)} m -> weight ${we.toFixed(3)} · sand ${he.toFixed(3)}`);
-
-  assert.ok(ww > 0.05, `the plateau weight at the hall's NW corner is ${ww.toFixed(3)} — if it has fallen `
-    + 'to zero the plateau no longer reaches the temple and this attribution is stale');
-  assert.equal(we, 0, `the hall's NE corner now carries plateau weight ${we.toFixed(3)}, so it is no longer `
-    + 'the control this arm rests on and the comparison proves nothing');
-
-  /* the prediction: lerping the flush height toward baseY by that weight reproduces the burial.
-     The east corner supplies the flush reference, since it is the same geometry with weight 0. */
-  const predicted = he + (baseY - he) * ww;
-  console.log(`  T3: lerp(flush ${he.toFixed(3)}, baseY ${baseY}, w ${ww.toFixed(3)}) = ${predicted.toFixed(3)} `
-    + `against a measured ${hw.toFixed(3)} — ${(100 * Math.abs(predicted - hw) / hw).toFixed(1)} % apart`);
-  assert.ok(Math.abs(predicted - hw) / hw < 0.08,
-    `the plateau lerp predicts ${predicted.toFixed(3)} m and the field returns ${hw.toFixed(3)} m. They agreed `
-    + 'to within 3 % when this was measured; if they have diverged, some OTHER term is now '
-    + 'contributing and the single-cause attribution here is wrong');
-
-  /* THE FIX THIS ARM IS WAITING FOR, stated so it is not re-derived: weight the plateau by the
-     complex mask, exactly as `approachRidge` already is —
-         h = lerp(h, _plateau[0], _plateau[1] * (1 - cm));
-     One line, no new constant, and it leaves the plateau untouched outside the complex because
-     `cm` is 0 there. Held while a capture holds the lock (§186). */
-  assert.match(SRC, /h = lerp\(h, _plateau\[0\], _plateau\[1\]\);/,
-    'the plateau lerp has changed. If it is now mask-weighted, this defect is fixed — retire T1, '
-    + 'T2 and T3 together and pin the exposed hall floor instead of the buried one');
+  console.log(`  T2: planted — re-bury by ${REBURY} m and ${stillLive.length}/4 segments still reach`);
+  assert.equal(stillLive.length, 0,
+    `${stillLive.length} vent segments still reach the probe after re-burying them under the sand the `
+    + 'dune fix removed. Then this arm cannot say "unreachable" and its green above means nothing');
 });
