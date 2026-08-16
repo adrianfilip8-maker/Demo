@@ -468,6 +468,22 @@ export class Terrain {
     this._cacheX0 = -this._cacheHalf;
     this._cache = null;
 
+    /* VEGETATION and WATER are sub-modules of TERRAIN, not MANIFEST entries: they take `this`
+       and read `terrain.tune` / `terrain.tex()` / `terrain.mat()` directly and unguarded, so
+       there is no way to boot either without a Terrain. That is fine in `main.js`, and it is a
+       trap for every offline harness — which is worth stating here because it has now cost two
+       lanes a wrong answer each.
+       ── The missing-module failure has no tell ────────────────────────────────────────────
+       A harness that builds ARCHITECTURE and not TERRAIN gets a level with **no desert floor at
+       all** — the courtyard `groundProxy` spans z −16…34 and everything beyond it is Terrain's
+       `ground`/`sand` collider (registered ~line 1071). Nothing warns; the geometry simply is
+       not there, and probes answer confidently about a world with a hole in it. §382 is one lane
+       measuring "nearest standable ground 7.48 m away, 6.45 m of solid pylon in between" from
+       exactly that hole, and §385 is this lane making the same omission with PROPS.
+       Counted, omitting TERRAIN drops **five** colliders and not one: 1 `ground` (the desert),
+       1 `water` (the Nile, from WATER), and 3 `misc` (palm trunks, from VEGETATION). Anything
+       reasoning about standable ground, water volumes or the palm grove needs this module
+       built, and cannot substitute the two children for it. */
     this.vegetation = new Vegetation(engine, this);
     this.water = new Water(engine, this);
   }

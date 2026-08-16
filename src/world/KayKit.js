@@ -375,9 +375,29 @@ export class KayKit {
     this.group.add(m);
     /* `misc`, not `obstacle` — which is not a tag. Collision.js knows ground/wall/ledge/rail/
        pole/hook/spire/vent/water/hazard/misc, and an unknown one is treated as GROUND, so the
-       first run silently turned every barrel into a piece of floor. `misc` is in SOLID_TAGS so
-       it blocks, without `wall`'s wall-run semantics (Controller.js:583), `ledge`'s grabbability
-       or `pole`'s climbability — none of which a crate should offer. */
+       first run silently turned every barrel into a piece of floor. `misc` is in SOLID_TAGS, so
+       it blocks. That much is true and it is the reason for the tag.
+
+       WHAT THIS COMMENT USED TO CLAIM, AND WHAT IS ACTUALLY TRUE. It said `misc` blocks "without
+       `wall`'s wall-run semantics, `ledge`'s grabbability or `pole`'s climbability — none of
+       which a crate should offer". Two thirds of that is false, and it was cited to a line
+       (`Controller.js:583`) that is an unrelated field initialiser. Measured on a real
+       `Controller` against a real `Collision`, one synthetic box per tag:
+
+         wall / misc / ledge   wallRun 38 frames, wallCling 83, apex 2.90 — IDENTICAL
+         wall / misc / ledge   ledgeClimb 18 frames                       — IDENTICAL
+
+       `Controller.probeWall` and `probeLedge` are **tag-agnostic**: they gate on surface normals
+       (`|n.y|` against `TUNE.wallNormalMax`, plus a special case that ignores flat `ground`),
+       never on the rec's tag. So a KayKit crate IS wall-runnable and IS ledge-grabbable, exactly
+       like a temple wall. Only the third claim holds: `PoleClimb.canEnter` goes through
+       `afford('pole')`, which IS tag-filtered, so a crate offers no shaft to climb.
+
+       Nothing is changed here on the strength of that. The tag is still right — `misc` is what
+       stops a barrel being FLOOR, which was the actual bug — and whether a 1 m crate should be
+       wall-runnable is a MOVEMENT question about normal-gated affordances, not a WORLD question
+       about tags. It is recorded so the next person does not re-derive a guarantee that the
+       collision layer never offered. */
     this.engine.registerCollider(m, { tag: 'misc', material: 'wood' });
     this.stats.colliders++;
   }
