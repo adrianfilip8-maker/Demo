@@ -43,102 +43,16 @@
  * is a question for a capture, and per KNOWN_ISSUES §367 a capture is the one instrument that
  * *can* answer it — FX are among the few systems that do render live in a shot.
  */
-import * as THREE from 'three';
-import { execFileSync } from 'node:child_process';
-import { buildLevel, trisIn, rayTri } from './lvl.mjs';
 import { SHOTS } from '../src/core/Shots.js';
+/* The five projection primitives live in `framelib.mjs` since `impactframe.mjs` was written
+   and needed the identical five. The one thing that must never happen is two staging tools
+   disagreeing about where a point lands, and two copies is how that happens. */
+import {
+  W, H, SLY, GUARD, provenance, camFor, project, boxOf, overlapArea, margins, clear,
+} from './framelib.mjs';
 
-/* Provenance, for the reason `charvis.mjs` states in its own header: this tool loads
-   `src/world/**`, so its numbers describe the tree at the moment it ran. A figure from it
-   without a commit beside it has been measured against a tree that may no longer exist. */
-const provenance = (() => {
-  try {
-    const sha = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
-    const dirty = execFileSync('git', ['status', '--porcelain', '--', 'src/'], { encoding: 'utf8' })
-      .split('\n').filter((l) => l.length > 3).length > 0;
-    return `${sha}${dirty ? ' +dirty(src)' : ''}`;
-  } catch { return 'unknown'; }
-})();
-
-const W = 1280, H = 720;          // the critic's resolution, not the harness's
-
-/** Sly is 1.8 m; a guard reads about 1.95 m in the nemes. Upright boxes, deliberately coarse. */
-const SLY = { w: 0.62, h: 1.80 };
-const GUARD = { w: 0.78, h: 1.95 };
 const MARK_Y = 1.55;              // Particles.js _onGuardAlert
 const MARK_R = 0.55;              // the mark's own radius, so "in frame" means all of it
-
-/* ---------------------------------------------------------------------- */
-
-function camFor(spec) {
-  const cam = new THREE.PerspectiveCamera(spec.fov, W / H, 0.1, 600);
-  cam.position.fromArray(spec.pos);
-  cam.lookAt(new THREE.Vector3().fromArray(spec.target));
-  if (spec.roll) cam.rotateZ(THREE.MathUtils.degToRad(spec.roll));
-  cam.updateMatrixWorld(true);
-  cam.updateProjectionMatrix();
-  return cam;
-}
-
-/** Project a world point to pixels. Returns null when it is behind the lens. */
-function project(cam, x, y, z) {
-  const v = new THREE.Vector3(x, y, z);
-  const view = v.clone().applyMatrix4(cam.matrixWorldInverse);
-  if (view.z > -1e-6) return null;                 // behind the camera
-  v.project(cam);
-  return { px: (v.x * 0.5 + 0.5) * W, py: (1 - (v.y * 0.5 + 0.5)) * H };
-}
-
-/** Pixel box of an upright box subject standing at (x, z) on ground `y`. */
-function boxOf(cam, x, y, z, dims) {
-  const pts = [];
-  for (const dx of [-dims.w / 2, dims.w / 2]) {
-    for (const dz of [-dims.w / 2, dims.w / 2]) {
-      for (const dy of [0, dims.h]) {
-        const p = project(cam, x + dx, y + dy, z + dz);
-        if (!p) return null;                       // any corner behind the lens: unusable
-        pts.push(p);
-      }
-    }
-  }
-  return {
-    x0: Math.min(...pts.map((p) => p.px)), x1: Math.max(...pts.map((p) => p.px)),
-    y0: Math.min(...pts.map((p) => p.py)), y1: Math.max(...pts.map((p) => p.py)),
-  };
-}
-
-const overlapArea = (a, b) => {
-  if (!a || !b) return 0;
-  const w = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
-  const h = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
-  return w > 0 && h > 0 ? w * h : 0;
-};
-
-const margins = (b) => (b ? {
-  l: b.x0, r: W - b.x1, t: b.y0, b: H - b.y1,
-} : null);
-
-/* ---------------------------------------------------------------------- */
-
-const { A } = await buildLevel();
-
-/** Is the straight line from the lens to `p` clear of architecture? */
-function clear(cam, p) {
-  const o = cam.position;
-  const d = new THREE.Vector3(p.x - o.x, p.y - o.y, p.z - o.z);
-  const len = d.length();
-  if (len < 1e-6) return true;
-  d.multiplyScalar(1 / len);
-  const box = new THREE.Box3().setFromPoints([o.clone(), new THREE.Vector3(p.x, p.y, p.z)]);
-  box.expandByScalar(1.0);
-  const tris = trisIn(A.root ?? A.group ?? A, box);
-  for (const T of tris) {
-    const t = rayTri(o.x, o.y, o.z, d.x, d.y, d.z, T);
-    /* The 0.25 m near-cut keeps a subject's own footing slab from counting as its occluder. */
-    if (t > 0.25 && t < len - 0.25) return false;
-  }
-  return true;
-}
 
 /* ---------------------------------------------------------------------- */
 
@@ -150,10 +64,22 @@ function clear(cam, p) {
  * the same place.
  *
  * That second rung is the point of the shot rather than a bonus. The registered claim (T3) is
- * that four rungs read APART — strictly increasing, ≥1.6x per step, rung 3 at loudness 0.0177
- * against rung 2's 0.00949. **One rung in a frame cannot evidence a ladder.** So a candidate that
- * frames only one guard is not a candidate for this shot, and `guard2` is required rather than
- * optional.
+ * that four rungs read APART — strictly increasing, ≥1.6x per step. Recomputed from the
+ * catalogue against T3's own `loudness` (`mean(count) × mean(alpha) × size[0]²`):
+ *
+ *   patrol 0.00366 → suspicious 0.01852 → searching 0.06014 → chase 0.21529
+ *   steps 5.06x · 3.25x · 3.58x
+ *
+ * **One rung in a frame cannot evidence a ladder.** So a candidate that frames only one guard is
+ * not a candidate for this shot, and `guard2` is required rather than optional.
+ *
+ * CORRECTION. This header previously cited "rung 3 at loudness 0.0177 against rung 2's 0.00949,
+ * a 1.9x step", and both halves of that pair are wrong. `0.0177` is `Particles.js:3577`'s
+ * figure, which is a DIFFERENT quantity from T3's (it does not reproduce from the catalogue
+ * under T3's formula either, and is a separate open question about that comment). `0.00949`
+ * appears nowhere in the tree at all. The real rung2→rung3 step is **3.58x, not 1.9x**, which
+ * makes every argument here that leaned on it stronger rather than weaker — but a citation that
+ * happens to argue in your favour is still a citation you have to be able to produce.
  */
 function score(name, c) {
   const cam = camFor(c);
@@ -209,10 +135,15 @@ function score(name, c) {
      correct staging. What has to survive is his MARK, because rung 2 is the entire reason he is in
      the shot: the frame's job is to show two rungs reading apart, and a rung nobody can resolve
      shows one. So the bar is on the mark's drawn diameter, not on the man carrying it.
-     30 px, derived: the FX lane measured rung 2 at loudness 0.00949 against rung 3's 0.0177, a
-     1.9x step, and a 1.9x difference in a soft puff needs enough pixels to be read as brightness
-     rather than as aliasing. 30 px is roughly the size at which the ink hull's own ~2.5 px line
-     stops dominating a round shape — an order of magnitude above it. */
+     30 px, derived: rung 2 scores 0.06014 against rung 3's 0.21529 on T3's own loudness, a
+     3.58x step (see the header's correction — the 1.9x this used to cite was two figures from
+     two different quantities, one of which does not exist). A 3.58x difference in a soft puff
+     still needs enough pixels to be read as brightness rather than as aliasing, and 30 px is
+     roughly the size at which the ink hull's own ~2.5 px line stops dominating a round shape —
+     an order of magnitude above it. The wider real step means this bar has MORE headroom than
+     it was set with, not less, so it is left where it is rather than loosened to match: a bar
+     is re-scoped when nothing depends on the answer (§141.1), and `alert` now ships against
+     this one. */
   const markPx = (b) => (b ? Math.max(b.x1 - b.x0, b.y1 - b.y0) : 0);
   const m3px = markPx(markBox), m2px = markPx(mark2Box);
   if (markBox && m3px < 30) faults.push(`rung-3 mark only ${m3px.toFixed(0)} px across`);

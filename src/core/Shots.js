@@ -604,6 +604,58 @@ export const SHOTS = {
         lookAt: [-9.5, 20.5], look: [0.26, 0.0] },
     ],
   },
+
+  /* The Cane Slam — the loudest thing in the FX catalogue, and unseen until now.
+     ────────────────────────────────────────────────────────────────────────────────────────
+     `Particles._stageImpact()` was written, is correct, and had never run: this file had no
+     entry named `impact`, so its dispatcher branch was unreachable, exactly as `alert`'s was.
+     `dive_ring`'s peak projected ink is 104x `alert_spot`'s, which makes it the largest single
+     sprite in the game by a factor of 7.6 over the next one, and nothing has ever framed it.
+
+     WHAT IS ON THE FLOOR, at `TUNE.impactScale` 1.25: a ring reaching 1.50 m, a dust dome
+     1.88 m high, and two decals — crack at 2.75 m across and scuff at 4.25 m, the widest mark
+     and the one that decides the framing. `tools/impactframe.mjs` measures all of it.
+
+     WHY A DISC AND NOT A BOX, which is the whole reason that tool exists rather than reusing
+     `alertframe`: a ground ring has no height and its silhouette is not its bounding square.
+     From a low camera a circle projects to a wide flat ellipse whose extremes are on the rim.
+     Projecting a box instead over-reports its vertical extent and under-reports its near/far
+     spread — and both errors point toward "it fits", which is the direction that ships a
+     cropped frame.
+
+     THIS IS CANDIDATE C, at 1280x720:
+
+       sly    rows 202..451 (249 px) · margins l583 r583 t202 b269 · clear
+       ring   360 x 181 px · margins l460 r460 t341 b198 · clear
+       scuff  517 x 264 px · margins l381 r381 t318 b137
+       ellipse ratio 0.511 (bar 0.22) · the ring covers 44% of Sly's box (bar 55%)
+
+     Chosen over three other candidates that also passed every bar, by a stated tiebreak rather
+     than by taste: the product of the ring reading as a RING (the ellipse ratio) and the figure
+     reading as a FIGURE (its pixel height). Those pull opposite ways — elevation rounds the
+     ring and shrinks the man — and C maximises the pair at 127.4 against A 122.6, D 114.4 and
+     B 97.0.
+
+     **The tiebreak is not a bar and must never be used as one.** The tool's calibration
+     candidate — close, low, the frame the instinct actually produces — scores 199.9, the
+     highest rank of all five, while cropping the scuff on three edges and the dust on two. The
+     composite ranks survivors; the derived bars decide who survives.
+
+     WHERE, and the two rejected sites are why this carries a comment. The first draft slammed
+     at (0, 0, 20): the column over that point holds architecture at 1.56, 1.63, 2.00 and
+     2.92 m, so it is a slam in a 1.56 m crawlspace under the obelisk terrace. The second tried
+     (0, 0, -6), which has NO architecture floor at all — a gap in the paving, where the crack
+     and scuff would have landed on terrain the tool cannot see, or on nothing. Both were found
+     by printing the whole column over the impact point rather than by taking one ground query's
+     answer, and both would have rendered a perfectly plausible picture.
+
+     NOT VERIFIED: whether the dust READS. `impactframe` is architecture-only and says nothing
+     about light or about FX. Per KNOWN_ISSUES §367 a capture can answer it, because FX is one
+     of the few systems that renders live in a shot. */
+  impact: {
+    pos: [5.4, 4.4, -2.6], target: [0.0, 0.6, -8.0], fov: 38, tod: 0.78,
+    player: { pos: [0, 0, -8], yaw: 0.35, pose: 'dive_impact' },
+  },
 };
 
 export const SHOT_NAMES = Object.keys(SHOTS);

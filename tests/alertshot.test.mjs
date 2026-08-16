@@ -1,5 +1,10 @@
 /**
- * alertshot.test.mjs — the runtime half of the `alert` canonical shot.
+ * alertshot.test.mjs — the runtime half of the two staged-FX canonical shots.
+ *
+ * `alert` and `impact`. They are together because they are the same defect closed twice:
+ * `Particles._stageAlert` and `_stageImpact` were both written, both correct, and neither had
+ * ever run, because `Shots.js` had no entry by either name and the dispatcher's two branches
+ * were unreachable. Everything below is a check that the two ends are now joined.
  *
  * `tools/alertframe.mjs` owns the FRAME: where the two figures and the two marks land at
  * 1280x720, whether anything is cropped, whether the silhouettes merge. It is the tool of
@@ -26,7 +31,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 
 import { SHOTS } from '../src/core/Shots.js';
-import { Particles } from '../src/fx/Particles.js';
+import { Particles, TUNE as FX_TUNE } from '../src/fx/Particles.js';
 import { Guards } from '../src/ai/Guard.js';
 
 const ALERT = SHOTS.alert;
@@ -232,4 +237,84 @@ test('alert: the guard is found by ROSTER index, not by array position', () => {
   Guards.prototype._poseOne.call(ctx, spec);
   assert.equal(ctx.shotGuards.length, 1,
     `roster #${spec.index} sitting at array position 0 was not found — the lookup is positional`);
+});
+
+/* ── 4. `impact`, the other branch that had never run ─────────────────────────────────── */
+
+const IMPACT = SHOTS.impact;
+
+/** Run the shipped `_stageImpact` against a stubbed world. */
+function stageImpact({ player = new THREE.Vector3(0, 0, -8) } = {}) {
+  const emits = [], decals = [];
+  const ctx = {
+    engine: { get: (k) => (k === 'movement' && player ? { position: player } : null) },
+    _emit: (name, at, o) => { emits.push({ name, at: at.clone(), ...o }); },
+    decal: (name, at, n, o) => { decals.push({ name, at: at.clone(), ...o }); },
+  };
+  const out = Particles.prototype._stageImpact.call(ctx);
+  return { emits, decals, out };
+}
+
+test('impact: the slam is staged at the player, and every sprite is aged off zero', () => {
+  /* THE AGES ARE THE POINT. `_onCaneHit`'s gameplay path emits at age 0, which is correct when
+     a clock is running and catastrophic when one is not: at age 0 the shader's
+     `smoothstep(0, fadeIn, u)` is exactly zero, so on the `dt = 0` capture path §195 mandates
+     for A/B arms, every one of these four sprites renders NOTHING. A regression that drops the
+     staged ages would produce an empty frame that no other check would notice, because the
+     emitters would all still be "reached". */
+  const at = new THREE.Vector3(0, 0, -8);
+  const { emits, decals, out } = stageImpact({ player: at });
+
+  const names = emits.map((e) => e.name).sort();
+  assert.deepEqual(names, ['dive_debris', 'dive_dust', 'dive_ring', 'dive_spark'],
+    `the slam staged ${names.join(', ') || 'nothing'}`);
+  for (const e of emits) {
+    assert.ok(typeof e.age === 'number' && e.age > 0,
+      `${e.name} is staged at age ${e.age} — at age 0 it renders nothing at all on the dt=0 path`);
+  }
+
+  /* Both decals, because they are half the event: the ring is gone in a third of a second and
+     the crack is what says something happened here. Not aged — `Decals` has its own hold ramp
+     and no fade-in, so a mark is full strength the moment it lands. */
+  assert.deepEqual(decals.map((d) => d.name).sort(), ['crack', 'scuff'],
+    'the slam left no lasting mark on the ground');
+
+  for (const e of emits) {
+    assert.ok(Math.abs(e.at.x - at.x) < 1e-6 && Math.abs(e.at.z - at.z) < 1e-6,
+      `${e.name} was staged at (${e.at.x}, ${e.at.z}), not under the player`);
+  }
+  assert.ok(out.point && out.radius > 0, '_stageImpact reported no framing point');
+});
+
+test('impact: the runtime and the framing tool agree about the footprint', () => {
+  /* `tools/impactframe.mjs` frames a ring of `1.2 * impactScale` and a scuff of
+     `3.4 * impactScale / 2`, and it reads those constants off `Particles.TUNE` rather than
+     copying them — but the 1.2 and the 3.4 are still two numbers in two files. This is the
+     seal that they describe one event: the certificate on `SHOTS.impact` is worthless if the
+     runtime puts a differently-sized ring on the floor than the tool measured. */
+  const { out, decals } = stageImpact();
+  assert.equal(out.radius, 1.2 * FX_TUNE.impactScale,
+    'the ring radius the runtime reports is not the one impactframe frames');
+  const scuff = decals.find((d) => d.name === 'scuff');
+  assert.equal(scuff.size, 3.4 * FX_TUNE.impactScale,
+    'the scuff decal is not the size impactframe measured as the widest ground mark');
+  assert.equal(decals.find((d) => d.name === 'crack').size, 2.2 * FX_TUNE.impactScale);
+
+  /* And the shot is authored where a floor exists — the runtime half of the check that caught
+     two bad sites. `impactframe --shot impact` owns the geometry; this owns the agreement. */
+  assert.ok(Array.isArray(IMPACT?.player?.pos), 'SHOTS.impact stages no player — nothing to slam');
+  assert.equal(IMPACT.player.pose, 'dive_impact',
+    'the impact shot is not posed mid-slam; the FX would be landing under a standing figure');
+});
+
+test('impact CALIBRATION: with no MOVEMENT the branch still stages, at the documented fallback', () => {
+  /* MUST FIRE in the sense that matters here: `_stageImpact` says outright that it uses a fixed
+     offset "when MOVEMENT is absent so the branch is never a no-op", and a staging function
+     that silently does nothing in a harness is the §357.1 failure this whole shot exists to
+     close. If the fallback is ever removed, a headless instrument would measure an empty slam
+     and report it as a slam. */
+  const { emits, out } = stageImpact({ player: null });
+  assert.equal(emits.length, 4, 'with no MOVEMENT the slam staged nothing — the branch IS a no-op');
+  assert.equal(out.point.y, 0.06, 'the documented fallback height moved');
+  assert.ok(emits.every((e) => e.age > 0), 'the fallback path lost its staged ages');
 });
