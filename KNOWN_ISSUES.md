@@ -31508,6 +31508,13 @@ not stop me writing the metric.
 
 ### §411.15 The river is not load-bearing, and the shift that clears pyr1 is −200 m
 
+> **CORRECTED by §411.18. This gate measured the wrong quantity.** It measured how much *river* is
+> on screen. The decision needed how much *frame changes if the river moves* — and the riverbed is
+> terrain, so vacating a 206 m channel raises ground by 12–24 m across the western world. That is
+> a bigger change than the water it relocates. The −200 m shift is **not** landed. See §411.18.
+
+
+
 Gate first, as with the pyramid. **Like for like**, same 64×36 screen-cell metric over both
 subjects, terrain-occluded:
 
@@ -31646,6 +31653,69 @@ oscillation*, not perceived flicker in pixels — a viewer sees camera position,
 not linear. And only `recoverSpeed` was varied; `recoverTime` 0.62 is the other half of the same
 mechanism and is untouched here. **The side-by-side frames are still owed** and are blocked on
 §186: a capture has held the lock continuously through this round.
+
+### §411.18 STOP: the hole the river leaves is bigger than the river
+
+Taking up the standing invitation to say so if the Nile turned out load-bearing somewhere I had
+not thought about. It is — not as water, but as **ground**.
+
+**The shift does work, exactly as the arithmetic promised.** Verified on a scratch copy of
+`Terrain.js` rather than an `src/**` edit, because a capture held the lock all round:
+
+```
+pyr1 pad (halfBase 82)     shipped                    shifted −200 m
+mean / min / max          −5.330 / −6.135 / 6.142    6.500 / 6.500 / 6.500
+below the water plane        97.1 %                     0.0 %
+mesh bottom to terrain      +10.330 m (floating)      −1.500 m (skirt buried, as pyr2)
+pyr2 pad                                              0.000000 m   unchanged
+hall / complex pad / avenue                           0.000000 m   unchanged
+```
+
+The pad comes out at **exactly `baseY` across the entire footprint**. The float is gone, with no
+mask and no island.
+
+**And then the cost, which my own gate never measured.** §411.15 counted the river's screen
+presence — 3 shots, ≤ 4.9 % of frame — and concluded it was background. But the riverbed is
+terrain. Vacating it raises ground 12–24 m over a 206 m corridor, and that corridor is what forms
+the horizon in every shot that looks west:
+
+```
+shot        ground changed >0.5 m     SKYLINE columns moved >10 px    max skyline shift
+dunes            159 cells  6.9 %          399 of 1243  (32 %)             138 px
+traversal        124 cells  5.4 %          395 of 1238  (32 %)             127 px
+hero             121 cells  5.3 %          264 of 1250  (21 %)             123 px
+guard             56 cells  2.4 %          320 of 1254  (26 %)              99 px
+combat            59 cells  2.6 %          434 of 1242  (35 %)              69 px
+```
+
+Nine shots see changed ground; five see a **changed horizon**. In `dunes` — the terrain shot —
+a third of the skyline moves, the worst column by **138 px, 19 % of frame height.**
+
+**So both options are expensive, and the river is the more expensive one.** Moving pyr1 resizes one
+object in four frames. Moving the river rewrites the skyline in five. Handing back rather than
+picking.
+
+**A local bend was tried instead of a translation, and it is not the answer.** Swinging the channel
+around pyr1's latitude the way a river swings around bedrock, leaving the rest of its length alone:
+
+```
+pyr1 pad     mean 0.391 m, still 46.9 % below water   — the float is NOT fixed
+pyr2 pad     moved 9.856 m
+hall         moved 5.517 m       complex pad moved 7.112 m
+```
+
+**My first bend had the sign backwards** and pushed the channel *east*, flooding the temple complex
+and pyr2. Recorded rather than quietly re-run: the candidate as written put a river through the
+hypostyle hall, and the reason it is in the ledger is that the arithmetic *looked* right — a
+positive offset added to a term named `m` whose east edge is a negative coordinate. Even corrected,
+a bend wide enough to clear an 82 m footprint vacates the same riverbed locally, so it buys less
+than it looks like it should.
+
+**Fourth instance of §411.16, and the worst kind.** The other three produced numbers that were
+visibly odd. This one produced a gate that *passed*, on a metric that answered a narrower question
+than the decision needed. **A measurement can be correct, precise, and about the wrong quantity** —
+and nothing in the number itself says so. What caught it was verifying the change rather than
+trusting the gate that approved it.
 
 ---
 
