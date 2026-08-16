@@ -41,7 +41,7 @@ test('rim: strength is the same at night as in daylight (§214.2)', () => {
       `${name} publishes rimStrength ${at.rimStrength}, not 0.50 — §214.2 withdrew the night boost:\n  ${byShot.join('\n  ')}`);
   }
   assert.ok(seen >= 16, `only ${seen} shots inspected`);
-  assert.ok(moonSeen === 2, `expected 2 moon-keyed shots to be covered, saw ${moonSeen}`);
+  assert.ok(moonSeen === 3, `expected 3 moon-keyed shots to be covered, saw ${moonSeen}`);
 });
 
 /* ── §214.1 — both moon-keyed shots are ~180° backlit ─────────────────────────────────── */
@@ -61,26 +61,44 @@ function cameraFacingWallNL(name, at) {
   return Math.cos(el * DEG) * Math.cos((wallAz - az) * DEG);
 }
 
-test('night: the two moon-keyed shots fail by DIFFERENT mechanisms (§214.1)', () => {
+test('night: the moon-keyed shots fail by DIFFERENT mechanisms (§214.1)', () => {
   /* This test's first run turned red and corrected the §214.1 write-up, which had assumed
-     `guard` behaved like `night`. It does not, and the two numbers are asserted separately so
-     they cannot quietly re-merge:
+     `guard` behaved like `night`. It does not, and the numbers are asserted separately so they
+     cannot quietly re-merge:
 
        night — backlit. Camera forward azimuth is 14.3° off the moon, so a wall facing the lens
                is ~166° from it and N·L is strongly NEGATIVE. Nothing visible is moonlit.
        guard — side-lit. Its camera-facing walls sit at N·L +0.1652, which is 0.0012 from the
                low terminator's upper edge — the §210.1 speckle mechanism, on walls.
+       alert — a THIRD mechanism, and the mildest of the three. N·L −0.2365: weakly backlit,
+               so its camera-facing walls sit in the shadow band like `night`'s — but nowhere
+               near a terminator (the shadow band closes at 0.116, and −0.2365 is 0.352 clear of
+               it), and nowhere near `night`'s −0.9476 either. It has neither shot's defect.
+               That is the useful thing to pin: `alert` shares tod 0.10 with `guard` and shares
+               its FLOOR margin exactly, yet its WALLS are in a different regime entirely,
+               because the two cameras face 26.4° apart. A tod does not determine a mechanism;
+               the camera azimuth does.
 
-     Goes red if the moon track moves, if either camera is re-aimed, or if a third moon-keyed
-     shot appears; all three change what critic defect 12 means. */
+     Goes red if the moon track moves, if any of the three cameras is re-aimed, or if a fourth
+     moon-keyed shot appears; all three change what critic defect 12 means. */
   const seen = new Map();
   for (const name of SHOT_NAMES) {
     const at = evalAtmosphere(SHOTS[name].tod, state);
     if (at.keyIsMoon) seen.set(name, cameraFacingWallNL(name, at));
   }
   const rows = [...seen].map(([k, v]) => `${k} wall N·L ${v.toFixed(4)}`).join('\n  ');
-  assert.deepEqual([...seen.keys()].sort(), ['guard', 'night'],
-    `the moon-keyed set changed; §214.1's per-shot diagnosis is about these two:\n  ${rows}`);
+  assert.deepEqual([...seen.keys()].sort(), ['alert', 'guard', 'night'],
+    `the moon-keyed set changed; §214.1's per-shot diagnosis is about these:\n  ${rows}`);
+
+  const a = seen.get('alert');
+  assert.ok(a < 0 && a > -0.5,
+    `alert camera-facing wall N·L is ${a.toFixed(4)}; §214.1 records it as WEAKLY negative — not ` +
+    `night's deep backlight and not guard's positive terminator sit. If it has moved into either ` +
+    `neighbour's regime, this shot has acquired that shot's defect:\n  ${rows}`);
+  assert.ok(Math.abs(a - (TOON_TUNE.termLo - TOON_TUNE.termSoft)) > 0.10,
+    `alert's camera-facing wall (N·L ${a.toFixed(4)}) has drifted within 0.10 of the shadow band's ` +
+    `edge (${(TOON_TUNE.termLo - TOON_TUNE.termSoft).toFixed(4)}) — the one thing that would give it ` +
+    `guard's speckle mechanism:\n  ${rows}`);
 
   assert.ok(seen.get('night') < -0.5,
     `night camera-facing wall N·L is ${seen.get('night').toFixed(4)}; §214.1 records it as strongly ` +
@@ -109,7 +127,16 @@ test('night: the sand bounce reaches night\'s walls and NOT guard\'s (§214.1)',
     dots.set(name, Math.cos(wallAz) * at.bounceDir.x + Math.sin(wallAz) * at.bounceDir.z);
   }
   const rows = [...dots].map(([k, v]) => `${k} bounce·wallNormal ${v.toFixed(4)}`).join('\n  ');
-  assert.equal(dots.size, 2, `inspected ${dots.size} moon-keyed shots, expected 2:\n  ${rows}`);
+  assert.equal(dots.size, 3, `inspected ${dots.size} moon-keyed shots, expected 3:\n  ${rows}`);
+  /* `alert` sits between the two, at +0.2424: the bounce reaches its camera-facing walls, but
+     glancing rather than head-on. So night's fill fix would partially transfer here and guard's
+     would not apply — which is a third answer, and the reason this arm asserts three values
+     rather than a rule. Bounded on both sides so it cannot drift into either neighbour's case
+     without saying so. */
+  const a = dots.get('alert');
+  assert.ok(a > 0 && a < 0.7,
+    `alert bounce·wallNormal is ${a.toFixed(4)}; §214.1 records it as glancing-positive — between ` +
+    `night's head-on and guard's behind-the-wall. It has moved into one of their cases:\n  ${rows}`);
   assert.ok(dots.get('night') > 0.7,
     `night bounce·wallNormal is ${dots.get('night').toFixed(4)}; §214.1 records it near head-on (> 0.7), ` +
     `which is the whole basis for fixing that shot with fill:\n  ${rows}`);
@@ -163,7 +190,7 @@ test('nightFillScale: default 1 is bit-identical, and 3 moves ONLY the moon-keye
     `CALIBRATION FAILED: the 3x arm moved ${nightMoved} shots. If the extreme value changes nothing, ` +
     `the lever does not reach evalAtmosphere and the "daylight is unaffected" result is UNSCOREABLE, not negative.`);
   assert.ok(dayChecked >= 12, `only ${dayChecked} daylight shots inspected`);
-  assert.equal(nightChecked, 2, `expected 2 full-night shots, inspected ${nightChecked}`);
+  assert.equal(nightChecked, 3, `expected 3 full-night shots, inspected ${nightChecked}`);
 });
 
 /* ── §214.3 — SHADOW_FLOOR is dominated by ToonMaterial's own constant ────────────────── */

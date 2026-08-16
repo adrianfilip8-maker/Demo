@@ -65,6 +65,13 @@ const KNOWN_NEAR_TERMINATOR = [
   'combat',   // 0.0036 — NOT in §210.1's five-shot table, and the one flagged shot that does have a
               //          large lit ground plane filling the lower half of frame.
   'guard',    // 0.0227 — moon-keyed, and inside the swing by less than a factor of two.
+  'alert',    // 0.0227 — IDENTICAL to `guard`, and identical for a reason rather than a coincidence:
+              //          a flat floor's N·L is sin(key elevation), `alert` and `guard` are both at
+              //          tod 0.10, and both key off the moon. Same elevation, same floor, same
+              //          number to four places. This is not new drift and not a new question — it
+              //          is `guard`'s open question arriving on a second shot, and §210.3's caveat
+              //          transfers with it: the margin is computed for FLOORS, and whether it
+              //          matters depends on whether floors dominate the frame.
 ];
 
 test('ramp: the shipped terminator constants are the ones this analysis was done against', () => {
@@ -85,7 +92,12 @@ test('ramp: every shot resolves a finite key elevation', () => {
   /* Night shots key off the moon; if that ever silently fell back to a sunk sun, every margin for
      those shots would be measuring a light that is not lighting the scene. */
   const moonKeyed = groundNL.filter((s) => s.moon).map((s) => s.name);
-  assert.deepEqual(moonKeyed.sort(), ['guard', 'night'],
+  /* Three since `alert` (tod 0.10) was authored. The set is asserted EXACTLY rather than as a
+     count, and it is worth being clear about which kind of change this was: a threshold was not
+     moved to accommodate a result. A member was added to the population and the enumeration
+     followed it — the numbers each arm asserts about `night` and `guard` are untouched, and
+     `alert` arrives with its own measurements rather than inheriting theirs by assumption. */
+  assert.deepEqual(moonKeyed.sort(), ['alert', 'guard', 'night'],
     'the set of moon-keyed shots changed — margins for those shots are about a different light');
 });
 

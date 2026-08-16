@@ -538,6 +538,72 @@ export const SHOTS = {
     pos: [2.4, 1.45, 33.2], target: [4.0, 0.95, 30.0], fov: 38, tod: 0.80,
     player: { pos: [4.0, 0, 30], yaw: 5.24, pose: 'idle_confident' },
   },
+
+  /* The first shot in this file that frames a RELATIONSHIP rather than a subject.
+     ────────────────────────────────────────────────────────────────────────────────────────
+     Every entry above stages one thing — Sly, or a guard, or the architecture — and every
+     staging tool this project has answers a one-subject question. `charvis` asks "is the
+     character occluded"; `keyocc4` asks "is he lit". Neither can ask "do the two subjects
+     merge into one silhouette", "is the alert mark inside the frame", or "is either figure
+     falling off an edge", and the third of those is not hypothetical: this file's own header
+     records `temple` and `courtyard` shipping with the figure's feet below the bottom edge,
+     and `sly-profile` records the same defect shipped a THIRD time in a brand-new shot.
+
+     So `tools/alertframe.mjs` was written before this entry was, and this entry is its
+     candidate H — the only one of four with no faults. Measured at 1280x720, the resolution a
+     critic reads a frame at rather than the 900 rows the harness renders:
+
+       sly     rows 467..655 (188 px)  margins l614 r585 t467 b65   clear
+       guard   rows 357..457 (100 px)  margins l443 r782 t357 b263  clear
+       guard2  rows 317..376  (59 px)  margins l793 r455 t317 b344  clear
+       mark3   at 470,379            margins l432 r772 t349 b309  clear
+       mark2                         margins l787 r449 t312 b372  clear
+       overlap 0.0% of the smaller subject · group spans 31%w 48%h, centre -1% off
+
+     WHY H AND NOT J, since both scored clean. The shot exists to show the alert LADDER, and a
+     ladder needs two rungs you can tell apart. H's marks are 76 px and 44 px across — a ratio
+     of 1.73. J's are 74 and 52, a ratio of 1.42. H separates the rungs by half again as much,
+     and that is the whole subject of the frame. The group span is the tiebreak in the same
+     direction: 31%w against J's 24%, where the shipped single-subject median is 11.1% and the
+     character-sheet cameras reach 19.0–19.8% (`alertframe --calibrate`). A relationship frame
+     should span more than a portrait does.
+
+     WHAT IS NOT VERIFIED HERE, stated because the record is worth more than the claim.
+     `alertframe` is architecture-only, exactly as `lvl.mjs` and `charvis.mjs` warn: props, FX,
+     decals, sky and terrain are invisible to it, and subjects are upright boxes rather than
+     skinned meshes. **A candidate it likes can still be a bad frame; a candidate it rejects
+     cannot be a good one.** It also says nothing about light, and this is the only canonical
+     shot at tod 0.10 — whether the mark reads against the night grade is a question only a
+     capture can answer, and per KNOWN_ISSUES §367 FX is one of the few systems that does
+     render live in a shot.
+
+     The guards are staged by `SHOT_POSE.alert` in `Guard.js`, at two real `courtyard_ring`
+     waypoints, and FX hangs the ladder on those two by name via `Guards.shotGuards` rather
+     than by proximity. Before this entry, `Particles._stageAlert` and `_stageImpact` existed,
+     were correct, and had never run: nothing in this file was ever named `alert`. */
+  alert: {
+    pos: [-4.0, 4.2, 27.5], target: [-15.0, 2.0, 14.0], fov: 46, tod: 0.10,
+    player: { pos: [-9.5, 0, 20.5], yaw: 4.05, pose: 'crouch_idle' },
+    /* The staging lives HERE, in the shot, and not in `Guard.js`'s `SHOT_POSE` where the
+       `guard` shot's solver spec lives — because the tool that certified this frame has to be
+       able to re-certify the shipped one. Put these two positions in the AI module and
+       `alertframe --shot alert` can no longer see the subjects it was written to measure, which
+       is the "wired at one end only" defect this shot exists partly to avoid repeating.
+       `guard`/`guard2` are the field names `alertframe.score()` reads; `stage` is what
+       `Guards._poseForShot` reads. One set of coordinates, two consumers, no second copy.
+
+       Both stands are real `courtyard_ring` waypoints (`Patrol.js`: [-18.0, 16.0] and
+       [-18.0, 1.0]) walked by roster #1 and #2 — a staged frame that puts a guard somewhere his
+       beat never takes him is a picture of a level that does not exist. */
+    guard: [-18.0, 0, 16.0],
+    guard2: [-18.0, 0, 1.0],
+    stage: [
+      { index: 1, at: [-18.0, 16.0], state: 'chase', clip: 'alert', t: 0.62,
+        lookAt: [-9.5, 20.5], look: [0.12, -0.04] },
+      { index: 2, at: [-18.0, 1.0], state: 'searching', clip: 'look_around', t: 1.15,
+        lookAt: [-9.5, 20.5], look: [0.26, 0.0] },
+    ],
+  },
 };
 
 export const SHOT_NAMES = Object.keys(SHOTS);

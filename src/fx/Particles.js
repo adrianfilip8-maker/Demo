@@ -3610,10 +3610,20 @@ export class Particles {
     const G = this.engine.get('guards');
     const list = G && (Array.isArray(G.list) ? G.list : Array.isArray(G.guards) ? G.guards : null);
 
-    /* Nearest guards to the player, since that is what the camera will be looking at. */
-    const near = [];
+    /* Whom the ladder hangs on, most explicit source first.
+       ---------------------------------------------------------------------------------------
+       `G.shotGuards` is the guards the SHOT named, in the order it named them, and it is the
+       only source that cannot be wrong: `alert` stages two specific bodies at two authored
+       waypoints and the marks belong over those two heads. Proximity was the original rule and
+       is still right when nothing authored anything — but it decides the composition by
+       accident, and it would silently re-rank the two rungs the first time an unrelated guard's
+       patrol phase brought him nearer than the staged one. */
     const p = mv?.position || null;
-    if (list) {
+    const staged = Array.isArray(G?.shotGuards) ? G.shotGuards.filter((g) => g?.position) : [];
+    const near = [];
+    if (staged.length) {
+      near.push(...staged);
+    } else if (list) {
       for (let i = 0; i < list.length; i++) {
         const g = list[i];
         if (!g?.position) continue;

@@ -199,6 +199,15 @@ const SHOT_POSE = {
     towardCamera: 0.35, screenSide: -1,
     minDist: 4.5, maxDist: 17,
   },
+
+  /* `alert` is deliberately NOT here. It stages two guards at AUTHORED positions rather than
+     solving for one, and those positions live in `SHOTS.alert.stage` — in the shot, beside the
+     camera that frames them, where `tools/alertframe.mjs` can read the same coordinates it
+     certified. A shot's staging split across two modules is a shot no tool can re-check.
+
+     `SHOT_POSE` remains the home of SOLVER specs: `guard` frames a single subject, so walking
+     the lens axis for the best-filling stand with line of sight is exactly right there. Both
+     shapes go through `_poseOne`. */
 };
 
 /* ============================ cone shaders ================================ */
@@ -1252,8 +1261,15 @@ export class Guards {
     this._offs = [];
     this._hazards = [];
     /* No `_shot` field either — `_poseForShot` wrote the shot name and nothing ever read it back.
-       `_shotLock` below is the one that does the work, and it is read. */
-    this._shotLock = null;
+       The lock below is the one that does the work, and it is read.
+
+       A LIST, since `alert` stages two guards. `_shotLock` survives as a read-only view of the
+       first, because that is the shape everything asking "is a shot holding anyone" wants and
+       `=== null` on release stays true. */
+    this._shotLocks = [];
+    /** Public, in staging order, so FX can hang the alert ladder on the guards the SHOT named
+        rather than re-deriving them from proximity. Empty outside shot mode. */
+    this.shotGuards = [];
     this._light = 0.3;
     this.TUNE = TUNE;        // so the capture harness can bracket a value (Lighting.js precedent)
     this.stats = { draws: 0, tris: 0 };
@@ -1764,7 +1780,7 @@ export class Guards {
       }
     });
 
-    on('shot', (p) => this._poseForShot(p?.name || null));
+    on('shot', (p) => this._poseForShot(p?.name || null, p?.shot || null));
 
     /* A tod *set* (shot staging, the debug slider) is a discontinuity, and easing `_light`
        across it leaves the cone's day fade and night grade carrying the previous scene's
@@ -1785,6 +1801,10 @@ export class Guards {
 
   /** Every guard, in ROSTER order. */
   get list() { return this.guards; }
+
+  /** The first guard a shot is holding, or null. A read-only view of `_shotLocks`, which is
+      the real state now that `alert` stages two. */
+  get _shotLock() { return this._shotLocks[0] ?? null; }
 
   /**
    * The guard whose pocket Sly can reach.
@@ -1852,7 +1872,7 @@ export class Guards {
 
     for (let i = 0; i < this.guards.length; i++) {
       const g = this.guards[i];
-      if (this._shotLock === g) { this._holdPose(g, dt); continue; }
+      if (this._shotLocks.includes(g)) { this._holdPose(g, dt); continue; }
       // Caught in somebody else's beam? Then you are lit, whatever the hour.
       const otherSees = this._sawCount - (g._sawPrev ? 1 : 0) > 0;
       s.light = otherSees ? Math.max(this._light, TUNE.beamLit) : this._light;
@@ -2136,23 +2156,71 @@ export class Guards {
    * on his first waypoint, three-quarter to the lens so the nemes, the muzzle and the spear
    * all read, with the beam raking off across the pavement rather than into the barrel.
    */
-  _poseForShot(name) {
-    this._shotLock = null;
-    const spec = name ? SHOT_POSE[name] : null;
+  _poseForShot(name, shot) {
+    this._shotLocks.length = 0;
+    this.shotGuards.length = 0;
+    /* The shot's own `stage` first — that is a shot author saying outright which bodies stand
+       where, and it is the only source `alertframe` can also read. `SHOT_POSE` is the fallback
+       for the solver-driven shots that predate it. */
+    const spec = (name && shot?.stage) || (name ? SHOT_POSE[name] : null);
     if (!spec) {
       for (const g of this.guards) g.anim.unfreeze();
       return;
     }
-    const g = this.guards[spec.index];
+    for (const one of Array.isArray(spec) ? spec : [spec]) this._poseOne(one);
+  }
+
+  /**
+   * Stage one guard for a shot. Two staging modes, chosen by what the spec carries:
+   *
+   *   `at: [x, z]`   AUTHORED, from `SHOTS.<name>.stage`. Stand him exactly there,
+   *                  ground-probed, facing `lookAt`. Used when the shot frames a relationship
+   *                  and the geometry between subjects IS the composition (`alert`).
+   *   otherwise      SOLVED, from `SHOT_POSE`. `_solveShotPose` walks the lens axis for the
+   *                  best-filling stand with line of sight. Used when the shot frames one
+   *                  subject (`guard`).
+   *
+   * `state` is applied directly rather than through `_setState`, deliberately: `_setState`
+   * emits `guardAlert`, FX's `_onGuardAlert` would answer it with a mark at age 0, and
+   * `Particles._stageAlert` is already emitting both marks at the ages it derived against the
+   * capture path. Going through the transition would put four marks in the frame, two of them
+   * freshly born and invisible.
+   *
+   * Looked up by ROSTER index rather than array position, because `this.guards` is only 1:1
+   * with `ROSTER` when every entry built — one warned-and-skipped roster line shifts every
+   * later guard, and a shot would then stage somebody else's body without saying so.
+   */
+  _poseOne(spec) {
+    const g = this.guards.find((x) => x.index === spec.index) || this.guards[spec.index];
     if (!g) return;
     g.senses.reset();
-    g.state = STATE.PATROL;
+    /* Set directly, NOT through `_setState` — see the note on SHOT_POSE.alert. The transition
+       would emit `guardAlert`, and FX would answer it with a second mark at age 0 on top of
+       the one `_stageAlert` places at the age it derived. */
+    g.state = STATE[String(spec.state || 'patrol').toUpperCase()] ?? STATE.PATROL;
     g.dwell = 99; g.dwellAction = 'look';
     g.u = 0;
 
-    /* If no stand in front of the lens is both walkable and visible, leave him on his beat.
-       A guard patrolling where he belongs beats a guard teleported behind a wall. */
-    this._solveShotPose(g, spec);
+    if (spec.at) {
+      /* `_place` ground-probes and falls back to the route's baseY, so an authored stand
+         inherits the same floor resolution a waypoint gets. */
+      _v1.set(spec.at[0], (g.route?.baseY ?? 0) + 0.5, spec.at[1]);
+      g._place(_v1);
+      g.hadGround = true;
+      if (spec.lookAt) {
+        _v1.set(spec.lookAt[0], g.position.y, spec.lookAt[1]);
+        g.yaw = g._yawToward(_v1);
+      } else if (typeof spec.yaw === 'number') g.yaw = spec.yaw;
+      /* He is standing on his own line but no longer at the `u` he was walking, and every
+         route query downstream reads `u`. Without this he is at one place and his beat thinks
+         he is at another. */
+      g._reanchor();
+    } else {
+      /* If no stand in front of the lens is both walkable and visible, leave him on his beat.
+         A guard patrolling where he belongs beats a guard teleported behind a wall. */
+      this._solveShotPose(g, spec);
+    }
+
     g.forward.set(Math.sin(g.yaw), 0, Math.cos(g.yaw));
     g.speed = 0;
     g.root.position.copy(g.position);
@@ -2161,7 +2229,8 @@ export class Guards {
     g.anim.freeze(spec.clip, spec.t);
     g.root.updateMatrixWorld(true);
     g.senses.blockedLength = g.vision.coneLength;
-    this._shotLock = g;
+    this._shotLocks.push(g);
+    this.shotGuards.push(g);
   }
 
   /**

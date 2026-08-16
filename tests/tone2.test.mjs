@@ -55,7 +55,7 @@ test('lift: every canonical shot sits at a gate endpoint, so no frame is half-li
   }
   assert.equal(day + night, SHOT_NAMES.length,
     `a canonical shot is in twilight, where the lift gate is partial:\n  ${rows.join('\n  ')}`);
-  assert.equal(night, 2, `expected exactly 2 fully-night shots, saw ${night}:\n  ${rows.join('\n  ')}`);
+  assert.equal(night, 3, `expected exactly 3 fully-night shots, saw ${night}:\n  ${rows.join('\n  ')}`);
   assert.ok(day >= 12, `only ${day} fully-daylight shots inspected`);
 });
 
@@ -139,7 +139,7 @@ test('rim: the clock reaches both legs, and only the moon-keyed shots', () => {
         `materially darker than the daylight constant (${lum(shadeDay).toFixed(3)}), so the swap is cosmetic`);
     }
   }
-  assert.equal(moonShots, 2, `expected 2 moon-keyed shots, saw ${moonShots}:\n  ${rows.join('\n  ')}`);
+  assert.equal(moonShots, 3, `expected 3 moon-keyed shots, saw ${moonShots}:\n  ${rows.join('\n  ')}`);
   assert.ok(dayShots >= 12, `only ${dayShots} daylight shots inspected:\n  ${rows.join('\n  ')}`);
   assert.equal(POST_TUNE.rimClock, 1, 'TUNE.rimClock shipped off; the night rim is back on the constants');
 });
