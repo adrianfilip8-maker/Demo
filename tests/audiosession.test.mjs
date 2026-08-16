@@ -848,3 +848,75 @@ test('the two continuous movement states are voiced, and stop when the state doe
   console.log(`  paraglide: ${glides.length} loop start(s)`);
   assert.equal(glides.length, 1, `paraglide opened ${glides.length} loops for one glide — it should open exactly one`);
 });
+
+test('the alert ladder is monotonic in the quantity that matches how it is judged visually', () => {
+  /* §395: the audio ladder appeared to INVERT against the visual one — rung 2 measuring quieter
+     than rung 1 — and it does, in every duration-weighted quantity. It is not an inversion. It
+     is a measurement mismatch, and the same one this project has hit three times before
+     (peak-for-area, ramp-for-shadow, near-black-count-for-edge-strength).
+     
+     The visual ladder is scored by `fxfeel` T3 on `count × alpha × size0²` — an INSTANTANEOUS
+     measure: the ink present at one moment, not integrated over the effect's life. Its audio
+     analogue is PEAK, not rms over a window and not total energy. Rung 1's `guard_confused` is a
+     long low mutter (dur 1.4, g 0.55) and rung 2's `guard_grunt` + `search_call` is a shorter,
+     sharper pair — so rung 2 delivers less total energy and a higher peak, and which of those
+     you call "louder" decides whether the ladder inverts. */
+  const measure = (state) => {
+    const w = makeWorld();
+    const ctx = new OfflineCtx(SR);
+    const audio = new Audio(w.engine);
+    audio.init(); audio.unlock(ctx);
+    w.engine.emit('shot', { name: 'isolate' });
+    audio.score?.stop?.(0);
+    const names = [];
+    const real = audio.play.bind(audio);
+    audio.play = (n, o) => { const v = real(n, o); if (v) names.push(n); return v; };
+    const DT = 1 / 60;
+    for (let f = 0; f * DT <= 0.30; f++) {
+      const t = f * DT; ctx.currentTime = t; w.engine.time = t;
+      if (f === 6) {
+        w.guards.list[0].state = state;
+        w.engine.emit('guardAlert', { state, level: state === 'chase' ? 1 : 0.5, pos: w.guards.list[0].position });
+      }
+      audio.setListener(w.player.position, w.player.faceDir, new THREE.Vector3(0, 1, 0));
+      audio.update(DT, t);
+    }
+    const d = ctx.render(1.6);
+    let energy = 0;
+    for (let i = 0; i < d.length; i++) energy += d[i] * d[i];
+    return { names, rms: rms(d), peak: peak(d), energy };
+  };
+
+  const ORDER = ['patrol', 'suspicious', 'searching', 'chase'];
+  const rows = ORDER.map((s) => ({ s, ...measure(s) }));
+  for (const r of rows) {
+    console.log(`  rung ${ORDER.indexOf(r.s)} ${r.s.padEnd(11)} ${(r.names.join(',') || '(none)').padEnd(26)} rms ${r.rms.toFixed(5)}  peak ${r.peak.toFixed(4)}  energy ${r.energy.toFixed(1)}`);
+  }
+
+  const peaks = rows.map((r) => r.peak);
+  const steps = peaks.slice(1).map((v, i) => v / peaks[i]);
+  console.log(`  peak steps: ${steps.map((x) => (Number.isFinite(x) ? x.toFixed(2) + '×' : '∞')).join(' · ')}`);
+
+  /* THE BAR: monotonic in peak, rung 0 through 3. */
+  for (let i = 1; i < peaks.length; i++) {
+    assert.ok(peaks[i] >= peaks[i - 1],
+      `rung ${i} (${rows[i].s}) peaks at ${peaks[i].toFixed(4)}, below rung ${i - 1} (${rows[i - 1].s}) `
+      + `at ${peaks[i - 1].toFixed(4)} — the ladder inverts even in the instantaneous measure`);
+  }
+  assert.equal(peaks[0], 0, 'rung 0 made a sound; de-escalation to patrol should be silent here');
+
+  /* AND THE CONTROL, which must fire: rms over a fixed window DOES invert, and recording that is
+     the point — it is the evidence that the quantity was the problem and not the ladder. If rms
+     ever stops inverting, this comment is stale and the finding needs re-deriving. */
+  const rmss = rows.map((r) => r.rms);
+  assert.ok(rmss[2] < rmss[1],
+    'rms no longer inverts between rungs 1 and 2, so the §395 finding (that the apparent '
+    + 'inversion was a duration-weighted measure, not a real one) no longer has its evidence');
+
+  /* NOT ASSERTED, REPORTED: the visual ladder carries a registered ≥1.6× step between adjacent
+     rungs (`fxfeel` T3). The audio ladder's rung1→rung2 peak step is ~1.56×, which would fail
+     that bar if it were applied here. Nobody has ever registered a step requirement for the
+     audio ladder, and imposing one is a design decision, not a test change. */
+  const flagged = steps.filter((x) => Number.isFinite(x) && x < 1.6).length;
+  if (flagged) console.log(`  NOTE: ${flagged} audio step(s) below the visual ladder's registered 1.6× — reported, not barred`);
+});
