@@ -30699,3 +30699,100 @@ The transfer defect underneath it: **10 cm is an ABSOLUTE quantum applied to obj
 magnitude apart in size** — "within 8 %" on a 1.86 m coil, "within 1 %" on a 5 m sphinx. That is
 how `decalstat` T3's avenue came to sit exactly on a limit while the coils cleared it without the
 bar ever engaging.
+
+---
+
+## §409 — A predicate that cannot say one of its answers is not a predicate
+
+Third instance today of one defect class, found three different ways. §408.3 found its by logical
+entailment, §407 found its by a 727,608-cell exhaustion, and this one arrived as a **regression I
+caused and had to diagnose** — which is the cheapest of the three routes and the only one that
+does not require suspecting the predicate in advance.
+
+### §409.1 The instance
+
+`Collision.capsuleSweep` sets `res.hit` on two different occasions that mean opposite things:
+
+- the swept capsule **contacted** geometry along its path, and
+- **depenetration** pushed a capsule that was already overlapping back out, without the sweep
+  contacting anything at all.
+
+On the second path it also sets `res.toi = 1`. A caller reading `hit` as a bare boolean cannot
+tell these apart, and the two demand opposite handling: the first says *"you got this far"*, the
+second says *"you did not move, but you were inside something"*.
+
+The ground snap in `Controller._moveHorizontal` read `hit` and trusted `toi`. At a wall-climb
+summit lip the depenetration path fired, `toi = 1` meant "you travelled the whole way", and the
+snap dropped Sly the full `stepHeight + groundSnap` off the top of the ladder. It surfaced as
+`ended airborne in "fall" at y 0.00` in an arm about summit delivery — nowhere near the sweep, and
+nothing about the failure pointed at a predicate.
+
+**The repair is not a bigger flag, it is a bound.** Both the snap and `_moveVertical` now descend
+by the lesser of `drop × toi` and the vertical distance the resolve actually achieved. Both
+quantities come from the same result, so it is a bound rather than a tuning constant, and it is
+correct under either meaning of `hit`.
+
+### §409.2 The census, and it is narrower than it felt
+
+Every consumer that reads `hit` from a capsule sweep, because a defect found by accident says
+nothing about its own blast radius:
+
+```
+_moveHorizontal snap   was vulnerable — bounded (34295c5)
+_moveVertical          was vulnerable — bounded and gated (bf076ce)
+_slide                 reads r.position; a depenetration contact IS a contact there.  OK
+ledge assist           reads position too, not the bare flag.                          OK
+CameraRig._sweep       reads r.distance, and the depenetration path sets
+                       distance = totalLen, so the boom reads "clear to the far end"
+                       rather than jamming to distHardMin.                    NOT VULNERABLE
+step-up probe          the one remaining bare-boolean reader
+```
+
+The step-up probe was measured rather than reasoned about: **0 depenetration-only hits in 305
+sweeps** across walking and standing on a grade. And were it ever to fire it would *disable*
+stepping — the fail-safe direction, not the fall-off-a-ladder direction. So the class is real but
+geometry-specific: it surfaced at one lip and nowhere in ordinary locomotion.
+
+### §409.3 The generalisation, with the third data point
+
+> **A predicate that cannot say one of its answers is not a predicate.**
+
+- `clear()` returned true unconditionally for the whole life of `alertframe` — it could only say
+  "visible".
+- `basketvary` A1 could only say "pass", by strict entailment from A2b.
+- The `impact` FIGURE SWALLOWED bar could only say "fail", across every camera in a 727,608-cell
+  sweep.
+- `capsuleSweep.hit` says "true" for two incompatible facts, which is the same defect wearing the
+  opposite costume: not an answer set too small, but a **question** too small for its answer set.
+
+The tell is identical in all four: **the answer carries less information than the caller needs,
+and the code reads as correct because the predicate is never wrong — merely never informative.**
+A green suite cannot see any of them, because every one of them passes.
+
+The check §408.3 states — *can this discriminate, in both directions?* — extends to any flag, not
+just a bar: **what are the distinct situations that set this true, and does every caller want the
+same thing in all of them?** Two situations, one flag, opposite handling required, is the shape.
+`hit` had two; `clear()` had one where it needed two.
+
+### §409.4 What the drift rounds cost and returned
+
+The class surfaced only because the drift fix was landed in two halves with a `wip:` push between
+them, and the red tree was diagnosed rather than re-run. §406's "push the moment it exists" is
+what made a red intermediate state safe to have.
+
+The drift itself, both sites, for the record:
+
+```
+                          before            after
+walking drift (level)     0.3180 ratio      0.0000
+                          0.8069 m mean     0.0000 m
+standing drift (level)    0.2816 m mean     0.0000 m
+                          2.1644 m max      0.0000 m
+synthetic 55° shed        0.4193 / 0.2866   0.4193 / 0.2866   IDENTICAL
+synthetic 65° shed        0.5111 / 0.2336   0.5111 / 0.2336   IDENTICAL
+```
+
+Neither gate was widened to make a half pass. The steep half is tested on a **synthetic** ramp and
+the arm says so and says why: this level contains no unwalkable ground at all — steepest face
+47.9° against a 50° limit — so a gate resting on level geometry would rest on geometry that does
+not exist.
