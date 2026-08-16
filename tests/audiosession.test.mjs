@@ -47,6 +47,71 @@ const SPACES_WET = Object.fromEntries(Object.entries(SPACES).map(([k, v]) => [k,
  * could not close.
  */
 
+/**
+ * ═══ PRE-REGISTERED, UNRUN — the blind listening protocol ═══════════════════════════════════
+ *
+ * §379.4 frames one question for one frame, and it is blocked on the capture lock. **This one is
+ * not blocked on anything but an ear.** The wav below is produced by `node --test`, takes no
+ * lock, contends with no lane, and can be rendered this afternoon. Nobody has ever heard this
+ * game; the only thing standing between that and a verdict is somebody putting headphones on.
+ *
+ * ── Why this can be stricter than the visual protocol ──────────────────────────────────────
+ * The frame question had to be open-ended ("which elements are made of the same material as the
+ * picture") because you cannot easily render two frames differing in exactly one authored idea.
+ * Audio can: `AUDIO_SESSION_WAV` renders the shipped module, and a second render with one field
+ * forced is the same session minus one decision. So this is a **forced-choice discrimination**,
+ * which is a much harder bar than an impression — and that is a property of the medium, not of
+ * the writing.
+ *
+ * ── Material ───────────────────────────────────────────────────────────────────────────────
+ *   A. the session as it ships.
+ *   B. the same session with every contact's `material` forced to `stone` — i.e. the game as it
+ *      sounded before §383/§389. One field, nothing else.
+ * Present A and B in a random order the listener does not know, twice each, no script, no
+ * picture, no transcript.
+ *
+ * ── Q1 · the "one place" question, and the analogue of the ink question ────────────────────
+ *   "Describe the space this was recorded in. Then: is everything you hear in that space, or is
+ *    some of it somewhere else?"
+ * NOT "can you hear the reverb" — routing is settled (`far/near 2.286` against a predicted 2.29,
+ * `flat/near 0.800` against 0.80), so every class demonstrably reaches the room at the published
+ * level. If a listener still places something outside it, the cause cannot be routing, and it is
+ * therefore spectrum, dynamics or timing — which is exactly the class of finding no arithmetic
+ * here can reach, and exactly the shape the ink hypothesis took for the picture.
+ *
+ * ── Q2 · the forced choice, and the bar that decides §389 ──────────────────────────────────
+ *   "Between 4 and 8 seconds the character touches five things. How many different materials do
+ *    you hear? Name them."  Then, on the pair: "Which of these two recordings has more variety
+ *    in what he is touching?"
+ * The render says the four rail materials span 1.63× in spectral centroid and a material-blind
+ * control spans 1.000×. That proves they DIFFER. It cannot prove they are DISCRIMINABLE, and the
+ * gap between those two words is the whole reason this protocol exists.
+ *   · A named correctly, and A picked over B → the payload work landed and is audible.
+ *   · A and B indistinguishable → the material layer is real, measurable and inaudible. That is
+ *     not a refutation of §383; it is an instruction to raise the layer's level or widen the
+ *     vocabulary, and it is a finding worth more than the fix that produced it.
+ *
+ * ── Q3 · the stealth question ──────────────────────────────────────────────────────────────
+ *   "At some point a guard notices him. When? When does he stop looking?"
+ * The ladder ascends and descends in the render and fires all five of its cues. A listener who
+ * cannot locate either edge means the ladder is graded on paper and flat in the ear — and the
+ * descent is the half to watch, because a stealth game whose room never audibly becomes safe
+ * again has only told the player half of what it knows.
+ *
+ * ── Q4 · the negative control, which every instrument here carries ─────────────────────────
+ *   "Is there a moment where something clearly happens and you hear nothing?"
+ * `enemyBounce` is in the session and is silent (§384.1) — the one moment Sly strikes a body.
+ * If a listener reports a hole there, the silence is audible and voicing it stops being a
+ * design call. If nobody notices across four passes, it stays one, and that is a real answer.
+ *
+ * ── What this protocol CANNOT answer, stated so nobody asks it to ──────────────────────────
+ * The renderer treats Panner, StereoPanner, Convolver and DynamicsCompressor as pass-throughs.
+ * So the wav carries no spatialisation, no reverb TAIL and no limiter behaviour. Q1 asks about
+ * belonging, not about the room's decay, and a listener's answer about *where* a sound sits is
+ * about spectrum and level only. A verdict on the tail, the HRTF or the limiter needs a real
+ * `AudioContext` and this protocol must not be read as covering them.
+ */
+
 const SR = 22050;
 const DUMP = process.env.AUDIO_SESSION_WAV || '';
 
