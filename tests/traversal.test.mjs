@@ -22,6 +22,23 @@ import { Controller, TUNE } from '../src/player/Controller.js';
  * registry of point affordances. `Controller.js`, `Moveset.js`, `States.js` and `Targets.js` all
  * import in plain Node, so the whole machine runs here.
  *
+ * ── Read this before you write a probe ──────────────────────────────────────────────────────
+ * **`groundCheck` returns the topmost surface below the cast origin, so the origin selects which
+ * floor you are asking about.** Casting from y = 20 at a spot with a roof at 13.50 and paving at
+ * 0.00 answers "the roof", and answers it with a plausible number. This cost one route this
+ * session — two probes of the same spot returned 13.50 and 0.00 and neither was wrong.
+ *
+ * It is the fourth instance here of the same failure: a correct call against a world that was not
+ * the one intended. The others were a harness built without `Terrain` (so the desert did not
+ * exist), a controller whose `col` was still `FLAT` because `_bindCollision` only runs inside
+ * `update()`, and `afford()`/`mark()` memoised on a `_frame` that never advanced. **All four
+ * returned plausible numbers, and none of them failed.** Inspection did not catch any of them;
+ * an implausible clock caught one and an implausible count caught another.
+ *
+ * So: pin the origin, bind collision by stepping at least one frame before probing, advance
+ * `_frame` between memoised queries, and assert your world is the world you meant — the collider
+ * count in `realWorld()` is there for exactly that.
+ *
  * ── Why every arm carries a lever ───────────────────────────────────────────────────────────
  * `tests/targets.test.mjs`'s header states the rule this file obeys: *a calibration arm must
  * move, or the instrument proved nothing.* An assertion that "Sly leaves the hook" is equally
@@ -1942,6 +1959,167 @@ test('spire: spireGrab catches the obelisk hop, not magnetism — the ordering p
     'spireGrab no longer subsumes magCatch — the beat can now be authored strict, retire this arm');
   assert.ok(tt < 0 || sl < tt,
     `toTarget@${tt} preceded spireLand@${sl}: magnetism caught him, not the spire's own grab`);
+});
+
+/* ====================================================================== */
+/* 13 — the input-contract census                                          */
+/* ====================================================================== */
+
+/**
+ * Arm 11 gates ENTRY: could any input sequence satisfy `canEnter`. This gates OPERATION: once
+ * inside, which inputs does the state actually read? A state can be enterable and still unusable
+ * because its `update()` reads a different input than the approach supplies, and two driven runs
+ * were lost to exactly that — `HookSwing` taking `interact` from a pole mount, and `PoleClimb`
+ * gating its climb on RAW stick while the driver supplied a camera-relative vector.
+ *
+ * **Observed, not tabulated.** A table of "which state reads what" is a second copy that drifts
+ * the first time someone edits `Moveset.js` (§388). So the real `canEnter`/`enter`/`update` are
+ * invoked with the input object and the two stick vectors replaced by recording proxies, and the
+ * census is whatever they actually touched.
+ *
+ * ── What this method CANNOT see, stated the way `peakY` was ─────────────────────────────────
+ * It is a **lower bound**: it reports reads that happened, on the branches that ran. A button
+ * read behind a condition none of the probe configurations satisfied is invisible. Coverage is
+ * widened by sweeping a small envelope per state, but no envelope is complete, so absence here
+ * is "not observed", never "not read". It DOES see reads through helpers — `c.canGroundJump()`,
+ * `travelDir(c, …)` — because the proxy sits on the data, not on the call site, which is the one
+ * thing a static parse of the class body would miss.
+ */
+function inputCensus(state, c, engine, configs) {
+  const btn = new Set(), stick = new Set();
+  const realInput = c.input;
+  const spyInput = {
+    get move() { stick.add('move'); return realInput.move; },
+    beginFrame: (dt) => realInput.beginFrame(dt),
+    down: (a) => { btn.add(a); return realInput.down(a); },
+    pressed: (a) => { btn.add(a); return realInput.pressed(a); },
+    released: (a) => { btn.add(a); return realInput.released(a); },
+    bufferedPeek: (a, ms) => { btn.add(a); return realInput.bufferedPeek(a, ms); },
+    buffered: (a, ms) => { btn.add(a); return realInput.buffered(a, ms); },
+    hold: (a) => realInput.hold(a),
+    let_go: (a) => realInput.let_go(a),
+    clear: () => realInput.clear?.(),
+  };
+  const rawVec = c.wishRaw, dirVec = c.wishDir;
+  const mkSpy = (v, tag) => new Proxy(v, {
+    get(t, p) { if (p === 'x' || p === 'y' || p === 'z') stick.add(tag); return Reflect.get(t, p); },
+  });
+  c.input = spyInput;
+  Object.defineProperty(c, 'wishRaw', { configurable: true, get: () => mkSpy(rawVec, 'wishRaw') });
+  Object.defineProperty(c, 'wishDir', { configurable: true, get: () => mkSpy(dirVec, 'wishDir') });
+  try {
+    for (const cfg of configs) {
+      cfg(c, engine, realInput);
+      try { state.canEnter(c); } catch { /* census only cares what it read */ }
+      try { state.enter(c); } catch { /* ditto */ }
+      try { state.update(c, DT); } catch { /* ditto */ }
+    }
+  } finally {
+    c.input = realInput;
+    delete c.wishRaw; delete c.wishDir;
+    c.wishRaw = rawVec; c.wishDir = dirVec;
+  }
+  return { buttons: [...btn].sort(), stick: [...stick].sort() };
+}
+
+function censusConfigs() {
+  const out = [];
+  for (const grounded of [true, false]) {
+    for (const btns of [[], ['jump'], ['crouch'], ['attack'], ['interact'], ['focus'], ['sneak'], ['glide']]) {
+      out.push((c, engine, realInput) => {
+        realInput.clear(); realInput.beginFrame(DT);
+        for (const b of btns) realInput.hold(b);
+        /* `mark()` and `afford()` memoise on `_frame`, which only advances inside `update()`.
+           Without this the second config onward reads the first one's cached answer and every
+           state whose raw-stick read sits behind a lock-on or affordance guard returns early —
+           which is precisely how `combatStrafe` went missing from the first run of this census. */
+        c._frame++;
+        /* Position must be re-pinned too: each state's `update()` calls `move()`, so without this
+           every state after the first is probed from wherever the previous one left Sly — which
+           put `combatStrafe` out of `lockRange` of the stub guard and hid its raw-stick read. */
+        c.position.set(0, 0, 30);
+        c.grounded = grounded;
+        c.velocity.set(0, grounded ? 0 : -4, 4);
+        c.wishRaw.set(0, 0, 1); c.wishDir.set(0, 0, 1); c.wishMag = 1;
+        c.airJumps = 1; c.wallRunUsed = 0; c.freeWall();
+        c.hangLock = 0; c.poleLock = 0; c.spireLock = 0;
+        c.sm.current = c.sm.get(grounded ? 'idle' : 'fall');
+      });
+    }
+  }
+  return out;
+}
+
+test('census: the input contract of every state, observed by proxy rather than tabulated', async () => {
+  const { engine, c } = await realWorld();
+  hardReset(engine, c, V(0, 0, 30));
+  for (let i = 0; i < 4; i++) {
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
+  }
+  const cfgs = censusConfigs();
+  const rows = [];
+  for (const s of c.sm.ordered) {
+    const r = inputCensus(s, c, engine, cfgs);
+    rows.push({ name: s.name, pri: s.priority, ...r });
+  }
+  console.log('\n[contract] state          pri  stick        buttons observed');
+  for (const r of rows) {
+    console.log(`  ${r.name.padEnd(14)} ${String(r.pri).padStart(3)}  ${(r.stick.join('+') || '—').padEnd(12)} ${r.buttons.join(', ') || '—'}`);
+  }
+
+  /* (2a) The stick partition. `PoleClimb` and `CombatStrafe` read RAW on purpose — a lock-on and
+     a shaft both define their own axes, so camera-relative input is exactly what they suspend.
+     Everything else steers camera-relative. A state that silently switches idiom reddens here. */
+  const raw = rows.filter((r) => r.stick.includes('wishRaw')).map((r) => r.name).sort();
+  console.log(`\n[contract] raw-stick states: ${raw.join(', ')}`);
+  assert.ok(raw.includes('poleClimb'), 'poleClimb no longer reads wishRaw — the climb idiom changed');
+  assert.ok(raw.includes('combatStrafe'), 'combatStrafe no longer reads wishRaw — the orbit idiom changed');
+  assert.ok(raw.length <= 6, `${raw.length} states now read raw stick (${raw.join(', ')}) — the partition is drifting`);
+
+  /* (2b) The button-overload map. `interact` is contended; the highest priority wins, which is
+     why pressing E to mount a pole from the kiosk lintel grabs a hook rope instead. This turns a
+     header comment into a checked fact. */
+  const wants = (b) => rows.filter((r) => r.buttons.includes(b)).sort((x, y) => y.pri - x.pri);
+  for (const b of ['interact', 'jump', 'attack', 'crouch']) {
+    console.log(`[contract] "${b}" contended by: ${wants(b).map((r) => `${r.name}(${r.pri})`).join(' > ')}`);
+  }
+  const inter = wants('interact');
+  /* `hookSwing` must be the highest-priority observed reader of `interact` — that is the whole
+     kiosk-lintel hazard: E is contended and the higher priority takes it.
+     Note what is NOT in this list: `poleClimb` and `railSlide` both read `interact`, but behind
+     `afford('pole')`/`afford('rail')`, and this census is probed from open paving where neither
+     affordance exists. That is the lower bound in the header demonstrating itself — absence here
+     is "not observed", never "not read" — and it is why the assertion is on the top of the list
+     rather than on a full ordering the method cannot see. */
+  assert.ok(inter.length > 1, 'interact is no longer contended — the overload note is stale');
+  assert.equal(inter[0].name, 'hookSwing',
+    `${inter[0].name} now outranks hookSwing for interact: the kiosk-lintel hazard changed`);
+});
+
+test('census: the contract prober detects a state nothing else reads (calibration)', async () => {
+  /* It must be able to fire. A synthetic state that reads a button no shipped state reads and a
+     stick idiom it would be wrong about — if the prober cannot see these, it cannot see anything,
+     and a census that reports the same answer for every input is the tautology this file has
+     already shipped once. */
+  const { engine, c } = await realWorld();
+  hardReset(engine, c, V(0, 0, 30));
+  for (let i = 0; i < 4; i++) {
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
+  }
+  const { State } = await import('../src/player/States.js');
+  class Canary extends State {
+    canEnter(ctx) { const z = ctx.wishRaw.z; return ctx.pressed('binocucom') && z > 0.3; }
+    update(ctx) { if (ctx.down('zzz_never_bound')) return 'idle'; return null; }
+  }
+  const r = inputCensus(new Canary('canary', {}), c, engine, censusConfigs());
+  console.log(`\n[contract] canary -> stick ${r.stick.join('+') || '—'}, buttons ${r.buttons.join(', ') || '—'}`);
+  assert.ok(r.buttons.includes('binocucom'), 'prober missed a button read in canEnter');
+  assert.ok(r.buttons.includes('zzz_never_bound'), 'prober missed a button read in update');
+  assert.ok(r.stick.includes('wishRaw'), 'prober missed a wishRaw read');
+  // …and it must not invent reads: the canary never touches wishDir.
+  assert.ok(!r.stick.includes('wishDir'), 'prober reported a wishDir read the canary never made');
 });
 
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {
