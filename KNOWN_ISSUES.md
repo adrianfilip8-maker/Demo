@@ -30572,6 +30572,32 @@ corners are the *near-bottom* ones — much closer to the lens than the subject'
 sized by the naive depth-at-centre formula fans out well past the silhouette. On an upright figure
 the error is small. On `dive_impact`, a crouched sprawl seen from a low camera, it is 20%.
 
+### §407.2b And §407.2 turned on its own author, one section later
+
+Placed here on the FX lane's behalf: it had the finding and could not commit it, because
+`KNOWN_ISSUES.md` carried 143 uncommitted lines of a third lane's work and `--only` would have
+published them. That refusal is §410.5 and §410.6 working exactly as intended, and it is the
+third time in one session a lane declined to commit a file it did not own.
+
+`f40e51d`'s message called 4.035 m **"the midpoint"** of `dive_ring`'s size draw. It is not.
+`sz = jitter * 1.25 * 3.2277` over `jitter ~ U(0.8, 1.25)` gives min **3.228**, mean and midpoint
+**4.135**, max **5.043** — and 4.035 is the value at jitter exactly 1.0, the **44th percentile**:
+what you get by leaving the jitter term out. That is worse than an imprecise central estimate,
+because an imprecise estimate is still an estimate of the right quantity. **A term was omitted and
+the result was then described as a central tendency of the distribution it had been omitted from.**
+Corrected in `aef2762` by fixing forward (§314).
+
+**§407.2 binds commit messages too.** The rule says a derivation is a claim about a number and an
+unchecked claim about a number is how these get in; a commit message is where most of this
+project's derivations are actually stated, and nothing executes one.
+
+And the sharpest detail: **the same expression was being carried correctly, in the same repo, at
+the same time.** `tests/fxrim.test.mjs`'s T9 has `const s = 1.25 * rung3.scale; // max size
+jitter` — the jitter term present and named — while `dive_ring`'s five copies dropped it. One
+repo, one expression, two derivations, one carrying the term. Which is the argument for
+`ringextent.mjs` in one line: the copies were not wrong *together*, they were wrong
+*independently*, and no amount of care applied per-copy would have found that.
+
 ### §407.3 The dust extent was minted by a rename
 
 When `RING_R` was split into `RING_R_DECLARED` and `RING_R_DRAWN` (§405), the dust cloud's model —
