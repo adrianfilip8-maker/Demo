@@ -31098,3 +31098,87 @@ Two lessons, and the second is the one worth keeping:
   SHIPPED boom.** Mean boom cut 1.222 m at x = 4 and 2.120 m at x = 12, with >50 cm cuts on 47.5 %
   and 62.0 % of frames — before any dolly. That is a pre-existing condition in the level's
   signature room and it is independent of #32.
+
+---
+
+## §411 — The fourth instance, and the first where the vacuity was in the SAMPLING
+
+§407 (a bar no camera could pass), §408.3 (a bar no frame could fail, entailed by its neighbour),
+§409 (a predicate that could not say "no" on one path). Three defects, three lanes, one shape: a
+check that carries no information. §409 states the generalisation and I wrote a fourth instance
+into a tool **the same hour**, inside the guard I built to prevent exactly this.
+
+### §411.1 The claim, and why it was worth making
+
+`impactframe --search` swept distance x height x azimuth x lens — 453,600 cameras — and **did not
+finish in 1500 s.** But the frame has a symmetry: every subject is centred on the contact point
+and the camera targets that point, so orbiting the lens about the vertical axis through it maps
+the whole configuration onto itself. **Azimuth cannot change any projected quantity.** Only
+`clear()` varies, because the courtyard's architecture is not rotationally symmetric.
+
+That collapses the sweep to 9,450 (d, h, fov) cells plus occlusion tests on the survivors — and it
+is a symmetry rather than a heuristic, so it rejects nothing the full sweep would have admitted.
+Worth doing, and worth guarding, because if a subject is ever added that is NOT centred on the
+contact the collapse starts silently hiding valid cameras.
+
+### §411.2 The guard agreed to 5e-16, and was measuring nothing
+
+`assertAzimuthFree()` swept 24 azimuths at 15° and compared the ellipse ratio and figure height
+across them. It reported a spread of **5e-16 and 1e-13** — floating-point noise, agreement far
+past any tolerance. I took that as confirmation and built the collapse on it.
+
+`discOf` samples an **inscribed polygon**, and its default is **24 segments**. `360 / 24 = 15`.
+**One azimuth step maps the polygon's sample set exactly onto itself**, so every camera in the
+probe was compared against a rotated copy of its own samples. The result could not have been
+anything but identical, for any geometry whatsoever, symmetric or not.
+
+Swept properly — 48 azimuths at 7.5°, across segment counts:
+
+```
+  segments   spread over 48 azimuths   1 - cos(pi/n)      ratio
+       24            5.11e-3              8.56e-3         0.597
+       48            9.44e-16             2.14e-3         0.000    <- 360/48 = 7.5
+       90            2.95e-4              6.09e-4         0.484
+      180            1.29e-4              1.52e-4         0.849
+      360            4.45e-6              3.81e-5         0.117
+      720            9.44e-16             9.52e-6         0.000    <- 7.5 is a multiple of 0.5
+```
+
+The two rows reading 9.44e-16 are **the two where the probe step divides evenly into the segment
+count.** Nothing else distinguishes them. Every other row shows the real discretisation spread,
+under the n-gon bound exactly as theory predicts.
+
+> **§411.3 — A probe whose sampling is commensurate with the thing it samples measures nothing,
+> and it reports perfect agreement while doing so.** The three earlier instances were bad
+> *predicates* — a threshold nothing could cross, a clause entailed by its neighbour, a return
+> value that could not take one of its states. This one is a perfectly good predicate given a
+> degenerate *sample set*. It is harder to see, because the code contains no bad reasoning at
+> all: the assertion is right, the tolerance is right, and the answer is still meaningless.
+>
+> The tell is the one that should now be reflexive here: **an agreement at machine epsilon is not
+> a strong result, it is a suspicious one.** Real quantities computed by different routes agree
+> to within their error, not to 5e-16. When a check reports that two things are bit-identical,
+> ask what makes them the same object rather than congratulating the code.
+
+### §411.4 Two repairs, both derived rather than picked
+
+**The segment count is a bar, not a detail.** An inscribed polygon's bounding box UNDER-reports
+the circle's by `1 - cos(pi/n)` — and under-reporting extent is the **permissive** direction for a
+cropping test: it certifies "in frame" about a rim that is not. At the default 24 segments that is
+8.56e-3, or **9 px on this shot's 1050 px ring — a third of the 24 px edge floor.** Raised to 180,
+where the bound is 1.52e-4, or 0.16 px. Chosen by where the error stops mattering against the bar
+it feeds.
+
+**The probe now steps 7.3°**, which shares no factor with 180, and the criterion is the polygon's
+own worst-case bound rather than a tolerance chosen to pass. It reports:
+
+```
+  azimuth-free CONFIRMED — geometry varies by 1.3e-4 over 49 non-commensurate azimuths
+  x 5 triples, inside the 180-gon bound 3.0e-4
+```
+
+1.3e-4 is a real number produced by real discretisation, sitting under a bound derived from the
+sampling. That is what a passing calibration should look like. **5e-16 was never that.**
+
+Past the bound the message says the asymmetry is REAL — a subject no longer centred on the
+contact — rather than reporting a generic failure, because those are different repairs.
