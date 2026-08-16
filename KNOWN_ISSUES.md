@@ -26876,3 +26876,104 @@ the right thing to do". The route telegraph provably reaches the lens; whether o
 answer and no capture can answer either, given §366.2. That remains open and needs a playtest.
 
 Committed `eab10ed`.
+
+---
+
+## §367 — What a capture actually contains: an exhaustive inventory of the shot harness's suppressions
+
+§366.2 found that `CameraRig.js` never appears in a frame. The obvious next question — *is it the
+only one?* — has an answer that is much larger than the camera, and it reframes what every blind
+critic round in this project has been measuring.
+
+### §367.1 Method
+
+Exhaustive grep of `src/**` for `freeCam`, `hideHud`, `hidePlayer`, `_shotMode` and `on('shot')`,
+cross-referenced against what `setShot` actually sets (`Debug.js:132-134`, `Shots.js:561-563`) and
+what `clearShot` restores (`Debug.js:249-256`). Every gate below is quoted at its line. **This is
+source-level evidence, not a captured frame** — the empirical check is blocked right now because
+three lanes are editing `src/**`, which makes any capture unreconstructible and would (correctly)
+be refused by the `tools/shot.mjs` guard added as task #23.
+
+### §367.2 What `setShot` sets
+
+```
+Debug.js:132   engine.debug.freeCam  = true
+Debug.js:133   engine.debug.hideHud  = true          ← unconditional. No shot overrides it.
+Debug.js:158   animation.freezePose(shot.player.pose)
+Shots.js:562   engine.debug.hidePlayer = !!shot.hidePlayer   ← per-shot, default false
+Shots.js:561   engine.debug.timeOfDay  = shot.tod ?? 0.78
+Debug.js:249   engine.stopLoop()  — frames come from api.step(), not rAF
+```
+
+### §367.3 The gates, and therefore what is NOT in any frame
+
+```
+CameraRig.js:639   if (engine.debug.freeCam) { this._shotHeld = true; return; }
+                   → the ENTIRE rig. Follow spring, leash, whiskers, ceiling settle, yaw
+                     assist, route telegraph. §366.2.
+
+Controller.js:641  if (this.engine.debug.freeCam) { …; this._pushCharacter();
+                                                    this._pushLocomotion(dt); return; }
+                   → returns BEFORE _thiefVision, _readInput, _preTimers, _probeEnvironment,
+                     targets.update, **sm.update**, _postTimers, _hazards, _safetyNet.
+                     The state machine does not run. So `Moveset.js`, `States.js` and
+                     `Targets.js` are absent from every frame too.
+
+HUD.js:1538        const hidden = !!this.engine.debug?.hideHud || !this._visible;
+HUD.js:630, :961   early-return on hideHud
+                   → the whole UI layer: HUD.js, Alert.js, Icons.js, hud.css.js. ~3,300 lines.
+
+Health.js:179      if (this.engine.debug?.freeCam) { this.refused++; return false; }
+                   → damage is refused for the duration of a shot.
+
+Animation.js:524   freezePose(name, phase) pins one clip at one phase
+                   → the blend tree and every transition. A frame shows an authored pose,
+                     never a blend.
+
+Guard.js:1764      on('shot', (p) => this._poseForShot(p?.name || null))
+Particles.js:2383  on('shot', (e) => this._stageShot(e?.name))
+SlyModel.js:968    on('shot', ({ shot }) => …)
+Audio.js:1265      on('shot', …) — stops every loop
+                   → guards, FX and the character model are STAGED per shot rather than
+                     bypassed. Different from the above: they run, but on authored input.
+```
+
+### §367.4 What IS live in a captured frame
+
+Everything not listed above, and the list is coherent rather than arbitrary — it is **the art**:
+
+`render/*` (ToonMaterial, Lighting, Sky, PostFX, Outline, shadows), `textures/*`, `world/*`
+(Architecture, Props, Terrain, EgyptLevel geometry), the character *mesh* and its materials, and
+the FX and guard *rendering* of a staged pose.
+
+### §367.5 The consequence, stated plainly
+
+> **A blind critic round on captured frames can only ever return an ART verdict.** Camera feel,
+> control feel, traversal, the state machine, the HUD, damage, animation blending and guard
+> behaviour are all structurally outside what a frame can contain.
+
+This is not a criticism of the harness — staging is exactly what makes canonical shots comparable,
+and §141.1's whole discipline depends on it. It is a statement about **scope of evidence**, and it
+has been implicit for the project's entire life without being written down. Re-reading the blind
+rounds with it in hand: when a critic wrote *"a correct Sly platforming camera"* they were reading
+`Shots.js` staging — an authored `pos`/`target`/`fov` triple — and not one line of `CameraRig.js`.
+The verdict was real; its subject was not what it was taken to be.
+
+**What follows from it:**
+
+1. Frame-based rounds stay the instrument for art, unchanged. They are good at it.
+2. Everything in §367.3 needs a *different* instrument. Two now exist —
+   `tests/camera.test.mjs` (§366) and `tests/input.test.mjs` — and both were written this session
+   precisely because their subjects are unreachable by capture.
+3. **Feel remains unmeasured by anything.** Both new suites verify code against its own constants.
+   Neither asks whether the constants are right, and no capture can. That gap is real, it is
+   named at §366.7, and it needs a human at a keyboard.
+
+### §367.6 What this does NOT claim
+
+Not that the harness should change — nothing here proposes lifting a single gate, and lifting
+`freeCam` in particular would break every canonical shot and every sealed comparison built on
+them. Not that the art verdicts were wrong. Not that gameplay is broken; only that frames have
+never been evidence about it either way. And the inventory is exhaustive **over the grep terms
+listed in §367.1** — a module suppressing itself by some other mechanism would not appear here,
+and a negative grep is evidence about the words you guessed (§365-era lesson, learned twice).
