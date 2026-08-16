@@ -138,21 +138,50 @@ const SLY_SLAM = { w: 1.565, yLo: -0.746, yHi: 1.106 };
  * it. Neither number is quoted as the other. */
 const DUST = { w: 4.878, yLo: -0.989, yHi: 1.569 };
 
-/* ── TWO RING EXTENTS, AND THE SHOT IS ADMITTED ON THE DRAWN ONE (§405) ─────────────────────
- * `RING_R_DECLARED` is what `_stageImpact` returns and four consumers read. `RING_R_DRAWN` is
- * what the sprite covers: `sz = mix(0.5, 6.25, (0.088/0.34)^0.36) = 4.035 m`, since
- * PARTICLE_VERT's `corner` spans [-1,1] so the half-extent IS `sz`, and the shader exempts
- * PLANAR from the `uMaxSize` ceiling. **2.69x apart.**
+/* ── THE RING'S EXTENT HAS FIVE TERMS AND THIS TOOL KNEW ABOUT ONE ──────────────────────────
+ * `_stageImpact` returns `radius: 1.2 * scale` = **1.50 m**. §405 corrected that to **4.035 m**,
+ * the quad's half-extent from `sz = mix(0.5, 6.25, (0.088/0.34)^0.36)`. Both are wrong, and the
+ * second is wrong in the direction that ships a cropped frame.
  *
- * Cropping is checked against the DRAWN one. The declared radius is kept and printed so the gap
- * stays visible rather than being quietly resolved in the tool's favour; which number
- * `_stageImpact` should RETURN is a separate decision with four consumers on it.
+ *   `_emit` line 3084:  const s = R.range(0.8, 1.25) * scale;
  *
- * The ring's LIGHT in the frame is wider still — it reads as an effective ~5 m radius, the quad
- * plus bloom spill. Framing is done to the quad, because bloom is a postfx radius and a shot is
- * not composed to one. */
-const RING_R_DECLARED = 1.2 * S;                                          // 1.50 m
-const RING_R_DRAWN = 0.5 + (6.25 - 0.5) * Math.pow(0.088 / 0.34, 0.36);   // 4.035 m
+ * **`sz` is a random variable**, not a constant. Over the draw it spans **3.228 to 5.043 m**, and
+ * 4.035 m is its value at jitter exactly 1.0 — *the number you get by leaving the jitter term
+ * out.* Not the mean either; that is 4.135. Derived here from `EMITTERS.dive_ring` and
+ * `TUNE.impactScale`, and independently confirmed by the FX lane reading the attribute buffers
+ * the GPU was actually handed (`tools/ringprobe.mjs`): this tree draws 4.335 and 3.917 m.
+ *
+ * Four further terms, all measured by that lane, and **every one makes the ring LARGER**:
+ *
+ *   1. the size draw above                          sz up to 5.043 m
+ *   2. TWO live `dive_ring` instances against `count: [1, 1]` — `Math.round` where the `+0.999`
+ *      idiom needs `floor`, so every emitter can exceed its declared maximum
+ *   3. the atlas UV window: the quad's edge samples the painter at |U| = 0.8904, so painter
+ *      radius r lands at world `r * sz / 0.8904`
+ *   4. the quad is a world-axis-aligned SQUARE seen corner-on, extremes at `sz * sqrt(2)`
+ *   5. PLANAR sprites drift `aV0 * age` — the plane normal doubling as a velocity — so the
+ *      ground ring is drawn 0.088 m above the ground
+ *
+ * ── WHAT THIS CROPS AGAINST, AND WHY IT IS THE WORST CASE ───────────────────────────────────
+ * A DISC of `sz_max / 0.8904` = **5.664 m**. Two choices in that, both deliberate:
+ *
+ * **A disc, not the quad's corners.** The ink is circular; the quad's corners at `sz*sqrt(2)`
+ * = 7.13 m are transparent atlas, and cropping transparent corners is not cropping the ring.
+ *
+ * **The worst case of the draw, not this tree's value.** `sz` is stable per tree and moves
+ * whenever anything upstream perturbs the RNG stream — the FX lane's capture read the ring at
+ * x 7..1247 where an earlier tree read x 0..1272. **A shipped camera may not depend on an RNG
+ * draw.** Taking the maximum makes the bar monotone-safe: a camera that clears 5.664 m clears
+ * every draw, so no re-stage is needed if this number is later revised downward.
+ *
+ * `RING_R_DECLARED` is kept and printed so the gap to what `_stageImpact` RETURNS stays visible
+ * rather than being quietly resolved in the tool's favour; which number that function should
+ * return is a separate decision with four consumers on it. */
+const RING_R_DECLARED = 1.2 * S;                                          // 1.50 m, returned
+const RING_SZ_NOJITTER = 0.5 + (6.25 - 0.5) * Math.pow(0.088 / 0.34, 0.36);   // 4.035 m, §405
+const RING_SZ_MAX = RING_SZ_NOJITTER * (1.25 / 1.0);                      // 5.043 m, max size draw
+const ATLAS_WINDOW = 0.8904;              // the quad's edge samples the painter here
+const RING_R_DRAWN = RING_SZ_MAX / ATLAS_WINDOW;                          // 5.664 m — the bar
 
 /* The drawn figure's centre sits 39.5 px left of the contact point's projection. Part is the
    pose — a dive sprawls away from its contact — and part is the unexplained placement offset
