@@ -42,6 +42,7 @@ import { Particles, TUNE as FX_TUNE } from '../src/fx/Particles.js';
 import { TUNE as TOON_TUNE } from '../src/render/ToonMaterial.js';
 import { TUNE as POSTFX_TUNE } from '../src/render/PostFX.js';
 import { W, H, SLY, camFor, discOf, project, boxOf, overlapArea } from '../tools/framelib.mjs';
+import { inkAudit, buildOutlineShell } from '../src/render/Outline.js';
 import { BAND_R, bandOfPolyline, bandOfPixels, boundaryOf, stamp, countOf, density }
   from '../tools/fxrimlib.mjs';
 
@@ -305,6 +306,57 @@ test('T7: `impact` passes FIGURE SWALLOWED on the proxy box and fails it on the 
   assert.ok(MEASURED_FIGURE.y1 - MEASURED_FIGURE.y0 > Number(hM[1]),
     `the measured figure is ${MEASURED_FIGURE.y1 - MEASURED_FIGURE.y0} px tall, under the ${hM[1]} px bar — `
     + 'the height verdict is affected too and Shots.js says it is not');
+});
+
+/* ════════ T8 — the hull half of §379.1, asked of the shipped audit rather than of pixels ══ */
+
+test('T8: the hull system counts an FX-shaped mesh as MISSING ink, not as refusing it', () => {
+  /* §379.4's rim measurement settles the CREASE treatment and says nothing about the HULL one,
+     because the only pixel-side locator for a silhouette is the hull's own footprint and
+     measuring hull ink on it is circular. The hull question does not need pixels at all.
+     `SANDS_CENSUS=1 node tools/fxrim.mjs impact` asks the shipped scene graph and records
+     (`shots/fxrim2-impact/census.json`, src tree 64fad73b2ff3d1f4):
+
+       meshes under fx.root   14      of those carrying a hull shell   0
+       shells in the scene    14      of those under fx.root           0
+       every FX material's userData.outline                            null
+
+     The shells belong to `slydlrig`, the cane, a guard and the gold props — hero geometry and
+     hero props, exactly as §2.1 point 2 specifies. FX gets no inverted hull, measured rather
+     than argued.
+
+     THIS arm is the part that needs no artefact, and it is the sharper half. `outline: 0` is
+     how a material DECLINES ink (`Outline.js`: "an unannotated group is a surface nobody made a
+     decision about, and the house default is that a surface is inked"). FX materials declare
+     nothing, so the shipped audit classifies them as **missing** — a defect — and not as
+     **refused**. The intent "do not ink particles" is real, deliberate and written in
+     `Particles.js:1800`'s comment, and it is nowhere the audit can see it.
+
+     Consequence, and the reason this is a test and not a note: `Outline.inkAudit()` is exported
+     and **never called anywhere in `src/`**. The first person to wire it up gets 14 false
+     defects on a system that is behaving exactly as designed. */
+  const fxLike = new THREE.Mesh(new THREE.InstancedBufferGeometry(), new THREE.ShaderMaterial());
+  fxLike.name = 'fx.dust';
+  const root = new THREE.Object3D();
+  root.add(fxLike);
+
+  const audit = inkAudit(root);
+  assert.ok(audit && typeof audit.missing === 'number', 'inkAudit no longer returns a census');
+  assert.equal(audit.refused, 0,
+    'an FX-shaped material now REFUSES ink — someone has annotated it `outline: 0`, which is the '
+    + 'right fix and makes the "silently missing" finding stale; withdraw it rather than leave it');
+  assert.equal(audit.missing, 1,
+    `the audit counts ${audit.missing} missing for a shell-less, undeclared FX mesh — if this is 0 `
+    + 'the classification changed and the 14 false defects predicted above will not appear');
+
+  /* And the gate that actually denies the shell. An instanced quad IS `isMesh`, so §379.1's
+     "not meshes in the hull system" is loose: what excludes them is that nothing ever offers
+     them, plus `weldNormals` on a geometry with no position attribute. Asserted, because a
+     reason nobody has executed is a reason nobody has checked. */
+  assert.equal(buildOutlineShell(fxLike, new THREE.MeshBasicMaterial()), null,
+    'buildOutlineShell now returns a shell for an FX-shaped instanced quad — particles would be '
+    + 'getting inverted-hull ink, and §379.1 would need re-testing on that basis');
+  assert.equal(fxLike.userData.slyShell, undefined, 'a shell was stamped on the FX mesh anyway');
 });
 
 /* ═══════════════════════ T6 — the build the measurement describes ══ */

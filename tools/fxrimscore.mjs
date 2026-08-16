@@ -36,14 +36,22 @@
  *           and radius the SHIPPED `Particles._stageImpact()` returns. Not restated — the
  *           staging function is executed and `discOf` hands back its own rim samples.
  *
- *   HERO    §379.4's MUST-FIND probe: the footprint of the inverted-hull shell, `B − C`. That
- *           is Sly's silhouette as a piece of GEOMETRY, and it locates him without reference to
- *           the pass being measured — the edge pass keys off the opaque scene's depth and
- *           normals and knows nothing about hull shells, so "does the edge pass fire where the
- *           hull says the silhouette is" is a real question. `boxOf` cannot supply this locus:
- *           the `dive_impact` slam pose renders at x 356..841 / rows 277..614 against the
- *           upright box's 583..697 / 202..451. `A − S-nosly` cannot either, because it includes
- *           his SHADOW, which correctly carries no ink.
+ *   HERO    §379.4's MUST-FIND probe: the footprint of the inverted-hull shells, `B − C`. Those
+ *           are hull-inked silhouettes as a piece of GEOMETRY, and they are located without
+ *           reference to the pass being measured — the edge pass keys off the opaque scene's
+ *           depth and normals and knows nothing about hull shells, so "does the edge pass fire
+ *           where the hull says a silhouette is" is a real question.
+ *
+ *           **It is not Sly alone, and an earlier version of this file said it was.** The census
+ *           (`SANDS_CENSUS=1`) counts 14 shells in this frame and they belong to `slydlrig`, the
+ *           cane, a guard and the gold props — so 41% of the mask, spanning x 385..1264, is not
+ *           the player. That makes it a broader positive control, not a worse one; it just is
+ *           not "Sly's silhouette" and must not be quoted as one.
+ *
+ *           `boxOf` cannot supply this locus: the `dive_impact` slam renders at x 502..699 /
+ *           rows 303..498 against the upright box's 583..697 / 202..451. `A − S-nosly` cannot
+ *           either — it is the figure PLUS his cast shadow (x 356..841 / rows 277..614), and a
+ *           shadow correctly carries no ink.
  *
  *   FLOOR   §379.4's MUST-NOT-FIND probe: ground-plane points on a grid, kept only where
  *           `framelib` finds architecture at the impact's own height, the camera has a clear
@@ -79,7 +87,7 @@ import {
   groundUnder,
 } from './framelib.mjs';
 import {
-  BAND_R, idx, inFrame, stamp, countOf, bandOfPolyline, bandOfPixels,
+  BAND_R, idx, inFrame, stamp, countOf, bandOfPolyline, bandOfPixels, boundaryOf,
 } from './fxrimlib.mjs';
 
 const DIR = process.argv[2] || 'shots/fxrim-impact';
@@ -309,19 +317,21 @@ console.log(`\nband half-width from ToonMaterial.TUNE.inkPx ${TOON_TUNE.inkPx} �
  *
  *   RIM    `discOf(...).rim` at 720 samples — the projected `dive_ring` rim, from the point
  *          and radius the shipped `_stageImpact()` returns.
- *   HERO   the boundary of the HULL mask `B − C`. That mask is where the inverted-hull shell
- *          projects, i.e. Sly's silhouette as a piece of GEOMETRY. It locates the hero without
- *          reference to the pass being measured — see the note on circularity below.
+ *   HERO   the HULL mask `B − C` — where the inverted-hull shells project, i.e. hull-inked
+ *          silhouettes as a piece of GEOMETRY. It locates them without reference to the pass
+ *          being measured — see the note on circularity below. All 14 shells in the frame, not
+ *          just the player's: 41% of the mask is a guard and the gold props.
  *   FLOOR  the ground-plane grid points `framelib` admits as visible paving at the impact's own
  *          height, cordoned off from every other region.
  *
  * ── Why the hero locus is the hull's footprint, and why that is not circular ─────────────────
  * `boxOf` cannot supply it. The `dive_impact` pose is a slam: the rendered figure occupies
- * x 356..841 and rows 277..614, against the upright 0.62 x 1.80 box's 583..697 and 202..451.
- * The box is not wrong — `framelib`'s header says outright that subjects are approximated as
- * upright boxes — it is simply not a silhouette, and using it threw away 86% of the boundary.
- * `A − S-nosly` is the whole figure but also its SHADOW, a ground feature that correctly carries
- * no ink and would dilute the MUST-FIND probe with pixels that are right to be blank.
+ * x 502..699 and rows 303..498, against the upright 0.62 x 1.80 box's 583..697 and 202..451 —
+ * wider than the box, shorter, and reaching lower. The box is not wrong (`framelib`'s header
+ * says outright that subjects are approximated as upright boxes); it is simply not a silhouette.
+ * `A − S-nosly` is the whole figure but also its SHADOW — together x 356..841 / rows 277..614 —
+ * and a shadow is a ground feature that correctly carries no ink, so it would dilute the
+ * MUST-FIND probe with pixels that are right to be blank.
  *
  * The verdict is therefore taken on the **CREASE** pass (`A − B`), the depth/normal edge detect,
  * located by the **HULL** pass (`B − C`). Two different systems: the edge pass keys off the
@@ -413,7 +423,7 @@ function floorLocus(r) {
 }
 
 console.log('\nPEAK INK within BAND_R of each sample, luma levels of 255 — MEDIAN over the locus');
-console.log('                     RIM, hero-overlap excluded      HERO (hull footprint)      FLOOR (open paving)');
+console.log('                     RIM, hero-overlap excluded      HERO (all hull-inked geo)      FLOOR (open paving)');
 console.log('  r    what        crease  allink   fx    n     crease  allink*  n         crease  allink   n');
 
 const rows = [];
@@ -447,7 +457,7 @@ console.log(`\nat the derived radius r = ${R0}:`);
 console.log(`  RIM    ${main.rimLocus.length} of ${rimAll.length} samples clear of the hero · crease ${med(main.rimC).toFixed(2)} L `
   + `· FX loudness ${med(main.rimF).toFixed(1)} L`);
 console.log(`         the other ${main.rimBehind.length} run behind him and read ${med(main.behindC).toFixed(2)} L — HIS ink, not the ring's`);
-console.log(`  HERO   ${heroLocus.length} samples · crease ${med(main.heroC).toFixed(2)} L`);
+console.log(`  HERO   ${heroLocus.length} samples · crease ${med(main.heroC).toFixed(2)} L   (all hull-inked geometry: Sly 59%, plus a guard and gold props)`);
 console.log(`  FLOOR  ${main.floorN} samples · crease ${med(main.floorC).toFixed(2)} L · FX loudness ${med(main.floorF).toFixed(1)} L`);
 
 /* CAL-E: the exclusion must not BE the measurement. If the hero swallowed most of the rim, the
@@ -471,7 +481,7 @@ gate('CAL-A the rim locus is on the drawn ring', med(main.rimF) > 4 * Math.max(m
    The bar is the floor control's own p90 — the level nine out of ten null samples stay under —
    which is derived from the frame and stated before the rim is read. */
 const BAR = quant(main.floorC, 0.9);
-gate('CAL-B hero silhouette carries crease ink', med(main.heroC) > BAR,
+gate('CAL-B hull-inked silhouettes carry crease ink', med(main.heroC) > BAR,
   `the hero silhouette peaks at only ${med(main.heroC).toFixed(2)} L against the floor control's p90 of `
   + `${BAR.toFixed(2)} L — the frame's strongest depth discontinuity does not read as inked, so a low `
   + 'rim number means nothing');
@@ -588,46 +598,120 @@ if (!havePops) {
     }
   }
 
+  /**
+   * ── A batch diff is only a SILHOUETTE when it looks like one, and this is that gate ────────
+   *
+   * The first run of this section reported all three populations as if their masks were
+   * silhouettes. Two of them are not, and the gate below is what says so instead of me:
+   *
+   *   ring   56.6% of the frame, one blob spanning x 0..1279 and every row from 214 to the
+   *          bottom edge. `dive_ring` draws into an ADDITIVE, PLANAR batch and stages at a
+   *          sprite size of ~4.03 m — `mix(0.4, 5, u^0.36)` at `u = 0.088/0.34`, times
+   *          `scale 1.25` — against the 1.5 m radius `_stageImpact` reports as "the ring's own
+   *          reach". So the mask is the flat additive QUAD and its glow, not the visible
+   *          annulus, and its boundary is nowhere near the rim. The rim has a GEOMETRIC locus
+   *          (`discOf`, above) and that is the one that answers for this population.
+   *   spark  875 px in 22 fragments, biggest 377, scattered across the upper left — the
+   *          braziers. `dive_spark` is 14-18 of the batch's 259 live instances and is not
+   *          separable from them by any lever here.
+   *
+   * The gate is derived from what a silhouette IS: a compact region whose boundary is one
+   * closed curve. A mask covering a quarter of the frame is not compact, and one whose largest
+   * component holds under 80% of its area is not one curve — it is a scatter, and the boundary
+   * of a scatter is a sum of unrelated little boundaries. Neither bound was chosen to admit or
+   * reject any particular row; both are properties of the word.
+   */
+  const FRAME_FRAC_MAX = 0.25, DOMINANCE_MIN = 0.8;
+  function components(mask) {
+    const seen = new Uint8Array(W * H); let n = 0, biggest = 0; const st = [];
+    for (let i = 0; i < W * H; i++) {
+      if (!mask[i] || seen[i]) continue;
+      n++; st.length = 0; st.push(i); seen[i] = 1; let sz = 0;
+      while (st.length) {
+        const q = st.pop(), x = q % W, y = (q / W) | 0; sz++;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx, ny = y + dy;
+          if (!inFrame(nx, ny)) continue;
+          const r = idx(nx, ny);
+          if (mask[r] && !seen[r]) { seen[r] = 1; st.push(r); }
+        }
+      }
+      if (sz > biggest) biggest = sz;
+    }
+    return { n, biggest };
+  }
+
   console.log('\n  crease-ink peak (median L) on each population\'s own silhouette, by where the');
   console.log('  mask is cut — samples touching the hero are excluded exactly as the rim\'s are');
-  console.log('   population                          cut  locus  clear  creaseL  allinkL   fxL');
+  console.log('   population                          cut  area%  comps  dom%  locus  clear  creaseL  allinkL   fxL');
   const popRows = [];
+  const popAdmitted = new Map();
   for (const p of POPS) {
     for (const cut of [0.5, 4, 12, 24]) {
       const m = new Uint8Array(W * H);
       let n = 0;
       for (let i = 0; i < W * H; i++) if (delta(IM['A-ship'], IM[p.tag], i) > cut) { m[i] = 1; n++; }
       if (!n) { console.log(`   ${p.label.padEnd(34)} ${String(cut).padEnd(4)} EMPTY MASK — population drew nothing`); continue; }
+      const cc = components(m);
+      const frac = n / (W * H), dom = cc.biggest / n;
+      const ok = frac <= FRAME_FRAC_MAX && dom >= DOMINANCE_MIN;
+      if (ok) popAdmitted.set(p.label, true);
+      const shape = `${(100 * frac).toFixed(1).padStart(5)} ${String(cc.n).padStart(5)} ${(100 * dom).toFixed(0).padStart(5)}`;
+      if (!ok) {
+        console.log(`   ${p.label.padEnd(34)} ${String(cut).padEnd(4)} ${shape}   NOT A SILHOUETTE — locus refused`);
+        continue;
+      }
       const locus = boundaryOf(m);
       const clear = locus.filter(([x, y]) => !touchesHero(x + 0.5, y + 0.5, R0 + 1)).map(([x, y]) => [x + 0.5, y + 0.5]);
-      if (!clear.length) { console.log(`   ${p.label.padEnd(34)} ${String(cut).padEnd(4)} ${String(locus.length).padStart(5)}      0  entirely behind the hero`); continue; }
+      if (!clear.length) { console.log(`   ${p.label.padEnd(34)} ${String(cut).padEnd(4)} ${shape}   entirely behind the hero`); continue; }
       const c = peaks(clear, creaseAmt, R0), ink = peaks(clear, inkAmt, R0), fxp = peaks(clear, fxAmt, R0);
       popRows.push({ pop: p.label, cut, n, locus: locus.length, clear: clear.length, c, ink, fxp });
-      console.log(`   ${p.label.padEnd(34)} ${String(cut).padEnd(4)} ${String(locus.length).padStart(5)} ${String(clear.length).padStart(6)} `
+      console.log(`   ${p.label.padEnd(34)} ${String(cut).padEnd(4)} ${shape} ${String(locus.length).padStart(6)} ${String(clear.length).padStart(6)} `
         + `${quant(c, 0.5).toFixed(2).padStart(8)} ${quant(ink, 0.5).toFixed(2).padStart(8)} ${quant(fxp, 0.5).toFixed(2).padStart(6)}`);
     }
   }
 
-  /* Same bars as the rim, applied population by population. The floor control and the hero
-     probe are the ones already computed above — one null and one positive for the whole set. */
+  /* Same bars as the rim, applied population by population — but only to the populations whose
+     mask is a silhouette at all. A refused locus is not a null result and is not reported as
+     one: it is a population this frame cannot answer for. */
   console.log(`\n  against the same controls: floor median ${med(main.floorC).toFixed(2)} L (p90 ${BAR.toFixed(2)}), hero ${med(main.heroC).toFixed(2)} L`);
-  let allQuiet = true, anyEmpty = false;
+  const answered = [], held = [];
   for (const p of POPS) {
     const rows2 = popRows.filter((r) => r.pop === p.label);
-    if (!rows2.length) { anyEmpty = true; continue; }
+    if (!rows2.length) {
+      held.push(p.label);
+      console.log(`   ${p.label.padEnd(34)} NO USABLE SILHOUETTE at any cut — HELD, not answered`);
+      continue;
+    }
     const worst = Math.max(...rows2.map((r) => quant(r.c, 0.5)));
     const loud = Math.max(...rows2.map((r) => quant(r.fxp, 0.5)));
     const quiet = worst <= VERDICT_BAR;
-    if (!quiet) allQuiet = false;
+    answered.push({ label: p.label, quiet, worst });
     console.log(`   ${p.label.padEnd(34)} worst-cut crease ${worst.toFixed(3)} L · FX loudness ${loud.toFixed(1)} L · `
       + `${quiet ? 'NO INK at any cut' : 'CARRIES INK'}`);
   }
-  console.log(anyEmpty
-    ? '\n  At least one population drew nothing; that row is not evidence either way.'
-    : (allQuiet
-      ? '\n  §379.1 holds for every staged population, not just the ring: none of the four sprites\n'
-        + '  carries crease ink on its own silhouette, at any cut of the mask that defines it.'
-      : '\n  At least one population DOES carry crease ink. §379.1 is not general — see the rows above.'));
+  const allQuiet = answered.length > 0 && answered.every((a) => a.quiet);
+  console.log('');
+  if (answered.length) {
+    /* Counted in SPRITES, not populations: the `dust` batch carries two of the four emitters
+       `_stageImpact` stages, so answering it answers two. Getting this wrong would understate
+       the coverage, which is the direction that reads as modesty and is still an error. */
+    const SPRITES_PER_POP = { 'dust': 2, 'ring': 1, 'spark': 1 };
+    const spritesAnswered = answered.reduce((a, r) => a + (SPRITES_PER_POP[r.label.split(' ')[0]] ?? 1), 0) + 1;
+    console.log(allQuiet
+      ? `  Every population this frame CAN answer for carries no crease ink on its own\n`
+        + `  silhouette, at any cut of the mask that defines it: ${answered.map((a) => a.label.split(' ')[0]).join(', ')}.\n`
+        + `  With the ring's geometric rim (0.00 L, above) that is ${spritesAnswered} of the 4 sprites\n`
+        + `  \`_stageImpact\` stages — the ring by geometry, the dust and the debris by mask.`
+      : `  At least one population DOES carry crease ink — see the rows above. §379.1 is not general.`);
+  }
+  if (held.length) {
+    console.log(`\n  HELD, and the reason is the instrument rather than the frame:\n   ${held.join('\n   ')}\n`
+      + `  A refused locus is not evidence of absence. The ring is answered anyway, by the\n`
+      + '  GEOMETRIC rim above — a locus `_stageImpact` supplies and no diff is needed for.\n'
+      + `  Nothing supplies one for \`dive_spark\`, and it is 14-18 of its batch's 259 live\n`
+      + `  instances, so this frame cannot separate it from the braziers at all.`);
+  }
 }
 
 /* ── §colour: what the ink actually measures as, reported not used ──────────────────────── */
