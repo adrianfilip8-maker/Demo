@@ -30885,6 +30885,34 @@ Third instance this session of the same shape: §406.3 (stashing a lane's live e
 deletion, and both times the destroyed work was indistinguishable from an environment failure
 afterward. **Every one of them happened while tidying the tree rather than while doing the work.**
 
+### §410.6 The same hook fired again, on a different wrong thing
+
+Second occurrence, ~40 minutes later, same message: *"There are uncommitted changes… Please commit
+and push."* This time the changes were `src/player/Controller.js`, `src/world/Collision.js`,
+`src/player/CameraRig.js`, `tests/traversal.test.mjs` and `tools/sweepcensus.mjs` — **three running
+lanes' live in-flight edits**, one of them a tool I had commissioned by name an hour earlier.
+
+Committing them would have published three rounds of unverified, half-written work under my name,
+and §406.3 already records what happens when I touch files a running lane is editing.
+
+So the hook has now been wrong twice, in two different directions:
+
+```
+  first fire   171 deletions I had just caused        committing = publishing the damage
+  second fire  three lanes' work in progress          committing = §240 / §311, and §406.3's shape
+```
+
+Neither is a malfunction. **The hook can see that the tree is dirty and cannot see why**, and
+"dirty" has at least three causes that call for opposite responses: work of mine to land, damage of
+mine to revert, and work of somebody else's to leave alone. §410.5 said to read the diff; the
+sharper form after two fires is:
+
+> **§410.6 — Before committing, establish OWNERSHIP as well as content.** `git status` names files,
+> not authors. `git log -3 -- <path>` and a live agent listing answer "whose is this" in seconds,
+> and on a branch with four concurrent lanes that question has a different answer for almost every
+> dirty path. An instruction to commit is scoped to *your* work, always — no automated nudge can
+> scope it for you.
+
 
 ---
 
