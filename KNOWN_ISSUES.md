@@ -28996,3 +28996,120 @@ another was writing assertions against it. Neither was wrong; the geometry was b
 the arms were being tightened. But an assertion written against a number another lane is actively
 tuning measures the schedule, and the defence is to assert the *invariant* rather than the value —
 which is what the surviving two do.
+
+---
+
+## §389 — This game can be heard for the first time, and a stance is a capsule
+
+### §389.1 The payloads were published and unconsumed — §357.1, one hour old
+
+Before building anything, the FX/audio lane checked whether AUDIO read the fields TRAVERSAL had
+landed that hour. **It did not.** All eight contacts carried `material` (`Moveset.js` 409/627/734/
+771/919/1149/1237/1446) and all eight AUDIO handlers still named a fixed recipe.
+
+The field arrived and nothing read it. **The fifth §357.1 of this session, live, an hour old, and
+caught by the lane that would have been blamed for it.** Eight handlers now resolve through
+`stepFor(p?.material)`, and `stepFor(undefined)` returns `step_stone` — so a contact resolving
+without a hit degrades to exactly the sound it made before, never to silence.
+
+**`ledgeGrab` is the one worth reading.** §383 called `step_cloth` on a stone ledge a defect and
+identified the cause: *cloth is the glove, not the ledge*, voiced because the ledge was unknowable.
+Both are knowable now, so the frame gets **both** — the surface with the cloth under it, which is
+the same character-plus-material pair `landed` has always used. The original author was not wrong
+about the glove; they were missing a field.
+
+### §389.2 The instrument committed the exact bug it was built to audit
+
+`_wireEngine` and `_hookAnimation` are called from `init()`, not `unlock()`. The first harness called
+only `unlock()`. So `Audio` built a perfect graph **that nothing was ever routed into** — and **two
+of four tests passed anyway**, because the wind and brazier beds cleared every absolute rms threshold
+written against them. The session rendered, every beat "made a sound", and not one game event had
+reached the module.
+
+**What caught it was the one bar with a real discriminator:** four rail materials came back at
+**502 Hz, identical to the digit.** An rms threshold cannot tell a cue from its own bed; a four-way
+spread can.
+
+The durable fix is not the wiring order — it is that the session now keeps **a ledger of what
+`play()` was actually called with**, because *"the window was loud"* and *"the cue was reached"* are
+different claims and only the second is under test.
+
+A second harness/game distinction found the same way: `_release` calls `stop()` **with no argument**,
+which the shim stores as `_stop = undefined` and which erases the source from the *whole* render
+rather than truncating it. A property of the renderer, not the game — in a live context the samples
+have already reached the device by the time the voice is reclaimed.
+
+### §389.3 What it measures, and the control that licenses it
+
+```
+railMount across four materials   metal 1467 · cloth 1556 · wood 955 · stone 1532 Hz   spread 1.63x
+caneHit (material-blind CONTROL)  229 / 229 / 229 Hz                                   spread 1.000x
+ledgeGrab   stone  919 Hz  vs  cloth 2006 Hz     — the §383 defect, 2.18x apart
+spireLand   stone 1261 Hz  vs  metal 1367 Hz
+```
+
+**The control is what makes the rest usable.** A material-blind event renders at *exactly* the same
+centroid across materials, so **the noise floor on this instrument is zero and any separation at all
+is signal.** That is what licenses the narrow 50 Hz bar on the cable/rope pair.
+
+**And `enemyBounce` has a bar of its own, written to FAIL the day somebody voices it.** §384.1
+recorded that the census scores that event live and always will, because it cannot see an event whose
+*second* listener is missing. **This is the instrument that can.** Its silence is now audible rather
+than a grep result, and voicing it has to come here and delete a line deliberately rather than drift
+in.
+
+### §389.4 What the harness is NOT, stated by its author
+
+`webaudio.mjs` implements Panner, StereoPanner, Convolver and DynamicsCompressor as **pass-throughs**.
+So level, spectrum, timing and material identity are real; **spatialisation, reverb tail and limiter
+behaviour are not.** Every assertion is written to depend only on the first group.
+
+In particular, §383.1's finding that every voice reaches the reverb at `wet × 0.28` or
+`wet × (0.35 + 0.9k)` **remains a source reading that this harness cannot confirm.** The 9-second
+script is a sample, not a session: no pole-climb scuffs, no paraglide, no full alert-ladder descent,
+no guard chatter over distance, no tomb/courtyard space transition.
+
+### §389.5 A stance is a capsule, not a point
+
+§387.3's boarding disagreement is settled, and the *reporting* lane's figure was the wrong one. Run
+side by side on one tree:
+
+```
+SOUTH end (-5.80, 12.70, -19.00)
+  DEF1  nearest point on the TOP FACE of a ground/ledge box   0.00 m   ledge
+  DEF2  nearest place a capsule can actually stand            3.01 m   wall
+```
+
+DEF1 asked *"is the rope's end on the top face of some box?"* — yes, exactly on that ledge's southern
+edge — and **never asked whether a body can be there.** It cannot: a downward ray at that xz lands on
+the nave roof deck at y 17.00, because **the great doorway's cornice is enclosed under the roof.**
+
+**That is the third time this session the same lane mistook a point ON a surface for a place a player
+can BE** — after *"a ray hit is not a foothold"* (§378.5) and grepping a method name that did not
+exist (§386.2). The rule that catches all three, now written at the site:
+
+> **A stance is a capsule, not a point.**
+
+The rope is re-anchored to the hall's south facade wall head — §8.1 step 3/4's own walkway, where the
+hook chain lands you. Boarding 0.41 m south and 1.25 m north against `railMount` 1.35: **both step
+on.** 0 of 301 samples inside a solid.
+
+**And a cross-lane catch worth recording:** the world lane predicted the rope's speed ceiling would
+follow from sag depth. Wrong — sag 1.0, 0.6 and 0.45 all measured **4.86 m/s, pinned.** The speed
+came from the **end-height difference**, the slope converting the drop-on into along-rail speed.
+Levelling the ends from a 0.50 m rise to 0.20 m took it to 4.57 with the sag untouched. **Their
+harness found what its author's derivation could not see.**
+
+### §389.6 `spireLand` and `crawl` have authored moments after all
+
+**Three of five spires** carry a target at ×1.25 with a pole beneath: pole-climb the east pinnacle
+shaft (13.50 → 19.50) and take `PoleClimb`'s top hop at `jumpV0 × 0.55` = 6.05 m/s, a **1.525 m rise
+against a 1.50 m gap** — §8.1's own named beat. The obelisk's 1.60 m gap falls 0.075 m short of the
+bare hop and `catch` 1.008 covers it, **which is what the magnetism is for.** The two pylon-stage
+tips are scenery with a state attached, deliberately: they stand on walkable ground, so a miss costs
+1.0 m and MAG's *"a miss is expensive"* rule excludes them.
+
+**`crawl` has one walkable approach**, and the first probe was wrong for the same family of reason —
+it cast from y 60 and found the aisle roof at 13.50 rather than the hall floor. Re-probed from each
+vent's own height, the entrance is standable 1.28 m away. The other three vents are **interior
+segments of one tunnel**, so "no external approach" is correct for them rather than a defect.
