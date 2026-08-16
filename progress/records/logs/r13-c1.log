@@ -1,0 +1,15 @@
+· starting dev server on :5300
+· loading game
+· ready
+· renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+· modules present (17): shading postfx sky lighting textures architecture props terrain collision character animation movement camera fx guards hud audio
+· 4 boot warning(s):
+    ! textures: prewarm 23 recipes in 2.72s at size 1024 on 3 workers (125 MB, 23 baked / 0 generated)
+    ! KayKit (props): 36 placed from 11 models, 0 failed, 31064 tris, 29 colliders, 36 contact decals, 0 hulls
+    ! SlyModelDLRig: relaxed 6070 glove vertices, max move 17.8 (asset units)
+    ! SlyModelDLRig: staff submesh dropped (258 tris), sly-cane.glb (§294) socketed to handR (grip 22.2 mm, 258 tris)
+  ✓ hero          306665ms  draws  253  tris 2299k
+  ✓ courtyard     277606ms  draws  276  tris 2427k
+  · page closed
+
+→ shots/r13/  (2 shots, 0 failed)
