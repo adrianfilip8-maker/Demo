@@ -618,9 +618,28 @@ export class Props {
    * or the rooftop run already names, and every one of them at a height you can only reach by
    * doing the traversal the beat exists to teach. Scattering them would make them coins.
    *
-   * The two on the entry pylon are the load-bearing pair: one at the foot of the new handhold
-   * ladder and one on the deck it delivers you to, so the route that had nothing saying "climb
-   * here" now has a collectible at both ends of it.
+   * The two on the entry pylon are the load-bearing pair: one ON the handhold ladder and one on
+   * the deck it delivers you to, so the route that had nothing saying "climb here" now has a
+   * collectible at both ends of it.
+   *
+   * ── "On the route" is asserted here and PROVEN against the built level ────────────────
+   * Placement claims are cheap and two of these were wrong when first written — one 0.30 m
+   * inside a kiosk pier, one over a hole that fell the full 15 m to the paving. So all twelve
+   * are checked headlessly against the real `Collision` on three tests, and the numbers are the
+   * reason to believe the sentence above rather than the sentence itself:
+   *
+   *   R1  a downward ray finds a real surface under it        — 12/12
+   *   R2  from the nearest place a PLAYER can actually be, the bottle is inside the pickup
+   *       magnet (2.40 m): measured 0.08–0.70 m, worst case the ladder bottle
+   *   R3  it is NOT reachable from the courtyard floor        — 12/12 cost the traversal
+   *
+   * R2 is the test that needed thinking about rather than writing. For eleven of them "where a
+   * player can be" is standing on the surface under the bottle, capsule centre at
+   * `surface + grabHeight`. For the ladder bottle it is **not**: the only thing under it is the
+   * battered pylon face 5.93 m below, and it is collected from a *cling* — capsule centre where
+   * `WallClimb.enter` puts it on rung `notch-pylon-e-w-5`, which measures 0.70 m. A test that
+   * only knew about floors called that bottle unreachable, and it is the one bottle in the level
+   * whose whole purpose is that you have to be climbing to take it.
    *
    * ── The manager half, adapted from the reference and NOT copied ───────────────────────
    * `bottle.gd` / `bottle_manager.gd` in NoahChase/Sly-Cooper--A-Thief-in-Godot (HEAD 6479957,
@@ -639,7 +658,7 @@ export class Props {
     /* Surface + ~1.0 m, so the bottle floats at chest height over the beat it marks rather than
        sitting in the floor. Every y here is checked against the registered collider under it. */
     const spots = [
-      [-6.0, 3.00, 17.5],    // terrace stage 1 (ground y 2.0) — §8.1 step 1
+      [-2.2, 3.00, 17.5],    // terrace stage 1 (ground y 2.0) — §8.1 step 1
       [5.4, 6.20, 9.0],      // terrace stage 2 (ground y 5.2) — §8.1 step 1
       [-2.0, 10.00, 7.5],    // obelisk kiosk lintel (ledge y 9.0) — §8.1 step 2
       [20.2, 10.00, 31.5],   // peristyle SE return architrave (ledge y 9.0) — the rail's landing

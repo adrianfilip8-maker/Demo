@@ -201,6 +201,19 @@ export class Decals {
     return i;
   }
 
+  /**
+   * Drop every live decal. Called by `Particles._stageShot`, which runs twice per capture and
+   * rebases this clock on both calls — without it the first staging's marks are reborn at the
+   * origin under the second's, and a `crack` painted twice at the same point is twice the ink.
+   * Same shape as `Batch.clear()`, and for the same reason.
+   */
+  clear() {
+    this._used = 0;
+    this._head = 0;
+    this._deathMax = -1;
+    this._dirty = true;
+  }
+
   remove(handle) {
     if (handle == null || handle < 0 || handle >= this.capacity) return;
     this.aData.array[handle * 4 + 1] = 0.0001;   // expire it next frame

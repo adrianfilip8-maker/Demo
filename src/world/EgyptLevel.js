@@ -1272,19 +1272,39 @@ function entryPylons(A) {
      * channel.
      *
      * ── The ladder runs PAST the niche head, and it has to ────────────────────────────────
-     * The first version stopped at the niches' own head (y 22), which put the top rung at 21.00
-     * and 19.95. Measured against the shipped moveset, that route ran out: from a cling at
-     * 21.00, `wallJump` rises 2.2274 and the re-granted `doubleJump` 2.0419, so the feet reach
-     * 25.269 and the hands `hangReach` 1.56 higher at **26.829 — 2.09 m under this tower's deck
-     * lip at 28.92.** A 23 m ladder that ends in a shrug is worse than no ladder, and it is
-     * exactly the "promise made in one place and kept in another" this file keeps arguing
-     * against. Two more rungs per niche carry the fittings up the 3.6 m of plain wall between
-     * the niche head and the cornice — which is where a real pylon's upper flagstaff brackets
-     * sit anyway, because the niche stops short of the cornice on a real one too. Top rungs are
-     * now 25.20 and 24.15, both inside the wall proxy's own 25.6 m top; from 25.20 one wall jump
-     * alone puts the hands at 28.99, clearing the lip by 0.07 m, and the double jump behind it
-     * turns that into 2.11 m. The route terminates on the deck the `pylon-drop` rail leaves
-     * from, which is the whole point of laddering this tower rather than the other one. */
+     * The first version stopped at the niches' own head (y 22), putting the top rungs at 21.00
+     * and 19.95, and the route ran out below the tower. Two more rungs per niche carry the
+     * fittings up the 3.6 m of plain wall between the niche head and the cornice — which is
+     * where a real pylon's upper flagstaff brackets sit anyway, because the niche stops short of
+     * the cornice on a real one too. Top rungs are now 25.20 (west line) and 24.15 (east),
+     * both inside the wall proxy's own 25.6 m top.
+     *
+     * ── AN ARITHMETIC RETRACTION, AND THEN THE MEASURED ANSWER ────────────────────────────
+     * The exit numbers first written here were wrong, and wrong in a way worth naming: they
+     * treated the rung as the position of Sly's FEET. It is the position of his HAND —
+     * `WallClimb.enter` puts the capsule at `h.point.y − hangReach`, exactly as a ledge does.
+     * So a launch from a rung at Y lifts the feet to Y − 1.56 + 2.2274 and the hands to
+     * **Y + 2.2274**, not Y + 2.2274 + 1.56. From 25.20 that is 27.427, not 28.99, and it does
+     * **not** clear the 28.92 deck lip by 0.07 m — it misses it by 1.49 m. With the re-granted
+     * double jump the hands make 29.469, clearing by 0.549 m.
+     *
+     * What the route actually does was then measured rather than derived, by flying the real
+     * `Controller` against the real `Collision` on the built level: the ascent tops out on the
+     * **head of this proxy at y 25.60**, which `LedgeHang` (priority 88, above everything in the
+     * ladder) catches on the way up from either line's top rung — hands reach 27.43 from the
+     * west and 26.38 from the east, both over the 25.60 lip. From that perch a plain jump puts
+     * the hands at 29.68 and the deck is taken. **The loop closes, in two beats rather than
+     * one**, and it closes from BOTH lines, so the 1.05 m stagger between their top rungs — which
+     * `WallClimb.find()` cannot bridge, the two lines being 3.5 m apart against its 0.685 m
+     * reach — costs nothing. Left as it is: an ascent that ends on the wall head and then steps
+     * onto the deck is a better beat than one that lands on the deck in a single bound, and it
+     * is the beat the geometry already had.
+     *
+     * ONE CONSEQUENCE IS NOT MINE TO FIX AND IS FLAGGED IN THE REPORT: this proxy is authored
+     * `ph − 0.4` while the drawn shell is `ph`, so the collider head at 25.60 sits 0.40 m below
+     * the masonry that is actually drawn there (measured: 284 vertices of `court|hieroglyph_wall`
+     * between y 25.88 and 26.03). Nothing could reach that surface before this ladder existed,
+     * so the mismatch has never mattered; it does now. */
     const holds = [];
     if (sx > 0) {
       /* y0 2.10 = one pitch off the paving, so the first rung is inside a plain standing jump

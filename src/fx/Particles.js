@@ -1727,6 +1727,37 @@ class Batch {
     return i;
   }
 
+  /**
+   * Drop the whole live population. **Looping batches are exempt and that is the point.**
+   *
+   * `_stageShot` runs TWICE per capture (`Debug.js`: applyShot → step(14) → applyShot →
+   * step(3) → capture) and rebases the clock to `_t = 0` on both calls, so the first
+   * staging's particles are reborn at the origin alongside the second's instead of aging
+   * out — every staged effect reached the film at 2x coincident density. Alpha composites
+   * as `1 - (1 - a)^2`, so that is not a scale factor anyone can divide out after the fact.
+   * The second staging is the operative one (it is what the ages in `STAGE_RUNGS` are
+   * derived against), so it must REPLACE the first rather than add to it.
+   *
+   * Only the one-shot batches are cleared. The looping ones are the ambient fields —
+   * `sand_drift`, `sand_haze`, `air_motes`, `shimmer` — which are GPU-resident populations
+   * with no birth event at all; `_used` is their size, not a write cursor, and zeroing it
+   * would empty the air out of the frame this is trying to fix.
+   *
+   * The attribute data is deliberately left alone: `instanceCount` and `_used` at 0 mean
+   * nothing is drawn whatever the buffers hold, and the next `slot()` overwrites from row 0.
+   */
+  clear() {
+    if (this.looping) return;
+    this._used = 0;
+    this._head = 0;
+    this._deathMax = -1;
+    this._lo = 1e9;
+    this._hi = -1;
+    this._dirty = true;
+    this.geometry.instanceCount = 0;
+    this._fold();
+  }
+
   /** Upload only the rows that changed, and fold the batch away when it is empty. */
   commit(time, density) {
     if (this.looping) {
@@ -3194,6 +3225,18 @@ export class Particles {
     this._t0 = this.engine.time;
     this._t = 0;
     if (this.decals) this.decals._t = 0;
+    /* **Staging replaces, it does not accumulate.** `Debug.js` calls `applyShot` twice per
+       capture — applyShot → step(14) → applyShot → step(3) → capture — and `Shots.js:564` is
+       the only `emit('shot')`, so this function runs twice and everything below it emits
+       twice. Rebasing `_t` to 0 above does not retire the first set: it re-births it at the
+       origin, so both populations were alive, coincident and identically seeded in the frame,
+       and every staged effect in every canonical shot has been rendering at double density.
+       Clearing here makes the second staging the only one that reaches the film, which is the
+       one the ages in `STAGE_RUNGS` are derived against (3 frames, not 17).
+       This repairs the instrument; it does not restage anything. What each shot DEPICTS is
+       unchanged — the same emitters at the same places — only the count is now the count a
+       player would see. */
+    this._clearStaged();
     let h = 0x811c9dc5;
     for (let i = 0; i < (name || '').length; i++) { h ^= name.charCodeAt(i); h = Math.imul(h, 0x01000193); }
     this.rand = rng((0x5c17c00 ^ 0xfada ^ h) >>> 0);
@@ -3233,6 +3276,19 @@ export class Particles {
     } else if (name === 'alert') {
       this._stageAlert();
     }
+  }
+
+  /**
+   * Retire everything a previous staging of this capture left behind.
+   *
+   * One-shot batches and decals only; the looping ambient fields are exempt (see
+   * `Batch.clear()`). Trails are tied to live objects and re-derive themselves, and both
+   * `SparkleField` and `FlameField` are rewritten wholesale every frame by their
+   * `begin()`/`end()` pair, so neither can accumulate across a re-stage.
+   */
+  _clearStaged() {
+    for (const b of this.batches.values()) b.clear();
+    this.decals?.clear();
   }
 
   /**
