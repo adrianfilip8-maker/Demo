@@ -142,6 +142,19 @@ function clear(cam, p) {
 
 /* ---------------------------------------------------------------------- */
 
+/**
+ * The staging is now known, so the tool has to match it. `Particles._stageAlert()` places
+ * **rung 3** (`alert_spot` + `alert_spot_spark`) at the NEAREST guard's head and, when a second
+ * guard exists, **rung 2** (`alert_search`) at the next-nearest — both at `+1.55 m`, which is
+ * `_onGuardAlert`'s own head-height offset, so a staged frame and a played one put the mark in
+ * the same place.
+ *
+ * That second rung is the point of the shot rather than a bonus. The registered claim (T3) is
+ * that four rungs read APART — strictly increasing, ≥1.6x per step, rung 3 at loudness 0.0177
+ * against rung 2's 0.00949. **One rung in a frame cannot evidence a ladder.** So a candidate that
+ * frames only one guard is not a candidate for this shot, and `guard2` is required rather than
+ * optional.
+ */
 function score(name, c) {
   const cam = camFor(c);
   const sly = boxOf(cam, c.player.pos[0], c.player.pos[1], c.player.pos[2], SLY);
@@ -150,13 +163,24 @@ function score(name, c) {
   const markBox = boxOf(cam, c.guard[0], c.guard[1] + MARK_Y - MARK_R, c.guard[2],
     { w: MARK_R * 2, h: MARK_R * 2 });
 
+  /* The second guard and its rung-2 mark, if the candidate stages one. */
+  const g2 = c.guard2 || null;
+  const grd2 = g2 ? boxOf(cam, g2[0], g2[1], g2[2], GUARD) : null;
+  const mark2Box = g2
+    ? boxOf(cam, g2[0], g2[1] + MARK_Y - MARK_R, g2[2], { w: MARK_R * 2, h: MARK_R * 2 })
+    : null;
+
   const faults = [];
   if (!sly) faults.push('SLY BEHIND LENS');
   if (!grd) faults.push('GUARD BEHIND LENS');
   if (!markC) faults.push('MARK BEHIND LENS');
 
+  if (!g2) faults.push('NO SECOND GUARD — one rung cannot evidence a ladder (T3)');
+  if (g2 && !grd2) faults.push('GUARD2 BEHIND LENS');
+
   const ms = margins(sly), mg = margins(grd), mm = margins(markBox);
-  for (const [who, m] of [['sly', ms], ['guard', mg], ['mark', mm]]) {
+  const mg2 = margins(grd2), mm2 = margins(mark2Box);
+  for (const [who, m] of [['sly', ms], ['guard', mg], ['mark', mm], ['guard2', mg2], ['mark2', mm2]]) {
     if (!m) continue;
     for (const [edge, v] of Object.entries(m)) {
       if (v < 0) faults.push(`${who} CROPPED ${edge} by ${(-v).toFixed(0)} px`);
@@ -164,16 +188,35 @@ function score(name, c) {
     }
   }
 
-  const ov = overlapArea(sly, grd);
-  const slyArea = sly ? (sly.x1 - sly.x0) * (sly.y1 - sly.y0) : 0;
-  const grdArea = grd ? (grd.x1 - grd.x0) * (grd.y1 - grd.y0) : 0;
-  const ovFrac = slyArea && grdArea ? ov / Math.min(slyArea, grdArea) : 0;
-  if (ovFrac > 0.25) faults.push(`SUBJECTS MERGE (${(ovFrac * 100).toFixed(0)}% of the smaller)`);
+  /* Pairwise, because with three figures the merge can happen between any two of them. */
+  const area = (b) => (b ? (b.x1 - b.x0) * (b.y1 - b.y0) : 0);
+  let ovFrac = 0;
+  for (const [an, a] of [['sly', sly], ['guard', grd], ['guard2', grd2]]) {
+    for (const [bn, b] of [['sly', sly], ['guard', grd], ['guard2', grd2]]) {
+      if (an >= bn || !a || !b) continue;
+      const f = overlapArea(a, b) / Math.max(1, Math.min(area(a), area(b)));
+      if (f > ovFrac) ovFrac = f;
+      if (f > 0.25) faults.push(`${an}/${bn} MERGE (${(f * 100).toFixed(0)}% of the smaller)`);
+    }
+  }
 
   const slyH = sly ? sly.y1 - sly.y0 : 0;
   const grdH = grd ? grd.y1 - grd.y0 : 0;
   if (slyH < 90) faults.push(`sly only ${slyH.toFixed(0)} px tall`);
   if (grdH < 90) faults.push(`guard only ${grdH.toFixed(0)} px tall`);
+
+  /* No figure-height bar on guard2, deliberately — he is a background figure and a smaller one is
+     correct staging. What has to survive is his MARK, because rung 2 is the entire reason he is in
+     the shot: the frame's job is to show two rungs reading apart, and a rung nobody can resolve
+     shows one. So the bar is on the mark's drawn diameter, not on the man carrying it.
+     30 px, derived: the FX lane measured rung 2 at loudness 0.00949 against rung 3's 0.0177, a
+     1.9x step, and a 1.9x difference in a soft puff needs enough pixels to be read as brightness
+     rather than as aliasing. 30 px is roughly the size at which the ink hull's own ~2.5 px line
+     stops dominating a round shape — an order of magnitude above it. */
+  const markPx = (b) => (b ? Math.max(b.x1 - b.x0, b.y1 - b.y0) : 0);
+  const m3px = markPx(markBox), m2px = markPx(mark2Box);
+  if (markBox && m3px < 30) faults.push(`rung-3 mark only ${m3px.toFixed(0)} px across`);
+  if (mark2Box && m2px < 30) faults.push(`rung-2 mark only ${m2px.toFixed(0)} px across — the ladder contrast is unreadable`);
 
   /* Group extent and balance. The first candidate set all scored "no faults" while putting both
      figures inside 20% of the frame width with the other 80% empty — every per-subject check
@@ -182,7 +225,7 @@ function score(name, c) {
      the per-subject checks structurally cannot see. Added after the first sweep, which is worth
      recording: the metric was missing because the tool was built one subject at a time. */
   let gx0 = Infinity, gx1 = -Infinity, gy0 = Infinity, gy1 = -Infinity;
-  for (const b of [sly, grd, markBox]) {
+  for (const b of [sly, grd, markBox, grd2, mark2Box]) {
     if (!b) continue;
     gx0 = Math.min(gx0, b.x0); gx1 = Math.max(gx1, b.x1);
     gy0 = Math.min(gy0, b.y0); gy1 = Math.max(gy1, b.y1);
@@ -208,15 +251,22 @@ function score(name, c) {
   const slyClear = sly ? clear(cam, { x: c.player.pos[0], y: c.player.pos[1] + 1.2, z: c.player.pos[2] }) : false;
   const grdClear = grd ? clear(cam, { x: c.guard[0], y: c.guard[1] + 1.2, z: c.guard[2] }) : false;
   const markClear = markC ? clear(cam, { x: c.guard[0], y: c.guard[1] + MARK_Y, z: c.guard[2] }) : false;
+  const grd2Clear = grd2 ? clear(cam, { x: g2[0], y: g2[1] + 1.2, z: g2[2] }) : true;
+  const mark2Clear = grd2 ? clear(cam, { x: g2[0], y: g2[1] + MARK_Y, z: g2[2] }) : true;
   if (!slyClear) faults.push('SLY OCCLUDED');
   if (!grdClear) faults.push('GUARD OCCLUDED');
   if (!markClear) faults.push('MARK OCCLUDED');
+  if (!grd2Clear) faults.push('GUARD2 OCCLUDED');
+  if (!mark2Clear) faults.push('MARK2 OCCLUDED');
 
   console.log(`\n── ${name}`);
   console.log(`   cam ${c.pos.map((v) => v.toFixed(2)).join(', ')} -> ${c.target.map((v) => v.toFixed(2)).join(', ')} · fov ${c.fov} · tod ${c.tod ?? '-'}`);
   if (sly) console.log(`   sly    rows ${sly.y0.toFixed(0)}..${sly.y1.toFixed(0)} (${slyH.toFixed(0)} px) cols ${sly.x0.toFixed(0)}..${sly.x1.toFixed(0)} · margins l${ms.l.toFixed(0)} r${ms.r.toFixed(0)} t${ms.t.toFixed(0)} b${ms.b.toFixed(0)} · ${slyClear ? 'clear' : 'OCCLUDED'}`);
   if (grd) console.log(`   guard  rows ${grd.y0.toFixed(0)}..${grd.y1.toFixed(0)} (${grdH.toFixed(0)} px) cols ${grd.x0.toFixed(0)}..${grd.x1.toFixed(0)} · margins l${mg.l.toFixed(0)} r${mg.r.toFixed(0)} t${mg.t.toFixed(0)} b${mg.b.toFixed(0)} · ${grdClear ? 'clear' : 'OCCLUDED'}`);
-  if (markC) console.log(`   mark   at ${markC.px.toFixed(0)},${markC.py.toFixed(0)} · margins l${mm.l.toFixed(0)} r${mm.r.toFixed(0)} t${mm.t.toFixed(0)} b${mm.b.toFixed(0)} · ${markClear ? 'clear' : 'OCCLUDED'}`);
+  if (markC) console.log(`   mark3  at ${markC.px.toFixed(0)},${markC.py.toFixed(0)} · margins l${mm.l.toFixed(0)} r${mm.r.toFixed(0)} t${mm.t.toFixed(0)} b${mm.b.toFixed(0)} · ${markClear ? 'clear' : 'OCCLUDED'}`);
+  if (grd2) console.log(`   guard2 rows ${grd2.y0.toFixed(0)}..${grd2.y1.toFixed(0)} (${(grd2.y1 - grd2.y0).toFixed(0)} px) cols ${grd2.x0.toFixed(0)}..${grd2.x1.toFixed(0)} · margins l${mg2.l.toFixed(0)} r${mg2.r.toFixed(0)} t${mg2.t.toFixed(0)} b${mg2.b.toFixed(0)} · ${grd2Clear ? 'clear' : 'OCCLUDED'}`);
+  if (mark2Box) console.log(`   mark2  margins l${mm2.l.toFixed(0)} r${mm2.r.toFixed(0)} t${mm2.t.toFixed(0)} b${mm2.b.toFixed(0)} · ${mark2Clear ? 'clear' : 'OCCLUDED'}`);
+  console.log(`   marks  rung3 ${m3px.toFixed(0)} px across · rung2 ${m2px.toFixed(0)} px (bar 30)`);
   console.log(`   overlap ${(ovFrac * 100).toFixed(1)}% of the smaller subject · group spans ` +
     `${(spanW * 100).toFixed(0)}%w ${(spanH * 100).toFixed(0)}%h, centre ${(centreOff * 100).toFixed(0)}% off`);
   console.log(`   ${faults.length ? 'FAULTS: ' + faults.join(' · ') : 'no faults'}`);
@@ -244,21 +294,25 @@ const CANDIDATES = {
      candidates below walk the guard down `courtyard_ring` toward Sly instead of moving the lens
      back. Waypoints from Patrol.js:241 are (-18.0, 28.5) (-18.0, 16.0) (-18.0, 1.0), so a guard
      between them stays on his own authored line. */
-  'A far guard, wide court': {
+  'A far guard, wide court (one guard — kept as the control)': {
     pos: [-4.0, 4.2, 26.5], target: [-14.0, 2.0, 15.0], fov: 46, tod: 0.10,
     player: { pos: [-9.5, 0, 20.0] }, guard: [-18.0, 0, 16.0],
   },
-  'E close guard, 5.6 m apart': {
-    pos: [-6.5, 3.0, 27.5], target: [-14.6, 1.5, 19.5], fov: 44, tod: 0.10,
-    player: { pos: [-11.5, 0, 21.5] }, guard: [-16.0, 0, 18.5],
+  /* Two guards on `courtyard_ring`, both on their own authored line: the nearest takes rung 3,
+     the one further down the colonnade takes rung 2. Separating them ALONG the run of the
+     colonnade rather than across it is what buys the group its width — the lesson from the first
+     sweep, where clustering the figures in world space shrank the angular span. */
+  'H two guards down the colonnade': {
+    pos: [-4.0, 4.2, 27.5], target: [-15.0, 2.0, 14.0], fov: 46, tod: 0.10,
+    player: { pos: [-9.5, 0, 20.5] }, guard: [-18.0, 0, 16.0], guard2: [-18.0, 0, 1.0],
   },
-  'F closer lens, 6.4 m apart': {
-    pos: [-5.0, 2.8, 27.0], target: [-15.2, 1.4, 19.0], fov: 40, tod: 0.10,
-    player: { pos: [-11.0, 0, 22.0] }, guard: [-17.0, 0, 18.0],
+  'I wider lens, guards further apart': {
+    pos: [-3.0, 4.6, 29.0], target: [-15.5, 2.2, 12.0], fov: 52, tod: 0.10,
+    player: { pos: [-9.0, 0, 22.0] }, guard: [-18.0, 0, 16.0], guard2: [-18.0, 0, 1.0],
   },
-  'G low angle, guard nearer the lens': {
-    pos: [-7.0, 2.2, 26.0], target: [-15.5, 1.5, 19.0], fov: 46, tod: 0.10,
-    player: { pos: [-12.5, 0, 22.5] }, guard: [-17.5, 0, 18.0],
+  'J second guard nearer, both on the west run': {
+    pos: [-4.5, 3.8, 27.0], target: [-15.0, 1.8, 15.0], fov: 48, tod: 0.10,
+    player: { pos: [-10.0, 0, 20.5] }, guard: [-18.0, 0, 16.0], guard2: [-18.0, 0, 7.0],
   },
 };
 
