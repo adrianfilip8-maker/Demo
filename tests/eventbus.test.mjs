@@ -167,6 +167,15 @@ const DEAD_BY_DECISION = ['binocucom', 'guardLost', 'guardSound', 'guardSpotted'
  *   clue              `Audio.js:1252` has a sting for finding a clue. Nothing in the game is a clue.
  *   objective         the HUD renders an objective card and `HUD.init` sets the only one that ever
  *                     appears, by direct call. The event is the hook a mission script would use.
+ *   propSmashed       FX and AUDIO both draw a prop breaking — chips, puff, contact mark, and a
+ *                     grind cue — and **nothing in the game can break a prop**. This is a half
+ *                     built deliberately and in the open: the destruction itself (hiding meshes,
+ *                     disabling colliders, emitting drops, respawning) is `src/world/`'s and has
+ *                     an owner. Both subscribers also expose a direct call, so the world half can
+ *                     skip the bus entirely if it would rather. When it lands, delete this line.
+ *                     Reference note for whoever takes it: `smashable.gd`'s one non-obvious idea
+ *                     is a respawn raycast guard — do not un-hide a prop while something occupies
+ *                     its volume.
  *   prompt            contextual "press E to …" prompts, and a trap. `HUD.js:383` sets `_sawPrompt`
  *                     on the first one and *permanently* retires its affordance-detection fallback,
  *                     so **the first module to publish this silently kills every contextual verb in
@@ -186,10 +195,10 @@ const DEAD_BY_DECISION = ['binocucom', 'guardLost', 'guardSound', 'guardSpotted'
  * does. That is the property that makes the register worth trusting, and the only way to keep it is
  * to actually delete lines when they stop being true.
  */
-const DEAD_UNBUILT = ['clue', 'objective', 'prompt', 'unregisterTarget'];
+const DEAD_UNBUILT = ['clue', 'objective', 'prompt', 'propSmashed', 'unregisterTarget'];
 
 const DEAD_SUBSCRIPTIONS = [...DEAD_BY_DECISION, ...DEAD_UNBUILT];
-if (DEAD_SUBSCRIPTIONS.length !== 8) throw new Error('DEAD_SUBSCRIPTIONS miscounted');
+if (DEAD_SUBSCRIPTIONS.length !== 9) throw new Error('DEAD_SUBSCRIPTIONS miscounted');
 if (DEAD_BY_DECISION.some((k) => DEAD_UNBUILT.includes(k))) throw new Error('an event is in both buckets');
 
 /**
