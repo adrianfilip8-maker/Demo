@@ -1813,6 +1813,53 @@ test('feasibility: the pre-check agrees with driving where driving has an answer
   }
 });
 
+test('feasibility: sweeping the level finds where spireLand and ledgeHang are possible at all', async () => {
+  /* The pre-check applied to a level-wide question: not "is there an authored moment" (a level
+     question) but "is there anywhere a player-controllable envelope satisfies the precondition".
+     A YES is a place worth pointing a driven run at; it is not a route. An empty result would be
+     the stronger finding — no envelope anywhere — but the filter's reach is 6.60 m on a 6 m seed
+     grid, so an empty result must be read as **nothing found within the filter's reach**, never
+     as unreachable.
+     `ledgeClimb` is deliberately absent: it is `onRequest` and has no `canEnter` override, so the
+     base `State.canEnter` returns true and this instrument would answer YES everywhere. It cannot
+     say anything about it, and saying so is the point — that is the same tautology shape as the
+     `src.includes(name)` check this file shipped once. Its reachability is decided entirely by
+     `LedgeHang.update` returning it. */
+  const { engine, c, collision } = await realWorld();
+  const base = c.sm.get('ledgeClimb');
+  const { State } = await import('../src/player/States.js');
+  assert.equal(Object.getPrototypeOf(base).canEnter, State.prototype.canEnter,
+    'ledgeClimb now has its own canEnter — it can be swept, add it here');
+
+  const seeds = [];
+  for (let x = -28; x <= 28; x += 6) for (let z = -78; z <= 48; z += 6) {
+    const g = collision.groundCheck(V(x, 90, z), TUNE.radius, 300);
+    if (g?.hit) seeds.push(V(x, g.y + 0.05, z));
+  }
+  assert.ok(seeds.length > 50, `only ${seeds.length} standable seeds — the grid missed the level`);
+  console.log(`\n[sweep] ${seeds.length} standable seeds on a 6 m grid, filter reach ${FEASIBLE_R.toFixed(2)} m`);
+  const report = {};
+  for (const name of ['spireLand', 'ledgeHang']) {
+    const hits = [];
+    for (const s of seeds) {
+      const f = feasibleFrom(engine, c, name, s);
+      if (f.possible) hits.push({ s, f });
+    }
+    report[name] = hits.length;
+    console.log(`[sweep] ${name}: ${hits.length}/${seeds.length} seeds possible`);
+    for (const h of hits.slice(0, 5)) {
+      console.log(`    from (${h.s.x.toFixed(1)}, ${h.s.y.toFixed(2)}, ${h.s.z.toFixed(1)}) -> satisfied ${h.f.dist.toFixed(2)} m away`);
+    }
+  }
+  /* Both must be non-empty AND ledgeHang must be commoner than spireLand: 90 `ledge` recs against
+     5 `spire`. If that ordering ever inverts, the sweep is measuring something other than the
+     level. */
+  assert.ok(report.spireLand > 0, 'no seed in the level makes spireLand possible within the filter reach');
+  assert.ok(report.ledgeHang > 0, 'no seed in the level makes ledgeHang possible within the filter reach');
+  assert.ok(report.ledgeHang > report.spireLand,
+    `ledgeHang ${report.ledgeHang} is not commoner than spireLand ${report.spireLand} — sweep is suspect`);
+});
+
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {
   /* `wall_notch.gd` commits on `elif player.direction:` — a hold acts when it is being reached
      for. Fly past the face with no stick input and nothing may take control. */
