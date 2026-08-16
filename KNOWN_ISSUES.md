@@ -28838,3 +28838,84 @@ Still open and explicitly unclaimed: `wallRun`/`wallJump` never fired (so their 
 stays verified-by-construction), `railSlide` **boarding** on `hall-cable` not achieved, and `crawl`
 defeated by a degenerate approach vector — *"not a finding about the level; a finding about my
 script."*
+
+---
+
+## §387 — All nine material sites measured, and a diagnosis retracted by the lane that made it
+
+### §387.1 `wallRun` is an air move, and "uneven sand" was never the reason
+
+§385.4 recorded that `wallRun`/`wallJump` could not be made to fire across three approach scripts,
+with the reported cause being *"the sand in front of that elevation is uneven enough that Sly never
+arrives with the 3.2 m/s `wallRunEnter` and a clean contact."*
+
+**That is not it.** Verified at source:
+
+```js
+WallRun.canEnter(c) {
+  if (c.grounded || c.sm.group !== 'air') return false;   // ← Moveset.js:382
+```
+
+**It is an air move.** All three scripts ran at the wall *on the ground* and never jumped, which is
+exactly why they produced `tiptoe`/`wallClimb`/`wallCling` instead. The lane retracted its own
+diagnosis rather than defending it.
+
+Closed by scanning wall recs for standable ground 3–7 m out whose run-up stays within 0.25 m of
+level — 14 such approaches exist — and then running **and jumping**:
+
+```
+stand (-12.4, 0.00, 5.9), wall 3.48 m, take-off f18
+move@0  jump@18  wallRun@27  wallJump@36  fall@45  move@70
+```
+
+**And that closes the payload gap.** `wallRun` → stone, `wallJump` → stone, **measured**. Both had
+been verified-by-construction for two rounds and the lane refused to count them each time.
+**All nine material sites (§383, §385.4) are now measured against the real level.**
+
+### §387.2 The rope enters as `railWalk` and never `railSlide`, and that is correct
+
+`hall-cable` boards at the north end — `move@0 railWalk@25`. It never enters `railSlide`, and that is
+**by design rather than a defect**: `mountSpeed: 0` puts the mount below `railWalk × 0.85 = 2.04`, so
+`RailSlide` hands off immediately. **`railSlide` is not reachable on this rail and should not be**;
+it remains reachable on the other five. The rope authored at §377.4 behaves as a rope.
+
+### §387.3 OPEN — the boarding distances do not reproduce
+
+§380.4 recorded the south end at **nearest stand 0.00 m**, boarded by walking to the edge and
+stepping on. Re-derived on the current tree at 0.25 m grid with standability decided by driving:
+
+```
+south (-5.80, 12.70, -19.00)   nearest stand (-5.80, 12.89, -15.75) tag `wall`    3.26 m
+north (11.30, 13.40, -45.50)   nearest stand (12.55, 13.50, -45.50) tag `ground`  1.25 m
+```
+
+Neither is 0.00. Three distinguishable causes — the geometry moved again (it has moved twice this
+session: 23 → 26 rungs, span 30.12 → 31.63 m, both under people mid-round), a different definition
+of "standable" than driving, or a mis-centred grid. Routed to WORLD to settle with the instrument.
+
+It is not bookkeeping: the north boarding **works** and the south fails to `hookSwing@25` because the
+hook chain is closer than the cable there.
+
+### §387.4 Two honesty notes the lane applied to itself
+
+**`crawl` is state-reachable, not route-reachable.** It entered at frame 0 with `inVent()` true — but
+the lane reached it by **placing** Sly inside the vent volume rather than driving an approach in from
+outside, and flagged that against its own incidental-vs-intended standard: *"that is reachability of
+the state, not of the route."*
+
+**`spireLand` and `ledgeHang`/`ledgeClimb` remain unclaimed as intended routes.** Both have appeared
+incidentally — `ledgeHang@35 ledgeClimb@41` under the north-end boarding script — and incidental
+sightings are not being counted.
+
+### §387.5 The lane closed §386.1's loop on itself
+
+Told not to rank driven above geometric as a class, it came back with the sharper version:
+
+> My three failures this round were all in the driven instrument — a state's own `canEnter`
+> precondition I hadn't read (`group !== 'air'`), a degenerate vector, a start below the floor. **A
+> geometric check of "is this state's entry precondition satisfiable from here" would have caught the
+> first one instantly and cost nothing.**
+
+That is the correction landing properly: not "geometric is also valid" but a specific, cheap,
+geometric pre-check that would have saved a driven round. §386.1 said a bad instrument lies in both
+directions; this says what to do about it.
