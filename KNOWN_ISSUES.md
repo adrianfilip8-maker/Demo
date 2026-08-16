@@ -29936,3 +29936,74 @@ That gives WebGL 2.0 over SwiftShader and renders the canonical set. It is **slo
 plus the first shot of a ~2M-triangle scene runs well past the four-minute timeout I first gave it,
 which is a fact about the rasteriser and not a fault. The capture half of §379.4 was never blocked
 by this container.
+
+## §399 — The stamping is calibrated, and the calibration corrected its own instrument twice
+
+§398 landed per-shot source-tree stamping in `critic.mjs` and explicitly did **not** claim it
+worked: syntax-checked, hash equality measured, wiring unverified. Wiring that exists at one end
+is the defect this session has found seven times, and a detector nobody has seen fire is exactly
+that shape.
+
+It fires. Three shots, one deliberate mid-run change:
+
+```
+boot        040965a92951dcc3
+hero        040965a92951dcc3   same
+courtyard   040965a92951dcc3   same
+dunes       72c834b78386a58b   MOVED
+```
+
+That is the ideal result rather than merely a passing one, because it demonstrates three things at
+once: the detector **fires**, it does **not** false-positive on the two frames that were clean, and
+it **names which frame** straddled rather than condemning the set. `TREE-MOVED.md` was written into
+the set's own directory with the per-shot table and the careful wording about what a moved tree
+does and does not prove.
+
+### §399.1 The first calibration instrument was wrong, and a stop-hook found it
+
+The first attempt planted a throwaway comment in `src/render/Outline.js`, to be reverted after.
+Two problems, and only the second is obvious in hindsight:
+
+- **It puts junk in a shipped file** for as long as the run takes, on a project whose whole
+  discipline is that source comments are claims.
+- **It leaves the working tree dirty until the run finishes**, which is a state that cannot be
+  committed and should not be. A repository check flagged it, correctly, and the correct response
+  was not to commit the probe but to notice the probe was badly designed.
+
+The repair: **move the tree with a real commit instead.** A pending correction landed mid-run moves
+the tree for a legitimate reason, leaves the working tree clean, and leaves nothing behind to
+revert. The change used was a genuine one — see §399.2 — so the calibration cost nothing and
+produced a wanted commit.
+
+The general form is worth keeping: **a probe that has to be undone is a worse probe than one that
+does not.** If a test needs the world to change, prefer a change the world wanted anyway.
+
+### §399.2 What the mid-run commit actually fixed, which is the same failure again
+
+`SHOTS.alert`'s comment read *"the guards are staged by `SHOT_POSE.alert` in `Guard.js`"*. There is
+no `SHOT_POSE.alert`. I deleted it in the same change that created `SHOTS.alert.stage` — precisely
+so `alertframe` could re-certify the shipped shot — and left the sentence behind. **The very next
+paragraph of the same entry explains that move**, so one comment contradicted itself two paragraphs
+apart.
+
+That is the fifth file this session carrying a comment claiming something the code does not do
+(§393.1, §395.3, §396.4, §397, and now this), and the first where **the author of the rule is the
+one who broke it**, in the file where he had just written the rule down. It is worth recording in
+that form rather than quietly fixing, because the useful lesson is not "check your comments" — it
+is that the discipline does not exempt the person enforcing it, and that a cross-reference to
+another module is the single most fragile sentence anyone writes.
+
+The same commit records that this frame's `clear` verdicts were vacuous when written (§396.2) and
+have since been re-earned. The numbers stood; the certificate did not, until it was re-measured.
+
+### §399.3 A runtime warning worth its own line
+
+The capture's own warnings surfaced this, unprompted:
+
+> `setShot("hero") was called without opts.dt, so the world clock is LIVE: each call advances
+> engine.time by 0.283 s over its 17 settle frames.`
+
+That is §370/§373 territory reporting itself from inside a live run, which is what a diagnostic in
+the artefact is for. Not acted on here — this set was a calibration of the stamping and nothing
+else — but it is the first time that warning has been read off a capture rather than reasoned about
+from `Debug.js`.
