@@ -31342,6 +31342,100 @@ lane   >2R at gain 0   >2R at gain 0.30    mean boom 0 -> 0.30
 So the pre-existing condition dominates by an order of magnitude, and the lever is the whisker
 geometry rather than the boom length. Left for the camera lane with the mechanism named.
 
+### §411.12 pyr1's move is GATED: it is a prominent landmark, and the float is already on screen
+
+**Not landed.** The condition was to measure the composition cost first and hand back if the
+pyramid is prominent. It is prominent, in four canonical shots, so this is the report rather than
+the change.
+
+**Where pyr1 appears.** Silhouette sampled (apex, base ring, mid ring) through the real shot
+cameras at the capture resolution of 1280×720, with a terrain sightline test per point:
+
+```
+shot          silhouette pts in frame   unoccluded by terrain   on-screen bbox
+dunes                  32 / 33                  32              505 x 190 px
+traversal              32 / 33                  32              645 x 249 px
+combat                 26 / 33                  11              682 x 223 px
+courtyard              19 / 33                  12              323 x 341 px
+guard / alert / sly-profile   8-16 / 33           1             ~13 px horizon slivers
+```
+
+`dunes` is *"terrain + sky + aerial perspective, the approach ridge looking back at the complex"* —
+pyr1 is a principal skyline element in it, fully unoccluded, about 39 % of frame width.
+
+**And the float is not latent — it is in the shipped captures.** The gap between pyr1's mesh
+bottom (`baseY − 1.5` = 5.0) and the Nile surface beneath it, in pixels:
+
+```
+shot         distance   mesh bottom   water plane   visible gap
+dunes          328 m       266 px        289 px        23 px
+traversal      255 m       260 px        290 px        29 px
+courtyard      274 m       421 px        448 px        27 px
+combat         270 m       226 px        257 px        31 px
+```
+
+A 23–31 px band of open air under a pyramid, in four canonical frames, today.
+
+**What "out of the river entirely" costs.** The river is a north-south channel (water collider
+x −272..−60, z −420..340), so no move in z escapes it — only x. East is unavailable: clearing both
+the river and the complex pad needs x ≥ 108.5, which is where pyr2 already stands. So west, and
+the footprint (halfBase 82) must clear the ramp's widest edge:
+
+```
+candidate   footprint reaches   clears narrowest nile edge by   horizonSwell there
+  x −360         x −278                    1.8 m                    0.152 m
+  x −400         x −318                   41.8 m                    0.549 m
+  x −440         x −358                   81.8 m                    1.358 m
+```
+
+**−360 is the first position with zero nile weight and it is exactly the trap §411.8 warns about**
+— 1.8 m of margin on a term whose noise is ±4.2 m. **x −400 is the first defensible one**, and the
+horizon swell there is 0.549 m, so it is ordinary dune terrain the plateau will flatten to `baseY`.
+
+**The composition cost is uniform and large.** Measured by subtended angle rather than a pixel
+bbox — a bbox computed from silhouette points that have left the frame reports nonsense, and did
+(it claimed `courtyard` grew 145 % on a move directly away from the camera, which is how the
+artefact announced itself):
+
+```
+shot         apparent width −150 -> −400    in-frame silhouette −150 -> −400
+dunes            481 -> 314 px   (−35 %)          64/65 -> 31/65
+traversal        584 -> 336 px   (−43 %)          56/65 -> 28/65
+combat           596 -> 360 px   (−40 %)          50/65 -> 64/65
+courtyard        427 -> 263 px   (−39 %)          35/65 ->  0/65
+guard            650 -> 392 px   (−40 %)          15/65 -> 32/65
+```
+
+So the move shrinks pyr1 by **~40 % in every shot that contains it**, halves its in-frame
+silhouette in `dunes` and `traversal`, and removes it from `courtyard` altogether. That is a
+skyline change across four canonical frames, which outranks the correctness fix it delivers.
+
+**Handed back for the composition call.** The correctness argument is unchanged and the site is
+picked: x −400, same z, which resolves the 10.330 m float with no mask and no island. What is not
+mine is whether `dunes` and `traversal` can afford a 40 % smaller pyramid 40 % further away.
+
+### §411.13 PROCEDURE: committing one lane's edit to a shared file, without sweeping three others
+
+Named because it was needed three times in one round and it is the only safe way to touch
+`KNOWN_ISSUES.md` on a branch with four concurrent lanes. `git commit --only <path>` commits the
+**working tree** content of that path, so on a shared file it publishes every other lane's
+uncommitted work along with yours — the §240/§311 failure with extra steps.
+
+```
+git show HEAD:<path> > /tmp/base                 # HEAD's version, none of anyone's edits
+<apply ONLY your edit to /tmp/base>              # same script that edits the working file
+BLOB=$(git hash-object -w /tmp/base)             # write it as a loose object
+git reset -q                                     # clear the index
+git update-index --cacheinfo 100644,$BLOB,<path> # stage exactly that content
+git diff --cached                                # VERIFY: only your lines, before committing
+git commit                                       # no -a, no --only
+```
+
+Two properties that make it safe: `update-index` never touches the working tree, so the other
+lanes' edits are still sitting there afterwards exactly as they were; and the `git diff --cached`
+step is a real check rather than a formality — it is where you find out your edit script matched
+an anchor inside somebody else's section.
+
 ---
 
 ## §414 — The fourth instance, and the first where the vacuity was in the SAMPLING
