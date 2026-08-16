@@ -30139,3 +30139,139 @@ did not check it.
 
 **Standing:** `SHOTS.alert` needs re-staging from a camera that can see its own subjects, and the
 comment's certificate has to be re-earned or withdrawn. `SHOTS.impact` is unaffected.
+
+## §402 — §379.1 demonstrated in the frame: the largest sprite in the game carries no ink
+
+The objective half of §379.4, run at last, on the `impact` frame. Registered claim: particles carry
+neither mandatory ink treatment.
+
+```
+fraction of each locus whose crease-ink peak is at least T levels
+  T        rim      hero     floor
+  0.5       9.92%   73.28%   15.02%
+  8         7.44%   67.17%   14.23%
+  64        1.65%   40.37%    1.98%
+
+rim    median 0.00 L · p90   0.00 L    dive_ring, 484 of 720 samples clear of the hero
+hero   median 42.98 L · p90 120.37 L   MUST FIND — fires
+floor  median 0.00 L · p90  37.54 L    MUST NOT FIND — fires
+```
+
+**The rim is at or below bare paving at every threshold.** No ratio is quoted because the
+denominator is zero: *no line at all* is the finding, not *a faint one*.
+
+### §402.1 The floor control's loud tail is the finding, not its noise
+
+The `floor` locus is open paving, and its p90 of 37.54 L is **paving block seams — real depth edges
+lying in the ring's own plane** — inked at full strength. So on one ground plane, in one frame, in
+one grade: **a masonry joint gets a line and the biggest sprite in the game does not.**
+
+That single comparison forecloses lighting, exposure and ground geometry simultaneously, which no
+amount of rim-versus-hero argument could. It was not in the commissioned design; the lane added it.
+
+### §402.2 The instrument I specified was wrong, and the lane refused it with a number
+
+I asked for near-black pixel counting (`#1a1210` warm / `#161022` violet, §2.1.2). Measured, the
+drawn crease line is **rgb(46, 40, 41)** in the graded frame — warm on 63%, correctly that family —
+but only **47% of it falls at or below luma 40.** A near-black detector finds under half the line,
+and §270 records that detector being VOIDed on this project once already.
+
+Ink is instead defined as **the pixels the ink passes change**, reusing `inkblack.mjs`'s
+definitional levers verbatim, which needs no threshold at all. The colour measurement survives as a
+reported cross-check the verdict never reads.
+
+**Declining a badly-specified instrument with a measurement rather than an argument is the correct
+way to push back on a commission**, and it is worth naming as such: the number made it
+undiscussable.
+
+### §402.3 Two instruments VOIDed themselves, and both failures were in the tool
+
+- A boolean `A≠C` mask reported **16.1% "ink" on bare paving** — it counts sub-level leakage.
+- A mean over an area band reported **5.9 L on bare paving** — a mean dilutes a 2.5 px line across
+  a 4.5 px band.
+
+The surviving statistic is the darkest ink within `BAND_R` of each sample on a locus — *is there a
+line here?* — reduced by the median. Reporting your own dead instruments is worth as much as the
+one that lived.
+
+A calibration probe caught the lane twice. `T2` first asserted `discOf`'s 24-segment default would
+miss the rim; it does not (sag 1.57 px against a 2.25 px band), so the claim is now the one the
+geometry supports. And `CAL-B` refused the first hero locus at 6.9 L, correctly — it had sampled
+the **outline of the hull annulus**, ~2.5 px outside the mesh silhouette where the crease actually
+lives. Repaired instrument, same bar, 42.98 L.
+
+**Not established:** the subjective half. Only the crease pass, only `dive_ring`'s rim, only one
+frame; `dive_dust`, `dive_spark` and `dive_debris` are unmeasured, and the hull half is
+inapplicable to a ground ring by construction.
+
+## §403 — RETRACTION: the shimmy was never inverted. The basis vector was.
+
+§393's `ledgeHang` finding is **withdrawn**, and two real inversions were hiding behind it.
+
+`(cos yaw, 0, −sin yaw)` appears at `Moveset.js:405` and `Controller.js:1182` written as though it
+were Sly's right. **It is his left.** Verified here independently of the lane, algebraically: the
+Three camera convention fixes `right = forward × up` (looking down −z with +y up gives +x), and
+with `faceDir = (sin yaw, 0, cos yaw)` that makes `right = (−cos yaw, 0, sin yaw)`. The dot product
+of the expression with the true right is **−1.000 at every yaw.**
+
+The lane reached the same answer four independent ways: driving the engine's own input pipeline at
+five yaws; `SlyModel.js:812` placing `shoulderL` at local +x; `Controller.js:719`'s camera-forward
+fallback; and `Animation.js:773` picking `turnRate > 0 ? 'turn_l' : 'turn_r'`, which already treats
+that same expression as **left** and gets its clip right.
+
+Re-measured with no formula in the comparison at all — same stick, same camera, against what a
+**walk** does:
+
+```
+stick RIGHT   23/23 with the walk, 0 against    clip ledge_shimmy_r
+stick LEFT    23/23 with the walk, 0 against    clip ledge_shimmy_l
+```
+
+**Motion right, clip right, camera-independent. Nothing to change and no design question exists.**
+The old counts reproduce exactly — only the label was wrong.
+
+### §403.1 The same error hid two genuine one-line bugs
+
+- **`poleSwing` IS inverted.** Last round's *"poleSwing is CLEAN — 12/12"* used the same wrong
+  basis, so it flips too: re-measured against a stick-right walk, **0/12 with, 12/12 against**.
+  `PoleSwing.update` takes `dir = -Math.sign(c.wishRaw.x)` (`Moveset.js:1292`); at the press Sly
+  faces the pole, so his right is the increasing-`angle` tangent and `dir = -1` walks away from it.
+  **Drop the minus.**
+- **`wallRun`'s clip side is inverted**, and this one *is* a mirrored clip. `WallRun.enter` picks
+  between two mirrored clips with the same constant (`Moveset.js:405-406`): **26 non-degenerate
+  approaches, 0 agree / 26 mismatch**, plus two driven runs in the shipped level with the wall
+  genuinely on his right playing `wall_run_l`. `Clips.js` is explicit — *"Wall run, wall on his
+  LEFT… the inside (left) hand slaps along the stone"*. **Sly banks away from the wall he is
+  running on and slaps empty air.** Negate `_d`, or flip the `'r'`/`'l'` on :406.
+
+Head-on approaches have `n·right = 0.000` and no side to be wrong about; an earlier build counted
+three of those as agreements, which is how a **uniform inversion reads as 90% correct.** Excluded by
+`|n·right| ≥ 0.30`.
+
+### §403.2 The rule, which the file's own header did not cover
+
+Fifth instance of *a correct call against the wrong world*, and the first where the wrong world was
+a **single basis vector**. The four defences in `tests/traversal.test.mjs`'s header — pin the cast
+origin, step a frame before probing, advance `_frame` between memoised queries, assert the world is
+the world you meant — none of them reach this. The fifth is now beside them:
+
+> **Do not restate a basis vector. Drive it.**
+
+A hand-copied `(cos, 0, −sin)` is indistinguishable from a correct one by inspection, agrees with
+itself everywhere it is used, and produces a self-consistent wrong answer across an entire lane's
+work. Two rounds of findings rested on it.
+
+### §403.3 The coverage census, whose result is not the one I predicted
+
+All 32 states **are** driven somewhere — my guess that several were never entered is wrong. The
+finding is concentration:
+
+```
+driven by any file OTHER than tests/traversal.test.mjs:  toTarget, doubleJump, jump, land, fall, move
+delete tests/traversal.test.mjs and 26 of 32 states go dark
+```
+
+Every attach state, all the wall tech, `crawl`, `tiptoe`, `sneak`, `crouch`, `roll`, `combo`,
+`pickpocket`, `dive`, `hurt`, `bounce`, `skid`, `paraglide` — driven by **exactly one file, and it
+is an instrument file**. Several are threadbare inside it: `bounce` 1 driven entry;
+`railWalk`/`roll`/`pickpocket`/`combatStrafe` 2; `skid`/`hurt` 3.
