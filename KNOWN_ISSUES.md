@@ -27471,3 +27471,87 @@ reachable only from a state that cannot be left (dead in a way no grep finds), a
 only exit is `jump`, which the hook and both swings all had and which reads as fine right up until
 the player is holding something that swallows jump. An exit that exists but is absurd is a finding,
 not a pass.
+
+---
+
+## §372 — CORRECTION: the ladder does not reach the deck in one bound, and I propagated the wrong number
+
+### §372.1 What was wrong, and where it got to
+
+`9815b0c`'s commit message states, of the extended ladder:
+
+> *"one wall jump alone now reaches 28.987, clearing the lip by 0.067 m"*
+
+**That is false.** The world lane retracted it in round 3 after flying the real `Controller` against
+the real `Collision`, and the error is a whole category, not a rounding:
+
+> I treated the rung as the position of Sly's **feet**. It is his **hand** — `enter` places the
+> capsule at `point.y − hangReach`. So a launch from rung Y lifts the hands to **Y + 2.2274**, not
+> Y + 3.79. From 25.20 that is 27.427, which **misses the 28.92 deck lip by 1.49 m**.
+
+I committed that figure and described the route as reaching its deck. Fixed forward per §314; the
+commit stands and this is the correction of record.
+
+**§371.1 is NOT affected and remains correct.** Its "clears a 0.40 m lip by 0.267 m" is measured
+against the **wall proxy head at 25.60**, not the deck at 28.92 — feet to `TOPY + 0.667` = 25.867,
+over 25.60 by 0.267. Two different surfaces; the traversal lane's number was always about the
+nearer one. Worth stating explicitly because the two claims look interchangeable and are not.
+
+### §372.2 The loop does close — by a better route than the one I recorded
+
+Driven, not computed. The ascent tops out on the **wall proxy head at y 25.60**, which `LedgeHang`
+(priority 88) catches from either line's top rung — hands at 27.43 west and 26.38 east, both over
+that lip. From that perch a plain jump reaches the deck: `reached deck: true`, max y 33.20, and the
+hook chain then acquires him and carries him off.
+
+So: spawn → ladder → wall head → deck → `pylon-drop` → y 9 circuit → spawn. It closes from **both**
+lines, so the 1.05 m stagger between their tops — which `find()` cannot bridge, 3.5 m apart against
+0.685 m of reach — costs nothing. Left as authored, and the lane's judgement is right: an ascent
+that ends on the wall head and steps onto the deck is a better beat than one that lands in a single
+bound.
+
+### §372.3 The static instrument said the broken route worked
+
+This is §371's thesis again, and the cleanest instance of it yet. **The arithmetic walk reported
+9/9 hops on a route that delivered 0 of 23 rungs.** Two defects, both invisible to it:
+
+- **`arrive: 'wallCling'` terminated the route.** `wallCling` was the only wall state that existed
+  when the mouth was authored; `WallClimb` landed afterwards. `WallCling.update`'s only jump exit is
+  `wallJump`, and `WallJump.enter` throws Sly *off* the face at `wallJumpOut` 7.2 m/s — 3.1 m clear
+  by its own apex, where no hold is within `find()`'s 0.685 m. Measured: 1400 frames, stick held
+  into the face, chain `toTarget → wallCling → wallJump → doubleJump → fall`, **0 of 23 rungs**.
+- **The mouth's own offset made `find()` return null.** The vertical drop was derived as
+  `height × 0.55` = 0.99, the height `probeWall` fires from — but `find()` measures hold-to-**hand**,
+  and 0.99 puts the hand 0.57 m *above* the rung: `hypot(0.55, 0.57)` = 0.7921 against `reach()`
+  0.6847. The correct drop is `hangReach` 1.56, which is what `WallClimb.enter` itself does.
+
+After both: **11 of 23 rungs**, committing to one line and climbing it end to end — `find()`'s line
+commitment working as designed. Calibration arm with holds stripped and targets kept: 0 rungs, 0
+frames in `wallClimb`, max y 2.61.
+
+The standoff is now pinned between three inequalities rather than chosen: upper bound `reach()`
+0.6847; lower bound **not** `radius` 0.34 but `radius + batter × hangReach` = **0.5038**, because a
+battered face leans out toward the feet a whole `hangReach` below the hand. A 0.18 m window, and
+0.55 clears the stone by 0.046 and the reach by 0.135.
+
+### §372.4 A visual defect the route has just made reachable
+
+The wall proxy is authored `ph − 0.4` while the drawn shell is `ph`, so the collider head at 25.60
+sits **0.40 m below the masonry actually drawn there** — 284 vertices of `court|hieroglyph_wall`
+between y 25.88 and 26.03. Nothing could reach that surface before the ladder existed. Now something
+can, and **Sly stands shin-deep in stone** at the one perch the whole ascent is built around.
+
+Flagged, not fixed: changing the proxy height moves both towers' wall extents. Open.
+
+### §372.5 An instrument corrected against itself
+
+One clue bottle failed the reachability test and **the test was wrong, not the bottle**. The only
+thing under it is the battered face 5.93 m below, so a floors-only check called it unreachable —
+when it is the one bottle whose entire purpose is that you must be *climbing* to take it. Re-tested
+against the cling position `WallClimb.enter` produces on rung `notch-pylon-e-w-5`: **0.70 m**. The
+instrument now models "where a player can be" as standing **or** clinging.
+
+All twelve then pass three tests: a real surface under it, within the 2.40 m pickup magnet of
+somewhere a player can be, and **not** reachable from the courtyard floor — so each one costs the
+traversal it marks. One other placement moved: 6.26 m off the route line, on the surface but not on
+the route.
