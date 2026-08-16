@@ -27111,3 +27111,151 @@ and **inert by design** (`api.handholds` is read by nothing; the moveset behaves
 and without it). The route telegraph is proven to reach the lens and is not proven to read as
 *"climb here"* to a player. And the four traversal fixes are proven to release, not proven to feel
 good. §366.7 stands: feel is still measured by nothing.
+
+---
+
+## §369 — Round two: three decisions, one near-miss that was mine, and a defect in the register itself
+
+Four lanes, second round. Every load-bearing number re-derived here before its work was committed.
+
+### §369.1 CORRECTION — a wrong test count in a pushed commit message
+
+`8be0293`'s message says *"basketvary 9/9"*. The file has **8** tests, 6 before that commit and 8
+after. All 8 pass; the count is the only thing wrong, and the seal it describes is real. Recorded
+here rather than rewritten, per §314 — the history is pushed and fixing forward is the rule. It is
+a small error in exactly the class of claim this project treats as load-bearing, made in the same
+commit that argues for measuring things directly, which is worth the embarrassment of writing down.
+
+### §369.2 MY ERROR — I told a lane to reverse an owner decision
+
+The FX lane's audit reported the `binocucom` / `binocucomState` split as one-ended machinery. The
+asymmetry is real and correctly measured. I turned it into an instruction to the HUD lane to
+publish `binocucom` at `HUD.js:825`.
+
+`binocucom` is in **`DEAD_BY_DECISION`**:
+
+> **Owner instruction, 2026-08-08: "Abandon the Binocucom goal for this project"** (§242). The
+> existing implementation was deliberately NOT deleted — §242 reasons that "abandon the goal" is
+> not "remove the code". So the subscription staying here is the correct end state, not a loose end.
+
+`tests/eventbus.test.mjs` enforces this in both directions: `no ABANDONED event is quietly revived`
+goes red if anything starts publishing one. My instruction would have failed that test and reversed
+an owner decision. **The HUD lane refused it independently** — it checked the register before
+touching the wiring, read §242 in full, and stopped — so nothing was published and my retraction
+arrived after the fact.
+
+The register's own comment records that this mistake was made once before and had to be corrected
+out of band. It has now been made twice, and the second time by the agent holding the ledger. The
+lesson is narrow and worth stating exactly: **an audit finding is an observation; turning it into
+an instruction requires checking whether the thing has already been decided.** The measurement was
+never in question.
+
+### §369.3 A DEFECT IN THE REGISTER — prose was counting as code, in both directions
+
+Three lanes hit this independently within one hour, which is how it got fixed rather than worked
+around. `PUB_DIRECT` ran against raw file text with no comment stripping.
+
+- **Harmless direction:** a lane documenting why an event must NOT be published wrote the fix
+  verbatim in a comment — `emit('binocucom', v)` — and the scrape counted it. Two assertions went
+  red with no code changed. Another lane's hazard note quoting `on('coin',` became a fifth
+  subscriber and failed P10.
+- **The dangerous direction, and the reason this is a fix:** three separate comments mentioning
+  `emit('clue')` each registered as publishers. Once the real publisher landed, **deleting it would
+  have left the census green on prose alone.** A comment could keep a dead event looking alive
+  indefinitely — which defeats the one property the register has, that it fails in both directions.
+
+Fixed at `54ad57b` by stripping block comments and full-line `//` before scraping. **Verified here
+rather than taken from the report, and the verification found more than was reported:** publishers
+49, subscribers 51, dead-subscription and dead-publication sets identical — but **three** publisher
+attributions narrow, not one. `clue` loses `world/Props.js`, `showColliders` loses
+`world/Collision.js`, `registerTarget` loses `player/Targets.js`. All three are files that only
+mention the event in prose.
+
+This is the **fourth** distinct way this scrape has produced a confident wrong answer (see
+`wrapperIsBus` for the first three), and the pattern is identical every time: the scrape reading
+something that looks like a bus call and is not.
+
+### §369.4 SETTLED — the capture latency is 3 frames, and `_stageShot` runs twice
+
+The FX lane could not measure this because §186 held the lock, and two notes in `Particles.js`
+disagreed — 3 frames vs 17. It does not need the lock; it is readable from the call sequence:
+
+```
+Debug.js:16   SETTLE_FRAMES   = 14
+Debug.js:17   SETTLE_FRAMES_2 = 3
+Debug.js:176  applyShot(engine, name)      → Shots.js:564 emit('shot') → _stageShot
+Debug.js:188  await api.step(14, dt)
+Debug.js:189  applyShot(engine, name)      → emit('shot') AGAIN        → _stageShot AGAIN
+Debug.js:190  await api.step(3, dt)
+              capture
+```
+
+Both notes are right about different origins: 17 frames is the wall distance from the *first*
+staging, 3 from the second. **The operative number is 3**, because `_stageShot` rebases the clock
+and re-seeds the stream on every call (`Particles.js:3096-3101`), so the second invocation destroys
+the aging basis the first one's particles were living on.
+
+**A consequence neither note anticipated: every staged FX emission happens twice per capture**, and
+the rebase does not remove the first set's particles. Routed to the FX lane.
+
+### §369.5 DECIDED — the 272 collider seal does not move
+
+`basketvary.test.mjs` P-A1 pins a **global** ARCHITECTURE+PROPS registration total in order to
+police a **local** property of six rope coils. The world lane hit it twice — once on a stray pole
+mast (correctly removed rather than re-pinned) and once on the vertical route, where
+`level.test.mjs` requires one point-carrying collider per magnetism target, so 23 notch targets
+would take the level from 272 to 294.
+
+**The pin stays.** The argument for moving it is strong and mostly correct — a global total is a
+blunt proxy and it taxes unrelated work. But the moment to act on it is not the moment it is
+telling my own lanes no. *"The bar measures the wrong thing"* is the most persuasive-sounding
+reason to move a bar that has just refused you, and it is usually true, which is exactly what makes
+it dangerous. §141.1 forbids the post-hoc threshold move; this is that move wearing a better
+argument. It is also not blocking an outcome — one acquisition target plus `WallClimb` is a
+complete route, measured.
+
+**P-A1b was added instead**, and it can only tighten: no registered collider is *attributable to* a
+rope coil, measured per coil.
+
+Overlap alone is the wrong quantity and I nearly shipped it. Every coil sits on the ground, so the
+ground slab contains all six and a plain `intersectsBox` reports 12 hits on a level where no coil
+has a collider at all. The discriminator is **size**:
+
+```
+overlapping boxes today:  40x a coil's volume (a 2.1 x 7.7 x 2.0 m wall)
+                     ..   360,783x            (a 44 x 22.5 x 102.6 m ground slab)
+a collider authored ON a coil would be         ~1x
+bar: 8x   — 5x below the smallest real overlapper, 3x above a plausible coil collider
+```
+
+Calibrated in the suite rather than in a scratchpad: a collider planted at coil 0's own dimensions
+and centre scores **1.00x** and is rejected. The two populations are four orders of magnitude
+apart.
+
+### §369.6 A distinction worth adopting — API is not dead machinery
+
+The FX lane, declining to delete `mute()`/`masterVolume()`/`toggleMute()`:
+
+> dead machinery is a **pair with one half missing** … an unconsumed API is a **single thing offered
+> outward**, and nothing is missing; a consumer simply hasn't been written, and may never be without
+> that being a defect.
+
+That is a sharper statement of §357.1 than this ledger had, and it correctly separates `guardSound`
+(a pair, deleted) from `mute()` (an offer, kept). Adopted.
+
+### §369.7 Also recorded
+
+- **§8.1's header coordinate is stale.** It says *"release onto the hall front cornice ledge at
+  (-9.5, 13.6, -15.2)"*; a downward ray there falls the full 15 m to paving. The built cornice
+  `ledge` is at **y 15.36, z −16.5**. The world lane flagged it rather than silently rewriting a
+  contract other lanes build against — correct, and which of the two is authoritative is still open.
+- **Two more lane self-retractions in the source**, both of the same shape: a plausible mechanism
+  written into a comment without measuring first. The `pinnedAffordance` false positive does not
+  exist (`Collision.js:909` reads `ud.point` for every rec whatever its tag; `isPoint` only governs
+  *deriving* one from bounds — 583 hits over six stations, zero disagreements). And the reference's
+  `userData.spline` absence claim was false (`_buildAffordances` writes it back; 23 of 23 recs
+  carry it after `build()`).
+- **The music `menu` section is deleted and `treasure` is wired.** `treasure` had been producing
+  real music no player could reach — peak 0.367 / rms 0.0363, comparable to `explore`'s 0.363 /
+  0.0415. Verified byte-identical across the deletion: five sections, sha256 over the rendered
+  Float32Array, 10 s at 22050 Hz.
