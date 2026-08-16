@@ -589,10 +589,25 @@ export const SHOTS = {
      capture can answer, and per KNOWN_ISSUES §367 FX is one of the few systems that does
      render live in a shot.
 
-     The guards are staged by `SHOT_POSE.alert` in `Guard.js`, at two real `courtyard_ring`
-     waypoints, and FX hangs the ladder on those two by name via `Guards.shotGuards` rather
-     than by proximity. Before this entry, `Particles._stageAlert` and `_stageImpact` existed,
-     were correct, and had never run: nothing in this file was ever named `alert`. */
+     The guards are staged by **`stage` below, in this object** — NOT by `SHOT_POSE.alert` in
+     `Guard.js`, which does not exist. This sentence used to say it did, and it was left behind
+     when the staging moved here so `alertframe` could re-certify the shipped shot; the very
+     next paragraph in this entry explains that move, so the two contradicted each other inside
+     one comment. Corrected rather than deleted, because a stale cross-reference to another
+     module is the exact failure this session has now found in five files (§393.1, §395.3,
+     §396.4, §397) and one of them should record that the author of the rule broke it too.
+
+     AND THE `clear` VERDICTS ON THIS FRAME WERE VACUOUS WHEN FIRST WRITTEN. `alertframe`'s
+     occlusion check passed `trisIn`'s record to `rayTri`, which wants the nine-number array;
+     `T[3]` was `undefined`, `det` was `NaN`, every guard comparison against `NaN` is false, and
+     the function returned −1 for every triangle in the level. It answered "clear"
+     unconditionally, for its whole life. Fixed in `tools/framelib.mjs`, which now also carries
+     `assertOccluded()` — a ray fired through the level that MUST report a blocker, run before
+     any verdict prints. Re-measured after the fix: all five subjects here are genuinely clear.
+     The numbers above stand; the certificate they came with did not, until it was re-earned.
+
+     Before this entry, `Particles._stageAlert` and `_stageImpact` existed, were correct, and
+     had never run: nothing in this file was ever named `alert`. */
   alert: {
     pos: [-4.0, 4.2, 27.5], target: [-15.0, 2.0, 14.0], fov: 46, tod: 0.10,
     player: { pos: [-9.5, 0, 20.5], yaw: 4.05, pose: 'crouch_idle' },
