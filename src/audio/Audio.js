@@ -61,7 +61,7 @@ export const STEM_STATS = {
    `explore` rather than getting a stem of their own — TRACK_SECTION still moves their level and
    filter, so they are distinguishable without pretending an arrangement exists that does not. */
 export const SECTION_STEM = {
-  menu: 'explore', explore: 'explore', treasure: 'explore',
+  explore: 'explore', treasure: 'explore',
   sneak: 'sneak', alert: 'chase', chase: 'chase',
 };
 
@@ -76,7 +76,6 @@ export const SECTION_STEM = {
  * the kit and lead almost to nothing, so here it drops level and closes the filter.
  */
 export const TRACK_SECTION = {
-  menu:     { level: 0.90, cutoff: 20000 },
   explore:  { level: 1.00, cutoff: 20000 },
   /* 0.55 -> 0.85. The old value was set as if `sneak` were the same recording heard more
      quietly. It is a different, far quieter recording, and `STEM_MAKEUP` now carries the level
@@ -239,6 +238,20 @@ export const TUNE = {
   listenerSmooth: 0.02,
   spaceFade: 1.5,
   alertHold: 7.0,         // seconds of calm before the score relaxes again
+  /**
+   * How long the score stays in `treasure` after a treasure is fenced.
+   *
+   * Derived, not chosen. `Music.barSeconds` is `(60 / bpm) * 4` and `SECTIONS.treasure` runs at
+   * 96 bpm, so a bar is 2.500 s and **four bars is 10.000 s** — one complete harmonic statement
+   * of `FORM_TREASURE` (Dmaj9#11 · Dmaj9#11 · Bm7 · Gmaj7), which is the whole point of the
+   * section: its own comment reads "the parallel major finally arrives", and an arrival that is
+   * cut off before it lands is not one. The full eight-bar form (20 s) was the other candidate
+   * and is too long a tail on a beat the player answers by walking back out into the level.
+   *
+   * The floor this has to clear: `stemFade` is 1.6 s each way, so 10 s leaves 6.8 s at full
+   * level. A cue whose cross-fades are longer than its plateau is not a cue, it is a wobble.
+   */
+  treasureHold: 10.0,
   sectionDebounce: 1.6,
   /* One number for the whole music transition. It used to be two — 1.6 s for the arrangement
      cross-fade and 1.2 s for the level/filter move — which meant the level finished shifting
@@ -292,6 +305,8 @@ export class Audio {
     /** 0 calm · 1 suspicious · 2 searching · 3 chasing — the four rungs of ALERT_FOR_STATE. */
     this._alert = 0;
     this._alertTimer = 0;
+    /** Seconds of `treasure` left to run after a fence. See TUNE.treasureHold. */
+    this._treasure = 0;
     this._thief = false;
     /** guard id -> rung, so the score tracks the whole garrison rather than the last speaker. */
     this._guardRung = new Map();
@@ -883,6 +898,7 @@ export class Audio {
       this._alertTimer += dt;
       if (this._alertTimer > TUNE.alertHold) { this._alert = Math.max(0, this._alert - 1); this._alertTimer = 0; }
     }
+    if (this._treasure > 0) this._treasure = Math.max(0, this._treasure - dt);
     if (this._autoOverrideFor > 0) this._autoOverrideFor -= dt;
     this._sectionTimer += dt;
     if (this._sectionAuto && this._autoOverrideFor <= 0 && this._sectionTimer > TUNE.sectionDebounce) {
@@ -1049,6 +1065,21 @@ export class Audio {
    */
   _wantSection() {
     if (this._alert > 0) return SECTION_FOR_ALERT[Math.min(3, this._alert)];
+    /* The payoff. `SECTIONS.treasure` — eight bars of Lydian, its own arrangement, and four
+       `style === 'treasure'` branches across the vibes, oud, kit and lead generators — was
+       **unreachable**: `setSection` is fed only by this function, and this function could only
+       ever return the four alert-ladder sections. It rendered real music the whole time (10 s
+       at seed 0x5c17c00: peak 0.367, rms 0.0363) that no player could reach.
+
+       `Pickups.js:577` has published `treasureBanked` since the fence economy landed, and
+       banking at the fence is the one moment in the level that the parallel major is *for* —
+       §246's own framing is that picking a treasure up credits nothing and only reaching the
+       fence pays. So the cue goes on the beat where the loot actually becomes yours.
+
+       Deliberately BELOW the alert ladder: being spotted mid-fanfare must win, and it does,
+       because that branch returns first. Getting driven to CHASE while carrying also drops the
+       treasure (`Pickups.js:467`), so the two can never contradict each other. */
+    if (this._treasure > 0) return 'treasure';
     const s = this._playerState;
     if (s === 'sneak' || s === 'crouch' || s === 'crawl' || s === 'tiptoe') return 'sneak';
     return 'explore';
@@ -1182,6 +1213,52 @@ export class Audio {
     }
   }
 
+  /**
+   * A prop came apart — the audible half of the destructible vocabulary.
+   *
+   * Two layers, because a break is a transient and a settle and neither alone reads as one:
+   *
+   *  · **The transient** is `stepFor(material)` pitched down. That is not a shortcut — a
+   *    footstep recipe *is* a material impact: `buildStep` shapes a band-passed strike with a
+   *    material-specific body, tick and ring (`STEP` in Sfx.js — stone gets a 3.6 kHz tick and
+   *    a 620 Hz high-pass, wood a 430 Hz ring, metal a 2.65 kHz one). Playing it at rate 0.62
+   *    drops it ~8 semitones, which turns "a boot on limestone" into "limestone breaking"
+   *    while keeping the one thing that had to be material-correct. Building a second
+   *    near-identical set of material transients would have been four more recipes saying what
+   *    these four already say.
+   *
+   *  · **The settle** is `stone_grind`, which the §357.1 audit found had **zero references
+   *    anywhere in the project, tests included** — a fully built 25-line recipe with a low
+   *    brown-noise rumble, a resonant 480 Hz scrape and a 17 Hz stick-slip judder, proven
+   *    non-silent and non-clipping by `tests/audio.test.mjs` and never once played. Its
+   *    authored intent is a sarcophagus lid dragging, and it is reached here at rate 1.0 by a
+   *    `scale` 3 break, which is that. Small breaks get it faster and quieter: `o.rate`
+   *    multiplies every filter frequency in its build, so rate 2.1 is the same grit an octave
+   *    up, which is what a jar's worth of rubble settling sounds like. Its own `duck: 0.2`
+   *    sidechains the score, so a break is felt in the mix as well as heard.
+   *
+   * Both are gap- and concurrency-capped by `play()` already (`stone_grind` is `max: 2`,
+   * `gap: 0.4`), so a shelf of jars broken in one swing cannot turn into a wall of rumble.
+   *
+   * NOT VERIFIED BY EAR. §186 held the capture lock and audio is silent in captures by
+   * construction, so the rate and volume curves below are derived from the recipes' own
+   * published constants, not auditioned.
+   */
+  _onSmash(p) {
+    if (!this.ready) return;
+    const pos = p?.pos || p?.position || null;
+    const s = Math.max(0.25, Math.min(4, p?.scale ?? 1));
+    /* Pitched down and loud: the same recipe a footfall uses, read as a break. */
+    this.play(stepFor(p?.material), { position: pos, rate: 0.62, volume: 1.0, gait: 'run' });
+    /* Rubble. Rate falls toward 1.0 — the full lid drag — as the prop gets heavier. */
+    this.play('stone_grind', {
+      position: pos,
+      rate: 2.3 - 0.43 * s,
+      volume: Math.min(1, 0.34 + 0.22 * s),
+      delay: 0.05,
+    });
+  }
+
   /** Sly's gait, from the movement state first and his actual speed second. */
   _gait() {
     const s = this._playerState;
@@ -1245,19 +1322,34 @@ export class Audio {
 
     /* ---- guards ---- */
     on('guardAlert', (p) => this._onGuardAlert(p));
-    on('guardSpotted', () => this._onGuardAlert(2));
-    on('guardLost', () => this._onGuardAlert(0));
-    on('guardSound', (p) => {
-      const n = typeof p === 'string' ? p : p?.name;
-      const pos = typeof p === 'object' ? p?.pos : null;
-      if (n && SFX[n]) this.play(n, { position: pos });
-    });
+    /* `guardSpotted`, `guardLost` and `guardSound` were subscribed here and had no publisher
+       anywhere in `src/`. They are **superseded, not missing**: the guards publish `guardAlert`
+       carrying a `state`, and this file's whole ladder (`_onGuardAlert` → `_rungOf` →
+       `ALERT_FOR_STATE`) was rebuilt on it in §219. `tests/eventbus.test.mjs` registers all
+       three under `DEAD_BY_DECISION` and states the fix explicitly — *delete the listeners*, do
+       not give them publishers, because a second source of truth for the alert rung is not an
+       improvement over one. Deleted here, which is that fix.
+
+       `guardSound`'s loss costs nothing: the four sounds it was the channel for — `guard_step`,
+       `armour_clank`, `spear_scrape`, `guard_yawn` — are already played by `_trackGuards`,
+       which reads GUARDS' public list directly and drives footfalls off distance travelled
+       (see its note above). That path was written precisely because this one never fired. */
 
     /* ---- systems ---- */
     on('thiefVision', (v) => this._onThiefVision(!!v));
     on('coins', (p) => this._onCoins(p));
     on('coin', (p) => this._onCoins(p));
     on('clue', (p) => this.play('clue_bottle', { position: p?.pos }));
+    /* Fenced. Open the treasure window and let the score react on the next debounce tick
+       rather than waiting up to `sectionDebounce` for one that was already pending. */
+    on('treasureBanked', () => {
+      this._treasure = TUNE.treasureHold;
+      this._sectionTimer = TUNE.sectionDebounce;
+    });
+    /* NEW BUS EVENT `propSmashed` — see the note at the matching subscription in
+       `src/fx/Particles.js`. FX draws the break; this makes it audible. Same payload, and the
+       two subscribe independently rather than one calling the other. */
+    on('propSmashed', (p) => this._onSmash(p));
     on('binocucom', () => this.play('binocucom'));
     on('shake', (a) => { if (a > 0.14) this.duckMusic(Math.min(0.4, a * 1.6), 0.03, 0.35); });
 

@@ -4,7 +4,7 @@ import {
   Bag, mergeAll, place, matrixOf,
   brazier, wallTorch, vessel, canopicJar, basket, ropeCoil, ropeSpan,
   offeringTable, incenseStand, scaffold, banner, bannerMast,
-  coin, ingot, scarab, sootStain, flameCard, chunk,
+  coin, clueBottle, ingot, scarab, sootStain, flameCard, chunk,
 } from './PropKit.js';
 import {
   seatedColossus, sphinx, anubis, falconRa, coffinLid, fallenHead, brokenStatue,
@@ -591,7 +591,85 @@ export class Props {
     });
     mesh.instanceMatrix.needsUpdate = true;
     this.group.add(mesh);
-    this._collect.push({ mesh, spots, phase: spots.map(() => R.range(0, Math.PI * 2)) });
+    this._collect.push({ mesh, spots, phase: spots.map(() => R.range(0, Math.PI * 2)), kind: 'coin', upright: false });
+
+    this._clueBottles();
+  }
+
+  /**
+   * Sly's clue bottles — the series' own answer to "how does a level tell you where to go".
+   *
+   * ── What was already here ─────────────────────────────────────────────────────────────
+   * Three quarters of this feature shipped and none of it was connected. `clueBottle()`
+   * (`PropKit.js:1144`) is exported and was imported by nothing. `MATERIALS.glass` and
+   * `MATERIALS.cork` sit in this file's own table, unused by any other builder, and `glass` is
+   * `0x8fd8ff` — §2.1.6's pickup blue, chosen for this and nothing else. `Sfx.js:516` carries a
+   * built `clue_bottle` cue that `tests/audio.test.mjs` proves non-clipping and non-silent, and
+   * `Audio.js:1305` has a live `on('clue')` subscriber. **`emit('clue')` existed nowhere in
+   * `src/`.** This is §239's defect exactly — four teams building against a contract with no
+   * publisher — and it is the same shape the coin loop was in before `Pickups.js` was written.
+   * The missing piece was never the modelling; it was the placement and the emit.
+   *
+   * ── Why these twelve places ───────────────────────────────────────────────────────────
+   * Not scatter. Two blind critics said this level does not communicate its routes, and a clue
+   * bottle is the franchise's standing answer to that: it is a collectible whose *placement is
+   * the instruction*. So there is exactly one per vertical beat of the authored route, from the
+   * terrace to the pylon summit and down into the vault — every one of them on a surface §8.1
+   * or the rooftop run already names, and every one of them at a height you can only reach by
+   * doing the traversal the beat exists to teach. Scattering them would make them coins.
+   *
+   * The two on the entry pylon are the load-bearing pair: one at the foot of the new handhold
+   * ladder and one on the deck it delivers you to, so the route that had nothing saying "climb
+   * here" now has a collectible at both ends of it.
+   *
+   * ── The manager half, adapted from the reference and NOT copied ───────────────────────
+   * `bottle.gd` / `bottle_manager.gd` in NoahChase/Sly-Cooper--A-Thief-in-Godot (HEAD 6479957,
+   * `/home/user/ref-godot`, **licence: none stated** — no LICENSE, no COPYING, fan work derived
+   * from Sucker Punch/Sony, recorded exactly as `public/assets/sly-godot/PROVENANCE.md` does).
+   * Two defects in it that this deliberately does not reproduce:
+   *   · `bottle.gd` connects its collected signal *inside* the body-entered handler and never
+   *     disconnects, so re-entering the trigger stacks duplicate connections. Here collection is
+   *     a one-way `taken` latch inside `stepPickup`, which cannot fire twice.
+   *   · `bottle_manager._ready()` computes `bottles_count = bottles_count_max - bottles.size()`,
+   *     which is identically 0 because `bottles` IS the max set at that moment. The count lives
+   *     in PICKUPS as a plain increment off the collection it actually observed.
+   */
+  _clueBottles() {
+    const R = this.rng;
+    /* Surface + ~1.0 m, so the bottle floats at chest height over the beat it marks rather than
+       sitting in the floor. Every y here is checked against the registered collider under it. */
+    const spots = [
+      [-6.0, 3.00, 17.5],    // terrace stage 1 (ground y 2.0) — §8.1 step 1
+      [5.4, 6.20, 9.0],      // terrace stage 2 (ground y 5.2) — §8.1 step 1
+      [-2.0, 10.00, 7.5],    // obelisk kiosk lintel (ledge y 9.0) — §8.1 step 2
+      [20.2, 10.00, 31.5],   // peristyle SE return architrave (ledge y 9.0) — the rail's landing
+      [11.4, 12.60, 36.3],   // ON the pylon ladder, at west rung 5 — only reachable by climbing
+      [14.0, 29.90, 34.0],   // east pylon deck (ground y 28.92) — where the ladder ends
+      /* Hall front cornice — §8.1 step 3's release point. NOT at the header's own
+         (−9.5, 13.6, −15.2): a downward ray there falls the full 15 m to the courtyard paving.
+         The built cornice `ledge` is at y 15.36 and z −16.5, measured. Flagged in the report;
+         the §8.1 coordinate is stale and is not this function's to rewrite. */
+      [-9.5, 16.40, -16.5],
+      [-16.0, 14.50, -30.0], // west aisle roof (y 13.5) — the rooftop run
+      [0.0, 18.00, -34.0],   // nave deck (y 17.0) — the rooftop run
+      [0.0, 27.00, -49.5],   // inner pylon south stage (ground y 26.0)
+      [0.0, 35.00, -52.0],   // pylon summit deck (ground y 34.0) — the highest point in the level
+      [0.0, -11.00, -60.0],  // tomb vault floor (y −12) — §8.1 step 7
+    ];
+    const parts = [];
+    clueBottle({ h: 0.42, rng: R }).drain((_key, geo) => parts.push(geo));
+    const geo = mergeAll(parts);
+    if (!geo) return;
+    this._geoms.push(geo);
+    /* One instanced mesh in the `glass` material. The cork merges into it: at 0.42 m tall and
+       read from metres away a second draw call for 5 cm of stopper is not a trade worth making,
+       and `glass` is the colour that says "pickup" in this project's palette. */
+    const mesh = new THREE.InstancedMesh(geo, this._mat('glass'), spots.length);
+    mesh.name = 'clue_bottles';
+    mesh.frustumCulled = false;
+    mesh.userData.noShadow = true;
+    this.group.add(mesh);
+    this._collect.push({ mesh, spots, phase: spots.map(() => R.range(0, Math.PI * 2)), kind: 'clue', upright: true });
   }
 
   /* ===================== emitters & lights ========================= */
@@ -812,11 +890,18 @@ export class Props {
     this.decals.update();
     // Collectibles bob and spin so they read as pickups rather than scenery.
     for (const c of this._collect) {
-      const { mesh, spots, phase } = c;
+      const { mesh, spots, phase, upright } = c;
+      if (!mesh) continue;
       for (let i = 0; i < spots.length; i++) {
         const s = spots[i];
         _v.set(s[0], s[1] + Math.sin(t * 2.2 + phase[i]) * 0.09, s[2]);
-        _m.compose(_v, _q.setFromEuler(_e.set(Math.PI / 2, 0, t * 1.8 + phase[i])), _one);
+        /* A coin is a disc and has to be laid flat (rx π/2) before it can spin in its own
+           plane; a bottle already stands up in its own geometry, so laying it over would spin
+           it lying on its side. Same bob, different axis. */
+        const rot = upright
+          ? _e.set(0, t * 1.8 + phase[i], 0)
+          : _e.set(Math.PI / 2, 0, t * 1.8 + phase[i]);
+        _m.compose(_v, _q.setFromEuler(rot), _one);
         mesh.setMatrixAt(i, _m);
       }
       mesh.instanceMatrix.needsUpdate = true;

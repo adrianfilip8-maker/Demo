@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { rng, fbm2, valueNoise2 } from '../core/Rand.js';
 import {
   EMITTERS, AMBIENT, MOTES, TORCH_MOTES, TILE, PAL, buildAtlas, ALERT_LADDER, CONTINUOUS,
+  smashFor,
 } from './Emitters.js';
 import { Decals } from './Decals.js';
 import { Trails } from './Trails.js';
@@ -1510,6 +1511,12 @@ const _fwd = new THREE.Vector3();
 /* Dedicated: `_emit` clobbers `_v1` building its tangent frame, and it reads `opts.inherit`
    *after* it does so. Passing `_v1` as an inherited velocity would silently become (0,1,0). */
 const _inh = new THREE.Vector3();
+/* Dedicated for the same reason, one step worse: `_emit` reads `position` inside its per-
+   particle loop (`p[idx*3] = position.x`), i.e. *after* line 22 has already written `_v1` to
+   build the tangent frame. So a caller that holds a position in `_v1` across an `_emit` gets
+   every particle at (0,1,0) — and `_stageAlert` emits six times from one position, which is
+   exactly the shape that trap is waiting for. §237, one file over. */
+const _stg = new THREE.Vector3();
 const _col = new THREE.Color();
 const _viewM = new THREE.Matrix4();
 const _ndc = new THREE.Vector3();
@@ -2378,6 +2385,15 @@ export class Particles {
     on('hookGrab', (e) => this._burstAt('target_catch', e?.pos, UP, 0.7));
     on('hookRelease', (e) => this._burstAt('cane_arc', e?.pos, UP, 0.5));
     on('enemyBounce', (e) => this._onEnemyBounce(e));
+    /* **NEW BUS EVENT — `propSmashed`.** Flagged loudly because adding one is not free: an
+       event with no publisher is the §357.1 shape this whole pass exists to remove, and right
+       now this has none. It is here rather than as a method-only API because that is how every
+       other cross-module beat in this project works — `caneHit` is published by MOVEMENT and
+       subscribed independently by FX and by AUDIO, neither knowing about the other, and a
+       break needs exactly that shape. `Particles.smash()` stays public so WORLD can call it
+       directly if it would rather not go through the bus.
+       Payload: `{ pos, material, scale, normal, dir }`. AUDIO subscribes to the same name. */
+    on('propSmashed', (e) => this.smash(e?.pos || e?.position, e || {}));
     on('thiefVision', (v) => { this._thiefTarget = v ? 1 : 0; });
     on('timeOfDay', () => { this._motesBuilt = -1; });
     on('shot', (e) => this._stageShot(e?.name));
@@ -2516,6 +2532,61 @@ export class Particles {
   /** Ribbon trail following an object. Returns a handle for `kill()`. */
   trail(object3d, opts) {
     return this.trails?.add(object3d, opts) ?? null;
+  }
+
+  /**
+   * **A prop came apart.** The visual half of destructible props, as a vocabulary WORLD calls
+   * rather than as a mechanic FX owns.
+   *
+   * FX does not decide *that* something broke — hiding meshes, disabling colliders, spawning
+   * drops and respawning are `src/world/`'s, and none of it is here. This is the other half:
+   * given a point, a material and a size, throw the right chips, the right puff and leave the
+   * right mark. Reachable two ways, both public: call it directly, or emit `propSmashed` and
+   * let `_wireEvents` route it — the same double path `spawn()`/`attach()` already offer PROPS.
+   *
+   *   fx.smash(point, { material: 'stone', scale: 1, normal, dir })
+   *
+   * `material` is COLLISION's own tag (`smashFor()` in Emitters.js resolves it, defaulting to
+   * stone exactly as `Sfx.stepFor()` does), so a caller holding a collision hit already holds
+   * the key. `scale` is the prop's size in units of "a canopic jar" — 1 for a jar or a basket,
+   * 2-3 for a stele or a lid.
+   *
+   * ── Cost, so this cannot become the thing that overflows a batch ──────────────────────────
+   * One call is `dive_debris` (count [10,14], mean 12) + `land_dust` (count [8,12], mean 10)
+   * = 22 dust-batch particles, plus `dive_spark` (mean 16) on `metal` only. Against
+   * `BATCH_CAPACITY.dust` 900 that is 2.4% per break, and debris dies in under a second
+   * (`dive_debris` life [0.55, 0.95]), so even a shelf of six jars broken in one swing peaks
+   * near 132 — well inside the 225 quarter-share `CONTINUOUS` reserves for the player-attached
+   * emitters that never get distance-culled. A break is an event, not a loop; it cannot
+   * accumulate.
+   *
+   * ── Not verified by capture ───────────────────────────────────────────────────────────────
+   * §186 held the lock throughout, so no frame of this has been seen. Everything above is
+   * arithmetic on committed data, and `tests/fxfeel.test.mjs` T7 holds the parts of it that a
+   * future edit could silently break.
+   */
+  smash(position, opts = {}) {
+    if (!position) return null;
+    const R = smashFor(opts.material);
+    const s = Math.max(0.25, Math.min(4, opts.scale ?? 1));
+    _v3.copy(position);
+
+    /* Chips first, thrown along the break direction when the caller knows it (the swing that
+       did it), else straight up — a jar hit from the side sprays sideways, and a caller with
+       no opinion gets the neutral burst rather than a wrong one. */
+    const dir = opts.dir || opts.normal || UP;
+    this._emit(R.debris, _v3, { dir, scale: s, color0: R.col[0], color1: R.col[1] });
+    this._emit(R.dust, _v3, { dir: UP, scale: s * 0.9, color0: R.dustCol[0], color1: R.dustCol[1] });
+    if (R.spark) this._emit(R.spark, _v3, { dir, scale: s * 0.8 });
+
+    /* The mark, on the surface it broke against rather than on the prop's own normal: a decal
+       floating at a jar's centre height is a decal on nothing. The caller's `normal` wins when
+       it has one (WORLD knows which face took the hit); otherwise the floor. */
+    this.decal(R.decal, _v3, opts.normal || UP, {
+      size: (R.decal === 'scorch' ? 1.1 : 1.9) * s,
+      alpha: R.decal === 'scorch' ? 0.55 : 0.4,
+    });
+    return true;
   }
 
   /** Emitter names in the catalogue — handy for the debug console. */
@@ -3061,7 +3132,112 @@ export class Particles {
     } else if (name === 'night' || name === 'guard') {
       const p = mv?.position;
       if (p) { _v3.copy(p); _v3.y += 0.9; this._emit('coin_sparkle', _v3, { count: 2 }); }
+    } else if (name === 'alert') {
+      this._stageAlert();
     }
+  }
+
+  /**
+   * Stage the stealth alert ladder — the `alert` shot's whole reason for existing.
+   *
+   * ── Why this branch exists ────────────────────────────────────────────────────────────────
+   * `_stageShot` executed against all ten canonical shot names reaches 12 of the catalogue's
+   * 34 emitters. The other 22 are unreachable in every capture ever taken, and among them is
+   * the entire four-rung stealth ladder — the one part of the FX layer with a dedicated
+   * pre-registered suite (`fxfeel.test.mjs` T3: four rungs strictly increasing, ≥1.6x step
+   * between adjacent ones) and zero pixels of evidence. Restaging an existing shot to fix that
+   * would have broken comparability with every sealed measurement built on it, so this is a
+   * NEW shot's staging, and it changes nothing about the other ten.
+   *
+   * ── Which rung, and why ───────────────────────────────────────────────────────────────────
+   * The hero mark is **rung 3, `alert_spot`**, on four grounds and in this order:
+   *
+   *  1. It is the only rung that carries an additive component (`alert_spot_spark`), so it is
+   *     the only one that puts light into the frame and therefore the only one that has to
+   *     survive AgX. If the top rung does not read after the tonemap, nothing below it can —
+   *     testing the quiet end first would prove nothing about the loud one, but not vice versa.
+   *  2. It is the loudest by the ladder's own score (count [8,11], alpha [0.62,0.86],
+   *     size0 0.175 → `loudness` 0.0177, against rung 0's 0.00073 — a 24x span), so it is the
+   *     rung most likely to be legible at whatever resolution the critic views.
+   *  3. Its `col0` #ff3a22 is the ladder's maximum hue separation from sunlit sandstone, and it
+   *     is the vision cone's own `colAlert`, so the frame shows the puff and the cone agreeing
+   *     rather than two languages for one state.
+   *  4. It is the dramatic beat — "he has you" — which is the frame a stealth game is judged on.
+   *
+   * ── But one rung cannot show a ladder ─────────────────────────────────────────────────────
+   * The registered claim is that the four rungs *read apart*, and a single mark cannot evidence
+   * that. So when GUARDS publishes a second guard, the next-nearest gets **rung 2**
+   * (`alert_search`, held amber, `loudness` 0.00949 — 1.9x below rung 3) and the frame carries
+   * the contrast directly. That is the difference between a screenshot of a red puff and a
+   * screenshot of a graded ladder, and it costs eight lines.
+   *
+   * GUARDS' public list is read the way `Audio._trackGuards` reads it — `list` or `guards` of
+   * objects with a `position`, every field optional, a missing one costing silence and never a
+   * throw. No reach into another module's internals.
+   *
+   * ── The burst train, and the thing I could not measure ────────────────────────────────────
+   * A staged still is captured some frames after the pose, and I do not know how many: the
+   * `_stageShot` note records that `Debug.setShot` applies the shot twice and that the capture
+   * lands ~3 frames after the *second* rebase, while `_prerollFires`' note puts the canonical
+   * gap at 17 frames / 0.28 s. Those disagree, and §186 held the capture lock throughout this
+   * pass so I could not settle it. Rather than bet the frame on one reading, each rung is
+   * emitted as three back-dated ticks spanning 0.36 s — the same idiom `_prerollCrests` uses —
+   * so a puff is near its peak size-times-alpha whichever of the two latencies is real. The
+   * cost of being wrong is a thinner mark, not an empty frame.
+   *
+   * @returns {{rung3: THREE.Vector3|null, rung2: THREE.Vector3|null}} where the marks landed,
+   *   so the shot author can frame them. Also what the test reads.
+   */
+  _stageAlert() {
+    const mv = this.engine.get('movement');
+    const G = this.engine.get('guards');
+    const list = G && (Array.isArray(G.list) ? G.list : Array.isArray(G.guards) ? G.guards : null);
+
+    /* Nearest guards to the player, since that is what the camera will be looking at. */
+    const near = [];
+    const p = mv?.position || null;
+    if (list) {
+      for (let i = 0; i < list.length; i++) {
+        const g = list[i];
+        if (!g?.position) continue;
+        near.push(g);
+        g.__sd2 = p ? g.position.distanceToSquared(p) : i;
+      }
+      near.sort((a, b) => a.__sd2 - b.__sd2);
+    }
+
+    const out = { rung3: null, rung2: null };
+    /* Head height: the mark belongs where his attention is, and where the cone is drawn from.
+       `_onGuardAlert` uses the same +1.55, so a staged frame and a played one agree. */
+    const place = (g, i) => {
+      if (g?.position) return _stg.copy(g.position).setY(g.position.y + 1.55);
+      if (!p) return null;
+      /* No GUARDS module (or no guards near): put the mark where a guard would be — a body
+         length ahead of Sly and off to one side, so it is in frame rather than on top of him. */
+      return _stg.set(p.x + (i === 0 ? 1.6 : -1.9), p.y + 1.55, p.z + (i === 0 ? -2.4 : -3.1));
+    };
+
+    const rungs = [
+      { entry: ALERT_LADDER.chase, scale: 1.15 },     // rung 3 — alert_spot + alert_spot_spark
+      { entry: ALERT_LADDER.searching, scale: 1.0 },  // rung 2 — alert_search, for the contrast
+    ];
+    for (let i = 0; i < rungs.length; i++) {
+      /* Only stage the second rung when there is a second guard to hang it on. Two marks in
+         mid-air with one guard under them would be a lie about the scene. */
+      if (i === 1 && near.length < 2) break;
+      const at = place(near[i], i);
+      if (!at) break;
+      const { entry, scale } = rungs[i];
+      const TICKS = 3, SPAN = 0.36;
+      for (let k = 0; k < TICKS; k++) {
+        const age = (k / TICKS) * SPAN;
+        this._emit(entry.emitter, at, { dir: UP, scale, age });
+        if (entry.spark) this._emit(entry.spark, at, { dir: UP, scale, age });
+      }
+      const rec = at.clone();
+      if (i === 0) out.rung3 = rec; else out.rung2 = rec;
+    }
+    return out;
   }
 
   /* ===================================================================== frame */

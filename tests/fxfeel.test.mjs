@@ -643,3 +643,164 @@ test('T6b: the sparkle guard rejects box affordances, and _updateSparkles actual
       'box entries would eat the sparkle budget',
   );
 });
+
+/* ══════════════════════════════════════ T7 — the destructible vocabulary (§357.1, round 2) ══
+ *
+ * FX owns what a break looks like; `src/world/` owns *that* one happened. These hold the half
+ * that lives here, and in particular that the three dead catalogue entries the audit found —
+ * the `dust_ring` and `scorch` decals and `PAL.crevice` — are now reachable through it.
+ */
+
+import { SMASH, smashFor } from '../src/fx/Emitters.js';
+import { DECALS } from '../src/fx/Decals.js';
+
+test('T7: every smash recipe names things that exist, and resolves like stepFor does', () => {
+  const mats = Object.keys(SMASH);
+  assert.ok(mats.length >= 4, `only ${mats.length} smash materials`);
+  let checked = 0;
+  for (const m of mats) {
+    const R = SMASH[m];
+    assert.ok(EMITTERS[R.debris], `SMASH.${m}.debris "${R.debris}" is not an emitter`);
+    assert.ok(EMITTERS[R.dust], `SMASH.${m}.dust "${R.dust}" is not an emitter`);
+    if (R.spark) assert.ok(EMITTERS[R.spark], `SMASH.${m}.spark "${R.spark}" is not an emitter`);
+    assert.ok(DECALS[R.decal], `SMASH.${m}.decal "${R.decal}" is not in the decal catalogue`);
+    assert.equal(R.col.length, 2, `SMASH.${m}.col must be [start, end]`);
+    assert.equal(R.dustCol.length, 2, `SMASH.${m}.dustCol must be [start, end]`);
+    checked++;
+  }
+  assert.equal(checked, mats.length, 'did not check every material');
+
+  /* Unknown material must fall back the same way `Sfx.stepFor()` does, or the two halves of a
+     break disagree about what an unlabelled prop is made of. */
+  assert.equal(smashFor('granite'), SMASH.stone, 'unknown material did not default to stone');
+  assert.equal(smashFor(undefined), SMASH.stone, 'missing material did not default to stone');
+  assert.equal(smashFor('wood'), SMASH.wood, 'a known material was not resolved');
+});
+
+test('T7: the smash table is what makes dust_ring, scorch and PAL.crevice reachable', () => {
+  /* The audit's finding, turned into a guard. All three were built and had zero readers in
+     `src/`; if a future edit drops them out of this table they go dead again silently. */
+  const decals = new Set(Object.values(SMASH).map((r) => r.decal));
+  assert.ok(decals.has('dust_ring'), 'no smash recipe places the dust_ring decal — it is dead again');
+  assert.ok(decals.has('scorch'), 'no smash recipe places the scorch decal — it is dead again');
+
+  const cols = Object.values(SMASH).flatMap((r) => [...r.col, ...r.dustCol]);
+  assert.ok(cols.includes(PAL.crevice), 'no smash recipe uses PAL.crevice — it is dead again');
+
+  /* scorch is a BURN. It belongs to metal and to nothing else: a clay jar breaking does not
+     char the floor, and spreading it to every material to use up a catalogue entry would be
+     worse than leaving it unread. */
+  for (const [m, r] of Object.entries(SMASH)) {
+    if (r.decal === 'scorch') assert.equal(m, 'metal', `"${m}" leaves a burn mark and should not`);
+    if (m === 'metal') assert.ok(r.spark, 'metal is the material that throws light and has no spark');
+    else assert.equal(r.spark, null, `"${m}" throws sparks; only metal should`);
+  }
+});
+
+test('T7: one break stays far inside the dust batch, and the arm that proves the bound bites', () => {
+  /* A break is an event, not a loop, so the only way it can hurt is if a single call is large
+     or a burst of them stacks. Mean count per call, against BATCH_CAPACITY. */
+  let worst = 0, worstMat = '';
+  for (const [m, r] of Object.entries(SMASH)) {
+    const dustN = meanOf(EMITTERS[r.debris].count) + meanOf(EMITTERS[r.dust].count);
+    if (dustN > worst) { worst = dustN; worstMat = m; }
+  }
+  const share = worst / BATCH_CAPACITY.dust;
+  console.log(`  T7: worst break is "${worstMat}" at ${worst} dust particles = ${(share * 100).toFixed(1)}% of ${BATCH_CAPACITY.dust}`);
+  assert.ok(share < 0.05, `one break costs ${(share * 100).toFixed(1)}% of the dust batch`);
+
+  /* Six broken in one swing — the shelf-of-jars case — must still clear the quarter-share that
+     CONTINUOUS reserves for the emitters that never get distance-culled. */
+  const six = worst * 6;
+  assert.ok(six < BATCH_CAPACITY.dust * T2_SHARE,
+    `six simultaneous breaks reach ${six}, past the ${BATCH_CAPACITY.dust * T2_SHARE} quarter-share`);
+
+  /* CALIBRATION, must fire: a recipe 20x the size has to breach the same bound, or the bound
+     is not measuring anything. */
+  assert.ok((worst * 20) / BATCH_CAPACITY.dust >= 0.05,
+    'calibration failed: a 20x recipe still passes the per-break bound');
+});
+
+/* ══════════════════════════════════════════════ T8 — the `alert` shot's staging ══
+ *
+ * 22 of the catalogue's 34 emitters are unreachable in every canonical capture, the whole
+ * stealth ladder among them — the one part of the FX layer with a pre-registered suite (T3
+ * above) and zero pixels of evidence. The coordinator authors the new `alert` shot; this is the
+ * staging half, and these hold it. Executed, not grepped: `_stageAlert` touches only the engine
+ * getters, `this._emit` and module scratch, so a stub runs the shipped code.
+ */
+
+test('T8: the alert shot stages the top rung, and the ladder contrast when there are two guards', () => {
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const run = (guards) => {
+    const calls = [];
+    const self = {
+      engine: {
+        get: (k) => (k === 'movement' ? { position: V(0, 0, 0) }
+          : k === 'guards' && guards ? { list: guards } : null),
+      },
+      _emit: (n, p) => calls.push({ n, x: +p.x.toFixed(3), y: +p.y.toFixed(3), z: +p.z.toFixed(3) }),
+    };
+    const out = Particles.prototype._stageAlert.call(self);
+    return { calls, out };
+  };
+
+  /* Two guards → both rungs, so one frame carries the grading the ladder claims. */
+  const two = run([{ position: V(3, 0, -4) }, { position: V(-6, 0, -8) }]);
+  const names = new Set(two.calls.map((c) => c.n));
+  assert.ok(names.has('alert_spot'), 'the top rung was not staged');
+  assert.ok(names.has('alert_spot_spark'), 'the top rung lost its additive spark — the only light in the ladder');
+  assert.ok(names.has('alert_search'), 'the second guard did not get the contrast rung');
+  assert.ok(!names.has('alert_clear') && !names.has('alert_notice'),
+    'staged a quiet rung; the shot exists to evidence the loud end');
+
+  /* Head height, agreeing with `_onGuardAlert`'s +1.55 — a staged frame and a played one must
+     put the mark in the same place or the capture is not evidence about the game. */
+  const spot = two.calls.find((c) => c.n === 'alert_spot');
+  assert.equal(spot.y, 1.55, `top rung at y=${spot.y}, not the guard's head height`);
+  assert.deepEqual([spot.x, spot.z], [3, -4], 'top rung did not land on the nearest guard');
+  const search = two.calls.find((c) => c.n === 'alert_search');
+  assert.deepEqual([search.x, search.z], [-6, -8], 'contrast rung did not land on the second guard');
+
+  /* §237 / the `_emit` aliasing trap: `_emit` writes `_v1` before it reads `position` inside its
+     particle loop, so a staging path that held its position in `_v1` would put every particle
+     at (0,1,0). Six emissions from one point is exactly that shape. MUST NOT be the origin. */
+  for (const c of two.calls) {
+    assert.ok(!(c.x === 0 && c.y === 1 && c.z === 0),
+      `"${c.n}" was emitted at (0,1,0) — the position scratch was clobbered by _emit`);
+  }
+
+  /* The burst train: the capture latency after Debug.setShot's second rebase is not something
+     this pass could measure (§186 held the lock), so each rung is emitted as several back-dated
+     ticks and is readable whichever latency is real. */
+  const spots = two.calls.filter((c) => c.n === 'alert_spot');
+  assert.ok(spots.length >= 3, `top rung staged as ${spots.length} tick(s); a single tick bets the frame on one latency`);
+
+  /* One guard → top rung only. Two marks with one guard under them would be a lie about the
+     scene, and this is the arm that proves the second rung is conditional rather than always-on. */
+  const one = run([{ position: V(3, 0, -4) }]);
+  const oneNames = new Set(one.calls.map((c) => c.n));
+  assert.ok(oneNames.has('alert_spot'), 'one guard did not get the top rung');
+  assert.ok(!oneNames.has('alert_search'), 'staged a second rung with only one guard to hang it on');
+  assert.equal(one.out.rung2, null, 'reported a rung-2 position that was never staged');
+
+  /* No GUARDS module at all → still stages, offset from the player, so the shot is never empty. */
+  const none = run(null);
+  assert.ok(none.calls.length > 0, 'no guards module staged nothing — the shot would capture an empty frame');
+  assert.ok(none.out.rung3 && none.out.rung3.lengthSq() > 0, 'fallback mark landed on the player');
+  console.log(`  T8: 2 guards -> ${two.calls.length} emissions, 1 guard -> ${one.calls.length}, none -> ${none.calls.length}`);
+});
+
+test('T8: an unknown shot name still stages nothing extra', () => {
+  /* The branch must be inert until the shot lands, and every existing shot must be untouched —
+     restaging an existing one would break comparability with every sealed measurement on it. */
+  const src = PARTICLES_SRC.slice(PARTICLES_SRC.indexOf('  _stageShot(name) {'));
+  const body = src.slice(0, src.indexOf('\n  }'));
+  assert.ok(/name === 'alert'/.test(body), '_stageShot has no alert branch');
+  for (const shot of ['hero', 'temple', 'courtyard', 'dunes', 'interior', 'night', 'traversal', 'combat', 'guard', 'kaykit']) {
+    const staged = (body.match(new RegExp(`name === '${shot}'`, 'g')) || []).length;
+    assert.ok(staged <= 1, `"${shot}" is branched on ${staged} times — a second branch would restage it`);
+  }
+  assert.ok(!/name === 'alert'[\s\S]*name === 'combat'/.test(body),
+    'the alert branch was inserted before combat, changing an existing shot\'s staging order');
+});

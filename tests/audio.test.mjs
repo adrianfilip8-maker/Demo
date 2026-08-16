@@ -705,3 +705,110 @@ test('impacts have instant attacks and swells do not', () => {
   }
   assert.equal(inspected, 5);
 });
+
+/* ==========================================================================
+   The score's reachable sections (§357.1)
+   ==========================================================================
+   `Music.setSection` is called from exactly one place — `Audio.music()` — and `Audio.music()`
+   is fed by exactly one place, `_wantSection()`. So the set of sections a player can ever hear
+   is whatever that one function can return, and two of the six shipped sections were outside
+   it: `treasure` (eight bars of Lydian, its own arrangement, four `style === 'treasure'`
+   branches across the generators) and `menu` (four bars, a `sparse` style with seven branches
+   of its own). Both rendered real music that nothing could reach.
+
+   `treasure` was WIRED — `Pickups.js` has published `treasureBanked` since the fence economy
+   landed. `menu` was DELETED, because there is no menu in this project and nothing to wire it
+   to. These hold both halves of that decision.
+========================================================================== */
+
+import { Audio as AudioModule } from '../src/audio/Audio.js';
+import { SECTIONS, SECTION_NAMES as MUSIC_SECTIONS } from '../src/audio/Music.js';
+
+/** Every section `_wantSection()` can return, by executing it rather than reading it. */
+function reachableSections() {
+  const out = new Set();
+  const states = ['idle', 'walk', 'run', 'sneak', 'crouch', 'crawl', 'tiptoe', 'roll', 'railSlide'];
+  for (let alert = 0; alert <= 3; alert++) {
+    for (const treasure of [0, 5]) {
+      for (const s of states) {
+        out.add(AudioModule.prototype._wantSection.call(
+          { _alert: alert, _treasure: treasure, _playerState: s },
+        ));
+      }
+    }
+  }
+  return out;
+}
+
+test('every music section the score defines is reachable, and every reachable one exists', () => {
+  const reach = reachableSections();
+  console.log(`  sections defined: ${MUSIC_SECTIONS.join(', ')}`);
+  console.log(`  sections reachable from _wantSection(): ${[...reach].sort().join(', ')}`);
+
+  const unreachable = MUSIC_SECTIONS.filter((s) => !reach.has(s));
+  assert.deepEqual(unreachable, [],
+    `sections that exist and no player can ever hear: ${unreachable.join(', ')}. `
+    + 'Wire it or delete it — a generator branch that looks alive and is not is the defect '
+    + 'this test exists for.');
+
+  const phantom = [...reach].filter((s) => !MUSIC_SECTIONS.includes(s));
+  assert.deepEqual(phantom, [], `_wantSection can return ${phantom.join(', ')}, which SECTIONS does not define`);
+
+  /* §211.1 — assert the instrument saw something. */
+  assert.ok(MUSIC_SECTIONS.length >= 5, `only ${MUSIC_SECTIONS.length} sections inspected`);
+  /* Both mix tables must agree with the section list, or a reachable section silently falls
+     back to `explore`'s level and stem. */
+  for (const s of MUSIC_SECTIONS) {
+    assert.ok(TRACK_SECTION[s], `TRACK_SECTION has no entry for reachable section "${s}"`);
+    assert.ok(SECTION_STEM[s], `SECTION_STEM has no entry for reachable section "${s}"`);
+  }
+  for (const s of Object.keys(TRACK_SECTION)) {
+    assert.ok(MUSIC_SECTIONS.includes(s), `TRACK_SECTION carries "${s}", which is not a section any more`);
+  }
+  for (const s of Object.keys(SECTION_STEM)) {
+    assert.ok(MUSIC_SECTIONS.includes(s), `SECTION_STEM carries "${s}", which is not a section any more`);
+  }
+});
+
+test('the treasure cue is subordinate to the alert ladder, and holds a full harmonic statement', () => {
+  const want = (o) => AudioModule.prototype._wantSection.call({ _playerState: 'walk', _alert: 0, _treasure: 0, ...o });
+
+  assert.equal(want({ _treasure: 5 }), 'treasure', 'a banked treasure does not reach the treasure section');
+  assert.equal(want({ _treasure: 0 }), 'explore', 'the treasure section did not fall back when the window closed');
+  /* MUST FIRE: being spotted mid-fanfare has to win, or the score tells the player they are
+     safe while a guard is running at them. */
+  for (let a = 1; a <= 3; a++) {
+    assert.equal(want({ _treasure: 5, _alert: a }), SECTION_FOR_ALERT[a],
+      `alert rung ${a} lost to the treasure cue`);
+  }
+  /* Sneak must lose to it too — banking happens at the fence, standing still, and a crouch
+     there would otherwise cancel the one reward cue in the game. */
+  assert.equal(want({ _treasure: 5, _playerState: 'crouch' }), 'treasure', 'sneak overrode the payoff');
+
+  /* The hold is derived, not chosen: Music.barSeconds is (60/bpm)*4 and treasure runs at
+     96 bpm, so four bars — one complete statement of FORM_TREASURE — is exactly 10 s. */
+  const bar = (60 / SECTIONS.treasure.bpm) * 4;
+  assert.equal(+(bar * 4).toFixed(6), TUNE.treasureHold,
+    `treasureHold ${TUNE.treasureHold}s is not four bars (${(bar * 4).toFixed(3)}s) at ${SECTIONS.treasure.bpm} bpm`);
+  /* And it has to outlast its own cross-fades, both of them, with a plateau left over. */
+  assert.ok(TUNE.treasureHold > TUNE.stemFade * 2,
+    `treasureHold ${TUNE.treasureHold}s does not clear two ${TUNE.stemFade}s cross-fades`);
+});
+
+test('the superseded guard listeners are gone, not merely unpublished', () => {
+  /* `tests/eventbus.test.mjs` registers guardLost / guardSound / guardSpotted under
+     DEAD_BY_DECISION and states the fix: delete the listeners, do not give them publishers,
+     because a second source of truth for the alert rung is not an improvement over one. */
+  const src = readFileSync(join(ROOT, 'src/audio/Audio.js'), 'utf8');
+  for (const evt of ['guardSpotted', 'guardLost', 'guardSound']) {
+    assert.ok(!new RegExp(`on\\(\\s*['"]${evt}['"]`).test(src),
+      `Audio.js still subscribes to "${evt}" — superseded by guardAlert (§219)`);
+  }
+  /* And the live one it was replaced by must still be there, or this test is celebrating the
+     deletion of the whole ladder. */
+  assert.ok(/on\(\s*['"]guardAlert['"]/.test(src), 'Audio.js no longer subscribes to guardAlert at all');
+  /* The four sounds `guardSound` was the channel for are played by `_trackGuards` instead. */
+  for (const n of ['guard_step', 'armour_clank', 'spear_scrape', 'guard_yawn']) {
+    assert.ok(new RegExp(`play\\(\\s*['"]${n}['"]`).test(src), `nothing plays "${n}" any more`);
+  }
+});

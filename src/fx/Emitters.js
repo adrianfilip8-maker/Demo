@@ -787,6 +787,76 @@ export const CONTINUOUS = {
 };
 
 /* =========================================================================
+   2b. Breaking things
+   ========================================================================= */
+
+/**
+ * What a prop looks like when it comes apart, by the material COLLISION already tags it with.
+ *
+ * ── Why this is a table and not four new emitters ─────────────────────────────────────────
+ * A destructible prop needs a chip burst, a dust puff at the contact, sometimes sparks, and a
+ * mark left behind. The catalogue already contains every one of those motions — `dive_debris`
+ * is chunks under real gravity with hard spin, `land_dust` is the contact puff, `dive_spark`
+ * is the hot scatter — and what actually distinguishes limestone from wicker from bronze is
+ * **colour**, not trajectory. `_emit` takes `color0`/`color1` overrides, so a table of colours
+ * over shared motion is the whole of it. Four near-duplicate emitters differing only in a hex
+ * pair would be four more things to keep in budget and four more places for the §2.2 palette
+ * to drift.
+ *
+ * ── Keyed on COLLISION's material vocabulary, deliberately ────────────────────────────────
+ * The keys are `MAT_NAMES` from `src/world/BVH.js` — the same eight names WORLD already puts
+ * on every collider and the same ones `Sfx.stepFor()` switches on. So a caller that has a
+ * collision hit already has the key, and nobody has to invent a second material vocabulary or
+ * map between two. `smashFor()` below defaults to `stone` for the same reason `stepFor()`
+ * does: it is the right guess for an unlabelled surface in a temple.
+ *
+ * ── The three dead entries this wires ─────────────────────────────────────────────────────
+ * `dust_ring` and `scorch` (`Decals.js:21-22`) and `PAL.crevice` had **no reader anywhere in
+ * `src/`** — found by the §357.1 audit, all three built and none reachable. They are not
+ * padding here; each is the honest answer to its slot. `dust_ring` is a ring of settled dust,
+ * which is exactly the mark a thing leaves when it bursts on the floor. `scorch` is a burn
+ * mark, so it goes to `metal` and nowhere else — a smashed clay jar does not scorch stone, and
+ * putting a burn under every break to use up a catalogue entry would be worse than leaving it
+ * dead. `PAL.crevice` #4a2f22 is §2.2's deep crevice brown, the darkest thing in the palette
+ * and the correct colour for a chip of limestone or wood dying into shadow.
+ *
+ * `col` is `[start, end]` and overrides the emitter's own pair. The starts are the material
+ * read at the moment of the break (lit stone, raw wood, hot bronze); the ends are all dark,
+ * because debris falls out of the light as it settles and a chip that stays bright reads as a
+ * spark rather than as rubble.
+ */
+export const SMASH = {
+  /* Limestone, the temple's own material: the pale lit face cooling into crevice brown. */
+  stone: { debris: 'dive_debris', dust: 'land_dust', spark: null, decal: 'dust_ring',
+           col: [PAL.limeLight, PAL.crevice], dustCol: [PAL.limeMid, PAL.sandMid] },
+  /* Crates, poles, shrine furniture. `PAL.woodChip` exists for exactly this and had one
+     reader in the whole project before this table. */
+  wood:  { debris: 'dive_debris', dust: 'land_dust', spark: null, decal: 'dust_ring',
+           col: [PAL.woodChip, PAL.crevice], dustCol: [PAL.sandMid, PAL.sandDark] },
+  /* The only material that throws light, and the only one that leaves a burn. Bronze fittings
+     shear hot; `dive_spark` is already the hot-scatter curve and needs no recolour. */
+  metal: { debris: 'dive_debris', dust: 'land_dust', spark: 'dive_spark', decal: 'scorch',
+           col: [PAL.metalSpark, PAL.sandDark], dustCol: [PAL.smokeLit, PAL.smoke] },
+  /* Wicker baskets and linen bundles. No chips — a basket does not produce shrapnel — so the
+     debris runs pale and the dust carries the beat. */
+  cloth: { debris: 'dive_debris', dust: 'land_dust', spark: null, decal: 'dust_ring',
+           col: [PAL.limeMid, PAL.sandDark], dustCol: [PAL.sandLight, PAL.sandMid] },
+  /* A sand-packed vessel bursting: almost no debris colour of its own, all puff. */
+  sand:  { debris: 'dive_debris', dust: 'land_dust', spark: null, decal: 'dust_ring',
+           col: [PAL.sandMid, PAL.sandDark], dustCol: [PAL.sandLight, PAL.sandMid] },
+};
+
+/**
+ * Break recipe for a COLLISION material tag (AGENTS.md §4.4 `material`).
+ *
+ * Mirrors `Sfx.stepFor()` exactly, including its default, so the two halves of a break — what
+ * it looks like and what it sounds like — resolve the same unknown material the same way.
+ */
+export function smashFor(material) {
+  return SMASH[material] || SMASH.stone;
+}
+
+/* =========================================================================
    3. Ambient field definitions (GPU-resident, never respawned on the CPU)
    ========================================================================= */
 export const AMBIENT = {

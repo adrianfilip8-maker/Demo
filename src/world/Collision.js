@@ -74,6 +74,11 @@ const TAG_COLOR = {
 };
 
 const AFF_POINT = 0, AFF_SPLINE = 1, AFF_BOX = 2;
+/**
+ * Published names for the three routes above, so a consumer can ask which one resolved instead
+ * of inferring it. See the `kind` field on `nearest()` / `query()` results.
+ */
+const AFF_KIND = ['point', 'spline', 'box'];
 
 /* ---- module-scope scratch. Nothing in a query path allocates. ---- */
 const _v1 = new THREE.Vector3();
@@ -730,6 +735,7 @@ export class Collision {
     res.material = e.rec.material;
     res.spline = e.curve || null;
     res.length = e.len || 0;
+    res.kind = AFF_KIND[e.type] || 'box';
     return res;
   }
 
@@ -763,8 +769,21 @@ export class Collision {
    *     a frozen `userData` — so "the reach resolves" is a property of when you ask, not a
    *     contract. The result shape is a contract.
    *
-   * Cost is one reference copy and one number per hit — `e.curve` and `e.len` are already
-   * resolved on the affordance entry, so nothing new is computed.
+   * `kind` is `'point' | 'spline' | 'box'` — **which of `_buildAffordances`' three routes this
+   * hit resolved through**, which is a different question from its tag and the only one that
+   * answers "does this point stay put, or is it the nearest bit of a box that tracks the
+   * player". It exists because `src/fx/Particles.js:pinnedAffordance` has to ask exactly that
+   * and could only ask it of the *authoring* fields. Its spline half already prefers this
+   * class's result field for the reason given there; its point half could not, because
+   * `slot.point` is populated on all three routes — so it falls back to
+   * `rec.mesh.userData.point`, and **that is a false positive waiting to happen.** The
+   * classification is `isPoint = tag === 'hook' || tag === 'spire'` (below): a `wall`, `ledge`
+   * or `ground` rec that carries a `userData.point` — which is a perfectly reasonable thing for
+   * a level to author, and this level now does — passes that guard and still resolves AFF_BOX.
+   * `kind` is the authoritative answer and cannot disagree with the affordance it came from.
+   *
+   * Cost is one reference copy, one number and one interned string per hit — `e.curve`, `e.len`
+   * and `e.type` are already resolved on the affordance entry, so nothing new is computed.
    */
   query(pos, radius, tags) {
     const t0 = now();
@@ -789,7 +808,7 @@ export class Collision {
         ? this._queryPool[out.length]
         : (this._queryPool[out.length] = {
           rec: null, point: new THREE.Vector3(), tangent: new THREE.Vector3(),
-          t: 0, distance: 0, tag: '', spline: null, length: 0,
+          t: 0, distance: 0, tag: '', spline: null, length: 0, kind: '',
         });
       slot.rec = e.rec;
       slot.point.set(_aX, _aY, _aZ);
@@ -799,6 +818,7 @@ export class Collision {
       slot.tag = e.rec.tag;
       slot.spline = e.curve || null;
       slot.length = e.len || 0;
+      slot.kind = AFF_KIND[e.type] || 'box';
       out.push(slot);
     }
     out.sort(byDistance);
@@ -1284,7 +1304,7 @@ function resetRay(r) {
 function makeNearResult() {
   return {
     rec: null, point: new THREE.Vector3(), tangent: new THREE.Vector3(0, 1, 0),
-    t: 0, arc: 0, distance: 0, tag: '', material: '', spline: null, length: 0,
+    t: 0, arc: 0, distance: 0, tag: '', material: '', spline: null, length: 0, kind: '',
   };
 }
 

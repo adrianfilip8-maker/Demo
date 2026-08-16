@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { rng, WORLD_SEED } from '../core/Rand.js';
-import { coin as coinGeo, ingot, scarab, collar, place, mergeAll } from './PropKit.js';
+import { coin as coinGeo, clueBottle, ingot, scarab, collar, place, mergeAll } from './PropKit.js';
 
 /**
  * Pickups — the collect loop. Coins, treasure, and the fence they are carried to.
@@ -100,6 +100,16 @@ export const TUNE = {
   treasureBob:   0.16,   // treasure is bigger, so it swims wider and slower — a different silhouette
   treasureRate:  1.25,
   treasureSpin:  0.75,
+  /* Clue bottles. `PropKit.clueBottle`'s own default `h`, kept in step so the collect radius
+     below and the art agree — the same reason `coinRadius` is pinned to `coin(0.16, …)`. */
+  clueHeight:    0.42,
+  /* playerRadius 0.34 + half the bottle's height. A bottle stands up where a coin lies flat, so
+     its grabbable extent is vertical and larger than a coin's; using `collect` 0.50 unchanged
+     would make you clip through the neck of one before it registered. */
+  clueCollect:   0.55,
+  clueBob:       0.11,
+  clueRate:      1.7,
+  clueSpin:      1.1,
 
   /* ---- economy ---- */
   milestone:     100,    // coins between purse toasts — "something reacts when it changes"
@@ -118,6 +128,15 @@ export const TUNE = {
    */
   subStep:       1 / 240,
 };
+
+/**
+ * The clue-bottle view of `TUNE`, built once at module scope.
+ *
+ * `stepPickup` reads `tune.collect`, and a bottle's is wider than a coin's. Deriving it per
+ * frame with a spread would allocate an object per bottle per frame, which §5 forbids and which
+ * the sub-stepping integrator would then do 12 times over. One frozen object instead.
+ */
+const CLUE_TUNE = Object.freeze({ ...TUNE, collect: TUNE.clueCollect });
 
 /** Denominations. `amount` doubles as Audio's chime count, so these stay small and legible. */
 export const COIN_VALUE = { single: 1, stack: 3, pile: 5 };
@@ -207,6 +226,34 @@ export function stepPickup(p, playerPos, dt, tune = TUNE) {
  * level does — that is the persistence the loop was missing. Deliberately NOT `localStorage`:
  * the screenshot harness boots this level repeatedly and a purse that carried over between
  * boots would make captures depend on capture order (§234's lesson, one layer up).
+ */
+/**
+ * ── READ THIS BEFORE BUILDING ANYTHING THAT SPENDS COINS ──────────────────────────────────
+ *
+ * `Wallet.coins` here and `Health.purse` (`src/player/Health.js:98`) are **two independent
+ * counters fed by the same event**, and neither knows the other exists. `Pickups._coin()` emits
+ * one `coin`; `Wallet.credit()` banks it here and `Health.js:148` — one of the four subscribers
+ * `tests/pickups.test.mjs` P10 censuses — banks the same coin into the charm purse. **Every coin
+ * is credited twice, to two different totals, on purpose** — one is the player's money, the
+ * other is progress toward a lucky charm, and today they agree because nothing has ever taken
+ * money out.
+ *
+ * (Spelling that subscription out as a literal call expression here is what broke P10 once: it
+ * scrapes `src/` for the subscribe token with a regex that cannot tell code from prose, so a
+ * comment *describing* the contract counts as a fifth subscriber. Documenting an event by name
+ * is safe; quoting the call is not.)
+ *
+ * `credit()` is add-only: `Math.max(0, …)`, no debit path, and nothing in `src/` spends. The
+ * instant anything does — a shop, a bribe, a toll — the two diverge silently and in a specific
+ * direction: **the charm arc the HUD draws keeps filling from money the player has already
+ * spent**, because `Health.purse` never hears about the spend. There is no assertion that will
+ * catch this and no visual that will look wrong until a charm is awarded for an empty wallet.
+ *
+ * So whoever builds the first coin sink owns a decision, not a bug fix: either `purse` is
+ * gross-earned (and the two are meant to differ, which should be said out loud somewhere the
+ * HUD can read), or it is net-spendable (and the sink has to publish a debit both counters
+ * consume). Recorded here rather than in KNOWN_ISSUES because this is the file the sink's
+ * author will be reading.
  */
 export class Wallet {
   constructor(tune = TUNE) {
@@ -302,6 +349,7 @@ export class Pickups {
 
     this.wallet = new Wallet(TUNE);
     this.coins = [];        // { pos, kind, value, taken, phase }
+    this.clues = [];        // { pos, taken, magnet, phase, home } — Sly's clue bottles
     this.treasures = [];    // { id, name, value, pos, taken, banked, mesh, phase }
     this.fence = new THREE.Vector3().fromArray(FENCE.pos);
 
@@ -309,6 +357,8 @@ export class Pickups {
     this._materials = [];
     this._offs = [];
     this._coinMesh = null;
+    this._clueMesh = null;
+    this._decoHidden = [];
     this._playerPos = new THREE.Vector3(0, 0, 30);
     this._alert = new Map();   // guard id -> state, so "am I being chased" is one lookup
     this.stats = { coins: 0, treasures: 0 };
@@ -340,16 +390,41 @@ export class Pickups {
        lovely; the alternative is worse, and the real fix is for `Props.js` to drop
        `_collectibles()` and hand placement here. Routed to the PROPS owner, see KNOWN_ISSUES. */
     const props = this.engine.get?.('props');
-    const adopted = props?._collect?.[0]?.spots;
+    /* Find the coin entry by its `kind`, not by index 0. Index worked while `_collect` had one
+       element in it and became a latent bug the moment it had two — the clue bottles are pushed
+       after the coins, and a later reorder in PROPS would silently turn every bottle into a
+       one-coin pickup with no error anywhere. `kind` is now written by the producer. The `?? 0`
+       keeps the old behaviour if an older PROPS is ever in the tree. */
+    const entryOf = (k) => props?._collect?.find?.((c) => c?.kind === k)
+      ?? (k === 'coin' ? props?._collect?.[0] : null);
+    const adopted = entryOf('coin')?.spots;
     if (Array.isArray(adopted)) {
       for (const s of adopted) {
         if (!Array.isArray(s) || s.length < 3) continue;
         specs.push({ kind: 'single', value: COIN_VALUE.single, x: s[0], y: s[1], z: s[2] });
       }
-      /* Hide the decorative twin rather than edit a file we do not own. Reversible, and it
-         leaves exactly one set of coins in the frame. */
-      const deco = props.group?.getObjectByName?.('coins');
-      if (deco) { deco.visible = false; this._decoHidden = deco; }
+    }
+
+    /* 3. Clue bottles, adopted the same way. `Props._clueBottles()` owns the placement — one per
+       vertical beat of the authored route — and this owns the collect loop and the publisher.
+       `emit('clue')` did not exist anywhere in `src/` before this; `Audio.js:1305` has been
+       subscribed to it, with a built and tested `clue_bottle` cue behind it, the whole time. */
+    const clueSpots = entryOf('clue')?.spots;
+    if (Array.isArray(clueSpots)) {
+      for (const s of clueSpots) {
+        if (!Array.isArray(s) || s.length < 3) continue;
+        this.clues.push({
+          pos: new THREE.Vector3(s[0], s[1], s[2]),
+          taken: false, magnet: false, phase: this.rng.range(0, Math.PI * 2), home: s[1],
+        });
+      }
+    }
+
+    /* Hide the decorative twins rather than draw two sets. Reversible on dispose(), and it
+       leaves exactly one set of each in the frame. */
+    for (const name of ['coins', 'clue_bottles']) {
+      const deco = props?.group?.getObjectByName?.(name);
+      if (deco) { deco.visible = false; this._decoHidden.push(deco); }
     }
 
     for (const s of specs) {
@@ -367,12 +442,32 @@ export class Pickups {
     }
     this.stats.coins = this.coins.length;
     this.stats.treasures = this.treasures.length;
+    this.stats.clues = this.clues.length;
   }
 
   /* --------------------------------------------------------------------- */
 
   _build() {
-    if (!this.coins.length && !this.treasures.length) return;
+    if (!this.coins.length && !this.treasures.length && !this.clues.length) return;
+
+    if (this.clues.length) {
+      /* `clueBottle()` hands back a Bag whose parts are `glass` and `cork`. Merged into one
+         geometry and instanced against the gold material would be wrong — a clue bottle is
+         glass and its whole job is to read as the §2.1.6 blue that means "pickup" — so this
+         gets its own material rather than sharing `_mat('gold')`. */
+      const parts = [];
+      clueBottle({ h: TUNE.clueHeight, rng: this.rng }).drain((_k, g) => parts.push(g));
+      const geo = mergeAll(parts);
+      if (geo) {
+        this._geoms.push(geo);
+        const mesh = new THREE.InstancedMesh(geo, this._clueMat(), this.clues.length);
+        mesh.name = 'pickup_clues';
+        mesh.frustumCulled = false;
+        mesh.userData.noShadow = true;
+        this._clueMesh = mesh;
+        this.root.add(mesh);
+      }
+    }
 
     if (this.coins.length) {
       const geo = coinGeo(TUNE.coinRadius, 0.035);
@@ -484,7 +579,7 @@ export class Pickups {
     /**
      * Sync the HUD to the starting purse, on the first frame rather than in init().
      *
-     * `HUD.js:390 on('coins', ...)` is the absolute-set channel, and it was the SECOND dead
+     * `HUD.js:540 on('coins', ...)` is the absolute-set channel, and it was the SECOND dead
      * listener in that file — nothing emitted `coins` either. But emitting it from init() would
      * have reproduced §223.3 exactly: MANIFEST registers `pickups` before `hud`, `initModules`
      * inits in registration order, and HUD installs its listeners in its own `init()` — so the
@@ -502,6 +597,11 @@ export class Pickups {
     for (const c of this.coins) {
       if (c.taken) continue;
       if (stepPickup(c, player, dt, TUNE)) this._collectCoin(c);
+    }
+
+    for (const c of this.clues) {
+      if (c.taken) continue;
+      if (stepPickup(c, player, dt, CLUE_TUNE)) this._collectClue(c);
     }
 
     for (const tr of this.treasures) {
@@ -531,6 +631,22 @@ export class Pickups {
       }
       mesh.instanceMatrix.needsUpdate = true;
     }
+    const cm = this._clueMesh;
+    if (cm) {
+      for (let i = 0; i < this.clues.length; i++) {
+        const c = this.clues[i];
+        if (c.taken) { _m.makeScale(0, 0, 0); cm.setMatrixAt(i, _m); continue; }
+        const y = c.magnet ? c.pos.y : c.home + Math.sin(t * TUNE.clueRate + c.phase) * TUNE.clueBob;
+        _v.set(c.pos.x, y, c.pos.z);
+        /* Upright and spinning about its own axis — a bottle laid flat like a coin reads as
+           litter. Same argument as `Props.update`'s `upright` branch, which draws the
+           decorative twin this one replaces. */
+        _m.compose(_v, _q.setFromEuler(_e.set(0, t * TUNE.clueSpin + c.phase, 0)), _one);
+        cm.setMatrixAt(i, _m);
+      }
+      cm.instanceMatrix.needsUpdate = true;
+    }
+
     for (const tr of this.treasures) {
       if (!tr.mesh) continue;
       tr.mesh.visible = !tr.taken && !tr.banked;
@@ -547,6 +663,53 @@ export class Pickups {
     const milestone = this.wallet.credit(c.value);
     this._coin(c.value, c.pos);
     if (milestone) this._emit('toast', { text: `${milestone} coins`, icon: 'coin' });
+  }
+
+  /**
+   * The publisher `clue` never had.
+   *
+   * `Audio.js:1305` has subscribed to this event, with a built and tested `clue_bottle` cue
+   * behind it, for as long as both files have existed; `emit('clue')` appeared nowhere in
+   * `src/`. That is §239's shape exactly — the same defect the coin loop had — and it is why
+   * this is four lines rather than a feature.
+   *
+   * NOT a coin. A clue bottle pays nothing into the wallet and nothing into `Health.purse`: in
+   * the series it is a set you complete, and crediting it would make the charm arc and the
+   * purse move on something the player will also expect to count separately. The count lives
+   * here as a plain increment off the collection actually observed — see `_clueBottles()` in
+   * PROPS for the reference manager's version of this, which computes it from set sizes at
+   * `_ready()` and is identically zero.
+   */
+  _collectClue(c) {
+    this.clueCount = (this.clueCount || 0) + 1;
+    this._emit('clue', { pos: new THREE.Vector3().copy(c.pos), found: this.clueCount, total: this.clues.length });
+    this._emit('toast', {
+      text: `Clue bottle ${this.clueCount} / ${this.clues.length}`,
+      icon: 'clue',
+    });
+  }
+
+  /**
+   * The clue bottle's own material — glass, not gold.
+   *
+   * Mirrors `Props.MATERIALS.glass` exactly (`0x8fd8ff` at 0.55 opacity), for the same reason
+   * `_mat` mirrors `MATERIALS.gold`: two modules drawing the same object in two different
+   * blues is the class of drift this file already refuses once. `0x8fd8ff` is §2.1.6's pickup
+   * colour and was put in that table for this object, which had no consumer until now.
+   */
+  _clueMat() {
+    const shading = this.engine.get?.('shading');
+    const opts = {
+      name: 'pickups:glass',
+      color: 0x8fd8ff, rough: 0.15, roughness: 0.15,
+      bands: 3, rim: 0.7, rimColor: 0x8fd8ff, spec: 0.8, gloss: 72,
+      transparent: true, opacity: 0.55,
+    };
+    let m = null;
+    try { m = shading?.make ? shading.make(opts) : null; } catch { m = null; }
+    if (!m) m = new THREE.MeshStandardMaterial({ color: opts.color, roughness: 0.15, transparent: true, opacity: 0.55 });
+    this._materials.push(m);
+    return m;
   }
 
   _takeTreasure(tr) {
@@ -614,6 +777,7 @@ export class Pickups {
       ...this.wallet.state(),
       placed: this.stats.coins, treasuresPlaced: this.stats.treasures,
       remaining: this.coins.reduce((n, c) => n + (c.taken ? 0 : 1), 0),
+      cluesPlaced: this.stats.clues, cluesFound: this.clueCount || 0,
       lastPocket: this._lastPocket || null,
     };
   }
@@ -621,7 +785,8 @@ export class Pickups {
   dispose() {
     for (const off of this._offs) { try { off(); } catch {} }
     this._offs.length = 0;
-    if (this._decoHidden) this._decoHidden.visible = true;
+    for (const deco of this._decoHidden) deco.visible = true;
+    this._decoHidden.length = 0;
     for (const g of this._geoms) g.dispose?.();
     for (const m of this._materials) m.dispose?.();
     this.root.removeFromParent();

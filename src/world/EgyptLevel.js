@@ -246,6 +246,13 @@ const NOTCH = {
   /** How far the corbel stands proud of the wall's own face plane, m. */
   out: 0.17,
   width: 0.74,
+  /** `Controller.TUNE.height` 1.80 × 0.55 — the height `probeWall` fires its ray from, so a
+   *  target's feet sit this far below the rung its hands are on. Hardcoded rather than imported
+   *  for the same reason `MAG.catchJump` is: `src/world/` does not depend on `src/player/`. */
+  chest: 0.99,
+  /** Capsule standoff from the face. `radius` 0.34 + `wallProbe` 0.40 = 0.74 m of probe reach,
+   *  of which `radius` is spent not being inside the stone — this is the middle of that window. */
+  standoff: 0.55,
 };
 
 /**
@@ -456,6 +463,83 @@ function swingTarget(A, id, x, y, z, volume = MAG.volume) {
     group: 'swing',
     arrive: 'hookSwing',
     userData: { kind: 'hook' },
+  });
+}
+
+/**
+ * The mouth of a wall route: a `group: 'notch'` target that hands off to `wallCling`.
+ *
+ * ── Why exactly one, and why it is the right one ──────────────────────────────────────────
+ * A vertical route wants a whole stack of these, and this level can author precisely one. The
+ * binding constraint is not taste, it is arithmetic, and it should be read before anyone
+ * "fixes" the count:
+ *
+ *   `tests/level.test.mjs` — "every authored point sits on a registered affordance, not in
+ *   mid-air" — requires every target's `point` to be within 1e-6 m of some **collider's**
+ *   `mesh.userData.point`. One mesh carries one point, so N targets need N point-carrying
+ *   colliders. The east pylon's whole south elevation is ONE `proxyBattered` rec, so it can
+ *   carry one. Registering 22 more would take ARCHITECTURE + PROPS from 272 collider
+ *   registrations to 294, and `tests/basketvary.test.mjs:79` seals that total at 272. Moving a
+ *   sealed bar so one's own change passes is what §141.1 forbids, so the count stands and the
+ *   blocker is reported rather than worked around.
+ *
+ * That constraint turns out to describe the right architecture anyway, which is the only reason
+ * this is authored at all rather than deferred: **magnetism is the acquisition, `rec.handholds`
+ * is the continuation.** Getting onto a wall out of a jump is the beat that needs assistance —
+ * it is a point, in flight, and a miss costs the whole ascent, which is the three-part test at
+ * `MAG`. Moving between rungs once you are already clung to the face is a climb, and a climb
+ * wants a state reading the published ladder (TRAVERSAL's `WallClimb`, priority 79, against
+ * `rec.handholds`), not 23 trigger spheres 1.05 m apart — which the pairwise volume rule could
+ * not admit in any case: at that spacing the widest legal volume is
+ * (1.05 − magSnapRadius 0.20625) / 2 = 0.42 m, an eighth of `magVolume`.
+ *
+ * ── Where the point goes, and why it is not on the rung ───────────────────────────────────
+ * The rung is where Sly's HANDS are; a target point is where his capsule ORIGIN — his feet —
+ * ends up. Two offsets, both read off `Controller`:
+ *
+ *   · down by `height × 0.55` = 1.80 × 0.55 = **0.99 m**, which is the exact height
+ *     `probeWall` fires its ray from. Put the feet there and the ray that has to find the wall
+ *     leaves at the rung's own height rather than a metre off it.
+ *   · out by **0.55 m** along the face's horizontal normal. `probeWall` reaches
+ *     `radius 0.34 + wallProbe 0.40` = 0.74 m, and the capsule needs `radius` 0.34 of that just
+ *     to not be inside the stone. 0.55 leaves 0.21 m of clear air outside the capsule and
+ *     0.19 m of probe margin — centred in a window only 0.40 m wide.
+ *
+ * `arrive: 'wallCling'` was unreachable as a handoff until `a3c2309`; `ToTarget`'s probe hid
+ * behind a null current state whose `sm.group` falls back to `'ground'`, and `WallCling.canEnter`
+ * opens `if (c.grounded || c.sm.group !== 'air') return false`. Nothing in the level named it, so
+ * the fix cost no behaviour — it bought the authoring surface this uses.
+ *
+ * ── What is NOT set, deliberately ─────────────────────────────────────────────────────────
+ * No `jumpMult`. `wall_notch.gd` carries `jump_mult` (its default is 2) and `TargetPoint`
+ * supports it, but §6 has no authored wall-notch multiplier the way it has "spire land — jump
+ * from it gets ×1.25", and inventing a balance number for a move MOVEMENT has not shipped yet
+ * would be this file deciding something that is not its to decide. `catch` stays the derived
+ * default 1.008 — nothing in this level rescues a wider miss than the chain's 1.4387.
+ */
+function notchTarget(A, id, mesh, hold) {
+  const pt = new THREE.Vector3(
+    hold.point.x,
+    hold.point.y - NOTCH.chest,
+    hold.point.z + Math.sign(hold.normal.z || 1) * NOTCH.standoff,
+  );
+  /* The collider carries the same point the target does — `tests/level.test.mjs` asserts the
+     coincidence, and the reason it asserts it is that §2.1.6's marker is drawn from COLLISION's
+     affordance query. Note what this does NOT buy: `Collision._buildAffordances` classifies by
+     `tag === 'hook' || tag === 'spire'`, so a `wall` rec resolves AFF_BOX whatever its userData
+     says, and the marker would track the player rather than sit on the notch. That is why
+     `query()` now publishes `kind` — see the note there. This point is honest data; it is not
+     yet a sparkle, and saying so is cheaper than discovering it in a frame. */
+  mesh.userData.point = pt.clone();
+  return magnet(A, {
+    id,
+    point: pt,
+    volume: MAG.volume,
+    catch: MAG.catchJump,
+    group: 'notch',
+    arrive: 'wallCling',
+    mesh,
+    userData: { kind: 'notch', rung: hold.rung, hold: hold.id },
   });
 }
 
@@ -1145,23 +1229,37 @@ function entryPylons(A) {
      * `registerCollider` — the same harness `tests/basketvary.test.mjs` seals — and diffing the
      * tag histogram against HEAD: **identical, 272 registrations, every tag equal**
      * (ground 52, hazard 8, hook 11, ledge 90, pole 21, rail 6, spire 5, vent 4, wall 75).
-     * 19 corbels + 19 pins, 0 new colliders, 0 new draw calls (both go into
-     * `court|bronze_dark`, a bucket that already exists), +2,096 triangles on 298,194.
-     * That the route tags in particular are untouched is the load-bearing half: `pole`, `hook`,
-     * `spire`, `rail` and `ledge` are CameraRig's `ROUTE_TAGS`, and one stray `pole` (weight
-     * 1.0, the highest there is) would silently drive the camera's UP channel. */
+     * 0 new colliders, 0 new draw calls (corbels and pins go into `court|bronze_dark`, a bucket
+     * that already exists). That the route tags in particular are untouched is the load-bearing
+     * half: `pole`, `hook`, `spire`, `rail` and `ledge` are CameraRig's `ROUTE_TAGS`, and one
+     * stray `pole` (weight 1.0, the highest there is) would silently drive the camera's UP
+     * channel.
+     *
+     * ── The ladder runs PAST the niche head, and it has to ────────────────────────────────
+     * The first version stopped at the niches' own head (y 22), which put the top rung at 21.00
+     * and 19.95. Measured against the shipped moveset, that route ran out: from a cling at
+     * 21.00, `wallJump` rises 2.2274 and the re-granted `doubleJump` 2.0419, so the feet reach
+     * 25.269 and the hands `hangReach` 1.56 higher at **26.829 — 2.09 m under this tower's deck
+     * lip at 28.92.** A 23 m ladder that ends in a shrug is worse than no ladder, and it is
+     * exactly the "promise made in one place and kept in another" this file keeps arguing
+     * against. Two more rungs per niche carry the fittings up the 3.6 m of plain wall between
+     * the niche head and the cornice — which is where a real pylon's upper flagstaff brackets
+     * sit anyway, because the niche stops short of the cornice on a real one too. Top rungs are
+     * now 25.20 and 24.15, both inside the wall proxy's own 25.6 m top; from 25.20 one wall jump
+     * alone puts the hands at 28.99, clearing the lip by 0.07 m, and the double jump behind it
+     * turns that into 2.11 m. The route terminates on the deck the `pylon-drop` rail leaves
+     * from, which is the whole point of laddering this tower rather than the other one. */
     const holds = [];
     if (sx > 0) {
       /* y0 2.10 = one pitch off the paving, so the first rung is inside a plain standing jump
-         (apex jumpV0²/2g = 2.52 m). Top rung 21.00 and 20.05, both under the niches' own head
-         at y 22. The +3.4 niche is offset half a pitch — see NOTCH. */
+         (apex jumpV0²/2g = 2.52 m). The +3.4 niche is offset half a pitch — see NOTCH. */
       holds.push(...notchLadder(A, {
         id: 'notch-pylon-e-w', zone: 'court', cx, cz: p.z, w: p.w, d: p.d, batter: B,
-        a: -3.4, rungs: 10, y0: NOTCH.pitch,
+        a: -3.4, rungs: 12, y0: NOTCH.pitch,
       }));
       holds.push(...notchLadder(A, {
         id: 'notch-pylon-e-e', zone: 'court', cx, cz: p.z, w: p.w, d: p.d, batter: B,
-        a: 3.4, rungs: 9, y0: NOTCH.pitch * 1.5,
+        a: 3.4, rungs: 11, y0: NOTCH.pitch * 1.5,
       }));
     }
 
@@ -1172,6 +1270,14 @@ function entryPylons(A) {
     if (holds.length) {
       face.userData.handholds = holds;
       for (const h of holds) h.mesh = face;
+      /* The mouth. Rung 1 of the west niche (y 4.20), not rung 0: the target's feet sit
+         `chest` 0.99 below the rung, so rung 0 would put the acquisition point at y 1.11 —
+         close enough to the paving that a running jump crosses it before magnetism is worth
+         anything. From 4.20 the point is at 3.21, which a jump (apex 2.5208) into a double
+         jump (a further 2.0419) reaches with 1.35 m to spare, and `volume` 3.30 opens the
+         trigger well before that. It is also the rung the two staggered ladders are furthest
+         apart at the bottom, so the mark is unambiguous about which line it starts. */
+      notchTarget(A, 'notch-pylon-e-mouth', face, holds[1]);
     }
 
     /* Sand drift on the north (leeward) face. */

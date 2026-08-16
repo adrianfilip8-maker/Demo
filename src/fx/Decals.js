@@ -15,7 +15,11 @@ import { TILE, PAL } from './Emitters.js';
  * a fast dissolve, so a crack looks like damage rather than like a projector timing out.
  */
 
-const CATALOGUE = {
+/* Exported so a test can enumerate it — `SMASH` in Emitters.js names decals by string, and a
+   recipe pointing at a decal that does not exist would otherwise fall through to `scuff` at
+   runtime (see `add()`) and look like a styling choice rather than a typo. Same reason
+   `SFX_NAMES` and `SECTION_NAMES` are exported. */
+export const DECALS = {
   crack: { tile: TILE.CRACK, life: 14, size: 2.2, alpha: 0.85, color: 0x4a2f22, hold: 0.72, spin: true },
   scuff: { tile: TILE.SCORCH, tile2: true, life: 6, size: 1.6, alpha: 0.42, color: PAL.sandLight, hold: 0.45, spin: true },
   scorch: { tile: TILE.SCORCH, life: 20, size: 1.2, alpha: 0.7, color: 0x241a16, hold: 0.8, spin: true },
@@ -156,7 +160,7 @@ export class Decals {
 
   /** @returns {number} slot index, usable as a handle for `remove()` */
   add(name, position, normal, opts = {}) {
-    const def = CATALOGUE[name] || CATALOGUE.scuff;
+    const def = DECALS[name] || DECALS.scuff;
     if (!position) return -1;
     const R = this.rand;
     const i = this._head;

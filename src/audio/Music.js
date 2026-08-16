@@ -87,20 +87,24 @@ const FORM_TREASURE = [
   ch(9,  [0, 5, 7, 10],     MIXO,    'A7sus'),
 ];
 
-const FORM_MENU = [
-  ch(2,  [0, 3, 7, 14],     DORIAN,  'Dm(add9)'),
-  ch(2,  [0, 3, 7, 14],     DORIAN,  'Dm(add9)'),
-  ch(3,  [0, 4, 7, 11],     LYDIAN,  'Ebmaj7'),
-  ch(3,  [0, 4, 7, 11],     LYDIAN,  'Ebmaj7'),
-];
+/* A `FORM_MENU` lived here — four bars, `Dm(add9) | Dm(add9) | Ebmaj7 | Ebmaj7`, feeding a
+   `menu` section at 88 bpm in a `sparse` style with the kit muted and the vibes forward. It was
+   **unreachable**: `setSection` is only ever called from `Audio.music()`, which is only ever fed
+   by `_wantSection()`, which returns `explore` / `sneak` / `alert` / `chase` and nothing else —
+   and `grep -rn "'menu'|pauseMenu|mainMenu|titleScreen" src/` finds **no menu anywhere in this
+   project**, so there was no caller to connect it to either. It rendered fine (10 s at seed
+   0x5c17c00: peak 0.223, rms 0.0218) and no player could ever hear it.
+   Deleted rather than wired, because the thing it was written for does not exist. Its style
+   `sparse` went with it, which is why seven `style === 'sparse'` conditions across `_bass`,
+   `_kit`, `_perc`, `_oud` and `_lead` are gone too — with `menu` removed nothing produced that
+   style, so every one of them was provably unreachable. If a title screen is ever built, this
+   comment is the recipe: four bars of Dorian add9 into Lydian maj7, kit at 0, vibes at 0.75. */
 
 /**
  * A section is a form plus an arrangement. Layer weights are the mix; `style`
  * selects the rhythmic language each generator plays in.
  */
 export const SECTIONS = {
-  menu:     { bpm: 88,  swing: 0.60, form: FORM_MENU,     style: 'sparse',
-              layers: { bass: 0.50, kit: 0.00, perc: 0.14, vibes: 0.75, lead: 0.14, oud: 0.60, pad: 0.45 } },
   explore:  { bpm: 100, swing: 0.62, form: FORM_A,        style: 'walk',
               layers: { bass: 0.85, kit: 0.52, perc: 0.28, vibes: 0.58, lead: 0.34, oud: 0.40, pad: 0.18 } },
   sneak:    { bpm: 100, swing: 0.62, form: FORM_A,        style: 'sneak',
@@ -351,7 +355,7 @@ export class Music {
   _bass(t0, beat, chord, next, r, style) {
     const out = this.layers.bass;
     const lo = 33, hi = 55;                       // A1 … G3, where an upright lives
-    const sparse = style === 'sneak' || style === 'sparse';
+    const sparse = style === 'sneak';
 
     if (sparse) {
       // Two half notes: root then fifth. Space is the point of a sneak cue.
@@ -427,8 +431,6 @@ export class Music {
 
   _kit(t0, beat, swing, r, style, firstBar) {
     const out = this.layers.kit;
-    if (style === 'sparse') return;
-
     if (style === 'sneak') {
       this._brushSwirl(out, t0, beat * 3.6, 0.5);
       this._brushSlap(out, this._pos(t0, beat, swing, 1), 0.35, r);
@@ -542,7 +544,7 @@ export class Music {
 
   _perc(t0, beat, swing, r, style) {
     const out = this.layers.perc;
-    if (style === 'sneak' || style === 'sparse') {
+    if (style === 'sneak') {
       // Finger snaps on 2 and 4. The most Sly sound there is.
       this._snap(out, this._pos(t0, beat, swing, 1), 0.85, r);
       this._snap(out, this._pos(t0, beat, swing, 3), 0.9, r);
@@ -658,9 +660,9 @@ export class Music {
     const out = this.layers.oud;
     const lo = 45, hi = 69;
 
-    if (style === 'sparse' || style === 'sneak') {
+    if (style === 'sneak') {
       const m = nearPc(chord.root, this._prevOud, lo, hi);
-      this._oudNote(out, t0 + (style === 'sparse' ? 0 : beat * 0.5), m, 0.75);
+      this._oudNote(out, t0 + beat * 0.5, m, 0.75);
       if (r.chance(0.45)) {
         const m2 = nearPc(chord.root + 7, m, lo, hi);
         this._oudNote(out, this._pos(t0, beat, swing, 2.5), m2, 0.5);
@@ -742,7 +744,7 @@ export class Music {
 
   _lead(t0, beat, swing, chord, r, style) {
     const out = this.layers.lead;
-    if (style === 'sneak' || style === 'sparse') {
+    if (style === 'sneak') {
       // One long, distant note every few bars. Presence, not melody.
       if (this._phraseCooldown-- > 0) return;
       this._phraseCooldown = 3;
