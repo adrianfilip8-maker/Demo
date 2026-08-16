@@ -733,7 +733,39 @@ export class Collision {
     return res;
   }
 
-  /** § 4.6 query — everything of a tag within radius, near→far. Pooled; don't retain. */
+  /**
+   * § 4.6 query — everything of a tag within radius, near→far. Pooled; don't retain.
+   *
+   * → [{ rec, point, tangent, t, distance, tag, spline, length }, …]
+   *
+   * `spline` and `length` are the same two fields `nearest()` returns and they carry the same
+   * meaning: the affordance's own curve (null for a box or a point) and its arc length in
+   * metres (0 for a box or a point). Two affordances of the same class answering the same
+   * question in two different shapes is the defect; `nearest()` has published both since it was
+   * written and `query()` published neither, so a consumer that switched from one to the other
+   * silently lost the route's extent.
+   *
+   * ONE ARGUMENT FOR THIS WAS CHECKED AND IS FALSE, and it is recorded because it was nearly
+   * written into the code as fact: `hit.rec.mesh.userData.spline` — the reach `src/player/
+   * CameraRig.js:888` makes today behind a `typeof getPoint === 'function'` guard — is NOT
+   * missing on poles whose curve was synthesised rather than authored. `_buildAffordances`
+   * writes the synthesised curve straight back to `ud.spline`, so after `build()` all 23
+   * rail/pole recs in the shipped level carry it and the fallback resolves on every one of
+   * them. Measured, not assumed.
+   *
+   * What survives is narrower and still worth the two fields:
+   *   · `length` is NOT reachable that way at all. From `userData.spline` you get a curve, and
+   *     turning it into metres means calling `curve.getLength()`, which builds and caches a
+   *     200-segment length table on first call. COLLISION resolved that in `_addSplineEntry`
+   *     and has been sitting on it as `e.len` ever since.
+   *   · the fallback works only because of an internal side effect of this class. It is an
+   *     authoring field on a mesh, backfilled during `build()`, inside a `try` that shrugs off
+   *     a frozen `userData` — so "the reach resolves" is a property of when you ask, not a
+   *     contract. The result shape is a contract.
+   *
+   * Cost is one reference copy and one number per hit — `e.curve` and `e.len` are already
+   * resolved on the affordance entry, so nothing new is computed.
+   */
   query(pos, radius, tags) {
     const t0 = now();
     const out = this._queryOut;
@@ -755,13 +787,18 @@ export class Collision {
       if (_aDist > md) continue;
       const slot = out.length < this._queryPool.length
         ? this._queryPool[out.length]
-        : (this._queryPool[out.length] = { rec: null, point: new THREE.Vector3(), tangent: new THREE.Vector3(), t: 0, distance: 0, tag: '' });
+        : (this._queryPool[out.length] = {
+          rec: null, point: new THREE.Vector3(), tangent: new THREE.Vector3(),
+          t: 0, distance: 0, tag: '', spline: null, length: 0,
+        });
       slot.rec = e.rec;
       slot.point.set(_aX, _aY, _aZ);
       slot.tangent.set(_aTx, _aTy, _aTz);
       slot.t = _aT;
       slot.distance = _aDist;
       slot.tag = e.rec.tag;
+      slot.spline = e.curve || null;
+      slot.length = e.len || 0;
       out.push(slot);
     }
     out.sort(byDistance);

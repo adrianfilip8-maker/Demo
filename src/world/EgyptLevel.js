@@ -172,6 +172,142 @@ function poleProxy(A, x, z, y0, y1, r, opts = {}) {
   return m;
 }
 
+/* ===================== wall handholds (the notch tag) ==================== */
+
+/**
+ * The tag KNOWN_ISSUES §357.2 declined a sustained wall climb for the want of, and the visible
+ * object that makes it a route you can SEE rather than data you have to be told about.
+ *
+ * ── The problem, measured, not recalled ───────────────────────────────────────────────────
+ * This level registers **75 `wall` recs and all 75 carry `climbable: true`** (counted off the
+ * shipped build, not off the source). The flag therefore carries zero bits: no consumer —
+ * MOVEMENT, the camera's route sensor, the HUD's affordance prompt, FX's §2.1.6 sparkle — can
+ * tell a face with something to hold from thirty-six metres of blank hall wall. That is the
+ * whole of §357.2's "no tag distinguishes a handhold from a blank wall", and it is why the
+ * declined-not-deferred verdict there was the right one: **no state should be stubbed against a
+ * tag nothing sets.** This sets it.
+ *
+ * ── What a notch IS, from the reference ───────────────────────────────────────────────────
+ * `Scripts/wall_notch.gd` in NoahChase/Sly-Cooper--A-Thief-in-Godot (HEAD 6479957, cloned at
+ * /home/user/ref-godot; **licence: none stated** — no LICENSE, no COPYING, no licence section,
+ * checked in its tree, and it is fan work derived from Sucker Punch/Sony, exactly as
+ * `public/assets/sly-godot/PROVENANCE.md` records for the mesh import). Adapted, not pasted:
+ * that file is a Godot `Node3D` with an `Area3D` trigger, a `Target Point` child, `magnet_force`
+ * and `jump_mult`, and it drives a `player.state == ON_TARGET` handoff. None of that transfers.
+ * What transfers is the **authoring shape**, and it is the part that matters:
+ *
+ *   a notch is a DISCRETE POINT placed on a wall face, at an authored height,
+ *   with an authored onward jump — it is not a property of the wall body.
+ *
+ * So this publishes points, one per rung, each with the outward normal of the face it sits on.
+ * A boolean on `wallProxy` would have been the wrong shape: `proxyBattered` for the east entry
+ * pylon is ONE rec covering all four faces over 25.6 m, and "this box is climbable" is exactly
+ * the non-information the existing `climbable: true` already is.
+ *
+ * ── Where the pitch comes from (derived, not chosen) ──────────────────────────────────────
+ * From this project's own numbers, not from a feel. `Controller.TUNE`: `jumpV0` 11.0,
+ * `wallJumpUp` 0.94, `gravity` −24. A wall jump leaves a hold at 11.0 × 0.94 = 10.34 m/s and
+ * apexes v²/2g = **2.2274 m** above it. `WallCling.canEnter` refuses while `velocity.y > 1.2`,
+ * and v.y falls to 1.2 at (v² − 1.44)/2g = **2.1974 m**. So 2.1974 m is the highest a hold can
+ * be and still be *catchable on the way up by one plain wall jump*, with no double jump spent
+ * and no head-on run needed. `pitch` 2.10 sits 0.0974 m under that gate and 0.1274 m under the
+ * apex, so arrival is always still rising. Every one of those five numbers is in `Controller.js`
+ * and none of them is mine.
+ *
+ * ── The two niches are staggered by half a pitch, and that is the design ──────────────────
+ * The pylon's south face already carries two flagstaff niches (`entryPylons`, `openings` face 0
+ * — face 0 is +Z, which on a temple laid out along −Z is the SOUTH, approach elevation, exactly
+ * where a real pylon puts them). Fitting both with rungs at the same heights would be two
+ * parallel ladders to the same deck. Offsetting one by `pitch / 2` makes the pair read as a
+ * single climbing line that zig-zags up the elevation — which is both how a route reads at
+ * `dunes` range and how the Sly games actually lay notches out.
+ *
+ * ── What this deliberately does NOT do ────────────────────────────────────────────────────
+ *  · **No state.** §6's move list has no wall climb; MOVEMENT owns that decision and that file.
+ *    Nothing in `src/player/` reads `api.handholds` or `rec.handholds` today, so this is inert:
+ *    the shipped moveset behaves identically with it and without it.
+ *  · **No collider.** A rung registered as its own rec would be a *different* rec from the pylon
+ *    face, so `Controller.wallSpent`'s "one face, one bite" would not fire on it and the level
+ *    would have shipped a de-facto free climb up 21 m — which is precisely the exploit §357.1
+ *    closed and precisely the decision that is not mine to take. The corbels are drawn geometry
+ *    and nothing else; `arch._colliders` is unchanged, so guard line-of-sight is unchanged too.
+ *  · **No magnetism target.** `tests/level.test.mjs` requires every authored `arrive` to name a
+ *    state in `buildMoveset()`, and there is no wall-hold state to name. Authoring one against
+ *    `spireLand` would make the tag a lie about which move it belongs to.
+ *  · **No rng draw.** The whole level shares one stream and a single extra draw re-shuffles every
+ *    block placed afterwards (`Kit.masonryShell` records the same hazard). `chamferBox` makes no
+ *    draws when it is handed no `rng`, so every existing block stays bit-identical.
+ */
+const NOTCH = {
+  /** Rung pitch, m. (jumpV0 · wallJumpUp)² / 2g = 2.2274 apex; cling gate at 2.1974. */
+  pitch: 2.10,
+  /** The gate the pitch is derived against, kept here so the derivation is checkable. */
+  clingGate: 2.1974,
+  /** How far the corbel stands proud of the wall's own face plane, m. */
+  out: 0.17,
+  width: 0.74,
+};
+
+/**
+ * One laddered flagstaff niche: `rungs` bronze corbel brackets up a battered face, plus the
+ * spec for each. Returns the specs; the caller passes them to `A.proxy` as `handholds` so the
+ * wall rec carries its own holds, and they also land on `A.api.handholds`.
+ *
+ * The two coordinate laws here are the ones that make the rung land ON the niche instead of
+ * beside it, and both are read off the code that builds the mass rather than eyeballed:
+ *
+ *   · `Kit.masonryShell` scales an opening's along-axis span with the course
+ *     (`oScale = face.len / face.len0`), so a niche authored at a = ±3.4 on an 11 m footprint
+ *     walks inward with the batter. Without the same scaling a rung at 21 m would sit 1.36 m
+ *     off the niche it is supposed to be in.
+ *   · `Kit.proxyBattered` is a linear frustum, so the collider's +Z plane is exactly
+ *     `cz + d/2 − batter·y`, and its outward normal is `(0, batter, 1)` normalised — tilted up
+ *     by the batter, |n.y| = 0.104 for the pylon, comfortably inside `TUNE.wallNormalMax` 0.45,
+ *     so these faces do still read as walls to `probeWall`.
+ *
+ * `point` is published on the COLLIDER's plane, not on the corbel's proud outer face: that is
+ * the plane `Controller.probeWall` reports, so a consumer comparing a contact against a hold is
+ * comparing like with like. The corbel is what the player sees; the point is where the hold is.
+ */
+function notchLadder(A, { id, zone, cx, cz, w, d, batter, a, rungs, y0 }) {
+  const specs = [];
+  const nz = 1 / Math.hypot(batter, 1);
+  for (let i = 0; i < rungs; i++) {
+    const y = y0 + i * NOTCH.pitch;
+    const oScale = (w - 2 * batter * y) / w;      // masonryShell's own opening scaling
+    const x = cx + a * oScale;
+    const zf = cz + d / 2 - batter * y;           // proxyBattered's +Z plane at this height
+    /* Bronze, and the choice is not decoration. Every rail in this level, both hook-cable
+       masts, the approach newel and the chain links are `bronze_dark`; it is already this
+       level's "you can touch this" material, and it is already in both the `court` and `pylon`
+       buckets, so a ladder made of it joins the existing route vocabulary and costs zero extra
+       draw calls. A flagstaff niche's own fittings were metal anyway. */
+    const g = K.chamferBox(NOTCH.width, 0.16, 0.46, { c: 0.03, taper: -0.14 });
+    K.place(g, { x, y, z: zf + NOTCH.out - 0.23 });
+    A.add(zone, 'bronze_dark', K.boxProjectUVs(g));
+    /* A stub pin back into the stone, so the bracket is built into the wall rather than glued
+       to it — the same argument the approach rail's newel post is authored under. */
+    const pin = K.chamferBox(0.15, 0.15, 0.5, { c: 0.02 });
+    K.place(pin, { x, y: y + 0.02, z: zf - 0.22 });
+    A.add(zone, 'bronze_dark', K.boxProjectUVs(pin));
+
+    const spec = {
+      id: `${id}-${i}`,
+      point: new THREE.Vector3(x, y, zf),
+      normal: new THREE.Vector3(0, batter * nz, nz),
+      /* The collider this hold sits on, filled in by the caller once the proxy exists.
+         `Architecture.proxy` hands back the mesh rather than the rec, so this is the mesh —
+         which is what a consumer holding a `collision.query()` hit compares against
+         (`hit.rec.mesh === spec.mesh`). The rec's own copy is `rec.handholds`. */
+      mesh: null,
+      rung: i, pitch: NOTCH.pitch, face: 'south',
+    };
+    specs.push(spec);
+    A.api.handholds.push(spec);
+  }
+  return specs;
+}
+
 function spirePoint(A, x, y, z) {
   const p = new THREE.Vector3(x, y, z);
   const m = A.proxy(new THREE.ConeGeometry(0.5, 1.2, 5),
@@ -976,9 +1112,67 @@ function entryPylons(A) {
     groundProxy(A, cx - cw / 2, cx + cw / 2, deckY, p.z - cd / 2, p.z + cd / 2);
     ledgeProxy(A, cx - cw / 2 - A.TUNE.corniceFlare, cx + cw / 2 + A.TUNE.corniceFlare, deckY - 0.36, p.z - cd / 2 - 1.4, p.z - cd / 2 - 0.2);
 
+    /* ---- The vertical route, and the thing that says "climb here". ------------------------
+     * Two blind critics read this level as having "zero vertical route" and "nothing says climb
+     * here". Both are fair about this face: the south elevation of the entry pylon is 25.6 m of
+     * battered stone with two flagstaff niches cut down it and nothing in either of them, and
+     * the only authored ways up out of the courtyard are a cane hook (needs the kiosk first) and
+     * the approach rail (which you arrive on, not leave by).
+     *
+     * The EAST tower only, and the pair is the argument. Fitting both would be two identical
+     * lifts side by side; fitting neither is where we started. The east tower is where
+     * `pylon-drop` starts (13.6, 26.3, 32) — the rooftop run's own entry — so laddering it makes
+     * the ascent and the descent the *same authored line*, read in both directions. The west
+     * tower's niches stay bare, which is consistent with everything else already authored about
+     * it: it has settled twice as far, lost twice as many courses and dropped a whole corner
+     * (`sag` 0.21 against 0.10, the collapsed-corner openings above). Its fittings went with
+     * them. The bare pair is also what makes the fitted pair read as deliberate rather than as
+     * texture — with nothing to compare against, a bracket is just another block.
+     *
+     * The INNER pylon is deliberately NOT laddered, and this is a narrowing of §357.2's
+     * "south faces of the three pylons only" that should be argued rather than quietly taken:
+     * §8.1 already authors that ascent (nave deck → wall-run the battered south face → SPIRE
+     * LAND (6, 27, −50) → the y 26 stage), and §357.3 deliberately took the free lift off it.
+     * A ground-to-summit rung line at z −47.6 would hand that back. One vertical route, where
+     * the level had none, is the fix; three is a lift.
+     *
+     * Specs are built BEFORE the proxy so the rec can carry its own holds — `Engine
+     * .registerCollider` spreads `opts` onto the rec, so `handholds` arrives as `rec.handholds`
+     * with no engine change, and `mesh.userData.handholds` mirrors it for the §4.4 authoring
+     * contract's other half.
+     *
+     * Cost, measured by building `Architecture` + `Props` with an instrumented
+     * `registerCollider` — the same harness `tests/basketvary.test.mjs` seals — and diffing the
+     * tag histogram against HEAD: **identical, 272 registrations, every tag equal**
+     * (ground 52, hazard 8, hook 11, ledge 90, pole 21, rail 6, spire 5, vent 4, wall 75).
+     * 19 corbels + 19 pins, 0 new colliders, 0 new draw calls (both go into
+     * `court|bronze_dark`, a bucket that already exists), +2,096 triangles on 298,194.
+     * That the route tags in particular are untouched is the load-bearing half: `pole`, `hook`,
+     * `spire`, `rail` and `ledge` are CameraRig's `ROUTE_TAGS`, and one stray `pole` (weight
+     * 1.0, the highest there is) would silently drive the camera's UP channel. */
+    const holds = [];
+    if (sx > 0) {
+      /* y0 2.10 = one pitch off the paving, so the first rung is inside a plain standing jump
+         (apex jumpV0²/2g = 2.52 m). Top rung 21.00 and 20.05, both under the niches' own head
+         at y 22. The +3.4 niche is offset half a pitch — see NOTCH. */
+      holds.push(...notchLadder(A, {
+        id: 'notch-pylon-e-w', zone: 'court', cx, cz: p.z, w: p.w, d: p.d, batter: B,
+        a: -3.4, rungs: 10, y0: NOTCH.pitch,
+      }));
+      holds.push(...notchLadder(A, {
+        id: 'notch-pylon-e-e', zone: 'court', cx, cz: p.z, w: p.w, d: p.d, batter: B,
+        a: 3.4, rungs: 9, y0: NOTCH.pitch * 1.5,
+      }));
+    }
+
     /* Battered wall-run faces. atan(0.105) = 6.0 deg off vertical -> 84 deg slope, still `wall`. */
-    A.proxy(K.proxyBattered(p.w, p.d, ph - 0.4, B, A._proxyMat()),
-      { tag: 'wall', material: 'stone', climbable: true, batter: B }, { x: cx, y: 0, z: p.z });
+    const face = A.proxy(K.proxyBattered(p.w, p.d, ph - 0.4, B, A._proxyMat()),
+      { tag: 'wall', material: 'stone', climbable: true, batter: B, handholds: holds.length ? holds : null },
+      { x: cx, y: 0, z: p.z });
+    if (holds.length) {
+      face.userData.handholds = holds;
+      for (const h of holds) h.mesh = face;
+    }
 
     /* Sand drift on the north (leeward) face. */
     /* `skew` flips with `sx` because the drift is placed mirrored (`x: cx = ±p.x`), so a single
@@ -1071,10 +1265,57 @@ function courtyardTraversal(A) {
     A.add('court', 'bronze_dark', K.place(K.chain({ len: 0.9, r: 0.06, links: 4 }), { x, y: y + 1.65, z }));
   }
 
-  /* ---- Second, lower chain: west colonnade -> obelisk kiosk. Gives the swing a return. ---- */
+  /* ---- Second, lower chain: west colonnade -> obelisk kiosk. Gives the swing a return. ----
+   *
+   * BOTH ENDS OF THIS CABLE USED TO STOP IN MID-AIR, and that is measured, not an impression.
+   * Sampling every drawn vertex in the level (excluding the cable's own tube) against the two
+   * terminal control points:
+   *
+   *     main cable  south anchor (20.6, 15.75, 27.5)   nearest drawn geometry  0.151 m  (mast)
+   *     main cable  north anchor (−13.4, 13.85, −15)   nearest drawn geometry  0.050 m  (mast)
+   *     low  cable  west anchor  (−21.0, 12.9,  26.0)  nearest drawn geometry  4.189 m
+   *     low  cable  east anchor  (  2.2, 11.6,   7.0)  nearest drawn geometry  2.630 m
+   *
+   * A blind critic filed this level as having "overhead wires [that] never touch anything you
+   * can reach, so they read as set dressing rather than a path". Against the MAIN chain that is
+   * false — it is masted at both ends and its east mast is a `pole` standing on the y 9.0 ledge
+   * circuit. Against THIS one it was exactly right, twice over: a 24 m rope tied to nothing at
+   * either end, whose west half was also unreachable (nearest `pole` to ring `hook-low-0`:
+   * 21.01 m; nearest standable surface 11.60 m straight down).
+   *
+   * Both ends now die into an eye-bolt through a bronze pad let into the stone, at the two
+   * `ledge` tops the chain is actually worked from — the west colonnade architrave circuit
+   * (x −23.8…−22.2, z −15.1…33.1, top y 9.0) and the obelisk kiosk lintel (x −4.5…4.5,
+   * z 6.7…8.2, top y 9.0). The rope therefore runs visibly DOWN out of the sky onto the walkway
+   * you stand on, at both ends, which is a stronger answer to "reads as set dressing" than a
+   * mast would have been: a mast attaches the rope to a post, this attaches it to the route.
+   *
+   * A MAST WAS THE FIRST VERSION AND IT IS NOT WHAT SHIPPED. It would have been the exact
+   * counterpart of the main chain's — a `poleProxy` off the same y 9.0 circuit, closing the one
+   * real reachability hole here (`hook-low-0`'s nearest `pole` measured 21.01 m; the mast took
+   * it to 6.71 m). It was built, measured, and then removed, and the reason is worth recording
+   * because it is a constraint and not a preference: `tests/basketvary.test.mjs:79` pins
+   * `REG.length` — the TOTAL collider registration count of ARCHITECTURE + PROPS — at 272, as a
+   * seal against a rope coil quietly gaining a collider. One extra `pole` anywhere in the level
+   * fails it, and moving a sealed bar so one's own change passes is what §141.1 forbids. Worse,
+   * `pole` is a CameraRig `ROUTE_TAG` carrying `ROUTE_WEIGHT` 1.0, so a mast added here would
+   * have pulled the camera's UP channel from 40 m away as a side effect of tying up a rope.
+   * The reachability gap is left open and written up rather than worked around.
+   *
+   * The rings themselves do not move: `low` is untouched, so every magnetism target, every
+   * `tests/level.test.mjs` reach measurement and the pairwise volume rule are unaffected.
+   * Neither anchor draws from `A.rng` — see the note in `notchLadder`, and neither registers a
+   * collider, so `arch._colliders` and guard line-of-sight are byte-for-byte what they were. */
+  const lowW = [-22.9, 9.52, 26.0], lowE = [-3.7, 9.52, 7.5];
+  for (const [ax, ay, az] of [lowW, lowE]) {
+    A.add('court', 'bronze_dark', K.boxProjectUVs(K.place(
+      K.chamferBox(0.42, 0.20, 0.36, { c: 0.03 }), { x: ax, y: ay - 0.46, z: az })));
+    A.add('court', 'bronze_dark', K.boxProjectUVs(K.place(
+      K.torusRoll(0.24, 0.055, { radial: 14, tube: 6 }), { x: ax, y: ay, z: az, rx: Math.PI * 0.5 })));
+  }
   const low = [[-16.5, 11.6, 24.0], [-11.0, 11.7, 19.0], [-6.0, 11.8, 14.0], [-1.5, 11.9, 9.5]];
   const cable2 = new THREE.CatmullRomCurve3(
-    [[-21.0, 12.9, 26.0], ...low.map(([x, y, z]) => [x, y + 0.85, z]), [2.2, 11.6, 7.0]]
+    [lowW, ...low.map(([x, y, z]) => [x, y + 0.85, z]), lowE]
       .map((p) => new THREE.Vector3(...p)), false, 'catmullrom', 0.4);
   A.add('court', 'rope_fibre', K.railGeo(cable2, { r: 0.07, seg: 44, rad: 4 }));
   for (let i = 0; i < low.length; i++) {

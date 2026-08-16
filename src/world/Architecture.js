@@ -141,6 +141,14 @@ export class Architecture {
       hooks: [],        // Vector3
       rails: [],        // { name, curve }
       poles: [],        // { pos:Vector3, top:number }
+      /* Wall handholds — the notch tag KNOWN_ISSUES §357.2 declined a sustained wall climb for
+         the want of. Every `wall` rec in this level carries `climbable: true`, so that flag
+         carries no information and no consumer can tell a face with a hold on it from 75 m of
+         blank battered stone. A handhold is an authored POINT ON a wall face, not a property of
+         the whole body: { id, point, normal, rec, rung, pitch, face }. See `notchLadder()` in
+         EgyptLevel.js for what is published and what it deliberately does not do — it is data
+         only, and nothing in MOVEMENT reads it yet. */
+      handholds: [],    // { id, point:Vector3, normal:Vector3, mesh, rung:number, pitch, face }
       route: [],        // annotated spawn -> sarcophagus waypoints
       bounds: new THREE.Box3(new THREE.Vector3(-160, -14, -260), new THREE.Vector3(160, 40, 100)),
     };
