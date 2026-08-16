@@ -108,16 +108,63 @@ const MARK_R2 = 0.857;            // rung 2, alert_search at scale 1.0
  *                unsafe by 1.78x against the measured r90, and 0.55 was the safe one.
  *
  * §407 corrected 0.55 → 1.333 and fixed cropping while silently inverting readability. That is
- * the §405.2 shape a third time — a bar passing on a proxy — so it is FLAGGED here and not
- * repaired: which radius each bar should read is a decision about the shot, and `alert` ships
- * against the 30 px bar today. `--markr` prints the whole sensitivity so the decision is made
- * against numbers rather than against this paragraph, and `ALERT_MARK_R3` / `ALERT_MARK_R2`
- * override for one run without moving what is shipped (§141.1: the sweep is reported in full,
- * no radius is selected after seeing which side a candidate landed on).
+ * the §405.2 shape a third time — a bar passing on a proxy — and it is now REPAIRED rather than
+ * flagged: see the block below, where each bar takes the radius its own direction needs.
+ * `--markr` still prints the whole sensitivity, and `ALERT_MARK_R3` / `ALERT_MARK_R2` still
+ * override both bars for one run (§141.1: the sweep was published in full before either radius
+ * was chosen, so no radius is selected after seeing which side a candidate landed on).
  *
  * Defaults are the constants above, so an un-overridden run is byte-identical to before. */
-let R3 = Number(process.env.ALERT_MARK_R3 || MARK_R3);
-let R2 = Number(process.env.ALERT_MARK_R2 || MARK_R2);
+
+/* ── THE REPAIR: EACH BAR GETS THE RADIUS ITS OWN DIRECTION NEEDS ────────────────────────────
+ * One constant cannot serve two bars that want it to err opposite ways, and §407 fixing cropping
+ * while inverting readability is what that costs. So the two bars are separated, and each radius
+ * is derived from the direction its bar fails in — never from which candidates it admits.
+ *
+ * The measurement (`tools/markradius.mjs` against `shots/fxalert`, rung 3 / `alert_spot`):
+ *
+ *     r50 0.50 m    r90 0.75 m    r99 0.90 m    outermost lit pixel 0.95 m
+ *     derived geometric envelope (§407): 1.333 m — an upper bound, and it bounds the above
+ *
+ * CROPPING — "is all of the mark in frame". Under-measuring certifies a cropped mark, so the
+ * safe error is LARGE, and the correct radius is therefore the LARGER of the measured extent
+ * (0.95) and the derived envelope (1.333). It stays at 1.333. **This bar is not relaxed**: the
+ * measurement showed the envelope is 1.40x looser than it needs to be, and a containment bar
+ * that is too generous costs candidates, never certificates. Taking the measured 0.95 here
+ * would have been the one move §141.1 forbids — loosening a bar after seeing that a retired
+ * candidate passes at the looser value.
+ *
+ * READABILITY — "is the mark >= 30 px across". Over-measuring certifies a mark whose readable
+ * part is under the bar, so the safe error is SMALL. The bar's own derivation is about the
+ * visible disc — "the size at which the ink hull's ~2.5 px line stops dominating a round shape"
+ * — which is the mark's core, not its faint outer fringe. That is r90 = 0.75 m. At 1.333 the
+ * bar was being handed 1.78x the mark that actually reads.
+ *
+ * Both moves are in the SAFE direction for their own bar, so neither can admit anything that
+ * was previously rejected; readability gets strictly stricter and cropping does not move. The
+ * full outcome table at every radius from 0.55 to 1.333 was published BEFORE these were chosen
+ * (`--markr`, and the commit that added it), which is what keeps the choice from being one made
+ * after seeing where a result landed: every frame in that table clears 30 px by more than 2x at
+ * the strictest radius in the sweep, so nothing here is load-bearing on any current verdict.
+ *
+ * RUNG 2 IS NOT SPLIT, because it was never measured — `alert_search`'s component at its own
+ * projected centre is 1 px and the `dust` batch's other 136 sprites cannot be separated from it.
+ * Splitting it would mean inventing two numbers from one derivation and calling the pair
+ * evidence. Both of its bars keep `MARK_R2`, and this comment is the record of why (§211.1). */
+const MARK_R3_MEASURED = 0.95;    // outermost lit pixel, tools/markradius.mjs
+const MARK_R3_READ_Q = 0.75;      // r90 — the core the 30 px bar is actually about
+
+/** CROPPING radius: max(measured extent, derived envelope). Erring large is the safe error. */
+const MARK_CROP_R3 = Math.max(MARK_R3_MEASURED, MARK_R3);
+const MARK_CROP_R2 = MARK_R2;     // unmeasured rung — one number, and it says so
+/** READABILITY radius: the measured core. Erring small is the safe error. */
+const MARK_READ_R3 = MARK_R3_READ_Q;
+const MARK_READ_R2 = MARK_R2;     // unmeasured rung — same number as its crop bar, deliberately
+
+let R3 = Number(process.env.ALERT_MARK_R3 || MARK_CROP_R3);
+let R2 = Number(process.env.ALERT_MARK_R2 || MARK_CROP_R2);
+let RD3 = Number(process.env.ALERT_MARK_R3 || MARK_READ_R3);
+let RD2 = Number(process.env.ALERT_MARK_R2 || MARK_READ_R2);
 
 /* ---------------------------------------------------------------------- */
 
@@ -209,8 +256,15 @@ function score(name, c, quiet = false, tally = null, rank = null) {
      it was set with, not less, so it is left where it is rather than loosened to match: a bar
      is re-scoped when nothing depends on the answer (§141.1), and `alert` now ships against
      this one. */
+  /* The readability bar reads its OWN box, at its own radius — the crop box above is 1.78x wider
+     by design and measuring legibility on it is what §407 inverted. */
+  const readBox = boxOf(cam, c.guard[0], c.guard[1] + MARK_Y - RD3, c.guard[2],
+    { w: RD3 * 2, h: RD3 * 2 });
+  const read2Box = g2
+    ? boxOf(cam, g2[0], g2[1] + MARK_Y - RD2, g2[2], { w: RD2 * 2, h: RD2 * 2 })
+    : null;
   const markPx = (b) => (b ? Math.max(b.x1 - b.x0, b.y1 - b.y0) : 0);
-  const m3px = markPx(markBox), m2px = markPx(mark2Box);
+  const m3px = markPx(readBox), m2px = markPx(read2Box);
   if (markBox && m3px < 30) faults.push(`rung-3 mark only ${m3px.toFixed(0)} px across`);
   if (mark2Box && m2px < 30) faults.push(`rung-2 mark only ${m2px.toFixed(0)} px across — the ladder contrast is unreadable`);
 
@@ -359,7 +413,8 @@ if (args.includes('--calibrate')) {
 }
 
 console.log(`alertframe · ${W}x${H} · tree ${provenance}`);
-console.log(`sly ${SLY.w}x${SLY.h} m · guard ${GUARD.w}x${GUARD.h} m · marks at guard.y+${MARK_Y}, r${R3}/${R2}`);
+console.log(`sly ${SLY.w}x${SLY.h} m · guard ${GUARD.w}x${GUARD.h} m · marks at guard.y+${MARK_Y}`);
+console.log(`mark radii — CROP r${R3}/${R2} (err large: containment) · READ r${RD3}/${RD2} (err small: legibility)`);
 
 /**
  * `--markr` — RE-CERTIFY every frame this tool has ever admitted, at every mark radius the
@@ -408,7 +463,7 @@ if (args.includes('--markr')) {
 
   const table = new Map();
   for (const r of RADII) {
-    R3 = r;
+    R3 = r; RD3 = r;      // the sweep is the ONE-CONSTANT regime: both bars, one number
     for (const [name, c] of frames) {
       const faults = [];
       /* score() prints; capture its fault list by re-deriving it from a quiet run's tally. */
@@ -419,7 +474,8 @@ if (args.includes('--markr')) {
       table.get(name).set(r, { n, faults: faults.sort() });
     }
   }
-  R3 = Number(process.env.ALERT_MARK_R3 || MARK_R3);
+  R3 = Number(process.env.ALERT_MARK_R3 || MARK_CROP_R3);
+  RD3 = Number(process.env.ALERT_MARK_R3 || MARK_READ_R3);
 
   console.log(`\n── mark-radius sensitivity · rung 3 swept, rung 2 held at ${R2} m\n`);
   console.log(`   ${'frame'.padEnd(46)} ${RADII.map((r) => String(r).padStart(7)).join('')}`);
@@ -458,16 +514,35 @@ if (args.includes('--markr')) {
   for (const [name, c] of frames) {
     const px = [];
     for (const r of RADII) {
-      R3 = r;
+      R3 = r; RD3 = r;
       const rank = {};
       score(name, c, true, null, rank);
       px.push(rank.last ? rank.last.m3px.toFixed(0) : '-');
     }
     console.log(`   ${name.slice(0, 46).padEnd(46)} ${px.map((v) => String(v).padStart(7)).join('')}`);
   }
-  R3 = Number(process.env.ALERT_MARK_R3 || MARK_R3);
+  R3 = Number(process.env.ALERT_MARK_R3 || MARK_CROP_R3);
+  RD3 = Number(process.env.ALERT_MARK_R3 || MARK_READ_R3);
   console.log('\n   A frame reading 30-53 px at 1.333 is reading UNDER the bar at the measured');
   console.log('   r90 of 0.75 m, because the bar is linear in the radius it is handed.');
+
+  /* ── AND WHAT SHIPS IS NOT A ROW OF THAT TABLE ───────────────────────────────────────────
+   * Every column above is the ONE-CONSTANT regime — one number handed to both bars, which is
+   * the regime the two bars could not both be right in. The shipped configuration is a POINT
+   * OUTSIDE the sweep: crop at 1.333 (err large) and read at 0.75 (err small) simultaneously.
+   * Printed separately so nobody reads a column as the shipped verdict. */
+  console.log(`\n   THE SHIPPED SPLIT — crop r${MARK_CROP_R3} · read r${MARK_READ_R3}, which is no column above:\n`);
+  R3 = MARK_CROP_R3; RD3 = MARK_READ_R3;
+  for (const [name, c] of frames) {
+    const rank = {};
+    const n = score(name, c, true, null, rank);
+    console.log(`   ${name.slice(0, 46).padEnd(46)} ${String(n).padStart(2)} faults · rung-3 reads ${rank.last ? rank.last.m3px.toFixed(0) : '-'} px (bar 30)`);
+  }
+  R3 = Number(process.env.ALERT_MARK_R3 || MARK_CROP_R3);
+  RD3 = Number(process.env.ALERT_MARK_R3 || MARK_READ_R3);
+  console.log('\n   Both radii moved in their own safe direction, so nothing previously rejected');
+  console.log('   can be admitted here: cropping did not move at all, and readability got 1.78x');
+  console.log('   stricter. Every frame still clears 30 px by more than 2x.');
   process.exit(0);
 }
 
