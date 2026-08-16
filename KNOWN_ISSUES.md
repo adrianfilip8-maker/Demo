@@ -32206,6 +32206,40 @@ The source states, in its own comment, the value its own code does not produce.
 So it is not six documents agreeing. It is the catalogue's INTENT, copied six times, one of the
 copies sitting inside the function that contradicts it. Nothing in the set is an observation.
 
+**A consistency check across all six would have passed at every moment of their existence.** That
+is what kills the obvious remedy before anyone proposes it: cross-checking documents against each
+other is worthless when they share a parent and none of them reads the output. It is worse than
+worthless, because six-way agreement *feels* like overwhelming corroboration and is therefore
+spent as if it were evidence.
+
+> **The number of agreeing sources is not evidence. The number of INDEPENDENT MEASUREMENTS is,
+> and here it was zero.** Six citations of one intent are one citation. Before treating agreement
+> as corroboration, ask of each member: what would this have said if the build were wrong? If the
+> answer is "the same thing", it is not a witness.
+
+### §415.2b The same pattern, in the section that named it, two hours later
+
+`impactframe`'s dust plate — `DUST = { w: 4.878, … }` — failed its own containment check by 4 px
+against a fresh capture, and the cause was not staleness. **It is a measurement of one RNG draw
+wearing a bound's clothes**, which is exactly the `RING_R_DRAWN` error that §405 and §407 exist to
+record.
+
+The detail worth keeping is that the correct derivation was *already written, in the same section*.
+§407.3 cross-checked the dust against its recipe and **carried the size jitter** — *"the puffs reach
+1.70 m of half-extent, so the population's outer edge sits at ≤ 3.05 m in the worst draw against
+2.44 m measured"* — and 1.7028 m is precisely `mix(size0·s, size1·s, u^exp)` at the jitter's
+supremum. The recipe bound was computed correctly, stated correctly, and then **the shipped
+constant was fitted to the single frame anyway**.
+
+Same author, adjacent paragraphs, the term present in one and absent in the other, and nothing in
+the tool forcing the two to meet. That is §415 from the inside: it is not that anyone failed to do
+the measurement — the measurement was done and written down — it is that **the artefact and the
+derivation were never required to agree**, so the artefact quietly kept the wrong one.
+
+Bounded properly over the whole draw, from the shader's own `disc`-spread expressions with the
+jitter carried: `w 6.540, yLo −1.959, yHi 2.124`, which projects to margins l204 r204 t178 b112 —
+uncropped, so the correction costs no verdict and the ring remains `impact`'s only crop.
+
 ### §415.3 The generalisation
 
 > **§415 — When a test, a catalogue and a ledger agree, check whether any of them has ever
