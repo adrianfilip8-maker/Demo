@@ -15,7 +15,21 @@ import * as THREE from 'three';
  *      moment, a fall clamp, a positional snap, and a collision bypass at close range.
  *
  * Imported from `progress/records/IMPORT-slyrepos-movement.md` §2 — the structure is theirs, the
- * numbers are not. **Their constants do not transfer**: they run SPEED 4.0 / JUMP_VELOCITY 8.0
+ * numbers are not. Upstream, the design is spread across three GDScript files in the fan-made
+ * Godot project the import record names: `Scripts/target_point.gd` (the point itself — a
+ * `is_selected` flag, `assign_player`/`unassign_player`, and a per-point `jump_mult`),
+ * `Scripts/wall_notch.gd` (the authored *wall* hold: a sphere `Area3D` of `area_radius`, a
+ * `magnet_force`, a `jump_mult`, an `auto_jump`) and `Scripts/thief_moves_wall_notch.gd` (the same
+ * two knobs on a capsule volume). Each field below names the one it came from.
+ *
+ * **Licence: none stated** — verified in that repository's own tree at the commit surveyed, not
+ * assumed: 720 files, no LICENSE, no COPYING, no NOTICE, no licence section, and no README at all.
+ * It is a fan work derived from Sucker Punch / Sony's Sly Cooper. This is the same status recorded
+ * in `public/assets/sly-godot/PROVENANCE.md`, and it is emphatically **not** the CC0 grant that
+ * `assets/kaykit/` carries. Nothing here is a paste: the designs are re-expressed in this file's
+ * own idiom and every constant is re-derived through `scaleFactors()` below.
+ *
+ * **Their constants do not transfer**: they run SPEED 4.0 / JUMP_VELOCITY 8.0
  * (~2 m apex), we run 7.2 / 11.0 with gravity −24 (2.52 m apex). Every imported constant is
  * re-derived through the dimensional scale factors in `scaleFactors()` and the arithmetic is
  * checked by `tests/targets.test.mjs` against `DERIVATION` below, so a number here cannot quietly
@@ -200,13 +214,36 @@ export class TargetPoint {
     /** How wide a ballistic miss this point will still rescue. Default = the input layer's own
      *  forgiveness, `runSpeed × jumpBufferMs`. Widen it only for deliberately generous set-pieces. */
     this.catch = spec.catch ?? tune.magCatch;
-    /** Their `magnet_force`: a multiplier on the horizontal pull. */
+    /** `wall_notch.gd`'s `magnet_force`: a multiplier on the horizontal pull. */
     this.magnet = spec.magnet ?? 1;
-    /** Their `jump_mult`: multiplies the exit velocity of a jump taken from this point. */
+    /** `target_point.gd`/`wall_notch.gd`'s `jump_mult`: multiplies the exit velocity of a jump
+     *  taken from this point. */
     this.jumpMult = spec.jumpMult ?? 1;
-    /** `swing` | `pole` | `notch`. A notch keeps its collider (you are pressed into a wall). */
+    /** `swing` | `pole` | `notch`. A notch keeps its collider (you are pressed into a wall) —
+     *  the group exists because `wall_notch.gd`'s hold is a face you are held *against*, not a
+     *  point you pass through, so `step()`'s `magNoClip` bypass must not apply to it. */
     this.group = spec.group || 'swing';
-    /** Optional state to hand off to on arrival, e.g. 'hookSwing' / 'poleClimb' / 'ledgeHang'. */
+    /**
+     * Optional state to hand off to on arrival.
+     *
+     * The reachable set is **whatever `canEnter` accepts when asked from `fall`** (or from `idle`
+     * if Sly has grounded) — that is literally the probe `ToTarget.update` runs, and those two are
+     * the states it falls back to when the handoff is declined. In the shipped moveset that means
+     * `'hookSwing'`, `'poleClimb'`, `'railSlide'`, `'spireLand'`, `'ledgeHang'` and `'wallCling'`.
+     *
+     * The last two were unreachable *as a handoff* until the probe was fixed, and the shape of the
+     * bug is worth keeping: both open `canEnter` with `if (c.grounded || c.sm.group !== 'air')`,
+     * and the probe used to hide `ToTarget` behind a **null** current state, whose `sm.group` falls
+     * back to `'ground'`. So they answered no unconditionally, every arrival, forever. It was not a
+     * dead end — the opportunistic poll picked Sly up once the lock timed out — but it cost the
+     * full `magHold`: **measured 35 frames from lock to `ledgeHang` against 20 after the fix, a
+     * 15-frame / 0.25 s stall on every arrival at a ledge or notch point.** These are the two
+     * states an authored *vertical* route is made of, which is why it mattered more than the count.
+     *
+     * A state named here still has to *want* the arrival. `'wallCling'` needs the stick pushed
+     * into the face (`wishMag > 0.5`) and an unspent wall; `'ledgeHang'` needs a real lip under
+     * `probeLedge`. A refused handoff is not an error — the arrival simply holds and releases.
+     */
     this.arrive = spec.arrive || null;
     /** Magnetism is an air move; set true for a point that also pulls a grounded player. */
     this.fromGround = !!spec.fromGround;

@@ -593,10 +593,61 @@ class LedgeClimb extends State {
 /* ====================================================================== */
 
 class HookSwing extends State {
+  constructor(n, o) {
+    super(n, o);
+    /** The anchor Sly last let go of, and whether it is still refusing to take him back. */
+    this._spent = false;
+    this._left = new THREE.Vector3();
+  }
+
+  /**
+   * One anchor, one release — the fourth member of a family this file already had three of
+   * (`hangLock` on ledges, `poleLockout` on poles, `spireLockout` on tips) and the one that
+   * was missing.
+   *
+   * **Without it the release is a no-op and a hook is a one-way door.** `update` returns
+   * 'fall'; the machine sets `fall` and re-polls *in the same frame*, with Sly's position not
+   * yet advanced by one millimetre; and `canEnter`'s fly-through clause —
+   * `!grounded && distance <= hookAuto` — is then satisfied by construction.
+   *
+   * By construction, and not merely usually. `afford('hook')` measures from the eye, 1.15 m up
+   * the capsule, so at swing angle θ off vertical the distance it reports is
+   * `|2.2·u + 1.15·y|` = **√(6.1625 − 5.06·cos θ)** — 1.05 m hanging straight down, 2.48 m at
+   * horizontal. It only reaches `hookAuto` 2.9 m at cos θ = −0.444, i.e. **θ = 116°**, which is
+   * past horizontal and unreachable for a pendulum that starts below its own anchor. There is no
+   * point on the swing from which the release survives its own frame. Measured on the shipped
+   * moveset — one ring, a scripted fly-through, a jump tap every 20 frames: **12 grabs, 11
+   * `hookRelease` events, 240 frames, and `distance(Sly, ring)` pinned at 2.200 m on every one
+   * of them.** Crouch bails the same way and fares no better. Both courtyard hook chains in
+   * §8.1 were traps rather than routes.
+   *
+   * The guard is a **place, not a clock**, and that is the point: what has to elapse after a
+   * rope release is the distance the launch buys, not a duration. It therefore costs a chain
+   * nothing — a *different* ring is grabbable on the very next frame, which is the whole reason
+   * `hookAuto` exists — and it needs no fourth timer in Controller's `_preTimers`.
+   *
+   * `hookL` is the same-anchor tolerance. It is a measurement, not a taste: EgyptLevel's `MAG`
+   * records the tightest ring gap in the level as 6.36 m, so 2.2 m tells two rings apart with
+   * 1.4 m to spare, while comfortably covering the drift of one ring's own reported point.
+   *
+   * It gates the deliberate clauses too, and has to: `bail` fires on `pressed('interact')`, and
+   * that same still-live press satisfies `canEnter`'s own E clause out to `hookGrab` 9 m on the
+   * re-poll. Letting go with E would otherwise be the most reliable way to stay put.
+   */
+  spent(a) {
+    if (!this._spent) return false;
+    // A different ring entirely — nothing to refuse.
+    if (a.point.distanceTo(this._left) > TUNE.hookL) { this._spent = false; return false; }
+    // Same ring, but the launch has carried him clear of it: the grab is honest again.
+    if (a.distance > TUNE.hookAuto) { this._spent = false; return false; }
+    return true;
+  }
+
   canEnter(c) {
     if (c.sm.group === 'attach') return false;
     const a = c.afford('hook');
     if (!a) return false;
+    if (this.spent(a)) return false;
     // E always works; RMB lock-on works; and flying close enough grabs on its own, because
     // making the player press a button mid-chain is what kills a swing line.
     if (c.pressed('interact')) return a.distance <= TUNE.hookGrab;
@@ -605,6 +656,7 @@ class HookSwing extends State {
   }
   enter(c) {
     const a = c.afford('hook');
+    this._spent = false;              // attached again: nothing is owed
     c.anchor.copy(a ? a.point : c.position);
     c.attached = a ? a.rec : null;
     // Rope goes taut: place Sly on the sphere, keep only the tangential part of his velocity.
@@ -662,7 +714,19 @@ class HookSwing extends State {
     if (c.speedXZ() > 0.4) c.turnToYaw(Math.atan2(c.velocity.x, c.velocity.z), 9, dt);
     c.balance = Math.max(-0.5, Math.min(0.5, -_a.x * 0.4 + -_a.z * 0.0));
 
-    const bail = c.pressed('jump') || c.pressed('interact') || c.pressed('attack');
+    /* `jumpBuffered()` alongside the press, the same poll `railSlide`, `railWalk`, `poleClimb`,
+       `wallRun`, `wallCling`, `spireLand`, `ledgeHang` and `toTarget` all already carry, and the
+       same defect `Roll` was just fixed for. The gate here is a *minimum wind-up*, so a press
+       that lands before it opens is dropped outright rather than deferred. Measured with a
+       one-frame tap at every offset after the grab: **frames +0…+10 (0–167 ms) were silently
+       swallowed**, and the release only answered from +11 on. The buffer recovers +3…+10 — eight
+       frames of input the player did make.
+
+       Frames +0…+2 stay dropped, and that is correct rather than a shortfall: `hookMinSwing`
+       0.18 s deliberately exceeds `jumpBufferMs` 0.14 s precisely so that the press which STARTS
+       a swing can never be the press that ends it — the same rule `poleSwingMin` was written for
+       — and a buffered poll respects it automatically instead of having to special-case it. */
+    const bail = c.pressed('jump') || c.jumpBuffered() || c.pressed('interact') || c.pressed('attack');
     if (bail && c.sm.time > TUNE.hookMinSwing) {
       // Release preserves tangential velocity ×1.15 (§6) plus a little lift, so a well-timed
       // release at the bottom of the arc genuinely launches you across the courtyard.
@@ -678,7 +742,14 @@ class HookSwing extends State {
     c.baseClip('hook_swing', 0.18);
     return null;
   }
-  exit(c) { c.attached = null; c.balance = 0; }
+  exit(c) {
+    c.attached = null;
+    c.balance = 0;
+    // Whatever ended the swing — a release, a crouch, a hurt, a teleport — this anchor has had
+    // its bite. `spent()` above hands it back as soon as Sly is clear of it.
+    this._left.copy(c.anchor);
+    this._spent = true;
+  }
 }
 
 /* ====================================================================== */
@@ -748,14 +819,64 @@ class RailBase extends State {
     c.pendingLaunch = TUNE.jumpV0 * TUNE.railJumpUp;
     return 'jump';
   }
-  exit(c) { c.attached = null; c.balance = 0; }
+
+  /**
+   * Where the "just stepped off this rail" flag lives: on the `railSlide` instance, because
+   * `railSlide` is the only rail state that is ever *polled* into (`railWalk.canEnter` needs
+   * `grounded` on `groundTag === 'rail'`, and the slide→walk handoff is forced). One flag,
+   * written by both states, read by one.
+   */
+  gate(c) { return c.sm.get('railSlide') || this; }
+
+  /**
+   * Record the departure. Called from `exit`, so every way off a rail — jump, crouch, running
+   * off the end, a hurt, a teleport — is covered by one line.
+   *
+   * Reads `c.attached` rather than `c.rail.rec`, and runs *before* `exit` clears it: `c.rail` is
+   * scratch that outlives the mount, so an `enter` that found no affordance and bailed to `fall`
+   * would otherwise stamp the previous rail's record and refuse it on the way back.
+   */
+  stepOff(c) { const g = this.gate(c); if (g) g._offRec = c.attached || null; }
+
+  exit(c) { this.stepOff(c); c.attached = null; c.balance = 0; }
 }
 
 class RailSlide extends RailBase {
+  /**
+   * The rail's half of `HookSwing.spent` — the same defect, and measured worse, because a rail
+   * has no `hookMinSwing` to hide behind.
+   *
+   * Both of a rail's non-jump departures leave Sly *on* the line, and the auto-engage clause
+   * below then re-takes him on the machine's very next pass:
+   *
+   *   · **Running off the end.** `advance` clamps `u` to 1, puts Sly on the end point and
+   *     returns 'fall'. Measured on an 8 m horizontal rail entered at `railSpeed` 9.5 m/s:
+   *     **Sly welded at x = 4.15 for the remaining 168 frames, 337 `railMount` events in 3
+   *     seconds, and `sm.frameSwitches` saturated at its 4-pass ceiling on every frame.**
+   *     A rail could not be ridden off its own end. Jump still escaped, so this was a lock the
+   *     player could only leave upward — which is precisely "traversal that cannot be chained".
+   *   · **Crouching off.** `velocity ×0.6` leaves `vy` at 0 on a level rail, which passes
+   *     `velocity.y <= 0.6`, and the escape then depends on falling the 0.65 m of the vertical
+   *     clause one re-mounted frame at a time. Measured: **0.90 s of frozen, stuttering descent
+   *     and 98 `railMount` events**, with the 9.5 m/s of momentum thrown away.
+   *
+   * Keyed on the collision record rather than on a point, because a rail is a *line* and its
+   * affordance point slides along with Sly — there is no fixed anchor to compare against, which
+   * is exactly why the hook's positional form will not transfer. `railMount × 1.6` is the widest
+   * radius any clause here mounts from, so clearing it means clearing all of them.
+   *
+   * A record-less COLLISION (the `FLAT` fallback, or any `nearest` that answers without recs)
+   * leaves `_offRec` null and the guard inert. That is the same degradation `wallSpent`
+   * documents, and it fails in the same direction — toward the behaviour that shipped.
+   */
   canEnter(c) {
     if (c.sm.group === 'attach') return false;
     const a = c.afford('rail');
     if (!a) return false;
+    if (this._offRec && a.rec === this._offRec) {
+      if (a.distance <= TUNE.railMount * 1.6) return false;
+      this._offRec = null;                 // clear of the rail he left: it is a rail again
+    }
     if (c.pressed('interact') && a.distance <= TUNE.railMount * 1.6) return true;
     // Auto-engage on contact from above (§ affordance discovery). Generous on purpose.
     if (!c.grounded && c.velocity.y <= 0.6 && a.distance <= TUNE.railMount
@@ -764,6 +885,7 @@ class RailSlide extends RailBase {
   }
   enter(c) {
     const a = c.afford('rail');
+    this._offRec = null;                   // attached again: nothing is owed
     if (!a) { c.sm.request('fall'); return; }
     this.mount(c, a, TUNE.railSpeed);
     c.oneShot('rail_slide');
@@ -788,6 +910,9 @@ class RailWalk extends RailBase {
     return !!a && a.distance <= TUNE.railMount * 1.3;
   }
   enter(c) {
+    // Same clear as `RailSlide.enter`, and needed here too: the slide→walk handoff runs
+    // `RailSlide.exit` (which arms the flag) before this, and Sly is still on the rail.
+    const g = this.gate(c); if (g) g._offRec = null;
     if (!c.rail.spline || c.sm.prev?.name !== 'railSlide') {
       const a = c.afford('rail');
       if (!a) { c.sm.request('fall'); return; }
@@ -917,9 +1042,16 @@ class PoleSwing extends State {
     _a.set(Math.cos(p.angle), 0, -Math.sin(p.angle)).multiplyScalar(dir);
     c.yaw = Math.atan2(_a.x, _a.z);
     c.velocity.set(0, 0, 0);
-    // The manual release needs the same minimum wind-up `hookMinSwing` gives the rope, or the
-    // press that STARTED the swing satisfies this test on its own first pass. See TUNE.poleSwingMin.
-    const bail = c.sm.time > TUNE.poleSwingMin && (c.pressed('jump') || c.pressed('attack'));
+    /* The manual release needs the same minimum wind-up `hookMinSwing` gives the rope, or the
+       press that STARTED the swing satisfies this test on its own first pass. See TUNE.poleSwingMin.
+
+       `jumpBuffered()` for the same reason it was just added to the rope and to `Roll`: this gate
+       is a *minimum*, so a jump pressed before it opens was dropped rather than deferred. The
+       press that starts a pole swing is `attack` (`PoleClimb.update` returns 'poleSwing' on it),
+       and `PoleClimb` polls `pressed('jump') || jumpBuffered()` one line above that — so any
+       buffered jump has already been spent on a pole jump and this poll cannot resurrect it. */
+    const bail = c.sm.time > TUNE.poleSwingMin
+      && (c.pressed('jump') || c.jumpBuffered() || c.pressed('attack'));
     if (c.sm.time >= TUNE.poleSwingTime || bail) {
       const sp = Math.abs(w) * p.hold * TUNE.poleSwingLaunch + 5.0;
       c.velocity.set(_a.x * sp, 0, _a.z * sp);
@@ -982,17 +1114,33 @@ class ToTarget extends State {
       const next = t.arrive;
       if (next && c.sm.has(next)) {
         let ok = false;
-        /* `ToTarget` is itself registered `group: 'attach'`, and every move an `arrive` can name —
-           HookSwing, SpireLand, PoleClimb, RailSlide — opens `canEnter` with
-           `if (c.sm.group === 'attach') return false`. Probing from inside ToTarget therefore fires
-           that guard ON OURSELVES, so the handoff could never succeed and the arrival instead sat
-           out `magHold` 0.25 s until the opportunistic grab took over — a visible 7-frame stall at
-           30 fps. Hide ourselves for the length of the probe; `sm.group` falls back to 'ground'.
-           The alternative, giving ToTarget its own group, also works but lets spireLand/ledgeClimb/
+        /* `ToTarget` is itself registered `group: 'attach'`, and every move an `arrive` can name
+           opens `canEnter` with `if (c.sm.group === 'attach') return false`. Probing from inside
+           ToTarget therefore fires that guard ON OURSELVES, so the handoff could never succeed and
+           the arrival instead sat out `magHold` 0.25 s until the opportunistic grab took over — a
+           visible 7-frame stall at 30 fps. Hide ourselves for the length of the probe. The
+           alternative, giving ToTarget its own group, also works but lets spireLand/ledgeClimb/
            ledgeHang preempt an authored lock and changes what `TargetField.acquire`'s attach guard
-           means. */
+           means.
+
+           **What we hide behind matters, and `null` was the wrong answer.** `sm.group` falls back
+           to 'ground' on a null current, and `LedgeHang` and `WallCling` both open
+           `if (c.grounded || c.sm.group !== 'air') return false` — so those two answered "no"
+           unconditionally, on every arrival, forever. `TargetPoint.arrive` documents `'ledgeHang'`
+           as one of its three examples and `group: 'notch'` exists for wall holds whose state is
+           `wallCling`: the two states an authored *vertical* route is made of were the two the
+           probe could not reach. Nothing in the shipped level names them, so this cost no
+           behaviour — it cost the authoring surface, which is the half of this system that is
+           supposed to be useful.
+
+           Standing in `fall` (or `idle` when grounded) fixes it and is strictly more honest than
+           `null`, because those are literally the two states this method hands to when the
+           handoff is declined — `return c.grounded ? 'idle' : 'fall'` below. The probe now asks
+           each candidate the question it will actually be asked one frame later. The four moves
+           that already worked test `group !== 'attach'` and are unaffected either way: 'air' and
+           'ground' both pass. */
         const cur = c.sm.current;
-        c.sm.current = null;
+        c.sm.current = c.sm.get(c.grounded ? 'idle' : 'fall') || null;
         try { ok = c.sm.get(next).canEnter(c); } catch { ok = false; } finally { c.sm.current = cur; }
         if (ok) { f.release('handoff'); return next; }
       }
