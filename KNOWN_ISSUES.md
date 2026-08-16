@@ -27666,3 +27666,86 @@ failure at a smaller scale: **the number you did not re-derive is the one that i
 difference is only that a commit message has no test to catch it, which makes it *more* exposed than
 a measurement, not less. The rule that would have caught both: a count that appears in prose gets
 read from `grep -c` in the same command that writes it, never from the line above.
+
+---
+
+## §375 — The state-exit census: 32 states, no traps, and the two that are held up by something outside the moveset
+
+§371.3 commissioned this because four states with no exit had been found *by hand*, out of 38, and
+only where the reference happened to have a counterpart. The other 34 had never been asked.
+
+**32 states × 12 input scripts × 600 frames**, forced entry via `sm.set()` with a purpose-built
+world per state so each `enter()` gets the context it reads. States come from `sm.ordered`, so
+anything a future lane adds is covered the day it lands.
+
+### §375.1 The result
+
+**No traps, no jump-only exits, and the slowest fastest-exit is 132 frames.** Verified against the
+test's own instrumented output:
+
+```
+[census] 32 states x 12 input scripts, 600 frames each
+[census] no traps, no jump-only exits, no exit slower than 132 frames
+```
+
+The four states with no self-timeout — `hookSwing`, `wallClimb`, `ledgeHang`, `spireLand` — are all
+**holds**, and each has 3–5 distinct exits. That is exactly the shape §371.3 asked to watch for (a
+state whose only exit is `jump`, which the hook and both swings all had), and none of them is it.
+No dead states either: all five `onRequest` states are named elsewhere with comments stripped.
+
+### §375.2 `crawl` — the only state whose guarantee lives outside the moveset
+
+`Crawl.update` polls no button. Its sole exit is `!c.inVent()`, a **geometric** condition. At
+priority 68 it sits above `jump` 64, so jump never reaches the machine at all.
+
+That is correct — a state that let you jump out of a vent would put Sly through the level — but it
+means the moveset guarantees nothing here and the guarantee lives in **level data**, which is a
+different place from every other state in the file. Measured and now asserted:
+
+```
+crawl out of a 5.0 m vent: 132 frames (2.20 s)   — 2.5 m at crawlSpeed 1.15 predicts 130
+4 shipped vents, longest run 10.60 m => worst-case crawl out 9.2 s
+```
+
+The 132-against-130 agreement is the arm's own calibration. A vent authored as a *region* rather
+than a tunnel now fails this file.
+
+### §375.3 `dive` — an exit that is not an ending
+
+`DiveAttack`'s only exit is `if (c.grounded)`. Over ground that is 39 frames. Over a hole it is
+bounded only by `_safetyNet`'s `voidY`:
+
+```
+dive over a bottomless void: 773 frames (12.88 s) before the safety net returned control
+```
+
+The census **passes** it, correctly — that is an exit. But *"you get your character back when the
+respawn catches you"* is not a state that ends. Pinned with a bound so a change to `voidY` or
+`maxFall` surfaces here rather than as a mystery hang. **No timeout added**, and the lane's reason
+is right: `DiveAttack` is not a traversal state, the fix is a feel decision, and inventing one
+unasked is how the `freeWall` brief went wrong in the other direction.
+
+### §375.4 Instrument error five, and one caught before it became evidence
+
+**The census's first result was that `crawl` is a hard trap** — 12 scripts, 600 frames, no exit. It
+was the harness: `groundTag: 'vent'` applied to every position, i.e. an infinite vent. Fifth
+instrument error of the session, and the lane classified it correctly as the same species as the
+`capsuleSweep` one — *a stub simpler than the thing it stands for, in exactly the direction that
+manufactures a bug.* The tell was identical both times: **a failure that could not be explained in
+terms of the code that had been read.**
+
+More valuable, because it never reached a report: the lane's own reachability assertion was
+`src.includes('name')`, which **every state satisfies from its own `buildMoveset` registration
+line** — a test that could not fail. Caught before being offered as evidence, rewritten to strip
+comments (the §369.3 failure, independently rediscovered) and require ≥2 occurrences, with a floor
+assertion so it cannot silently become a tautology again.
+
+### §375.5 What the census does NOT establish, and the next instrument
+
+**Forced entry is not natural entry.** This proves every state can be *left*; it proves nothing
+about whether every state can be *reached* through play. `toTarget` and `poleSwing` in particular
+were entered by `set()` with hand-built context, not by a player doing the thing. A state
+unreachable through play is dead content that no grep and no exit-census can find.
+
+Also untested: `combatStrafe` and `pickpocket` ran against a stationary stub guard, so a mark that
+walks away mid-state is uncovered.
