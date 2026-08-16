@@ -123,9 +123,18 @@ export const TUNE = {
      1.664 m at the apex of a full-height jump, so at 2.6 m this never engages in ordinary play.
      What it catches is the case no amount of spring tuning can: `Controller.TUNE.maxFall` is
      -40 m/s and `maxFollowV` is 16, so on a long drop the look-at falls behind at 24 m/s and the
-     character leaves the frame entirely — measured 9.85 m behind after 1.5 s of falling, against
-     a half-frame height of 3.07 m at this boom and lens. A spring cannot be tuned out of that;
-     only a limit can. 2.6 m keeps him inside the frame with margin at the longest boom. */
+     character leaves the frame entirely — 9.85 m behind after 1.5 s of falling, against a
+     half-frame height of 3.07 m at this boom and lens. A spring cannot be tuned out of that;
+     only a limit can. 2.6 m keeps him inside the frame with margin at the longest boom.
+
+     That 9.85 m figure did not record its fall profile, and the profile is most of the answer.
+     `tests/camera.test.mjs` pins the WORST case instead — 1.5 s held at a sustained -40 m/s,
+     harsher than any accelerating drop reaching the same speed — and measures **39.90 m** of lag
+     with the leash lifted out of the way. Leashed, the same fall settles at exactly 1.75 m, which
+     is the saturation value and not an approach to it: the leash bounds `_goal.y - pivot.y` to
+     2.6, and `_goal` already carries the -1.0 m `fallLeadMax` plus FRAMES.air's +0.15 height, so
+     2.6 - 1.0 + 0.15 = 1.75 m above the character exactly. Both numbers are the same constant
+     seen from two ends. */
   followLeashV: 2.6,
 
   /* ---- velocity lead ------------------------------------------------------ */
@@ -803,7 +812,13 @@ export class CameraRig {
    * on whichever ramp is larger, so a route is never rejected for failing the test belonging to
    * the other channel. The ramps are also what make `ledge` safe to sense at all: the level is
    * built out of that tag, and a kerb has neither rise nor line, so it scores zero and the camera
-   * never so much as twitches at it. Measured: 0.2 m kerb → 0.000, 4 m parapet → 0.369.
+   * never so much as twitches at it.
+   *
+   * Measured, and the scenario is part of the measurement — a score is a function of crest height
+   * AND distance, so a bare "4 m parapet → 0.369" is not reproducible. Standing at the origin, a
+   * `ledge` **dead ahead at 4.63 m**: a 0.2 m kerb → 0.0000, a 4 m parapet → 0.3689
+   * (near 0.7913 × riseRamp 0.6216 × weight 0.75). `tests/camera.test.mjs` re-derives that from
+   * the constants and asserts the code agrees to 1e-6, so it survives a retune of any of them.
    */
   _pickRoute() {
     this._routeUpRaw = 0;
