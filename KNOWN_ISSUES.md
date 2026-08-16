@@ -26406,3 +26406,100 @@ the traversal line connecting them — it states the verb of the game); the teal
 terracotta hue relationships; the courtyard's monumental tiered massing; and the strung lamp wires
 as the best route-language gesture in either frame. **The colour choices are not the problem — the
 value spread is.**
+
+---
+
+## §362 — the rendering critic: numbers exact to three decimals, ONE new instrument defect, and its top recommendation NOT established
+
+Third blind critic on r13, technical rather than aesthetic. Its arithmetic is the most accurate of
+the three — reproduced here to three decimal places on several quantities — which makes the one
+claim I could **not** reproduce worth more than the ones I could.
+
+### §362.1 VERIFIED exactly
+
+```
+                     claimed                 measured here
+hero maxRGB          234/235/241             234/235/241
+hero p99.9 luma      196                     196
+hero >240 luma       0.000%                  0.000%
+courtyard maxRGB     243                     243
+courtyard R<=2       0.854%                  0.854%
+courtyard G<=2,B<=2  0.000%                  0.000%, 0.000%
+ink runs 1px  hero   47.8%                   47.8%
+ink runs 1px  court  45.2%                   45.8%
+```
+
+**Nothing in either frame reaches display white** — roughly the top 25% of the range is unused, with
+no specular pop and no bloom anchor. And **half the ink is isolated single pixels**, which is a
+stipple rather than a line; the critic's diagnosis (a contrast-thresholded screen-space edge detect
+keyed off luminance rather than depth+normals) fits both the run-length distribution and the
+observed behaviour that ink vanishes wherever background contrast is low.
+
+### §362.2 NEW — a red-channel clip is contaminating the shading lineage's own control rect
+
+The critic found `courtyard` clipping red to zero on the left colossus's shadow side. Verified and
+then followed further than it went:
+
+```
+whole frame      R<=2 0.854%   G<=2 0.000%   B<=2 0.000%
+                 79.4% of those pixels inside x80-320, y80-240 (the shadowed colossus)
+
+CAST_L rect [70,150,280,300]        R<=2      G<=2      B<=2
+  r13        (2d16446)              4.921%    0.000%    0.000%
+  keyprobe1  (cfcdd94)              4.921%    0.000%    0.000%
+```
+
+**`CAST_L` is the lineage's own control rect** — §342.2 measured it at R/G 1.02, §344 scored
+`PF_KEY_LO` on it, §356 cited it as reproducing "to four decimal places". Almost **5% of its pixels
+have red pinned at the floor**, identically in both builds, while green and blue have none at all.
+
+Two consequences.
+
+**An R/G ratio over that rect is a lower bound, not a measurement.** Where R is clamped, the ratio
+reports the clamp. Every graded-frame R/G figure in this lineage inherits that.
+
+**§356's "reproduces to four decimal places" is partly a clipping artifact.** §356 read `CAST_L`'s
+cross-build stability as evidence that exposure, grade and framing had not moved. A clipped value
+reproduces trivially — the floor is a fixed point — so ~5% of that rect was *guaranteed* to agree
+whatever the grade did. The observation stands; its force as a control does not.
+
+**NOT affected:** §344's `key 0.0281`. That was read off `term5`'s blue channel in a raw debug
+frame, not the graded PNG measured here — a distinction this lineage has got wrong before (§342.2's
+Error 2) and which matters exactly here.
+
+### §362.3 NOT ESTABLISHED — "characters cast no shadows, props do"
+
+This was the critic's **#1 ranked defect and its highest-leverage recommendation** — a week of
+lighting-TA work on the theory that skinned meshes are missing from the shadow caster set. I could
+not reproduce the measurement it rests on.
+
+```
+courtyard, ground rows under the NPC      y600 108   y602 110   y604 105   y608  94
+same rows, control strip 120 px left      y600 121   y602 121   y604 119   y608 118
+```
+
+The critic reported these rows as *"a flat 105-118 luma… identical to surrounding ground"*. The
+values match; the comparison was never made. Against a same-row control the ground under the NPC is
+**11-24 luma darker**, so it is not true that there is "zero contact shadow, zero AO". Its companion
+claim that the pot 60 px away *"casts a long, correct sun shadow to the right"* also fails to
+reproduce — the floor immediately right of the pot reads **117** against my control's **70**, i.e.
+brighter, though my control there is poorly matched and I do not lean on it.
+
+**What IS confirmed** is narrower and was checked by eye at 8×: `hero`'s boot meets the ledge with
+no contact darkening at all (§361.3). So contact occlusion is genuinely missing *somewhere*, and
+absent *nowhere* that I could establish as a caster-set bug.
+
+**Verdict: the diagnosis is plausible and unproven, and it must not be actioned as stated.** The
+measurement that would settle it is one capture — the same shot with characters hidden, differenced
+against this one, which is the technique §7's own correction records (*"hiding him in `courtyard`
+changed zero pixels"*). Until that runs, "exclude skinned meshes from the caster set" is a mechanism
+proposed before the cheap discriminating measurement, which §201's method note names as this
+project's most repeated error.
+
+### §362.4 Standing
+
+Three critics, three sets of arithmetic, and the pattern holds from §361: **the convergent
+observations survive checking and the confident single-source diagnoses do not.** The character
+failing to read, the compressed value range and the unsculpted colossi were each found by more than
+one observer and each verified. The two claims that fell — an undecided ink model (§361.5) and the
+caster-set bug here — were each asserted once, with conviction, by one critic.
