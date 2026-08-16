@@ -104,13 +104,44 @@ function wrapperIsBus(text) {
   return !!m && /engine\.emit\(/.test(m[1]);
 }
 
+/**
+ * Strip comments before scraping, because **prose was counting as code in both directions**.
+ *
+ * Found the hard way, twice in one afternoon. First: a lane documenting why an event must NOT be
+ * published wrote the fix verbatim in its comment as `emit('binocucom', v)`, and `PUB_DIRECT`
+ * matched it — two census assertions went red with no code changed. Then the more dangerous
+ * direction: three separate comments mentioning `emit('clue')` each registered as publishers of
+ * `clue`, so once the real publisher landed the census could no longer tell if it were deleted.
+ * **A comment could keep a dead event looking alive indefinitely.**
+ *
+ * That is the failure this whole file is built to prevent — the register's value is failing in
+ * BOTH directions, and a false publisher silently disables one of them. It is also the fourth
+ * distinct way this scrape has produced a confident wrong answer; see `wrapperIsBus` for the
+ * first three, and note the pattern: every one of them was the scrape reading something that
+ * looked like a bus call and was not.
+ *
+ * Deliberately conservative. Block comments, and line comments only where `//` is the first
+ * non-space on the line — so a `https://…` inside a string literal is untouched. It will
+ * over-strip on a `/*` inside a string literal; no file in `src/` has one, and the alternative
+ * is a JS parser for a check that has to stay cheap enough to run every time.
+ *
+ * Verified before landing: with and without the strip, over all of `src/`, every verdict is
+ * identical — 49 publishers, 51 subscribers, the same five dead subscriptions and the same three
+ * dead publications — and the only difference is `clue`'s publisher list correctly narrowing from
+ * two files to the one that actually emits it. Zero verdict change today, one false-positive
+ * channel closed.
+ */
+const stripComments = (text) => text
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/^[ \t]*\/\/.*$/gm, '');
+
 const files = walk(SRC);
 const published = new Map();
 const subscribed = new Map();
 let wrapperFiles = 0;
 
 for (const f of files) {
-  const text = readFileSync(f, 'utf8');
+  const text = stripComments(readFileSync(f, 'utf8'));
   const rel = f.slice(SRC.length);
   const add = (map, k) => {
     if (!map.has(k)) map.set(k, new Set());
