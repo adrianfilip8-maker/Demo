@@ -401,8 +401,18 @@ class WallRun extends State {
     _b.set(0, 1, 0).cross(_c3.set(this._nx, 0, this._nz)).normalize();
     this._sign = dot2(_b.x, _b.z, _a.x, _a.z) >= 0 ? 1 : -1;
     this._tx = _b.x * this._sign; this._tz = _b.z * this._sign;
-    // Wall on the left or the right, for the clip.
-    _d.set(Math.cos(c.yaw), 0, -Math.sin(c.yaw));
+    /* Wall on the left or the right, for the clip. `_d` is Sly's RIGHT — `faceDir × up`, the
+       same definition `Controller._readInput` strafes on — and `w.n` points OUT of the face,
+       from the wall toward Sly, so the wall lies along `-n` and is on his right exactly when
+       `n · right < 0`.
+
+       This was `(cos yaw, 0, -sin yaw)`, which is his LEFT, so every non-degenerate wall run
+       played the mirrored clip: measured 26/26 mismatched across a yaw × normal sweep and in two
+       driven approaches at 55° and 70° off the face. `Clips.js` names what that costs — "wall on
+       his LEFT… the inside (left) hand slaps along the stone" — so Sly banked away from the wall
+       he was running on and slapped empty air. A head-on approach has `n · right` ≈ 0 and no side
+       either way; only glancing runs could ever show it. See `tests/traversal.test.mjs`. */
+    _d.set(-Math.cos(c.yaw), 0, Math.sin(c.yaw));
     this._side = dot2(this._nx, this._nz, _d.x, _d.z) < 0 ? 'r' : 'l';
     if (this._vertical) c.velocity.y = Math.max(c.velocity.y, TUNE.wallRunUp);
     c.oneShot(`wall_run_${this._side}`);
@@ -1289,7 +1299,16 @@ class PoleSwing extends State {
   enter(c) { c.oneShot('pole_swing'); this._spin = 0; }
   update(c, dt) {
     const p = c.pole;
-    const dir = c.wishRaw.x !== 0 ? -Math.sign(c.wishRaw.x) : 1;
+    /* The orbit follows the stick. `position` is `pole + hold · (sin angle, 0, cos angle)`, so
+       increasing `angle` moves along `(cos angle, 0, -sin angle)` — and at the press Sly faces
+       the pole, which makes that his RIGHT. So stick-right must raise `angle`: `dir = +sign`.
+
+       This was `-Math.sign`, and pushing right orbited him left in all 12 poses the level offers.
+       The tell that needed no basis vector at all: with NO stick the default is `dir = 1`, so
+       letting go reversed the direction the stick had just asked for. Everything below is written
+       in terms of `dir` — the tangent, the yaw, the launch velocity — so the sign lives here and
+       only here. See `tests/traversal.test.mjs`. */
+    const dir = c.wishRaw.x !== 0 ? Math.sign(c.wishRaw.x) : 1;
     const w = TUNE.poleSwingSpin * dir;
     p.angle += w * dt;
     this._spin += Math.abs(w) * dt;
@@ -1575,9 +1594,15 @@ class CombatStrafe extends State {
     const m = c.mark(true);
     if (!m) return c.wishMag > 0.12 ? 'move' : 'idle';
 
-    /* Frame of the orbit: `_a` points from Sly to the mark (radial, inward), `_b` is its
-       left-hand tangent. Both are flattened — an orbit is a plan-view move; a guard standing on
-       a step above you must not tilt it. */
+    /* Frame of the orbit: `_a` points from Sly to the mark (radial, inward), and `_b` is `_a × up`
+       — which, since `turnToYaw` below puts his facing on `_a`, is **his right**. Both are
+       flattened: an orbit is a plan-view move, and a guard standing on a step above you must not
+       tilt it.
+
+       `_b` was described here as the "left-hand tangent", and that wording is why this note now
+       says which one it is. The behaviour was never wrong — stick-right orbits right, measured
+       12/12 against a stick-right walk — but a lateral vector labelled with the wrong side is
+       exactly what faked two findings across two rounds elsewhere in this file. */
     _a.set(m.point.x - c.position.x, 0, m.point.z - c.position.z);
     const r = _a.length();
     if (r < 1e-3) return 'idle';

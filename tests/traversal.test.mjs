@@ -2217,9 +2217,10 @@ test('crawl: the vent column, enumerated rather than cast — and one aperture t
  *
  * **This helper exists because getting it wrong is instrument error five.** The previous version
  * of arm 15 measured shimmy displacement against `(cos yaw, 0, -sin yaw)` — copied in good faith
- * from `WallRun.enter` (`Moveset.js:405`) and `Controller.narrowGround` (`Controller.js:1182`),
- * where it is written as if it were the right vector. **It is the LEFT vector**, so every
- * direction that arm reported came out backwards, and a state that works was filed as broken.
+ * from `WallRun.enter`, which at the time wrote it as if it were the right vector, as
+ * `Controller.narrowGround` and `CameraRig._buildBasis` still do. **It is the LEFT vector**, so
+ * every direction that arm reported came out backwards, and a state that works was filed as
+ * broken while two that were broken passed. Arm 21 is the census of who else writes it by hand.
  *
  * `aimCamera` + `_readInput` is the way to ask without a formula: point the camera along the
  * facing in question, push the stick right, and read what the game's own input pipeline produces.
@@ -2291,7 +2292,7 @@ test('basis: "right" is faceDir x UP, and (cos yaw, 0, -sin yaw) is its exact ne
    *      `faceDir` with respect to yaw is exactly `(cos yaw, 0, -sin yaw)`, so that line is
    *      already treating this vector as the direction Sly turns TOWARD when yaw rises — his
    *      LEFT — and gets its clip right. The same expression is used as his right in
-   *      `Moveset.js:405`. One of the two files is wrong about it and it is not this one. */
+   *      `CameraRig._buildBasis`. Two of the three files are wrong about it and this is not one. */
   const { engine, c } = await realWorld();
   hardReset(engine, c, V(0, 0, 30));
   for (let i = 0; i < 4; i++) {
@@ -2318,7 +2319,7 @@ test('ledgeHang: the shimmy is NOT inverted — RETRACTING my own §393 finding'
    * This arm used to assert `right === 0, left === total` and read that as "stick RIGHT shimmies
    * Sly LEFT". **The counts reproduce exactly and the conclusion was backwards**, because the
    * basis vector it projected onto was Sly's left (see the arm above). The step is taken along
-   * `_b = up × n` (`Moveset.js:788`); Sly hangs facing the wall so `faceDir = -n`, and
+   * `_b = up × n` (`Moveset.js:798`); Sly hangs facing the wall so `faceDir = -n`, and
    * `up × n = -n × up = faceDir × up` = **his right**. The code was correct all along.
    *
    * That is the fourth time this session a correct measurement was made against the wrong world,
@@ -2411,21 +2412,29 @@ test('ledgeHang drop / poleSwing: the other two raw-stick axes, driven', async (
    *     basis and survives the arm-15 retraction unchanged.
    *   · `poleSwing` shares the AXIS (`wishRaw.x`) but not the state.
    *
-   * ── CORRECTION, and it inverts the previous verdict ─────────────────────────────────────────
-   * This arm used to report `poleSwing` CLEAN — 12/12 orbiting to his right on stick right — and
-   * that was used to argue the shimmy defect was local rather than shared. Both halves of that
-   * were wrong, from the one cause: `rv` was `(cos yaw, 0, -sin yaw)`, Sly's LEFT (arm 15's
-   * calibration). Re-measured against what the same stick does through the walk pipeline:
+   * ── The poleSwing half asserts the FIXED behaviour: the orbit follows the stick ─────────────
+   * Push right on a pole and Sly goes right. Every pose the level offers, measured against what
+   * the same stick does through the walk pipeline — no formula anywhere in the comparison.
    *
-   *     stick RIGHT   0/12 the way a stick-right walk goes    12/12 opposite
+   * **Why this arm exists, in the numbers that made it necessary.** Before the fix it was
+   * `dir = -Math.sign(wishRaw.x)` and this measured **0/12 with the stick, 12/12 against it**.
+   * Two rounds missed it because the arm asserting it was healthy projected onto
+   * `(cos yaw, 0, -sin yaw)` — Sly's LEFT (arm 15's calibration) — so a uniform inversion read as
+   * a clean pass, and that reading was then used to argue the shimmy defect was local rather than
+   * shared. It was neither: the shimmy was never broken and this was.
    *
-   * **`poleSwing` is the inverted one.** `PoleSwing.update` takes `dir = -sign(wishRaw.x)`
-   * (`Moveset.js:1292`), and at the moment of the press Sly faces the pole, so his right is the
-   * increasing-`angle` tangent — which `dir = -1` walks away from. The old figure reproduces
-   * exactly; only its label was wrong, so this is one error in one place, read three ways.
+   * Three checks, deliberately of different kinds, because the last two rounds proved one is not
+   * enough:
+   *   1. **against a walk** — the stick means the same thing on a pole as on the ground;
+   *   2. **against the retracted basis** — it must now label every arc the OTHER way, which is
+   *      what makes "the two bases are exact opposites" a measured fact rather than an argument;
+   *   3. **against NO STICK** — `dir` defaults to `+1`, so a neutral stick already orbits one
+   *      way. The pre-fix code made pushing right *reverse* the direction letting go produced.
+   *      That check needs no basis vector, no camera and no walk, and it would have caught this
+   *      in the first round for free.
    *
    * The measurement excludes frame 1, which snaps him onto the orbit radius; including it gives
-   * the same 12/0, so the snap is not what decides this. */
+   * the same counts, so the snap is not what decides this. */
   const { engine, c, collision } = await realWorld();
   hardReset(engine, c, V(0, 0, 30));
   for (let i = 0; i < 4; i++) {
@@ -2476,55 +2485,66 @@ test('ledgeHang drop / poleSwing: the other two raw-stick axes, driven', async (
      toward the one just released. `hangLock` blocks re-GRABBING but not the assist. Not
      confirmed, so it is bounded here rather than asserted either way. */
 
-  /* ---- poleSwing: same axis, different state, and this is the one that is backwards ---- */
-  let pent = 0, pwith = 0, pagainst = 0, pold = 0;
+  /* ---- poleSwing: the orbit follows the stick ---- */
+  let pent = 0, pwith = 0, pagainst = 0, pold = 0, pneutral = 0;
   for (const r of collision.recs.filter((x) => x.tag === 'pole')) {
     const ud = r.mesh.userData || {}, p = r.mesh.position;
     const y = ((ud.bottom ?? p.y) + (ud.top ?? p.y)) / 2;
     for (const off of [[1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]]) {
-      hardReset(engine, c, V(p.x + off[0], y, p.z + off[1]));
-      c.position.set(p.x + off[0], y, p.z + off[1]);
-      c.grounded = false; c._needSpawnSnap = false; c._frame++;
-      if (!c.afford('pole')) continue;
-      c.sm.set('poleClimb');
-      if (c.stateName !== 'poleClimb') continue;
-      c.sm.set('poleSwing');
-      if (c.stateName !== 'poleSwing') continue;
+      /** Mount the pole, hold `mx` for the arc, return the chord from frame 1 to frame 10. */
+      const swing = (mx) => {
+        hardReset(engine, c, V(p.x + off[0], y, p.z + off[1]));
+        c.position.set(p.x + off[0], y, p.z + off[1]);
+        c.grounded = false; c._needSpawnSnap = false; c._frame++;
+        if (!c.afford('pole')) return null;
+        c.sm.set('poleClimb');
+        if (c.stateName !== 'poleClimb') return null;
+        c.sm.set('poleSwing');
+        if (c.stateName !== 'poleSwing') return null;
+        const yaw0 = c.yaw;                          // facing at the moment of the press: the pole
+        /* Frame 1 snaps him from `hold`-ish onto exactly `hold`; the ARC is frames 1..10. */
+        engine.input.beginFrame(DT); engine.input.move.x = mx; engine.input.move.y = 0;
+        engine.time = 0; c.update(DT, 0);
+        const p1 = c.position.clone();
+        for (let i = 1; i < 10; i++) {
+          engine.input.beginFrame(DT); engine.input.move.x = mx; engine.input.move.y = 0;
+          engine.time = i * DT; c.update(DT, i * DT);
+          if (c.stateName !== 'poleSwing') break;
+        }
+        const d = c.position.clone().sub(p1); d.y = 0;
+        return d.length() < 1e-4 ? null : { d: d.normalize(), yaw0 };
+      };
+      const right = swing(1);
+      if (!right) continue;
       pent++;
-      const yaw0 = c.yaw;                            // facing at the moment of the press: the pole
-      const walkRight = stickRightFor(engine, c, faceOf(yaw0));
-      const oldBasis = V(Math.cos(yaw0), 0, -Math.sin(yaw0));   // what this arm used to project on
-      /* Frame 1 snaps him from `hold`-ish onto exactly `hold`; the ARC is frames 1..10. */
-      engine.input.beginFrame(DT); engine.input.move.x = 1; engine.input.move.y = 0;
-      engine.time = 0; c.update(DT, 0);
-      const p1 = c.position.clone();
-      for (let i = 1; i < 10; i++) {
-        engine.input.beginFrame(DT); engine.input.move.x = 1; engine.input.move.y = 0;  // stick RIGHT
-        engine.time = i * DT; c.update(DT, i * DT);
-        if (c.stateName !== 'poleSwing') break;
-      }
-      const d = c.position.clone().sub(p1); d.y = 0;
-      if (d.length() < 1e-4) continue;
-      d.normalize();
-      if (d.dot(walkRight) > 0) pwith++; else pagainst++;
-      if (d.dot(oldBasis) > 0) pold++;
+      const walkRight = stickRightFor(engine, c, faceOf(right.yaw0));
+      const oldBasis = V(Math.cos(right.yaw0), 0, -Math.sin(right.yaw0));  // the retracted basis
+      if (right.d.dot(walkRight) > 0) pwith++; else pagainst++;
+      if (right.d.dot(oldBasis) > 0) pold++;
+      const neutral = swing(0);                       // check 3: no stick at all
+      if (neutral && neutral.d.dot(right.d) > 0) pneutral++;
     }
     if (pent >= 12) break;
   }
   console.log(`[poleSwing] entered ${pent}; stick RIGHT -> with a stick-right walk ${pwith}, against it ${pagainst}`);
-  console.log(`[poleSwing]   (on the retracted basis this same arc reads "his right" ${pold}/${pent})`);
+  console.log(`[poleSwing]   retracted basis calls this same arc "his right" ${pold}/${pent}` +
+              `   |   agrees with a NEUTRAL stick ${pneutral}/${pent}`);
   assert.ok(pent >= 8, `only ${pent} pole poses entered poleSwing`);
-  /* THE FINDING, pinned in its current (broken) state so it reddens when someone fixes it. */
-  assert.equal(pwith, 0,
-    `${pwith} of ${pent} pole swings now orbit the way a stick-right walk goes. If \`dir\` in ` +
-    'PoleSwing.update (Moveset.js:1292) lost its minus sign, that is the fix landing — invert this ' +
-    'arm to assert pwith === pent and drop the pagainst check.');
-  assert.equal(pagainst, pent, `only ${pagainst} of ${pent} orbited against the stick — the inversion is not uniform`);
-  /* The lever that proves the two bases really are opposite, on this arm's own data rather than
-     on arm 15's: the retracted basis must label every one of these the other way. */
-  assert.equal(pold, pent,
+  /* (1) The stick means the same thing on a pole as it does on the ground. */
+  assert.equal(pagainst, 0,
+    `${pagainst} of ${pent} pole swings orbit AGAINST a stick-right walk. The sign in ` +
+    'PoleSwing.update (Moveset.js:1311) has inverted again — it must be `Math.sign(wishRaw.x)`.');
+  assert.equal(pwith, pent, `only ${pwith} of ${pent} orbited with the stick — the fix is not uniform`);
+  /* (2) The two bases are exact opposites, measured on this arm's own data rather than argued
+     from arm 15's. This is what makes the retraction checkable here and not just asserted. */
+  assert.equal(pold, 0,
     'the retracted basis no longer mirrors the calibrated one here — arm 15 and this arm disagree ' +
     'about handedness, and one of them is now wrong');
+  /* (3) The check that needed no basis at all: `dir` defaults to +1, and pushing right must not
+     reverse what letting go does. This was the free catch that two rounds walked past. */
+  assert.equal(pneutral, pent,
+    `${pent - pneutral} of ${pent} pole swings reverse when the stick is RELEASED — stick-right and ` +
+    'the neutral default disagree, which is exactly the shape of the bug this arm was written for');
 });
 
 /* ====================================================================== */
@@ -2754,32 +2774,32 @@ test('wallClimb: proximity alone does not snag a player who is not reaching for 
 });
 
 /* ====================================================================== */
-/* 19 — the same constant, where it picks a clip                           */
+/* 19 — the wall-run clip: the inside hand is the wall side                */
 /* ====================================================================== */
 
-test('wallRun: the clip side is inverted — Sly banks away from the wall he is running on', async () => {
-  /* Arm 15's calibration found `(cos yaw, 0, -sin yaw)` written as if it were Sly's right in two
-   * places in `src/**`. One of them, `Controller.narrowGround` (`Controller.js:1182`), probes
-   * `s = -1` and `s = +1` symmetrically, so naming the axis backwards there cannot change an
-   * answer. **The other one decides which of two mirrored clips plays.**
+test('wallRun: the clip plays for the side the wall is actually on — the inside hand meets stone', async () => {
+  /* `Clips.js:1446` states what the clip depicts: *"Wall run, wall on his LEFT. Feet strike the
+   * vertical surface, the body is banked hard into it, the inside (left) hand slaps along the
+   * stone"*, mirrored into `wall_run_r` by `defMirror`. This arm asserts the engine agrees with
+   * that sentence — that the side in the clip's NAME is the side the wall is really on.
    *
-   *     Moveset.js:405   _d.set(Math.cos(c.yaw), 0, -Math.sin(c.yaw));
-   *     Moveset.js:406   this._side = dot2(this._nx, this._nz, _d.x, _d.z) < 0 ? 'r' : 'l';
+   *     Moveset.js:415   _d.set(-Math.cos(c.yaw), 0, Math.sin(c.yaw));      // his RIGHT
+   *     Moveset.js:416   this._side = dot2(this._nx, this._nz, _d.x, _d.z) < 0 ? 'r' : 'l';
    *
    * `c.wall.n` points OUT of the face, from the wall toward Sly (`WallRun.update` re-probes along
-   * `-n` to keep contact), so the wall lies along `-n` and it is on his right exactly when
-   * `n · right < 0`. With `_d` being his LEFT, `n · left < 0` means `n · right > 0` means the wall
-   * is on his **left** — and the line returns `'r'`.
+   * `-n` to keep contact), so the wall lies along `-n` and is on his right exactly when
+   * `n · right < 0`.
    *
-   * `Clips.js:1446` is unambiguous about what the name means: *"Wall run, wall on his LEFT. Feet
-   * strike the vertical surface, the body is banked hard into it, the inside (left) hand slaps
-   * along the stone"*, mirrored into `wall_run_r` by `defMirror`. So the consequence is not
-   * cosmetic bookkeeping: **Sly banks away from the wall he is running on and slaps empty air.**
+   * ── Why this arm exists, in the numbers that made it necessary ──────────────────────────────
+   * `_d` used to be `(cos yaw, 0, -sin yaw)`, which is his LEFT, so `n · left < 0` — meaning the
+   * wall is on his left — returned `'r'`. Measured before the fix: **0 of 26 non-degenerate
+   * approaches matched, and 26 of 26 mismatched**, plus two driven runs at 55° and 70° off the
+   * face. Sly banked away from the wall he was running on and slapped empty air, in every wall
+   * run in the game that had a side at all.
    *
-   * ── THE ONE-LINE FIX ────────────────────────────────────────────────────────────────────────
-   *     Moveset.js:405   _d.set(-Math.cos(c.yaw), 0, Math.sin(c.yaw));
-   * (or equivalently flip the `'r'`/`'l'` on :406). Not applied here — this lane does not edit
-   * `src/**` — and this arm pins the CURRENT behaviour so it reddens the moment it is.
+   * The reason it survived: a head-on approach has `n · right` ≈ 0 and no side to be wrong about,
+   * and the only driven wall run this project had ever staged (script F, arm 10) runs straight at
+   * the face. **A bug that is invisible in the one approach anybody drives.**
    *
    * ── Why the sweep excludes head-on approaches ───────────────────────────────────────────────
    * When the wall is straight ahead or straight behind, `n · right` is ~0 and there is no side to
@@ -2827,15 +2847,15 @@ test('wallRun: the clip side is inverted — Sly banks away from the wall he is 
   console.log(`\n[wallRun] ${clean} non-degenerate approaches (+${degenerate} head-on, excluded)`);
   console.log(`[wallRun]   clip matches the side the wall is really on: ${agree}   mismatched: ${disagree}`);
 
-  /* The lever: the sweep must be capable of producing BOTH clips, or "always mismatched" is just
-     "always the same clip" wearing a costume. */
+  /* The lever: the sweep must be capable of producing BOTH clips, or "always matched" is just
+     "always the same clip" wearing a costume — and that is the exact shape of the pass this arm
+     replaces, which reported 3/30 agreement on three coin flips. */
   assert.ok(clean >= 20, `only ${clean} non-degenerate approaches — the sweep is too thin to conclude`);
   assert.ok(sawL > 0 && sawR > 0, `the sweep only ever produced one clip (l ${sawL}, r ${sawR}) — no side is being chosen`);
-  assert.equal(agree, 0,
-    `${agree} of ${clean} wall runs now play the clip for the side the wall is actually on. If ` +
-    'Moveset.js:405 was corrected, that is the fix landing — invert this arm to assert ' +
-    'agree === clean and drop the disagree check.');
-  assert.equal(disagree, clean, `${disagree} of ${clean} mismatched — the inversion is no longer uniform`);
+  assert.equal(disagree, 0,
+    `${disagree} of ${clean} wall runs play the clip for the WRONG side — the inside hand is ` +
+    'slapping air. `_d` in WallRun.enter (Moveset.js:415) must be Sly\'s right, `(-cos yaw, 0, sin yaw)`.');
+  assert.equal(agree, clean, `only ${agree} of ${clean} matched — the side is right but not uniformly`);
 
   /* And the same thing in a DRIVEN run, because a forced entry sets `c.wall` by hand and a
      reviewer is entitled to ask whether the real `probeWall` produces a different normal. The
@@ -2918,9 +2938,9 @@ test('wallRun: the clip side is inverted — Sly banks away from the wall he is 
   assert.ok(decisive.length > 0,
     'every driven wall run arrived head-on, so none of them has a side — the driven half cannot decide this');
   for (const d of decisive) {
-    assert.ok(!d.clip.endsWith(d.side),
-      `the driven wall run at ${d.deg}° now plays ${d.clip} for a wall on his ${d.side.toUpperCase()} — ` +
-      'the fix has landed in a real approach; invert this check too');
+    assert.ok(d.clip.endsWith(d.side),
+      `the driven wall run at ${d.deg}° plays ${d.clip} for a wall on his ${d.side.toUpperCase()} — ` +
+      'the forced sweep and the real approach disagree, so one of them is not measuring the game');
   }
 });
 
@@ -3072,4 +3092,358 @@ test('census: which of the 32 states any test in this project has ever entered',
   assert.ok(onlyMine.length >= 20,
     `only ${onlyMine.length} states are traversal-only — if that dropped, other lanes have started ` +
     'driving the moveset and this arm should say so rather than assert the old concentration');
+});
+
+/* ====================================================================== */
+/* 21 — who else writes the lateral basis by hand                          */
+/* ====================================================================== */
+
+test('basis: narrowGround is genuinely side-blind, so its backwards axis cannot reach an answer', async () => {
+  /* `Controller.js:1182` writes `_rgt.set(Math.cos(yaw), 0, -Math.sin(yaw))` — the left vector,
+   * under a name that says right. I assessed it harmless last round *by inspection*, on the
+   * grounds that the loop probes `s = -1` and `s = +1` at equal offsets so the pair `{p + r·u,
+   * p − r·u}` is identical under `u → −u`. Re-assessed now that the sign is fixed everywhere
+   * else, because the question is not whether the probe is symmetric — it is whether **anything
+   * downstream reads which of the two matched.**
+   *
+   *   · the return is a bare boolean, and the loop `return true`s on the first side that fails;
+   *   · both callers are `Tiptoe` (`Moveset.js:200`, `:204`) and both use only that boolean;
+   *   · `_rgt` is a module scratch shared with `_readInput`, but both sites write it immediately
+   *     before reading it (`Controller.js:721`, `:1182`), so nothing leaks between them.
+   *
+   * Inspection again — so this arm makes it a measurement instead. Negating the axis is exactly
+   * a yaw of +π, and nothing else in `narrowGround` reads yaw, so the answer must be identical at
+   * `yaw` and `yaw + π` for every pose. If someone later gives the two sides different offsets,
+   * or returns which one matched, this reddens and the "harmless" ruling has to be re-made.
+   *
+   * **It is not a claim that the axis is correctly named.** It is a claim that this consumer
+   * cannot tell, which is a different and much weaker thing. */
+  const { engine, c } = await makeSim({ narrow: 0.5 });   // a beam along z: narrow in x, wide in z
+  const probe = (x, z, yaw) => {
+    hardReset(engine, c, V(x, 0, z), yaw);
+    /* Frames first, because `narrowGround` compares against `groundY`, which only exists after
+       one update — then RE-PIN both position and yaw before asking. The header's first defence:
+       a probe whose origin drifts between the two halves of a comparison is not a comparison. */
+    for (let i = 0; i < 3; i++) {
+      engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+      engine.time = i * DT; c.update(DT, i * DT);
+    }
+    c.position.x = x; c.position.z = z; c.yaw = yaw;
+    return c.narrowGround();
+  };
+  let pairs = 0, same = 0, sawTrue = 0, sawFalse = 0;
+  for (const yaw of [0, 0.4, Math.PI / 2, 1.9, Math.PI, -0.8, -Math.PI / 2, 2.6]) {
+    for (const [x, z] of [[0, 0], [0.3, 4], [-0.3, -4], [0, 12]]) {
+      const a = probe(x, z, yaw), b = probe(x, z, yaw + Math.PI);
+      pairs++;
+      if (a === b) same++;
+      if (a) sawTrue++; else sawFalse++;
+    }
+  }
+  console.log(`\n[narrow] ${pairs} pose pairs at yaw and yaw+π: identical ${same}, differing ${pairs - same}`);
+  console.log(`[narrow]   answers seen: true ${sawTrue}, false ${sawFalse}`);
+  /* The lever: a probe that always says the same thing is trivially symmetric and proves nothing.
+     Both answers must appear, or this arm is a tautology of the kind this file has shipped once. */
+  assert.ok(sawTrue > 0 && sawFalse > 0,
+    `narrowGround answered ${sawTrue ? 'true' : 'false'} for all ${pairs * 2} probes — it is not ` +
+    'discriminating, so the symmetry it exhibits is worthless as evidence');
+  assert.equal(same, pairs,
+    `${pairs - same} pose pairs answered differently at yaw and yaw+π — narrowGround now depends on ` +
+    'WHICH side matched, so the backwards axis at Controller.js:1182 is no longer harmless');
+});
+
+test('basis: every hand-written lateral basis in src, and one that is still backwards', async () => {
+  /* The guard against the next instance, and it found one on its first run.
+   *
+   * ── Why a census of SITES and not a shared `RIGHT_OF(yaw)` helper ───────────────────────────
+   * The obvious response to "this expression was written by hand in three files" is to export it
+   * once. I do not think that is the fix, and I am not building it:
+   *
+   *   · after the fix there is exactly ONE site that wants a right vector (`Moveset.js:415`).
+   *     A named export with a single consumer is ceremony;
+   *   · the failure was never that a helper was wrong. It was that a hand-written vector **agrees
+   *     with itself** everywhere it is used, so a self-consistent wrong answer survives review.
+   *     A helper does not stop the next person writing the vector out by hand — only something
+   *     that LOOKS is going to catch that, and a helper does not look;
+   *   · §388's rule applies: a table of what the code should say is a second copy that drifts.
+   *     This stores no value. It stores nothing but a list of places, with a reason each.
+   *
+   * ── What it found ───────────────────────────────────────────────────────────────────────────
+   * A third site the first pass missed, because the line contains no `Math.` at all:
+   *
+   *     CameraRig.js:1127   const sy = Math.sin(yaw), cy = Math.cos(yaw);
+   *     CameraRig.js:1128   this.forward.set(sy, 0, cy);
+   *     CameraRig.js:1129   this.right.set(cy, 0, -sy);      // ← this is LEFT
+   *
+   * Driven below: `rig.right · (rig.forward × up) = -1.000` at every yaw. A field named `right`
+   * holding the left vector. Its consumers split, and the split is the finding:
+   *
+   *   SELF-CANCELLING — `_sideSign` (`:763`) derives the sign by projecting velocity ON `right`
+   *     and `_pivotGoal` (`:1161`) applies it back along `right`, so the framing offset lands on
+   *     the travel side whichever vector it is. The whiskers (`:1307`) take ±, like `narrowGround`.
+   *   NOT CANCELLING — `_freeFly` (`:1530`) strafes `mv.x` along `right`, so the debug camera
+   *     moves opposite the stick; the `aim ? 0.45` shoulder offset (`:1160`) is unpaired, so
+   *     aiming shifts over the wrong shoulder; and `_probeWallSide` (`:774`) labels its two casts
+   *     `hitR`/`hitL` from it, feeding `_wallSide` and hence the bank in `_roll` (`:759`).
+   *
+   * **Routed, not fixed.** `CameraRig.js` is FRAMES' file, the roll sign feeds every shot in
+   * `shots/`, and flipping it during a capture is the §186 situation. This arm measures it and
+   * pins it so the decision is someone's to make rather than nobody's to notice. */
+  const srcDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
+  const walk = (dir, out = []) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) walk(p, out);
+      else if (e.name.endsWith('.js')) out.push(p);
+    }
+    return out;
+  };
+  /* Any `.set(a, 0, b)` whose x slot is a cosine of a FACING and whose z slot is its sine — in
+     either sign, and through a local alias like `cy`/`sy`, which is how the third site hid. The
+     alias half is resolved by looking for the alias's own definition in the same file.
+
+     **`yaw` is required, and that is a real narrowing, not tidiness.** The first build matched on
+     shape alone and pulled in `Moveset.js:1318`, `_a.set(Math.cos(p.angle), 0, -Math.sin(p.angle))`
+     — the tangent of the pole orbit. Same three characters, different object: `p.angle` is a
+     position along a circle, not a heading, and there is no left or right to get wrong about it.
+     Allow-listing it would have taught the next reader that this census is about a spelling.
+     The cost is stated: a lateral basis built from a facing that is not called `yaw` is invisible
+     here, and so is one assembled across two lines without `.set`. */
+  const TRIG = /\.set\(\s*(-?)\s*(Math\.cos\([^)]*yaw[^)]*\)|c[a-z]?)\s*,\s*0\s*,\s*(-?)\s*(Math\.sin\([^)]*yaw[^)]*\)|s[a-z]?)\s*\)/;
+  const found = [];
+  for (const file of walk(srcDir)) {
+    const lines = readFileSync(file, 'utf8').split('\n');
+    const aliased = /const\s+(s[a-z]?)\s*=\s*Math\.sin\(\s*yaw|const\s+(c[a-z]?)\s*=\s*Math\.cos\(\s*yaw/.test(lines.join('\n'));
+    lines.forEach((ln, i) => {
+      const m = TRIG.exec(ln);
+      if (!m) return;
+      const literal = m[2].startsWith('Math.') && m[4].startsWith('Math.');
+      if (!literal && !aliased) return;          // `c`/`s` that are not this file's yaw aliases
+      found.push({ rel: path.relative(srcDir, file), line: i + 1, text: ln.trim(), sign: m[1] ? '-cos' : '+cos' });
+    });
+  }
+  console.log('\n[sites] hand-written lateral bases in src/:');
+  for (const f of found) console.log(`  ${f.rel}:${f.line}  ${f.sign}  ${f.text.slice(0, 62)}`);
+
+  /* The allow-list. A site here is a place someone wrote the lateral axis out by hand; being
+     listed is not approval, it is an acknowledgement with a reason and an owner. A NEW one fails
+     this arm, and the message says what to do about it. */
+  const KNOWN = {
+    'player/Controller.js': 'narrowGround — backwards, but side-blind: proved by the arm above',
+    'player/Moveset.js':    'WallRun._side — his RIGHT, fixed this round, pinned by arm 19',
+    'player/CameraRig.js':  'rig.right — backwards, live, ROUTED TO FRAMES (see this arm)',
+  };
+  const unknown = found.filter((f) => !KNOWN[f.rel]);
+  assert.deepEqual(unknown.map((f) => `${f.rel}:${f.line}`), [],
+    'a new hand-written lateral basis appeared in src/. It is the expression that faked two ' +
+    'findings across two rounds, so it does not get in silently: add it to KNOWN with a reason, ' +
+    'and drive its direction the way arm 15 does rather than reasoning about the sign.');
+  /* The lever, which matters more than the list: the scanner must actually be able to SEE the
+     alias form, because that is the one that hid the CameraRig site from the first pass. */
+  assert.ok(found.some((f) => f.rel === 'player/CameraRig.js'),
+    'the scanner no longer sees the aliased `set(cy, 0, -sy)` form — it is back to missing the ' +
+    'exact site it was written to catch');
+  assert.ok(found.length >= 3, `only ${found.length} sites found — the scanner has stopped matching`);
+
+  /* And the CameraRig claim itself, driven rather than read off the source. */
+  const { CameraRig } = await import('../src/player/CameraRig.js');
+  const rig = new CameraRig(stubEngine());
+  const UP = V(0, 1, 0);
+  let neg = 0, n = 0;
+  for (const yaw of [0, 0.7, Math.PI / 2, -1.2, Math.PI]) {
+    rig._buildBasis(yaw);
+    const dot = rig.right.dot(new THREE.Vector3().crossVectors(rig.forward, UP));
+    n++;
+    if (dot < -0.999) neg++;
+    console.log(`[sites] CameraRig yaw ${yaw.toFixed(2)}: right · (forward × up) = ${dot.toFixed(3)}`);
+  }
+  assert.equal(neg, n,
+    `CameraRig.right is no longer the exact negation of forward × up (${neg}/${n}). If FRAMES ` +
+    'corrected it, drop this half and re-check `_wallSide`, the aim shoulder and the free-fly ' +
+    'strafe, which are the three consumers that do not cancel.');
+});
+
+/* ====================================================================== */
+/* 22 — operation, not entry: the states nothing else drives               */
+/* ====================================================================== */
+
+test('combatStrafe: the fourth raw-stick reader, and it orbits and closes the way it says', async () => {
+  /* The census (arm 20) says `combatStrafe` has **2 driven entries in the whole project**, both
+   * in this file, and arm 13 says it is one of four states that read the raw stick. The other
+   * three are now all measured: `ledgeHang` correct, `poleClimb` correct, `poleSwing` was
+   * inverted. This is the last one, and nothing has ever driven its direction.
+   *
+   * Both axes, against what the same stick does through the walk pipeline:
+   *   · TANGENT (`wishRaw.x`) — `_b = (-a_z, 0, a_x)` where `_a` points at the mark. Sly is turned
+   *     to face the mark, so `_b` is his right; stick-right must orbit right.
+   *   · RADIAL (`wishRaw.z`) — the comment at `Moveset.js:1615` claims *"+z on the stick is
+   *     'forward' = close in"*. That is a sentence about behaviour, so it is checkable: stick
+   *     forward must reduce the distance to the mark and stick back must raise it.
+   *
+   * The mark is a real stub guard at a known spot, and the orbit radius is read from the mark
+   * rather than from Sly, so "closer" is measured against the thing he is circling. */
+  const guard = stubGuards(V(0, 0, -3.0));
+  const { engine, c } = await makeSim({ guards: guard });
+  const markAt = V(0, 0, -3.0);
+  const run = (mx, my, frames = 30) => {
+    hardReset(engine, c, V(0, 0, 0), Math.PI);
+    for (let i = 0; i < 3; i++) {
+      engine.input.beginFrame(DT); engine.input.hold('focus');
+      engine.input.move.x = 0; engine.input.move.y = 0;
+      engine.time = i * DT; c.update(DT, i * DT);
+    }
+    c.sm.set('combatStrafe');
+    if (c.stateName !== 'combatStrafe') return null;
+    const p0 = c.position.clone(), r0 = p0.distanceTo(markAt);
+    const face0 = V(Math.sin(c.yaw), 0, Math.cos(c.yaw));
+    for (let i = 0; i < frames; i++) {
+      engine.input.beginFrame(DT); engine.input.hold('focus');
+      engine.input.move.x = mx; engine.input.move.y = my;
+      engine.time = i * DT; c.update(DT, i * DT);
+      if (c.stateName !== 'combatStrafe') break;
+    }
+    const d = c.position.clone().sub(p0); d.y = 0;
+    return { d, face0, r0, r1: c.position.distanceTo(markAt), state: c.stateName, moved: d.length() };
+  };
+
+  const right = run(1, 0), left = run(-1, 0), fwd = run(0, 1), back = run(0, -1);
+  for (const [tag, r] of [['right', right], ['left', left], ['fwd', fwd], ['back', back]]) {
+    assert.ok(r, `combatStrafe would not engage for the ${tag} probe — the stub mark is not in range`);
+    assert.ok(r.moved > 0.05, `the ${tag} probe moved ${r.moved.toFixed(3)} m — nothing to measure`);
+  }
+  const walkRight = stickRightFor(engine, c, right.face0);
+  const orbitR = right.d.clone().normalize().dot(walkRight);
+  const orbitL = left.d.clone().normalize().dot(walkRight);
+  console.log(`\n[strafe] tangent: stick-right · walk-right ${orbitR.toFixed(3)}, stick-left · walk-right ${orbitL.toFixed(3)}`);
+  console.log(`[strafe] radial:  r ${right.r0.toFixed(2)} m -> forward ${fwd.r1.toFixed(2)}, back ${back.r1.toFixed(2)}`);
+  /* The tangent, and the reason this arm was written: a fourth instance would have been here. */
+  assert.ok(orbitR > 0.5, `stick RIGHT orbits at ${orbitR.toFixed(3)} to a stick-right walk — the tangent is inverted`);
+  assert.ok(orbitL < -0.5, `stick LEFT orbits at ${orbitL.toFixed(3)} to a stick-right walk — the tangent is inverted`);
+  /* The radial, checked against the comment's own words rather than against a sign. */
+  assert.ok(fwd.r1 < fwd.r0 - 0.05,
+    `stick FORWARD moved him from ${fwd.r0.toFixed(2)} m to ${fwd.r1.toFixed(2)} m — Moveset.js's ` +
+    '"+z on the stick is forward = close in" is false');
+  assert.ok(back.r1 > back.r0 + 0.05,
+    `stick BACK moved him from ${back.r0.toFixed(2)} m to ${back.r1.toFixed(2)} m — it should back off`);
+  /* And he keeps facing the mark the whole time: that is what a lock-on is for. */
+  const look = V(Math.sin(c.yaw), 0, Math.cos(c.yaw));
+  const toMark = markAt.clone().sub(c.position); toMark.y = 0;
+  assert.ok(look.dot(toMark.normalize()) > 0.9, 'combatStrafe stopped facing the mark it is locked to');
+});
+
+test('roll / bounce: two moves with one driven entry each, checked against what they claim', async () => {
+  /* The two thinnest states in the census — `bounce` has **1** driven entry in the entire test
+   * suite and `roll` has 2, both here. Entry is not the question; these check that the move does
+   * what its own comment says once it is running.
+   *
+   * ── roll ────────────────────────────────────────────────────────────────────────────────────
+   * `Roll.enter` claims a direction: travel direction, overridden by the stick when
+   * `wishMag > 0.4` (`Moveset.js:110`). And `update` claims a speed profile: `rollSpeed` decaying
+   * to `walkSpeed` across `rollTime`. Both are checkable against the numbers in TUNE, and the
+   * direction half is the same family as everything else this round — a move that launches you
+   * the wrong way is the bug that has been found twice already.
+   *
+   * ── bounce ──────────────────────────────────────────────────────────────────────────────────
+   * `Bounce.enter` claims three things in three comments: `launch(jumpV0 · bounceUp)`, *"a bounce
+   * refreshes the double jump — chains read as skill"*, and *"…and the walls, for the same
+   * reason"*. A refreshed air jump that is not actually refreshed is invisible until a player
+   * tries to chain, and nothing in this project has ever driven it. So: spend the air jump AND
+   * the wall, bounce, and assert both came back. */
+  /* ---- roll: direction and profile ---- */
+  {
+    const { engine, c } = await makeSim();
+    const rollFrom = (yaw, mx, my) => {
+      hardReset(engine, c, V(0, 0, 0), yaw);
+      /* Settle with NO input first, then re-arm the run. Settling with the probe's own stick held
+         would decelerate him below `canEnter`'s 3.4 m/s in the reversal case and the arm would be
+         measuring a roll that never started. */
+      for (let i = 0; i < 2; i++) {
+        engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+        engine.time = i * DT; c.update(DT, i * DT);
+      }
+      c.position.set(0, 0, 0);
+      c.yaw = yaw; c.grounded = true;
+      c.velocity.set(Math.sin(yaw) * 6, 0, Math.cos(yaw) * 6);
+      const p0 = c.position.clone();
+      engine.input.beginFrame(DT); engine.input.move.x = mx; engine.input.move.y = my;
+      engine.input.hold('crouch');
+      c.update(DT, 0);
+      if (c.stateName !== 'roll') return null;
+      const v0 = c.speedXZ();
+      /* Speed and displacement are sampled INSIDE the roll. Reading `speedXZ()` after the loop
+         reads whatever `skid` or `idle` had done to it in the frames since — the first build did
+         that and reported a roll "ending" at 1.73 m/s, which is not a fact about Roll at all. */
+      let peak = v0, end = v0, frames = 0;
+      let dEnd = V(0, 0, 0);
+      for (let i = 1; i < 60 && c.stateName === 'roll'; i++) {
+        engine.input.beginFrame(DT); engine.input.move.x = mx; engine.input.move.y = my;
+        engine.time = i * DT; c.update(DT, i * DT);
+        if (c.stateName !== 'roll') break;
+        peak = Math.max(peak, c.speedXZ());
+        end = c.speedXZ(); frames = i;
+        dEnd = c.position.clone().sub(p0); dEnd.y = 0;
+      }
+      return { d: dEnd, v0, peak, end, frames };
+    };
+    /* No stick: the roll must follow the direction he was already travelling. */
+    const plain = rollFrom(Math.PI, 0, 0);
+    assert.ok(plain, 'roll would not engage from a 6 m/s run — canEnter needs speedXZ > 3.4');
+    const travel = V(Math.sin(Math.PI), 0, Math.cos(Math.PI));
+    const along = plain.d.clone().normalize().dot(travel);
+    console.log(`\n[roll] no stick: travelled ${plain.d.length().toFixed(2)} m at ${along.toFixed(3)} to his heading, ` +
+                `speed ${plain.v0.toFixed(2)} -> ${plain.end.toFixed(2)} m/s over ${plain.frames} frames`);
+    assert.ok(along > 0.95, `the roll went at ${along.toFixed(3)} to the direction of travel — it should follow it`);
+    assert.ok(plain.peak >= TUNE.rollSpeed - 0.3,
+      `roll peaked at ${plain.peak.toFixed(2)} m/s, below TUNE.rollSpeed ${TUNE.rollSpeed} — the launch is short`);
+    /* The profile its own line writes: `walkSpeed + (rollSpeed - walkSpeed) · k`, `k` falling to
+       0 across `rollTime`. So the last in-roll frame must be at walking pace, not merely "slower". */
+    assert.ok(Math.abs(plain.end - TUNE.walkSpeed) < 1.0,
+      `roll's last frame was ${plain.end.toFixed(2)} m/s, not the walkSpeed ${TUNE.walkSpeed} its ` +
+      'decay lands on — the k-ramp in Roll.update is not reaching 0');
+    assert.ok(Math.abs(plain.frames - TUNE.rollTime / DT) <= 3,
+      `roll ran ${plain.frames} frames, not the ${Math.round(TUNE.rollTime / DT)} TUNE.rollTime asks for`);
+    /* With the stick held hard the other way, `enter` must take the STICK, not the travel — the
+       override is what makes a roll a dodge rather than a commitment. The camera in `makeSim` is
+       the default one, looking down −Z, so `move.y = -1` is a wish of +Z against a −Z run. */
+    const steered = rollFrom(Math.PI, 0, -1);        // travelling -z, stick asks for +z
+    assert.ok(steered, 'roll would not engage for the steered probe');
+    const steer = steered.d.clone().normalize().dot(travel);
+    console.log(`[roll] stick reversed: ${steer.toFixed(3)} to the old heading (wishMag override at 0.4)`);
+    assert.ok(steer < 0, `a full-stick reversal still rolled at ${steer.toFixed(3)} along the OLD heading — ` +
+      'Moveset.js:110\'s wishDir override is not taking');
+  }
+  /* ---- bounce: the two refreshes nothing has ever checked ---- */
+  {
+    /* OPEN AIR, and the spent wall is a synthetic record rather than a real face. The first
+       build put him beside the census's stub wall so there would be something to un-spend, and
+       `WallRun` took him on the same frame the bounce resolved: the arm reported `state wallRun`
+       and `wall spent true -> true`, both of which are true statements about a wall run. The
+       wall bookkeeping is pure — `markWall`/`wallSpent` only touch `lastWallRec`
+       (`Controller.js:936`) — so the refresh can be tested without a wall in the world at all,
+       and then nothing is competing for the frame. */
+    const { engine, c } = await makeSim();
+    const FACE = { id: 'synthetic-face' };
+    hardReset(engine, c, V(0, 12, 0));
+    c.grounded = false;
+    c.velocity.set(0, 2, 0);
+    c.airJumps = 0;                                   // spend the double jump…
+    c.markWall(FACE, 0, 1);                           // …and the wall
+    const spentWall = c.wallSpent(FACE, 0, 1);
+    const vy0 = c.velocity.y;
+    c.bounce();
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+    c.update(DT, 0);
+    const freshWall = !c.wallSpent(FACE, 0, 1);
+    console.log(`[bounce] state ${c.stateName}, vy ${vy0.toFixed(2)} -> ${c.velocity.y.toFixed(2)} ` +
+                `(jumpV0 ${TUNE.jumpV0} × bounceUp ${TUNE.bounceUp} = ${(TUNE.jumpV0 * TUNE.bounceUp).toFixed(2)}, ` +
+                `less one frame of gravity), airJumps ${c.airJumps}, wall spent ${spentWall} -> ${!freshWall}`);
+    assert.equal(c.stateName, 'bounce', `bounce() left Sly in ${c.stateName}`);
+    assert.ok(c.velocity.y > vy0, 'bounce did not launch him upward at all');
+    assert.ok(Math.abs(c.velocity.y - TUNE.jumpV0 * TUNE.bounceUp) < 1.2,
+      `bounce launched at ${c.velocity.y.toFixed(2)} m/s, not the jumpV0 × bounceUp ` +
+      `${(TUNE.jumpV0 * TUNE.bounceUp).toFixed(2)} its own line claims`);
+    assert.ok(spentWall, 'the probe failed to spend the wall, so the refresh below proves nothing');
+    assert.equal(c.airJumps, 1, 'bounce did not refresh the double jump — "chains read as skill" is false');
+    assert.ok(freshWall, 'bounce did not free the wall — the second half of its own comment is false');
+  }
 });
