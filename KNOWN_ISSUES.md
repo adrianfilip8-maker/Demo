@@ -29453,3 +29453,106 @@ Three sessions of instrument errors keep landing on the same sentence, and this 
 form of it: *a harness missing a module returns plausible numbers.* The specific addition here is
 that **module boundaries in MANIFEST are not the same as construction boundaries in the code**, so
 "I booted the modules I need" is not a statement a harness author can check from MANIFEST alone.
+
+## §394 — The arm nobody could score turned out to be the thing that scored the instrument
+
+Round 13 of the FX lane, landed as `a63475c`. Commissioned as a control for task #27's listening
+protocol; delivered a control, and on the way invalidated three arms that had been green for two
+rounds on a signal that was not the one they named.
+
+### §394.1 The B arm's first result was `0.00e+0`, and that is why it was worth building
+
+The B render is the shipped session with **one field different**: every contact's `material` forced
+to `stone`, substituted on the event bus in flight rather than by editing the script, so the beats,
+the timeline and the seed are identical *by construction* rather than by care. A and B demonstrably
+play different recipes — `step_metal` and `step_wood` fire in A and not in B.
+
+They rendered **bit-identical**. `mean |A−B| = 0.00e+0`.
+
+The cause is the reclamation artefact, third instance:
+
+```
+Audio.js:884    if (v.active && now >= v.end) this._release(v);
+Audio.js:997    try { s.stop(); } catch {}
+webaudio.mjs:437   stop(t) { this._stop = t; }
+webaudio.mjs:446   const i1 = Math.min(len, this._stop === Infinity ? len : Math.round(this._stop * sr));
+```
+
+`stop()` with no argument stores `_stop = undefined`; `Math.round(undefined * sr)` is `NaN`;
+`Math.min(len, NaN)` is `NaN`; the render loop `for (i = i0; i < i1; i++)` never executes. **The
+source is erased from the whole render rather than truncated at the stop.**
+
+So a nine-second session was rendering its loops and its score and **not one of its one-shot cues** —
+every one of them was reclaimed before `render()` was called. The fingerprint, the per-beat rms
+table and the `enemyBounce` bar had all been measuring the wind and brazier beds. **Three of ten
+arms were green on the wrong signal, in the file whose entire purpose is catching exactly that,
+written by the lane that had already found the same bug once in `renderContact`.**
+
+After the fix, session rms **0.0596 → 0.0971**, and the per-beat table has structure for the first
+time: jump 0.118, guard-spots 0.205, coin 0.138 against a ~0.07 bed.
+
+The lane's own reading of it, which is the entry worth keeping:
+
+> *"I was wrong to decline it, and wrong for a reason worth writing down: I judged its value by
+> whether its RESULT could be read, not by whether its CONSTRUCTION was a test of everything
+> upstream of it."*
+
+**That generalises past audio.** An A/B whose verdict needs a human is not therefore unscoreable —
+building the B arm exercises every stage the A arm depends on, and a discrepancy between two runs
+that should differ is a machine-readable result even when neither run's *quality* is. This project
+has deferred at least one other comparison on the same reasoning.
+
+### §394.2 The comparability check, which was a live risk and not a formality
+
+`step_*` recipes carry `max: 3` **per name**. In A the contacts spread across four recipes; in B
+they all pile onto `step_stone`, so B could plausibly have started rejecting plays A accepted — and
+then B would have been quieter for a reason with nothing to do with material, and the comparison
+would have been void without saying so.
+
+```
+A: 24 plays accepted, 0 rejected · B: 24 accepted, 0 rejected
+recipes only in A: step_metal, step_wood
+mean |A−B| 2.05e-2 over 9.0s
+```
+
+Measured, with the arm carrying the instruction to ship A alone if it ever stops holding. **A
+control arm needs its own control.**
+
+### §394.3 CORRECTION IN ADVANCE: the override patches the wrong layer, and the shim is what is wrong
+
+The lane fixed this by overriding `Audio._release` from the harness, and flagged the fix as *argued
+rather than proved*. Chasing it to source, the argument is better than the lane claimed and the
+patch is in the wrong place.
+
+**The Web Audio spec's `stop()` with no argument means "stop at `currentTime`", not "erase".** The
+shim's `stop(t) { this._stop = t; }` at `webaudio.mjs:376` and `:437` is missing the spec default.
+`Audio._release` is doing the correct thing; the mock is not. Overriding shipped code to
+accommodate a bug in the harness's own mock is the wrong direction, and it leaves a permanent
+caveat on every number the session arms produce.
+
+The fix belongs at `stop(t = this.context.currentTime)`, after which the `_release` override should
+be deleted outright. Commissioned as round 14, with the blast radius as the interesting part:
+`webaudio.mjs` is shared, so **any arm whose number moves when `stop()` starts truncating was
+measuring the bug** — and those must be named rather than quietly re-baselined.
+
+### §394.4 Two mechanisms exercised for the first time, and a script that measured itself
+
+```
+guards heard at x = 6, 10, 14, 18   (earshot 34 m, budget 4 voices)
+```
+
+Exactly the nearest four: the guard at 22 m is inside earshot and dropped by the `guardVoices` budget,
+the one at 54 m by the earshot cull. Neither had been exercised by anything.
+
+The first version had all six guards at 2 m/s and **one** was audible. Six guards at an identical
+pace cross `TUNE.guardStride` on the same frame, and `guard_step`'s `max: 4` rejects the
+simultaneous ones — so **a lockstep script measures the per-name concurrency cap and reports it as
+the earshot budget.** Staggering the speeds makes the cull and the budget the things under test.
+
+Worth keeping as a property rather than a bug: **synchronised patrols mask each other's footsteps.**
+Real patrols are not synchronised, but a future formation that marches in step will sound like one
+guard.
+
+And the ladder's *played-but-inaudible* hole is closed with isolated per-rung renders — suspicious
+0.084, searching 0.064, chase 0.170. The ledger arm closed "the window was loud"; this closes "the
+cue reached a voice that makes no sound". Both halves now have a bar.
