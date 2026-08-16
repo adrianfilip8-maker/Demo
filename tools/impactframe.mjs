@@ -68,6 +68,7 @@ import { TUNE as FX_TUNE } from '../src/fx/Particles.js';
 import { RING_R_CROP, RING_R_DECLARED, ringPlaneY, RING_PLANE_LIFT, summary as ringSummary }
   from './ringextent.mjs';
 import { writeFileSync, mkdirSync } from 'node:fs';
+import { treeHash } from './_srctree.mjs';
 import {
   W, H, provenance, camFor, project, plateOf, discOf, margins, clear, assertOccluded,
   assertVisible, groundColumn,
@@ -229,6 +230,31 @@ function assertExtents() {
       + ` · measured ${m.x1 - m.x0} x ${m.y1 - m.y0} px, rows ${m.y0}..${m.y1}`
       + ` · ${verdict}`);
   }
+  /* ── AND THE MEASUREMENT DESCRIBES THE TREE IT WAS CAPTURED ON ──────────────────────────
+     `assertExtents` above proves each constant reproduces its own pixels. It cannot prove those
+     pixels are still what the renderer draws — it compares a number to a recorded measurement,
+     and both can be right about a tree that no longer exists.
+
+     This is not hypothetical. The `count` fix (`R.int` for `Math.round`) changes how many
+     per-particle values each burst draws, so **every emitter staged after a shrunk one
+     re-draws** — `dive_dust` in this very shot first. The dust plate was measured before that
+     landed.
+
+     Checked with the project's own `treeHash()`, the same function `critic.mjs` stamps captures
+     with, rather than a git sha: what invalidates a capture is the source it rendered from, and
+     a commit can touch `src/` without changing what any tool sees, or change it without a
+     commit. Whole-`src` scope is deliberate. It is noisier than scoping to `src/fx/`, and it is
+     right: this frame's pixels depend on the character, the level, the lighting and the post
+     chain as much as on the emitter. */
+  try {
+    const now = treeHash();
+    const at = REF.src.match(/src tree ([0-9a-f]+)/)?.[1];
+    lines.push(now === at
+      ? `   src tree ${now} — UNCHANGED since the capture, so the measurement still describes this renderer`
+      : `   *** src tree is ${now}, the capture was taken at ${at} — the extents above reproduce `
+        + 'their recorded pixels, but those pixels may no longer be what the renderer draws. '
+        + 'Re-capture before treating any margin as tight. ***');
+  } catch (e) { lines.push(`   (could not hash the src tree: ${e.message})`); }
   if (bad) lines.push('   *** an extent above does not reproduce the pixels it was derived from;'
     + ' every margin this tool prints is a claim about the wrong subject ***');
   return lines.join('\n');
@@ -238,6 +264,25 @@ console.log(assertExtents());
 /* The impact point does not move across a sweep, so its ground column is one query answered
    hundreds of thousands of times. Keyed on the point, not hoisted into a bare variable, so the
    candidate set — which may stage elsewhere — still gets its own answer. */
+/**
+ * `clear()` memoised on the only two things it reads: the lens position and the target point.
+ *
+ * It does not read the projection at all — no fov, no aspect, no roll — so the azimuth sweep was
+ * firing the identical ray six times, once per lens. Provably safe rather than approximately:
+ * same inputs, same output, and the key is the full set of inputs.
+ *
+ * This is the expensive half of the search by a wide margin. Each call builds a Box3 around the
+ * segment and walks every architecture triangle it contains.
+ */
+const _clearCache = new Map();
+function clearAt(cam, p) {
+  const o = cam.position;
+  const k = `${o.x.toFixed(4)},${o.y.toFixed(4)},${o.z.toFixed(4)}|${p.x.toFixed(4)},${p.y.toFixed(4)},${p.z.toFixed(4)}`;
+  let v = _clearCache.get(k);
+  if (v === undefined) { v = clear(cam, p); _clearCache.set(k, v); }
+  return v;
+}
+
 const _colCache = new Map();
 function columnAt(x, z, ceiling) {
   const k = `${x},${z}`;
@@ -310,8 +355,8 @@ function score(name, c, { quiet = false, stopEarly = false, skipClear = false } 
   if (stopEarly && faults.length) return { faults, rank: 0, flat, slyH };
   if (skipClear) return { faults, rank: flat * slyH, flat, slyH };
 
-  const slyClear = clear(cam, { x: px, y: py + 0.5, z: pz });
-  const ringClear = clear(cam, { x: px, y: ringPlaneY(py), z: pz });
+  const slyClear = clearAt(cam, { x: px, y: py + 0.5, z: pz });
+  const ringClear = clearAt(cam, { x: px, y: ringPlaneY(py), z: pz });
   if (!slyClear) faults.push('SLY OCCLUDED by architecture');
   if (!ringClear) faults.push('RING OCCLUDED by architecture');
 
@@ -461,6 +506,10 @@ if (args.includes('--search')) {
     for (let hh = 1.0; hh <= 12; hh += 0.25) {
       for (const fov of [26, 30, 34, 38, 44, 50]) {
         geomCells++;
+        if (geomCells % 500 === 0) {
+          console.log(`   … ${geomCells} cells · ${geomPass} geometric survivors · ${azTested} occlusion tests`
+            + ` · ${survivors.length} clean · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+        }
         const base = {
           pos: [AT[0] + d, hh, AT[2]], target: [AT[0], 0.6, AT[2]], fov, tod: 0.78, player: P,
         };
