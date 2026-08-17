@@ -39084,3 +39084,101 @@ The full 853-arm suite is **not stably measurable this round**: the world lane i
 runs disagree with each other — `R2` red then green, `P-A1` green then red, with no change from me
 in between. Reported rather than averaged, because a suite result taken while its inputs are being
 rewritten is not a measurement.
+
+---
+
+## §508 — The lintel chain is a FAILED BEAT, and the margin that explains it is 0.21 m/s
+
+Reported as a failed beat per instruction. §449's leads are **still not re-derived**, and this says
+precisely why, with the mechanism measured rather than guessed.
+
+### §508.1 The drive does not chain, across twelve release windows
+
+Driven from the kiosk lintel (2.2, 9.0, 8.4) — jump off, E-grab ring 1, pump toward ring 2, bail —
+with the release window swept at 16 / 24 / 32 / 40 / 55 / 70 / 90 / 110 / 140 / 170 / 200 / 240
+frames, switch off and on:
+
+```
+  distinct authored rings grabbed:  1 of 4        (ring 1 only, at frame 3)
+  telegraph emits, switch OFF:      1             lead to the ring-1 grab: 3 frames, 50 ms
+  telegraph emits, switch ON:       4             same 3-frame lead on ring 1
+```
+
+That is now **five drivers across two lanes** that cannot chain this beat, against one uncommitted
+apparatus that could.
+
+### §508.2 The margin, measured: 6.21 available against 6.00 required
+
+T8 established that ring1 → ring2 chains from **every arrival speed 6 to 18 m/s**. So the question
+is what the authored entry actually supplies. Measured on the lintel E-grab, pumping toward ring 2
+throughout:
+
+```
+  swing speed after the grab   f+0 3.38   f+30 5.62   f+60 2.67   f+90 4.56   f+120 2.10
+                               f+150 4.46  f+180 1.42  f+210 3.39  f+240 1.23  f+270 3.28
+  PEAK over the whole hang     6.21 m/s
+  T8's lowest chaining entry   6.00 m/s
+```
+
+**The margin is 0.21 m/s — about half a gravity tick.** The authored entry supplies barely more
+than the minimum the next ring requires, and only at the peak of the first swing.
+
+### §508.3 And pumping does not build the swing — it loses
+
+The sample series above is the finding. The peak is **at the start** and every subsequent
+oscillation is lower: 5.62 → 4.56 → 4.46 → 3.39 → 3.28 → 2.41 → 2.16. `hookDamp` 0.30 is removing
+energy faster than `hookPump` 7.0 adds it at this amplitude, with the stick held toward the swing
+throughout.
+
+So a player cannot wind up. **The only chance at ring 2 is a narrow release window on the FIRST
+swing, at a speed 0.21 m/s above the minimum**, and after that the swing decays away from the
+requirement rather than toward it. That is consistent with five drivers missing it, and it means the
+beat is not merely hard to drive — it is hard, full stop.
+
+### §508.4 What this is, and whose
+
+**A difficulty/route finding, for the world lane**, in the same class as §444.3 and §500's ring
+spacing: the numbers are all individually defensible and their composition leaves a 0.21 m/s window
+on the critical path to the vault. Levers, priced, none pulled:
+
+- **ring spacing** — ring1→ring2 is 8.16 m, the widest of the three legs (7.46, 7.14). Closing it is
+  the level's own lever and costs nothing else.
+- **`hookDamp` 0.30 / `hookPump` 7.0** — the pump/damp balance decides whether a player can wind up
+  at all. Changing either alters every swing in the game.
+- **`hookAuto` 2.9** — widening the catch is the crudest fix and would make every fly-through
+  grabbier.
+
+Not touched, for §506.4's reason: none of them is broken, and one chain is not a mandate to retune
+every hook in the game.
+
+### §508.5 The leads, and what can and cannot be said about the switch
+
+**Cannot be said:** the per-ring chain leads, switch on or off. They need the chain, the chain does
+not drive, and §449's 34 / 3 / 7 / 7 / 5 / 1 therefore remains **the one published figure in this
+project that no committed apparatus can re-derive.** It should stay marked provisional.
+
+**Can be said, and it is not nothing:**
+
+- **The clutter case is made.** 3 emits across 420 frames of continuous attachment, all naming
+  hooks, one of them the next chain ring at 8.99 m while still hanging on the previous one (§507.3).
+- **The one lead this drive did measure** is on the E-grab into ring 1: **3 frames, 50 ms**, and it
+  is the *same* with the switch on and off — because that grab happens from the ground, where the
+  gate was never closed. So the switch does not regress the beat §441 originally fixed.
+- **The qualitative shape is settled even without the number.** With the switch on, the next ring is
+  named while the player is still attached to the previous one — the lead becomes *the remaining
+  hang time plus the flight*, which is categorically larger than the gated version's 1–7 frames
+  rather than incrementally larger.
+
+**Recommendation: leave `telegraphNextHold` OFF and ship it as the hardware item it already is
+(sheet item 8).** The clutter bound argues for it, the lead argument is qualitative rather than
+measured, and the question the sheet asks — does a mark while you are still on a ring read as help
+or as noise — is exactly the one a person answers in a second and a driver cannot answer at all.
+Shipping it on against an unmeasured lead would be choosing on the half of the evidence that a
+machine happened to be able to produce.
+
+### §508.6 Suite
+
+The coordinator ran the full suite on a clean tree at `c373f19`: **853/853, exit 0.** That is the
+authoritative green. The instability recorded in §507.6 belongs to the interval after it, while
+`Collision.js`, `EgyptLevel.js`, `Terrain.js` and `tombdoor.test.mjs` were being rewritten — and it
+is now resolved rather than outstanding.
