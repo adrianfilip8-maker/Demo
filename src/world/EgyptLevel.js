@@ -13,13 +13,30 @@ import * as K from './Kit.js';
  *     visible from here is climbable.
  *  1. WALK north to the terrace south stair at (0, 0, 19.6). Climb: paving 0 -> stage 1
  *     (y 2.0) -> stage 2 (y 5.2). Both `ground`.
- *  2. DOUBLE JUMP (2.5 + 1.9 = 4.4 m > 3.8 m) from stage 2 onto the obelisk kiosk lintel
- *     ring, top y = 9.0 — the `ledge` Sly perches on in the `hero` shot at (2.2, 9, 8.4).
+ *  2. DOUBLE JUMP (3.88 m MEASURED > 3.8 m — margin 8 cm, see below) from stage 2 onto the
+ *     obelisk kiosk lintel ring, top y = 9.0 — the `ledge` Sly perches on in the `hero` shot
+ *     at (2.2, 9, 8.4).
  *     Alternative: POLE CLIMB the obelisk (0, ·, 11) all 22 m and SPIRE LAND on its
  *     pyramidion tip at y = 22, then drop to the kiosk.
+ *
+ *     THE DOUBLE JUMP IS 3.88 m, NOT 4.4 m, AND EVERY BEAT BELOW SPENDS FROM THAT ONE BUDGET.
+ *     This line used to read "2.5 + 1.9 = 4.4 m", which is the sum of the two authored apex
+ *     gains and is not a height anybody can reach: apex-hang decay and the frame quantum eat
+ *     the difference. Swept over hold duration on the shipped controller through
+ *     `_moveset.mjs`'s realWorld(), the delivered maximum is **3.88 m**. The overstatement is
+ *     0.52 m — larger than either margin it is quoted to justify — and it is the first number a
+ *     tuner reads before touching `jumpV0`, `doubleJumpV0` or `applyJumpCut`. Corrected here
+ *     rather than in the ledger because a route document that asserts headroom nobody has will
+ *     license the next author to tighten a beat already at 8 cm (§481).
  *  3. CANE HOOK the ring at (4.2, 14.8, 4.5) — 5.8 m above the lintel, inside jump+hook
- *     reach — and SWING the chain north-west: rings at y 14.8 -> 13.2 across z 4.5 -> -13.
- *     Release onto the hall front cornice ledge at (-9.5, 13.6, -15.2).
+ *     reach — and SWING the chain north-west: rings at y 14.8 -> 14.0 across z 4.5 -> -13.
+ *     Release onto the hall front cornice ledge at (-9.5, 15.29, -16.0). TWO corrections here:
+ *     it used to read (-9.5, 13.6, -15.2), which §369.7 flagged as stale — a downward probe
+ *     there falls the full 15 m to paving. And the cornice is only STANDABLE where the aisle
+ *     roof does not overhang it: the roof slab runs z -19.13..-16.73 with its underside at
+ *     y 16.15, leaving 0.79 m over a cornice topping at 15.36 — less than `CAPSULE_H` 1.80, so
+ *     the band z -18.2..-16.73 is a soffit, not a ledge. The nearest cell that takes a capsule
+ *     with full headroom is (-9.5, 15.29, -16.0), 3.00 m from the last ring (§482).
  *  4. WALK the hall front cornice west to the west aisle roof (y 13.5), or drop through the
  *     hall's great south doorway (x ±4, y 0..9) to the hypostyle floor.
  *  5. INSIDE THE HALL: pole climb any of the 12 papyrus columns; the aisle architrave
@@ -959,13 +976,16 @@ function courtyard(A) {
    *
    * Two things fall out of that and both belong to whoever takes this next:
    *
-   *  · §8.1's *"DOUBLE JUMP (2.5 + 1.9 = 4.4 m > 3.8 m)"* is optimistic. The delivered maximum
+   *  · §8.1's *"DOUBLE JUMP (2.5 + 1.9 = 4.4 m > 3.8 m)"* was optimistic. The delivered maximum
    *    is 3.88 m, swept over hold duration on `realWorld()`. The consequence is not this stair —
    *    it is step 2, where the hop from stage 2 (y 5.2) to the kiosk lintel (y 9.0) needs 3.8 m
    *    and clears it by **8 cm rather than 60**. Anyone tuning `jumpV0`, `doubleJumpV0` or
-   *    `applyJumpCut` down by more than that breaks the authored route, and the document they
-   *    would check first overstates the headroom by half a metre. Recorded, not acted on: the
-   *    route works today.
+   *    `applyJumpCut` down by more than that breaks the authored route.
+   *    **The route header at the top of this file now states 3.88 m** — the correction was
+   *    made rather than recorded (§481), because it turned out step 2 is not the only beat
+   *    drawing on that budget: step 3's release onto the hall front cornice needed 3.69 m of
+   *    the same 3.88, a 19 cm margin off a swing. Two consecutive beats inside 20 cm, both
+   *    priced against a number half a metre too generous.
    *  · The terraces had no side collision at all — you could walk through the building.
    *    **Fixed**; the note on stage 1's `groundProxy` above carries the measurements, and the
    *    reason stage 1 *looked* solid when it was not.
@@ -1691,10 +1711,34 @@ function courtyardTraversal(A) {
     poleProxy(A, mx, mz, y0, my, 0.4, { material: 'metal' });
   }
 
-  /* ---- Main hook chain: z 27 -> -13, y 14.8 -> 13.2, swingable end to end. ---- */
+  /* ---- Main hook chain: z 27 -> -13, y 14.9 -> 14.0, swingable end to end. ----
+   *
+   * ── The last ring was raised 13.2 -> 14.0, and NOT the cornice (§482) ─────────────────────
+   * §8.1 step 3 releases from this chain's last ring onto the hall front cornice. Measured, the
+   * cornice's standable top is y 15.29 and the release hangs at ring − `hangDrop`, so the beat
+   * needed a **3.69 m** gain against a delivered maximum double jump of **3.88 m** — a 19 cm
+   * margin, off a swing whose launch velocity depends on release phase, with a 14 m fall and a
+   * hard landing for a miss. That is the tighter of the route's two thin beats even though it is
+   * the larger number (step 2's 8 cm is a standing hop the player can line up and retry).
+   *
+   * The repair first proposed was to lower the cornice to 14.6. **That was priced without reading
+   * what produces it and it is wrong**: `cTop = WALL_H + ext.height` = 13.0 + 2.36, so the ledge
+   * is derived from the drawn exterior cornice, and the four proxies at that height ring the
+   * ENTIRE hall — x ±24.2, z −51.8…−16.2. Lowering the number alone desyncs the collider from the
+   * art, which is the exact defect the terrace stair and the descent landing already are;
+   * lowering it honestly means lowering the hall's 13 m wall head. §435.4 in a new costume: a
+   * recommendation written from a measured *height* without reading the *coupling*.
+   *
+   * Raising the last ring buys the same margin for one number. `hookLine` is the single source
+   * for the drawn cable, the rings, the hanging chains, `hookPoint` and `swingTarget`, so art,
+   * collider and affordance all follow it and cannot drift. The gain needed becomes **2.89 m**
+   * against 3.88 — a **99 cm margin**, well past one double-jump quantum. The chain still reads
+   * as a descent (14.9 → 14.0) and the cable's north anchor at (−13.4, 13.85, −15.0) still sits
+   * below the ring it leaves.
+   */
   const hookLine = [
     [20.0, 14.9, 27.0], [14.0, 14.9, 20.0], [8.5, 14.9, 12.0],
-    [4.2, 14.8, 4.5], [1.0, 14.5, -3.0], [-4.0, 13.9, -8.5], [-9.5, 13.2, -13.0],
+    [4.2, 14.8, 4.5], [1.0, 14.5, -3.0], [-4.0, 13.9, -8.5], [-9.5, 14.0, -13.0],
   ];
   const cable = new THREE.CatmullRomCurve3(
     [[20.6, 15.75, 27.5], ...hookLine.map(([x, y, z]) => [x, y + 0.85, z]), [-13.4, 13.85, -15.0]]
@@ -1710,7 +1754,7 @@ function courtyardTraversal(A) {
     mats.push(m);
     hookPoint(A, x, y, z);
     /* The set piece magnetism exists for. Seven 0.62 m rings strung 7.14–9.71 m apart at
-       y 13.2–14.9 over paving at y 0: a missed catch is an 11–13 m fall and the whole ascent
+       y 14.0–14.9 over paving at y 0: a missed catch is an 11–13 m fall and the whole ascent
        again. §8.1's route enters this chain at ring 3 (the E-grab off the kiosk lintel, which
        `hookGrab` 9.0 already covers) and swings north-west; ring 0's own entry is the east
        mast (20.6, ·, 27.5), a `pole` from y 9.0 to 15.9 standing 0.78 m off the ring. Every
@@ -2374,18 +2418,70 @@ function tomb(A) {
   const F = t.floor, C = t.ceil, zc = (t.z0 + t.z1) / 2;
 
   /* ---- Descent: landing, then a dog-leg of two flights, 0 -> -12. ---- */
-  groundProxy(A, -3.6, 3.6, 0, -58.6, -55.4);
+  /**
+   * The descent landing, trimmed OUT of the flight's own z band (§482).
+   *
+   * It used to read `groundProxy(A, -3.6, 3.6, 0, -58.6, -55.4)` — a flat-topped box at y 0
+   * across x ±3.6 — while flight A's ramp proxy runs its top face from (x 2.762, y −0.442) to
+   * (x −5.852, y −5.314) through the same space. **The landing was a lid over 6.36 m of its own
+   * staircase**, which is precisely what `groundProxy`'s docblock warns about in the voice of the
+   * terrace stair: a box for a staircase, one floor down. Measured before the trim, walking west
+   * the ground read y 0.000 at x −3.5 and **−4.216 at x −4.0** — the first step of the tomb stair
+   * was a 3.9 m fall, driven at 17.20 m/s and a hard landing.
+   *
+   * The flight occupies z −57.2…−54.0 (`fA` is 3.2 wide at z −55.6). Pulling the landing back to
+   * z −57.25 removes the overlap without moving any art and without narrowing the platform the
+   * player arrives on: the gate approach comes from the south at |x| ≤ 3, and at x 3 the stair
+   * head sits 0.35 m below y 0 — inside `stepHeight` 0.42, so it is a kerb rather than a drop.
+   */
+  groundProxy(A, -3.6, 3.6, 0, -58.6, -57.25);
   vol(A, 'tomb', 'sandstone_block', -13.6, 4.2, -0.9, 0.02, -59.4, -54.0, { jitter: 0.03 });
+  /**
+   * ── Both flights: the proxy is now DERIVED from the drawn run, not eyeballed near it (§482) ──
+   *
+   * Every number below comes from the flight's own `steps × run` and `steps × rise`, so the
+   * collider cannot drift from the masonry. Three defects are closed here and none of them was
+   * ever reachable to notice, because TERRAIN's proxy roofed the whole stairwell until §480.
+   *
+   *  1. FLIGHT A's PROXY WAS SHORT AND LOW. The art runs 14 × 0.69 = 9.66 m for 14 × 0.4 = 5.6 m,
+   *     i.e. from (3.6, 0) to (−6.06, −5.6) at 30.10°. The proxy was a 9.9-long box at
+   *     `atan2(5.6, 9.9)` = 29.5°, whose top face ran (2.762, −0.442) → (−5.852, −5.314): its head
+   *     sat **0.44 m below the top tread and 0.84 m short of it**. A box length is not a run —
+   *     the run is the box's horizontal PROJECTION, so the length has to be `hypot(run, rise)`.
+   *  2. FLIGHT B's ART AND ITS PROXY RAN IN OPPOSITE DIRECTIONS. `stairFlight` climbs +X from its
+   *     origin and `fB` was placed with **no `ry`**, so the drawn flight ascended EAST from
+   *     (−9.9, −12.0); its proxy carries `rz: -atan2(...)`, which descends east. Drawn stair and
+   *     collider were mirror images of each other. This is `flight 1`'s defect at the terrace,
+   *     one floor down and in the other axis, and the route text — *"flight B drops east"* — sides
+   *     with the proxy, so the ART is the half that was wrong.
+   *  3. FLIGHT A'S FOOT REACHED NOTHING. Its foot is (−6.06, −5.6) and the mid landing starts at
+   *     x −9.6: **3.54 m of open air at the same height**, which a walker cannot cross. The bridge
+   *     below closes it, and is deliberately kept out of flight B's z band (−59.5…−56.3) so it
+   *     does not become defect 1 again in a new place.
+   */
+  const A_RUN = 14 * 0.69, A_RISE = 14 * 0.4, A_ANG = Math.atan2(A_RISE, A_RUN);
   const fA = K.stairFlight({ steps: 14, rise: 0.4, run: 0.69, width: 3.2, rng: R, cheek: 0.9 });
   A.add('tomb', 'sandstone_worn', K.place(fA, { x: 3.6, y: 0, z: -55.6, ry: Math.PI }));
-  /* stairFlight climbs +X from its origin, so mirror it: descend west from x 3.6 to -6.1. */
-  A.proxy(new THREE.BoxGeometry(9.9, 1.2, 3.2), { tag: 'ground', material: 'stone' },
-    { x: -1.25, y: -2.8 - 0.6, z: -55.6, rz: Math.atan2(5.6, 9.9) });
+  /* stairFlight climbs +X from its origin, so mirror it: descend west from x 3.6 to -6.06.
+     Box centre = top-face midpoint minus the half-thickness normal, so the TOP lands on the art. */
+  A.proxy(new THREE.BoxGeometry(Math.hypot(A_RUN, A_RISE), 1.2, 3.2), { tag: 'ground', material: 'stone' },
+    { x: (3.6 - A_RUN / 2) + 0.6 * Math.sin(A_ANG), y: -A_RISE / 2 - 0.6 * Math.cos(A_ANG), z: -55.6, rz: A_ANG });
+
+  const B_RUN = 16 * 0.63, B_RISE = 16 * 0.4, B_ANG = Math.atan2(B_RISE, B_RUN);
+  /* Flight B's HIGH end is anchored to the mid landing it has to meet — x -9.9 is inside the
+     landing's x[-13.6, -9.6] — and everything else is derived from it, so the flight cannot drift
+     off the platform it starts on. Mirrored (`ry: PI`) so the drawn flight descends EAST like its
+     proxy and like the route text; it climbs -X from its origin at the low end. */
+  const B_TOP_X = -9.9;
   const fB = K.stairFlight({ steps: 16, rise: 0.4, run: 0.63, width: 3.2, rng: R, cheek: 0.9 });
-  A.add('tomb', 'sandstone_worn', K.place(fB, { x: -9.9, y: -12.0, z: -57.9 }));
-  A.proxy(new THREE.BoxGeometry(10.4, 1.2, 3.2), { tag: 'ground', material: 'stone' },
-    { x: -4.7, y: -8.8 - 0.6, z: -57.9, rz: -Math.atan2(6.4, 10.1) });
+  A.add('tomb', 'sandstone_worn', K.place(fB, { x: B_TOP_X + B_RUN, y: -12.0, z: -57.9, ry: Math.PI }));
+  A.proxy(new THREE.BoxGeometry(Math.hypot(B_RUN, B_RISE), 1.2, 3.2), { tag: 'ground', material: 'stone' },
+    { x: (B_TOP_X + B_RUN / 2) + 0.6 * Math.sin(B_ANG), y: -12.0 + B_RISE / 2 - 0.6 * Math.cos(B_ANG), z: -57.9, rz: -B_ANG });
+
   groundProxy(A, -13.6, -9.6, -5.6, -59.4, -54.2);        // mid landing
+  /* Flight A's foot -> the mid landing: 3.54 m of open air at y -5.6, closed. Kept clear of
+     flight B's z band (-59.5..-56.3) so it cannot lid the flight below it. */
+  groundProxy(A, -9.6, -5.9, -5.6, -56.3, -54.2);
   vol(A, 'tomb', 'sandstone_block', -13.8, -9.4, -6.5, -5.6, -59.6, -54.0, { jitter: 0.03 });
   for (const sx of [-1, 1]) wallProxy(A, -14.2, 4.4, -12.4, 0.4, sx > 0 ? -54.4 : -60.0, sx > 0 ? -53.8 : -59.4);
   vol(A, 'tomb', 'mudbrick', -14.2, 4.4, -12.4, 0.4, -54.4, -53.6, { jitter: 0.04 });
@@ -2640,7 +2736,7 @@ export function buildEgyptLevel(A) {
 
   A.api.route = [
     ['spawn', 0, 0, 30], ['terrace-1', 0, 2, 19], ['terrace-2', 0, 5.2, 14],
-    ['kiosk-lintel', 2.2, 9, 8.4], ['hook-chain', 4.2, 14.8, 4.5], ['hall-front-cornice', -9.5, 13.6, -15.2],
+    ['kiosk-lintel', 2.2, 9, 8.4], ['hook-chain', 4.2, 14.8, 4.5], ['hall-front-cornice', -9.5, 15.29, -16.0],
     ['hall-floor', 0, 0, -20], ['inner-gate', 0, 0, -52], ['descent-landing', 0, 0, -57],
     ['vault-floor', 0.4, -12, -57.6], ['sarcophagus', 0, -12, -72],
   ];

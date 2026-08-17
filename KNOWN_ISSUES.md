@@ -38163,3 +38163,117 @@ danger is that **staging and committing are separate**, and every rule that leav
 rule that will fail at a lower rate rather than not fail. §438's tell applies to process advice as well
 as to code: *when successive fixes each reduce a failure without removing it, the model is wrong rather
 than the tuning.*
+
+---
+
+## §482 — The route contract corrected, step 3's margin bought for one number, and three coupled defects in the tomb stair
+
+Three jobs. The first two are closed and verified. The third is substantially repaired and **not
+closed** — the walk from the courtyard to the vault floor still does not complete, and the reason is
+now a fourth defect in a fourth module.
+
+### §482.1 §8.1's double jump is 3.88 m, corrected in the contract rather than the ledger
+
+`EgyptLevel.js`'s route header said *"DOUBLE JUMP (2.5 + 1.9 = 4.4 m > 3.8 m)"*. That sum is the two
+authored apex gains and is not a height anybody can reach — apex-hang decay and the frame quantum eat
+the difference, and the delivered maximum swept over hold duration is **3.88 m**. The overstatement is
+**0.52 m, larger than either margin it was quoted to justify.**
+
+Corrected at the source, with the measurement and its method inline, because a route document that
+asserts headroom nobody has is what licenses the next author to tighten a beat already at 8 cm. The
+downstream note at the terrace stair now points at the header instead of repeating the complaint.
+
+### §482.2 Step 3's margin: 0.19 m → 0.97 m, and the authorised repair was the wrong one
+
+The approved fix was to lower the hall front cornice from 15.29 to 14.6. **I proposed that without
+reading what produces it, and it is wrong.** `cTop = WALL_H + ext.height` = 13.0 + 2.36: the ledge is
+*derived* from the drawn exterior cornice, and the four proxies at that height **ring the entire
+hall**, x ±24.2, z −51.8…−16.2. Lowering the number alone desyncs collider from art — the exact defect
+the terrace stair and the descent landing already are — and lowering it honestly means lowering the
+hall's 13 m wall head.
+
+That is §435.4 in a new costume, and worth naming precisely because it is not the usual form: I
+measured the level rather than my picture of it, and still got it wrong, because **I measured a
+height and not a coupling.** A number read off a collider tells you where a surface is; it does not
+tell you what will move with it.
+
+Raising the chain's last ring buys the same margin for one number. `hookLine` is the single source for
+the drawn cable, the rings, the hanging chains, `hookPoint` and `swingTarget`, so art, collider and
+affordance all follow it and cannot drift:
+
+```
+  last ring  (-9.5, 13.2, -13.0) -> (-9.5, 14.0, -13.0)
+  gain needed from the hang        3.69 m -> 2.91 m        margin vs 3.88 m:  0.19 m -> 0.97 m
+  swept capsule ring -> cornice    clear, 5.00 m headroom at the stance
+```
+
+**And the route's release waypoint was wrong twice over.** It read (−9.5, 13.6, −15.2), which §369.7
+flagged as stale — a probe there falls the full 15 m to paving. My first correction, (−9.5, 15.36,
+−17.2), was also wrong and the arm caught it: the aisle roof slab runs z −19.13…−16.73 with its
+underside at **y 16.15**, leaving **0.79 m** over a cornice topping at 15.36. That is less than
+`CAPSULE_H` 1.80, so most of the cornice band is a **soffit, not a ledge**. The nearest cell that
+takes a capsule with full headroom is **(−9.5, 15.29, −16.0)**, and that is what the route now says.
+Checking a landing for headroom and not merely for a surface is the reusable half.
+
+### §482.3 The tomb stair: three coupled defects, all invisible until §480 opened the shaft
+
+None of these could be reached to notice while TERRAIN's proxy roofed the stairwell.
+
+1. **Flight A's proxy was short and low.** The art runs 14 × 0.69 = 9.66 m for 5.6 m of rise, from
+   (3.6, 0) to (−6.06, −5.6) at 30.10°. The proxy was a **9.9-long box at 29.5°** whose top face ran
+   (2.762, −0.442) → (−5.852, −5.314): its head sat **0.44 m below the top tread and 0.84 m short of
+   it**. The error is a category one — **a box length is not a run**; the run is the box's horizontal
+   *projection*, so the length must be `hypot(run, rise)` = 11.17. Both flights are now derived from
+   their own `steps × run` / `steps × rise` and cannot drift from the masonry.
+
+2. **Flight B's art and its proxy ran in opposite directions.** `stairFlight` climbs +X from its
+   origin and `fB` was placed with **no `ry`**, so the drawn flight ascended EAST from (−9.9, −12.0)
+   while its proxy — `rz: -atan2(…)` — descends east. Drawn stair and collider were mirror images of
+   each other. This is flight 1's terrace defect one floor down, and the route text (*"flight B drops
+   east"*) sides with the proxy, so the **art** was the wrong half. Mirrored, and its high end is now
+   anchored to `B_TOP_X = -9.9` — inside the mid landing's x[−13.6, −9.6] — so the flight cannot start
+   off the platform it is supposed to meet.
+
+3. **Flight A's foot reached nothing.** Foot (−6.06, −5.6), mid landing starting at x −9.6:
+   **3.54 m of open air at the same height.** Bridged, and the bridge is deliberately held to
+   z[−56.3, −54.2] — clear of flight B's band (−59.5…−56.3) — so it cannot become defect 1 again
+   somewhere new.
+
+Flood-filled from the landing at `stepHeight` 0.42 and `slopeWalkableDeg` 50, the same instrument as
+§480.3:
+
+```
+                                 before §482      after
+  standable cells                     699          709
+  walk-reachable from the landing     185          251
+  deepest walk-reachable              -0.15       -8.75
+```
+
+The stair is real now: at (−4, −56.0) the ground reads **−4.353** on flight A's ramp with its top face
+at y 0.00, and flight B descends continuously from −5.6 at x −10 to −9.5 at x −3.
+
+### §482.4 NOT CLOSED: a false floor of props stands over the descent
+
+**The walk from the courtyard to the vault floor still does not complete**, and the remaining cause is
+not the stair. Sampling the stairwell's registered ground on a 0.5 m grid:
+
+```
+  stairwell cells with ground     370
+  held up by a PROP mesh           38     at y 1.20 .. 3.06
+```
+
+`props_dark` and `props_carnelian` are registered `ground` and sit **above** the stairwell floor, from
+x −3.5 to −2.5 across z −56.5…−54.5. A driven descent walks onto them at y ≈ 0…3 and over the top of
+the shaft instead of down it — which is why the drive rides out at y 3.21 north of the tomb rather
+than arriving at −12. It is the §480 lid a third time, in a third module, at a third height, and the
+shape is the one this session keeps meeting: **a surface that is correct as scenery and load-bearing
+as collision.**
+
+That is PROPS' to fix and it is not taken here. The measurement is above; whoever takes it should
+check the whole stairwell footprint rather than the three cells named, and the acceptance test is the
+one this round could not yet write: **a walk from the courtyard to the vault floor with no teleport.**
+
+`tests/tombdoor.test.mjs` deliberately still does not assert that. Its docblock says the arms claim
+the shaft is open and not that the descent is walkable, and that remains exactly true — the honest
+state is that the door is open, the stair is built, and something is standing in the doorway.
+
