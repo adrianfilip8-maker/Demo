@@ -33136,6 +33136,44 @@ haze alone erased a 206 m river, and props alone blocked a 10 m gap in ten shots
 Nothing shipped is invalidated: the shot certificates claim *geometry*, and geometry is what they
 measure. But the gap between "clear" and "visible" has a size now, and it is not small.
 
+### §419.9 The plausible cause that would have looked like a fix
+
+The playtest measured `glide`'s framing live at **ndcY −0.532** where the test stub said **−0.330**.
+I diagnosed the gap as the thing the stub visibly lacks — no boom occlusion, no ceiling probe —
+and told the camera lane to re-price against a driven world for that reason.
+
+**The conclusion was right and the mechanism was wrong.** Replaying one recorded trajectory
+through the real BVH and through open sky gives the same `ndcY` to three decimals:
+
+```
+  route          framing    real BVH   open sky
+  desert run     idle        -0.190    -0.189
+  glide          glide       -0.534    -0.534      <- occlusion contributes ZERO
+  into masonry   wall_run    -4.542    -0.204      <- the only row where they differ
+```
+
+The stub's error was **motion, not geometry**: it held `velocity.y` at 0, so `fallLeadTime` and
+`fallPitch` never engaged. A real glide descends at −3.2 m/s and reads −0.534, which is the
+playtest's live −0.532 to three decimals.
+
+> **§419.9 — The repair suggested by the obvious cause can reproduce the right number for the
+> wrong reason, and then it is unfalsifiable.** Adding occlusion to the stub would have been real
+> work, would have been defensible in review, and **would have changed nothing** — while the lane
+> that did it would have moved on believing the instrument fixed. The number that would have
+> confirmed it (−0.534) was going to appear either way, because the actual fix (driving real
+> trajectories) was bundled into the same round.
+
+The distinguishing move was keeping the **masonry route** — the one place where real BVH and open
+sky disagree, at −4.542 against −0.204. Without it the agreement everywhere else would have been a
+statement about an instrument that cannot tell the two apart, not about occlusion being irrelevant.
+**A control that can only agree is not a control** — §418 at the level of a whole experiment rather
+than a single bar.
+
+Fourth briefing error of mine this session (§419.5, §419.7, the state-harness premise, this), and
+the first where I was right about *what* was wrong and wrong about *why*. The earlier three were
+caught by the receiving lane before spending; this one was caught **after** spending, by a lane
+that measured the mechanism instead of assuming the fix it had been handed was aimed correctly.
+
 ### §419.8 A safety argument is only about the axis you thought of
 
 §425 caches an immutable world across twenty test boots and takes one file from 127 s to 50 s. The
