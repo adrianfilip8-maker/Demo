@@ -38117,3 +38117,49 @@ Fixed forward rather than rewritten: `583c223` keeps this lane's message on the 
 content, and the real content is in the commit that follows it. Their work is intact and pushed, so
 rewriting shared history to repair a byline would cost more than saying so — §443.7's trade, made
 again for the same reason.
+
+## §462 — §460.4's check is necessary and still not sufficient: the commit is shared too
+
+Correcting advice of my own that was adopted project-wide two rounds ago, because it has just failed in
+front of me and the correction is one word long.
+
+§460.4 said: *explicit paths are necessary and not sufficient; the check that works is
+`git diff --cached --stat` between staging and committing, treating any unexpected file as a stop.*
+
+**It fired correctly and then did not save the commit.** Staging item 8 of the hardware sheet, the check
+caught a sibling lane's `KNOWN_ISSUES.md` and `tests/wedge.test.mjs` sitting in the shared index; both
+were unstaged with `git restore --staged`, the index was re-verified as one file, and the commit was
+issued. Between those two commands the wedge lane committed. **My change went out inside `583c223`
+under its message** — the eleventh collision this session, and the second in that direction.
+
+Nothing was lost and item 8 is intact at 46 lines. The attribution is wrong again.
+
+**What §460.4 got wrong.** It treats the index as the shared thing. The index *is* shared — but so is
+the commit, and they are two operations with a gap between them. The check protects against
+**committing someone else's work**; it does nothing about **someone else committing yours**, because in
+that window your correctly-staged index is simply consumed by whoever calls `commit` first. Every
+defence phrased as "verify, then act" has this hole. The three rules this session has produced in order:
+
+```
+  1. never `git add -A`                    — necessary, insufficient (the index is shared)
+  2. explicit paths                        — necessary, insufficient (the index is shared)
+  3. `git diff --cached --stat` first      — necessary, insufficient (the COMMIT is shared)
+```
+
+**The version that closes it is not a check at all — it is making stage-and-commit one operation:**
+
+```
+  git commit --no-gpg-sign -- <explicit paths>
+```
+
+`git commit -- <paths>` commits those paths straight from the working tree and **ignores the index
+entirely**, so there is no window for another lane to consume, and no way to pick up a file you did not
+name. It is strictly better than `add` + `diff --cached` + `commit` and it is shorter. This section is
+committed that way.
+
+**The general shape, which is the part worth keeping.** Three rounds of this problem produced three
+rules, and the first two were refinements of a wrong model — that the danger is *what you stage*. The
+danger is that **staging and committing are separate**, and every rule that leaves them separate is a
+rule that will fail at a lower rate rather than not fail. §438's tell applies to process advice as well
+as to code: *when successive fixes each reduce a failure without removing it, the model is wrong rather
+than the tuning.*
