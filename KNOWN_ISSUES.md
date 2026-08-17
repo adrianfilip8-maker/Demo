@@ -32866,6 +32866,48 @@ sheds" unfalsifiable while looking entirely ordinary.
 That is a failure mode §418.3 catches that nothing else would: not a badly written bar, but a
 correctly written bar in a world with no counterexample in it.
 
+### §418.7 The baseline: 4 of 56
+
+`armaudit --domain-only` now measures §418.3 coverage on every run. The first number, on the file
+that has had the most attention of any in this project:
+
+```
+    documented 4 · partial 0 · MISSING 52        (tests/traversal.test.mjs, 56 arms)
+```
+
+**52 arms have never had the question asked.** Recorded here as a baseline rather than a
+grievance — it is the honest distance the discipline has to travel, and a number future rounds
+can be measured against instead of an impression.
+
+Three decisions inside that count are worth keeping, because each one resists a way of flattering
+it:
+
+- **Tripwires score as documented, not as gaps.** §418.5: what is illegitimate is not having an
+  unfalsifiable bar, it is not knowing which you wrote. Scoring the honest label as a failure
+  would teach people to delete the label rather than the ambiguity.
+- **Tripwire is an annotation on a bar, not a category of arm.** An arm may hold ordinary bars
+  *and* a tripwire — the census arm does. A third bucket would declare the whole arm
+  unfalsifiable and hide the bars inside it that do discriminate.
+- **Prior art counts.** Four arms named `(calibration)` already remove a guard and show a sibling
+  going red — §418.3's failing input, expressed as an arm instead of a comment, long before the
+  rule existed. Counting them MISSING would report the absence of a discipline the file has in an
+  older form.
+
+**And the reporting is REPORTED, never failed.** A prospective rule that reddens the suite
+punishes only the arms that predate it, which is every arm. The gap is made visible on every run;
+it does not become a gate.
+
+**The detector over-matched on its first pass** — scanning whole arms for "NO INPUT" caught the
+phrase *"with NO INPUT"* in two arms' scenario prose, which describes standing still, and
+reported 3 tripwires where there is 1. Now scoped to the `fails on :` lines. That is the fourth
+over-matching instrument of the session, and it was committed inside the fix for the same
+objection: **a detector whose hits are mostly false costs attention instead of buying coverage.**
+
+One more, found on the way and worth its own line: `armaudit.mjs` was **binary to `grep`**,
+because its entailment pass joined map keys with a raw NUL byte. It worked perfectly, and it made
+the auditor invisible to exactly the kind of source scan its own census arm depends on. **A tool
+that cannot be grepped cannot be audited.**
+
 ### §418.6 And the housekeeping corollary, since it happened a third time
 
 `update-index` never touches the working tree. **So every blob commit any lane makes leaves every
