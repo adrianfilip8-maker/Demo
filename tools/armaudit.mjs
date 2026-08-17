@@ -56,7 +56,7 @@
  *
  *   node tools/armaudit.mjs [tests/traversal.test.mjs] [--domain-only] [--invert N] [--only <s>]
  */
-import { readFileSync, existsSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -78,26 +78,36 @@ const ABS = path.join(ROOT, FILE);
 const src = readFileSync(ABS, 'utf8');
 const lines = src.split('\n');
 
-/* ---- 1. static inventory: every assert site, and the arm that lexically owns it ------------ */
-const arms = [];                       // { name, start, end }
-for (let i = 0; i < lines.length; i++) {
-  const m = /^test\(\s*(['"`])((?:[^\\]|\\.)*?)\1\s*,/.exec(lines[i]);
-  /* Un-escape the JS string literal. The SOURCE spells an apostrophe `\'`; the runtime test name
-     has no backslash, so passing the raw text to `--test-name-pattern` matched nothing, the arm
-     never ran, and its assertions came back "unreached". Two of them did, and they were an
-     instrument artefact reported as a property of the suite — which is the failure this whole tool
-     is about, so it is fixed rather than filtered. */
-  if (m) arms.push({ name: m[2].replace(/\\(['"`\\])/g, '$1'), start: i + 1, end: lines.length });
-}
-for (let k = 0; k < arms.length - 1; k++) arms[k].end = arms[k + 1].start - 1;
-const armAt = (ln) => arms.find((a) => ln >= a.start && ln <= a.end)?.name || '(top level)';
+/* ---- 1. static inventory: every assert site, and the arm that lexically owns it ------------
+ * Written as functions so `--all` measures every file through EXACTLY this code. A second
+ * implementation for the project-wide pass would drift from this one and the two numbers would
+ * stop being comparable — which is how a baseline quietly stops being a baseline. */
+const DOMAIN_TAG = /DOMAIN\s*\(§418\.3\)/;
 
-const staticSites = [];                // { line, method, arm, text }
-for (let i = 0; i < lines.length; i++) {
-  const m = /assert\.(ok|equal|notEqual|deepEqual|notDeepEqual|strictEqual|match|fail|throws)\s*\(/.exec(lines[i]);
-  if (!m) continue;
-  if (/^\s*(\/\/|\*|\/\*)/.test(lines[i])) continue;      // a mention in prose, not a call
-  staticSites.push({ line: i + 1, method: m[1], arm: armAt(i + 1), text: lines[i].trim() });
+function parseArms(lines) {
+  const arms = [];                       // { name, start, end }
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^test\(\s*(['"`])((?:[^\\]|\\.)*?)\1\s*,/.exec(lines[i]);
+    /* Un-escape the JS string literal. The SOURCE spells an apostrophe `\'`; the runtime test name
+       has no backslash, so passing the raw text to `--test-name-pattern` matched nothing, the arm
+       never ran, and its assertions came back "unreached". Two of them did, and they were an
+       instrument artefact reported as a property of the suite — which is the failure this whole
+       tool is about, so it is fixed rather than filtered. */
+    if (m) arms.push({ name: m[2].replace(/\\(['"`\\])/g, '$1'), start: i + 1, end: lines.length });
+  }
+  for (let k = 0; k < arms.length - 1; k++) arms[k].end = arms[k + 1].start - 1;
+  return arms;
+}
+
+function parseSites(lines, armAt) {
+  const out = [];                        // { line, method, arm, text }
+  for (let i = 0; i < lines.length; i++) {
+    const m = /assert\.(ok|equal|notEqual|deepEqual|notDeepEqual|strictEqual|match|fail|throws)\s*\(/.exec(lines[i]);
+    if (!m) continue;
+    if (/^\s*(\/\/|\*|\/\*)/.test(lines[i])) continue;   // a mention in prose, not a call
+    out.push({ line: i + 1, method: m[1], arm: armAt(i + 1), text: lines[i].trim() });
+  }
+  return out;
 }
 
 /* ---- §418.3 coverage: does the arm name the two inputs? ------------------------------------
@@ -106,32 +116,39 @@ for (let i = 0; i < lines.length; i++) {
  * is prospective, so turning it into a red suite would only punish the arms that predate it.
  *
  * The distinction §418.5 draws is enforced here rather than flattened. An arm whose failing case
- * is honestly recorded as unreachable — "NO INPUT", "NOT REACHABLE" — counts as DOCUMENTED, not
- * as a gap. The rule is not "every bar must be falsifiable"; a bar with no failing input is a
- * TRIPWIRE and that is a legitimate thing to have. The rule is that you must have found out which
- * one you wrote, and said so. Counting the honest tripwire as a failure would teach people to
- * delete the label rather than the ambiguity.
+ * is honestly recorded as unreachable counts as DOCUMENTED, not as a gap. The rule is not "every
+ * bar must be falsifiable"; a bar with no failing input is a TRIPWIRE and that is a legitimate
+ * thing to have. The rule is that you must have found out which one you wrote, and said so.
+ * Counting the honest tripwire as a failure would teach people to delete the label rather than
+ * the ambiguity.
  */
-const DOMAIN_TAG = /DOMAIN\s*\(§418\.3\)/;
-for (let k = 0; k < arms.length; k++) {
-  const a = arms[k];
-  /* Search the arm AND the comment block above `test(` — a doc comment there is the natural place
-     for it and scanning only the body would report those arms as undocumented. */
-  const floor = k === 0 ? 1 : arms[k - 1].end + 1;
-  const from = Math.max(floor, a.start - 40);
-  const text = lines.slice(from - 1, a.end).join('\n');
-  a.hasTag = DOMAIN_TAG.test(text);
-  a.hasPass = /passes\s+on\s*:/i.test(text);
-  a.hasFail = /fails\s+on\s*:/i.test(text);
-  /* Scope the unreachable-case test to the `fails on :` LINES, not the whole window. Scanning the
-     window matched the phrase "with NO INPUT" in two arms' scenario prose — they describe standing
-     still, not an unreachable domain — and reported 3 tripwires where there is 1. A detector whose
-     hits are mostly false costs attention instead of coverage, which is the same objection this
-     file raises to the entailment pass, committed here inside the fix for it. */
-  const failLines = text.split('\n').filter((l) => /fails\s+on\s*:/i.test(l));
-  a.tripwire = a.hasTag && failLines.some((l) => /NO INPUT|NOT REACHABLE|no failing input/i.test(l));
-  a.domain = a.hasTag && a.hasPass && a.hasFail ? 'documented' : a.hasTag ? 'partial' : 'none';
+function classifyDomains(arms, lines) {
+  for (let k = 0; k < arms.length; k++) {
+    const a = arms[k];
+    /* Search the arm AND the comment block above `test(` — a doc comment there is the natural
+       place for it, and scanning only the body would report those arms as undocumented. */
+    const floor = k === 0 ? 1 : arms[k - 1].end + 1;
+    const from = Math.max(floor, a.start - 40);
+    const text = lines.slice(from - 1, a.end).join('\n');
+    a.hasTag = DOMAIN_TAG.test(text);
+    a.hasPass = /passes\s+on\s*:/i.test(text);
+    a.hasFail = /fails\s+on\s*:/i.test(text);
+    /* Scope the unreachable-case test to the `fails on :` LINES, not the whole window. Scanning
+       the window matched the phrase "with NO INPUT" in two arms' scenario prose — they describe
+       standing still, not an unreachable domain — and reported 3 tripwires where there is 1. A
+       detector whose hits are mostly false costs attention instead of buying coverage, which is
+       this file's own objection to its entailment pass, committed inside the fix for it. */
+    const failLines = text.split('\n').filter((l) => /fails\s+on\s*:/i.test(l));
+    a.tripwire = a.hasTag && failLines.some((l) => /NO INPUT|NOT REACHABLE|no failing input/i.test(l));
+    a.domain = a.hasTag && a.hasPass && a.hasFail ? 'documented' : a.hasTag ? 'partial' : 'none';
+  }
+  return arms;
 }
+
+const arms = classifyDomains(parseArms(lines), lines);
+const armAt = (ln) => arms.find((a) => ln >= a.start && ln <= a.end)?.name || '(top level)';
+const staticSites = parseSites(lines, armAt);
+
 
 /* ---- §418.3 report, printed FIRST because it is the cheap half and needs no run ------------- */
 function reportDomains() {
@@ -174,6 +191,65 @@ function reportDomains() {
   console.log('  deciding what a bar MEANS, which is the only moment its domain is in front of you.');
   console.log('  Retrofitting it to an old arm means reconstructing a domain someone else had.');
 }
+/* ---- --all: the project-wide §418.3 baseline --------------------------------------------------
+ * Gathered BEFORE anyone starts closing the gap, because a baseline measured after remediation
+ * begins is not a baseline. Same three exemptions as the single-file pass, applied through the
+ * same functions rather than a second implementation.
+ *
+ * Read the two possible outcomes differently, and decide that before seeing the number:
+ *   · a low total means the project never had the discipline, and §418.3 is new work;
+ *   · a HIGH total in files nobody touched today would be worse — it would mean the discipline
+ *     already existed and the nine instances slipped past it anyway, which is a story about the
+ *     rule being insufficient rather than absent.
+ */
+if (argv.includes('--all')) {
+  const dir = path.join(ROOT, 'tests');
+  const files = readdirSync(dir).filter((f) => f.endsWith('.test.mjs')).sort();
+  let tArms = 0, tDoc = 0, tPart = 0, tNone = 0, tTrip = 0, tCal = 0, tSites = 0;
+  const rows = [];
+  for (const f of files) {
+    const ls = readFileSync(path.join(dir, f), 'utf8').split('\n');
+    const as = classifyDomains(parseArms(ls), ls);
+    const at = (ln) => as.find((a) => ln >= a.start && ln <= a.end)?.name || '(top level)';
+    const sites = parseSites(ls, at);
+    const doc = as.filter((a) => a.domain === 'documented').length;
+    const part = as.filter((a) => a.domain === 'partial').length;
+    const none = as.filter((a) => a.domain === 'none').length;
+    const trip = as.filter((a) => a.tripwire).length;
+    const cal = as.filter((a) => /\(calibration\)/i.test(a.name)).length;
+    tArms += as.length; tDoc += doc; tPart += part; tNone += none; tTrip += trip; tCal += cal;
+    tSites += sites.length;
+    rows.push({ f, n: as.length, doc, part, none, trip, cal, sites: sites.length });
+  }
+  rows.sort((a, b) => b.n - a.n);
+  console.log(`\n=== §418.3 PROJECT BASELINE — ${files.length} test files ===\n`);
+  console.log('file                          arms  asserts   documented  partial  MISSING  tripwire  calib');
+  for (const r of rows) {
+    if (!r.n) continue;
+    console.log(`  ${r.f.padEnd(28)}${String(r.n).padStart(4)}${String(r.sites).padStart(9)}` +
+      `${String(r.doc).padStart(13)}${String(r.part).padStart(9)}${String(r.none).padStart(9)}` +
+      `${String(r.trip).padStart(10)}${String(r.cal).padStart(7)}`);
+  }
+  const pct = tArms ? (100 * tDoc / tArms) : 0;
+  console.log(`  ${'TOTAL'.padEnd(28)}${String(tArms).padStart(4)}${String(tSites).padStart(9)}` +
+    `${String(tDoc).padStart(13)}${String(tPart).padStart(9)}${String(tNone).padStart(9)}` +
+    `${String(tTrip).padStart(10)}${String(tCal).padStart(7)}`);
+  console.log(`\n  ${tDoc} of ${tArms} arms name both inputs — ${pct.toFixed(1)}%. ` +
+    `${tSites} assert sites across the suite.`);
+  /* The denominator's soundness check, and it is not decoration: an arm the parser fails to see is
+     an arm silently dropped from the bottom of the fraction, which makes coverage look BETTER than
+     it is. Cross-check it against the runner rather than trusting the regex — at the baseline these
+     agreed exactly, 751 and 751. Same discipline as mode A refusing to report a zero when the hook
+     matched nothing. */
+  console.log(`  Cross-check the denominator: \`node --test "tests/*.test.mjs"\` should report ${tArms}`);
+  console.log('  tests. If it reports more, this parser is missing arms and the percentage flatters.');
+  console.log(`  ${tCal} arms are "(calibration)" siblings: §418.3's failing input as an arm, not a comment.`);
+  console.log('\n  Reported, never failed. Measured before any remediation, so it is a baseline and');
+  console.log('  not a progress report. A DOMAIN block is a claim by its author, not a proof —');
+  console.log('  100% here would not mean the suite is sound, only that the question was asked.');
+  process.exit(0);
+}
+
 reportDomains();
 if (argv.includes('--domain-only')) process.exit(0);
 

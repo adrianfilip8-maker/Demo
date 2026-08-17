@@ -1886,11 +1886,27 @@ test('feasibility: sweeping the level finds where spireLand and ledgeHang are po
   }
   /* Both must be non-empty AND ledgeHang must be commoner than spireLand: 90 `ledge` recs against
      5 `spire`. If that ordering ever inverts, the sweep is measuring something other than the
-     level. */
+     level.
+   *
+   * There used to be a third line here — `assert.ok(report.ledgeHang > 0, ...)` — and it was
+   * ENTAILED by the two that remain, found by `tools/armaudit.mjs` (§418). Work the worlds through:
+   * if both counts are zero the first line fires; if `spireLand > 0` and `ledgeHang == 0` the last
+   * one fires, because `0 > positive` is false. There is no state the deleted line could report
+   * that a neighbour does not already report. Only its WORDING was doing work, so the wording
+   * moved into the message below rather than being lost — which is what made this look like a
+   * trade and was not one.
+   *
+   * Rejected on the way: giving it something the neighbours do not assert, an absolute floor on
+   * `ledgeHang`. Any floor would have been invented on the spot to justify keeping the line, which
+   * is §141.1 run backwards. */
   assert.ok(report.spireLand > 0, 'no seed in the level makes spireLand possible within the filter reach');
-  assert.ok(report.ledgeHang > 0, 'no seed in the level makes ledgeHang possible within the filter reach');
   assert.ok(report.ledgeHang > report.spireLand,
-    `ledgeHang ${report.ledgeHang} is not commoner than spireLand ${report.spireLand} — sweep is suspect`);
+    `ledgeHang ${report.ledgeHang} is not commoner than spireLand ${report.spireLand} — ` +
+    (report.ledgeHang === 0
+      ? 'no seed in the level makes ledgeHang possible within the filter reach AT ALL, which is the '
+        + 'stronger failure: not a mis-ordering but an absent affordance. '
+      : '') +
+    'sweep is suspect');
 });
 
 /* ====================================================================== */
