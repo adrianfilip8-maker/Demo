@@ -33079,6 +33079,33 @@ haze alone erased a 206 m river, and props alone blocked a 10 m gap in ten shots
 Nothing shipped is invalidated: the shot certificates claim *geometry*, and geometry is what they
 measure. But the gap between "clear" and "visible" has a size now, and it is not small.
 
+### §419.5 The cheapest measurement is the one you reach for, and cheapness is uncorrelated with relevance
+
+§420 records a briefing error of mine: I sized a survey by line count, told a lane that
+`enemy_base_flashlight.gd`'s **887 lines** made it "the detection model worth learning from", and
+it contains **no vision maths at all** — it reads a boolean from a 57-line helper, and the bulk is
+navigation, gun aim-prediction and melee timing.
+
+The lane's own analysis of why is better than mine and generalises past this instance:
+
+> 887 was a true measurement, cheap to take, and the only property of those files that was free to
+> measure. That is what made it attractive.
+
+That is the distinguishing feature. It is not §418's family — nothing here was a check that could
+only give one answer; the count was correct, and re-running it would return 887 again. It is
+§419's: **a measurement that is correct and about the wrong quantity.** What §420 adds is the
+*mechanism* by which one gets chosen —
+
+> **§419.5 — Before a survey, ask what you are about to measure and what you actually want to
+> know. If the answer is "the cheapest property available", you are not sizing the work, you are
+> sizing the file.** Line count, file count, pixel count and commit count are all free, all true,
+> and all uncorrelated with what a thing does. The alternative here cost one `grep` for the word
+> the assignment was actually about.
+
+It was caught on the survey's first pass, which is the cheapest place it could have been caught —
+and it was caught by the person who received the brief, not the one who wrote it. Both halves are
+worth keeping: a brief is an instrument, and the reader is its only control.
+
 ### §419.4 And a refusal worth more than the deliverable
 
 The `recoverSpeed` side-by-side frames were commissioned by me and **cannot be shot.** `shot.mjs`
