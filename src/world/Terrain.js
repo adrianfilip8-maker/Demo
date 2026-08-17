@@ -246,8 +246,19 @@ function sphinxDrift(x, z) {
   const ax = Math.abs(x);
   if (ax < 3.4 || ax > 11.6 || z < 34 || z > 90) return 0;
   const px = 7;
-  const step = (84 - 40) / 7;
-  const k = Math.round((z - 40) / step);
+  /* `Props.TUNE.sphinxZ` is eight stations, [40 … 84], so the valid indices are 0..LAST and
+     `Math.round` must be CLAMPED to them. Unclamped, the guard band above (z 34…90) is wider
+     than the row, and the rounding invents two pedestals that no sphinx stands on: k = −1 at
+     z 33.71 and k = 8 at z 90.29. Each grew its own drift mound — and the southern one landed
+     0.490 m of sand on the temple's paving at (6, 34), 3.5 m INSIDE the complex pad, where the
+     profile jumps from −0.044 m at z 33 to +0.433 m at z 34 with nothing standing there.
+
+     Found by the §411.8 chain audit, which flagged this as the one post-flush stage crossing
+     into the complex without a mask. A mask would have hidden the southern mound and left the
+     northern one, because the defect was never masking: it is an index escaping its row. */
+  const LAST = 7;                           // Props.sphinxZ.length - 1
+  const step = (84 - 40) / LAST;
+  const k = Math.max(0, Math.min(LAST, Math.round((z - 40) / step)));
   const pz = 40 + k * step;
   const dx = ax - px, dz = z - pz;
   const d = Math.sqrt(dx * dx + dz * dz);
