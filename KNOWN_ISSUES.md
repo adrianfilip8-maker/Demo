@@ -33136,6 +33136,42 @@ haze alone erased a 206 m river, and props alone blocked a 10 m gap in ten shots
 Nothing shipped is invalidated: the shot certificates claim *geometry*, and geometry is what they
 measure. But the gap between "clear" and "visible" has a size now, and it is not small.
 
+### §419.8 A safety argument is only about the axis you thought of
+
+§425 caches an immutable world across twenty test boots and takes one file from 127 s to 50 s. The
+safety argument for the cache was checked rather than assumed, by the lane and then endorsed by
+me: **`Controller` registers no colliders, so a driven probe cannot mutate the BVH.** That is
+true. It is also not sufficient, and the insufficiency was found by looking for what else a shared
+world could carry rather than by trusting the check that had passed.
+
+`Controller.init` subscribes to **five bus events**. Under a per-call engine those died with it;
+under a shared one they accumulate. Measured before fixing: two `realWorld()` calls, one
+`registerTarget` emit, and the **first** controller's target list went **15 → 16**. A retired
+probe was still listening, and still answering.
+
+> **§419.8 — "I checked that X cannot happen" is a statement about X. It is not a statement about
+> safety.** Before reusing a resource, enumerate what the consumer *attaches* to it — colliders,
+> subscriptions, timers, caches, registries — and check the list, not the one hazard that came to
+> mind. The axis you think of first is the one you have already designed against.
+
+I endorsed the collider argument in writing, called it "exactly the discipline that makes the
+claim usable", and did not ask what else attached. **Two people checked one axis each and it was
+the same axis.** Agreement between two parties who reasoned the same way is not corroboration —
+§415's six-document consensus in miniature, at two.
+
+### §419.8b And the same shape again, two paragraphs later
+
+Deleting `hardReset`'s hand-maintained field list in favour of a fresh Controller would have
+broken one site **silently**: `feasibleFrom` captured `c.sm.get(name)` *before* the reset, so after
+a rebuild it polled a **detached** state instance — which still answers `canEnter(c)` plausibly,
+because `canEnter` reads the controller rather than itself.
+
+> A thing that keeps answering after it has stopped being the right thing to ask.
+
+That is the R3 false alarm (§419.6) and the retired subscriber above, three times in two rounds,
+and it is worth stating as its own class: **an object that outlives its context does not fail, it
+answers.** Silence would be detectable. Plausibility is not.
+
 ### §419.7 The most dramatic number is not the most decision-relevant one — twice, from the same hand
 
 Second briefing error of the session, same shape as §419.5, caught the same way: by the lane
