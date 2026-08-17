@@ -301,7 +301,8 @@ export class HUD {
     this._recT = 0;
     this._wasLocked = false;
     this._sawPrompt = false;    // a real `prompt` event retires the affordance fallback
-    this._lock = null;          // MOVEMENT's current lock-on mark
+    this._lock = null;          // MOVEMENT's current lock-on mark (combat)
+    this._tele = null;          // the traversal telegraph — what the game will let you grab
     this._pocket = null;        // the guard whose pouch is currently reachable
     this._pocketCount = 0;
     this._pstate = '';          // MOVEMENT's current state name, from `playerState`
@@ -668,6 +669,34 @@ export class HUD {
     on('thiefVision', (v) => this.thiefVision(!!v));
     on('thiefTargets', (list) => this._onTargets(list));
     /**
+     * The traversal telegraph: "the game will let you grab that".
+     *
+     * ── The half this closes, and the half it cannot ──────────────────────────────────────────
+     * Measured on the shipped build: **nothing on screen says what is grabbable.** During
+     * ordinary traversal the HUD receives nothing at all. `thiefTargets` above is the only
+     * target signal that reaches this file and `Controller._thiefVision` emits it *exclusively*
+     * on the rising edge of holding `focus`, so it is a Thief-o-Vision readout, not a telegraph.
+     * `targetLocked` — the signal that means the game has CHOSEN a hold — has exactly one
+     * listener in the project and it is `Particles._onTargetLocked`; it has never reached a HUD.
+     * `hookGrab` and `railMount` reach Audio and FX only and fire **on contact**, which is not a
+     * telegraph by any definition. Driven, both grab paths gave **0 frames of warning**:
+     * announcement and commitment on the same frame, auto-grab and E-grab alike.
+     *
+     * So this is a §357.1 with the renderer already built: `_project` and the lock mark below
+     * have existed all along and nothing was ever wired to them for traversal.
+     *
+     * **The publisher is deliberately absent and this subscription is listed in
+     * `tests/eventbus.test.mjs`'s `DEAD_UNBUILT` until it lands.** `src/player/Controller.js` is
+     * held by another lane; the emit belongs in a per-frame pass in `Controller.update` (never in
+     * `canEnter` — a predicate must not emit), reading `afford('hook' | 'rail' | 'ledge')`, which
+     * is free because `Controller.afford` memoises per frame. It must read `afford` and NOT
+     * `TargetField`: `TargetField` is an air-assist, not the thing that decides a grab, and every
+     * target in this level is deliberately `fromGround: false` — `EgyptLevel.js`'s
+     * `notch-pylon-e-mouth` cites the gate by name and picks rung 1 to sit above it. An assist
+     * that refuses grounded players cannot telegraph §8.1 step 2's grounded E-grab.
+     */
+    on('telegraph', (p) => this.setTelegraph(p));
+    /**
      * DELIBERATELY UNWIRED. Do not give this a publisher — read §242 before you try.
      *
      * The pair looks exactly like the charm-progress defect and it is not one. `binocucom` has two
@@ -1025,6 +1054,27 @@ export class HUD {
   }
 
   /**
+   * The traversal telegraph mark. `setTelegraph(null)` retires it.
+   *
+   * Shares the lock element rather than adding a second one, because it is the same visual act —
+   * a world point projected onto the frame — and a second reticle competing with the first is a
+   * composition problem, not a wiring one. **Combat wins when both are live**: the render below
+   * reads `_lock || _tele`, so a combat lock-on is never displaced by a hold the player is merely
+   * near. Written as an explicit precedence rather than as an assumption that the two never
+   * coexist, because nothing in the state machine guarantees that.
+   */
+  setTelegraph(p) {
+    if (!this._built) return;
+    const point = p?.pos ?? p?.point ?? p?.position ?? (p?.isVector3 ? p : null);
+    if (!point || typeof point.x !== 'number') {
+      this._tele = null;
+      if (!this._lock) this.el.lock.classList.remove('on');
+      return;
+    }
+    this._tele = point;
+  }
+
+  /**
    * MOVEMENT changed state.
    *
    * The only thing rendered from it directly is the stealth mark on the exposure chip, and the
@@ -1305,8 +1355,9 @@ export class HUD {
 
     /* Lock-on. Not edge-clamped on purpose: a reticle pinned to the frame edge is pointing at
        nothing, and MOVEMENT drops the lock at `lockDrop` anyway, so off-screen is momentary. */
-    if (this._lock) {
-      const p = this._project(this._lock, cam, W, H);
+    const mark = this._lock || this._tele;      // combat lock outranks the traversal telegraph
+    if (mark) {
+      const p = this._project(mark, cam, W, H);
       if (p.ok) {
         this.el.lock.style.transform =
           `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) scale(${p.s.toFixed(3)})`;
@@ -1660,6 +1711,7 @@ export class HUD {
     this._digits.length = 0;
     this._goal = null;
     this._lock = null;
+    this._tele = null;
     this._pocket = null;      // a live Guard reference; holding it past teardown pins the garrison
     this._carry = null;
     this._objBase = null;

@@ -35782,3 +35782,102 @@ by 0.068 of NDC where they agreed to 0.001 before. Its bar is re-derived rather 
 the claim is that occlusion does not explain the stub's 0.202 error, so the bar is half of that,
 and the row that actually carries the claim, the glide, is still asserted at the original 0.02 and
 still measures **0.000**.
+
+---
+
+## §441 — The game never tells you what it will let you grab, and the renderer to do it was already built
+
+Commissioned from the camera lane's controls note, item 5: *nothing on screen says what is
+grabbable*. Every event a telegraph would need is emitted and has listeners, and **nobody had
+checked whether what they produce is usable in play.** For a traversal game that is the difference
+between a tester saying *"this is hard"* and *"this is broken"*, because a game that does not
+telegraph its holds reads as a jumping puzzle with invisible walls.
+
+### §441.1 The bus census answers it without a single drive
+
+```
+  thiefTargets   -> HUD          emitted ONLY inside Controller._thiefVision(), on the rising
+                                 edge of holding `focus`. A Thief-o-Vision readout, not a telegraph.
+  targetLocked   -> Particles    the signal meaning "the game has CHOSEN this hold". Exactly one
+                                 listener in the project, and it is FX. It has never reached a HUD.
+  hookGrab       -> Audio, FX    fires ON CONTACT.
+  railMount      -> Audio, FX    fires ON CONTACT.
+  lockOn         -> HUD          emitted only by Moveset's CombatStrafe.
+```
+
+So during ordinary traversal the HUD receives **nothing**, and the one target signal that reaches
+it is gated behind a held button. This is §357.1 with the expensive half already built: `HUD`'s
+`_project` and lock mark have existed all along and nothing was ever wired to them for traversal.
+
+### §441.2 Driven: zero frames of warning, on both grab paths
+
+```
+  auto-grab (freefall onto ring 3)      fall@0   -> hookSwing@27, hookGrab@27      0 frames
+  E-grab    (kiosk lintel -> ring 3)    tiptoe@0 -> hookSwing@30, hookGrab@30      0 frames
+```
+
+Announcement and commitment on the same frame. A telegraph that arrives on contact is not a
+telegraph.
+
+**Item 2 — where on screen — came back UNANSWERABLE, and that is the result rather than a gap.**
+The projection apparatus was built, run on both completed beats, and never had an input: there was
+no telegraph event to project. *A measurement apparatus with nothing to measure is stronger
+evidence about the system than a number would have been.*
+
+### §441.3 `fromGround: false` on all fifteen targets is a DESIGN CONSTRAINT, not a defect
+
+`TargetField.acquire()` opens `if (c.grounded && !t.fromGround) continue`, and every one of the
+level's 15 registered targets is `fromGround: false` — so a grounded player can never acquire any
+of them. That reads exactly like a bug and it is not. `EgyptLevel.js`'s `notch-pylon-e-mouth`
+cites the gate by name and picks its rung to sit above it:
+
+> *"rung 0 would put it at y 1.11, low enough that a running player crosses it while still
+> grounded, and `TargetField.acquire` refuses a grounded player unless the spec says `fromGround`.
+> From 2.64 a jump (apex 2.52) into a double jump (2.04 more) arrives with margin"*
+
+**This was one citation away from being filed as the round's headline defect.** It is the class
+this project keeps nearly getting wrong, and the check that saved it was reading the level's own
+reasoning at the site rather than the gate in isolation.
+
+It also *derives* the design instead of leaving it a preference: **`TargetField` is an air-assist,
+not the thing that decides a grab.** Both grab paths consult `afford('hook')`. An assist that
+deliberately refuses grounded players cannot telegraph §8.1 step 2's grounded E-grab, so a
+telegraph must read `afford`, not `TargetField`.
+
+### §441.4 The ceiling, computed from constants rather than from a beat
+
+The assisted path's best possible window is bounded by its own numbers: `volume` 3.3 m at swing and
+jump speeds of 7–10 m/s is **20–28 frames, 0.33–0.47 s**. That is the maximum the current
+`TargetField` could ever offer, and the delivered value is 0 because nothing subscribes to
+`targetLocked`. Bounding it this way means the conclusion does not depend on a beat completing —
+which mattered, because one did not: a ring-to-ring drive fell past ring 4 and landed, and is
+recorded as **a failed beat, not as evidence of silence.** That distinction is the whole reason the
+round's results survive.
+
+### §441.5 The job splits, and only one half was blocked
+
+The HUD half is landed: an `on('telegraph')` subscription, `setTelegraph()`, and an explicit
+precedence — `_lock || _tele`, so a combat lock is never displaced by a hold the player is merely
+near, written as a branch rather than as an assumption that the two cannot coexist. No new DOM: it
+is the same visual act as the existing lock mark, and a second competing reticle is a composition
+problem rather than a wiring one.
+
+The publisher is **declared missing, not forgotten**: `telegraph` is listed in the census's
+`DEAD_UNBUILT`, and the count guard beside it went 3 → 4 deliberately, which is what that guard is
+for. The emit belongs in a per-frame pass in `Controller.update` — never in `canEnter`, because **a
+predicate must not emit** — carrying `{point, kind, distance}` on the rising edge, at zero cost
+because `Controller.afford` memoises per frame.
+
+### §441.6 And the arms say what they cannot discriminate
+
+`tests/telegraph.test.mjs` drives the HUD with a **synthetic** event, so every arm carries the
+third domain line alongside §418.3's two:
+
+> **passes on / fails on / cannot discriminate.** The first two make a bar honest about its
+> domain; the third makes it honest about its reach.
+
+Here the third line is the same on every arm and it is the important one: *these arms cannot prove
+the emit is correct, well-timed, or fired at all in play.* A green here says the HUD renders a
+telegraph it is given, and the measured truth today is that the game gives it none. Written into
+the file so it cannot later be quoted as evidence that the telegraph works — which is precisely how
+the camera lane's `OneWall` stub was quoted for two rounds before it was retracted.
