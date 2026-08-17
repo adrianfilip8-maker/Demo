@@ -605,13 +605,14 @@ if (args.includes('--search')) {
      the edge of the sweep.** Printing the best cell per lens makes that visible instead of
      letting one number hide it, and turns the lens into a composition choice — which is what it
      is — rather than an artefact of the array literal above. */
-  const byLens = new Map();
+  const byLens = new Map(), bigLens = new Map();
   for (const c of cells) {
     const b = byLens.get(c.fov);
     if (!b || c.rank > b.rank) byLens.set(c.fov, c);
+    const g = bigLens.get(c.fov);
+    if (!g || c.slyH > g.slyH || (c.slyH === g.slyH && c.flat > g.flat)) bigLens.set(c.fov, c);
   }
-  console.log(`\n   best admissible cell per lens — the rank peaks at whichever lens is longest,`
-    + ` so this is a composition choice and not a measurement:`);
+  console.log(`\n   RANK-maximal cell per lens — and note what the rank does to the figure:`);
   for (const fov of [...byLens.keys()].sort((a, b) => a - b)) {
     const c = byLens.get(fov);
     console.log(`     fov ${String(fov).padStart(2)} · rank ${c.rank.toFixed(1).padStart(6)}`
@@ -621,6 +622,23 @@ if (args.includes('--search')) {
   }
   console.log(`\n   geometry: ${geomCells} cells swept in ${geomT} s · ${cells.length} clear every bar but occlusion`);
   console.log(`   probing the top ${Math.min(PROBE_CELLS, cells.length)} by rank for a clear sightline`);
+
+  /* ── THE OTHER CORNER, AND IT IS THE ONE THIS SHOT WANTS ────────────────────────────────
+     Every rank-maximal cell above drives the figure to 110-125 px — its admissible FLOOR. The
+     composite gains more from elevation than it loses from shrinking the man, so on a frame
+     whose named failure mode is "the character is a detail inside his own effect", the tiebreak
+     selects the frame where the character is smallest. That is not a close call, it is the
+     wrong direction.
+     So the figure-maximal cell per lens is printed beside it. Both are admissible — every bar
+     is already satisfied in both columns — and the choice between them is composition, which is
+     exactly what a tiebreak was supposed to spare us and here cannot. */
+  console.log(`\n   FIGURE-maximal cell per lens — same bars, opposite corner:`);
+  for (const fov of [...bigLens.keys()].sort((a, b) => a - b)) {
+    const c = bigLens.get(fov);
+    console.log(`     fov ${String(fov).padStart(2)} · d ${String(c.d).padStart(4)} m h ${String(c.hh).padStart(5)} m`
+      + ` · ellipse ${c.flat.toFixed(3)} · sly ${c.slyH.toFixed(0)} px`
+      + ` · elevation ${(Math.atan2(c.hh, c.d) * 180 / Math.PI).toFixed(1)}° · rank ${c.rank.toFixed(1)}`);
+  }
 
   const survivors = [];
   let probed = 0, azTested = 0, cellsClear = 0;
