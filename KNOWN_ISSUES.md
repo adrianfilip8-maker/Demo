@@ -35308,3 +35308,92 @@ So the collision fix removed a sight line that was only ever available because t
 an open frame, and the player can now work the obelisk base unobserved. That is a consequence of
 the level being correct, not a defect, and with guards out of scope it is recorded rather than
 acted on. If they come back, the answer is a route on stage 2, not a wider one on stage 1.
+
+## §436 — A player cannot wedge: the negative result, and the driver line closes
+
+One question, one round. Four rounds of driving the collect route died the same way — walk into a
+face, hold forward, stop for thousands of frames — and §434 filed that as a driver limitation.
+The objection that produced this round was right to make: **holding forward into a wall is not
+exotic driver behaviour, it is the most common thing a human does**, so a pin that ordinary input
+cannot leave would be a playability defect hiding behind an assumption about the instrument.
+
+It is not one, and the answer is clean.
+
+### §436.1 The three answers
+
+```
+  1  does it recover?      back off      3.850 m (plinth)   4.709 m (kiosk)     FREED
+                           jump          1.163 m            1.333 m             FREED
+                           strafe        0.074 m            0.359 m             no
+                           release+press / no input                             no
+  2  is it latched?        held 1200 frames, back off still frees               NOT LATCHED
+  3  one mechanism?        identical escape signature at both faces             ONE
+```
+
+Both reflexive responses at a wall work immediately, at every site and every approach tested. The
+pin exists only while forward is held, which is a wall behaving like a wall. The `grounded` flag
+differs between sites — `fall` at the plinth, a ground state at the kiosk — but that is a property
+of the ledge each face sits on, which is why the arm compares **escape behaviour** rather than
+state; comparing state would have reported two mechanisms where there is one.
+
+**The driver line closes.** §434's 4/12 was about the driver, and now that is established rather
+than assumed.
+
+### §436.2 The instrument, one level up, and why the control is the whole thing
+
+§431 used a cold start to ask whether a *position* is escapable. This asks whether a *state* is,
+and the shape is the same: the question must be able to come out either way. The control here is
+the sixth input — **keep holding forward, which must NOT free it** — because without it every
+"FREED" is noise from a capsule that was never pinned.
+
+Three of this round's own instruments failed that standard before passing it:
+
+- **The first detector called a wall a wedge.** "Displacement < 0.1 m while holding forward" is
+  what a wall *should* produce. It measured resistance and called it entrapment — the wrong
+  quantity, confidently.
+- **The "open courtyard" control was not open.** Walking south from spawn reaches the terrace
+  inside the approach window and pins against it, so the control would have agreed with the test
+  sites *by accident* and licensed the conclusion it was there to check. Replaced with ground
+  that actually measures 11.68 m of travel.
+- **The release-then-back-off arm was confounded.** Releasing forward lets the capsule drop off
+  the lip it is resting against, so the escape was being applied to a different situation. One
+  run ended in `hurt` with the nearest hazard **5.11 m away** — fall damage, correctly. Reading
+  that as "the pin outlives its input" would have inverted the round's answer.
+
+That last one is worth the emphasis: **it would have produced a false positive on the exact
+question being asked**, in the direction that halts a project.
+
+### §436.3 A correction to §434
+
+§434 said the back-off recovery "fires and is not enough." That is wrong about the cause. Back-off
+frees the capsule decisively — 3.85 m from a dead stop. What actually happened is that the driver
+freed itself and then **walked into the same face again**, because the navigation had no memory of
+having failed. The outcome reported was right; the mechanism given for it was not.
+
+Recorded because the two readings prescribe opposite work: "recovery is insufficient" points at
+`Controller`, and "navigation has no memory" points at a scratch driver nobody should fund.
+
+### §436.4 One real oddity, reported and not fixed
+
+At the plinth the pinned state is `fall` with `grounded=false`, held for **3600 frames — 60 s of
+game time** — with `airTime` reaching **59.18 s**, while `groundCheck` finds ground **0.107 m
+below his feet.** The capsule floats 10.7 cm over solid ground and never lands.
+
+Contained rather than harmless, and the difference is measured: `airTime` is read in exactly one
+place in `src/` (`Moveset.js:314`, as `> 0.10`), so unbounded growth is inert. The consequence
+that survives is that `grounded` never latches while a player leans on that face, which suppresses
+anything gated on it.
+
+Not fixed here: the repair would be in `Controller`/`Collision`, and the mechanism should be seen
+before either is touched.
+
+### §436.5 What a negative result is worth
+
+Nothing was built this round and nothing was repaired. What changed is that a question which had
+been open for four rounds — *is the thing blocking the drive a bug in the game* — is now answered,
+with the counterexamples that make the answer checkable rather than asserted. `tests/wedge.test.mjs`
+holds it, so the next lane to watch a driver die against a wall finds the answer instead of
+re-deriving it.
+
+The rule the round leaves: **resistance is not entrapment, and the only way to tell them apart is
+to try leaving.**
