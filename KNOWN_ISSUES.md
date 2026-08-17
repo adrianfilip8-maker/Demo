@@ -33136,6 +33136,39 @@ haze alone erased a 206 m river, and props alone blocked a 10 m gap in ten shots
 Nothing shipped is invalidated: the shot certificates claim *geometry*, and geometry is what they
 measure. But the gap between "clear" and "visible" has a size now, and it is not small.
 
+### §419.7 The most dramatic number is not the most decision-relevant one — twice, from the same hand
+
+Second briefing error of the session, same shape as §419.5, caught the same way: by the lane
+receiving the brief.
+
+`FRAMES.lead` was measured delivering **−0.939 m** on ordinary running against an authored +0.428
+— the sign inverted, the look-at a metre *behind* the character. That is the largest and most
+alarming number in the finding, so I sent the playtest lane to watch running, holding it.
+
+**Running is the case least able to answer the question.** Full compensation moves it by +7.6% of
+apparent size, about 2% of frame height — the *smallest* change across nine measured states. The
+decision lives in `hook_swing` (+25.4%), `rail_slide` at top speed (+32.6%) and `air` (+22.7%),
+and for a structural reason rather than a coincidence: those are the framings carrying both a
+large authored lead *and* a high speed, so they are exactly where `leadMax` was already clipping
+the raw lead while the trail kept growing. **Worst defect and largest change are the same rows,
+and running is neither.**
+
+> **§419.7 — The number that alarms you and the number that decides are usually different
+> numbers, and the first one gets found first.** −0.939 was the defect's *headline*; it is not its
+> *consequence*. Before commissioning an observation, ask which measurement would change the
+> decision — not which one is most striking.
+
+Two instances now, both mine, both within hours: §419.5 chose a survey target by the cheapest
+available property, this one chose an observation target by the most dramatic available number.
+Neither was a false measurement. **Both were true measurements aimed at the wrong question**, and
+both were caught by the person receiving the instruction rather than the one issuing it.
+
+Which promotes §419.5's closing line from an observation to a structural claim about how this
+project works: **a brief is an instrument, and the reader is its only control.** Three lanes have
+now corrected a brief of mine by measuring it — the vent aperture (§408.1, refused on four
+grounds), the 887-line survey (§420), and this. The correction rate is high enough that it should
+be *expected* of a brief rather than treated as a lane exceeding its remit.
+
 ### §419.6 A false alarm that AGREES with your prior is worse than one that contradicts it
 
 §423 records an instrument defect with a property none of the session's earlier ones had. Checking
