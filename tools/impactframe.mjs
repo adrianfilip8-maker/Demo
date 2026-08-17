@@ -548,18 +548,32 @@ if (args.includes('--search')) {
   }
   console.log(assertAzimuthFree());
 
+  /**
+   * ── RANK FIRST, OCCLUDE SECOND ─────────────────────────────────────────────────────────────
+   * The rank is `flat * slyH`, and both factors are azimuth-invariant — the same symmetry the
+   * calibration above re-derives. So **the ordering of every candidate is fully determined
+   * before a single ray is fired**, and testing occlusion on all 9,450 cells to rank them is
+   * work done to learn something already known.
+   *
+   * The previous version did exactly that: 45,840 occlusion tests to reach cell 8,000, at which
+   * point it was still 1,450 cells from finishing and out of budget. `clear()` is expensive —
+   * a Box3 around a 20 m segment, then every architecture triangle inside it — and memoising it
+   * only removes the duplicates, not the work.
+   *
+   * So: score the geometry over the whole domain, sort, and fire rays only at the top
+   * `PROBE_CELLS` by rank. Occlusion cannot promote a camera, only reject one, so walking the
+   * ranked list until enough survive yields exactly the shortlist a full sweep would, and the
+   * cells never probed are ones that could only have ranked below the ones that were.
+   *
+   * That is a claim about the ORDER, not about the bars, and it is the one thing here that
+   * could quietly go wrong: if `rank` ever gains an azimuth-dependent term, this stops being
+   * equivalent. `assertAzimuthFree()` is the guard, and it checks `flat` and the fault count
+   * over non-commensurate azimuths on every run.
+   */
   const t0 = Date.now();
-  /* ── SURVIVORS ARE COUNTED IN FULL AND RETAINED IN PART ─────────────────────────────────
-     The first run of this sweep accumulated every clean camera. At the rate the progress lines
-     showed — 374 clean out of 384 occlusion tests — the domain yields tens of thousands, each an
-     object holding two arrays, and the process died without printing a summary. So the COUNT is
-     exact and the RETENTION is bounded: `keep` holds the best `KEEP` by rank, and the tally
-     below reports the true total. A ranked shortlist is all a re-stage needs; a full dump of
-     equivalent cameras is not evidence of anything. */
-  const KEEP = 200;
-  const survivors = [];
-  let cleanTotal = 0, worstKept = -Infinity;
-  let geomCells = 0, geomPass = 0, azTested = 0;
+  const PROBE_CELLS = 400, KEEP_AZ = 6;
+  const cells = [];
+  let geomCells = 0;
   const faultTally = new Map();
   const tally = (fs) => { for (const f of fs) {
     const key = f.replace(/ by [\d.]+ px/, ' by N px').replace(/ [\d.]+ px of /, ' N px of ')
@@ -572,49 +586,48 @@ if (args.includes('--search')) {
     for (let hh = 1.0; hh <= 12; hh += 0.25) {
       for (const fov of [26, 30, 34, 38, 44, 50]) {
         geomCells++;
-        if (geomCells % 500 === 0) {
-          console.log(`   … ${geomCells} cells · ${geomPass} geometric survivors · ${azTested} occlusion tests`
-            + ` · ${cleanTotal} clean · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
-        }
-        const base = {
+        const g = score('', {
           pos: [AT[0] + d, hh, AT[2]], target: [AT[0], 0.6, AT[2]], fov, tod: 0.78, player: P,
-        };
-        const g = score('', base, { quiet: true, stopEarly: true, skipClear: true });
+        }, { quiet: true, stopEarly: true, skipClear: true });
         if (g.faults.length) { tally(g.faults); continue; }
-        geomPass++;
-        /* ── THE AZIMUTH LOOP TESTS OCCLUSION AND NOTHING ELSE ─────────────────────────
-           Geometry admits this (d, h, fov) at every azimuth — that is the symmetry
-           `assertAzimuthFree()` re-derives each run, to 1.3e-4 inside a 3.0e-4 bound. So
-           re-running `score()` per azimuth recomputes 360 projections that provably do not
-           vary, 48 times over. The first version did exactly that and spent 524 s reaching
-           cell 4,000 of 9,450.
-           Only `clear()` varies, so only `clear()` runs. The geometry carried into each
-           survivor is `g`, the value computed once above — not a fresh one that happens to
-           match, which would be the same waste wearing a different shape. */
-        for (let i = 0; i < AZ_N; i++) {
-          const azDeg = i * AZ_STEP, a = azDeg * Math.PI / 180;
-          const pos = [AT[0] + Math.cos(a) * d, hh, AT[2] + Math.sin(a) * d];
-          const cam = camFor({ pos, target: [AT[0], 0.6, AT[2]], fov });
-          azTested++;
-          if (!clearAt(cam, { x: AT[0], y: AT[1] + 0.5, z: AT[2] })) continue;
-          if (!clearAt(cam, { x: AT[0], y: ringPlaneY(AT[1]), z: AT[2] })) continue;
-          cleanTotal++;
-          if (survivors.length < KEEP || g.rank > worstKept) {
-            survivors.push({ pos, fov, d, hh, azDeg, rank: g.rank, flat: g.flat, slyH: g.slyH });
-            if (survivors.length > KEEP) {
-              survivors.sort((x, y) => y.rank - x.rank);
-              survivors.length = KEEP;
-              worstKept = survivors[KEEP - 1].rank;
-            }
-          }
-        }
+        cells.push({ d, hh, fov, rank: g.rank, flat: g.flat, slyH: g.slyH });
       }
     }
   }
+  cells.sort((x, y) => y.rank - x.rank);
+  const geomT = ((Date.now() - t0) / 1000).toFixed(1);
+  console.log(`\n   geometry: ${geomCells} cells swept in ${geomT} s · ${cells.length} clear every bar but occlusion`);
+  console.log(`   probing the top ${Math.min(PROBE_CELLS, cells.length)} by rank for a clear sightline`);
+
+  const survivors = [];
+  let probed = 0, azTested = 0, cellsClear = 0;
+  for (const c of cells.slice(0, PROBE_CELLS)) {
+    probed++;
+    const clearAz = [];
+    for (let i = 0; i < AZ_N && clearAz.length < KEEP_AZ; i++) {
+      const azDeg = i * AZ_STEP, a = azDeg * Math.PI / 180;
+      const pos = [AT[0] + Math.cos(a) * c.d, c.hh, AT[2] + Math.sin(a) * c.d];
+      const cam = camFor({ pos, target: [AT[0], 0.6, AT[2]], fov: c.fov });
+      azTested++;
+      if (!clearAt(cam, { x: AT[0], y: AT[1] + 0.5, z: AT[2] })) continue;
+      if (!clearAt(cam, { x: AT[0], y: ringPlaneY(AT[1]), z: AT[2] })) continue;
+      clearAz.push({ azDeg, pos });
+    }
+    if (!clearAz.length) { tally(['SLY or RING OCCLUDED at every azimuth']); continue; }
+    cellsClear++;
+    for (const { azDeg, pos } of clearAz) {
+      survivors.push({ pos, fov: c.fov, d: c.d, hh: c.hh, azDeg, rank: c.rank, flat: c.flat, slyH: c.slyH });
+    }
+    if (probed % 50 === 0) {
+      console.log(`   … probed ${probed}/${Math.min(PROBE_CELLS, cells.length)} cells · ${cellsClear} with a clear sightline`
+        + ` · ${azTested} rays · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+    }
+  }
+  const cleanTotal = survivors.length;
   survivors.sort((x, y) => y.rank - x.rank);
-  console.log(`\n══ SEARCH · ${geomCells} (d,h,fov) cells -> ${geomPass} geometric survivors`
-    + ` x ${AZ_N} azimuths = ${azTested} occlusion tests · ${cleanTotal} clean`
-    + ` · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  console.log(`\n══ SEARCH · ${geomCells} cells · ${cells.length} pass every bar but occlusion`
+    + ` · top ${probed} by rank probed with ${azTested} rays · ${cellsClear} keep a clear sightline`
+    + ` · ${cleanTotal} cameras retained · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   console.log(`   domain: distance 5-22 m by 0.5, height 1-12 m by 0.25, ${AZ_N} azimuths, 6 lenses,`
     + ` target fixed at the contact`);
   console.log(`\n   why the rest were rejected (FIRST reason only — the ray casts are skipped once\n`
@@ -632,11 +645,12 @@ if (args.includes('--search')) {
     mkdirSync('progress/records', { recursive: true });
     writeFileSync('progress/records/impact-search.json', JSON.stringify({
       tree: provenance, when: new Date().toISOString(),
-      geomCells, geomPass, azTested, azimuthFree: assertAzimuthFree(),
+      geomCells, geomClear: cells.length, probed, azTested, cellsClear,
+      azimuthFree: assertAzimuthFree(),
       domain: 'd 5-22 by 0.5, h 1-12 by 0.25, az 0-360 by 7.5, fov [26,30,34,38,44,50]',
       bars: { edge: EDGE, figureSlop: FIGURE_PLACEMENT_SLOP, ellipse: 0.22, slyPx: 110 },
       extents: { SLY_SLAM, DUST, RING_R_DRAWN, RING_R_DECLARED, SCUFF_R },
-      survivorsTotal: cleanTotal, retained: survivors.length,
+      retained: survivors.length,
       rejections: [...faultTally.entries()].sort((x, y) => y[1] - x[1]),
       top: survivors.slice(0, 40),
     }, null, 2));
