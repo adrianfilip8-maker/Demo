@@ -34519,3 +34519,102 @@ have been forgotten. Nothing about the output distinguished them; only opening e
 > §426 said a ranked list of the slowest files is not a list of problems. This is the same
 > sentence one level down: **a list of unread fields is not a list of defects, and a list produced
 > by an unverified scraper is not even a list of unread fields.**
+
+## §429 — `caneSlam.material`: the field was right, the publisher was right, and three subscribers dropped it
+
+§428.4's census found 25 payload fields nobody reads. This is the one that was worth acting on,
+and it is worth a section because of *why* it is different from the other 24: it was not two
+teams failing to meet. **It was one file contradicting itself.**
+
+```
+  Moveset.js:347   emit('caneSlam', { pos, radius, material: c.groundMaterial })
+  Moveset.js:1528  emit('caneHit',  { index, pos, dir })      <- material deliberately absent
+```
+
+`caneHit` carries a long comment explaining the omission — a cane swing fires on the wind-up,
+before and independently of connecting with anything, so there is no surface to name and *"a
+wrong material is worse than none, because none is at least honestly a default."* That is careful,
+correct reasoning about the hard case. Twelve hundred lines earlier the same author published the
+easy case — a landing, where the surface under his feet is known and correct — and **all three
+subscribers read `pos` and `radius` and dropped it.** A Cane Slam on the desert and a Cane Slam on
+temple paving were the same sound and the same particles.
+
+### §429.1 Nothing was authored, and that was checked rather than hoped
+
+The scope rule was: read what is published; where a catalogue has no entry for a material, report
+it rather than invent one. It never came up, and the measurement is the reason:
+
+```
+  standable colliders by material   stone 140 · sand 1 (the desert) · wood 2
+  smashFor()  distinct entries      stone · sand · wood · metal · cloth
+  stepFor()   distinct entries      stone · sand · wood · metal · cloth · water
+```
+
+Every material a player can stand on already had its own recipe **and** its own cue. The gap that
+does exist is `flesh` and `misc` — real entries in COLLISION's `MAT_NAMES`, collapsing onto stone
+in both catalogues, and present on no collider in the level. M6 **asserts** that collapse rather
+than describing it, so the day either gains an entry the arm reddens instead of the note going
+quietly stale.
+
+### §429.2 The shipped effect was right for neither surface
+
+```
+  dive_dust   defaults sandLight/sandMid   == SMASH.sand.dustCol exactly
+  dive_debris defaults limeMid/sandDark    == limestone
+```
+
+**Limestone chips inside a sand cloud, on every surface in the game.** Not a missing feature — a
+mixture that no single material would produce. And `dive_spark` fired unconditionally, so a slam
+into the desert struck sparks off sand, against a table whose own comment calls metal *"the only
+material that throws light."*
+
+Reading the field fixes all three. What it deliberately does **not** do is swap the emitters: the
+slam keeps `dive_dust`/`dive_debris` and its `crack`/`scuff` marks rather than adopting `SMASH`'s
+`land_dust`/`dust_ring`/`scorch`. That would be authoring a new look under cover of reading a
+published field, and M4 is a tripwire against a later edit that "finishes the job" that way.
+
+### §429.3 The two things that made this safe to do in one round
+
+**No canonical shot is affected.** `_stageImpact` builds the certified `impact` frame from its own
+`STAGE_IMPACT` list and never calls `_onDiveImpact` — so the biggest effect in the game could be
+made material-dependent without invalidating a single certificate. That was checked first, and had
+it gone the other way this would have been a report rather than a fix.
+
+**The audio layer reuses `_onSmash`'s numbers exactly** — `stepFor(material)` at rate 0.62 — and
+M5 extracts both rates from the shipping source and requires them equal. A slam and a break are
+the same physical event with different bodies behind them; two differently-felt sets of material
+transients is precisely the drift this project refuses elsewhere.
+
+### §429.4 One subscriber still drops it, and now says so
+
+`Smashables` reads `pos` and `radius` and ignores `material` — correctly. Its question is about
+the **jar that broke**, not the **ground he landed on**, and a basket standing on limestone is
+still wicker. It resolves its own material from `KINDS[p.kind]`.
+
+That is now a comment rather than an absence, and the reason generalises into the rule §428.4 was
+reaching for:
+
+> **A published field should be read, or carry a line saying why it is not.** Of the 25 unread
+> fields, exactly one — `damage.amount` — was already documented as ignored on purpose. The other
+> 24 are silent, and silence is indistinguishable from an oversight. This one *was* an oversight.
+
+An unexplained omission sitting beside two that have just been fixed reads as a third that was
+missed, which is how a correct decision becomes a future false positive.
+
+### §429.5 A side effect worth recording: the harness is being used
+
+The suite ends 806/807, and the one failure is `traversal.test.mjs`'s own concentration census
+reporting that **11 states are now driven outside it, was 6** — an arm whose failure message says
+*"coverage has spread, which is good: update this bound."*
+
+Four of the five new states (`wallCling`, `paraglide`, `skid`, `tiptoe`) come from
+`tests/camdrive.test.mjs`, the camera lane's uncommitted file, which imports `realWorld` and
+`hardReset` from the `_moveset.mjs` §425 extracted one round earlier and drives the real
+`Controller` through the shipped level. The fifth, `wallClimb`, is `cluevault`'s driven cling from
+that same round.
+
+Not re-based here: the bound belongs to the traversal lane, the file that moved it is uncommitted,
+and if `camdrive` never lands the bound is correct as it stands. Recorded because it is the first
+external evidence that the extraction did the thing it was argued for — **a second lane driving
+real states instead of assigning `stateName` as a string** — and because the instrument that
+noticed was a census written to measure how much this project depends on one file.
