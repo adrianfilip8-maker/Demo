@@ -68,6 +68,57 @@ partial, and the partiality is not random.
 
 **Nothing is retuned.** Every candidate change here is a feel decision.
 
+## What shortening the chain would buy — priced, not shipped
+
+`land.tau` was never the lever, because `tau` moves only the first of three stages. So the question
+is what collapsing the **boom** to the depth `pitch` already has would do. Measured on a patched
+copy that does not land, same absolute-weighted scorer, identical trajectories.
+
+**Exactly two of the 19 blend sites were collapsed, and which two is the result:**
+
+1. `_boomWant`'s own `smoothDamp` (`zoomTime` 0.16 s) — removed; `want` feeds through directly.
+2. `this.boom`'s `smoothDamp` **on the free-air path only** — when the boom is *extending* and no
+   occlusion is in play, it takes the value directly.
+
+**Left exactly as shipped:** the occlusion pull-in (already instant), and the entire recovery
+design — `recoverDelay` 0.22 s, `recoverTime` 0.62 s, `recoverSpeed` 6.0. Collapsing those would
+have deleted a documented behaviour rather than shortened a chain, and the numbers would then be
+about a different camera.
+
+```
+  framing        boom SHIPPED -> COLLAPSED      in metres, got of asked
+  land                0%   ->   53%             0.00/0.54  ->  0.44/0.83
+  combat             35%   ->   73%             0.96/2.70  ->  2.68/3.66
+  dive               61%   ->   88%             3.47/5.65  ->  4.98/5.68
+  roll               60%   ->   86%             0.55/0.91  ->  0.81/0.94
+  idle (=move)       41%   ->   63%             5.18/12.69 ->  9.18/14.53
+  air                16%   ->   32%             1.34/8.49  ->  3.00/9.24
+  wall_run            5%   ->    8%             0.13/2.59  ->  0.21/2.72
+  glide             100%   ->  100%             2.65/2.65  ->  2.37/2.37
+  sneak             100%   ->  100%             2.19/2.19  ->  2.20/2.20
+```
+
+**The two healthy rows cost nothing.** `glide` and `sneak` are 100 % before and 100 % after. That
+was the question, and the answer is the second of the two the brief named.
+
+**The cost is continuous motion, not pops.** Over the identical trajectories:
+
+```
+                 mean |Δboom|/frame     p99 step      direction reversals
+  shipped            11.12 mm           108.6 mm        40 in 1852 frames
+  collapsed          14.79 mm           111.9 mm        48 in 1852 frames
+```
+
++33 % mean boom motion and +20 % reversals, but the **p99 single-frame step is unchanged** (+3 %),
+which is the useful shape: the worst steps are occlusion pull-ins and those were left alone.
+Collapsing does not add snaps; it adds small continuous movement.
+
+**And it separates two causes that looked like one.** `land` 0 → 53 % is chain depth. `wall_run`
+5 → 8 % is not — its boom is governed by the wall it is running along, so no amount of chain
+shortening reaches it. Before this run both were simply "the framing does not arrive".
+
+Still a human's call: +33 % of continuous boom motion against `land` going from nothing to half.
+
 ---
 
 # Appendix: the lead question, and how this table was arrived at

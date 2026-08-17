@@ -20,6 +20,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { Controller, TUNE } from '../src/player/Controller.js';
+import { realWorld, hardReset } from './_moveset.mjs';
 
 const DEG = Math.PI / 180;
 
@@ -264,4 +265,90 @@ test('R3: a timed-out lock hands back half a jump; a lock that fell out of range
   assert.ok(paid !== declined,
     'the paying and non-paying release reasons produced the same answer, so the reason is not '
     + 'reaching the payout and R3 is measuring nothing');
+});
+
+/* ====================================================================== */
+/* R4 — how many landings a player is actually told about                  */
+/* ====================================================================== */
+
+test('R4: half of all ordinary drop heights land in silence, and arrival speed does not predict which', async () => {
+  /* `Controller.TUNE`'s `landImpact` block documents a race: `_moveVertical` zeroes `v.y` on the
+     swept capsule before `_probeGround` reads it, so whether a landing registers is decided by
+     arithmetic the player cannot see. It states the consequence as *"on a fast descent (>3.6 m/s)
+     it is decided against"* and cites a 14 m drop landing in total silence.
+   *
+   * Driven against the shipped temple, **the substance is confirmed and the description is
+   * wrong.** It is not monotonic in speed and a 15 m drop fires perfectly well. What actually
+   * happens is that roughly half of all drop heights produce no `land` state, no `landed` event,
+   * no shake and no sound — and which half is not predictable from the arrival speed:
+   *
+   *     drop 0.5 m  arrival  4.51 m/s   silent
+   *     drop 1.0 m  arrival  6.10 m/s   fires
+   *     drop 2.5 m  arrival 10.07 m/s   fires
+   *     drop 4.0 m  arrival 13.00 m/s   silent
+   *     drop 6.0 m  arrival 16.09 m/s   silent
+   *     drop 8.0 m  arrival 18.55 m/s   fires
+   *     drop 10  m  arrival 20.98 m/s   silent
+   *     drop 15  m  arrival 25.74 m/s   fires
+   *
+   * Every one of these is above `landBeat` 3.2, so every one of them is a landing the moveset
+   * intends to react to.
+   *
+   * ── AND THE FIRST INSTRUMENT I POINTED AT THIS WAS VACUOUS (§414) ────────────────────────────
+   * I swept the SUB-FRAME PHASE first, offsetting the arc by `g·dt²` = 6.7 mm, and got 20/20
+   * agreement at every height — which reads as "phase does not matter". It is not a result: one
+   * frame of fall at these speeds is 100–430 mm, so a 6.7 mm perturbation is two orders of
+   * magnitude below the quantity that decides the outcome. The probe could not have disagreed
+   * with itself. **The height sweep is the instrument; the phase sweep measured its own step
+   * size**, and it is recorded here rather than deleted because it is the same defect class this
+   * arm exists to document.
+   *
+   * DOMAIN (§418.3)
+   *   passes on : 1.0, 2.5, 8 and 15 m — `landed` fires, so the event path is wired and works.
+   *   fails on  : 0.5, 4, 6 and 10 m — nothing fires. Both sets are measured in the same sweep,
+   *               so "silent" is a fact about those drops and not a harness that cannot hear the
+   *               event. */
+  const heights = [0.5, 1.0, 2.52, 4, 6, 8, 10, 15];
+  const rows = [];
+  for (const h of heights) {
+    const { engine, c } = await realWorld();
+    hardReset(engine, c, new THREE.Vector3(0, 0.2, 30), 0);
+    c._needSpawnSnap = false;
+    c.pendingLaunch = Math.sqrt(2 * -TUNE.gravity * h);
+    c.sm.set('jump');
+    let prevG = true, vyB = 0, arrival = 0;
+    for (let i = 0; i < 240; i++) {
+      engine.input.beginFrame(1 / 60);
+      engine.input.move.x = 0; engine.input.move.y = 0;
+      engine.input.let_go('jump');
+      const vy = c.velocity.y;
+      c.update(1 / 60, i / 60);
+      if (!prevG && c.grounded) arrival = -vyB;
+      prevG = c.grounded; vyB = vy;
+    }
+    rows.push({ h, arrival, fired: engine.events.filter((e) => e.evt === 'landed').length > 0 });
+  }
+  console.log('\n[R4] drop      arrival    landed?');
+  for (const r of rows) {
+    console.log(`[R4] ${String(r.h).padStart(5)} m  ${r.arrival.toFixed(2).padStart(7)} m/s   ${r.fired ? 'fires ' : 'SILENT'}`);
+  }
+  const fired = rows.filter((r) => r.fired);
+  const silent = rows.filter((r) => !r.fired);
+  console.log(`[R4] ${fired.length}/${rows.length} drop heights produce landing feedback · landBeat ${TUNE.landBeat} m/s`);
+
+  assert.ok(rows.every((r) => r.arrival > TUNE.landBeat),
+    'some sampled drops arrive below landBeat, so their silence is by design and this arm is '
+    + 'counting intended behaviour as a defect');
+  assert.ok(fired.length >= 3,
+    `only ${fired.length} of ${rows.length} heights fired — if NOTHING fires the event path is broken `
+    + 'rather than raced, which is a different and simpler bug');
+  assert.ok(silent.length >= 3,
+    `only ${silent.length} of ${rows.length} heights were silent. If that dropped, the landImpact race `
+    + 'has been fixed — say so and retire this arm rather than loosening it.');
+  /* The part that makes it a race rather than a threshold: silence is not ordered by speed. */
+  const maxFired = Math.max(...fired.map((r) => r.arrival));
+  const minSilent = Math.min(...silent.map((r) => r.arrival));
+  assert.ok(minSilent < maxFired,
+    `every silent drop (min ${minSilent.toFixed(2)} m/s) arrives faster than every firing one `
+    + `(max ${maxFired.toFixed(2)} m/s) — that is a THRESHOLD, not a race, and the diagnosis above is wrong`);
 });
