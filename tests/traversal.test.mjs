@@ -2921,11 +2921,11 @@ test('census: which of the 32 states any test in this project has ever entered',
      are kept as COVERAGE-LOSS detectors, which is the direction that still matters, and the
      `never` set above is the assertion doing the real work now. Re-based by the mover, same
      committed-file rule as the previous two times. */
-  assert.ok(elsewhere.length <= 22,
-    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, 11, 15, 17, 22) ` +
+  assert.ok(elsewhere.length <= 23,
+    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, 11, 15, 17, 22, 23) ` +
     `— coverage has spread, which is good: update this bound. ${elsewhere.join(', ')}`);
-  assert.ok(onlyMine.length >= 10,
-    `only ${onlyMine.length} states are traversal-only (was 21, 17, 15, 10) — if that dropped, other ` +
+  assert.ok(onlyMine.length >= 9,
+    `only ${onlyMine.length} states are traversal-only (was 21, 17, 15, 10, 9) — if that dropped, other ` +
     'lanes have started driving the moveset and this arm should say so rather than assert the old ' +
     'concentration');
   /* The thinness pins. Both are stated as "no worse than", so widening coverage never reddens
