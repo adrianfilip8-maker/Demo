@@ -80,11 +80,18 @@ export const KEY_BINDINGS = {
   pause:    ['KeyP'],
 };
 
-/** action -> MouseEvent.button. */
+/**
+ * action -> MouseEvent.button.
+ *
+ * `middle: 1` was removed: nothing read it, and unlike `quality` — which had an obvious intended
+ * consumer and got one — there is no candidate verb for the middle button in this game. A
+ * binding with no reader and no plausible reader is worse than no binding, because it is
+ * published through `bindings()` and `describe()`, so a control list would offer the player a
+ * button that does nothing.
+ */
 export const MOUSE_BINDINGS = {
   attack: 0,   // left  — cane combo / dive attack
   focus:  2,   // right — Thief-o-Vision + hook lock-on
-  middle: 1,
 };
 
 /**

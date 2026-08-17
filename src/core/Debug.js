@@ -306,6 +306,25 @@ export class Debug {
       engine.debug.showColliders = !engine.debug.showColliders;
       engine.emit('showColliders', engine.debug.showColliders);
     }
+    /**
+     * F2 cycles the quality preset.
+     *
+     * `quality` has been in `KEY_BINDINGS` since Input was written and **nothing read it** — it
+     * sat between two live debug keys (F1 `freecam`, F3 `colliders`) doing nothing, while
+     * `engine.setQuality()` and `__GAME.setQuality()` both existed. That is the milder of the
+     * two ways an action can be broken, and the distinction is worth keeping: a bound-but-unread
+     * action **advertises a key that does nothing** — it appears in `input.bindings()` and
+     * `describe()`, so a control list or a rebinding screen offers it and the player blames
+     * themselves when it is inert. An unbound-but-read verb is worse: it exists in code and no
+     * input can reach it, so the feature is invisible. A census of every action against every
+     * binding found **zero of the latter**, so this build's input surface is in the better state
+     * — recorded here because that is the fact a future reader will want and it is cheap to lose.
+     */
+    if (input.pressed('quality')) {
+      const order = ['low', 'med', 'high', 'ultra'];
+      const next = order[(order.indexOf(engine.quality) + 1) % order.length];
+      engine.setQuality(next);
+    }
     if (input.pressed('pause')) engine.debug.paused = !engine.debug.paused;
 
     if (!this.visible) return;

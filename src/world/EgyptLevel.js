@@ -142,11 +142,77 @@ function sandCeil(A, x, z, halfW, halfD = halfW, n = 3) {
   return Number.isFinite(hi) ? hi : 0;
 }
 
+/**
+ * A flat walkable slab. **`slope` is not an option here and never was** — see below.
+ *
+ * ── What `slope` means, so nobody has to rediscover this ──────────────────────────────────
+ * It means **use `rampProxy`**. It was written once at the terrace-stair call site, with clear
+ * intent, spread into the collider record, and read by nothing in `src/`. The resolution is
+ * that a sloped surface is a different SHAPE, so it gets a different function rather than a
+ * flag; `groundProxy` now warns if it is handed one, because an option that was silently inert
+ * once will be written again by the next author who assumes it works.
+ */
 function groundProxy(A, x0, x1, y, z0, z1, opts = {}) {
   const t = opts.thick ?? 1.0;
+  /**
+   * The defect this guard exists for, kept because the symptom is the argument.
+   *
+   * `slope: true` used to be passed here by the terrace stair at the call site below, spread
+   * into the collider record, and read by NOTHING in `src/` — the tenth §357.1 in this project
+   * and the one with the most vivid symptom: the drawn stairs rise 0 -> 2 m in four steps and
+   * the collider was a box with a flat top at 2.05, so the player walked into 2.04 m of
+   * invisible wall standing where the art shows open paving. Holding forward from spawn — the
+   * first thing anyone does — stopped dead after 7.14 m.
+   *
+   * Warning rather than ignoring, because the failure mode of ignoring is that the next author
+   * writes it again believing it works. A sloped surface is a different SHAPE, so it gets a
+   * different function; see `rampProxy`.
+   */
+  if (opts.slope !== undefined) {
+    A.engine?.warn?.('groundProxy: `slope` is not a ground-slab option and does nothing here — '
+      + 'use rampProxy() for a sloped walkable surface (see EgyptLevel.js groundProxy)');
+  }
   A.proxy(new THREE.BoxGeometry(x1 - x0, t, z1 - z0),
     { tag: 'ground', material: opts.material || 'stone', ...opts },
     { x: (x0 + x1) / 2, y: y - t / 2, z: (z0 + z1) / 2 });
+}
+
+/**
+ * A sloped walkable surface: the top face runs from `yAtZ0` at `z0` to `yAtZ1` at `z1`, with
+ * vertical sides and a flat underside `thick` below the high end.
+ *
+ * ── Why a ramp and not a stepped proxy, which is the obvious alternative ───────────────────
+ * `Controller.TUNE.stepHeight` is **0.42 m** — "stairs and kerbs are climbed, not collided
+ * with". The terrace flights are authored with **0.50 m** and **0.46 m** risers, both above it.
+ * So a proxy that reproduced the drawn steps faithfully would be *unclimbable*, and a ramp is
+ * not a simplification here, it is the only shape that works. That is almost certainly why the
+ * original call site asked for `slope` in the first place.
+ *
+ * The pitch is the caller's problem and it is checked rather than assumed: `Collision.TUNE
+ * .slopeWalkableDeg` is 50, and a ramp steeper than that is ground the player cannot walk up.
+ * `tests/terracestair.test.mjs` pins both the delivered pitch and that limit, and it is a limit
+ * to design within, never one to move to make a ramp fit.
+ *
+ * Built by shearing a box's top face rather than by authoring eight corners: `BoxGeometry`
+ * already carries per-face duplicated vertices and correct winding, so displacing every vertex
+ * above the mid-plane keeps the solid closed and lets `computeVertexNormals` produce flat
+ * per-face normals — which matters, because `Collision` derives walkability from `normal.y`.
+ */
+function rampProxy(A, x0, x1, yAtZ0, yAtZ1, z0, z1, opts = {}) {
+  const w = x1 - x0, d = z1 - z0;
+  const hi = Math.max(yAtZ0, yAtZ1);
+  const t = opts.thick ?? 1.0;
+  const g = new THREE.BoxGeometry(w, t, d, 1, 1, 1);
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    if (pos.getY(i) <= 0) continue;                       // the underside stays flat
+    const u = (pos.getZ(i) + d / 2) / d;                  // 0 at z0, 1 at z1
+    pos.setY(i, t / 2 - (hi - (yAtZ0 + (yAtZ1 - yAtZ0) * u)));
+  }
+  pos.needsUpdate = true;
+  g.computeVertexNormals();
+  A.proxy(g, { tag: 'ground', material: opts.material || 'stone', ...opts },
+    { x: (x0 + x1) / 2, y: hi - t / 2, z: (z0 + z1) / 2 });
 }
 
 function ledgeProxy(A, x0, x1, y, z0, z1, opts = {}) {
@@ -809,10 +875,46 @@ function courtyard(A) {
   groundProxy(A, -t2.x, t2.x, t2.y, t2.z0, t2.z1);
   ledgeProxy(A, -t2.x, t2.x, t2.y, t2.z0, t2.z0 + 0.9);
 
-  /* Stairs up the south face of each stage — the readable way in. */
+  /* Stairs up the south face of each stage — the readable way in.
+   *
+   * ── Flight 1 carried two defects and both are fixed here ──────────────────────────────────
+   * `stairFlight` climbs +X from its origin (the tomb flights at the bottom of this file say so
+   * in their own comment), and `ry: -Math.PI/2` maps +X to +Z — so the flight ascended SOUTH,
+   * away from the terrace it serves, topping out 6 m into open courtyard at 2 m with nothing to
+   * step onto. `ry: +Math.PI/2` maps +X to −Z, which lands the four treads exactly on the
+   * collision footprint below and delivers the top tread to the stage-1 deck edge at z1 = 19.4,
+   * y = 2.0. Measured after the change: drawn top surface 0.50 m at z 22.03 rising to 2.00 m at
+   * z 19.78, against a deck at 2.0.
+   *
+   * That the proxy footprint — not the art — was the authored intent is not inferred from the
+   * proxy: §8.1's route at the top of this file says *"WALK north to the terrace south stair at
+   * (0, 0, 19.6)"*, and 19.6 is inside [19.4, 22.5] and nowhere near the art's old [22.4, 25.4].
+   *
+   * The second defect is the one the player actually hit — see `groundProxy`'s note on `slope`.
+   * 2.05 m over 3.1 m is 33.48 deg against a `slopeWalkableDeg` of 50. */
   const st1 = K.stairFlight({ steps: 4, rise: 0.5, run: 0.75, width: 6.4, rng: R });
-  A.add('court', 'sandstone_worn', K.place(st1, { x: 0, y: 0, z: t1.z1 + 3.0, ry: -Math.PI / 2 }));
-  groundProxy(A, -3.2, 3.2, 2.05, t1.z1, t1.z1 + 3.1, { thick: 3.4, slope: true });
+  A.add('court', 'sandstone_worn', K.place(st1, { x: 0, y: 0, z: t1.z1 + 3.0, ry: Math.PI / 2 }));
+  rampProxy(A, -3.2, 3.2, 2.05, 0.0, t1.z1, t1.z1 + 3.1, { thick: 3.4 });
+
+  /**
+   * ── Flight 2 is NOT fixed here, deliberately, and this is the reason ───────────────────────
+   * It has the identical box-for-a-staircase defect and it cannot be repaired the same way:
+   *
+   *     proxy footprint   3.25 m rise over 2.70 m run   = 50.28 deg
+   *     slopeWalkableDeg                                  50.00 deg
+   *     art run           3.22 m rise over 4.90 m run   = 33.31 deg, but needs 4.9 m and the
+   *                                                       gap between the two terrace edges
+   *                                                       (z 19.4 -> 16.6) is only 2.8 m
+   *     risers            0.46 m  vs  Controller stepHeight 0.42 m — a stepped proxy is
+   *                                                       unclimbable too
+   *
+   * So every available repair either moves `slopeWalkableDeg` — which would be §141.1, changing
+   * a threshold after seeing which side a result landed on — or re-authors the terrace spacing
+   * or the step count, which is a level-design decision and not a collision fix. The stage-1
+   * deck is reachable after this commit; stage 2 is still walled, and that is a routed question
+   * rather than a silent hole. `tests/terracestair.test.mjs` pins the 50.28 deg so this cannot
+   * be quietly "fixed" by widening the limit.
+   */
   const st2 = K.stairFlight({ steps: 7, rise: 0.46, run: 0.7, width: 5.2, rng: R });
   A.add('court', 'sandstone_worn', K.place(st2, { x: 0, y: t1.y, z: t2.z1 + 2.6, ry: -Math.PI / 2 }));
   groundProxy(A, -2.6, 2.6, 5.25, t2.z1, t2.z1 + 2.7, { thick: 3.6 });
