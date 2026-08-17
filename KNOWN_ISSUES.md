@@ -36230,3 +36230,82 @@ an audit's silence explicit. Read the other way it is a coverage result in its o
 moves the level's drivable routes never exercise**, three of them signature traversal verbs.
 
 Nothing camera-side follows from it. It belongs to whoever owns what the routes are for.
+
+## §445 — Rollback #8, and the counterexample §438.4 predicted
+
+Two unrelated items, both coordinator-level, recorded together because they landed in the same hour.
+
+### §445.1 The eighth container rollback, and why it cost nothing
+
+The container reverted to `de3080d` — §327, several hundred commits back. The local tree lost the
+patrol repair, six ledger sections, the hardware-review sheet, and every lane's work. The task list
+reverted with it, and **all three running lanes were killed**.
+
+Durable loss: **none.** Recovery took four commands, and it is worth writing down exactly why,
+because the reason is a discipline rather than luck.
+
+`origin` was ahead of the rolled-back local tree at every point, because §410.2 has been enforced all
+session: *push work, not just findings.* Every lane commits and pushes at the end of a round rather
+than holding a working tree, so the rollback destroyed a container and not a single result. The
+recovery is `git fetch` then `git merge --ff-only origin/<branch>` — local was a strict ancestor.
+
+**One trap, and it is the one §410.4 was written about.** The merge aborted: 33 untracked files
+under `progress/records/` would have been overwritten. These look exactly like rollback debris —
+stale manifests, capture PNGs, run logs — and the reflex is to delete them. That reflex once
+destroyed 171 tracked files in this project. They are not debris: they are *tracked in the remote
+tree* and untracked locally, because the rollback restored an older container in which they had not
+yet been committed. The procedure that is safe regardless of which reading is right:
+
+    1. list exactly what blocks the merge, and check none of it is under src/, tests/ or tools/
+    2. copy all of it to the scratchpad, preserving paths
+    3. only then clear it from the working tree
+    4. ff-merge, and keep the backup until the tree is verified
+
+Step 1 is the one that makes the rest safe: 33 of 33 were capture artifacts, and the answer to
+"is any code at risk" was available before anything was touched.
+
+**What rollbacks actually cost now.** Not results — coordination. Three lanes died mid-round with
+live context: what they had just measured, what they had decided not to do, which files they held.
+Their commits survive; their reasoning has to be rebuilt from commit messages and ledger sections,
+which is precisely why this project writes both at the length it does. A lane's section is not
+documentation of its work — it is **the lane's own restore point**, and it has now been used as one
+eight times.
+
+### §445.2 §438 said reading never catches anything. §444.1 is the counterexample it predicted
+
+§438 counted sixteen expensive errors and found the catching technique in every case was moving an
+agent, disbelieving a number against an external referent, or running a second instrument. **Zero
+were caught by reading the code**, and the prescription was that budget goes to drives rather than
+review. §438.4 stated the sampling bias plainly: *this counts errors that were found, by techniques
+this project happens to run, and cannot see a class only review would catch.*
+
+That class has now produced an instance, one section later, and it is a large one.
+
+`FRAMES.lead` is inert on **11 of 19 rows**. `_pivotGoal` floors the lead at the follow spring's own
+trail, so the delivered quantity is `max(leadTime × f.lead − followTimeH × f.stiff, 0) × speed −
+deadzoneH`, and the sign of that margin decides whether an authored `lead` does anything whatsoever.
+`air` authors 1.20 under the comment *"lead hard"* and delivers **16 cm**. `hook_swing` authors 1.60
+under *"Lead frames the landing"* and delivers **13 cm**. `land` sits **0.001 s** below break-even.
+
+**Every one of those numbers was derivable in closed form from `TUNE` and `FRAMES`.** No level, no
+driving, no capture. It took three rounds of driving the temple to arrive at it, and the reason is
+exact and general:
+
+> **Every instrument was pointed at delivery *measured*. Nobody asked what delivery was *bounded
+> by*.** A measurement tells you what happened; an algebraic bound tells you what could have
+> happened, and a quantity that is clamped never reveals its clamp by being measured — it just
+> reads low, which looks like a tuning problem and gets chased as one.
+
+So the §438 prescription needs its complement, and the two do not compete:
+
+- **Drive it** when the question is *what does the system do* — reachability, occupancy, whether a
+  beat connects, whether an agent can get somewhere. Sixteen for sixteen, this is where the errors
+  were.
+- **Solve it** when the question is *what is the system's output bounded by* — a clamp, a floor, a
+  `max(x, 0)`, a saturating blend, a threshold comparison. Driving an expression that is pinned at
+  its floor produces a number that is correct, reproducible, and completely uninformative about the
+  thing you are trying to fix.
+
+The tell for the second case is cheap and worth having: **an authored constant whose delivered value
+is small and stubborn across every route you try.** Three rounds of "it delivers 5%, then 26%, then
+16 cm" is not noisy data. It is a clamp, and the way to find a clamp is to read the expression.
