@@ -212,3 +212,133 @@ test('D3 the stealth vent is still sealed, and a terrain cut is NOT its repair',
     `a capsule at the vent shaft falls to y ${y.toFixed(2)}. The proxy has been cut here without a ` +
     'floor underneath, which turns a sealed passage into a hole into the void.');
 });
+
+/**
+ * ── R1/R2: the cheap invariant, and the expensive one it replaces (§483) ────────────────────
+ *
+ * Four lids were found this session — TERRAIN's sand over the stairwell, ARCHITECTURE's descent
+ * landing over its own ramp, the gate corridor over the same ramp, and a suspected prop lid that
+ * turned out not to exist. The tempting arm is the general one: *"no `ground` proxy roofs a
+ * walkable surface it does not belong to."* **Measured, that is unusable.** Sampling every
+ * walkable column in the playspace on a 2 m grid and walking down each one:
+ *
+ *     walkable columns                                  1505
+ *     walkable surfaces roofed by something above      10152
+ *     ... where the roof is a DIFFERENT collider        5108   across 36 distinct pairs
+ *     the top pairs:  ledge over ground 1141 · ground over sand 968 · sand over ground 567
+ *
+ * Every architrave roofs a floor, every deck roofs the desert, every cornice roofs a wall. The
+ * general invariant fires five thousand times on a correct level, so it is not an invariant, it
+ * is a description of a temple.
+ *
+ * What separates the real lids is not that they roof something — it is that they roof **the only
+ * way to a place the level promises**. So the cheap arm is not about roofs at all: it asserts the
+ * promise directly. `architecture.api.route` is eleven waypoints, and checking that a capsule can
+ * *stand* at each one would have caught two of the three real defects on its own — `vault-floor`
+ * had no ground at all under the sand lid, and the hall-front cornice's first corrected coordinate
+ * sat under the aisle roof with 0.79 m of clearance.
+ */
+test('R1: every authored route waypoint is a place a capsule can actually stand', async () => {
+  /**
+   * DOMAIN (§418.3)
+   * PASSES ON: today's tree, where every standing waypoint takes a 1.80 m capsule.
+   * FAILS ON:  the §447.1 tree — `vault-floor` returned no ground at all — and on the soffit
+   *            coordinate (−9.5, 15.36, −17.2) this lane briefly shipped, which has 0.79 m under
+   *            the aisle roof. Both are drawn from the claim's own domain rather than invented.
+   * does NOT discriminate: whether consecutive waypoints CONNECT. R2 measures that and does not
+   *            yet assert the tomb leg. A waypoint you can stand on is not a waypoint you can
+   *            reach, and this file has already made that mistake once at level scale.
+   */
+  const { collision, arch } = await realWorld();
+  /* `hook-chain` is an airborne hold and `sarcophagus` is the goal object you stand BESIDE, not
+     on. Named rather than filtered by a rule, so adding a waypoint forces a decision here. */
+  const NOT_STANCES = new Set(['hook-chain', 'sarcophagus']);
+
+  for (const [name, x, y, z] of arch.api.route) {
+    if (NOT_STANCES.has(name)) continue;
+    const g = collision.groundCheck(V(x, y + 1.2, z), R, 6);
+    assert.ok(g.hit,
+      `route waypoint '${name}' at (${x}, ${y}, ${z}) has NO GROUND under it within 6 m. That is ` +
+      'the §447.1 signature — something is roofing the place the route promises.');
+    const p = V(x, g.y + 0.03, z);
+    const occ = collision.capsuleSweep(p, p.clone(), R, H);
+    assert.ok(!(occ.depenHit && occ.depenDepth > 0.05),
+      `route waypoint '${name}' has ground at y ${g.y.toFixed(2)} but a ${H} m capsule does not fit ` +
+      `there (depenetration ${(occ.depenDepth || 0).toFixed(3)} m). A horizontal surface with ` +
+      'something close above it is a soffit, not a ledge, and nothing in the route table says so.');
+  }
+});
+
+test('R2: the route legs that connect, and the one that does not', async () => {
+  /**
+   * Step-connectivity between consecutive waypoints, flood-filled at `stepHeight` 0.42 and
+   * `slopeWalkableDeg` 50 — the same bars `_moveHorizontal` and the ground probe use, so a leg
+   * that passes here is one a walker can actually take.
+   *
+   * PASSES ON: the legs listed in CONNECTED below.
+   * FAILS ON:  any of those legs regressing — which is what a lid does first.
+   * does NOT discriminate: the tomb descent, which is OPEN and NOT YET WALKABLE (§482.3, §483).
+   *            It is excluded BY NAME rather than by a threshold, so closing it is a one-line
+   *            change here and cannot be forgotten. Legs involving airborne holds are excluded
+   *            for the same reason: a hook chain is not a walk.
+   */
+  const { collision, arch } = await realWorld();
+  const WALK = Math.cos(50 * Math.PI / 180), G = 0.5, STEP = 0.42;
+  /**
+   * LOCAL probe, from just above the walker's current height — not from the sky.
+   *
+   * The first draft cast from y 40 and reported `hall-floor -> inner-gate` unwalkable, a leg this
+   * lane had already DRIVEN in 133 frames. Inside a roofed hall a downward cast from above finds
+   * the ROOF at y 17, so the flood was walking the rooftop and failing to reach a gate at y 0.
+   * That is a clearance read from the wrong side (§435.4's rule, in the vertical), and it would
+   * have been filed as a level defect by anything that trusted its own output.
+   */
+  const stand = (x, z, fromY) => {
+    const g = collision.groundCheck(V(x, fromY + 1.0, z), R, 2.4);
+    if (!g.hit || g.normal.y < WALK) return null;
+    const p = V(x, g.y + 0.03, z);
+    const occ = collision.capsuleSweep(p, p.clone(), R, H);
+    return (occ.depenHit && occ.depenDepth > 0.05) ? null : g.y;
+  };
+  /** Can a walker get from a to b, staying on standable ground within stepHeight each move? */
+  const connects = (ax, ay, az, bx, by, bz, budget = 20000) => {
+    const key = (x, z) => `${Math.round(x / G)},${Math.round(z / G)}`;
+    const y0 = stand(ax, az, ay); if (y0 == null) return false;
+    const seen = new Set([key(ax, az)]);
+    const q = [[ax, az, y0]];
+    while (q.length && seen.size < budget) {
+      const [cx, cz, cy] = q.shift();
+      /* THE GOAL TEST MUST INCLUDE Y, and this is not pedantry: `descent-landing` (0, 0, -57)
+         and `vault-floor` (0.4, -12, -57.6) are 0.72 m apart in XZ and 12 m apart vertically, so
+         an XZ-only goal reported the tomb leg CONNECTED from its own start cell without taking a
+         single step. A reachability test that ignores the axis the defect lives on returns true
+         for the thing it exists to refute. */
+      if (Math.hypot(cx - bx, cz - bz) < 1.2 && Math.abs(cy - by) < 1.0) return true;
+      for (const [dx, dz] of [[G, 0], [-G, 0], [0, G], [0, -G]]) {
+        const nx = cx + dx, nz = cz + dz, k = key(nx, nz);
+        if (seen.has(k)) continue;
+        const ny = stand(nx, nz, cy);
+        if (ny == null || Math.abs(ny - cy) > STEP) continue;
+        seen.add(k); q.push([nx, nz, ny]);
+      }
+    }
+    return false;
+  };
+  /* Ground legs only. The route's other legs are jumps, a hook chain and a stair, and a flood
+     fill is the wrong instrument for every one of them. */
+  const CONNECTED = [
+    ['hall-floor', 'inner-gate'],
+    ['inner-gate', 'descent-landing'],
+  ];
+  const wp = Object.fromEntries(arch.api.route.map(([n, x, y, z]) => [n, { x, y, z }]));
+  for (const [a, b] of CONNECTED) {
+    assert.ok(connects(wp[a].x, wp[a].y, wp[a].z, wp[b].x, wp[b].y, wp[b].z),
+      `route leg '${a}' -> '${b}' is no longer walkable at stepHeight ${STEP} / slopeWalkable 50. ` +
+      'A lid over the path is the first thing to check.');
+  }
+  /* The open one, measured and reported rather than asserted, so its state is visible in the log
+     without pinning a defect as though it were intended. */
+  const tomb = connects(wp['descent-landing'].x, wp['descent-landing'].y, wp['descent-landing'].z,
+                        wp['vault-floor'].x, wp['vault-floor'].y, wp['vault-floor'].z);
+  console.log(`  R2 descent-landing -> vault-floor walkable: ${tomb}  (§482.3 open; promote to CONNECTED when true)`);
+});

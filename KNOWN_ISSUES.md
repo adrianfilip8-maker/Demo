@@ -38375,3 +38375,137 @@ against the mechanism, and needed no tightening.
 **848 arms: 844 pass, 4 fail.** D8, L1b, P-A1 and the CameraRig framing arm — all traced to the
 camera lane's uncommitted `CameraRig.js`, verified by stashing this lane's changes and watching the
 same four persist. Nothing in this lane's files is red.
+
+---
+
+## §483 — RETRACTION: the props are not a lid; and the general invariant is unusable, measured
+
+Three results. The first withdraws §482.4. The second answers whether a level-wide arm can catch
+the lid class — it cannot, and the number says why. The third is the round's own error log, which
+is the most useful part, because all three errors were in **my instruments** and two of them would
+have shipped as level defects.
+
+### §483.1 §482.4 is WITHDRAWN — no prop roofs anything, anywhere in the level
+
+§482.4 claimed *"38 of 370 stairwell cells with ground are held up by `props_dark`/`props_carnelian`
+standing ABOVE the shaft… a driven descent walks onto them and over the top of the stairwell."*
+**That is wrong.** The correct question is not *what is the top surface* but *what is underneath
+it*, and asking it inverts the answer:
+
+```
+  prop-topped cells in the stairwell        36
+    standing on floor (flanks the descent)  36
+    standing over the open shaft (a LID)     0
+    standing over nothing at all             0
+```
+
+Level-wide, on a 2 m grid over the whole playspace:
+
+```
+  columns whose top walkable surface is a PROP   28
+  of those, roofing open space or a far surface   0
+```
+
+**Zero.** Every standable prop in this level is standing on something.
+
+The props concerned are the **Anubis pair flanking the tomb descent** — `Props.js:_tomb()`, placed
+at `L.tombStair.x ± 2.6`, described in its own comment as *"the most readable silhouette in the
+game"*. They stand on the gate corridor floor at y 0 and rise to 4.55, with **3.8 m of clear gap
+between them**, which is a gateway you walk through. My driver walked into one because my waypoints
+steered it there.
+
+**That is a failed beat filed as a defect — the exact error this ledger records four previous lanes
+committing, and I have now made it the fifth.** The rule exists, I quoted it earlier in this same
+session about somebody else's round, and I still did it, because the driver's failure was vivid and
+the check was one probe away. The check that would have caught it is one line: *before calling a
+surface a lid, look underneath it.*
+
+### §483.2 Which props register `ground`, and whether they should — they should
+
+Answering the question directly rather than by the stairwell instance. `Props.js` batches props by
+material key into one merged mesh each and registers **one collider per material**:
+
+```
+  if (!spec.transparent && !spec.emissive && key !== 'rope')
+    registerCollider(mesh, { tag: 'ground', material: key === 'wood' ? 'wood' : 'stone' })
+```
+
+So the set is *every solid prop in the level*, and the exclusions are already the right ones —
+cloth, flame, glass and rope. The design intent is explicit in the source (*"Solid props are
+standable; cloth, flame and glass are not"*) and it agrees with §8.1, which makes the colossi's
+knees a landable `ledge`. **Standing on the furniture is a feature of this genre**, and the census
+above shows it costs nothing: no prop occludes a surface it should not.
+
+One property of the batching is worth recording even though it is not a defect: because colliders
+are per *material*, `props_dark` is a single rec whose bounding box spans x[−22, 22] y[−12, 10.47]
+z[−76.1, 26.5] — the whole level. Any diagnostic that identifies a collider by its bounds will
+therefore describe a torch as if it were the size of the temple. That cost this lane an hour, and
+it is why §483.1's numbers are computed per *sample* rather than per rec.
+
+### §483.3 The general invariant is unusable, and here is the number
+
+The tempting arm is *"no `ground` proxy roofs a walkable surface it does not belong to."* Sampling
+every walkable column in the playspace on a 2 m grid and walking down each one:
+
+```
+  walkable columns                                  1505
+  walkable surfaces roofed by something above      10152
+  ... where the roof is a DIFFERENT collider        5108     across 36 distinct pairs
+  the top pairs   ledge over ground  1141      ground over sand   968
+                  sand over ground    567      ground over ledge  528
+```
+
+Every architrave roofs a floor, every deck roofs the desert, every cornice roofs a wall. **The
+general invariant fires five thousand times on a correct level**, so it is not an invariant, it is
+a description of a temple. Recorded as a negative result because it is worth more than an arm that
+would have to be suppressed everywhere it fired.
+
+**What separates the real lids is not that they roof something — it is that they roof the only way
+to a place the level promises.** So the cheap arm does not mention roofs at all: it asserts the
+promise. `architecture.api.route` is eleven waypoints, and `tests/tombdoor.test.mjs` R1 now checks
+that a 1.80 m capsule can stand at each one. That alone would have caught **two of the three real
+lids**: `vault-floor` had no ground at all under the sand, and the hall-front cornice's first
+corrected coordinate sits under the aisle roof with 0.79 m of clearance. R2 adds step-connectivity
+between consecutive waypoints at `stepHeight` 0.42, which is what the third needs.
+
+Eleven waypoints against 1505 columns is the whole argument: **test the promise, not the geometry.**
+
+### §483.4 Three instrument errors in one round, all mine, all caught by disbelieving the output
+
+Recorded in full because the pattern is identical in all three and it is not the pattern I expected.
+
+1. **Travel read as clearance.** R1's first draft measured headroom as `capsuleSweep(up).position.y
+   − groundY`, which is *how far the feet can rise*, not the room above the head. It reported
+   `terrace-1` at 1.45 m and `terrace-2` at 0.75 m against `CAPSULE_H` 1.80 — **two false defects on
+   the level's first two waypoints**, both of which this lane had already stood on. The correct
+   reading is that a capsule which depenetrates nowhere at the stance *has* 1.80 m by construction.
+   Corrected, `terrace-2`'s ceiling is **2.55 m** — the same 2.55 m §435.4 cites, which is the
+   cross-check that the new number is right.
+2. **Probed from the sky, inside a roofed building.** R2's first flood cast down from y 40 and
+   reported `hall-floor → inner-gate` unwalkable — a leg this lane had **driven in 133 frames**.
+   Inside the hypostyle hall a downward cast finds the roof at y 17, so the flood was walking the
+   rooftop and failing to reach a gate at y 0. §435.4's rule in the vertical: a clearance read from
+   the wrong side. The probe is now local — from the walker's own height, 2.4 m of reach.
+3. **A goal test that ignored the axis the defect lives on.** `connects()` compared XZ only, and
+   `descent-landing` (0, 0, −57) sits 0.72 m from `vault-floor` (0.4, −12, −57.6) in XZ and **12 m
+   above it**. So the tomb leg returned CONNECTED from its own start cell without taking a step, and
+   for about ten minutes this lane believed the descent was walkable. Caught by extracting the path
+   the flood claimed and finding it was **one cell long**.
+
+The common shape is not carelessness — each instrument was written to answer the right question and
+each returned a plausible number. What caught all three was the same move: **take the instrument's
+answer and ask it to produce the artefact behind it.** A headroom that disagrees with a stance you
+have stood in; a route that disagrees with a drive you have watched; a path with a length. None of
+the three survived being asked for its evidence, and none would have been caught by re-reading the
+code, because the code was doing exactly what it said.
+
+### §483.5 Correction to this lane's own suite report
+
+An earlier report from this lane said *"two failures remain"*. The complete run shows **four**:
+P-A1 (mine, fixed and pinned), camdrive D8, camlead L1b, and traversal 819 (the CameraRig framing
+census). The count was wrong because it was read off a run that had not finished.
+
+Checked properly, in a `git worktree` at HEAD so no sibling lane's uncommitted work was disturbed:
+**all four pass.** Every failure in the shared working tree comes from another lane's in-flight
+edits to `src/player/CameraRig.js` and `src/player/Controller.js`. HEAD itself is green.
+
