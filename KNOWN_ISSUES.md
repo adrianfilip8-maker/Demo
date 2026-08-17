@@ -35881,3 +35881,82 @@ the emit is correct, well-timed, or fired at all in play.* A green here says the
 telegraph it is given, and the measured truth today is that the game gives it none. Written into
 the file so it cannot later be quoted as evidence that the telegraph works — which is precisely how
 the camera lane's `OneWall` stub was quoted for two rounds before it was retracted.
+
+---
+
+## §442 — A framing key is not a move: the row quoted to three lanes was measuring a different one
+
+Two results. The first ships a change; the second says a published table was partly about the
+wrong things, and it is the one that matters because the table had already propagated.
+
+### §442.1 The boom chain is collapsed, and the two rows that already worked cost nothing
+
+`FRAMES.tau` was never the delivery time of anything — every authored channel passes through at
+least one more blend before a pixel, and the boom passed through two. Delivery tracked **chain
+depth**, not `tau`. Two of nineteen blend sites collapsed, both in `_boomLength`: `_boomWant`'s own
+`smoothDamp`, and `this.boom`'s on the **free-air path only.** The occlusion pull-in and the whole
+recovery design were left as shipped.
+
+```
+  land   6% -> 52%   combat 35% -> 73%   dive 61% -> 88%   roll 65% -> 89%
+  idle  43% -> 63%   air    13% -> 32%   glide 100% -> 100%   sneak 100% -> 100%
+```
+
+Held on sequencing until MOVEMENT's landing repair landed, then re-measured rather than assumed —
+the repair made 2.5× as many landings register, so the collapse is worth **more** than when it was
+priced (1.11 m of 2.13 m against 0.44 m of 0.83 m). A side effect nobody predicted: the Cane Slam's
+two visual identities largely merged, its distribution across drop heights going from
+5/50/86/96/100 to **71/92/98/97/100**.
+
+The cost is stated as motion because motion is what a person on hardware judges: **mean |Δboom|
+11.35 → 15.27 mm/frame (+35 %), reversals 38 → 52**, and the **p99 single-frame step unchanged** at
+108.6 → 111.9 mm. Small continuous movement, not snaps — which is the evidence that leaving the
+occlusion pull-ins alone was the right line to draw.
+
+### §442.2 And one published row was never about the move it is named for
+
+`wall_run` was quoted at 5 % to three lanes. **100 % of the frames behind it are `wallCling`** —
+held against a wall, not running along one. Not one frame is the `wallRun` state.
+
+This is a distinct defect from anything the session has catalogued so far. §357.1 is machinery
+wired at one end; §430 is a value that cannot arrive; §437.1 is machinery wired through something
+that does not conduct. This is **a measurement correctly performed on the wrong subject, under a
+label that says otherwise** — and the label is not a mistake anyone made, it is the framing key,
+which is shared by four states and named after one of them.
+
+The audit run over every row:
+
+```
+  idle       idle 49% + move 51%          MAJORITY `move` — the row reads as standing, is running
+  air        fall 68% + jump 32%          category name, legitimate — BUT see below
+  wall_run   wallCling 100%               named for a move it never saw
+  glide      paraglide 100%               category name, legitimate
+  combat     combo 100%                   category name, legitimate
+  sneak · dive · roll · land              single state, name matches — clean
+```
+
+**Pooling hides spread even where the name is fine.** `air` is 68 % `fall` and 32 % `jump`, and
+their `lead` delivery is **92 % against 26 %**. One number for both told nobody that, and nothing
+in the pooled table could have.
+
+Six of nine rows are clean, one is misattributed outright, and two pool states that differ
+materially. The published table now opens with a read-this-first box saying which.
+
+### §442.3 The correction I had to make to my own correction, again
+
+§440.3 said the `wall_run` row pooled `wallClimb`, `wallCling` and `wallJump`. It does not. It is
+`wallCling` alone. I described the composition from the routing table instead of measuring it —
+the same habit that produced the occlusion story in §439 and the one-route generalisation in §440,
+three times in three rounds, each time about the same row.
+
+The pattern is specific enough to name: **when a number is wrong, the explanation for why is the
+next thing that will be wrong**, because it is reached by reasoning from the same picture that
+produced the number. The defence is the same each time and it is cheap — measure the composition,
+do not derive it.
+
+### §442.4 `does NOT discriminate`, applied to a sample
+
+D7 carries the third domain line §439 added, and this is the first arm where it is about a
+**sample** rather than a stub: `combatStrafe`, `wallRun`, `railSlide`, `poleClimb` and `hookSwing`
+produce no frames on these routes, so the audit is silent about them. Saying so is the whole point.
+A sample looks like evidence in a way a stub does not, which is exactly why it needs the line more.
