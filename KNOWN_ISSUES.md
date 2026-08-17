@@ -32838,3 +32838,43 @@ to it holds one subject or two, and it held two.
 *shipping* one, and only if it executes. Every worker here knew the class by mid-session; every
 worker wrote another instance afterwards, including inside the arm written to demonstrate the
 lesson. Knowing did not help. Running did.
+
+### §418.5 Two refinements, both from applying §418.3 within the hour
+
+**An unfalsifiable bar is allowed. Believing it discriminates is not.** Applying the rule to its
+own round, the traversal lane found `assert.equal(cal?.sweepHit, true)` has **no failing input in
+this level**: `_calibrate` drops 3.5 m from 3 m above a floor `groundCheck` just found, so the
+sweep must cross it. The same structural argument that makes the bare `hit` read safe is what
+makes the bar unfalsifiable. It was kept — deliberately, as a **tripwire**, with the comment
+saying which it is:
+
+> §407's failure was not having an unfalsifiable bar. It was believing one was discriminating.
+
+That distinction is what keeps §418.3 from becoming a rule against defensive assertions. A bar
+with no failing input still catches a *change to the world* that gives it one, which is exactly
+what a tripwire is for. What it must never do is sit in a seal being counted as evidence. So the
+rule is not "delete bars you cannot fail" — it is **"name which kind you have written"**, and the
+two inputs are how you find out.
+
+**Applying the rule can reveal that the domain cannot support the bar.** The slope-shedding pair
+has no passing and failing input that coexist in this level: the steepest face is **47.9° against
+a 50° walkability limit**, so "still sheds" and "does not travel" cannot both be exercised by any
+real geometry here. The ramp used for it is synthetic, and now says so — not for convenience, but
+because **half the domain does not exist**, and without saying so the arm would have left "still
+sheds" unfalsifiable while looking entirely ordinary.
+
+That is a failure mode §418.3 catches that nothing else would: not a badly written bar, but a
+correctly written bar in a world with no counterexample in it.
+
+### §418.6 And the housekeeping corollary, since it happened a third time
+
+`update-index` never touches the working tree. **So every blob commit any lane makes leaves every
+other working copy one section behind — including the committer's own.** Restore after the LAST
+commit of a sequence, with `git checkout -- <path>`, which re-reads the index when it runs; a
+snapshot taken earlier in the round is a stale base wearing a restore's clothing.
+
+Three distinct ways this one file was damaged in a single session — a `git stash` over a lane's
+live edits (§406.3), an `rm -rf` of paths untracked in the rolled-back tree and tracked in the
+recovered one (§410.4), and a restore from a stale snapshot. **All three were tidying operations.
+None of them was the work.** On a branch with concurrent writers the dangerous commands are the
+housekeeping ones, precisely because they are the ones run without reading first.
