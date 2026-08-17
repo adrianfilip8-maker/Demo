@@ -34225,3 +34225,174 @@ after `traversal` are 24 s, 15 s and 7.5 s of genuinely irreducible computation,
 them would have looked like a candidate from the timing column alone. **A ranked list of the
 eleven slowest files is not a list of eleven problems**, and the difference between those two
 readings is the whole content of this round.
+
+---
+
+## §427 — A playtest driven by the wall clock measures the renderer, not the game; and `stats.fps` made the identical mistake with the sign reversed
+
+The lane was asked to stop building and **drive the thing** — boot it in a browser, press real
+keys, report what breaks. Nobody had. Every session to that point had been staged stills, and a
+staged still goes through `?shot=1`, which is the branch of `main.js:287` that removes the boot
+veil without a click, never requests pointer lock, and **never dispatches an input event**. So the
+first question was not "what is broken" but "has anything ever pressed a key".
+
+### §427.1 The first instrument produced a confident, catastrophic, wrong answer
+
+25 beats, real dispatched key and mouse events, 53.9 s of held input against a live rAF loop. It
+produced a clean table whose second row said:
+
+```
+  beat            input       moved      state
+  forward W       KeyW        0.000 m    idle
+  strafe right D  KeyD        0.000 m    move
+  back S          KeyS        0.000 m    move
+```
+
+Holding forward for two and a half seconds moved the player **nothing**. Read at face value that
+is a dead movement system, and it would have been the headline defect of the session.
+
+It is an artefact. Across all 25 beats the engine presented **38 frames** and `engine.time`
+advanced **2.054 s** — the whole session simulated two seconds of game. There is no GPU here;
+WebGL is ANGLE-over-SwiftShader and this scene costs ~0.5–1.4 s a frame. Normalised by the
+denominator that actually moved, every number in that table is correct:
+
+```
+  walk      0.095 m / frame        walkSpeed 2.60 m/s x dt 0.05 = 0.130
+  fall      0.258 m / frame
+  jump      0.513 m in the single frame that fired
+```
+
+**The column was reporting how many frames happened to fire.** Two of the six movement beats
+rendered zero frames, and a beat that renders zero frames returns the same answer for a working
+key and a missing one. That is §418.3's question asked of a measurement rather than a bar — *what
+input makes this read differently?* — and at 0.7 fps the answer is none.
+
+### §427.2 The fix is to stop measuring wall time, and the engine already exposed the seam
+
+`Engine.renderFrame(forcedDt)` is public so the screenshot harness can step deterministically, and
+`main.js:273` wraps it so `input.beginFrame()`/`endFrame()` run around every call. So `stopLoop()`
+followed by `renderFrame(1/60)` in a loop drives the **entire** pipeline — input, movement,
+collision, camera, animation — at an exact dt, while real dispatched key events keep supplying the
+input state (keys are level state in `Input._down`, so a held key stays held across a batch).
+
+The denominator becomes frames, which is what the game simulates. Rendering was additionally cut
+to 320x180 with `shadowMap.enabled = false`; neither touches the simulation, and both are stated
+in the runner rather than left for a reader to find.
+
+### §427.3 The same confusion, in this project's code, pointing the other way
+
+`Engine.renderFrame` computed the on-screen frame rate from the **simulation** delta:
+
+```js
+    this._fpsAccum += this.dt || 1 / 60;        // dt = min(raw, 1/20) * timeScale
+    this.stats.fps = Math.round(this._fpsFrames / this._fpsAccum);
+```
+
+`dt` is clamped to 1/20 s, so on any machine slower than 20 fps every frame contributes exactly
+1/20 and the quotient is exactly 20. **There is no input below 20 fps on which that expression can
+return anything else.** Measured, in the driven session:
+
+```
+  presented           0.70 fps
+  stats.fps read        21          <- Debug.js:320 prints this on screen
+```
+
+And the other half: `timeScale` multiplies `dt`, so Thief-o-Vision's slow motion **raises** the
+reported rate while the game visibly slows. Replaced with `FpsMeter`, which accumulates wall time.
+`stats.ms` is left alone and documented instead — it is CPU time inside `renderFrame`, which is
+why it read 18–45 ms while frames arrived 1.4 s apart. It is not a frame time.
+
+### §427.4 Both errors are one error, and the project had already written the rule
+
+The harness accumulated **wall** time and reported a **per-frame** property. The engine
+accumulated **simulated** time and reported a **wall-clock** property. Same confusion, opposite
+signs — §419's observation from a different room: a pair of wrong instruments that disagree is
+more convincing than either alone.
+
+And the rule already existed here, with numbers. `src/core/Input.js:17` guarantees the jump buffer
+runs on the game clock and not the wall clock, because `performance.now()` made a 140 ms buffer
+cover 1.466 m at `timeScale` 1 and **0.513 m** under Thief-o-Vision — tightening 2.86x exactly
+when the game had slowed down to let the player be precise.
+
+**It did not generalise because it was filed as a rule about gameplay timing, and the surviving
+instance was in diagnostics.** A readout is not gameplay, so nobody checked it against a doctrine
+about gameplay — and a frame-rate counter is the one number in the build whose entire job is to
+describe the wall clock.
+
+> A rate has two clocks in it. Name the one in the denominator, out loud, where the division is
+> written.
+
+### §427.5 What the driven session then found, including a live check of §422's table
+
+With frames as the denominator, the run answers things it previously could not. Zero page errors
+and zero failed requests across **1,700 stepped frames** and 25 real-time beats; all 17 modules
+present; boot 15–19 s; click-to-play, pointer lock and the HUD all live. Concretely:
+
+- **Holding forward from spawn travels 7.14 m and stops dead** at z 22.84 against geometry, with
+  `forward` still held and `stateName` still `move`, for the remaining 236 frames. Strafing
+  escapes, so it is a wall and not a wedge — but it is the first thing a player does.
+- The camera framing at 7.2 m/s of ground running is `idle`, never `walk`/`run`/`run_fast`,
+  corroborating §422 from live play rather than from a stub.
+- **`glide` at 5.6 m/s delivers a lead of 0.207 m, range [0.207, 0.207] over 260 frames** —
+  exactly the SHIPPED value in `NOTE-camera-lead-compensation.md`, at exactly its speed, measured
+  in the integrated game instead of against a constant-velocity stub. The spring settles well
+  inside the state, so for a state the player commits to, the settled number is the delivered one.
+- **`air` is the opposite case and it matters for the same decision.** Entered and left repeatedly
+  in real play, its authored lead never finishes blending, and the delivered lead ranges
+  −0.392 … +0.217 with a mean of **−0.139** against a settled model of +0.217. The settled table is
+  right about committed states and does not describe chopped ones.
+- Standing still delivers **−0.100 m**, which is `deadzoneH` 0.10 exactly — the note's one term
+  deliberately left outside the floor, confirmed in situ.
+
+The general form, and the reason this sits with the clock lesson rather than in the camera
+lane's ledger: **a settled measurement and a played one answer different questions, and which one
+is right depends on how long the player stays in the state.** Neither instrument is wrong. Quoting
+either without its duration is.
+
+### §427.5b And the same live-vs-stub gap in the column the decision is actually made on
+
+`NOTE-camera-lead-compensation.md` decides "does Sly fall out of the bottom of the shot" on `ndcY`,
+measured against an `OpenAir` stub — no architecture, so no boom occlusion and no ceiling probe.
+Driven in the shipped temple, both airborne framings already sit **lower than that stub reports**:
+
+```
+                     stub SHIPPED   stub FULL   LIVE, shipped rig, real level
+  glide  (paraglide)    -0.330       -0.445              -0.532
+  hook_swing            -0.268       -0.397              -0.419
+```
+
+**The live hook swing is already below the value full compensation was predicted to take it to**,
+and paraglide — the row the note flags as "most likely to look wrong" — is 0.20 of frame height
+lower in situ than on the stub. Whatever full compensation costs in `ndcY`, it is spent from a
+starting point the arbitration table does not show. That is a caution the table alone cannot
+raise, and it is the one thing a played session could contribute to this decision that a stub
+could not.
+
+Two limits on that, stated rather than buried: the live hook swing ran at **4.18 m/s**, not the
+table's 8.0, so the rows are not speed-matched; and `railSlide` — the largest change in the table
+— **was not reached at all.** Dropping onto the `rail`-tagged cable above the ring chain gave
+`sneak` once and `hook_swing` once, never `railSlide`, which is independent corroboration of
+§424.1's list of six states with a stub route and no proven real-world approach.
+
+### §427.6 §418.3 caught a bar at authoring time, which is the entire point of it
+
+The reset arm of `tests/enginefps.test.mjs` was first written as: gap the clock 30 s, run 120
+frames at 60 Hz with and without `reset()`, compare the reported number. **It could not fail.** A
+30 s gap poisons one 0.5 s window and the next thirty frames refill it, so both sides end at 60 and
+the assertion passes whether the reset exists or not. Found by trying to name the failing input,
+before the arm was committed. It now asserts on the first *published* value — `[60,60,60]` against
+`[0,60,60,60]` — which required a `windows` counter on the meter, because `fps` reads 0 both when
+the machine is stalled and when nothing has been measured yet, and those two must not look alike.
+
+One arm is labelled a **tripwire** rather than counted as discriminating: the guard against a
+backwards or stalled clock runs only its passing side.
+
+And one instrument correction made against myself, worth recording because it is the cheap kind:
+the first action-binding census reported `binocu` as a bound key nothing reads. It is read, at
+`HUD.js:1086`, through `input?.pressed?.('binocu')` — a bare `pressed\(` pattern misses the
+optional-call form. A second pass then reported `forward`/`back`/`left`/`right` as unread, because
+the held-query is `down(a)` and not `held(a)`, which does not exist. **Two false defect reports in
+one instrument before it was pointed at the right API**, which is `tests/eventbus.test.mjs`'s
+"a census that cries wolf is worse than no census" arriving again. The corrected census: every
+action in `KEY_BINDINGS` is read except `quality` (F2) and `middle` (MMB), and no action is read
+that is not bound.
