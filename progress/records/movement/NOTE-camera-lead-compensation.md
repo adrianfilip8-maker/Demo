@@ -45,7 +45,7 @@ In metres and degrees, which is what the percentages are of:
 > ## Read the row names before quoting this table
 >
 > **A framing key is not a move**, and two rows are not about what they are called (audited by
-> `camdrive` D7, `KNOWN_ISSUES.md` §441):
+> `camdrive` D7, `KNOWN_ISSUES.md` §442):
 >
 > - **`wall_run` is 100 % `wallCling`.** Not one frame behind that row is the `wallRun` state. The
 >   published 5 % was a measurement of the wall *cling* — held against a wall, not running along
