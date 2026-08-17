@@ -859,6 +859,34 @@ function courtyard(A) {
   const tc1 = K.cornice({ w: t1.x * 2 + 0.1, d: t1.z1 - t1.z0 + 0.1, h: 0.62, flare: 0.40, roll: 0.20 });
   A.add('court', 'sandstone_worn', K.place(tc1.geo, { x: 0, y: t1.y - tc1.height, z: (t1.z0 + t1.z1) / 2 }));
   vol(A, 'court', 'paving_courtyard', -t1.x, t1.x, t1.y - 0.5, t1.y, t1.z0, t1.z1, { jitter: 0.02, c: 0.09 });
+  /**
+   * SOLID to the ground, not a 1 m deck slab. **You could walk through this building.**
+   *
+   * `masonryShell` draws the terrace faces and registers no collider at all, so the only
+   * collision either stage had was its deck: a `groundProxy` at the default `thick` 1.0. Stage 2's
+   * slab therefore had its underside at y 4.2 over a stage-1 deck at y 2.0 — **2.20 m of clearance
+   * against a 1.80 m capsule.** Walking north off the stage-1 deck went straight *inside* the
+   * second terrace and out the far side; the driven trace ran z 18.99 -> 16 -> 13 -> 10 -> 7 at a
+   * constant y 2.0 and ended by falling out of the level at (5, 0, -10.45).
+   *
+   * ── Stage 1 has the IDENTICAL defect and is left as-is, which needs justifying ─────────────
+   * Its slab underside sits at y 1.0 over courtyard paving at y 0 — **1.0 m of clearance, and Sly
+   * is 1.80 m, so he does not fit.** Stage 1 is not solid; it is too short to enter. The bug is
+   * in both terraces and one of them is hidden by 0.8 m of capsule height, which is why it
+   * survived: anyone who tested the lower stage found a wall and stopped looking. **The default
+   * `thick` of 1.0 is the root cause, and the next terrace anyone authors inherits it plus a
+   * coin-flip on whether the gap is tall enough to notice.**
+   *
+   * It is deliberately NOT solidified here, and the reason is measured rather than cautious.
+   * `cluevault.test.mjs` R3 proves no clue bottle is takeable from the courtyard floor by
+   * casting a headroom ray upward from the terrain *under* this platform; with a 1 m slab that
+   * ray enters the slab and correctly reports blocked. Make the platform solid and the ray
+   * starts INSIDE it, misses the entry face, and reports clear air — so the arm flips to
+   * "reachable" while the player is strictly more obstructed than before. Solidifying stage 1
+   * would buy nothing a player can do and would silently break a working instrument in another
+   * lane, so the latent case is recorded here and routed instead. That blind spot is §419's
+   * lesson landing on the very arm whose docblock teaches it.
+   */
   groundProxy(A, -t1.x, t1.x, t1.y, t1.z0, t1.z1);
   ledgeProxy(A, -t1.x, t1.x, t1.y, t1.z0, t1.z0 + 0.9);
 
@@ -872,7 +900,10 @@ function courtyard(A) {
   const tc2 = K.cornice({ w: t2.x * 2 + 0.1, d: t2.z1 - t2.z0 + 0.1, h: 0.56, flare: 0.36, roll: 0.18 });
   A.add('court', 'sandstone_worn', K.place(tc2.geo, { x: 0, y: t2.y - tc2.height, z: (t2.z0 + t2.z1) / 2 }));
   vol(A, 'court', 'paving_courtyard', -t2.x, t2.x, t2.y - 0.45, t2.y, t2.z0, t2.z1, { jitter: 0.02, c: 0.09 });
-  groundProxy(A, -t2.x, t2.x, t2.y, t2.z0, t2.z1);
+  /* Solid, for the reason on stage 1's proxy — this is the stage you could actually walk into.
+     The depth is the drawn shell's own `h`, `t2.y - t1.y + 0.4`, so the collider reaches exactly
+     as far down as the masonry does and cannot drift from it. */
+  groundProxy(A, -t2.x, t2.x, t2.y, t2.z0, t2.z1, { thick: t2.y - t1.y + 0.4 });
   ledgeProxy(A, -t2.x, t2.x, t2.y, t2.z0, t2.z0 + 0.9);
 
   /* Stairs up the south face of each stage — the readable way in.
@@ -929,13 +960,15 @@ function courtyard(A) {
    * Two things fall out of that and both belong to whoever takes this next:
    *
    *  · §8.1's *"DOUBLE JUMP (2.5 + 1.9 = 4.4 m > 3.8 m)"* is optimistic. The delivered maximum
-   *    is 3.88 m, so the kiosk-lintel hop in step 2 clears its 3.8 m by **8 cm**, not by 60.
-   *  · **The terraces have no side collision.** Both decks are 1 m `groundProxy` slabs and the
-   *    `masonryShell` forming their faces registers nothing, so the underside of stage 2 sits at
-   *    y 4.2 over a stage-1 deck at y 2.0 — **2.20 m of clearance against a 1.80 m capsule.**
-   *    Walking north from the stage-1 deck goes straight *under* the second terrace and out the
-   *    far side at z -10. That is a larger defect than this stair angle and is deliberately not
-   *    fixed in the same commit as a stair.
+   *    is 3.88 m, swept over hold duration on `realWorld()`. The consequence is not this stair —
+   *    it is step 2, where the hop from stage 2 (y 5.2) to the kiosk lintel (y 9.0) needs 3.8 m
+   *    and clears it by **8 cm rather than 60**. Anyone tuning `jumpV0`, `doubleJumpV0` or
+   *    `applyJumpCut` down by more than that breaks the authored route, and the document they
+   *    would check first overstates the headroom by half a metre. Recorded, not acted on: the
+   *    route works today.
+   *  · The terraces had no side collision at all — you could walk through the building.
+   *    **Fixed**; the note on stage 1's `groundProxy` above carries the measurements, and the
+   *    reason stage 1 *looked* solid when it was not.
    */
   const st2 = K.stairFlight({ steps: 7, rise: 0.46, run: 0.7, width: 5.2, rng: R });
   A.add('court', 'sandstone_worn', K.place(st2, { x: 0, y: t1.y, z: t2.z1 + 2.6, ry: -Math.PI / 2 }));

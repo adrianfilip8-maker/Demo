@@ -171,6 +171,101 @@ test('terracestair: flight 2 is left broken ON PURPOSE, and this pins the reason
   console.log(`[stair] flight 2 footprint ${r2(pitch)} deg vs walkable ${r2(limitDeg)} deg — still correctly refused`);
 });
 
+test('terracestair: you cannot walk into the second terrace', async () => {
+  /* DOMAIN (§418.3)
+   *   passes on : walking north from the stage-1 deck at x 5 — stopped at z ~16.94, which is
+   *               stage 2's face at 16.6 plus the 0.34 capsule radius.
+   *   fails  on : the same walk at x 12, OUTSIDE the terrace footprint (x +-9.4) — nothing to
+   *               stop him, so he keeps going well past z 16.6. Both are driven here, so the
+   *               bar distinguishes "blocked by the terrace" from "blocked by anything".
+   *
+   * The historical failing input is the one this exists for: before the terrace colliders were
+   * made solid, this same drive went straight THROUGH the building — z 18.99 -> 16 -> 13 -> 10
+   * -> 7 at a constant y 2.0 — and ended by falling out of the level at (5, 0, -10.45). */
+  const { engine, c, collision } = await realWorld();
+  const run = (x, startZ) => {
+    engine.input.clear();
+    const g = collision.groundCheck(new THREE.Vector3(x, 8, startZ), 0.34, 20);
+    hardReset(engine, c, new THREE.Vector3(x, g.hit ? g.y : 2, startZ), Math.PI);
+    engine.camera.rotation.set(0, 0, 0); engine.camera.updateMatrixWorld(true);
+    for (let i = 0; i < 260; i++) {
+      engine.input.beginFrame(DT);
+      engine.input.move.x = 0; engine.input.move.y = 1;
+      engine.time = i * DT;
+      c.update(DT, i * DT);
+    }
+    return c.position.clone();
+  };
+  const onTerrace = run(5, 19.0);
+  const besideIt = run(12, 19.0);
+
+  assert.ok(onTerrace.z > L.terrace.s2.z1,
+    `walking north on the stage-1 deck must be stopped by the terrace face at z ${L.terrace.s2.z1}, `
+    + `got z ${r2(onTerrace.z)} — pre-fix this walk reached z -10.45, inside and then past the building`);
+  assert.ok(onTerrace.y >= L.terrace.s1.y - 0.2,
+    `he must still be standing on the stage-1 deck, got y ${r2(onTerrace.y)}`);
+  assert.ok(besideIt.z < L.terrace.s2.z1,
+    `the failing input: walking north OUTSIDE the footprint must not be stopped by it, got z ${r2(besideIt.z)}`);
+  console.log(`[stair] north on deck -> z ${r2(onTerrace.z)} (blocked)  ·  north beside it -> z ${r2(besideIt.z)} (free)`);
+});
+
+test('terracestair: stage 2 is solid, and stage 1 is hollow-but-unenterable on purpose', async () => {
+  /* The coincidence worth pinning. Both decks used the default `thick` 1.0, so BOTH were hollow
+   * shells; only stage 2's gap was tall enough to enter:
+   *
+   *     stage 1   slab underside y 1.0 over courtyard y 0.0   ->  1.0 m clearance   capsule 1.8 -> DID NOT FIT
+   *     stage 2   slab underside y 4.2 over deck      y 2.0   ->  2.2 m clearance   capsule 1.8 -> WALKED IN
+   *
+   * Stage 2 is solidified. **Stage 1 deliberately is not**, and this arm pins both halves of
+   * that so neither drifts: stage 2 must stay solid, and stage 1's gap must stay SHORTER than
+   * the capsule — because the moment it is not, the latent defect is live and the source note
+   * on its `groundProxy` stops being true.
+   *
+   * DOMAIN (§418.3)
+   *   passes on : stage 2 at `thick = t2.y - t1.y + 0.4`, reaching the stage-1 deck.
+   *   fails  on : stage 2 at the old default `thick: 1.0`, computed below, which leaves a gap
+   *               of 2.2 m — taller than the 1.8 m capsule, i.e. enterable. Both evaluated.
+   * The stage-1 pair is the mirror: its real 1.0 m gap is asserted to be UNDER the capsule
+   * height, which is the whole reason it was invisible. */
+  const { collision } = await realWorld();
+  const S1 = L.terrace.s1, S2 = L.terrace.s2;
+  const CAPSULE = 1.80;
+
+  const extentOf = (halfX, z0, z1) => {
+    let best = null;
+    for (const rec of collision.recs || []) {
+      const m = rec.mesh;
+      if (!m?.geometry || m.name !== 'proxy:ground') continue;
+      m.updateWorldMatrix?.(true, false);
+      const b = new THREE.Box3().setFromObject(m);
+      const s = b.getSize(new THREE.Vector3()), ctr = b.getCenter(new THREE.Vector3());
+      if (Math.abs(s.x - halfX * 2) < 0.6 && Math.abs(ctr.z - (z0 + z1) / 2) < 0.6) {
+        if (!best || b.max.y > best.max.y) best = b;
+      }
+    }
+    return best;
+  };
+  const e1 = extentOf(S1.x, S1.z0, S1.z1);
+  const e2 = extentOf(S2.x, S2.z0, S2.z1);
+  assert.ok(e1 && e2, 'both terrace deck colliders must be findable');
+
+  assert.ok(e2.min.y <= S1.y + 0.05,
+    `stage 2 must be solid down to the stage-1 deck, underside at y ${r2(e2.min.y)}`);
+
+  /* Stage 1 is still a slab, and the arm asserts the coincidence rather than the fix: its gap
+     must remain too short to enter. If a future edit raises the deck or thins the slab, this
+     goes red and the source note about it being "unenterable, not solid" needs revisiting. */
+  const gap1 = e1.min.y - 0.0;
+  assert.ok(gap1 < CAPSULE,
+    `stage 1's gap is ${r2(gap1)} m against a ${CAPSULE} m capsule — the latent defect just went live`);
+
+  /* The failing input, evaluated rather than described: stage 2 at the old default. */
+  const oldGap2 = (S2.y - 1.0) - S1.y;
+  assert.ok(oldGap2 > CAPSULE, `thick 1.0 is supposed to leave stage 2 enterable, gap ${r2(oldGap2)}`);
+  console.log(`[stair] stage2 solid y[${r2(e2.min.y)}, ${r2(e2.max.y)}] · stage1 slab y[${r2(e1.min.y)}, ${r2(e1.max.y)}]`
+    + `  ·  gaps: stage1 ${r2(gap1)} m (< ${CAPSULE}, unenterable — the coincidence), stage2 would be ${r2(oldGap2)} m at thick 1.0 (> ${CAPSULE}, the defect)`);
+});
+
 test('terracestair: no call site passes `slope` to groundProxy, and the guard is present', () => {
   /* DOMAIN (§418.3)
    *   passes on : the current `EgyptLevel.js`.
