@@ -202,25 +202,28 @@ const DEAD_BY_DECISION = ['binocucom'];
 /**
  * Dead because nobody has built the other half yet. **This** is the to-do list.
  *
- *   propSmashed       both FX halves of a prop coming apart exist and **nothing breaks props yet**.
- *                     `Particles.smash()` throws the debris, the contact puff and (on metal) the
- *                     sparks, and leaves a `dust_ring` — or a `scorch`, metal only; `Audio._onSmash()`
- *                     lays the material transient over `stone_grind`. Between them they are the
- *                     second end of three catalogue entries that had no reader at all. The missing
- *                     half is the mechanic: hiding meshes, disabling colliders, spawning drops and
- *                     respawning, which is `src/world/`'s and has an owner. Payload
- *                     `{ pos, material, scale, normal, dir }`, `material` being COLLISION's own tag
- *                     so a caller holding a hit holds the key. Both subscribers also expose a direct
- *                     call, so the world half may skip the bus entirely. When it lands, delete this.
- *                     One thing worth carrying from `smashable.gd` and nothing else: it fans five
- *                     raycasts before respawning and restarts the timer if any is colliding, so a
- *                     crate never rematerialises around the player or another prop.
  *   prompt            contextual "press E to …" prompts, and a trap. `HUD.js:383` sets `_sawPrompt`
  *                     on the first one and *permanently* retires its affordance-detection fallback,
  *                     so **the first module to publish this silently kills every contextual verb in
  *                     the game**. Publishing it is not a one-line change.
  *   unregisterTarget  `Controller.js:378` can drop a magnetism target; nothing ever asks it to. The
  *                     `registerTarget` counterpart IS published (§223), so this is half a pair.
+ *
+ * ── `propSmashed` was deleted from here, and this entry got what it asked for ───────────────────
+ * `src/world/Smashables.js` is the mechanic half. The brief above was unusually complete and was
+ * followed to the letter on the payload — `{ pos, material, scale, normal, dir }`, `material`
+ * being COLLISION's own tag — so `Particles.smash()` and `Audio._onSmash()` both light up with no
+ * edit on either side, and `dust_ring`, `scorch` and `PAL.crevice` reach a screen for the first
+ * time. Two of the brief's four suggested mechanics are deliberately NOT built, and the reasons
+ * are in that file's header:
+ *
+ *   · **respawning** — a smashable pays coins, so one that comes back is a money farm with a
+ *     two-second cycle and `Wallet.credit` has no debit path anywhere in `src/`. Dropping the
+ *     timer also drops the five-raycast dance the brief singled out from `smashable.gd`: that
+ *     careful code exists to stop a respawn landing on the player, and there is no respawn.
+ *   · **disabling colliders** — `Collision.build()` rebuilds the entire triangle soup and BVH
+ *     from every record and there is no per-record removal, so one jar's collider costs a full
+ *     rebuild. Smashables are therefore not colliders at all. Measured, not assumed.
  *
  * ── `objective` was deleted from here, and the deletion is the deliverable ──────────────────────
  * This line said *"the event is the hook a mission script would use"*, and there was no mission
@@ -255,10 +258,10 @@ const DEAD_BY_DECISION = ['binocucom'];
  * does. That is the property that makes the register worth trusting, and the only way to keep it is
  * to actually delete lines when they stop being true.
  */
-const DEAD_UNBUILT = ['prompt', 'propSmashed', 'unregisterTarget'];
+const DEAD_UNBUILT = ['prompt', 'unregisterTarget'];
 
 const DEAD_SUBSCRIPTIONS = [...DEAD_BY_DECISION, ...DEAD_UNBUILT];
-if (DEAD_SUBSCRIPTIONS.length !== 4) throw new Error('DEAD_SUBSCRIPTIONS miscounted');
+if (DEAD_SUBSCRIPTIONS.length !== 3) throw new Error('DEAD_SUBSCRIPTIONS miscounted');
 if (DEAD_BY_DECISION.some((k) => DEAD_UNBUILT.includes(k))) throw new Error('an event is in both buckets');
 
 /**

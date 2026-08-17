@@ -108,6 +108,11 @@ const MANIFEST = [
      `architecture.api.route` and PROPS' authored spots both exist by the time it authors its
      placements. Registering it earlier would give it an empty route and no coins. */
   ['pickups',      './world/Pickups.js',          'Pickups'],
+  /* Breakable props. AFTER `pickups` on purpose and for two reasons, not one: it authors its
+     clusters off `architecture.api.route` (so it needs the same init-order guarantee PICKUPS
+     needs), and a break pays coins through `Pickups.award()` rather than by publishing `coin`
+     itself — see that method's docblock for the divergence a second publisher would cause. */
+  ['smashables',   './world/Smashables.js',       'Smashables'],
   ['camera',       './player/CameraRig.js',       'CameraRig'],
   ['guards',       './ai/Guard.js',               'Guards'],
   ['fx',           './fx/Particles.js',           'Particles'],
