@@ -2910,11 +2910,22 @@ test('census: which of the 32 states any test in this project has ever entered',
      32 go dark"; it is now 15 of 32, and every step has been another lane needing REAL
      trajectories rather than a stub. That is the finding aging out, which is the outcome its own
      message asks for, not the arm losing its grip. */
-  assert.ok(elsewhere.length <= 17,
-    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, 11, 15, 17) ` +
+  /* 17 -> 22, and at this point the arm's founding finding has fully inverted. It was written to
+     report "delete this one file and 6 of 32 states go dark". It is now 22 of 32 driven
+     elsewhere, and the step that took it there was `camdrive.test.mjs` D6 measuring end-to-end
+     framing delivery, which needs `roll`, `combo`, `sneak`, `poleClimb` and `wallRun` driven on
+     real geometry to have anything to measure.
+
+     **These two ratchets are no longer concentration detectors.** They cannot be — a claim about
+     concentration is not falsifiable once two thirds of the states are covered elsewhere. They
+     are kept as COVERAGE-LOSS detectors, which is the direction that still matters, and the
+     `never` set above is the assertion doing the real work now. Re-based by the mover, same
+     committed-file rule as the previous two times. */
+  assert.ok(elsewhere.length <= 22,
+    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, 11, 15, 17, 22) ` +
     `— coverage has spread, which is good: update this bound. ${elsewhere.join(', ')}`);
-  assert.ok(onlyMine.length >= 15,
-    `only ${onlyMine.length} states are traversal-only (was 21, 17, 15) — if that dropped, other ` +
+  assert.ok(onlyMine.length >= 10,
+    `only ${onlyMine.length} states are traversal-only (was 21, 17, 15, 10) — if that dropped, other ` +
     'lanes have started driving the moveset and this arm should say so rather than assert the old ' +
     'concentration');
   /* The thinness pins. Both are stated as "no worse than", so widening coverage never reddens

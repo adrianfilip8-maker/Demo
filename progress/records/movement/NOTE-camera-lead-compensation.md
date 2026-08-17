@@ -1,4 +1,76 @@
-# Camera lead: the full-compensation question, priced against the driven temple
+# Camera framing: what actually reaches the screen
+
+> **Read this section and stop, unless you want the derivation.** Everything below it is how the
+> table was arrived at, and two of its earlier revisions were wrong in the same direction.
+
+Both open feel decisions — **full lead compensation** and **`land.tau`** — were previously priced
+in `FRAMES` channel numbers. A `FRAMES` entry is an offset into a chain of up to three blends, not
+a pixel value, so those numbers were wrong by up to an order of magnitude. This is the same
+question asked at the screen.
+
+Method: drive the real `Controller` through the shipped temple, replay the trajectory through a
+`CameraRig` sharing the same `Collision`, and for every framing residency replay it a second time
+with the state **pinned** — which settles every blend at the same motion and gives the pixel value
+the screen converges to if the player stays in the state. Delivered = how far toward that the
+screen actually got. Aggregated **absolute-weighted** (`Σ|got| / Σ|asked|`), because a mean of
+per-visit fractions flatters: `wall_run`'s boom reads 47 % as a mean and **5 %** in metres.
+
+```
+  framing    visits  frames  len med/max |  boom    fov   pivY   lead   side  pitch
+  ─────────────────────────────────────────────────────────────────────────────────
+  idle (=move)   19     617      14/166   |   41%    50%    77%    90%    94%    89%
+  air            13     467      24/202   |   16%    88%   100%    73%     —    103%
+  glide           1     175     175/175   |  100%   100%   112%   120%     —    107%
+  sneak           1     158     158/158   |  100%   100%    61%   100%     —    100%
+  wall_run        3     112      46/ 46   |    5%     —    113%     —     94%   106%
+  combat          6      93      16/ 24   |   35%    28%     —      —      —     71%
+  dive            2      57      49/ 49   |   61%    58%    93%     —      —     93%
+  roll            2      38      23/ 23   |   60%    46%    74%    30%     —    105%
+  land            2      12       6/  6   |    0%     —      —      —      —    100%
+```
+
+In metres and degrees, which is what the percentages are of:
+
+```
+  land        boom  0.00 of 0.54 m       <- the boom does not move on a landing. At all.
+  wall_run    boom  0.13 of 2.59 m       <- 5 %, on a framing only made reachable this session
+  air         boom  1.34 of 8.49 m
+  combat      boom  0.96 of 2.70 m       fov  1.85 of 6.72 deg
+  idle        boom  5.18 of 12.69 m      fov 12.38 of 24.55 deg
+  dive        boom  3.47 of 5.65 m       fov  2.64 of 4.58 deg
+  glide       boom  2.65 of 2.65 m       fov  3.85 of 3.87 deg   <- closes cleanly
+  sneak       boom  2.19 of 2.19 m       fov  4.41 of 4.43 deg   <- closes cleanly
+```
+
+**Rows where the answer is essentially none:** `land` (0 %) and `wall_run` (5 %). **Rows that close
+cleanly:** `glide` and `sneak` — the two with long uninterrupted residencies. Everything else is
+partial, and the partiality is not random.
+
+### The one sentence that explains the whole table
+
+**Delivery tracks chain depth, not `tau`.** `pitch` is one blend from the screen and closes on 8 of
+9 framings. `boom` is three (`_frame.dist` → `_boomWant` → `boom`) and misses on 7 of 9. `fov` and
+`lead` are two and sit in between. Shortening a framing's `tau` moves only the first stage.
+
+### What this changes about the two open decisions
+
+- **`land.tau`** was going to be arbitrated at "45 %". The screen figure is **0 %** — the boom
+  travels 0.00 m of the 0.54 m it is asked for. Whether that matters is still a feel question: the
+  channel that would be felt is `stiff` (the landing snap), which has no single screen quantity
+  because it modulates a rate rather than a position, and it blends on the same clock.
+- **Full lead compensation** is priced on the `lead` column, and that column is the *healthiest* in
+  the table — 73–120 % everywhere it is authored. So the lead decision was priced roughly right,
+  and it remains what it was: a trade between `air` gaining apparent size and `glide` dropping
+  further down frame.
+- **`wall_run` is new information.** Routing it correctly (`STATE_FRAME`, this session) made the
+  framing reachable, and it still does not arrive: 0.13 m of 2.59 m. Fixing a route is not the same
+  as delivering a framing, and nothing before this measured the difference.
+
+**Nothing is retuned.** Every candidate change here is a feel decision.
+
+---
+
+# Appendix: the lead question, and how this table was arrived at
 
 **Arbitration package, not a proposal.** Revision 2 — the first revision was priced on an open-sky
 stub and the playtest lane found it understated the starting point. This one is measured by driving

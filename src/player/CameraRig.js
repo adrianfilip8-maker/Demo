@@ -385,8 +385,32 @@ export const TUNE = {
  * FOV reaches 43 %, and **the boom reaches 5 %** — 5.29 m against an authored 3.20 m, i.e. the
  * slam does not pull in at all. So `land`'s 45 % is likewise an overstatement, and "the framing
  * blends in `tau` seconds" was never true of anything a player can see.
- * `tests/camdrive.test.mjs` D3/D4/D5 hold all of this; the note beside `_pivotGoal` carries the
- * tables. Not retuned here — every candidate fix is a feel decision, not a defect fix.
+ * ── SO HERE IS THE TABLE THAT MATTERS, MEASURED AT THE SCREEN ───────────────────────────────
+ * Absolute-weighted delivery of each authored channel over the residencies real routes produce
+ * (`tests/camdrive.test.mjs` D6; full version in
+ * `progress/records/movement/NOTE-camera-lead-compensation.md`):
+ *
+ *     framing        boom   fov   pivY  lead  pitch      residency med/max
+ *     idle (=move)    41%   50%    77%   90%    89%          14 / 166
+ *     air             16%   88%   100%   73%   103%          24 / 202
+ *     glide          100%  100%   112%  120%   107%         175 / 175
+ *     sneak          100%  100%    61%  100%   100%         158 / 158
+ *     wall_run         5%    —    113%    —    106%          46 /  46
+ *     combat          35%   28%     —     —     71%          16 /  24
+ *     dive            61%   58%    93%    —     93%          49 /  49
+ *     roll            60%   46%    74%   30%   105%          23 /  23
+ *     land             0%    —      —     —    100%           6 /   6
+ *
+ * **Delivery tracks CHAIN DEPTH, not `tau`.** `pitch` is one blend from the screen and closes on
+ * 8 of 9; `boom` is three and misses on 7 of 9; `fov` and `lead` are two and sit between. So
+ * shortening a row's `tau` moves only the first stage of three.
+ *
+ * Two rows are essentially never delivered: `land` (boom 0.00 m of 0.54 m) and `wall_run`
+ * (0.13 m of 2.59 m — **a framing this session made reachable, which still does not arrive**;
+ * routing a state correctly is not the same as delivering its framing). Two close cleanly,
+ * `glide` and `sneak`, and they are the two with long uninterrupted residencies.
+ *
+ * Not retuned here — every candidate fix is a feel decision, not a defect fix.
  */
 const FRAMES = {
   idle:       { dist:  0.00, height:  0.00, lead: 0.35, fov:  0.0, pitch:  0.0 * DEG, side: 0.00, stiff: 1.15, tau: 0.35 },

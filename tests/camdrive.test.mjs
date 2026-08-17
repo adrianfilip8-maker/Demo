@@ -619,3 +619,177 @@ test('D5: FRAMES.tau is never the delivery time of anything — the clock census
   assert.equal(clocks[0][1], TUNE.ceilTau,
     `the longest clock is now ${clocks[0][0]} at ${clocks[0][1]}s, not ceilTau ${TUNE.ceilTau}s`);
 });
+
+/* ====================================================================== */
+/* D6 — end-to-end delivery, every framing, at the screen                  */
+/* ====================================================================== */
+
+/**
+ * The completion of D3/D4/D5, and the table a person can read without knowing any of it.
+ *
+ * Every earlier number scored a `FRAMES` CHANNEL. D5 showed the channel is up to three stages
+ * from a pixel, so those numbers are upper bounds on upper bounds. This measures the **screen
+ * quantities**: the boom in metres, the camera FOV in degrees, the pivot height and lead in
+ * metres, the orbit pitch in radians.
+ *
+ * "Authored" is defined by measurement rather than by reading `FRAMES`, because a `FRAMES` entry
+ * is an offset into a chain and not a pixel value. For every residency the same trajectory is
+ * replayed a second time with `stateName` **pinned** to that residency's state, which settles
+ * every blend at the same motion; the pinned run's value is what the screen converges to if the
+ * player stays in the state, and that is the honest denominator.
+ *
+ *     delivered = (peak reached during the residency − value on entry)
+ *                 / (pinned-run value − value on entry)
+ */
+const SCREEN = [
+  ['boom', 'm', 0.05], ['fov', 'deg', 0.30], ['pivY', 'm', 0.05],
+  ['lead', 'm', 0.08], ['side', 'm', 0.05], ['pitch', 'rad', 0.010],
+];
+
+function screenReplay(samples, collision, pin) {
+  const keep = TUNE.leadMode;
+  TUNE.leadMode = 'floor';
+  try {
+    const movement = { position: new THREE.Vector3(), velocity: new THREE.Vector3(), grounded: true, stateName: 'idle', yaw: Math.PI };
+    const L = new Map();
+    const cam = new THREE.PerspectiveCamera(TUNE.fovBase, 16 / 9, 0.1, 2000);
+    const engine = { input: new LookInput(), camera: cam, scene: new THREE.Scene(), movement, collision,
+      time: 0, dt: 0, timeScale: 1, width: 1920, height: 1080, quality: 'high', debug: { freeCam: false },
+      warn() {}, has() { return false; },
+      on(e, f) { if (!L.has(e)) L.set(e, new Set()); L.get(e).add(f); return () => {}; },
+      emit(e, p) { for (const f of L.get(e) || []) f(p); },
+      get(n) { return n === 'movement' ? movement : n === 'collision' ? collision : null; } };
+    const rig = new CameraRig(engine); rig.init?.();
+    const feed = (s) => { movement.position.set(s.px, s.py, s.pz); movement.velocity.set(s.vx, s.vy, s.vz);
+      movement.stateName = pin || s.state; movement.grounded = s.grounded; movement.yaw = s.yaw; };
+    feed(samples[0]); rig.snap?.(true);
+    const out = [];
+    for (let i = 0; i < samples.length; i++) {
+      const s = samples[i];
+      feed(s); engine.dt = DT; engine.time = i * DT;
+      rig.update(DT);
+      const sp = Math.hypot(s.vx, s.vz);
+      const dx = rig.pivot.x - s.px, dz = rig.pivot.z - s.pz;
+      out.push({ key: rig._frameKey, state: s.state, boom: rig.boom, fov: cam.fov,
+        pivY: rig.pivot.y - s.py, lead: sp > 0.4 ? (dx * s.vx + dz * s.vz) / sp : null,
+        side: dx * rig.right.x + dz * rig.right.z, pitch: rig._effectivePitch() });
+    }
+    return out;
+  } finally { TUNE.leadMode = keep; }
+}
+
+test('D6: how much of each authored framing reaches the screen, over the residencies play produces', async () => {
+  /* DOMAIN (§418.3)
+   *   passes on : `glide` and `sneak` — long uninterrupted residencies, and every screen channel
+   *               closes at 100 %. A framing a player stays in does arrive.
+   *   fails on  : `land` (boom 0.00 m of 0.27 m asked) and `wall_run` (0.04 m of 0.86 m). Both
+   *               measured on the same instrument as the passing rows, so 0 % is a fact about
+   *               those residencies and not a scorer that cannot see a moving boom.
+   *
+   * **And the aggregate is absolute-weighted, `Σ|got| / Σ|asked|`, not a mean of per-visit
+   * fractions — because the two disagree and the mean flatters.** `wall_run` reads 47 % as a mean
+   * of three visits and 5 % in metres: two visits with almost nothing to deliver score high and
+   * drown the one with 0.86 m on the table. That is §419.5's shape a third time — the legible
+   * statistic and the felt one, diverging inside one row — so both are printed and the metres
+   * are the answer. */
+  const ST = { fired: false };
+  const ROUTES = [
+    ['flat run + jumps', V(0, 0.1, 30), 0, 320, (inp, i) => { inp.move.y = -1; if (i % 50 >= 18 && i % 50 < 23) inp.hold('jump'); else inp.let_go('jump'); }, null],
+    ['glide', V(0, 18, 34), 0, 240, (inp, i, cc) => { inp.move.y = -1; if (!cc.grounded) inp.hold('glide'); else inp.let_go('glide'); }, (c) => { c.grounded = false; c.sm.set('fall'); }],
+    ['sneak', V(0, 0.1, 30), 0, 160, (inp) => { inp.move.y = -1; inp.hold('sneak'); }, null],
+    ['crouch + roll', V(0, 0.1, 30), 0, 200, (inp, i) => { inp.move.y = -1; if (i === 60 || i === 130) inp.hold('crouch'); else inp.let_go('crouch'); }, null],
+    ['dive from a jump', V(0, 0.2, 30), 0, 200, (inp, i, cc) => {
+      if (i === 1) { cc.pendingLaunch = CTUNE.jumpV0; cc.sm.set('jump'); }
+      if (i > 3 && cc.velocity.y < 0 && !ST.fired) { inp.hold('attack'); ST.fired = true; } else inp.let_go('attack');
+    }, () => { ST.fired = false; }],
+    ['dive from 15 m', V(0, 0.2, 30), 0, 260, (inp, i, cc) => {
+      if (i === 1) { cc.pendingLaunch = Math.sqrt(2 * -CTUNE.gravity * 15); cc.sm.set('jump'); }
+      if (i > 3 && cc.velocity.y < 0 && !ST.fired) { inp.hold('attack'); ST.fired = true; } else inp.let_go('attack');
+    }, () => { ST.fired = false; }],
+    ['temple approach', V(0, 0.1, 30), Math.PI, 320, (inp, i) => { inp.move.y = 1; if (i % 45 >= 20 && i % 45 < 24) inp.hold('jump'); else inp.let_go('jump'); }, null],
+    ['combo', V(0, 0.1, 30), 0, 160, (inp, i) => { if (i % 30 === 5) inp.hold('attack'); else inp.let_go('attack'); }, null],
+  ];
+
+  const table = new Map();
+  for (const [, start, yaw, nf, drive, pre] of ROUTES) {
+    const t = await trace(start, yaw, nf, drive, (c) => { if (pre) pre(c); c._needSpawnSnap = false; });
+    const A = screenReplay(t.samples, t.collision, null);
+    const spans = [];
+    let cur = null;
+    for (let i = 0; i < A.length; i++) {
+      if (!cur || A[i].key !== cur.key) { if (cur) spans.push(cur); cur = { key: A[i].key, s: i, e: i, state: A[i].state }; }
+      cur.e = i;
+    }
+    if (cur) spans.push(cur);
+    for (const r of spans) {
+      const len = r.e - r.s + 1;
+      if (len < 2 || r.s === 0) continue;
+      const B = screenReplay(t.samples, t.collision, r.state);
+      const enter = A[r.s - 1];
+      let rec = table.get(r.key);
+      if (!rec) { rec = { visits: 0, frames: 0, lens: [], ch: {} }; table.set(r.key, rec); }
+      rec.visits++; rec.frames += len; rec.lens.push(len);
+      for (const [name, , minSpan] of SCREEN) {
+        const ref = B[r.e][name], e0 = enter[name];
+        if (ref == null || e0 == null) continue;
+        const span = ref - e0;
+        if (Math.abs(span) < minSpan) continue;
+        let peak = 0;
+        for (let i = r.s; i <= r.e; i++) if (A[i][name] != null) peak = Math.max(peak, (A[i][name] - e0) / span);
+        const frac = Math.max(0, Math.min(1.2, peak));
+        const c = rec.ch[name] = rec.ch[name] || { fracs: [], asked: 0, got: 0 };
+        c.fracs.push(frac); c.asked += Math.abs(span); c.got += frac * Math.abs(span);
+      }
+    }
+  }
+
+  const order = [...table].sort((a, b) => b[1].frames - a[1].frames);
+  const abs = (c) => (c && c.asked > 1e-9 ? c.got / c.asked : NaN);
+  const cell = (c) => (c && c.asked > 1e-9 ? `${(100 * abs(c)).toFixed(0)}%` : '  —');
+  console.log('\n[D6] END-TO-END DELIVERY AT THE SCREEN — absolute-weighted, sum|got| / sum|asked|');
+  console.log('[D6] framing    visits frames  med/max | ' + SCREEN.map(([n]) => n.padStart(6)).join(''));
+  for (const [key, r] of order) {
+    const L = r.lens.slice().sort((a, b) => a - b);
+    console.log(`[D6] ${key.padEnd(11)} ${String(r.visits).padStart(5)} ${String(r.frames).padStart(6)} `
+      + `${String(L[L.length >> 1]).padStart(5)}/${String(L[L.length - 1]).padStart(4)} | `
+      + SCREEN.map(([n]) => cell(r.ch[n]).padStart(6)).join(''));
+  }
+  console.log('[D6] the same rows in METRES/DEGREES — got of asked:');
+  for (const [key, r] of order) {
+    console.log(`[D6] ${key.padEnd(11)} ` + SCREEN.map(([n]) => {
+      const c = r.ch[n];
+      return (c && c.asked > 1e-9 ? `${n}: ${c.got.toFixed(2)}/${c.asked.toFixed(2)}` : '').padEnd(19);
+    }).join(''));
+  }
+
+  const g = (k) => table.get(k);
+  assert.ok(order.length >= 7, `only ${order.length} framings were reached — the routes stopped working`);
+  /* PASSING: framings a player stays in do arrive. */
+  for (const k of ['glide', 'sneak']) {
+    assert.ok(abs(g(k).ch.boom) > 0.95,
+      `'${k}' delivers only ${(100 * abs(g(k).ch.boom)).toFixed(0)}% of its boom despite an uninterrupted `
+      + 'residency — then nothing in this table arrives and D6 is measuring a broken scorer');
+  }
+  /* FAILING: the two that essentially never arrive. */
+  assert.ok(abs(g('land').ch.boom) < 0.05,
+    `'land' now delivers ${(100 * abs(g('land').ch.boom)).toFixed(0)}% of its boom. If that is real the `
+    + 'framing has become reachable and the pending `land.tau` decision is answered — say so.');
+  assert.ok(abs(g('wall_run').ch.boom) < 0.15,
+    `'wall_run' delivers ${(100 * abs(g('wall_run').ch.boom)).toFixed(0)}% of its boom — the routing fix `
+    + 'in STATE_FRAME made this framing reachable and this arm reports it still does not arrive');
+  /* The methodological point, asserted rather than described: the mean of fractions flatters. */
+  const wr = g('wall_run').ch.boom;
+  const meanFrac = wr.fracs.reduce((a, b) => a + b, 0) / wr.fracs.length;
+  console.log(`[D6] wall_run boom: mean-of-fractions ${(100 * meanFrac).toFixed(0)}% vs absolute-weighted ${(100 * abs(wr)).toFixed(0)}%`);
+  assert.ok(meanFrac - abs(wr) > 0.2,
+    `the two aggregates agree to ${(100 * (meanFrac - abs(wr))).toFixed(0)} points on wall_run's boom. They `
+    + 'disagreed by 42; if they now agree, the absolute weighting is buying nothing and the simpler '
+    + 'mean should be used instead of carrying two numbers.');
+  /* And the ordering that explains the whole table: delivery tracks CHAIN DEPTH, not tau. */
+  const pitchOK = order.filter(([, r]) => r.ch.pitch && abs(r.ch.pitch) > 0.85).length;
+  const boomBad = order.filter(([, r]) => r.ch.boom && abs(r.ch.boom) < 0.7).length;
+  console.log(`[D6] pitch (1 stage) closes on ${pitchOK}/${order.length} framings · boom (3 stages) misses on ${boomBad}`);
+  assert.ok(pitchOK >= boomBad,
+    `pitch closes on ${pitchOK} framings and the boom misses on ${boomBad} — the one-stage channel is no `
+    + 'longer outperforming the three-stage one, so D5\'s chain-depth explanation does not hold here');
+});
