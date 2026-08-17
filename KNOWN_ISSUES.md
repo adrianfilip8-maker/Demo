@@ -34985,3 +34985,105 @@ rule it earns: **`realWorld()` is once per arm**, and that is now written at the
 (*"Correctly wired, correctly resolved, and structurally unable to finish"*) took the same number
 from the same base. Not renumbered here — it is another lane's content and they may already have
 cross-references — but every future citation of "§430" is ambiguous until one of them moves.
+
+## §433 — The end-to-end drive is held, and the reason is a false defect I nearly filed
+
+Commissioned to drive the whole loop in one continuous run and report **one number: does it
+complete on the shipped level.** The number is not in this section, and both reasons matter.
+
+### §433.1 The fix being waited on has not landed
+
+`fc3db1b` fixed the terrace **stair** — the invisible wall on the way in. The terrace **side**
+collision, the one that lets you walk through stage 2 and out of the level, is still uncommitted
+in the playtest lane's working tree. Its diff is unambiguous:
+
+> *"`masonryShell` draws the terrace faces and registers no collider at all... Stage 2's slab had
+> its underside at y 4.2 over a stage-1 deck at y 2.0 — **2.20 m of clearance against a 1.80 m
+> capsule.** ... And stage 1 had the identical defect, masked by a coincidence of dimensions."*
+
+So the instruction to wait still binds. Worth stating plainly, because it changes what any run
+means right now: **the working tree already contains that in-flight edit**, so there is no
+committed-tree baseline available and nothing measured today is a measurement of the shipped
+level. Every number below is against another lane's uncommitted state.
+
+### §433.2 "All twelve bottles in order" is not a walkable sequence, and the fix is to say which order
+
+The brief says *spawn → stairs → all twelve bottles → vault → Eye*. The array order in
+`Props._clueBottles()` is grouped by beat, not by path: bottles 3, 4 and 5 sit at **z +31.5,
++36.3, +34.0**, behind spawn's z 30, on the entry pylon.
+
+```
+  array-order path   270.6 m      forces 24.0 m of net travel back toward and past spawn
+  route-order path   251.6 m      entry-pylon cluster taken on the way in, as a player would
+```
+
+Driving the array order would measure a sequence nobody plays. Recorded rather than silently
+resolved: whoever runs this needs to have chosen the order deliberately, and route order is the
+choice.
+
+### §433.3 The instrument cannot produce a trustworthy "no", and this is the round where that matters most
+
+The driver is a walker — aim, hold forward, jump when progress stalls — plus the rung script for
+ladders. Against the level's own authored route it reaches **3 of 10 waypoints**, and the fourth
+waypoint is `hook-chain`. **A straight-line walker structurally cannot pass a hook swing.** It
+also has no script for a rail slide (which is bottle 3's own authored beat) or the 45 m descent.
+
+So 3/10 is a statement about the driver. It is exactly the asymmetry §431.1 recorded — *a leg
+that connects is proof; a leg that does not is a candidate* — and the stakes here are different in
+kind, because the brief says that if the loop does not complete, **"the leg that breaks it is the
+most important defect in the demo and everything else waits."** A false "no" halts the project.
+
+The run is not worthless: driven from spawn on plain input it collected **18 coins and picked up
+the scarab treasure**, through the real `Pickups` module reading a real driven `Controller`. The
+collect loop's machinery works under a real player. What is unproven is traversal, and it is
+unproven because of the driver.
+
+### §433.4 The false defect, which is the actual finding
+
+At the point the drive stopped — `(2.87, 7.41, 10.11)`, at the kiosk — the numbers read like a
+level defect of exactly the class being fixed two files away:
+
+```
+  state fall · grounded = false · velocity 3.26 m/s · 0.095 m of travel in 300 frames
+  groundCheck  floor at 7.47, feet at 7.41
+  headroom     BLOCKED at 0.34 m
+```
+
+**0.34 m of clearance against a 1.80 m capsule**, permanently stuck, on the authored route. That
+is the terrace defect's twin, and it was a keystroke from being filed as the loop-breaking defect
+the brief said everything would wait for.
+
+It is not real. Probing the whole column instead of one ray:
+
+```
+  floor 5.20 ────────── open 2.55 m ────────── slab 7.75 … 9.00 ── open above
+```
+
+A **2.55 m room**, comfortably capsule-sized. The 0.34 m was the distance from where he happened
+to be floating to the slab underside above him — not the size of the space. And the decisive
+check: dropped in cold at that exact point and two neighbours, holding the same forward input, he
+**escaped every time**, travelling 26–29 m out through the hall.
+
+> The stall is a property of the state he arrives in, not of the geometry he arrives at. One ray
+> answered honestly about the distance to a ceiling; I read it as the size of a room.
+
+Three defences existed and only the third worked. Disbelief did not — the number was entirely
+plausible. Precedent did not — it *matched* a real defect fixed hours earlier, in the same class,
+which made it more convincing rather than less. What caught it was **probing the column instead of
+the point, and then re-running from a cold start** — asking the geometry a question whose answer
+could come out either way, rather than confirming the one I already had.
+
+§419.6 said a finding that agrees with the hypothesis you set out with deserves more scrutiny than
+one that surprises you. This adds the sharper case: **a finding that matches a defect somebody
+else just fixed is the most convincing wrong answer available**, because it arrives with a
+precedent attached.
+
+### §433.5 What the number needs
+
+Not a better walker. The authored route is built out of beats — a hook chain, a rail landing, a
+45 m descent — and a driver that cannot perform them cannot answer the question no matter how
+long it runs. The honest paths are either per-beat scripts of the kind `traversal.test.mjs`
+already derived for the ladder, or accepting the compositional answer §431 gives (8 of 13 legs
+proven, none blocked by geometry) as the strongest available evidence until then.
+
+Held, with the terrace fix, for a round where both can be done properly.
