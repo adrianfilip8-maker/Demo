@@ -760,6 +760,11 @@ export class Pickups {
    */
   _collectClue(c) {
     this.clueCount = (this.clueCount || 0) + 1;
+    /* `pos` is read by AUDIO. **`found` and `total` are read by nothing** (§430), and they are
+       kept as redundant rather than wired: the same two numbers already reach the player as the
+       toast text one line below, and the *set* is consumed inside this module by
+       `clueComplete()`, not off the bus. A HUD counter keyed on them would be a new widget, not
+       a dropped field — which is the distinction §428.4 was drawn to make. */
     this._emit('clue', { pos: new THREE.Vector3().copy(c.pos), found: this.clueCount, total: this.clues.length });
     this._emit('toast', {
       text: `Clue bottle ${this.clueCount} / ${this.clues.length}`,
@@ -887,6 +892,10 @@ export class Pickups {
        three listeners light up on the moment the loot actually becomes yours. */
     this._coin(tr.value, this.fence);
     this._emit('toast', { text: `${tr.name} fenced — ${tr.value}`, icon: 'coin' });
+    /* HUD reads `name` and `value`; AUDIO's handler takes no parameter. **`id` and `total` are
+       read by nothing** (§430). `total` is redundant — the HUD's purse is fed by the `coin`
+       event `_coin()` emits two lines above, so wiring it would give one number two sources.
+       `id` is provenance for a save file or an objective tracker, neither of which exists. */
     this._emit('treasureBanked', { id: tr.id, name: tr.name, value: tr.value, total: this.wallet.coins });
     if (milestone) this._emit('toast', { text: `${milestone} coins`, icon: 'coin' });
   }

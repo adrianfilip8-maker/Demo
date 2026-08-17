@@ -372,6 +372,11 @@ export class Engine {
     this.camera.updateProjectionMatrix();
     this.renderer.setPixelRatio(this._pixelRatio());
     this.renderer.setSize(w, h, true);
+    /* **Neither field is read** (§430), and that is correct rather than an oversight. Both
+       subscribers — `Particles._resizeDepth` and `PostFX.setSize` — take no parameter and
+       re-derive from the renderer, because a derived constant refreshed by events goes stale in
+       whichever path forgets to forward one (`PostFX.js` says so at its `syncInkResolution`).
+       The event is the *notification*; the size is read from the source of truth. */
     this.emit('resize', { width: w, height: h });
   }
 

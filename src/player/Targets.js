@@ -352,6 +352,11 @@ export class TargetField {
     this.time = 0;
     this.against = 0;
     this.stats.acquired++;
+    /* `target` and `point` are read — `Particles._targetFx` picks `target.userData.fx` and falls
+       back to `point`. **`miss` is not read by anything** (§430). It is `bestMiss`, how far the
+       player would have missed without the assist, and it is here as a tuning quantity rather
+       than for a consumer: no FX curve is keyed on it and inventing one would be authoring a
+       look, not reading a field. Unread and said so, which is the shape §428.4 asks for. */
     this.c.engine.emit('targetLocked', { target: this.target, point: this.target.point, miss: this.miss });
     return true;
   }
@@ -392,6 +397,12 @@ export class TargetField {
     this.bypass = false;
     this.lastRelease = reason || '';
     this.stats.released++;
+    /* **Neither field is read, and that is deliberate at the subscriber** (§430). FX's handler
+       takes no parameter at all — `on('targetReleased', () => { this._targetReached = false; })`
+       — under its own comment: a release is the assist giving up, and §2.1.6's grammar has no
+       failure mark, so there is no burst to place and nothing to place it with. The payload is
+       kept because a release is a real beat something may later want to hear; anything that does
+       read `target` must copy it, since it is the live target object. */
     this.c.engine.emit('targetReleased', { target: t, reason: this.lastRelease });
   }
 
@@ -486,6 +497,9 @@ export class TargetField {
       if (this.status !== 'onTarget') {
         this.status = 'onTarget';
         this.stats.reached++;
+        /* `target` and `point` are read via `Particles._targetFx`; **`group` is not** (§430).
+           It is the authored group name, provenance for a consumer that would burst differently
+           per group — there is none, and adding one is a new look rather than a dropped field. */
         c.engine.emit('targetReached', { target: t, point: P, group: t.group });
       }
       return 'onTarget';
