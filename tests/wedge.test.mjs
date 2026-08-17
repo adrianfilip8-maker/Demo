@@ -28,6 +28,31 @@ import { TUNE as CTUNE } from '../src/player/Controller.js';
  * ── What "pinned" is, and why it is correct ────────────────────────────────────────────────
  * A capsule pressed into a face with forward held does not move. That is a wall behaving like a
  * wall. The defect would be a pin that ordinary input cannot leave, and there is none.
+ *
+ * ── §503 CORRECTION: "there is none" IS FALSE, AND THIS FILE CANNOT SEE THE COUNTEREXAMPLE ──
+ * Read this before quoting anything above. The sentence "backing off and jumping free the capsule
+ * immediately at every site, from every approach tested" is true of `SITES` and was generalised
+ * past it. `SITES` has **two** entries, both hand-picked from driven runs, and **both stand on
+ * walkable ground.** That is the whole domain of this file.
+ *
+ * A third site exists where neither reflex works — (−9.26, −6.58, −56.60), in the tomb stairwell,
+ * reported by the world lane and driven in §503:
+ *
+ *     hold nothing (control)   moved 0.000 m    STILL PINNED
+ *     walk toward flat ground  moved 0.004 m    STILL PINNED
+ *     walk the other way       moved 0.006 m    STILL PINNED
+ *     jump                     moved 0.000 m    STILL PINNED
+ *     jump + walk              moved 16.541 m   fell 10 m further down the shaft, still `fall`
+ *
+ * The mechanism is different from anything this file tests: the ground under the feet is 6 mm
+ * away but **57.64° steep**, so `_probeGround` correctly refuses it, `grounded` never latches, and
+ * `Jump.canEnter`'s `canGroundJump()` therefore never returns true — **the player cannot jump,
+ * which is the escape this file measures.** All five trials end in `fall`, ungrounded.
+ *
+ * So this file's negative result holds *for pins on walkable ground* and nowhere else. It is NOT
+ * widened here: the site is inside the sealed tomb (§447.1) and its geometry is under active
+ * repair by the world lane, so an arm pinned to those coordinates would be pinned to a surface
+ * that is about to move. What is fixed is the claim, which was the part that travelled.
  */
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);

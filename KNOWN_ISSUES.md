@@ -37990,3 +37990,105 @@ and have none of the three problems. Concretely, and in this order:
 What is *not* recommended: wiring `walk`/`run`/`run_fast` as framings at their authored thresholds. If
 a future analogue-stick or sprint state makes the middle rungs into places a player actually sits, the
 question reopens — and it reopens as a `Moveset` change first, which this lane does not hold.
+
+---
+
+## §503 — The tomb wedge is not §436.4: the probe is refusing ground correctly, and the pin is inescapable
+
+The world lane reported a floating capsule on the authored route — `fall`, `grounded === false`,
+ground 0.00 m under its feet, at **(−9.26, −6.58, −56.60)** — and asked whether §443.2's repair is
+incomplete or this is a second mechanism. **It is a second mechanism, and it is the opposite one.**
+
+### §503.1 Reproduced, then instrumented at the gate rather than at the outcome
+
+It reproduces on HEAD with the world lane's in-flight `EgyptLevel.js` in the tree: 240 idle frames
+at that point end in `fall`, `grounded false`, `airTime 4.00`, `vy 0.0000`. Not moving, not landing.
+`_probeGround` field by field:
+
+```
+  groundCheck hit  y −6.5860       feet −6.5800      delta 0.0060 m   tag ground
+  slope            57.64°          walkable limit    50.00°
+  GATES            above-feet ✓    within-snap ✓     walkable ✗   => REJECTED
+  velocity gate    vy 0.00000      (needs <= 0.02)   ✓ — not the cause
+```
+
+**§436.4's mechanism was the probe measuring PAST an available floor** to a further surface 0.107 m
+down, which is what §443.2's `_sweepLand*` fallback exists to catch. Here the probe **finds** the
+surface, 6 mm from the feet, comfortably inside the snap band — and refuses it because it is
+**57.64°, steeper than walkable.** That refusal is correct; grounding on a 57.64° face would be
+the bug.
+
+The §443.2 fallback declines for the same reason and also correctly: `_sweepLandFrame` is current
+(240 = `_frame`), and the swept contact's `normal.y` is **0.0223** — an ~88.7° face — far below the
+consumption site's `normal.y > 0.3` walkability gate. **Both paths are working as designed.** The
+repair is not incomplete.
+
+### §503.2 The geometry, and why it is a corner rather than a slope
+
+Profiling the ground normal around the point shows walkable floor 0.6 m away:
+
+```
+  offset  (0.0, 0.0)   y −6.586  57.6°        (−0.3, 0)  y −6.200  13.7°
+          (0.0, ±0.3)  y −6.586  57.6°        (−0.6, 0)  y −6.600   0.0°   flat
+          (+0.3, 0)    y −6.200  57.6°        (+0.6, 0)  y −6.200  24.0°
+```
+
+A capsule pressed into a steep corner in the stairwell with flat floor just to the −x side. This is
+stairwell geometry — flight B's ramp/riser junction, per §447.1's survey — and it belongs to the
+world lane, whose repair is in flight there now.
+
+### §503.3 The part that makes it a defect rather than a wall: it is inescapable
+
+wedge.test.mjs's conclusion is that backing off and jumping free the capsule at every site. Driven
+here, they do not:
+
+```
+  hold nothing (control)   moved 0.000 m    STILL PINNED
+  walk toward flat ground  moved 0.004 m    STILL PINNED
+  walk the other way       moved 0.006 m    STILL PINNED
+  jump                     moved 0.000 m    STILL PINNED
+  jump + walk              moved 16.541 m   fell to y −16.85, still `fall`, still ungrounded
+```
+
+**Four of five fail, and the fifth is not an escape — it is falling 10 m further down the shaft.**
+All five end ungrounded.
+
+The reason the jump fails is the interesting half and it is a consequence of §503.1 being correct:
+`Jump.canEnter` requires `canGroundJump()`, `grounded` is false because the face is unwalkable, and
+`coyote` expired long ago. **The player cannot jump, and jumping is the escape.** A correctly
+refused surface and an inescapable pin are the same fact seen twice.
+
+### §503.4 Whose it is, and the one Controller-side gap worth naming
+
+**The geometry is the world lane's**, and it becomes reachable exactly when the tomb is unsealed —
+today a player cannot get there at all (§447.1), which is the only reason this is not already a
+shipped trap. Handed over with the mechanism rather than the symptom: *a 57.64° face with walkable
+floor 0.6 m to −x, at flight B's ramp junction.*
+
+**The Controller-side gap is that nothing recovers from it.** `_safetyNet` triggers on height alone
+(`position.y > TUNE.voidY` −220), so a capsule stuck in `fall` at −6.58 with `vy` 0.0000 forever
+never trips it, and `_recordSafeStance` has a perfectly good recovery point stored the whole time.
+The missing predicate is *stuck*, not *low*: airborne, not moving, for N seconds. Named and **not
+built** — it is a behaviour change to the safety net, and the full suite cannot be run honestly
+while two lanes have work in the tree.
+
+### §503.5 The arm could not see it, and its domain block said the opposite
+
+wedge.test.mjs concluded *"the defect would be a pin that ordinary input cannot leave, and there is
+none."* Its `SITES` list is **two** entries, both hand-picked from driven runs, and **both on
+walkable ground** — so the file's entire domain excludes the case where `grounded` cannot latch,
+which is the case that produces an inescapable pin. The claim was generalised past its sample, and
+the generalisation is what travelled.
+
+Corrected in place with the counterexample and its five trials. **Not widened into an arm**: the
+site is inside a stairwell being rebuilt this session, so an arm pinned to those coordinates would
+be pinned to a surface about to move — §501.7's mistake in advance. What is fixed is the sentence,
+because that was the part being quoted.
+
+### §503.6 Process — the staging check, adopted
+
+`git add` with explicit paths is necessary and not sufficient: the index is shared and staging is
+not path-scoped, so an explicit-path add still commits whatever a sibling has staged. **`git diff
+--cached --stat` between staging and committing, treating any unexpected file as a stop**, is now
+run on every commit in this lane. The index was verified empty before this round began and the
+world lane's `EgyptLevel.js` was confirmed unstaged and left alone.
