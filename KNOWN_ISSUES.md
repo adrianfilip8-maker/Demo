@@ -35397,3 +35397,106 @@ re-deriving it.
 
 The rule the round leaves: **resistance is not entrapment, and the only way to tell them apart is
 to try leaving.**
+
+---
+
+## §437 — Fixing a route is not the same as delivering a framing, and a bound that only fires on good news
+
+Three results from the camera lane, and the first is the one that generalises past the camera.
+
+### §437.1 Machinery wired at both ends can still be wired through something that does not conduct
+
+`wall_run` is the case study and it is the lane's own work seen from the far end. Earlier this
+session `_resolveFrame` was found to be matching camelCase STATE names against a snake_case CLIP
+table, so `wallRun` resolved to the `run` framing and the `wall_run` row — the one with `side 0.35`
+and `vtrack 1` — **was reached by nothing.** `STATE_FRAME` fixed it. The framing became reachable,
+the census arm went green, and the round closed.
+
+Measured at the screen one round later: **`wall_run` delivers 0.13 m of the 2.59 m of boom it asks
+for. 5 %.** The bank arrives — roll and side and pitch all land at 94–106 %, so the horizon does
+tilt — and the camera never pulls back to show the wall, which is the entire point of that row.
+
+> **Fixing a route is not the same as delivering a framing.**
+
+This is the §357.1 family seen from the delivery end rather than the wiring end. §357.1 is
+machinery wired at one end. §430 is a value that cannot arrive in time. This is the third:
+**machinery wired correctly at both ends, and wired through something that does not conduct.** All
+three ship green, all three survive a reader checking that the code is right, and this one
+additionally survives *the census written to catch the previous one* — because that census asks
+"does the key resolve" and the key resolves perfectly.
+
+The general form, for anything with a route and a payload: **a reachability test and a delivery
+test are two tests.** Every routing fix in this project has quietly claimed the second while
+measuring the first.
+
+### §437.2 The boom chain, priced — and it costs the healthy rows nothing
+
+`land.tau` was never the lever anyone thought it was, because `tau` moves only the first of three
+blends. Priced on a patched copy that does not land, same absolute-weighted scorer as the shipped
+table, identical trajectories. **Exactly two of the 19 blend sites were collapsed, and which two is
+the result** — `_boomWant`'s own `smoothDamp`, and `this.boom`'s `smoothDamp` on the free-air path
+only. The occlusion pull-in and the entire recovery design were left as shipped; collapsing those
+would have deleted a documented behaviour rather than shortened a chain.
+
+```
+  land      0% ->  53%      combat  35% -> 73%      dive  61% -> 88%
+  roll     60% ->  86%      idle    41% -> 63%      air   16% -> 32%
+  wall_run  5% ->   8%      glide  100% -> 100%     sneak 100% -> 100%
+```
+
+**`glide` and `sneak` are unchanged.** The two rows that already close cost nothing, which was the
+question. The cost is elsewhere and it is continuous rather than sudden: mean |Δboom| 11.12 →
+14.79 mm/frame (+33 %), reversals 40 → 48 — and the **p99 single-frame step is unchanged** at
+108.6 → 111.9 mm, because the worst steps are occlusion pull-ins and those were not touched.
+Collapsing does not add snaps; it adds small continuous movement.
+
+It also **separates two causes that looked like one.** `land` 0 → 53 % is chain depth. `wall_run`
+5 → 8 % is not: its boom is governed by the wall it is running along, and no chain change reaches
+it. Before this run both were simply "the framing does not arrive".
+
+Shipped nothing. Still a human's call on hardware that renders.
+
+### §437.3 Half of all landings are silent, and my first instrument on it was vacuous
+
+The controls half of the charter, which had been waiting. Headline: **against the reference,
+controls are feature-complete for a demo — what is missing is delivery, not verbs.** The same
+finding as the camera, reached independently. What a player notices first, measured:
+
+```
+  drop 0.5 m   4.51 m/s  SILENT     drop  6 m  16.09 m/s  SILENT
+  drop 1.0 m   6.10 m/s  fires      drop  8 m  18.55 m/s  fires
+  drop 2.5 m  10.07 m/s  fires      drop 10 m  20.98 m/s  SILENT
+  drop 4.0 m  13.00 m/s  SILENT     drop 15 m  25.74 m/s  fires
+```
+
+Every one is above `landBeat` 3.2. Silent means no `land` state and no `landed` event, so no sound,
+no shake, no impact pose. **And it is not ordered by speed**, so a player cannot learn the rule.
+This confirms the substance of `Controller.TUNE`'s documented `landImpact` race and corrects its
+description: that note says any descent over ~3.6 m/s is decided against and cites a 14 m drop
+landing in silence; 15 m fires, and it is roughly half of all heights.
+
+**The first instrument pointed at this was vacuous, and it is §414's shape exactly.** I swept the
+*sub-frame phase*, offsetting the arc by `g·dt²` = 6.7 mm, got 20/20 agreement at every height, and
+nearly reported "phase does not matter". One frame of fall at these speeds is 100–430 mm — the
+perturbation was two orders of magnitude below the quantity that decides the outcome, so the probe
+could not have disagreed with itself. The *height* sweep is the instrument. Kept in the arm rather
+than deleted, because the round it appeared in is a round about things that look like measurements.
+
+### §437.4 And a bound that can only be broken by improvement is not a detector
+
+The `census` arm's two ratchets moved **6 → 11 → 15 → 17 → 22 → 23** in one session. Every break was
+another lane needing real trajectories instead of a stub, which is precisely what that arm's
+finding hoped for.
+
+They are `elsewhere <= N` and `onlyMine >= M`. **`elsewhere <= N` fires when MORE states are
+covered elsewhere; `onlyMine >= M` fires when FEWER are traversal-only. Both trip on coverage
+spreading and neither can trip on coverage being lost.** So the previous revision's comment — this
+lane's own — calling them coverage-loss detectors was wrong. Loss is caught by `never` (asserted
+empty) and by the two thinness pins, which are stated as "no worse than" and do point the right
+way.
+
+Recorded rather than edited: the arm broke again on this lane's new work and another lane already
+had an uncommitted re-base to 23/9 in the shared tree, so changing it would have been housekeeping
+over someone's in-flight state (§418.6). The observation is the deliverable. If it is worth acting
+on, the one assertion with a remaining job is `elsewhere >= 6` — coverage must not collapse back to
+the concentration the arm was written to report.
