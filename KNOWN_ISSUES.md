@@ -34117,3 +34117,111 @@ a Terrain-only fixture.
 
 The standing rule this leaves: **`realWorld` lives in one file. A second one appearing beside it
 is the defect §424 exists to prevent, and the check is one grep.**
+
+## §426 — The suite profiled, all 70 files: traversal was the only one, and the exchange rate is 0.68
+
+Commissioned after §425 to profile the rest of the suite for the shape that made `traversal`
+worth a round — the same immutable thing built repeatedly — and to rank the fixes **by what they
+move on the wall clock**. Nothing was fixed in this round; that was the instruction and it turned
+out to be the right one.
+
+**The answer is that traversal was the only one.**
+
+### §426.1 The profile
+
+Every file run alone, whole machine, wall time including node startup:
+
+```
+  49,172  traversal.test.mjs      56 arms      31% of all serial work
+  23,965  audiosession.test.mjs   13
+  15,338  patrol.test.mjs         18
+   7,468  kaykit.test.mjs         23
+   5,300  cluevault.test.mjs      19
+   5,086  level.test.mjs          16
+   4,974  audio.test.mjs          40
+   4,952  camspeed.test.mjs        2
+   4,436  vegwater.test.mjs       14
+   3,931  textures.test.mjs       17
+   3,904  guardsuite.test.mjs      1
+  ------  the other 59 files      28.1 s total, mean 477 ms
+```
+
+```
+  total serial            156.7 s over 70 files
+  suite wall clock        127.8 s
+  top 1 / 3 / 5 / 11      31% / 56% / 65% / 82% of serial work
+```
+
+### §426.2 The census, which is the actual deliverable
+
+The shape is *a world fixture constructed inside test bodies rather than once*. Swept over all 70
+files — heavy constructors (`Collision`, `Architecture`, `Terrain`, `Props`, `Textures`, `KayKit`,
+`Statues`, `Vegetation`, `Water`) and `realWorld()` calls appearing between `test(` and its close:
+
+```
+  traversal.test.mjs   24 sites     <- fixed in §425
+  cluevault.test.mjs    5 sites     <- fixed in §425 (it was mine)
+  every other file       0 sites
+```
+
+**Sixty-eight of seventy files already build their immutable fixture once at module scope.** Spot
+checks confirm the negative rather than resting on one grep pattern:
+
+- `patrol` builds the shipped level **once**, and already prints its own cost — *"shipped level
+  built in 1103 ms — 248 collision AABBs, 10 routes, 11 guards"*. Its remaining 14 s is guard
+  simulation across 18 arms, which is the thing under test.
+- `audiosession`'s `makeWorld()` is a plain stub — no BVH, no geometry — and full sessions are
+  already memoised behind `SESSION_CACHE`. Every other render in it takes a **distinct** input:
+  a different material, a different contact event, a different beat script. 24 s of
+  non-redundant offline DSP.
+- `audio` memoises its catalogue behind `catalogue()`; its 43 cues are 43 different renders.
+- `camspeed`, `level`, `vegwater`, `kaykit`, `textures`, `guardsuite` — zero per-test builds.
+
+So the ranked list of available fixes of this kind has **one entry, and it is already done.**
+
+### §426.3 The exchange rate, measured rather than modelled — and it is not 1/N
+
+The interesting result is what a saved second is *worth*, because the naive answers are both
+wrong. §425's change is the calibration: it removed **77.8 s** of serial time from one file and
+**52.8 s** from the suite wall clock.
+
+> **0.68 wall-seconds per serial-second.** Not 1.0 (the file is not the whole critical path) and
+> not 0.25 (four workers do not divide the work cleanly).
+
+Why it is not 1/4 was measured directly. The four largest files, whose serial sum is 96.0 s, were
+run concurrently on the 4-core box:
+
+```
+  ideal makespan (perfect packing, no contention)    49.2 s
+  measured wall, four at once                        81.6 s
+  speedup against serial sum                          1.18x on 4 cores
+```
+
+Four CPU-bound Node processes on four cores stretch each other by roughly **1.66×**. That is why
+the whole suite achieves only 1.23× against its own serial total. **Scheduling arithmetic
+over-promises here by a factor of three**, and any future estimate of "this saves N seconds"
+should be quoted through the measured 0.68 rather than through worker count.
+
+### §426.4 What is left, and the one structural observation
+
+At 127.8 s the suite is bounded below by `traversal` — 49.2 s alone, and stretched by contention
+when it runs beside anything. Even if the other 69 files became instant, the floor is roughly
+**80 s**. The remaining 48 s of headroom is not reachable by the fix this round went looking for,
+because there is no repeated-immutable work left to remove: what remains is guard simulation,
+offline DSP and geometry generation, all of it producing a different answer each time.
+
+The one structural option, recorded and **not taken**: `traversal.test.mjs` is 31% of the suite's
+serial work in a single file, and a single file cannot be parallelised. Splitting it into two or
+three would let that work spread across workers and is the only remaining change that could move
+the floor. It is not a performance edit — it is a decision about how the project's most worked
+file, and the only one with non-zero §418.3 coverage, is organised. **That belongs to the
+traversal lane, not to a profiling round**, and it is listed here so the option is on the record
+rather than acted on by whoever happened to be holding a stopwatch.
+
+### §426.5 The result worth having is the negative one
+
+The temptation with a profile in hand is to start at the top and find work. The top three entries
+after `traversal` are 24 s, 15 s and 7.5 s of genuinely irreducible computation, and every one of
+them would have looked like a candidate from the timing column alone. **A ranked list of the
+eleven slowest files is not a list of eleven problems**, and the difference between those two
+readings is the whole content of this round.
