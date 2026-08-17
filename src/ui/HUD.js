@@ -685,15 +685,17 @@ export class HUD {
      * So this is a §357.1 with the renderer already built: `_project` and the lock mark below
      * have existed all along and nothing was ever wired to them for traversal.
      *
-     * **The publisher is deliberately absent and this subscription is listed in
-     * `tests/eventbus.test.mjs`'s `DEAD_UNBUILT` until it lands.** `src/player/Controller.js` is
-     * held by another lane; the emit belongs in a per-frame pass in `Controller.update` (never in
-     * `canEnter` — a predicate must not emit), reading `afford('hook' | 'rail' | 'ledge')`, which
-     * is free because `Controller.afford` memoises per frame. It must read `afford` and NOT
-     * `TargetField`: `TargetField` is an air-assist, not the thing that decides a grab, and every
-     * target in this level is deliberately `fromGround: false` — `EgyptLevel.js`'s
-     * `notch-pylon-e-mouth` cites the gate by name and picks rung 1 to sit above it. An assist
-     * that refuses grounded players cannot telegraph §8.1 step 2's grounded E-grab.
+     * **The publisher is `Controller._telegraph()`** — a per-frame pass in `Controller.update`,
+     * never in a `canEnter`, because a predicate must not emit. It reads `afford('hook' | 'rail'
+     * | 'ledge')` and NOT `TargetField`: `TargetField` is an air-assist, not the thing that
+     * decides a grab, and every target in this level is deliberately `fromGround: false` —
+     * `EgyptLevel.js`'s `notch-pylon-e-mouth` cites the gate by name and picks its rung to clear
+     * it. An assist that refuses grounded players cannot telegraph §8.1 step 2's grounded E-grab.
+     *
+     * Delivered on that beat: **30 frames, 0.50 s of warning**, against a measured baseline of 0.
+     * `tests/telegraph.test.mjs` drives the real Controller to prove the mark precedes the
+     * commitment frame and names the ring actually taken; the synthetic-event arms beside it
+     * cover projection and precedence only, and each says so.
      */
     on('telegraph', (p) => this.setTelegraph(p));
     /**

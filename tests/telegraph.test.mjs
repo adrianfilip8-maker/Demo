@@ -20,12 +20,18 @@ import { installDom, fakeEngine } from './_hudshim.mjs';
  * and fire on contact. So the renderer existed and nothing was wired to it, which is §357.1 with
  * the expensive half already built.
  *
- * ── The publisher is BLOCKED, and this file must not be read as proof it works ──────────────
- * `src/player/Controller.js` is held by another lane. These arms drive `HUD` with a SYNTHETIC
- * `telegraph` event, so they prove the subscription, the precedence and the projection. They
- * cannot prove the emit is correct, well-timed, or fired at all in play — see the third domain
- * line on every arm below. `tests/eventbus.test.mjs` carries `telegraph` in `DEAD_UNBUILT` as the
- * receipt for that gap.
+ * ── The publisher has LANDED, and the arms changed shape because of it ─────────────────────
+ * `Controller._telegraph()` now emits. The HUD arms below still drive a SYNTHETIC event — that is
+ * the right instrument for "does the view render what it is given" — but they no longer claim they
+ * cannot discriminate the emit, because a real driven arm at the bottom of this file does. That
+ * last arm is the only one that can tell "the HUD renders what it is given" apart from "the game
+ * gives it something in time", and it is the one that closes the loop.
+ *
+ * Delivered lead, measured the same way as the 0-frame baseline that motivated the work:
+ *
+ *     E-grab (kiosk lintel -> ring 3)   telegraph@0, hookGrab@30   ->  30 frames, 0.50 s
+ *     auto-grab (freefall onto ring 3)  did not reproduce in this harness — a FAILED BEAT,
+ *                                       reported as such and not as a measurement
  */
 
 async function bootHud() {
@@ -54,11 +60,9 @@ test('telegraph: a hold in front of the camera raises a mark near frame centre',
    *   passes on : a point 12 m straight down the camera's forward axis — the mark comes on and
    *               lands within a quarter-frame of centre.
    *   fails  on : a point 12 m BEHIND the camera — `_project` rejects it and no mark appears.
-   *   cannot discriminate : whether anything ever EMITS `telegraph`. Both inputs here are
-   *               synthetic `engine.emit` calls. A green here says the HUD renders a telegraph
-   *               it is given; it says nothing about the game giving it one, and the measured
-   *               truth today is that the game gives it none. Do not quote this arm as evidence
-   *               that the telegraph works in play.
+   *   cannot discriminate : the emit's TIMING or its choice of hold. Both inputs here are
+   *               synthetic, so this arm covers projection and gating only. The driven arm at the
+   *               bottom of this file covers whether the game emits, when, and pointing at what.
    */
   const { hud, engine } = await bootHud();
 
@@ -80,9 +84,9 @@ test('telegraph: the mark follows the hold, and null retires it', async () => {
   /* DOMAIN (§418.3 + the third line)
    *   passes on : two holds at different screen positions — the mark moves between them.
    *   fails  on : `telegraph` with a null payload — the mark goes off.
-   *   cannot discriminate : whether the emit ever sends null when the hold leaves reach. The
-   *               retire path is the publisher's responsibility and is unwritten; this proves
-   *               only that the HUD honours it when told.
+   *   cannot discriminate : whether the publisher ever sends null in play. `_telegraph` emits
+   *               null when the best hold's identity becomes none, but this arm proves only that
+   *               the HUD honours it when told.
    */
   const { hud, engine } = await bootHud();
 
@@ -109,7 +113,8 @@ test('telegraph: a combat lock outranks the traversal telegraph', async () => {
    *               position, proving the precedence is a real branch and not a constant.
    *   cannot discriminate : whether the two ever coexist in play. They may never, and the
    *               precedence exists because nothing in the state machine guarantees they cannot.
-   *               This arm shows the branch works, not that it is ever taken.
+   *               This arm shows the branch works, not that it is ever taken. That one is
+   *               genuinely unreachable and stays.
    */
   const { hud, engine } = await bootHud();
 
@@ -130,17 +135,66 @@ test('telegraph: a combat lock outranks the traversal telegraph', async () => {
   console.log(`[telegraph] precedence: lock ${withLock.x.toFixed(0)} -> telegraph ${withoutLock.x.toFixed(0)}`);
 });
 
-test('telegraph: the subscription exists and the publisher is declared missing', async () => {
-  /* A TRIPWIRE, labelled (§418.5). It has no failing input while `Controller` is held by another
-   * lane: it asserts the HUD subscribes and that the census still lists `telegraph` as unbuilt.
-   * It goes red the moment the emit lands, which is the signal to delete the census line — the
-   * census's own doctrine is that a closed line is deleted, not moved to a "fixed" list. */
-  const { readFileSync } = await import('node:fs');
-  const hudSrc = readFileSync(new URL('../src/ui/HUD.js', import.meta.url), 'utf8');
-  const busSrc = readFileSync(new URL('./eventbus.test.mjs', import.meta.url), 'utf8');
-  assert.ok(/on\('telegraph'/.test(hudSrc), 'the HUD subscription is gone');
-  assert.ok(/setTelegraph\s*\(/.test(hudSrc), 'setTelegraph is gone');
-  assert.ok(/DEAD_UNBUILT = \[[^\]]*'telegraph'/.test(busSrc),
-    'the census no longer lists `telegraph` as unbuilt — if the emit landed, delete this arm and '
-    + 'the census line together');
+test('telegraph: DRIVEN — the game emits a hook mark before the player commits', async () => {
+  /* THE ARM THAT CLOSES THE LOOP. Every arm above drives the HUD with a synthetic event and so
+   * can only show that the view renders what it is given. This one runs the real `Controller`
+   * over the shipped level and asks the question that actually matters: does the GAME produce a
+   * telegraph, pointing at the hold it is about to take, BEFORE the frame it commits?
+   *
+   * DOMAIN (§418.3 + the third line)
+   *   passes on : §8.1 step 2's E-grab — standing on the kiosk lintel (2.2, 8.95, 8.4), pressing
+   *               `interact` at frame 30. `telegraph` fires with kind `hook` at ring 3 and
+   *               `hookGrab` lands at frame 30, so the mark precedes the commitment.
+   *   fails  on : the same drive with no hold in reach — spawn (0, 0, 30), where the nearest hook
+   *               is far outside `hookGrab` 9.0. No hook telegraph is emitted at all. Both are
+   *               driven here, so the arm distinguishes "emits a hook mark" from "emits always".
+   *   cannot discriminate : whether the lead is ENOUGH. 30 frames is what this beat delivers and
+   *               whether half a second is adequate warning is a feel question this arm has no
+   *               access to. It pins that the lead is positive and that the mark names the right
+   *               hold; it does not certify the number.
+   *
+   * The baseline this replaces: before the emit, both grab paths gave 0 frames — announcement and
+   * commitment on the same frame. */
+  const { realWorld, hardReset, DT } = await import('./_moveset.mjs');
+  const { engine, c } = await realWorld();
+
+  const drive = (start, script, frames) => {
+    engine.input.clear();
+    hardReset(engine, c, new THREE.Vector3(start[0], start[1], start[2]), Math.PI);
+    let tele = -1, point = null, grab = -1;
+    for (let i = 0; i < frames; i++) {
+      engine.events.length = 0;
+      engine.input.beginFrame(DT);
+      engine.input.move.x = 0; engine.input.move.y = 0;
+      script(engine.input, i);
+      engine.time = i * DT;
+      c.update(DT, i * DT);
+      for (const e of engine.events) {
+        if (e.evt === 'telegraph' && e.payload?.kind === 'hook' && tele < 0) {
+          tele = i; point = e.payload.point.clone();
+        }
+        if (e.evt === 'hookGrab' && grab < 0) grab = i;
+      }
+    }
+    return { tele, point, grab };
+  };
+
+  const eGrab = drive([2.2, 8.95, 8.4],
+    (inp, i) => { if (i === 30) inp.hold('interact'); if (i === 34) inp.let_go('interact'); }, 200);
+  const noHold = drive([0, 0, 30], () => {}, 120);
+
+  assert.ok(eGrab.tele >= 0, 'the game must emit a hook telegraph on the lintel beat');
+  assert.ok(eGrab.grab >= 0, 'the beat must actually reach a grab, or it proves nothing');
+  assert.ok(eGrab.tele < eGrab.grab,
+    `the mark must precede the commitment: telegraph@${eGrab.tele} vs hookGrab@${eGrab.grab}`);
+  /* It must name the hold that is actually taken — ring 3 at (4.2, 14.8, 4.5). A mark on the
+     ledge underfoot passed an earlier version of this and told the player nothing; ranking by
+     KIND rather than by distance is what fixed it. */
+  assert.ok(eGrab.point && eGrab.point.distanceTo(new THREE.Vector3(4.2, 14.8, 4.5)) < 0.5,
+    `the mark must name ring 3, got ${eGrab.point && JSON.stringify(eGrab.point.toArray().map((v) => Math.round(v * 100) / 100))}`);
+  assert.equal(noHold.tele, -1,
+    'the failing input: standing at spawn with no hook in reach must emit no hook telegraph');
+
+  console.log(`[telegraph] DRIVEN E-grab: telegraph@${eGrab.tele} -> hookGrab@${eGrab.grab} = `
+    + `${eGrab.grab - eGrab.tele} frames (${((eGrab.grab - eGrab.tele) / 60).toFixed(2)} s) lead, baseline was 0`);
 });

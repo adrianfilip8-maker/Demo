@@ -258,23 +258,15 @@ const DEAD_BY_DECISION = ['binocucom'];
  * does. That is the property that makes the register worth trusting, and the only way to keep it is
  * to actually delete lines when they stop being true.
  */
-/**
- * `telegraph` — the HUD half is built and the publisher is BLOCKED, not forgotten.
- *
- * Measured on the shipped build: nothing on screen says what is grabbable, and both grab paths
- * announce on the frame they commit — 0 frames of warning. `HUD.setTelegraph` and its subscription
- * exist and are tested against a synthetic event (`tests/telegraph.test.mjs`); the emit belongs in
- * `Controller.update` and `src/player/Controller.js` is held by another lane. This line is the
- * receipt for that, and it comes out the moment the emit lands — the doctrine above is that a
- * closed line is DELETED, not moved to a "fixed" list.
- */
-const DEAD_UNBUILT = ['prompt', 'unregisterTarget', 'telegraph'];
+const DEAD_UNBUILT = ['prompt', 'unregisterTarget'];
 
 const DEAD_SUBSCRIPTIONS = [...DEAD_BY_DECISION, ...DEAD_UNBUILT];
-/* 3 -> 4: `telegraph` joined DEAD_UNBUILT. This guard is why the addition had to be deliberate,
-   which is what it is for — the list may not grow by accident. It goes back to 3 when the
-   `Controller` emit lands and the line is deleted. */
-if (DEAD_SUBSCRIPTIONS.length !== 4) throw new Error('DEAD_SUBSCRIPTIONS miscounted');
+/* Back to 3: `telegraph` was listed here for exactly one round while the HUD half waited on
+   `Controller`, and the line is DELETED now the emit has landed rather than moved to a "fixed"
+   list — the doctrine at the top of this file. `Controller._telegraph()` publishes it and
+   `HUD` subscribes; `tests/telegraph.test.mjs` drives the real Controller to prove the mark
+   precedes the commitment frame. */
+if (DEAD_SUBSCRIPTIONS.length !== 3) throw new Error('DEAD_SUBSCRIPTIONS miscounted');
 if (DEAD_BY_DECISION.some((k) => DEAD_UNBUILT.includes(k))) throw new Error('an event is in both buckets');
 
 /**

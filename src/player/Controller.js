@@ -339,31 +339,46 @@ export const TUNE = {
      0.107 m down.
 
      ── AND `landHard` RE-DERIVED, BECAUSE THE FIX FORCED IT ───────────────────────────────────
-     With arrivals measured correctly, every ordinary jump lands at 10.474 m/s — above the old
+     With arrivals measured correctly, an ordinary jump lands at 10.874 m/s — above the old
      `landHard` 9.0 — so the repair alone would have made *every jump in the game* a hard landing
      with a 0.19 s control tax and a shake. The threshold is therefore derived from the arcs this
-     moveset and this level actually produce, measured rather than chosen:
+     moveset and this level actually produce, measured rather than chosen. Both populations are
+     re-measured on every run by `recover.test.mjs` L1, so these numbers cannot quietly rot:
 
-         what he can do to himself      10.474 … 14.186 m/s
-                                        plain jump … jump+double stacked, and 14.186 is a hard
-                                        ceiling: swept over 21 double-jump press timings, from
-                                        apex to 40 frames late, nothing exceeds it
-         authored descents              7.59 · 9.55 · 24.00 · 25.55 · 35.93 · 46.99 m/s
-                                        the two small ones are step-downs below a plain jump; the
-                                        first genuine fall is the 12 m descent to the vault
+         what he can do to himself      6.196 … 14.586 m/s
+                                        floor is a fully cut jump, ceiling is jump+double with the
+                                        button held. 14.586 is hard: swept over a 31 x 50 grid of
+                                        hold/release/press timings at 1-frame resolution, 1550
+                                        arcs, nothing exceeds it. Highest apex reached: 4.502 m
+         authored route descents        7.753 · 23.749 · 25.368 m/s
+                                        dropped for real, not solved for. The small one is a
+                                        step-down below a plain jump; the first genuine fall is
+                                        the 12 m descent to the vault. The bottle route's own
+                                        descents (26.9 m and 46.0 m) are both larger and so do
+                                        not move the lower edge of the band
 
-     The two populations are separated by an empty band **14.186 … 24.00 m/s**, 9.8 m/s wide, and
-     the rule that reads off it is the one the moveset already implies: **`landHard` is the first
-     landing that was not a move you meant.** 15.0 sits 0.81 m/s (5.7 %) above everything he can
-     do under his own power and 9.0 m/s below the first authored fall. In player terms it is a
-     drop of 4.69 m — and the highest apex the moveset can reach is 4.262 m, so the hard landing
-     begins exactly where his own jumping stops being able to cause it.
+     The two populations are separated by an empty band **14.586 … 23.749 m/s**, 9.16 m/s wide,
+     and the rule that reads off it is the one the moveset already implies: **`landHard` is the
+     first landing that was not a move you meant.**
+
+     The margin is worth stating in the right units, because **arrivals are quantized**. The sweep
+     records the velocity the move was made with, so every arrival sits on a ladder spaced one
+     frame of gravity apart — 0.400 m/s. Population A's top three rungs are 14.586, 14.186,
+     13.786. 15.0 clears the top rung by 0.414 m/s, which is 1.04 rungs: a whole step, but only
+     just one. It is not a percentage of a continuous quantity, and it is not a comfortable
+     margin either — one extra frame of fall anywhere in the moveset would close it. L1 asserts
+     exactly that ( `landHard - ceiling >= one tick` ) and is the arm that will fire first if
+     `jumpV0`, `gravity` or the double-jump is ever retuned.
 
      `landBeat` stays 3.2: with the race fixed every real landing speaks, which is the point.
 
-     FEEL REVIEW OWED. These are numbers, not a verdict — nobody has heard or seen them on a
-     machine that renders. Flagged for hardware arbitration with the distribution above, so the
-     reviewer is judging a defensible number rather than a coin flip. ---- */
+     FEEL REVIEW OWED, AND IT IS THE WHOLE DECISION. The measurement fixes the *band*; every value
+     in 14.586 … 23.749 separates the same two populations identically, and L1 passes for all of
+     them. Where 15.0 sits inside a 9 m/s window is a feel judgement nobody has made on a machine
+     that renders — nobody has heard the shake or felt the 0.19 s. Flagged for hardware
+     arbitration with the distribution above, so the reviewer is placing a number inside a
+     measured window rather than guessing one. If it wants to move, it is a one-line change here
+     and L1 will keep it honest about the edges. ---- */
   landBeat:     3.2,     // enter `land` above this arrival speed. Shipped value, formerly inline.
   landHard:     15.0,    // above this it is `land_hard` + shake + root impulse. Derived above (§438).
   landSoftTime: 0.09,
@@ -472,6 +487,16 @@ const AFFORD = {
   ledge: { range: 2.6,           eye: 1.20, cone: 0 },
 };
 
+/**
+ * What the telegraph offers to point at, and why it is these three.
+ *
+ * `hook`, `rail` and `ledge` are the holds a player *aims for* and can miss. `pole` and `spire`
+ * are omitted deliberately: both are arrived at rather than aimed at — `poleClimb` is entered by
+ * running into a shaft and `spireLand` by descending onto a tip — so a mark on them would fire
+ * constantly while telling the player nothing they were deciding about.
+ */
+const TELEGRAPH_KINDS = ['hook', 'rail', 'ledge'];
+
 export class Controller {
   constructor(engine) {
     this.engine = engine;
@@ -567,6 +592,10 @@ export class Controller {
     this.lastWallRec = null;
     this.lastWallNx = 0;
     this.lastWallNz = 0;
+    /* Identity of the hold currently telegraphed — see `_telegraph`. `null`/'' means "nothing is
+       being pointed at", which is a state the HUD is told about explicitly. */
+    this._teleRec = null;
+    this._teleKind = '';
     this.comboIndex = 0;
     this.comboTimer = 0;
     this.hurtCooldown = 0;
@@ -701,6 +730,10 @@ export class Controller {
       this._probeEnvironment();
       this.targets.update(dt);
       this.sm.update(dt);
+      /* After the machine, so the affordances it polled this frame are already memoised and the
+         group reflects what Sly is actually in. Never inside a `canEnter`: a predicate must not
+         emit, and `canEnter` is called speculatively for states that are then refused. */
+      this._telegraph();
       this._postTimers(dt);
       this._hazards(dt);
       // After `_hazards`, so `hurtCooldown` reflects THIS frame and a stance inside a hazard is
@@ -1023,6 +1056,72 @@ export class Controller {
       if (this.velocity.y < 0) this.velocity.y = 0;
     }
     return canGround;
+  }
+
+  /**
+   * Tell the HUD what the game will let Sly grab, before he has to commit.
+   *
+   * ── The defect this closes ─────────────────────────────────────────────────────────────────
+   * Measured on the shipped build: **nothing on screen said what was grabbable.** `thiefTargets`
+   * only fires on the rising edge of holding `focus`, so it is a Thief-o-Vision readout;
+   * `targetLocked` had exactly one listener and it was FX; `hookGrab` and `railMount` reach Audio
+   * and FX only and fire ON CONTACT. Driven, both grab paths gave **0 frames of warning** —
+   * announcement and commitment on the same frame, auto-grab and E-grab alike. The HUD's mark and
+   * its projection had existed all along with nothing wired to them (§441).
+   *
+   * ── Why `afford` and not `TargetField` ────────────────────────────────────────────────────
+   * `TargetField` is an **air-assist**, not the thing that decides a grab, and every target in
+   * this level is `fromGround: false` **by design** — `EgyptLevel.js`'s `notch-pylon-e-mouth`
+   * cites `acquire`'s grounded refusal by name and picks its rung to clear it. An assist that
+   * deliberately refuses grounded players cannot telegraph §8.1 step 2's grounded E-grab off the
+   * kiosk lintel. Both grab paths consult `afford('hook')`, so `afford` is the mechanism.
+   *
+   * ── Cost ──────────────────────────────────────────────────────────────────────────────────
+   * Free on any frame the moveset already asked the same question — `afford` memoises on
+   * `_frame`, and `hookSwing`/`railSlide`/`ledgeHang` poll exactly these three. On a frame where
+   * none was polled it is one `col.nearest` per kind, which is the honest worst case rather than
+   * the advertised one.
+   *
+   * ── The point is CLONED, and that is not defensive ────────────────────────────────────────
+   * `afford` returns a per-tag scratch object whose `point` is overwritten the next time that tag
+   * is queried. Handing that reference to the HUD would be the shelf-life defect §441.5 records —
+   * a value that arrives correct and then decays into someone else's memory. These holds are
+   * static world geometry, so a copy is not merely safe, it is *correct*; the moving-badge
+   * argument that makes `setLockOn` hold a live reference does not apply to a stone ring. One
+   * allocation per change of hold, and a change of hold is rare.
+   */
+  _telegraph() {
+    const attached = this.sm?.group === 'attach';
+    let best = null, bestKind = '';
+    if (!attached) {
+      /**
+       * Ranked by KIND, first hit wins — not by distance. Measured: nearest-first pointed the
+       * mark at the kiosk lintel's own `ledge`, 0.25 m under Sly's feet, while he was standing on
+       * it aiming at a ring 7.27 m away. The nearest affordance is routinely the one you are
+       * already on, and a telegraph that marks the floor tells you nothing you are deciding.
+       *
+       * `TELEGRAPH_KINDS` is therefore an ordering, and it is the same one its own docblock
+       * argues: hooks and rails are *aimed at*, ledges are largely *arrived at*, so a hook in
+       * cone and in range is the more decision-relevant hold even when a ledge is closer.
+       */
+      for (const kind of TELEGRAPH_KINDS) {
+        const a = this.afford(kind);
+        if (!a) continue;
+        best = a; bestKind = kind;
+        break;
+      }
+    }
+    /* Edge-triggered on the IDENTITY of the hold, not on its distance: a mark that re-emits every
+       frame while Sly walks toward the same ring is a per-frame event on the bus for no new
+       information. `rec` is the collider the hold belongs to, so two rings are two identities and
+       the same ring approached for eighty frames is one. */
+    const rec = best ? (best.rec || null) : null;
+    if (rec === this._teleRec && bestKind === this._teleKind) return;
+    this._teleRec = rec;
+    this._teleKind = bestKind;
+    this.engine.emit('telegraph', best
+      ? { point: best.point.clone(), kind: bestKind, distance: best.distance }
+      : null);
   }
 
   /** Look for a wall in `dir` (XZ). Fills this.wall. Loose enough for battered temple faces. */
