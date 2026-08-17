@@ -2881,19 +2881,42 @@ test('census: which of the 32 states any test in this project has ever entered',
   assert.deepEqual(never, [],
     `${never.length} states are entered by nothing in tests/: ${never.join(', ')}. That is a real ` +
     'coverage hole; add a driven route or record why there cannot be one.');
-  /* Was 6, then 11. The five that arrived are `toTarget`, `wallClimb`, `wallCling`, `doubleJump`
-     and `paraglide`, and they arrived from `camdrive.test.mjs` — the camera lane pricing the lead
-     question needed REAL trajectories rather than a stub player, so it drives `realWorld()` and
-     picks those up incidentally. That is the shape this bound exists to notice: the arm's own
-     message says "coverage has spread, which is good: update this bound", and this is that
-     update rather than a bound widened to make a red arm green. 14 leaves headroom for the next
-     file to do the same without a maintenance failure. */
-  assert.ok(elsewhere.length <= 14,
-    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, then 11) — coverage ` +
-    `has spread, which is good: update this bound. ${elsewhere.join(', ')}`);
-  assert.ok(onlyMine.length >= 20,
-    `only ${onlyMine.length} states are traversal-only — if that dropped, other lanes have started ` +
-    'driving the moveset and this arm should say so rather than assert the old concentration');
+  /* Was 6, then 11, now 15. The first five arrived from `camdrive.test.mjs` — the camera lane
+     pricing the lead question needed REAL trajectories rather than a stub player, so it drives
+     `realWorld()` and picks them up incidentally.
+
+     The next four — `ledgeClimb`, `ledgeHang`, `hookSwing`, `wallJump` — arrived from
+     `collectroute.test.mjs`, which walks the twelve-bottle route through the shipped level to
+     establish that the collect loop is completable at all. Measured rather than inferred: that
+     file alone enters 14 of the 32, and all four of the new names are in its set.
+
+     Re-based by the lane that moved it. The distinction being kept: the previous break was
+     caused by a file that was still UNCOMMITTED and belonged to another lane, so re-basing then
+     would have encoded someone's in-flight state — it was left, and it resolved itself when
+     `camdrive` landed. This one is caused by a committed file of the mover's own, which is the
+     case where leaving the tree red is not a courtesy to anyone.
+
+     Both numbers are set to what was measured, not to slack. This is not §141.1: these are
+     descriptive ratchets whose own messages ask to be re-based when coverage spreads, not gates
+     deciding whether a result is good — and the direction of travel is the one the arm's finding
+     measurement and adds no name beyond this set. */
+  /* And 15 -> 17, re-based by the mover again and for the same committed-file reason. The two
+     that arrived are `dive` and `idle`, from `camdrive.test.mjs` D4: pricing the Cane Slam's
+     framing needs the slam driven from five different drop heights, which enters `dive` for the
+     first time outside this file. `idle` came with it — the route starts standing.
+
+     Worth saying plainly because the number is now more than half of 32: **the concentration this
+     arm was written to report is genuinely dissolving.** It found "delete this one file and 6 of
+     32 go dark"; it is now 15 of 32, and every step has been another lane needing REAL
+     trajectories rather than a stub. That is the finding aging out, which is the outcome its own
+     message asks for, not the arm losing its grip. */
+  assert.ok(elsewhere.length <= 17,
+    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, 11, 15, 17) ` +
+    `— coverage has spread, which is good: update this bound. ${elsewhere.join(', ')}`);
+  assert.ok(onlyMine.length >= 15,
+    `only ${onlyMine.length} states are traversal-only (was 21, 17, 15) — if that dropped, other ` +
+    'lanes have started driving the moveset and this arm should say so rather than assert the old ' +
+    'concentration');
   /* The thinness pins. Both are stated as "no worse than", so widening coverage never reddens
      them — only losing coverage does, which is the direction that matters for a regression.
      Measured: exactly ONE state (`bounce`) hangs on a single arm, and ZERO are placement-only. */
