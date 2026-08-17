@@ -37842,3 +37842,151 @@ own rule was always asking.
 Landing-relevant suites green: recover, traversal, payloadtriage, audio, telegraph, collectroute —
 116/116. The full suite is deliberately not re-run: `Terrain.js` and `CameraRig.js` are dirty with
 two other lanes' work in progress and a full run would be measuring them, not this.
+
+## §461 — The speed ladder is wired on the animation side and not on the camera side, and its thresholds were authored for something else
+
+Reported, not repaired. Four questions were asked; the third answer is the one that decides it, and it
+is not the answer the question expected.
+
+### §461.1 What routes to what, measured off the shipped resolver
+
+All 32 registered states driven through a running `CameraRig` rather than read off `STATE_RULES`,
+because the table is what has been wrong twice:
+
+```
+  idle        hurt toTarget bounce pickpocket skid move idle      ← seven states, one framing
+  walk        *** NOTHING ROUTES HERE ***
+  run         *** NOTHING ROUTES HERE ***
+  run_fast    *** NOTHING ROUTES HERE ***
+  sneak       tiptoe crouch sneak          crawl       crawl
+  hook_swing  hookSwing                    rail_slide  railSlide
+  balance     railWalk                     spire       spireLand
+  dive        dive                         wall_run    wallRun wallClimb wallCling wallJump
+  ledge_hang  ledgeHang                    climb       ledgeClimb poleClimb poleSwing
+  glide       paraglide                    land        land
+  roll        roll                         air         doubleJump jump fall
+  combat      combo combatStrafe
+```
+
+**A correction to the premise I was given.** The router is *not* mis-mapping `wall_run` or `combat`.
+The real state names `wallRun` and `combatStrafe` both resolve correctly, through `STATE_FRAME`. What
+resolved wrongly was **my own test harness**, which fed *framing keys* in as state names — and
+`'wall_run'.indexOf('run')` is 5, so the string `wall_run` hits `['run','run']` before `['wall',…]`.
+That was §442 in a harness, already fixed in §460.2, and it is not a defect in shipped routing. Three
+orphan framings is the real finding here and it is the only one.
+
+**And the `idle` row is not measuring standing still.** Attributed by contributing state over four
+driven routes, 538 frames: **`move` 82.5 %, `idle` 17.5 %.** An earlier audit on a stand-heavier route
+set put it at 51/49. Both are true and the spread is the point — *how much of this framing is running
+depends on the route*, so the row's identity is not a property of the row. On anything that traverses,
+the framing named for standing still is overwhelmingly the running one.
+
+### §461.2 Not dead authoring — the ladder is live, on the other side of the game
+
+The question was *dead authoring nobody removed, or a router that lost a branch?* It is neither.
+
+```
+  Moveset.Move.update:   c.baseClip(sp < 3.4 ? 'walk' : sp < 6.3 ? 'run' : 'run_fast', 0.16);
+```
+
+**The same three names, with thresholds already authored and already shipping.** The ladder is wired to
+the *clips* and not to the *camera*. `Move` is one state, so `_resolveFrame` — which routes by state
+name — cannot see the rung the animation is already on. Two halves authored to one vocabulary, one of
+them connected.
+
+The camera half was not lost; it was **declined, on the record**. `tests/camspeed.test.mjs` says so:
+the fix chosen was a continuous `distSpeedGain` on smoothed ground speed *"rather than lighting up that
+ladder, which would also double-count against `fovSpeedGain`"*. `CameraRig` says it again at
+`distSpeedGain`: lighting `run_fast` is *"a +10° / +59.7 %-apparent-width change with its own risk, and
+it is not this one."*
+
+So the honest label is **superseded on purpose, with the supersession never written where the rows
+are.** That is why three unreachable rows read as coverage — they misled this lane's own census twice,
+counting `run` and `run_fast` among the framings that "escape properly" when nothing can reach either.
+
+One rule in the table really is dead: `['sprint', 'run_fast']`, for a state no `buildMoveset` entry
+produces. `run_fast` as a *clip* is reachable — `LOCO.maxSpeed` is `runSpeed` 7.2 and the top rung
+starts at 6.3 — but there is no sprint state and nothing on the ground goes faster than a run.
+
+### §461.3 What a player would see, and the number that decides it
+
+```
+  TODAY — every ground speed uses `idle`; only the continuous gains move
+    standing      boom 5.400   fov 52.00   lead  0.000   ndcY -0.259
+    1.70 m/s      boom 5.464   fov 53.27   lead -0.086   ndcY -0.240
+    4.85 m/s      boom 5.582   fov 55.64   lead -0.061   ndcY -0.226
+    7.20 m/s      boom 5.670   fov 57.40   lead -0.043   ndcY -0.216
+
+  IF WIRED — same speeds, on the framings the ladder authors
+    walk     @1.70   boom +0.200   fov +0.60   lead +0.000   ndcY +0.024
+    run      @4.85   boom +0.900   fov +2.40   lead +0.441   ndcY +0.054
+    run_fast @7.20   boom +1.600   fov +4.60   lead +1.286   ndcY +0.059
+```
+
+**But the middle rungs are not places a player is.** Rung occupancy over `move` frames on three driven
+routes, using the animation's own thresholds:
+
+```
+  route          move-frames   walk    run  run_fast   rung changes  changes/sec
+  desert run             142      8      9       125              5         2.11
+  run + jumps            108      8     12        88              5         2.78
+  stop-start             171     26     25       120             13         4.56
+```
+
+**`run_fast` owns 70–88 % of every route; `walk` and `run` own 5–15 % between them and are transients.**
+`Move.accelerate` targets `runSpeed` outright, and the class comment says exactly this: *"Keyboard has
+no analogue ramp, so the run is the target and §6's walk speed is the blend point ANIMATION crosses on
+the way there — you feel the walk during accel."* **The thresholds were authored to sequence a
+crossfade during acceleration, not to name three speeds a player occupies.** A camera ladder built on
+them inherits a purpose it was not designed for.
+
+### §461.4 Three reasons it cannot be wired as authored, and one interaction
+
+1. **The camera would never settle on a rung.** 2.11–4.56 rung changes per second against framing `tau`
+   of 0.26–0.35 s. On the stop-start route that is one change every 0.22 s against a 0.28 s blend — the
+   camera is asked to re-aim faster than it can arrive, on the most common thing a player does.
+2. **It double-counts against two shipped continuous couplings on the same axis.** At full run,
+   `distSpeedGain` already gives +0.270 m and `fovSpeedGain` +5.40°. Adding `run_fast` gives
+   **boom +1.870 m — 5.9× the current dolly — and fov +10.00°.** The boom reaches 7.27 m against a
+   player zoom maximum of 9.0, so the camera would place itself at 81 % of the furthest the player can
+   choose, without being asked.
+3. **`run_fast` has no room above it.** Nothing on the ground exceeds `runSpeed`, so the top rung is a
+   0.9 m/s band at the ceiling rather than a gear the player shifts into.
+
+Nothing hidden couples to these rows, which is the one clean result: `ROUTE_SUPPRESS` lists none of
+`idle/walk/run/run_fast` (all at full telegraph strength) and `vtrack` is 0 on all four. So the blast
+radius is `dist`, `fov`, `lead`, `pitch`, `height` and nothing else.
+
+**The interaction that must not be missed.** Item 7 of the hardware sheet proposes `leadTime` 0.17 →
+0.22, and its largest beneficiary is the most-seen row — `move`, framed as `idle`, delivering −0.043 m.
+Wiring the ladder gives that same row `run`'s **+0.612 m** or `run_fast`'s **+1.244 m** outright. **The
+two proposals overlap on the row that matters most and must be decided together**, not in sequence:
+whoever takes the ladder first makes the other one smaller.
+
+### §461.5 Recommendation: neither wire it nor delete it — the disagreement is about size
+
+Deleting the rows loses the only written record of how big the author wanted the speed effect to be.
+Wiring them as framings fails on all three counts above. Both moves treat the rows as *routing*, and
+they are not a routing question at all:
+
+> `run_fast.dist` **1.60 m** and `distSpeedGain` **0.30 m** are two authored answers to one question —
+> *how much should the camera open up at a sprint?* — and they disagree by **5.9×**. The same pair
+> exists for the lens: `run_fast.fov` **+4.6°** against `fovSpeedGain` **+5.4°**. They have never been
+> live at once and nobody has ever had to choose, because they live in different mechanisms and no
+> instrument looked at both.
+
+So the recommendation is to **stop treating the ladder as unrouted framings and start treating it as
+the calibration record for the continuous gains** — which are the mechanism that shipped, are reachable,
+and have none of the three problems. Concretely, and in this order:
+
+1. **Annotate, do not delete.** The three rows must stop reading as coverage — that is what misled two
+   of this lane's own censuses. They are authored sizes for a speed effect delivered elsewhere, and
+   saying so in `FRAMES` costs nothing and removes the trap.
+2. **Put the size question on the hardware sheet**, with both endpoints measured: 0.27 m / +5.4° as
+   shipped against 1.87 m / +10.0° as authored. That is a feel decision with a factor of six in it and
+   it has never been posed.
+3. **Decide it alongside item 7**, because they move the same row.
+
+What is *not* recommended: wiring `walk`/`run`/`run_fast` as framings at their authored thresholds. If
+a future analogue-stick or sprint state makes the middle rungs into places a player actually sits, the
+question reopens — and it reopens as a `Moveset` change first, which this lane does not hold.
