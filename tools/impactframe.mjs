@@ -605,12 +605,21 @@ if (args.includes('--search')) {
      the edge of the sweep.** Printing the best cell per lens makes that visible instead of
      letting one number hide it, and turns the lens into a composition choice — which is what it
      is — rather than an artefact of the array literal above. */
-  const byLens = new Map(), bigLens = new Map();
+  const COURTYARD_FLAT = 0.28;
+  const byLens = new Map(), bigLens = new Map(), qualLens = new Map();
   for (const c of cells) {
     const b = byLens.get(c.fov);
     if (!b || c.rank > b.rank) byLens.set(c.fov, c);
     const g = bigLens.get(c.fov);
     if (!g || c.slyH > g.slyH || (c.slyH === g.slyH && c.flat > g.flat)) bigLens.set(c.fov, c);
+    /* And the corner that is actually wanted: the largest figure in a frame that reads the
+       ground at least as well as `courtyard` — the shipped canonical that looks most steeply
+       down the ground plane, at 0.28 by this same measure. Derived from a shipped shot rather
+       than picked, and it is a FLOOR on an existing frame rather than a new bar. */
+    if (c.flat >= COURTYARD_FLAT) {
+      const q = qualLens.get(c.fov);
+      if (!q || c.slyH > q.slyH || (c.slyH === q.slyH && c.flat > q.flat)) qualLens.set(c.fov, c);
+    }
   }
   console.log(`\n   RANK-maximal cell per lens — and note what the rank does to the figure:`);
   for (const fov of [...byLens.keys()].sort((a, b) => a - b)) {
@@ -635,6 +644,16 @@ if (args.includes('--search')) {
   console.log(`\n   FIGURE-maximal cell per lens — same bars, opposite corner:`);
   for (const fov of [...bigLens.keys()].sort((a, b) => a - b)) {
     const c = bigLens.get(fov);
+    console.log(`     fov ${String(fov).padStart(2)} · d ${String(c.d).padStart(4)} m h ${String(c.hh).padStart(5)} m`
+      + ` · ellipse ${c.flat.toFixed(3)} · sly ${c.slyH.toFixed(0)} px`
+      + ` · elevation ${(Math.atan2(c.hh, c.d) * 180 / Math.PI).toFixed(1)}° · rank ${c.rank.toFixed(1)}`);
+  }
+
+  console.log(`\n   LARGEST FIGURE at ellipse >= ${COURTYARD_FLAT} (courtyard's own value — the shipped shot`
+    + ` that looks most steeply down the ground plane):`);
+  if (!qualLens.size) console.log('     none — no admissible cell reads the ground as well as courtyard');
+  for (const fov of [...qualLens.keys()].sort((a, b) => a - b)) {
+    const c = qualLens.get(fov);
     console.log(`     fov ${String(fov).padStart(2)} · d ${String(c.d).padStart(4)} m h ${String(c.hh).padStart(5)} m`
       + ` · ellipse ${c.flat.toFixed(3)} · sly ${c.slyH.toFixed(0)} px`
       + ` · elevation ${(Math.atan2(c.hh, c.d) * 180 / Math.PI).toFixed(1)}° · rank ${c.rank.toFixed(1)}`);
