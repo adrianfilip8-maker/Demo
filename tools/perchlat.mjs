@@ -84,6 +84,61 @@ export function travelOf(rows, trim = 0) {
   return { pp: hi - lo, lo, hi, loY, hiY, rows: win.length, y0: win[0].y, y1: win[win.length - 1].y };
 }
 
+
+/**
+ * The figure, isolated as the largest CONNECTED COMPONENT of the mask.
+ *
+ * ── Why this is here, and it is the second time I have needed it ────────────────────────────
+ * `A-ship − S-nosly` is every pixel that changes when the character root is hidden, and that is
+ * NOT only the character: it is the character, his ink hull, and **his cast shadow**, which at
+ * this shot's tod 0.80 lands as a separate blob 400 px to his right. The first version of this
+ * file took the per-row centroid of the whole mask and reported 438 px of travel against a
+ * predicted 8.94 — 49x, which is not a confirmation, it is a mask with two subjects in it.
+ *
+ * Measured: at |dL| > 16 the mask holds 288 components —
+ *     55,411 px  x 515..912  rows  93..569   the figure
+ *     14,824 px  x 922..1194 rows 463..572   the cast shadow
+ * On the rows where both exist, a centroid of their union sits between them and swings by
+ * hundreds of pixels as each gains rows. That swing was the entire measurement.
+ *
+ * **This is the `markradius` failure, by me, in a tool I wrote the same day.** There, 136
+ * unrelated dust sprites put rung 2's median lit radius at 6.35 m for a mark framed at 0.857,
+ * and the fix was connected-component isolation because it needs no distance threshold and is
+ * stable across cut levels. Identical here.
+ *
+ * And the reason my controls did not catch it is worth more than the fix: `--self-test`
+ * validates the STATISTIC on synthetic shapes, and it passed — 0.00 px on symmetric shapes,
+ * exact on known shears. It says nothing about whether the mask handed to that statistic
+ * contains one subject or two. **I controlled the estimator and not the input**, which is a
+ * whole class of control that looks complete and is half of one.
+ */
+function largestComponent(mask) {
+  const lab = new Int32Array(W * H).fill(-1);
+  const st = new Int32Array(W * H);
+  let best = null, nComp = 0;
+  for (let s = 0; s < W * H; s++) {
+    if (!mask[s] || lab[s] >= 0) continue;
+    let sp = 0; st[sp++] = s; lab[s] = nComp;
+    let cnt = 0, x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    const cells = [];
+    while (sp) {
+      const i = st[--sp]; const x = i % W, y = (i / W) | 0;
+      cnt++; cells.push(i);
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      if (x > 0 && mask[i - 1] && lab[i - 1] < 0) { lab[i - 1] = nComp; st[sp++] = i - 1; }
+      if (x < W - 1 && mask[i + 1] && lab[i + 1] < 0) { lab[i + 1] = nComp; st[sp++] = i + 1; }
+      if (y > 0 && mask[i - W] && lab[i - W] < 0) { lab[i - W] = nComp; st[sp++] = i - W; }
+      if (y < H - 1 && mask[i + W] && lab[i + W] < 0) { lab[i + W] = nComp; st[sp++] = i + W; }
+    }
+    nComp++;
+    if (!best || cnt > best.cnt) best = { cnt, x0, x1, y0, y1, cells };
+  }
+  if (!best) return null;
+  const m = new Uint8Array(W * H);
+  for (const i of best.cells) m[i] = 1;
+  return { mask: m, cnt: best.cnt, x0: best.x0, x1: best.x1, y0: best.y0, y1: best.y1, nComp };
+}
+
 /* ══ INSTRUMENT CONTROLS — can this statistic return "no excursion"? ══════════════════════ */
 /* §409: a measurement that cannot produce its own null is not a measurement. Before any frame
    is opened, the statistic is run on shapes whose answer is known by construction. If a
@@ -145,38 +200,69 @@ for (let i = 0; i < W * H; i++) dL[i] = Math.abs(LA[i] - LS[i]);
    of action and sits below him — so the cut is swept and the answer is read where it stops
    moving, the same plateau discipline `armextent` uses. */
 console.log('── the drawn figure, and its centre line ───────────────────────────────────────');
-console.log('   cut     px    rows          centre-line travel (peak-to-peak), by row trim');
+console.log('   cut  figure/mask comps rows   centre-line travel (peak-to-peak), by row trim');
 console.log('                               trim 0%    trim 10%   trim 20%   trim 30%');
 const results = [];
 for (const cut of [2, 4, 8, 16, 32, 64]) {
-  const mask = new Uint8Array(W * H);
-  let n = 0;
-  for (let i = 0; i < W * H; i++) if (dL[i] > cut) { mask[i] = 1; n++; }
+  const raw = new Uint8Array(W * H);
+  let nRaw = 0;
+  for (let i = 0; i < W * H; i++) if (dL[i] > cut) { raw[i] = 1; nRaw++; }
+  const comp = largestComponent(raw);
+  if (!comp) { console.log(`   >${String(cut).padEnd(3)} (empty)`); continue; }
+  const mask = comp.mask, n = comp.cnt;
   const rows = centreLine(mask);
   if (rows.length < 3) { console.log(`   >${String(cut).padEnd(3)} ${String(n).padStart(7)}  (too few rows)`); continue; }
   const t = [0, 0.10, 0.20, 0.30].map((tr) => travelOf(rows, tr));
   results.push({ cut, n, rows, t });
-  console.log(`   >${String(cut).padEnd(3)} ${String(n).padStart(7)}  ${String(rows[0].y).padStart(3)}..${String(rows[rows.length - 1].y).padEnd(3)}   `
+  console.log(`   >${String(cut).padEnd(3)} ${String(n).padStart(6)}/${String(nRaw).padStart(6)} ${String(comp.nComp).padStart(4)}c ${String(rows[0].y).padStart(3)}..${String(rows[rows.length - 1].y).padEnd(3)} `
     + t.map((v) => `${v ? v.pp.toFixed(2) : '—'} px`.padEnd(11)).join(''));
 }
 
 /* ── the verdict, against the two numbers that exist ─────────────────────────────────────── */
 const PRED_LAT = 11.18;      // §413.1 / §345: the LATERAL component alone, at 1600x900
 const predAtH = PRED_LAT * (H / 900);
+/* ── THE VERDICT IS A REFUSAL, AND THE NUMBERS ARE WHY ──────────────────────────────────────
+ * Across cuts 2..64 and trims 0..30% the centre-line travel ranges 57 to 173 px, and above
+ * |dL| > 32 the figure stops being one connected component at all (19,780 px of 53,498 at 32;
+ * 10,210 px spanning only rows 464..556 at 64, which is a fragment and not a figure). There is
+ * no value here to quote. The statistic does not converge on this subject.
+ *
+ * And the reason is not noise, it is that THIS IS NOT THE QUANTITY §413.1 PREDICTS. Its 11.18 px
+ * is the projection of a lateral displacement of the TORSO CHAIN. A per-row centroid of the full
+ * silhouette measures where the body's mass sits on each row, which on a crouched perch with
+ * limbs out is dominated by limb placement — a swing of 100+ px that has nothing to do with the
+ * torso's lean, and which would be there if the lean were zero.
+ *
+ * So this is §405.1's shape: a probe firing correctly, on the subject, and returning a number
+ * that describes a different part of it. The honest report is that the measurement was taken and
+ * DOES NOT confirm the prediction, because the instrument cannot isolate the predicted quantity —
+ * not that the pose "survives projection at 50x the hull", which is what the first version of
+ * this file printed and which is an artefact of measuring the whole body.
+ *
+ * WHAT WOULD ACTUALLY ANSWER IT: the same pose with the lean removed, differenced against the
+ * shipped one — an A/B on the animation, not on the frame. §345 already priced and refused the
+ * only keyframe change, so that arm does not exist and cannot be built for this measurement
+ * alone. §413.3 registered this as "worth one lock slot and not more"; the slot has been spent
+ * and the answer is that a pixel centroid is the wrong instrument for it.
+ */
+const all = results.flatMap((r) => r.t.filter(Boolean).map((v) => v.pp));
+const lo = Math.min(...all), hi = Math.max(...all);
+const frag = results.filter((r) => r.cut >= 32);
 console.log(`\n── against the numbers that already exist ──────────────────────────────────────`);
 console.log(`   §413.1 predicts the LATERAL component alone at ${PRED_LAT} px (1600x900)`);
 console.log(`          = ${predAtH.toFixed(2)} px at this capture's ${H} rows`);
-console.log(`   the ink hull drawn over it is ${HULL_PX.toFixed(2)} px`);
-const stable = results.filter((r) => r.cut >= 16);
-if (stable.length) {
-  const pp = stable.map((r) => r.t[1]?.pp).filter((v) => v != null);
-  const med = pp.sort((a, b) => a - b)[pp.length >> 1];
-  console.log(`\n   MEASURED centre-line travel (cuts >= 16, trim 10%): ${pp.map((v) => v.toFixed(2)).join(', ')} px  median ${med.toFixed(2)}`);
-  console.log(`   against the ${HULL_PX.toFixed(2)} px hull: ${(med / HULL_PX).toFixed(2)}x`);
-  console.log(`   against the ${predAtH.toFixed(2)} px predicted lateral component: ${(med / predAtH).toFixed(2)}x`);
-  console.log(`\n   ${med > HULL_PX * 2
-    ? 'The drawn centre line travels well past the line drawn over it, so the pose SURVIVES\n   projection at this shot — which is the claim §413.3 registered and never took.'
-    : 'The drawn centre line does NOT clear the ink hull by a comfortable margin here.'}`);
-  console.log('   The excess over the predicted lateral component, if any, is SAGITTAL: this');
-  console.log('   statistic mixes both axes and cannot attribute travel to one of them.');
+console.log(`   the ink hull drawn over it is ${HULL_PX.toFixed(2)} px\n`);
+console.log(`   MEASURED centre-line travel across every cut and trim: ${lo.toFixed(1)} .. ${hi.toFixed(1)} px`);
+console.log(`   spread ${(hi / lo).toFixed(1)}x — THE STATISTIC DOES NOT CONVERGE ON THIS SUBJECT.`);
+for (const r of frag) {
+  console.log(`   at |dL| > ${r.cut} the figure is ${r.n} px in its largest component and spans rows `
+    + `${r.rows[0].y}..${r.rows[r.rows.length - 1].y} — it has fragmented, so "largest component" is a fragment`);
 }
+console.log(`\n   *** NO CONFIRMATION. *** The measurement was taken and it does not settle §413.3.`);
+console.log(`   A per-row centroid of the full silhouette is dominated by LIMB placement on a`);
+console.log(`   crouched perch; §413.1's ${PRED_LAT} px is a TORSO-CHAIN displacement. Those are`);
+console.log(`   different quantities, and the larger one would be present with zero lean, so it`);
+console.log(`   cannot evidence the lean. §405.1's shape: right about the wrong question.`);
+console.log(`\n   The arm that would answer it is the same pose with the lean removed, differenced`);
+console.log(`   against the shipped one — an A/B on the ANIMATION, not on the frame. §345 priced`);
+console.log(`   and refused the only keyframe change, so that arm does not exist.`);
