@@ -37495,6 +37495,24 @@ test, and still been wrong by half a metre on the row that pays.
 Nothing about the `leadTime` proposal has shipped. `leadTime` stands at 0.17, `followTimeH` 0.16,
 `deadzoneH` 0.10, `leadMax` 1.75.
 
+### §460.4 The tenth staging collision, and this time I caused it
+
+`a62dc40` was staged as `git add KNOWN_ISSUES.md` and committed **three** files: it swept a sibling
+lane's `src/world/Terrain.js` change and its new `tests/tombdoor.test.mjs` out of the shared index and
+into my commit, under my message. **Nothing was lost — their work went to the remote and the suite is
+847/847 — but the attribution is wrong**, and the commit message describes a camera change while the
+diff carries a terrain one.
+
+Recorded because the first nine collisions this session were all in the other direction: my work swept
+into someone else's commit. **It is the same defect and it does not care which way it points.** Explicit
+paths are necessary and are not sufficient — `git add <one path>` still commits whatever else is already
+in the index, because the index is shared and staging is not scoped to a path.
+
+The defence that actually works is one line longer: **inspect `git diff --cached --stat` between staging
+and committing, and treat any file you did not stage as a stop.** That is what would have caught this,
+and it is what the previous nine ledger entries about this should have said instead of "commit promptly".
+
+
 ---
 
 ## §480 — The tomb's lid is off: TERRAIN's proxy roofed the descent, and the stair underneath is a second defect
