@@ -32741,3 +32741,86 @@ Both were written that way because the defect was fresh, not because a tool aske
 
 `tools/armaudit.mjs` closes A and B permanently and cheaply, and should be run when arms are added.
 It will not find the next §407. Nothing will, except writing the domain down.
+
+---
+
+## §418 — Nine vacuous checks in one session, and the one discipline that would have caught them
+
+§407, §408.3, §409, §414, §415, §416, §417 and two more inside instruments. Four workers, one
+defect: **a check that can only return one answer.** §417 audited the class systematically and
+produced the result that makes this section necessary rather than a summary — so this is the
+consolidation, written from the coordinator's seat because no single lane owns it.
+
+### §418.1 The nine, sorted by what was wrong rather than by who found them
+
+**Bars that could not discriminate (five).**
+
+```
+  §407.1  FIGURE SWALLOWED   unpassable      0 of 727,608 cameras cleared it and the ellipse bar
+  §408.3  basketvary A1      unfailable      entailed by A2b; max count 1 against a bar of 2
+  §409    capsuleSweep hit   half a domain   could not report "no" on the depenetration path
+  §414    azimuth-free       vacuous probe   probe step commensurate with the sampling: 5e-16
+  impactframe rank           constant factor slyH pinned by the ring's width; elevation alone
+```
+
+**Instruments that answered honestly about the wrong thing (four).**
+
+```
+  world   occlusion metric   counted a 1 cm graze as an occlusion
+  world   cost bbox          the subject "grew 145%" as it receded out of frame
+  world   river-screen gate  correct, precise, and not the quantity the decision needed
+  fx      perch mask         two subjects in one centroid — the figure and his cast shadow
+```
+
+The second group is the harder one and the reason is structural. **A bad bar announces itself by
+never changing its verdict. A good instrument pointed at the wrong quantity agrees with you.**
+Three of the four produced numbers that were visibly impossible — a subject growing as it
+recedes, a 49x agreement with a prediction of 8.94 px — and were caught by disbelief. The fourth
+produced a gate that simply *passed*, and only doing the change caught it.
+
+### §418.2 §417's residual is the finding, and it is a negative result
+
+The audit built two instruments and swept 56 arms, 263 assert sites:
+
+```
+  mode A  never executes        0 of 263      decidable, and empty
+  mode B  executes but inert    0 survive     258 kill, 4 unreachable by the method, accounted
+  mode C  entailed              3             invisible to inversion; two of the three kill
+```
+
+**Not one of the nine is in mode A, B or C.** `FIGURE SWALLOWED` executes, and inverting it
+changes the outcome — it is a live, inversion-sensitive assertion that no camera could pass. A
+generic instrument can ask *does this assertion change the result on the input the suite runs*.
+Every one of the nine fails a different question:
+
+> **Does this check have BOTH a passing and a failing input inside its reachable domain?**
+
+That is a property of the check's domain, not of the assertion, and it is **not recoverable from
+the code.** No auditor, however careful, can extract it retrospectively. Which explains why all
+nine arrived by accident, and predicts that the next one will too.
+
+### §418.3 So the discipline is prospective, and it is one line
+
+> **§418.3 — When you write a bar, record the two inputs: one you have seen it pass on, and one
+> you have seen it fail on. If you cannot name both, you have not finished writing it.**
+>
+> Not "add a calibration arm" — this project has had that rule for hundreds of sections and
+> wrote nine violations in a day. The difference is *when*. A calibration arm added afterwards
+> tests the bar you built; the two inputs are found while you are deciding what the bar means,
+> which is the only moment the domain is in front of you. §414's probe would have died at
+> birth: "what azimuth step makes this disagree?" has no answer at 24 segments and 15°.
+
+The cost is minutes at authoring time. The observed cost of not doing it is one round per
+instance, nine times, and a shipped shot certified against a bar nothing could clear.
+
+### §418.4 Two corollaries earned the same day
+
+**A control on the estimator is not a control on its input.** `perchlat`'s self-test passed
+cleanly — 0.00 px on symmetric shapes, exact on known shears — because it validates the
+*statistic* on synthetic single-component masks. It says nothing about whether the mask handed
+to it holds one subject or two, and it held two.
+
+**A rule against a defect class is not a defence against writing one.** It is a defence against
+*shipping* one, and only if it executes. Every worker here knew the class by mid-session; every
+worker wrote another instance afterwards, including inside the arm written to demonstrate the
+lesson. Knowing did not help. Running did.
