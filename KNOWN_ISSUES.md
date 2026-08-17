@@ -31922,6 +31922,80 @@ That is why "verify the change, not the gate" and "self-test the instrument befo
 same discipline seen from two ends, and why neither is a talisman: both are cheap, and both are
 only worth anything when executed at the point where the number is still cheap to throw away.
 
+### §411.23 The river verdict: leave the float. Both of my gates were wrong, in opposite directions.
+
+Frames: `shots/river-before` at `dffaaa9` (clean tree) and `shots/river-after` at `632f33d`. The
+candidate is reverted; it stays in history with its frames so the next person to raise this has the
+measurement instead of the round.
+
+**1. The float is invisible.** Casting the gap band between pyr1's mesh bottom and the water beneath
+it through the **full BVH — architecture and props, not just terrain, which every earlier test of
+mine used**:
+
+```
+hero 0/72   temple 0/66   courtyard 0/48   interior 0/57   traversal 0/72
+combat 0/72  guard 0/20   sly-profile 0/72  alert 0/60     impact 0/72
+dunes 18/72   <- the only shot that sees any of it
+```
+
+Ten of eleven shots: **zero**. And in the `dunes` frame the pyramid's base sits behind the pylons
+and the dune ridge at 328 m through heavy aerial haze.
+
+**2. The fix is cheap but not free.** `dunes` 5.1 % of pixels differ, `traversal` 0.7 %. The `dunes`
+change is mostly **vegetation redistributing** — the palm scatter follows the river — plus distant
+dune texture. A real, unrequested change to a shipped flagship composition, bought for a defect no
+camera in the game can see.
+
+**3. Both numeric gates were wrong, in opposite directions, and only the frames caught either.**
+
+```
+§411.15  "the Nile is background, 3.1-4.9 % of frame"
+         -> in the frames the Nile is not visible AT ALL in dunes or traversal.
+            Aerial haze erases it. It never contributed the 4.9 % I credited it,
+            so the gate approved the move for a reason that did not exist.
+
+§411.18  "moving it rewrites the skyline: a third of columns, worst 138 px"
+         -> the frames show the skyline essentially unchanged. The skyline in dunes
+            is made of PYRAMID AND ARCHITECTURE MESHES, and `heightAt` contains
+            neither. I measured a terrain-only horizon that nothing renders.
+```
+
+**One root cause under both**, and it is worth more than either number: I modelled *geometry in
+frustum, unoccluded by terrain* and called it **visibility**. No atmosphere, no meshes. The first
+gate overstated a thing haze deletes; the second overstated a horizon the renderer draws out of
+objects my height field does not contain. Correct arithmetic about the wrong world, twice, in
+opposite directions — which is why they did not cancel and why neither was suspicious on its own.
+
+> **"In frustum and not behind terrain" is not visibility.** It omits atmosphere, every mesh that
+> is not the height field, and every material that is not opaque. A projection test answers *where
+> would this be drawn*, never *would anyone see it*. The renderer is the only instrument that
+> answers the second, which is what the frames are for.
+
+**Verdict: leave the float, recorded.** The defect is real — pyr1 has no pad, 97.1 % of its
+footprint below the water plane, its mesh hanging 10.330 m over the riverbed — and §411.9 and
+§411.18 carry a verified fix ready to apply the moment a camera goes there. What is not worth doing
+is changing a flagship frame to fix something no camera reaches.
+
+### §411.24 On the frames still owed for `recoverSpeed`, and why they cannot be shot
+
+The side-by-side capture of the corner case at 2.4 vs 6.0 is **not producible by this project's
+harness**, and saying so is better than shipping something that looks like it.
+
+`tools/shot.mjs` renders **static staged shots**: it sets a camera, steps 17 frames to settle, and
+writes one PNG. Flicker is **temporal** — a boom reversing direction over tenths of a second — and
+no single frame contains it. Two stills at the same instant with different `recoverSpeed` would
+differ only in boom length, which is not the quantity in question and would read as "the camera is
+slightly further back", inviting exactly the wrong conclusion.
+
+The right instrument for a temporal quantity is the one §411.17 used: drive the real rig at 60 Hz
+over the corner traverses and count boom-direction reversals and total variation, with the
+saturation check first so the comparison is not between two identical runs. That measurement exists
+and is recorded. A frame pair would be **less** evidence, not more, and producing one to satisfy the
+form of the request would be the §407 defect wearing a camera.
+
+If a temporal comparison is wanted as pixels, it needs a sequence harness this project does not
+have — a real deliverable, and a different one.
+
 ---
 
 ## §414 — The fourth instance, and the first where the vacuity was in the SAMPLING
