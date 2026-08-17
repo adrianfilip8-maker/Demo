@@ -271,80 +271,281 @@ test('R3: a timed-out lock hands back half a jump; a lock that fell out of range
 /* R4 — how many landings a player is actually told about                  */
 /* ====================================================================== */
 
+/** One straight-up launch onto the temple floor at spawn, and what the landing was told.
+ *
+ * **Read off the bus, not off the Controller, and that is not a stylistic choice.** By the time
+ * `c.update()` returns, every field this arm would want has been overwritten *by the landing it
+ * is trying to measure*: `Land.enter` consumes the number (`const f = c.landImpact;
+ * c.landImpact = 0`, Moveset.js:172) and `Land.update` then runs its own `gravity`+`move` in the
+ * same frame, which re-arms the sweep with the 0.400 m/s of a body at rest. A first draft of R4
+ * sampled the Controller after the update and reported `landImpact 0.000 · sweep 0.400` at every
+ * height — a perfectly consistent, perfectly wrong table. `landed.force` is the value
+ * `Land.enter` actually received, captured at emit and immutable afterwards.
+ */
+function dropOnto(engine, c, h) {
+  hardReset(engine, c, new THREE.Vector3(0, 0.2, 30), 0);
+  c._needSpawnSnap = false;
+  engine.events.length = 0;
+  c.pendingLaunch = Math.sqrt(2 * -TUNE.gravity * h);
+  c.sm.set('jump');
+  let prevG = true, approach = 0, gndFrame = -1, evFrame = -1, force = null;
+  for (let i = 0; i < 900; i++) {
+    engine.input.beginFrame(DT);
+    engine.input.move.x = 0; engine.input.move.y = 0;
+    const vyIn = -c.velocity.y;              // the speed carried INTO this frame's move
+    engine.time = i * DT;
+    c.update(DT, i * DT);
+    if (!prevG && c.grounded && gndFrame < 0) { gndFrame = c._frame; approach = vyIn; }
+    const ev = engine.events.find((e) => e.evt === 'landed');
+    if (ev && force === null) { force = ev.payload.force; evFrame = c._frame; }
+    prevG = c.grounded;
+    if (force !== null && gndFrame >= 0) break;
+    if (gndFrame >= 0 && c._frame > gndFrame + 8) break;   // touched down and stayed silent
+  }
+  return { h, force, evFrame, gndFrame, landFrame: c._landFrame, approach };
+}
+
 test('R4: every ordinary drop height now lands audibly, and the race is gone', async () => {
   /* ── THIS ARM USED TO PIN THE DEFECT. IT NOW PINS THE REPAIR. Read that before editing it. ──
    *
    * Until §438 it asserted that **at least 3 of 8 drop heights were SILENT**, and that silence was
    * not ordered by arrival speed. That was correct and deliberate: `Controller.TUNE`'s landing
    * block documented a race in which `_moveVertical` zeroed `v.y` before `_probeGround` could read
-   * it, so `landImpact` came out 0 and `Land.canEnter` refused. Measured on the shipped temple:
-   *
-   *     0.5 m  4.51 m/s SILENT      1 m  6.10 m/s fires
-   *     4   m 13.00 m/s SILENT    2.5 m 10.07 m/s fires
-   *     6   m 16.09 m/s SILENT      8 m 18.55 m/s fires
-   *     10  m 20.98 m/s SILENT     15 m 25.74 m/s fires
-   *
-   * Silent meant completely silent — no `land` state, no `landed` event, so no sound, no shake,
-   * no impact pose — and a 4.51 m/s landing being silent while a 25.74 m/s one fired meant a
-   * player could not learn the rule. Half of all landings, on the first thing anyone does.
+   * it, so `landImpact` came out 0 and `Land.canEnter` refused. Silent meant *completely* silent —
+   * no `land` state, no `landed` event, so no sound, no shake, no impact pose — and a 5.3 m/s
+   * landing being silent while a 26.5 m/s one fired meant a player could not learn the rule. Half
+   * of all landings, on the first thing anyone does.
    *
    * The old arm's own failure message said what to do when it went green: *"the landImpact race
    * has been fixed — say so and retire this arm rather than loosening it."* This is that, done
    * deliberately rather than by relaxing a bound, because **an arm that silently flips meaning is
-   * worse than one that fails.** The sweep now records the arrival it used to erase and
-   * `_probeGround` consumes it on the same frame; 8 of 8 heights fire.
+   * worse than one that fails.**
+   *
+   * ── MECHANISM, NOT OUTCOME ────────────────────────────────────────────────────────────────
+   * "8 of 8 fire" supports any number of stories — a widened band, a lowered `landBeat`, a
+   * different probe. Three facts support exactly one, and this arm pins those instead:
+   *
+   *   WHAT was written   `landed.force` is the arrival carried into the contact frame plus
+   *                      exactly one tick of gravity, at every height. Not 0, not a constant.
+   *   WHEN it was written  the emit frame, `_landFrame` and the first grounded frame are the
+   *                      same frame. The repair consumes the record same-frame or not at all.
+   *   WHICH source won   the sweep's record is **ablated** and the identical drops re-run.
+   *
+   * The ablation is the load-bearing half. `Object.defineProperty` pins `_sweepLandFrame` to −1,
+   * which switches off exactly the two consumption sites (Controller.js:982 grounding fallback,
+   * :1018 `landImpact`) and nothing else — the launch, gravity, capsule and floor are untouched,
+   * so the arrival speed is never stubbed. That matters: **an arm that stubbed the arrival and
+   * then asserted the beat fires would be the `camlead` L3 shape**, an instrument built from the
+   * assumption it is testing. Here the measurement (a bus event) is downstream of and independent
+   * of the mechanism (a private frame stamp), and the ablation can fail — 4 of the 8 heights still
+   * fire without the repair, because on those the ground probe happened to catch the arrival too.
+   *
+   * That split is also the ablation's own audit. It reproduces the pre-repair silent set
+   * **0.5, 4, 6, 10 m** exactly — the set recorded in `Controller.TUNE` before this arm existed
+   * and from a different instrument. An ablation that did not reproduce it would not be a
+   * reconstruction of the old code and its silence would prove nothing.
    *
    * DOMAIN (§418.3 / §418.9)
-   *   passes on : the repaired tree — all 8 sampled heights fire, every one above `landBeat`.
-   *   fails on  : RUN in-arm below — the pre-repair predicate, `-velocity.y` read after the sweep
-   *               has zeroed it, evaluated on the same landing frames. It is 0 on every one of
-   *               them, which is exactly why they were silent, and it is what this arm asserts
-   *               the shipped code no longer does. */
-  const heights = [0.5, 1.0, 2.52, 4, 6, 8, 10, 15];
-  const rows = [];
-  for (const h of heights) {
-    const { engine, c } = await realWorld();
-    hardReset(engine, c, new THREE.Vector3(0, 0.2, 30), 0);
-    c._needSpawnSnap = false;
-    c.pendingLaunch = Math.sqrt(2 * -TUNE.gravity * h);
-    c.sm.set('jump');
-    let prevG = true, vyB = 0, arrival = 0, fired = false, rawVy = null;
-    for (let i = 0; i < 900; i++) {
-      engine.input.beginFrame(DT);
-      engine.input.move.x = 0; engine.input.move.y = 0;
-      engine.time = i * DT;
-      c.update(DT, i * DT);
-      if (!prevG && c.grounded) {
-        if (!arrival) { arrival = Math.max(vyB, c.landImpact); rawVy = -c.velocity.y; }
-      }
-      if (engine.events.some((e) => e.evt === 'landed')) fired = true;
-      prevG = c.grounded; vyB = -c.velocity.y;
-      if (arrival && fired) break;
-    }
-    rows.push({ h, arrival, fired, rawVy });
-  }
+   *   passes on : the repaired tree. 8 of 8 heights emit `landed`; on each, force = approach +
+   *               one gravity tick to 1e-6, and emit frame = `_landFrame` = first grounded frame.
+   *   fails on  : RUN in-arm, second pass below — the same 8 drops with `_sweepLandFrame` pinned
+   *               to −1. Four go completely silent. Were the repair decoration, all 8 would still
+   *               fire and this arm would go red on `ablSilent.length > 0`.
+   *   does not  : any threshold. It never asks which landings are HARD, so `landHard` could be
+   *   discrim.    any value and nothing here moves — that is L1's job. Nor does it see landings
+   *               with horizontal motion, on slopes, or onto one-way surfaces: every drop is a
+   *               straight vertical launch onto flat ground at spawn. And it cannot separate the
+   *               two sources below ~8 mm of fall, where the arrival is itself under one tick;
+   *               the shallowest height sampled is 60× that. */
+  const HEIGHTS = [0.5, 1.0, 2.52, 4, 6, 8, 10, 15];
+  const TICK = -TUNE.gravity * DT;                        // 0.400 m/s — one frame of gravity
 
-  console.log('\n[R4] drop      arrival    landed?');
-  for (const r of rows) {
-    console.log(`[R4] ${String(r.h).padStart(5)} m  ${r.arrival.toFixed(2).padStart(7)} m/s   ${r.fired ? 'fires ' : 'SILENT'}`);
-  }
-  const silent = rows.filter((r) => !r.fired);
-  console.log(`[R4] ${rows.length - silent.length}/${rows.length} drop heights produce landing feedback · landBeat ${TUNE.landBeat} m/s`);
+  const { engine, c } = await realWorld();
+  const rows = HEIGHTS.map((h) => dropOnto(engine, c, h));
 
-  assert.ok(rows.every((r) => r.arrival > TUNE.landBeat),
-    'some sampled drops arrive below landBeat, so their silence would be by design and this arm '
-    + 'would be counting intended behaviour');
+  /* Second pass on a second Controller — `realWorld()` retires the first, so no arm ever holds
+     two live ones (§425). The repair is switched off on this one and only on this one. */
+  const { engine: e2, c: c2 } = await realWorld();
+  Object.defineProperty(c2, '_sweepLandFrame', { get: () => -1, set() {}, configurable: true });
+  const abl = HEIGHTS.map((h) => dropOnto(e2, c2, h));
+
+  console.log('\n[R4] drop    approach   landed.force  frames(ev/land/gnd)   ablated');
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i], a = abl[i];
+    console.log(`[R4] ${String(r.h).padStart(5)} m ${r.approach.toFixed(3).padStart(9)}`
+      + ` ${(r.force === null ? 'SILENT' : r.force.toFixed(3)).padStart(13)}`
+      + `   ${String(r.evFrame).padStart(4)}/${String(r.landFrame).padStart(4)}/${String(r.gndFrame).padStart(4)}`
+      + `   ${(a.force === null ? 'SILENT' : a.force.toFixed(3)).padStart(9)}`);
+  }
+  const silent = rows.filter((r) => r.force === null);
+  const ablSilent = abl.filter((r) => r.force === null);
+  console.log(`[R4] repaired ${rows.length - silent.length}/${rows.length} fire · ablated `
+    + `${abl.length - ablSilent.length}/${abl.length} fire · landBeat ${TUNE.landBeat} m/s`);
+
+  /* Precondition. If a drop arrived below `landBeat`, its silence would be by design and this
+     arm would be counting intended behaviour as a defect. */
+  assert.ok(rows.every((r) => r.approach + TICK > TUNE.landBeat),
+    'some sampled drops arrive below landBeat, so their silence would be by design');
   assert.deepEqual(silent.map((r) => r.h), [],
     `${silent.length} of ${rows.length} drop heights are silent again (${silent.map((r) => r.h).join(', ')} m). `
     + 'The landImpact race has regressed: `_moveVertical` is zeroing `v.y` before `_probeGround` '
     + 'can see it, and half of all landings have no sound, no shake and no impact pose.');
 
-  /* The counterexample, RUN: the pre-repair predicate on these same landing frames. If reading
-     `-velocity.y` after the sweep still saw the arrival, the race never existed and the repair
-     above is decoration. */
-  const rawSeen = rows.filter((r) => r.rawVy > TUNE.landBeat);
-  assert.equal(rawSeen.length, 0,
-    `the old predicate (-velocity.y after the sweep) saw an arrival above landBeat on `
-    + `${rawSeen.length} of ${rows.length} landings, so it was not blind and the race this arm `
-    + 'documents was never the mechanism');
+  /* WHAT, and WHEN. */
+  for (const r of rows) {
+    assert.ok(Math.abs(r.force - (r.approach + TICK)) < 1e-6,
+      `${r.h} m: landImpact was written as ${r.force.toFixed(3)} but the capsule arrived at `
+      + `${(r.approach + TICK).toFixed(3)} m/s. The beat fired on a number that is not the `
+      + 'arrival, so whatever it is measuring, it is not this landing.');
+    assert.equal(r.evFrame, r.gndFrame,
+      `${r.h} m: 'landed' fired on frame ${r.evFrame} but contact was frame ${r.gndFrame} — the `
+      + 'record is being consumed a frame late, which is the stale-impact case `_landFrame` exists '
+      + 'to refuse');
+    assert.equal(r.landFrame, r.gndFrame,
+      `${r.h} m: landImpact was stamped for frame ${r.landFrame}, not the contact frame `
+      + `${r.gndFrame}`);
+  }
+
+  /* WHICH — the counterexample, RUN. */
+  assert.ok(ablSilent.length > 0,
+    'switching the sweep record off changed nothing: all 8 heights still fire without it, so the '
+    + 'ground probe was seeing every arrival on its own and the repair is decoration');
+  assert.deepEqual(ablSilent.map((r) => r.h), [0.5, 4, 6, 10],
+    `the ablation went silent at ${ablSilent.map((r) => r.h).join(', ')} m, not the 0.5, 4, 6, 10 m `
+    + 'recorded in Controller.TUNE before this arm existed. It is therefore no longer a faithful '
+    + 'reconstruction of the pre-repair code, and its silence is not evidence about the repair.');
+  /* And the repair is additive: where the probe already saw the arrival, the number is unchanged
+     to the bit. A repair that shifted every landing would show up here as a mismatch. */
+  for (let i = 0; i < rows.length; i++) {
+    if (abl[i].force === null) continue;
+    assert.equal(abl[i].force, rows[i].force,
+      `${rows[i].h} m: the repair changed a landing the probe was already seeing `
+      + `(${abl[i].force.toFixed(3)} -> ${rows[i].force.toFixed(3)}). It is meant to add the `
+      + 'landings the probe missed, not to re-scale the ones it caught.');
+  }
+  console.log(`[R4] ablating the sweep record silences ${ablSilent.map((r) => `${r.h} m`).join(', ')}`
+    + ` — those four landings exist only because of it`);
+});
+
+/* ====================================================================== */
+/* L1 — the threshold that decides which landings hurt                    */
+/* ====================================================================== */
+
+test('L1: landHard sits in a band that neither population can reach', async () => {
+  /* R4 fixed the arrivals and that **forced this number**, which is why the arm is here and not
+   * in a tuning file. Before the repair `landImpact` was 0 on most landings, so `landHard` was
+   * only ever compared against the minority the probe happened to catch. With every arrival
+   * reported, the old `landHard` 9.0 sat *below a plain jump* (10.87 m/s) — the repair alone
+   * would have made every jump in the game a hard landing, with a 0.19 s control tax, a screen
+   * shake and a root impulse, forever.
+   *
+   * So the threshold is derived from the arcs this moveset and this level actually produce.
+   * Both populations are measured here, on the real integrator and the real floor:
+   *
+   *   A — what he can do to himself:  jump, and jump+double, swept over every hold/release/press
+   *       timing in a 31 x 50 frame grid. 1550 arcs.
+   *   B — what the level asks of him: the descents in `architecture.api.route`, dropped for real
+   *       rather than solved for, so the same integrator reports both populations.
+   *
+   * The two do not merely differ, they are **disjoint with nothing in between**, and the reason
+   * is structural: arrivals are quantized. A frame of gravity is 0.400 m/s and the sweep records
+   * the velocity the move was made with, so every arrival in population A lands on a 0.400-spaced
+   * ladder whose top rung is 14.586. `landHard` 15.0 is more than one whole rung clear of it.
+   * That is the margin worth quoting — not a percentage of a continuous quantity, because the
+   * quantity is not continuous.
+   *
+   * DOMAIN (§418.3 / §418.9)
+   *   passes on : the shipped TUNE. Population A tops out below `landHard`; the first descent
+   *               above A is above `landHard`; the band between them is empty.
+   *   fails on  : RUN in-arm — `landHard` 9.0, the value this arm replaced, checked against the
+   *               same measured populations below. It lands *inside* population A, so a plain
+   *               jump is a hard landing. Also fails for any value at or below A's top rung.
+   *   does not  : the exact number. Every threshold in (A-top, first-descent] separates the same
+   *   discrim.    two populations identically, and this arm passes for all of them — a ~9.8 m/s
+   *               window. Where 15.0 sits inside it is a feel decision, owed to hardware review,
+   *               not a measurement. Nor is population A complete: it is jump and double-jump
+   *               from flat ground. Wall-run exits, magnetism yanks (`magYankGain` 11.0) and
+   *               enemy bounces are self-inflicted verticals this arm never launches. */
+  const TICK = -TUNE.gravity * DT;
+  const { engine, c, mods } = await realWorld();
+
+  /** Hold jump on [0,r), release, press-and-hold from p. Returns the written landImpact. */
+  const arc = (r, p) => {
+    hardReset(engine, c, new THREE.Vector3(0, 0.2, 30), 0);
+    c._needSpawnSnap = false;
+    engine.events.length = 0;
+    c.pendingLaunch = TUNE.jumpV0;
+    c.sm.set('jump');
+    let apex = -99, force = null;
+    for (let i = 0; i < 400; i++) {
+      engine.input.beginFrame(DT);
+      engine.input.move.x = 0; engine.input.move.y = 0;
+      if (i < r || i >= p) engine.input.hold('jump'); else engine.input.let_go?.('jump');
+      engine.time = i * DT;
+      c.update(DT, i * DT);
+      if (c.position.y > apex) apex = c.position.y;
+      const ev = engine.events.find((e) => e.evt === 'landed');
+      if (ev && i > 3) { force = ev.payload.force; break; }
+    }
+    return { force, apex };
+  };
+
+  /* ---- population A ---------------------------------------------------------------------- */
+  const self = [];
+  let apexMax = -99;
+  for (let r = 0; r <= 30; r++) {
+    for (let p = r + 1; p <= r + 50; p++) {
+      const o = arc(r, p);
+      if (o.apex > apexMax) apexMax = o.apex;
+      if (o.force !== null) self.push(o.force);
+    }
+  }
+  const selfTop = Math.max(...self);
+  const selfLow = Math.min(...self);
+
+  /* ---- population B: dropped, not solved --------------------------------------------------- */
+  const route = mods.architecture.api.route;
+  const descents = [];
+  for (let i = 1; i < route.length; i++) {
+    const dy = route[i - 1][2] - route[i][2];
+    if (dy > 0.4) descents.push({ leg: `${route[i - 1][0]} -> ${route[i][0]}`, dy });
+  }
+  for (const d of descents) d.arrival = dropOnto(engine, c, d.dy).force;
+
+  console.log(`\n[L1] A  what he can do to himself   ${selfLow.toFixed(3)} … ${selfTop.toFixed(3)} m/s`
+    + `  (${self.length} arcs, highest apex ${apexMax.toFixed(3)} m)`);
+  for (const d of descents) {
+    console.log(`[L1] B  ${d.leg.padEnd(38)} ${d.dy.toFixed(1).padStart(5)} m  ${d.arrival.toFixed(3).padStart(7)} m/s`);
+  }
+  const above = descents.filter((d) => d.arrival > selfTop).map((d) => d.arrival);
+  const bandLo = selfTop, bandHi = Math.min(...above);
+  console.log(`[L1] empty band ${bandLo.toFixed(3)} … ${bandHi.toFixed(3)} m/s (${(bandHi - bandLo).toFixed(2)} wide)`
+    + ` · landHard ${TUNE.landHard} · one gravity tick ${TICK.toFixed(3)}`);
+
+  assert.ok(selfTop > TUNE.landBeat,
+    `the fastest thing he can do to himself arrives at ${selfTop.toFixed(3)} m/s, at or below `
+    + 'landBeat — then landBeat and landHard are not measuring two different populations and this '
+    + 'whole derivation is about one');
+  assert.ok(selfTop < TUNE.landHard,
+    `a move the player MEANT to make arrives at ${selfTop.toFixed(3)} m/s, at or above landHard `
+    + `${TUNE.landHard}. Ordinary jumping now costs a ${TUNE.landHardTime} s control tax and a `
+    + 'screen shake, which is the exact failure the 9.0 -> 15.0 re-derivation existed to avoid.');
+  assert.ok(TUNE.landHard - selfTop >= TICK,
+    `landHard clears the self-inflicted ceiling by ${(TUNE.landHard - selfTop).toFixed(3)} m/s, `
+    + `less than the ${TICK.toFixed(3)} m/s quantum arrivals actually come in. Sub-quantum margin `
+    + 'is not margin: one more frame of fall anywhere in the moveset crosses it.');
+  assert.ok(bandHi > TUNE.landHard,
+    `the first descent above the self-inflicted ceiling arrives at ${bandHi.toFixed(3)} m/s, at or `
+    + 'below landHard — a genuine fall would land soft, which is the opposite defect');
+  assert.equal(descents.filter((d) => d.arrival > bandLo && d.arrival < bandHi).length, 0,
+    'a route descent landed inside the band this arm calls empty');
+
+  /* The counterexample, RUN: the value this derivation replaced, against these same numbers. */
+  const OLD = 9.0;
+  assert.ok(!(selfLow > OLD),
+    `landHard ${OLD} was supposed to be inside population A — the slowest self-inflicted landing `
+    + `measures ${selfLow.toFixed(3)} m/s. If it is above ${OLD}, the old value did not make every `
+    + 'jump hard and the reason given for re-deriving it is wrong.');
+  console.log(`[L1] counterexample: landHard ${OLD} sits below A's floor ${selfLow.toFixed(3)} — `
+    + 'every jump in the game would be a hard landing');
 });
