@@ -216,6 +216,52 @@ function blockedAt(x, y, z, extra = []) {
   return null;
 }
 
+/**
+ * Horizontal distance from (x, z) to the nearest ground slab a walker on plane `baseY` cannot
+ * get onto — and the reason this function exists at all.
+ *
+ * ── C1 CLAIMED THE MASONRY AND CHECKED TWO TAGS OUT OF FOUR ────────────────────────────────
+ * `clearanceAt` filters on `BLOCK_TAGS`, which is `{wall, pole}`. Every terrace, plinth, deck
+ * and platform in the level is registered by `groundProxy`/`ledgeProxy` as `ground` or `ledge`,
+ * so **C1 has never inspected a single one of them**, at any height, on any route. Its title
+ * says "clears the masonry"; its body could only ever see walls and columns.
+ *
+ * That is not a hypothetical gap. `obelisk_watch` spent 12% of its arc inside the obelisk
+ * terrace's stage-2 block — a 3.2 m mass of stone — and C1 passed it on every run, including
+ * the runs where the guard was physically pinned at 0.9 m of a 144.2 m beat. The defect was
+ * found by the stall test, three arms further down, which notices only that *somebody stopped
+ * moving*: C1 is the arm that is supposed to say **where** and **why**, and it was silent.
+ *
+ * CAL-1 did not catch this and structurally could not: it grazes a hall *column* and proves the
+ * instrument fires on the class it already sees. A calibration that only exercises the covered
+ * class certifies coverage it does not have (§418).
+ *
+ * ── The predicate, and why it is these two clauses ─────────────────────────────────────────
+ * A ground box is an obstacle to a walker when he can neither climb it nor pass under it:
+ *
+ *   · top above `baseY + GUARD_TUNE.stepUp` — below that he steps up onto it, which is what
+ *     `Guard._step` actually does, so a kerb is not a wall;
+ *   · underside below `baseY + headTop` — a deck 3 m over his head is a canopy, not an obstacle,
+ *     and the terrace's own upper ledge is exactly that for the guard on the tier below.
+ *
+ * Both bounds are read out of `GUARD_TUNE` rather than chosen here. A number picked to make the
+ * shipped level pass would make this arm a record of the level rather than a check on it.
+ */
+function slabClearanceAt(x, baseY, z, stepUp, headTop, extra = []) {
+  let best = Infinity;
+  const list = extra.length ? near(x, z, 6 + CELL).concat(extra) : near(x, z, 6 + CELL);
+  for (const b of list) {
+    if (!SUPPORT_TAGS.has(b.tag)) continue;
+    if (b.max.y <= baseY + stepUp) continue;      // he steps onto it
+    if (b.min.y >= baseY + headTop) continue;     // it passes over his head
+    const dx = Math.max(b.min.x - x, 0, x - b.max.x);
+    const dz = Math.max(b.min.z - z, 0, z - b.max.z);
+    const d = Math.hypot(dx, dz);
+    if (d < best) best = d;
+  }
+  return best;
+}
+
 /** Horizontal distance from (x, z) to the nearest wall/pole that spans height `y`. */
 function clearanceAt(x, y, z, extra = []) {
   let best = Infinity;
@@ -296,6 +342,9 @@ function step(guards, engine, seconds, dt = 1 / 30, onFrame = null) {
 const RAD = GUARD_TUNE.radius;
 const widestOn = (routeName) => Math.max(0.26,
   ...ROSTER.filter((e) => e.route === routeName).map((e) => RAD[e.type] || 0.42));
+/** The tallest head on a route — the height above which a slab is a canopy rather than a wall. */
+const tallestOn = (routeName) => Math.max(0.34,
+  ...ROSTER.filter((e) => e.route === routeName).map((e) => GUARD_TUNE.headTop[e.type] || 1.95));
 
 const ROUTE_NAMES = Object.keys(ROUTES);
 const SEED = 0x9a2d10;
@@ -332,19 +381,26 @@ test('C1: every route clears the masonry by the widest body that walks it, plus 
   const bad = [];
   const report = [];
   for (const name of ROUTE_NAMES) {
-    const { rows, radius } = sampleRoute(name);
+    const { rows, radius, baseY } = sampleRoute(name);
     const need = radius + 0.20;
-    let worst = Infinity, worstAt = null;
+    const headTop = tallestOn(name);
+    let worst = Infinity, worstAt = null, worstKind = '';
+    let wSlab = Infinity;
     for (const r of rows) {
       inspected++;
-      const c = clearanceAt(r.x, r.chestY, r.z);
-      if (c < worst) { worst = c; worstAt = r; }
-      if (c <= need) bad.push(`${name} @ (${r.x.toFixed(1)}, ${r.z.toFixed(1)}) clear ${c.toFixed(2)} m, needs > ${need.toFixed(2)}`);
+      const cw = clearanceAt(r.x, r.chestY, r.z);
+      const cs = slabClearanceAt(r.x, baseY, r.z, GUARD_TUNE.stepUp, headTop);
+      wSlab = Math.min(wSlab, cs);
+      const c = Math.min(cw, cs);
+      if (c < worst) { worst = c; worstAt = r; worstKind = cs < cw ? 'slab' : 'wall'; }
+      if (c <= need) bad.push(`${name} @ (${r.x.toFixed(1)}, ${r.z.toFixed(1)}) clear ${c.toFixed(2)} m `
+        + `(${cs < cw ? 'ground slab' : 'wall/pole'}), needs > ${need.toFixed(2)}`);
     }
     report.push(`  ${name.padEnd(18)} radius ${radius.toFixed(2)}  tightest ${worst === Infinity ? '  none' : worst.toFixed(2)} m`
-      + (worstAt && worst < 9 ? `  at (${worstAt.x.toFixed(1)}, ${worstAt.z.toFixed(1)})` : ''));
+      + (worstAt && worst < 9 ? ` ${worstKind} at (${worstAt.x.toFixed(1)}, ${worstAt.z.toFixed(1)})` : '')
+      + `   slabs alone ${wSlab === Infinity ? ' none' : wSlab.toFixed(2)} m`);
   }
-  console.log('[C1] clearance to the nearest wall or column, per route:');
+  console.log('[C1] clearance to the nearest wall, column OR unclimbable ground slab, per route:');
   for (const line of report) console.log(line);
   assert.ok(inspected >= ROUTE_NAMES.length * 400, `inspected only ${inspected} samples`);
   assert.deepEqual(bad.slice(0, 6), [], `${bad.length} clearance violations`);
@@ -367,6 +423,57 @@ test('CAL-1: the clearance test detects a route threaded past a hall column', ()
   console.log(`[CAL-1] grazing route: tightest ${tightest.toFixed(3)} m, ${violations}/${inspected} samples violate`);
   assert.ok(inspected === 400, `inspected ${inspected}`);
   assert.ok(violations > 0, 'CAL-1 DID NOT FIRE — the clearance test is blind, every C1 pass is void');
+});
+
+/* CAL-1's route grazes a hall COLUMN, which is a `pole`. It therefore calibrates C1 against the
+   one class C1 could already see, and was passing throughout the period in which C1 was blind to
+   every terrace in the level. This is the missing half.
+
+   DOMAIN (§418.3) — both inputs run here, in this arm, on the shipped level:
+     PASSES  the shipped `obelisk_watch` as rewritten — corner waypoints on the band; measured
+             clearance 1.10 m against a 0.62 m bar.
+     FAILS   the seven-point heptagon this route shipped as until now, verbatim below. It is
+             inside the stage-2 block on 12% of its arc and never clears −0.36 m on any seed.
+   The failing input is the real prior text rather than a constructed one, so if someone widens
+   the predicate until the level passes, the thing that goes green is a route that pinned a
+   guard at 0.9 m of 144.2 m — and that is the failure this arm exists to make impossible. */
+test('CAL-1b: the clearance test detects a route walking through the obelisk terrace', () => {
+  const HEPTAGON = {
+    closed: false, baseY: 2.0, space: 'terrace',
+    points: [
+      [5.5, 18.0, 2.0, 'look'], [7.6, 12.0, 0, null], [7.6, 6.2, 1.2, null], [0.0, 4.4, 1.8, 'look'],
+      [-7.6, 6.2, 1.2, null], [-7.6, 12.0, 0, null], [-5.5, 18.0, 2.0, 'look'],
+    ],
+  };
+  const need = RAD.temple + 0.20;
+  const headTop = GUARD_TUNE.headTop.temple;
+  const scan = (def) => {
+    const r = new Route('cal1b', def, SEED + 2 * 7919);   // obelisk_watch's own seed
+    const p = new THREE.Vector3();
+    let tightest = Infinity, violations = 0;
+    for (let i = 0; i < 400; i++) {
+      r.at(i / 400, p);
+      const c = slabClearanceAt(p.x, def.baseY, p.z, GUARD_TUNE.stepUp, headTop);
+      tightest = Math.min(tightest, c);
+      if (c <= need) violations++;
+    }
+    return { tightest, violations };
+  };
+  const old = scan(HEPTAGON);
+  const now = scan(ROUTES.obelisk_watch);
+  console.log(`[CAL-1b] heptagon (the route until now): tightest ${old.tightest.toFixed(3)} m, ${old.violations}/400 violate`);
+  console.log(`[CAL-1b] shipped obelisk_watch:          tightest ${now.tightest.toFixed(3)} m, ${now.violations}/400 violate`);
+  assert.ok(old.violations > 0,
+    'CAL-1b DID NOT FIRE — a route driven through a 3.2 m terrace reads as clear, so C1 is still '
+    + 'blind to every ground slab in the level and its "clears the masonry" is two tags out of four');
+  assert.equal(now.violations, 0,
+    `the shipped route violates its own bar at ${now.tightest.toFixed(3)} m — needs > ${need.toFixed(2)}`);
+  /* The improvement has to exceed the bar itself, not merely reach it: a route that scrapes past
+     0.62 m is one jitter draw from failing, and the point of the rewrite was the corner geometry
+     rather than a nudge. Measured at 0.87 m against a 0.62 m bar. */
+  assert.ok(now.tightest - old.tightest > need,
+    `the rewrite bought only ${(now.tightest - old.tightest).toFixed(2)} m against a ${need.toFixed(2)} m bar `
+    + '— the chamfered corners are not doing the work');
 });
 
 /* ====================================================================== */

@@ -35185,3 +35185,126 @@ one number.
 
 Recorded as unfinished rather than dressed up. The `patrol` C3 red is the coordinator's and was
 not touched; `src/ai/Patrol.js` was left alone throughout.
+
+## §435 — The guard walked through the building too, and C1 checked two tags out of four
+
+`7f2495f` closed the terrace side collision for the player. It also stopped `obelisk_watch`'s
+guard dead: **0.9 m of a 144.2 m beat**, `tests/patrol.test.mjs` C3 red. The route had been
+walking through the obelisk terrace for its whole life and nothing noticed, because until that
+commit the building was an open frame.
+
+**One collider gap, two consumers, and only one of them was a player.** The patrol layer is a
+second occupancy test for the level's solids and it had been silently failing the same test the
+playtest lane failed by hand — which is the part worth keeping: a level defect that expresses
+itself in the AI layer does not look like a level defect from inside the AI layer. It looks like
+a guard who is bad at walking.
+
+### §435.1 The route broke rule 1 at the top of its own file
+
+`Patrol.js`'s header states three rules, the first of which is *"corridors, not diagonals — a
+waypoint pair that cuts a corner diagonally will cross a column line somewhere, and Catmull-Rom
+rounding puts it there even when the straight segment would have missed."* `obelisk_watch` was a
+heptagon drawn around a rectangle: every waypoint clear of stage 2, **four of six legs cutting
+its corners by 0.45 m each**.
+
+    leg 0  (5.5,18) -> (7.6,12)     at ( 6.15, 16.14)
+    leg 2  (7.6,6.2) -> (0,4.4)     at ( 6.12,  5.85)
+    leg 3  (0,4.4) -> (-7.6,6.2)    at (-6.12,  5.85)
+    leg 5  (-7.6,12) -> (-5.5,18)   at (-6.15, 16.14)
+
+Rule 1 with a building in place of a column. Over 200 seeds of the ±0.22 m control-point jitter
+the spline is inside the block on 12% of its arc and its clearance never rises above −0.361 m:
+**there is no seed on which this route was ever walkable.** A file can state a rule in its header
+and violate it 60 lines down, and prose does not check itself.
+
+### §435.2 C1 claimed the masonry and inspected two tags out of four — the tenth §418
+
+`tests/patrol.test.mjs` C1 is titled *"every route clears the masonry by the widest body that
+walks it, plus 20 cm"*. Its body calls `clearanceAt`, which filters on
+
+    const BLOCK_TAGS = new Set(['wall', 'pole']);
+
+and **every terrace, deck, plinth, parapet and platform in this level is registered by
+`groundProxy`/`ledgeProxy` as `ground` or `ledge`.** C1 has therefore never inspected a single
+one of them, at any height, on any route, in the entire history of the arm. It passed
+`obelisk_watch` on every run — including the runs where the guard was physically pinned.
+
+The stall test three arms below is what found it, and a stall test only knows *somebody stopped
+moving*. C1 is the arm whose job is **where** and **why**, and it was silent on both.
+
+### §435.3 CAL-1 fired every time, and structurally could not catch this
+
+The calibration arm was not missing. `CAL-1` drives a route 0.1 m off a hall column's face and
+asserts the clearance check reports violations; it reported 109 of 400 and has passed throughout.
+A hall column is a `pole`. **The calibration exercised the one class the check could already
+see.**
+
+This is the sharpening §418 needed, and it is the first time the gap has been visible as a rule
+rather than as an anecdote:
+
+> **§435.3 — A calibration must fire on the class the check CLAIMS, not on the class it covers.**
+> An arm that says "masonry" and calibrates against a column has proven that walls are visible.
+> It has proven nothing about masonry, and its green is read as though it had. The failing input
+> in a `DOMAIN (§418.3)` block has to be drawn from the claim's full domain; if the claim names
+> a category, the negative case must come from the part of the category the author is least sure
+> of, not the part that motivated the code.
+
+C1 now takes `min(clearanceAt, slabClearanceAt)`, where a ground slab obstructs a walker when its
+top is more than `GUARD_TUNE.stepUp` above his plane (below that he steps onto it — a kerb is not
+a wall) and its underside is below `baseY + headTop` (above that it is a canopy, and the terrace's
+own upper deck is exactly that for the guard on the tier below). Both bounds are read out of
+`GUARD_TUNE`; a number picked to make the shipped level pass would make the arm a record of the
+level rather than a check on it. `CAL-1b` supplies the missing half — the real heptagon, run in
+the arm, on the shipped level, 168 of 400 samples violating at 0.000 m.
+
+### §435.4 My first rewrite measured clean against a level I had written down myself
+
+Corner waypoints on the annulus between stage 2 (|x| ≤ 6.6, z 5.4‥16.6) and the stage-1 deck
+(|x| ≤ 9.4, z 2.6‥19.4) — 2.8 m of band on every side. My probe reported worst-case clearance
+**1.100 m** against a 0.62 m bar over 200 seeds. I committed it to the file.
+
+C1 immediately failed it at **0.48 m**.
+
+The probe was measuring the two rectangles I had typed into the probe. The level also has a
+terrace parapet — a `ledge` proxy at |x| 8.8‥10.0, y 3.0‥3.5, solid because `ledge` is in
+`Collision.SOLID_TAGS` — which makes the usable corridor **2.2 m, not 2.8**. It is drawn, it is
+registered, it is in the `night` shot's lower frame, and it was not in my model.
+
+That is the census lane's v1 error and the objects lane's scratch-tooling error in a third
+costume, and the common shape is now stated plainly enough to act on: **a probe written from the
+author's mental model of the level is a test of the model.** The rewrite that followed reads
+`arch._colliders` and measures against whatever is registered, which is why it found the parapet
+without being told to look for one. Four lanes and I have now each made this mistake once.
+
+### §435.5 The corner was the problem, and sliding the legs is what the numbers invite
+
+With the parapet in the model, the leg position row is non-monotone:
+
+    |x| = 7.2  ->  0.422 m        7.7 is the corridor's exact centre-line
+    |x| = 7.4  ->  0.622 m        and it is the WORST of the four
+    |x| = 7.7  ->  0.507 m
+    |x| = 7.9  ->  0.294 m
+
+because the binding face alternates between the building and the parapet, and because **the worst
+sample was never on a leg — it was at the south-east turn.** A 90° Catmull-Rom corner overshoots
+outward and no leg position repairs a corner. 7.4 m reads as the winner at 0.622 against a 0.62
+bar, which is a 2 mm margin dressed up as a pass, and taking it would have been §141.1 by
+accident.
+
+Chamfering each 90° corner into two 45° ones — 0.8 m diagonals, in open band — moves the worst
+case from 0.506 m to **0.865 m**, and the shipped route measures **0.946 m** on its own seed with
+0 of 400 samples in violation. Route length 40.4 → 46.3 m; both about-faces and all four dwell
+reads unchanged; C3's guard now covers 216.9 m of the 144.2 m required.
+
+### §435.6 Registered, not repaired: the obelisk base is now unguardable
+
+C4 reports `obelisk-base` at **0.0% coverage, longest gap 240.0 s**. This is not the route's
+doing and no route on the terrace can fix it. `obelisk_watch` walks the stage-1 annulus at y 2.0;
+the obelisk's plinth stands on stage 2 at y 5.2‥6.3. A sight line from a guard's head at y 3.95
+to the plinth at y 5.7 passes x = 6.6 at height 4.20 m — **1.0 m below the deck that is now
+solid.** Before `7f2495f` that line went through the building.
+
+So the collision fix removed a sight line that was only ever available because the building was
+an open frame, and the player can now work the obelisk base unobserved. That is a consequence of
+the level being correct, not a defect, and with guards out of scope it is recorded rather than
+acted on. If they come back, the answer is a route on stage 2, not a wider one on stage 1.

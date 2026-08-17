@@ -263,17 +263,77 @@ export const ROUTES = {
      1 (y = 2.0) is an annulus around stage 2, and its north side is cut in half by the upper
      stair at |x| ≤ 2.6. There is no closed loop up here. A sentry pacing a U past the obelisk
      and turning at each end of the north band is a stronger read anyway — the about-face is
-     the beat the player counts. */
+     the beat the player counts.
+
+     ── THIS ROUTE BROKE RULE 1 AT THE TOP OF THE FILE, AND THE FILE DID NOT NOTICE ──────────
+     The seven-point version walked (5.5, 18) → (7.6, 12) → (7.6, 6.2) → (0, 4.4) and mirrored
+     back: a heptagon drawn around a rectangle. Every waypoint was clear of stage 2 and **four
+     of the six legs cut its corners**, each by 0.45 m —
+
+         leg 0  (5.5,18) → (7.6,12)     at ( 6.15, 16.14)
+         leg 2  (7.6,6.2) → (0,4.4)     at ( 6.12,  5.85)
+         leg 3  (0,4.4) → (-7.6,6.2)    at (-6.12,  5.85)
+         leg 5  (-7.6,12) → (-5.5,18)   at (-6.15, 16.14)
+
+     — which is rule 1 verbatim ("a waypoint pair that cuts a corner diagonally will cross a
+     column line somewhere") with a building in place of a column. Driven over 200 seeds the
+     spline is inside the stage-2 collider on 12% of its arc and its clearance never rises above
+     **−0.361 m**: there is no seed on which this route was ever walkable.
+
+     It walked anyway for as long as it did because **the terrace had no side collision at all**
+     — `masonryShell` draws faces and registers nothing, and the ground proxy under stage 2 was
+     1.0 m thick against a deck 3.2 m up, so the building was an open frame. `EgyptLevel` closed
+     that for the player (you could walk through the second terrace); closing it stopped this
+     guard dead at 0.9 m of 144.2 m. **One collider gap had two consumers and only one of them
+     was a player.** The patrol layer is a second occupancy test for the level's solids, and it
+     found this one first.
+
+     ── The band is 2.2 m wide, not 2.8, and the first rewrite failed on that ────────────────
+     The obvious repair is corner waypoints on the annulus between stage 2 (|x| ≤ 6.6, z 5.4‥16.6)
+     and the stage-1 deck (|x| ≤ 9.4, z 2.6‥19.4) — 2.8 m of band on all four sides. It measured
+     clean against those two rectangles and **still failed**, because the east and west sides
+     carry the terrace parapet: a `ledge` proxy at |x| 8.8‥10.0, y 3.0‥3.5, which stands 1.0 m
+     above the deck and is solid (`ledge` is in `Collision.SOLID_TAGS`). The usable corridor is
+     6.6‥8.8 — **2.2 m**, and a 0.42 m guard who must keep 0.62 m off both faces has 0.96 m of
+     total slack for ±0.22 m of jitter and whatever the spline does at the corners.
+
+     Which turned out to be the whole problem. At |x| = 7.7 — the corridor's exact centre-line —
+     square corners measured **0.506 m**, under the bar, with the worst sample at the south-east
+     turn rather than on any leg. A 90° Catmull-Rom corner overshoots outward, and there is no
+     leg position that fixes a corner. Sliding the legs is what the numbers invite and it does
+     not work: 7.2 → 0.422, 7.4 → 0.622, 7.7 → 0.507, 7.9 → 0.294, a non-monotone row because
+     the binding face alternates between the building and the parapet.
+
+     **Chamfering each 90° corner into two 45° ones buys 0.36 m and costs nothing else.** That
+     is rule 1 again, in its own terms: the diagonals here are 0.8 m long and sit in open band.
+
+     Rule 3's bar is `radius + 0.20` = 0.62 m for the temple guard who walks it. Measured on the
+     spline against **the level's registered colliders** — not against a rectangle written here,
+     which is the mistake that produced the first rewrite — over 60 seeds of the jitter:
+
+         nearest obstacle    0.865 m  worst   (square corners 0.506; the heptagon −0.443)
+         deck inset          1.145 m  worst
+         route length        46.5 m   (was 40.4)
+
+     The four dwell reads are unchanged and both about-faces stay where they were. */
   obelisk_watch: {
     closed: false, baseY: 2.0, space: 'terrace',
     points: [
-      [5.5, 18.0, 2.0, 'look'],
-      [7.6, 12.0, 0, null],
-      [7.6, 6.2, 1.2, null],
-      [0.0, 4.4, 1.8, 'look'],
-      [-7.6, 6.2, 1.2, null],
-      [-7.6, 12.0, 0, null],
-      [-5.5, 18.0, 2.0, 'look'],
+      [5.5, 17.8, 2.0, 'look'],
+      [6.9, 17.8, 0, null],
+      [7.7, 17.0, 0, null],
+      [7.7, 12.0, 0, null],
+      [7.7, 6.2, 1.2, null],
+      [7.7, 4.8, 0, null],
+      [6.9, 4.0, 0, null],
+      [0.0, 4.0, 1.8, 'look'],
+      [-6.9, 4.0, 0, null],
+      [-7.7, 4.8, 0, null],
+      [-7.7, 6.2, 1.2, null],
+      [-7.7, 12.0, 0, null],
+      [-7.7, 17.0, 0, null],
+      [-6.9, 17.8, 0, null],
+      [-5.5, 17.8, 2.0, 'look'],
     ],
   },
 
