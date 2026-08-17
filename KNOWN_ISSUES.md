@@ -38277,3 +38277,101 @@ one this round could not yet write: **a walk from the courtyard to the vault flo
 the shaft is open and not that the descent is walkable, and that remains exactly true — the honest
 state is that the door is open, the stair is built, and something is standing in the doorway.
 
+
+---
+
+## §504 — The safety net gets its second failure mode, and the telegraph gate is measured only halfway
+
+Two tasks. The first is built and pinned. The second is **not delivered**, and the reason is stated
+rather than papered over.
+
+### §504.1 `_safetyNet`: stuck, not low — built
+
+§503 named the gap and declined to build it; this builds it. `_safetyNet` triggered on height alone
+(`voidY` −220), so the tomb pin — stationary, airborne, ungrounded at y −6.58 — never tripped it
+while `_recordSafeStance` held a good recovery point throughout.
+
+**The pin is inescapable by construction, which is why a watchdog is the only fix.** `_probeGround`
+refuses a 57.64° face (correctly), `grounded` cannot latch, `Jump.canEnter` needs `canGroundJump()`,
+coyote expires, and no input produces a jump — driven: backing off, walking either way and jumping
+all moved the capsule under 7 mm in 180 frames.
+
+The predicate, and *stuck is not slow* is the whole of it:
+
+```
+  grounded             -> NOT stuck   a player standing still is the most ordinary thing there is
+  `attach` group       -> NOT stuck   hangs, hooks, poles, rails, spire perches: holds by design
+  moved > stuckDist    -> NOT stuck   anchor resets; a slow slide is motion
+```
+
+`wallCling` is deliberately **not** exempted by name despite being stationary and airborne: it is
+group `air`, and it self-terminates at `wallClingMax` 2.0 s. Exempting it by name would also exempt
+a capsule pinned against the same wall — the case this exists for. So `stuckTime` **3.0** is that
+ceiling plus a full second, and `stuckDist` **0.25** is ~40× the 0.000–0.006 m drift the real pin
+showed. Neither is chosen.
+
+**The coordinates no longer reproduce, and that is the argument for the shape.** Re-driven against
+the world lane's current geometry, (−9.26, −6.58, −56.60) settles to `tiptoe`, grounded, y −6.695
+within 10 frames — they closed the face. **The instance is gone; the class is not.** An arm pinned
+to those coordinates would today be green for the wrong reason.
+
+R6 pins it: recovered at frame 180 = 3.00 s exactly, with two counterexamples RUN in-arm (standing
+on real ground, and free fall) surviving ten times the window. My first control set
+`c.grounded = true` at y 12 and the arm went red — `_probeGround` runs inside `update()` and
+correctly cleared it, so the "standing still" control was a capsule in mid-air with a stale boolean.
+§435.4 inside the arm written to catch it.
+
+### §504.2 The telegraph gate: NOT DELIVERED, and what stopped it
+
+The task was to measure what the leads would be with `_telegraph`'s `attach` gate lifted, and what
+else becomes live. **I could not reproduce §449's chain drive**, so I cannot answer it, and per
+§501.1 that is reported rather than filled in from their numbers:
+
+```
+  §449 drove          4 rings, 6 grabs, leads 34 / 3 / 7 / 7 / 5 / 1 frames
+  reproduced here     1 grab, and its `hookGrab` payload carries no `point` to pair on
+```
+
+Three drivers were tried (hold-forward toward the ring set; aim-at-next-unreached-ring with
+`interact` held; a jump-seeded variant). None chained. **What reproduces is the mechanism, by
+reading, not the numbers:** `_telegraph`'s first line is
+`const attached = this.sm?.group === 'attach'`, and when attached `best` stays `null`, so the emit
+is `null` — the identity edge then means the next ring cannot be announced until after release.
+
+The one measurement I trust from the attempt is a **rate**, not a lead: over 420 frames of the same
+approach, the shipped gate produced **4** telegraph emits and the same ranked scan with `attached`
+forced false produced **104** — a 26× increase in emit rate on a drive that barely attaches at all.
+That bounds the clutter question from below and says nothing about the chain.
+
+**And there is a structural cost that needs no drive**, which is the part worth carrying: lifting the
+gate naively would emit the *ranked-first* affordance while attached, and §441.5 already established
+that the ranked-first hold is routinely **the one you are already on** — that is why
+`TELEGRAPH_KINDS` is an ordering rather than nearest-first. So "lift the gate" is not one change: it
+is *announce the NEXT hold*, which requires excluding the currently-held `rec`, and that is a
+different feature from the one the gate switches off.
+
+**Recommendation, scoped to what is established:** do not lift the gate as a boolean. The change
+worth costing is *announce the next hold while attached, excluding the held one* — and it should be
+measured on a driver that actually chains, which this lane did not manage to build. Left open with
+the mechanism, the 26× rate bound, and the exclusion requirement recorded, so the next lane starts
+from those rather than from the gate.
+
+### §504.3 Process — committing without the index
+
+Adopted this round: `git commit --no-gpg-sign -- <paths>` commits straight from the working tree and
+never reads the index, so there is no window for a sibling's staged file to be consumed. Both commits
+this round used it and both were verified with `git show --stat HEAD` afterwards.
+
+The generalisation is the one that matters and it now has three instances in this lane —
+**when successive fixes each reduce a failure without removing it, the model is wrong rather than the
+tuning.** §460.4 and §503.7 each refined a wrong model of the staging race (the index is the shared
+thing) before the right one arrived (the index *and* the commit are two operations with a gap).
+`landHard` was the same shape: two threshold re-derivations, each an improvement, while the actual
+error was that arrival speed was the wrong quantity. It applied here too — `_stuck` was written once,
+against the mechanism, and needed no tightening.
+
+### §504.4 Suite
+
+**848 arms: 844 pass, 4 fail.** D8, L1b, P-A1 and the CameraRig framing arm — all traced to the
+camera lane's uncommitted `CameraRig.js`, verified by stashing this lane's changes and watching the
+same four persist. Nothing in this lane's files is red.
