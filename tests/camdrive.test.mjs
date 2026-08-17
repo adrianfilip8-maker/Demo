@@ -817,3 +817,126 @@ test('D6: how much of each authored framing reaches the screen, over the residen
     `pitch closes on ${pitchOK} framings and the boom misses on ${boomBad} — the one-stage channel is no `
     + 'longer outperforming the three-stage one, so D5\'s chain-depth explanation does not hold here');
 });
+
+/* ====================================================================== */
+/* D7 — which STATES each framing row actually measured                    */
+/* ====================================================================== */
+
+test('D7: every framing row, attributed to the states that produced it', async () => {
+  /* D6 publishes one row per framing KEY. A key is not a move. `wall_run` was quoted at 5 %, and
+     **100 % of the frames behind that number were `wallCling`** — a different move, held against
+     a wall rather than running along one. The row was named for something it never measured, the
+     table was quoted to three lanes, and nothing in D6 could have shown it.
+   *
+   * So this arm reports the same routes broken out per state, and fails when a row's name stops
+   * matching what produced it. Where a key genuinely serves several states it says so and gives
+   * the numbers separately, because pooling is what made `wall_run` unreadable — and pooling hid
+   * a real spread elsewhere too: `air` is 68 % `fall` and 32 % `jump`, and their `lead` delivery
+   * is **92 % against 26 %**. One number for both told nobody that.
+   *
+   * DOMAIN (§418.3)
+   *   passes on : `sneak`, `dive`, `roll`, `land`, `glide` — single-state rows whose name is the
+   *               state (or, for `glide`, `paraglide`, its only member).
+   *   fails on  : `wall_run`, whose sole contributor is `wallCling`. Asserted below as a named
+   *               known misattribution rather than allowed to pass quietly, so that if it ever
+   *               becomes the `wallRun` state the arm says the world changed.
+   *   does NOT discriminate : whether a state that never occurs on these routes would be
+   *               correctly attributed. `combatStrafe`, `wallRun`, `railSlide`, `poleClimb` and
+   *               `hookSwing` produce no frames here, so this arm is silent about them — which
+   *               is the §439.3 line, applied to a sample rather than to a stub. */
+  const ST = { fired: false };
+  const ROUTES = [
+    ['flat run + jumps', V(0, 0.1, 30), 0, 320, (inp, i) => { inp.move.y = -1; if (i % 50 >= 18 && i % 50 < 23) inp.hold('jump'); else inp.let_go('jump'); }, null],
+    ['glide', V(0, 18, 34), 0, 240, (inp, i, cc) => { inp.move.y = -1; if (!cc.grounded) inp.hold('glide'); else inp.let_go('glide'); }, (c) => { c.grounded = false; c.sm.set('fall'); }],
+    ['sneak', V(0, 0.1, 30), 0, 160, (inp) => { inp.move.y = -1; inp.hold('sneak'); }, null],
+    ['crouch + roll', V(0, 0.1, 30), 0, 200, (inp, i) => { inp.move.y = -1; if (i === 60 || i === 130) inp.hold('crouch'); else inp.let_go('crouch'); }, null],
+    ['dive', V(0, 0.2, 30), 0, 200, (inp, i, cc) => {
+      if (i === 1) { cc.pendingLaunch = CTUNE.jumpV0; cc.sm.set('jump'); }
+      if (i > 3 && cc.velocity.y < 0 && !ST.fired) { inp.hold('attack'); ST.fired = true; } else inp.let_go('attack');
+    }, () => { ST.fired = false; }],
+    ['temple approach', V(0, 0.1, 30), Math.PI, 320, (inp, i) => { inp.move.y = 1; if (i % 45 >= 20 && i % 45 < 24) inp.hold('jump'); else inp.let_go('jump'); }, null],
+    ['combo', V(0, 0.1, 30), 0, 160, (inp, i) => { if (i % 30 === 5) inp.hold('attack'); else inp.let_go('attack'); }, null],
+  ];
+
+  const table = new Map();                       // key -> state -> {frames, visits, ch}
+  for (const [, start, yaw, nf, drive, pre] of ROUTES) {
+    const t = await trace(start, yaw, nf, drive, (c) => { if (pre) pre(c); c._needSpawnSnap = false; });
+    const A = screenReplay(t.samples, t.collision, null);
+    const spans = []; let cur = null;
+    for (let i = 0; i < A.length; i++) {
+      if (!cur || A[i].key !== cur.key) { if (cur) spans.push(cur); cur = { key: A[i].key, s: i, e: i, state: A[i].state }; }
+      cur.e = i;
+    }
+    if (cur) spans.push(cur);
+    for (const r of spans) {
+      if (r.e - r.s + 1 < 2 || r.s === 0) continue;
+      const B = screenReplay(t.samples, t.collision, r.state);
+      const enter = A[r.s - 1];
+      if (!table.has(r.key)) table.set(r.key, new Map());
+      const byState = table.get(r.key);
+      if (!byState.has(r.state)) byState.set(r.state, { frames: 0, visits: 0, ch: {} });
+      const rec = byState.get(r.state);
+      rec.frames += r.e - r.s + 1; rec.visits++;
+      for (const [name, , minSpan] of SCREEN) {
+        const ref = B[r.e][name], e0 = enter[name];
+        if (ref == null || e0 == null) continue;
+        const span = ref - e0;
+        if (Math.abs(span) < minSpan) continue;
+        let peak = 0;
+        for (let i = r.s; i <= r.e; i++) if (A[i][name] != null) peak = Math.max(peak, (A[i][name] - e0) / span);
+        const f = Math.max(0, Math.min(1.2, peak));
+        const c = rec.ch[name] = rec.ch[name] || { asked: 0, got: 0 };
+        c.asked += Math.abs(span); c.got += f * Math.abs(span);
+      }
+    }
+  }
+
+  const abs = (c) => (c && c.asked > 1e-9 ? c.got / c.asked : NaN);
+  const cell = (c) => (c && c.asked > 1e-9 ? `${(100 * abs(c)).toFixed(0)}%` : '  —');
+  /* A key names a MOVE when its dominant state is that move, and names a CATEGORY when it does
+     not — `air` over fall/jump, `combat` over combo, `glide` over paraglide are categories and
+     legitimate. Only a key whose name IS a state name has to match. */
+  const STATE_NAMED = new Set(['sneak', 'dive', 'roll', 'land', 'idle', 'crawl', 'wall_run', 'spire', 'balance']);
+  console.log('\n[D7] key          state          visits frames share |  boom   fov  pivY  lead  side pitch');
+  const flags = [];
+  for (const [key, byState] of [...table].sort((a, b) => {
+    const fa = [...a[1].values()].reduce((x, y) => x + y.frames, 0);
+    const fb = [...b[1].values()].reduce((x, y) => x + y.frames, 0);
+    return fb - fa;
+  })) {
+    const tot = [...byState.values()].reduce((x, y) => x + y.frames, 0);
+    const ss = [...byState].sort((a, b) => b[1].frames - a[1].frames);
+    const dominant = ss[0][0];
+    const named = STATE_NAMED.has(key);
+    const matches = dominant.toLowerCase().replace(/[^a-z]/g, '') === key.replace(/[^a-z]/g, '');
+    if (named && !matches) flags.push({ key, dominant, share: ss[0][1].frames / tot });
+    console.log(`[D7] ${key.padEnd(12)} ${(named ? (matches ? '' : 'MISATTRIBUTED') : '(category)').padEnd(14)} `
+      + `${String(ss.length).padStart(6)} ${String(tot).padStart(6)}       |`);
+    for (const [st, rec] of ss) {
+      console.log(`[D7]   ${''.padEnd(10)} ${st.padEnd(14)} ${String(rec.visits).padStart(6)} ${String(rec.frames).padStart(6)} `
+        + `${String(Math.round(100 * rec.frames / tot)).padStart(4)}% | ` + SCREEN.map(([n]) => cell(rec.ch[n]).padStart(5)).join(''));
+    }
+  }
+  console.log(`[D7] state-named keys whose dominant contributor is a different move: `
+    + `${flags.map((f) => `${f.key} <- ${f.dominant} (${(100 * f.share).toFixed(0)}%)`).join(', ') || 'none'}`);
+
+  assert.ok(table.size >= 7, `only ${table.size} framing keys were reached — the routes stopped working`);
+  /* PASSING: the single-state rows are what they say they are. */
+  for (const k of ['sneak', 'dive', 'roll', 'land']) {
+    const byState = table.get(k);
+    assert.ok(byState && byState.has(k) && byState.get(k).frames / [...byState.values()].reduce((x, y) => x + y.frames, 0) > 0.9,
+      `'${k}' is no longer dominated by the '${k}' state — its published row has stopped being about the move it names`);
+  }
+  /* THE KNOWN MISATTRIBUTION, named rather than allowed to pass quietly. */
+  const wr = table.get('wall_run');
+  assert.ok(wr, 'no wall_run frames on these routes — the audit cannot see the row it exists for');
+  const wrDom = [...wr].sort((a, b) => b[1].frames - a[1].frames)[0][0];
+  assert.equal(wrDom, 'wallCling',
+    `'wall_run' is now dominated by '${wrDom}'. If that is 'wallRun' the row finally measures the move `
+    + 'it is named for and D6\'s wall_run figure means something new — re-read it before quoting it.');
+  /* And the pooling that hid a real spread: `air` must keep reporting its members separately. */
+  const air = table.get('air');
+  assert.ok(air && air.size >= 2,
+    `'air' now has ${air?.size ?? 0} contributing state(s). It pooled fall and jump, whose lead delivery `
+    + 'differs 92% vs 26%; if it has collapsed to one the spread this arm reports is no longer visible');
+});

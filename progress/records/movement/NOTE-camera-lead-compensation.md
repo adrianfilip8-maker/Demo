@@ -42,9 +42,26 @@ In metres and degrees, which is what the percentages are of:
   sneak       boom  2.19 of 2.19 m       fov  4.41 of 4.43 deg   <- closes cleanly
 ```
 
-**Rows where the answer is essentially none:** `land` (0 %) and `wall_run` (5 %). **Rows that close
-cleanly:** `glide` and `sneak` — the two with long uninterrupted residencies. Everything else is
-partial, and the partiality is not random.
+> ## Read the row names before quoting this table
+>
+> **A framing key is not a move**, and two rows are not about what they are called (audited by
+> `camdrive` D7, `KNOWN_ISSUES.md` §441):
+>
+> - **`wall_run` is 100 % `wallCling`.** Not one frame behind that row is the `wallRun` state. The
+>   published 5 % was a measurement of the wall *cling* — held against a wall, not running along
+>   one — and the row was quoted to three lanes before anyone checked. A real lateral wall run is
+>   reachable (50 of 62 entries across 14 sites) and simply never occurred on these routes.
+> - **`idle` is 51 % the `move` state.** That is the documented `move → idle` routing, so it is
+>   known rather than new, but the row is majority *running* and reads as though it were standing.
+>
+> Pooling also hides spread where the name is fine: **`air` is 68 % `fall` and 32 % `jump`, and
+> their `lead` delivery is 92 % against 26 %.** One number for both told nobody that. `sneak`,
+> `dive`, `roll`, `land` and `glide` are single-state and correctly named.
+
+**Rows where the answer is essentially none:** `land` (0 %) and `wall_run` (5 %) — but see the box
+above for what `wall_run` actually measured. **Rows that close cleanly:** `glide` and `sneak` — the
+two with long uninterrupted residencies. Everything else is partial, and the partiality is not
+random.
 
 ### The one sentence that explains the whole table
 
