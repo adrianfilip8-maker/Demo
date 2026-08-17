@@ -32629,19 +32629,25 @@ owning arm, require the arm to go red. An assertion whose inversion leaves its o
 not affect that arm's outcome.
 
 ```
-one process per site, against the real file in place
+one process per site, against the real file in place — 262 sites (263 less the duplicate §417.4 removed)
 
-  197  inverted in the first sweep          kills 197   SURVIVES 0
-   10  re-tested individually by hand        kills  10   SURVIVES 0   (see the escape bug below)
+  156  first sweep, sites below the edit point        kills 156
+   10  hand-tested after the escaped-name fix         kills  10
+   91  targeted re-sweep of everything above it       kills  91
+    1  the site the re-sweep's read loop dropped      kills   1
+    4  NOT reachable by this method — see below     unreached
   ---
-  207  of 263 confirmed                     SURVIVORS: NONE
-   56  invalidated by my own edit mid-sweep — re-running, see the note below
+  262  every site accounted for                     SURVIVORS: NONE
 ```
 
-**207 of 263, no survivors.** The outstanding 56 are stated as outstanding rather than folded in:
-they are the sites whose line numbers I moved underneath the first sweep, and the re-run is honest
-work in progress, not a result. If any of them survives, this section is wrong and gets corrected
-rather than quietly amended.
+**258 kill, 4 unreachable, 0 survive.** The four are all in one arm — the state-coverage census —
+and they are **not** a vacuity finding. That arm reads `_smtrace`'s record of which states other
+arms drove, so under a single-arm name filter the record is nearly empty, an earlier assertion in
+the same arm fails, and execution never reaches them. **The arm cannot pass in isolation; it is a
+property of the whole file.** That is worth knowing on its own — it means those four bars are only
+ever exercised by a full-suite run — and it is a limit of single-arm inversion rather than a defect
+in the bars, which is why they are reported as `unreached` and not as findings. Mode A already
+showed all four execute in a full run.
 
 Calibrated in both directions before any number was taken from it: a known-live assertion reports
 `kills`, and a line holding no assertion reports `FIRED=0` and is scored **unreached** rather than
@@ -32693,7 +32699,7 @@ the entry's own evidence for its last section.
 
 ### §417.5 The residual, and every instance of the day was in it
 
-Mode A is empty. Mode B is empty across 207 of 263 and the rest are running. Mode C yields three.
+Mode A is empty. Mode B is empty — 258 sites killed, 4 unreachable by the method, none survived. Mode C yields three.
 And **not one of the day's five instances is in any of the three.**
 
 - §407's `FIGURE SWALLOWED` bar **executes**, and inverting it would turn its arm red. It is
