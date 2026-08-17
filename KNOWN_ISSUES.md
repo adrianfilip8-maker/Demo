@@ -34829,3 +34829,103 @@ can render it.
 
 Two rows remain unresolved by the same arithmetic: `roll` clears at 94% and is fine; `dive`'s
 duration is a fall time rather than a constant and is **unmeasured**.
+
+## §431 — The collect loop, driven: 8 of 13 legs connect, and the one that looked like a gap was furniture
+
+Twelve bottles were proved reachable in §423. **Reachable is not connected.** R2's question was
+*"can this bottle be taken from somewhere"*; it says nothing about whether the somewheres join,
+and twelve locally-reachable bottles on a route with a gap in it is twelve reachable bottles and
+no loop. Nobody had ever established that the demo's core loop is completable — the browser
+playtest stopped at the terrace stair (`fc3db1b`) and frames there cost 0.8 s each.
+
+Driven headlessly through the shipped level, after the stair fix landed:
+
+```
+  spawn -> b0 -> b1 -> b2     plain forward input      f97 / f228 / f244
+  b3 -> b4                    plain forward input
+  b4 -> b5                    the pylon ladder — 7 consecutive rungs, y 10.64 -> 28.95, f137
+  b6 -> b7 -> b8              plain forward input
+  b11 -> Eye of Ra            0.10 m at f157, round the sarcophagus
+  ------------------------------------------------------------------------------
+  8 of 13 connected · none of the other 5 blocked by geometry
+```
+
+### §431.1 The instrument is asymmetric, and the asymmetry is the honest part
+
+The driver aims the camera at the target, holds forward, and jumps when horizontal progress
+stalls. It cannot hook-swing, cannot pathfind, and climbs a ladder only when handed the
+rung-by-rung script `traversal.test.mjs` derived.
+
+> **A leg that connects is proof** — a driven `Controller` actually got there.
+> **A leg that does not is a candidate, not a verdict**, because the missing thing may be the
+> verb rather than the route.
+
+The five unconnected legs are climbs, a 55 m cross-level traversal and a 45 m descent — the
+route's own authored beats. Each ends in open air or against a face it would need a verb to
+pass; not one ends against a wall where the route says there is a way. Reporting them as
+"unproven" rather than "broken" is the whole discipline, and it is the same shape as §426's
+"a ranked list of the slowest files is not a list of problems".
+
+### §431.2 The leg that looked like a real gap
+
+`b11 -> Eye` was the one to worry about: right room, right height, and the driver stopped
+**4.42 m** short of the payoff — the last link in the loop the vault reward exists for.
+
+It is not a gap. The **sarcophagus** sits on the straight line at z −72, where the floor rises to
+−10.89 and headroom is blocked 0.13 m up. Measured before concluding, then driven round it at
+x = −5: **0.10 m at frame 157.** A player walks round furniture; a straight-line bot walks into
+it.
+
+Had that been reported as "the collect loop does not close", it would have been a confident,
+false, *plausible* finding about the demo's payoff — arrived at by an instrument doing exactly
+what it was built to do. §419.6's family again, and the defence was the same one: measure the
+obstacle before believing the failure.
+
+V3 keeps both drives, one waypoint apart, so "the loop closes" cannot be satisfied by a driver
+that reaches everything.
+
+### §431.3 The ladder is the beat the bottles were placed to teach, driven for the first time
+
+`Props._clueBottles()` puts one bottle **on** the pylon ladder and one on the deck it delivers
+you to, *"so the route that had nothing saying 'climb here' now has a collectible at both ends of
+it."* That claim had never been driven end to end in the shipped level. It holds: 7 consecutive
+rungs, `notch-pylon-e-w-6` through `-12`, and bottle 5 collected at frame 137.
+
+The counterexample is the same drive with plain forward input, which catches no rung and never
+reaches the deck — which is why the full sweep scored this leg unconnected, and why that score
+was a statement about the driver rather than about the pylon.
+
+### §431.4 A ratchet re-based, and the rule for when that is allowed
+
+`traversal.test.mjs`'s concentration census went red again: 15, then 17, states driven outside
+it. **This time the cause was mine** — `collectroute.test.mjs` enters 14 of the 32 states and all
+four newly-spread names (`ledgeClimb`, `ledgeHang`, `hookSwing`, `wallJump`) are in its set,
+measured by tracing `StateMachine.set` rather than inferred.
+
+Re-based to the measured values, 14 → 17 and 20 → 17, and the distinction from §429.5 is the
+point:
+
+> Leaving the tree red on **another lane's uncommitted file** was right — re-basing then would
+> have encoded someone's in-flight state, and it resolved itself when `camdrive` landed. Leaving
+> it red on **my own committed file** is not a courtesy to anyone.
+
+Not §141.1: these are descriptive ratchets whose own failure messages ask to be re-based when
+coverage spreads, not gates deciding whether a result is good, and the direction of travel is the
+one the arm's finding hopes for. The count was briefly unstable — 15 while
+`tests/terracestair.test.mjs` was uncommitted, 17 once it landed in `fc3db1b` — which is worth
+knowing about this census: **its answer depends on which files exist, so it cannot be re-based
+reliably while any contributing file is in flight.**
+
+### §431.5 Two things for whoever reads this next
+
+**A defect I introduced two rounds ago caught me.** V1's first draft called `realWorld()` a second
+time from a helper while holding a `Controller` from the first call. §425.1's subscription fix
+disposes the previous Controller on handout — so the arm reported *"the way in is blocked again",
+13.04 m, ended exactly at spawn*, which is precisely the shape of the playtest's stair report. A
+false alarm about the one thing the round was commissioned to check, produced by my own fix. The
+rule it earns: **`realWorld()` is once per arm**, and that is now written at the call site.
+
+**There are two §430s in this file.** Mine (the payload triage) landed first; another lane's
+(*"Correctly wired, correctly resolved, and structurally unable to finish"*) took the same number
+from the same base. Not renumbered here — it is another lane's content and they may already have
+cross-references — but every future citation of "§430" is ambiguous until one of them moves.
