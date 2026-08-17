@@ -33093,3 +33093,160 @@ of it. A frame pair would be *less* evidence than the measurement it was meant t
 Refusing a commissioned artefact because it would answer a different question is the same
 discipline as §413's refusal to spend a capture on an unresolvable one — and both refusals came
 from the lane that would have been credited for delivering.
+
+---
+
+## §420 — The detection survey, salvaged from two cancellations: their 887-line guard holds no vision maths, and ours is the better model
+
+Guards, searchlights, motion trackers, lasers and security cameras were cut by the user mid-round,
+after menus and upgrades had been cut from the same lane an hour earlier. **Nothing was built and
+nothing was committed from either brief.** What survives is the reading, recorded here because it
+cost a round to gather and would cost another to redo the day guards come back.
+
+This is a survey. It contains no build plan, and the two decisions the work would have turned on
+are left open at §420.8 rather than quietly settled.
+
+### §420.1 The assignment was sized by line count, and the line count was about the wrong file
+
+The brief named `enemy_base_flashlight.gd` — 887 lines — as "the detection model worth learning
+from", and `spotlight_detection.gd` — 57 lines — as a minor sibling. It is the other way round.
+
+**`enemy_base_flashlight.gd` contains no vision maths at all.** It reads a boolean,
+`flashlight.player_detected`, and a target reference off the flashlight node, and branches on
+them. Its 887 lines are navigation, nine wall-detection rays, nine floor rays, three stair rays, a
+stair-ascent frame buffer, projectile aim-prediction with a four-shot accuracy ladder, and melee
+timing. The whole detection model is the 57-line file, and that file is one Area3D trigger, one
+raycast at the player, and a one-second re-arm timer.
+
+This is §419's shape exactly, in the briefing rather than in an instrument: **a number that is
+correct and about the wrong quantity.** 887 is the true line count. It is not a measure of where
+the detection lives, and nothing about reading the larger file first would have revealed that
+until the reading was done. The cost was bounded here — the survey found it in the first pass —
+but the general form is worth keeping: *file size is a proxy for effort spent, never for
+subject matter*, and a brief that picks the biggest file has chosen by the one property that is
+free to measure and unrelated to the question.
+
+### §420.2 `motion_tracker.gd` is a player component, not a hazard
+
+It was briefed as a static stealth hazard alongside searchlights. It is not one. The script is
+attached to the **player** scene and is read for animation blending, pole-climb direction, and
+camera lead prediction. What it detects is whether *its own node* is moving, by comparing this
+frame's origin against last frame's against a small distance buffer, with a grace-frame counter
+so a single stalled frame does not read as "stopped".
+
+**The name matched the brief and the script did not.** Building "their motion tracker" would have
+produced a velocity helper this project already has on the movement module. The check was cheaper
+than the build, which is the only reason this is a note and not a round.
+
+### §420.3 The comparison, which is the actual salvage
+
+Recorded because the evidence runs the opposite way to the intuition that a reference project is
+a reference. **On detection specifically, this project is ahead, and nobody should re-import
+theirs later on the assumption that it is the source.**
+
+```
+  dimension          theirs                          ours
+  ─────────────────────────────────────────────────────────────────────────────────────
+  signal             binary bool                     continuous meter, ceiling 1.45
+  cone test          none — trigger volume + 1 ray   3-zone: core, peripheral, soft edge
+  distance falloff   none                            nearBoost 2.05 → farFloor 0.22
+  movement term      none                            still .50 / walk 1.0 / run 1.65 / air 1.20
+  stealth term       none                            sneak 0.40 / crouch 0.55
+  light term         none                            dark 0.68 / lit 1.28, + beam term
+  hearing            sprint+speed → INSTANT CHASE    hearGain 0.42, capped 0.66 — cannot chase
+  forgiveness        1.0 s re-arm timer              drainDelay 0.85 then drain 0.34/s
+  band stability     none                            hysteresis 0.06 on every band
+  reaction delay     none                            reactDelay 0.35
+  states             6                               7, with a documented ladder
+  guard→guard alert  written, every call site        absent
+                     commented out
+  beam aim           independent, with inertia       rigid to the head bone
+```
+
+Ours: `src/ai/Patrol.js` (`VISION`, `DETECT`, `STATE`, `Senses.evaluate`), driven from
+`src/ai/Guard.js`. The LOS raycast carries 0.45 m of slack at `Patrol.js:634` so a ray clipping
+the ledge the player stands on is not counted as a wall.
+
+The one row that is not merely "more of the same": **their sprint rule is the design ours was
+written against.** Theirs promotes a sprinting grounded player straight to chase. Ours caps
+heard-not-seen below the chase threshold on purpose, and `Patrol.js`'s own header states the
+reason — instant detection leaves the player no frame in which to react, so failure reads as
+arbitrary. That is a deliberate disagreement, already argued in the file, not an omission.
+
+### §420.4 Three things genuinely worth taking, if guards ever return
+
+Adapted mechanics only — a shape and two feel constants, nothing ported.
+
+- **The decoupled detection organ.** Their detector is a separate node with its own target, own
+  ray and own state, which the guard merely *reads*. That decoupling is the entire reason a
+  static searchlight is possible in their design at all: it is the same detector with no guard
+  behind it. Ours is welded — the cone reads off the head bone. If a beam hazard is ever wanted,
+  this is the structural lesson, and it is worth more than any constant in their files.
+- **The inertial beam, and specifically its asymmetry.** Their beam lerps toward the tracked point
+  at roughly twice the rate it drifts back to its rest pose. It snaps onto you and leaves you
+  slowly. That ratio — not the absolute rates, which are frame-coupled in their implementation —
+  is what would make a searchlight a puzzle with momentum rather than a cone on a timer.
+- **The grace-frame debounce.** Requiring N consecutive sub-threshold frames before declaring a
+  target "still" is a genuinely reusable primitive, and it is the one salvageable idea inside
+  §420.2's misfiled script. It is the forgiveness window any movement-gated sensor needs.
+
+### §420.5 Four refusals, with reasons
+
+- **Their sprint-to-instant-chase.** See §420.3. Ours is the considered position.
+- **Their SEARCH give-up rule.** It drops to idle when the target is *nearer than* about 5 m as
+  well as when it is far. Walking toward what you are hunting should not make you stop hunting
+  it. Bug-shaped, and it would import as a behaviour nobody could later explain.
+- **Their patrol pathing.** A spline path plus a respawn counter. This project's routes are
+  Catmull-Rom and are validated against real collision geometry — `Patrol.js`'s header records
+  that 6 of 9 routes were physically impossible before that test existed. Importing theirs would
+  be a downgrade with no test behind it.
+- **`motion_tracker.gd` as a hazard.** §420.2. The role is refused; the primitive is kept.
+
+### §420.6 The seam that took real reading: a player in another guard's beam already counts as lit
+
+`src/ai/Guard.js:1878` already raises the `light` term for a player standing in *another* guard's
+cone, to a named constant (`beamLit`, 0.85 at `Guard.js:120`) rather than to full daylight.
+
+Two things make this the precedent any future beam hazard should follow. It establishes that
+**being illuminated by a sensor is expressed as an input to detection, not as a second detection
+authority** — the beam makes you easier to see; the guards remain the threat. And the surrounding
+comment records the trap it was written to avoid: a guard's *own* sight is deliberately not fed
+back into his own light term, because "he can see you, therefore you are easier to see" is a loop
+that silently doubles every tuned fill rate in the file.
+
+Anyone adding an illuminating hazard inherits both the seam and that warning.
+
+### §420.7 Two collisions for whoever builds here next, neither about guards
+
+- **`src/ai/Guard.test.mjs` is outside the test glob.** The suite runs `tests/*.test.mjs`; this
+  file is in `src/ai/`, carries its own three-function harness rather than `node:test`, and its
+  own header says `npm test` never runs it. **So the project's "751 arms" excludes it entirely**,
+  and anyone quoting that number as total coverage of the garrison is quoting the wrong figure.
+  It self-documents that it can rot silently between hand-runs, and has before.
+- **`_updateHazards` is already taken.** At `Guard.js:2109` it means an *alerted guard's damage
+  volume* — a moving hitbox parented to a guard — and it is called every frame from the garrison
+  update. It has nothing to do with static hazards. Anyone building those will reach for exactly
+  this identifier; the collision is silent and would read as a merge artefact later.
+
+### §420.8 Two decisions, recorded OPEN and deliberately not taken
+
+Both were surfaced by the survey, both have global blast radius, and both are cut along with the
+work. Recommendations are attached because the reasoning is perishable — **and they are
+recommendations, not rulings. Neither was taken, and neither should be treated as settled by
+whoever picks this up.**
+
+- **Does an illuminating hazard feed the `light` term?** If it does, every tuned detection rate
+  near one changes: the dark-to-lit span is roughly 0.68 → 1.28, close to a 2× swing on fill
+  rate, and §141.1 forbids deciding this after seeing which way the resulting numbers land.
+  *Recommendation, not taken:* feed it, because being caught in a beam ought to make guards see
+  you and that is the whole mechanic — but behind a named constant that reverts in one edit, with
+  the before/after fill table measured and published the way `Patrol.js`'s header already does
+  for the base model.
+- **Can such a hazard reach `chase` on its own?** A second detection authority will contend with
+  the guard ladder for the HUD badge, which is edge-triggered and assumes one publisher per
+  transition. *Recommendation, not taken:* it fills suspicion and never chases — the same
+  discipline as the hearing cap in §420.3. The hazard is a sensor; the guards are the threat.
+
+**Licence, restated because this section quotes behaviour.** The reference repository states no
+licence. Everything above describes what its code *does* and what its structure *is*. Nothing was
+copied, ported or transliterated, and §364.3's exclusions were not touched.
