@@ -37634,3 +37634,72 @@ was not evidence of health. It was evidence that the question had never been ask
 The distinction `tombdoor.test.mjs` exists to hold, written into its own docblock so it cannot later be
 quoted for the wrong half: **V3 tests the room, D1–D3 test the door, and neither tests the stair.**
 
+
+---
+
+## §481 — The two thin margins on the authored route, and what I would move
+
+Requested as a recommendation rather than an edit, because both are level design and moving either
+is a decision about how the game should feel rather than a repair to something broken.
+
+### §481.1 The measurements, restated so the recommendation can be checked against them
+
+```
+  step 2   stage 2 (y 5.2) -> kiosk lintel (y 9.0)      needs 3.80 m   delivers 3.88 m   margin  8 cm
+  step 3   ring 4  (hang y 11.6) -> cornice (y 15.29)   needs 3.69 m   delivers 3.88 m   margin 19 cm
+```
+
+3.88 m is the maximum double jump measured on the shipped controller, swept over hold duration.
+§8.1's own arithmetic — *"DOUBLE JUMP (2.5 + 1.9 = 4.4 m > 3.8 m)"* — overstates it by 0.52 m, and it
+is the first thing anyone tuning `jumpV0`, `doubleJumpV0` or `applyJumpCut` will read.
+
+**Two consecutive beats of the authored line inside 20 cm of impossible.** They are also *coupled*:
+both are paid for out of the same 3.88 m, so any change to the jump moves both at once and in the
+same direction. There is no tuning that fixes one without the other.
+
+**And the second one is worse than its number.** Step 2's 8 cm is a hop from a standing start on a
+flat deck — the player can line it up, and a miss costs 6.6 m back to stage 2. Step 3's 19 cm is from
+a *swing*, where the launch velocity depends on release phase, and a miss costs a 14 m fall to the
+courtyard and a hard landing. **The larger margin is the more fragile beat**, which is exactly the
+kind of thing a margin figure hides.
+
+### §481.2 What I would move, and by how much
+
+**Move the cornice, not the jump.** Lower the hall front cornice `ledge` from y 15.29 to **y 14.6**.
+
+- It buys **0.69 m**, taking step 3 from a 19 cm margin to **88 cm** — comfortably more than one
+  double-jump quantum, so the beat stops being timing-critical.
+- It costs nothing elsewhere: the swept capsule from ring 4 to the cornice is already **clear with
+  5.00 m of headroom**, so there is room to come down into. The aisle roof above it sits at y 17.00,
+  so the cornice does not collide with it at 14.6 either.
+- It leaves the chain's own descent (14.8 → 13.2) reading correctly as a *descent* — at 14.6 the exit
+  is 1.4 m above the last ring rather than 2.09, which is a step up rather than a climb.
+- It is one number in ARCHITECTURE and it does not touch the moveset, so nothing else in the game
+  changes shape.
+
+**Do not touch `jumpV0` or `doubleJumpV0`.** Raising the jump to buy step 3 also raises every other
+vertical in the level — it moves 85 of 101 standable surfaces further past §447.2's hard-landing line,
+and it would silently re-slacken the terrace stair that `terracestair.test.mjs` deliberately pins.
+That is a global change bought for one beat.
+
+**Leave step 2's 8 cm alone, and this is the deliberate half.** It is a standing hop with a cheap
+failure, it is already pinned by the level's own note, and 8 cm of margin on a beat the player can
+retry immediately is a *skill check*, which is what a traversal game is made of. What it needs is not
+more room but the documentation corrected: §8.1's 4.4 m should read **3.88 m measured**, in the
+contract, so the next tuner does not spend the headroom twice.
+
+**If only one of the two can be done**, do the correction to §8.1 rather than the cornice. The
+geometry is survivable; a wrong number in the binding contract is what makes someone break it.
+
+### §481.3 Attribution note on §480
+
+§480's repair, `tests/tombdoor.test.mjs` and §480's own text were staged in this working tree when the
+camera lane committed, and were swept into **`a62dc40`** — a ledger commit whose message is about
+`leadMax`. The content is correct and in HEAD; the authorship line on those hunks is not that lane's.
+
+Recorded rather than rewritten, on §443.7's precedent and for the same reason: rewriting shared
+history to fix a byline is a worse trade than saying so. Worth noting that this is the **second**
+occurrence this session and both had the same cause — concurrent lanes staging into one working tree —
+so it is a process property rather than an accident. `git add` with explicit paths does not help the
+lane that commits *second*; only the committer checking `git status` before committing does.
+
