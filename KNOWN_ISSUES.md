@@ -32552,3 +32552,155 @@ to discover that nothing had executed it.
 the correct handling for a containment target. No verdict moves. The value of the sweep is that
 the phrase now means something everywhere it appears, and that a future extent cannot inherit the
 claim without the tool producing it.
+
+---
+
+## §417 — The vacuity class, audited systematically: two modes closed, and the mode that produced every instance is the one no generic instrument can reach
+
+Five instances of one defect class landed in a single day, found by four lanes, **every one of them
+by accident in the course of other work**: a bar no camera could pass (§407), a bar no frame could
+fail because a neighbour entailed it (§408.3), a predicate that could not say "no" on one of its
+paths (§409), a symmetry probe whose sampling was commensurate with what it sampled (§414), and my
+own `sweepcensus` printing a total as a breakdown (§412.2).
+
+Commissioned to do systematically what four of us had done by luck: audit every arm in
+`tests/traversal.test.mjs` against two questions — **can it fail**, and **does it assert anything
+another arm does not already assert** — with evidence rather than inspection.
+
+The answer is not the one anyone expected, including me, and the shape of it is the finding.
+
+### §417.1 The instrument
+
+`tools/_armhook.mjs` is a `--import` preload that wraps `node:assert/strict`. Its default export is
+one shared callable object, so mutating its methods before any test module evaluates means every
+later `import assert from 'node:assert/strict'` receives the wrapped versions — **the suite is
+measured exactly as it ships**, with no source rewriting and no loader hooks. `tools/armaudit.mjs`
+drives it and compares what the source contains against what the process observed.
+
+### §417.2 Mode A — never executes. Decidable, and it is empty.
+
+An assertion that never runs cannot fail. Unlike the rest of the class this one is *decidable*:
+enumerate the assertions in the source, enumerate the assertions the process evaluated, subtract.
+
+```
+56 arms · 263 assert sites · 263 of 263 observed at runtime · ZERO never executed
+```
+
+The 263/263 match is what makes the zero worth anything. A hook that silently attached to nothing
+would report the identical "nothing runs" as a dead suite would, so `armaudit` **refuses to print
+the result at all** when the match count is zero, and says why. Reporting a clean instrument and a
+broken instrument with the same output is the defect this file is about.
+
+### §417.3 Mode B — executes, but inert on the path the suite takes. Empty across 207 of 263.
+
+Attacked by **inversion**: flip one assertion's already-evaluated argument at runtime, run only its
+owning arm, require the arm to go red. An assertion whose inversion leaves its own arm green does
+not affect that arm's outcome.
+
+```
+one process per site, against the real file in place
+
+  197  inverted in the first sweep          kills 197   SURVIVES 0
+   10  re-tested individually by hand        kills  10   SURVIVES 0   (see the escape bug below)
+  ---
+  207  of 263 confirmed                     SURVIVORS: NONE
+   56  invalidated by my own edit mid-sweep — re-running, see the note below
+```
+
+**207 of 263, no survivors.** The outstanding 56 are stated as outstanding rather than folded in:
+they are the sites whose line numbers I moved underneath the first sweep, and the re-run is honest
+work in progress, not a result. If any of them survives, this section is wrong and gets corrected
+rather than quietly amended.
+
+Calibrated in both directions before any number was taken from it: a known-live assertion reports
+`kills`, and a line holding no assertion reports `FIRED=0` and is scored **unreached** rather than
+`SURVIVES`. Without that third verdict every site its name filter failed to reach would have been
+counted as a finding — the false-positive twin of the class being audited.
+
+Three of the instrument's own bugs were caught before publishing, and all three are the class:
+
+- The first design **copied the test file to a tmp directory** and rewrote it. That breaks the
+  file's relative imports, so the run dies for an unrelated reason and *every* site reports
+  `kills`. A check that cannot say no, inside the audit for checks that cannot say no.
+- The textual mutation `assert.ok(` → `assert.ok(!` **does not negate the condition**. On
+  `assert.ok(Math.abs(d) < 0.01)` it produces `!Math.abs(d) < 0.01` — negating the operand, then
+  comparing a boolean to a number. It would have run clean while testing nothing.
+- Arm names were read from raw source, so the two arms whose names contain an escaped apostrophe
+  got a `--test-name-pattern` matching nothing; ten sites came back `unreached`. **An instrument
+  artefact, one edit away from being published as a property of the suite.** Fixed, not filtered;
+  re-tested by hand, all ten fire and all ten kill.
+
+*And one methodological failure of my own, recorded because it invalidated a whole run:* I edited
+`traversal.test.mjs` **while the first sweep was running against it**, adding six lines. Every site
+below the edit shifted, the site match failed, and 56 assertions came back `unreached`. The 66-site
+`unreached` column reconciled exactly — 10 escape-bug + 56 line-shift, no residue — which is the
+only reason it was recognisable as instrument error rather than a suite property. **Freeze the
+subject for the duration of the measurement.** The sibling of §412.2's pooled `groundCheck` result:
+in both cases the thing being measured moved underneath the measurement.
+
+### §417.4 Mode C — entailed by a neighbour. THIS one is not empty, and inversion is blind to it.
+
+Same quantity, same *direction* — a two-sided bracket is two claims, not a duplicate, and an earlier
+version of the detector reported nine of those as suspects before the direction test cut it to three.
+All three are real:
+
+```
+:2835  `ratio < 0.05` re-asserted 44 lines after :2791, on a `const` computed once and never
+       recomputed. Cannot fail unless the first already did.        MINE. Removed.
+:1891  `report.ledgeHang > 0`, entailed by its two NEIGHBOURS — :1890 gives spireLand > 0 and
+       :1892 gives ledgeHang > spireLand.                           Not mine. Reported.
+:1386  `holds.length > 0`, entailed by :1474 `holds.length >= 10` on an unreassigned const.
+       Entailed but JUSTIFIED: runs first, fails fast, better message.        Kept, and said so.
+```
+
+**The load-bearing measurement:** inverting `:2835` turns its arm red. So does inverting `:1891`.
+Both score `kills`. **Inversion says live; entailment says it asserts nothing.** The two tests are
+orthogonal, and a tool that only inverts reports a clean file with these in it.
+
+That `:2835` is mine — written in the round that landed the drift fix, by the author of §409 — is
+the entry's own evidence for its last section.
+
+### §417.5 The residual, and every instance of the day was in it
+
+Mode A is empty. Mode B is empty across 207 of 263 and the rest are running. Mode C yields three.
+And **not one of the day's five instances is in any of the three.**
+
+- §407's `FIGURE SWALLOWED` bar **executes**, and inverting it would turn its arm red. It is
+  mode-B-live. It also could not be passed by any of **727,608** cameras.
+- §409's `capsuleSweep.hit` executes, is inversion-sensitive, and answers two incompatible
+  questions with one token.
+- §414's probe executes and is sensitive; its *sampling* was commensurate with the thing sampled.
+- §412.2's attribution executed on all 6,412 sweeps and filed every one of them under a single
+  name, printing a one-row table that looked exactly like a census with nothing to report.
+
+The question a generic instrument can ask is *"does this assertion's value change the outcome on the
+input the suite happens to run?"* The question all five failures answer "no" to is
+*"**does this bar have both a passing and a failing input in its reachable domain?**"* — and that is
+a property of the bar's own domain, which is not recoverable from the assertion. §407 answered it
+for one bar by exhausting 727,608 cells. There is no generic version of that.
+
+So the honest result of the systematic audit:
+
+> **The two cheap modes are decidable and this suite is clean in both. The expensive mode is the
+> only one that has ever bitten us, and it cannot be audited after the fact — only at authoring
+> time, by the person who knows the bar's domain.**
+
+That is not a disappointing result, it is an explanation. It says *why* all five arrived by accident
+and predicts they will keep arriving by accident: the audit that would have caught them cannot be
+run retrospectively by anyone.
+
+### §417.6 The rule
+
+> **A bar's domain is part of the bar. A threshold recorded without the input set it was shown to
+> both pass and fail on has not been checked — and no later instrument can check it, because the
+> domain is not recoverable from the assertion.**
+
+The practical form costs almost nothing at authoring time and is what every one of the five
+would have needed: when you write a bar, **record the two inputs** — one that passes it, one that
+fails it — and prefer a bar you have actually seen red. §409's summit-lip pair does this by
+construction, which is why reverting the fix turns it red on demand; §412.5 records the revert. The
+`slopes` arm does it by carrying a synthetic 55°/65° ramp for the half the level cannot exercise.
+Both were written that way because the defect was fresh, not because a tool asked.
+
+`tools/armaudit.mjs` closes A and B permanently and cheaply, and should be run when arms are added.
+It will not find the next §407. Nothing will, except writing the domain down.
