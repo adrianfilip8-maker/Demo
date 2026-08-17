@@ -39449,3 +39449,39 @@ and 13.43 m/s, and nothing in the game says so.
 - The lintel chain is a **failed beat with an unfound cause** — §508.2's margin explanation is
   retracted here rather than left standing.
 - No constants changed this round. No `src/` behaviour changed this round.
+
+---
+
+## §510 — The index-free commit has its own collision, and the file list is not the check
+
+Recorded immediately, because it happened to §509's commit and it invalidates the rule I adopted two
+rounds ago.
+
+`git commit -- <paths>` was adopted in §504.3 to defeat the shared-index race (§460.4 → §503.7): it
+never reads the index, so no sibling's staged file can be consumed. **It does not defeat a shared
+FILE.** It commits the working-tree version of the path given — including any other lane's
+uncommitted edits to that same file.
+
+`KNOWN_ISSUES.md` is exactly that file: every lane appends to it. §509's commit reported *"1 file
+changed, **267 insertions**"* against a section of about ninety lines, and the diff contains the
+world lane's **§485** alongside my §509. Their content is intact and pushed; the byline on it is
+mine and wrong, for the second time this session.
+
+**The post-commit verify caught it, and only because the number was checkable.** `git show --stat
+HEAD` returned the file list I expected — one file, `KNOWN_ISSUES.md`, exactly the path I passed —
+and the file list was *correct and useless*. What gave it away was the insertion count not matching
+what I had written.
+
+So the rule needs its third revision, and this is the form that holds:
+
+> **Verify the CONTENT, not the file list.** After committing, check that the diff contains only what
+> you wrote — for an append-only shared ledger, `git show HEAD -- KNOWN_ISSUES.md | grep "^+## §"`
+> should list your section headers and nobody else's.
+
+The progression is worth keeping because each step fixed a real failure and exposed the next:
+`git add -A` → explicit paths (wrong files staged) → pre-commit `--cached` check (the index races) →
+index-free `commit -- <paths>` (the working tree is shared too) → **verify the diff's content**.
+Each rule was correct about the failure it was written for and silent about the one underneath it.
+
+Not rewritten: `34ebfa5` keeps my message over both sections. §443.7's trade, made a third time —
+rewriting shared history to repair a byline costs more than saying so, and the content is safe.
