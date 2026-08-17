@@ -35668,3 +35668,117 @@ The cheap defence is the one that worked here and it is not a better stub: **poi
 the mechanism rather than the outcome.** "The framing delivers 5 %" is an outcome and supports any
 number of stories. "The boom is cut by 0.03 m and `_wallSide` is 0 for 121 frames" is a mechanism
 and supports exactly one.
+
+---
+
+## §440 — The lateral wall run is reachable, the bank does fire, and §439's headline was scoped to one route
+
+Asked to start `wall_run` from reachability rather than from the camera. The answer inverts two
+things, one of them mine from the round before.
+
+### §440.1 A lateral wall run is reachable, at 14 sites, and it is the COMMON case
+
+`WallRun.enter` sets `_vertical = headOn > 0.72`, so lateral needs travel more than 43.9° off the
+face normal. `canEnter` has two probes and the second is the reachable path: **travel along the
+face while steering into it** — `probeWall(wishDir)` hits, `headOn` computed from `travelDir` stays
+near zero, entry is lateral.
+
+Swept over the shipped level — every `wall` rec, candidate stand points 0.8–2.6 m off a face with
+8 m of flat ground along it, then scripted run-along-and-steer-in at two tangent signs, four steer
+delays and three take-off frames:
+
+```
+  14 candidate sites · 336 scripted entries · wallRun entered 62 times
+      LATERAL 50    vertical 12
+```
+
+**So the bank is not authored for a move the level does not contain.** That disposal — the one the
+brief offered and the one my §439 was heading toward — is closed, and closed in the direction that
+makes the framing's `side 0.35` legitimate.
+
+### §440.2 And the bank fires. §439's "has still never fired" was true of one route and stated flatly.
+
+Driven at the first lateral site, 24 frames of the `wallRun` **state**:
+
+```
+  _wallSide non-zero        10 / 24 frames
+  |_roll| > 0.02 rad         7 / 24 frames
+  max |roll|            0.05099 rad  =  53 % of wallRoll 0.0960
+  |camera.right · wallNormal|   mean 0.946     (1.0 = probe pointing at the face)
+```
+
+The probe points almost straight at the wall — 0.946 against **0.000** on the head-on route — and
+the roll reaches just over half its authored value. **Under-delivered, not dead.**
+
+§439 measured a head-on route, reported `_wallSide` 0 on 121 of 121 frames and max roll exactly
+0.00000, and generalised that to *"the bank has still never fired"*. The measurement was right and
+the generalisation was one route wide. On a head-on run there is no side and zero is the correct
+answer; the sentence should have said so and did not.
+
+**Same defect as the one §439 was written about, one turn further in.** §439's own lesson is that
+an instrument built from the same assumption as its subject cannot falsify it — and I then took a
+single route as the domain without asking whether the other kind of entry existed. The stub could
+not disagree; neither could the sample.
+
+### §440.3 What the delivery table's `wall_run` row was actually measuring
+
+The published row read `boom 0.13 of 2.59 m, 5 %`. Those frames were produced by `wallClimb`,
+`wallCling` and `wallJump` — **three states that route to the `wall_run` framing key and are not
+wall runs.** The row is correct as a statement about the framing key and was read, by me, as a
+statement about the move. The key is shared four ways and only one of the four is the one it is
+named for.
+
+The genuine wall-run row is a different and simpler problem: a lateral run lasts **24 frames**
+against `wall_run.tau` 0.22 s = **40 frames to 95 %**, so its ceiling is 84 % before anything else
+happens, and `_wallSide` — re-probed only every `0.1 s` and latched when both sides agree — drives
+the roll for under half of that. §430's clock problem, on a residency nobody had measured because
+nobody had reached the state.
+
+### §440.4 The shape of the whole session, stated plainly
+
+Two correct repairs to the same mechanism — the roll sign in round 20, the framing routing this
+session — neither sufficient, and the reason legible the entire time in a comment in
+`Moveset.WallRun.enter` about the *clip* side: *"a head-on approach has `n · right` ≈ 0 and no side
+either way; only glancing runs could ever show it."* Both repairs walked past it. So did the arm
+written to catch the second one. So did I, twice.
+
+**That is not a failure of care. It is what happens when every check available to you is built from
+the same picture as the code.** The stub assumed the wall is beside you because the probe does.
+The route sample assumed one entry kind because the script that found it did. The framing-key
+census assumed a key means a move because the table is named that way. Each was reasonable, each
+agreed with the others, and the disagreement only ever arrived from outside — from pointing an
+instrument at a mechanism instead of an outcome, and from asking whether the other case exists
+before concluding the case in hand is the case.
+
+### §440.5 And the chain-collapse `land` row, re-measured after the landing repair: it holds
+
+Decision 1 was approved in principle and held on sequencing, because the 53 % was measured on
+trajectories the objects lane's `landImpact` fix was about to change. It landed; re-measured on the
+repaired trajectories, same two collapsed sites, same absolute-weighted scorer:
+
+```
+                     pre-repair            post-repair
+  land        0% -> 53%   (0.44 m)    6% -> 52%   (1.11 m of 2.13 m)
+  combat     35% -> 73%                35% -> 73%
+  dive       61% -> 88%                61% -> 88%
+  roll       60% -> 86%                65% -> 89%
+  idle       41% -> 63%                43% -> 63%
+  air        16% -> 32%                13% -> 32%
+  wall_run    5% ->  8%                 8% -> 10%
+  glide     100% -> 100%              100% -> 100%
+  sneak     100% -> 100%              100% -> 100%
+```
+
+**It holds, and it is worth more than it was.** The repair made 2.5× as many landings register — 2
+visits and 12 frames became 5 and 30 — so the framing now asks for 2.13 m instead of 0.83 m, and
+the collapse delivers **1.11 m against 0.44 m before.** The two healthy rows are still exactly
+unchanged. Cost, on the repaired trajectories: mean |Δboom| 11.35 → 15.27 mm/frame, reversals
+38 → 52, and the **p99 single-frame step still unchanged** at 108.6 → 111.9 mm.
+
+Two arms moved with the world and are re-based in place rather than relaxed. `D6`'s `land` bar
+went 0 % → 6 % because more landings register. `D1`'s desert bar broke for a better reason: the
+repaired trajectory now passes geometry, so the real BVH and the open sky genuinely disagree there
+by 0.068 of NDC where they agreed to 0.001 before. Its bar is re-derived rather than loosened —
+the claim is that occlusion does not explain the stub's 0.202 error, so the bar is half of that,
+and the row that actually carries the claim, the glide, is still asserted at the original 0.02 and
+still measures **0.000**.
