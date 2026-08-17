@@ -36670,14 +36670,14 @@ are.
 
 ---
 
-## §447 — Running §446.3's detector: 220 hits, two real clusters, and the refinement that a missing seam is not a bug
+## §448 — Running §446.3's detector: 220 hits, two real clusters, and the refinement that a missing seam is not a bug
 
 §446.3 proposed a detector — *a workaround appearing independently in more than two places is a
 defect report nobody wrote down, and the cheap grep is assignments to a private field from outside
 its own class* — and predicted that every cluster of two or more is an unfiled defect. That
 prediction is testable, so this is the test. **Report only; nothing here is fixed.**
 
-### §447.1 Method, and the two false-positive families it had to grow past
+### §448.1 Method, and the two false-positive families it had to grow past
 
 Sweep `src/`, `tests/` and `tools/` for assignments to an `_`-prefixed member through a receiver
 that is not `this`, then attribute each field to the class that **declares** it, so "outside the
@@ -36709,7 +36709,7 @@ record. Two of them were **name-collision false positives that only a hand-check
 because those classes happen to declare same-named `this._x`. A detector that matches on a *name*
 will always do this, and the cost of not checking is a fabricated cross-module dependency.
 
-### §447.2 The result: two multi-file clusters, and one of them is the training case
+### §448.2 The result: two multi-file clusters, and one of them is the training case
 
 Split by whether more than one file found the same thing, because that is where §446.3's "five lanes
 each patched it and none filed it" character actually lives.
@@ -36763,7 +36763,7 @@ used as a public one*, a milder and different thing, and they do not pool:
 **Tier B** (`_dirty`, `_stamp`, `_deathMax`, `_holdLook`, `_patchWarned`) is a class collaborating
 with its own helper inside one module — `Particles`↔`Batch`, `Collision`↔`rec`. Not the category.
 
-### §447.3 The verdict, and the refinement
+### §448.3 The verdict, and the refinement
 
 **The prediction holds, and the class is small.** Two multi-file clusters, one of which is
 `_needSpawnSnap` itself, so the detector produced exactly **one new finding** at full strength — and
