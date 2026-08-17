@@ -111,9 +111,21 @@ export const TUNE = {
      size until the boom passes 11 m. **The level never refused the dolly; it refused the
      recovery constant.**
 
-     0.30 is therefore retained as a conservative value, NOT as a level-derived one, and it is
-     flagged for re-decision rather than quietly re-tuned here — the size is a feel question
-     and the evidence that settled it has been withdrawn.
+     WHERE THAT LEAVES 0.30 — under-determined, not arbitrary, and the difference decides what
+     to do about it. Of the three arguments that chose it:
+
+       1. the level's occlusion budget                                    WITHDRAWN (above)
+       2. the framing channel is already carrying the speed cue           SURVIVES, and on its
+          own argues for a SMALL value: `fovSpeedGain` already delivers +5.40 deg continuously
+          at `runSpeed`, and `FRAMES.run_fast.fov` would add +4.6 on top if that row ever goes
+          live. The dolly is a supplement to a cue that already exists, not the mechanism for it.
+       3. no tiering without new `Moveset` states                         UNTOUCHED
+
+     Two of three stand and one of those independently wants a small number, so 0.30 is not a
+     number picked out of the air — it is a number the surviving arguments bound loosely rather
+     than pin. An ARBITRARY constant should be re-derived; an UNDER-DETERMINED one should be
+     evaluated by eye. This is the second, so it is on the list as a feel question needing
+     frames, and it is not re-tuned from this lane's measurements.
 
      Deliberately NOT done here: lighting the `run_fast` framing row as well. Its `fov` +4.6
      ADDS to `fovSpeedGain` +5.4 in `_write`, and the two have never been live at once; that
