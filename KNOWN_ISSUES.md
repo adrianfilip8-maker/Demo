@@ -38604,3 +38604,97 @@ emits above are that partial behaviour, not the full feature.
 
 **851 arms: 848 pass, 3 fail** — D8, L1b and the CameraRig framing arm, all the camera lane's
 uncommitted `CameraRig.js`. `P-A1` has gone green since last round; the world lane fixed it.
+
+---
+
+## §506 — The chain is completable: my hypothesis was wrong, and the driver that proves it is now committed
+
+§505.1 recorded a hypothesis — that `HookSwing`'s release halves your speed, so the authored
+four-ring chain might not be drivable at all. It reached the coordinator, and a task was built on it.
+**It is false.** Reported first, because it is the correction.
+
+### §506.1 There are two releases, and four drivers across two lanes used the wrong one
+
+```
+  bail    jump / buffered jump / interact / attack, after `hookMinSwing`
+          -> velocity × `hookRelease` 1.15, PLUS `hookUpKick` 2.4 of lift    the CHAIN release
+  crouch  after `hookMinSwing`
+          -> velocity × 0.5                                                  the DROP-OFF
+```
+
+`Moveset.js:1009` and `:1020`. The `multiplyScalar(0.5)` I quoted is the deliberate step-off; the
+release that carries a chain multiplies by 1.15 and adds lift, and its own comment says so — *"a
+well-timed release at the bottom of the arc genuinely launches you across the courtyard."* **My
+drivers held `crouch`.** I read one of the two branches and reported it as the release.
+
+**A second instrument error compounded it, and it was visible in the output.** My first reachability
+sweep started Sly hanging directly below the ring at rest — the pendulum's stable equilibrium, where
+a swing never swings. It reported a release speed of **1.65 m/s at every hold from 12 to 80 frames**,
+and an apex that moved by 4 cm across the whole sweep. A quantity that is identical across a swept
+input is an instrument fault, and §443.6 already has that exact entry ("a table that is identical at
+every drop height should have read as an instrument fault immediately"). It read to me as
+"the chain is hard".
+
+### §506.2 The chain is completable, and the driver is committed
+
+Arriving at a ring with real speed, grabbing, swinging and bailing toward the next:
+
+```
+  leg               gap      arrival speeds that reach the next ring
+  ring1 -> ring2    8.16 m   7 of 7   (6, 8, 10, 12, 14, 16, 18 m/s)   closest 0.22-2.20 m
+  ring2 -> ring3    7.46 m   7 of 7                                     closest 0.21-2.20 m
+```
+
+Not a narrow phase window either: at every arrival speed some release phase in 10–40 frames makes
+it. **This is not a difficulty finding and not a route defect — the chain simply works, on the
+release the game intends.**
+
+`telegraph.test.mjs` **T8** is that driver, committed, which is the thing §505.1 said did not exist.
+The telegraph leads §449 published are now re-derivable in principle: what T8 pins is the
+precondition, and pairing leads still needs a full drive from the kiosk lintel.
+
+### §506.3 Leg 3 → 4 does something else, and it is the `afford` limitation again
+
+The third leg closes to **0.66 m of ring 4 — 4.4× inside `hookAuto` 2.9 — and does not grab it.**
+Instrumented per frame rather than explained:
+
+```
+  f84  dist->ring4 1.40   afford('hook') -> a DIFFERENT hook   a.distance 1.70   state toTarget
+  f90  dist->ring4 0.66   afford('hook') -> a DIFFERENT hook   a.distance 1.00   state toTarget
+  f91                                                                            state hookSwing
+```
+
+Sly passes through traversal magnetism (`toTarget`) and `afford('hook')` returns a hook that is
+neither the ring he left nor ring 4 — a nearer one — and he grabs that. **He does chain; he chains
+onto something else.**
+
+This is the same limitation §505.3 recorded for the telegraph, met from the other side:
+**`afford(kind)` returns one hold per kind, the nearest, with no way to ask for the next one.** For
+the telegraph it means the held ring cannot be skipped past; here it means the authored ring cannot
+be preferred over an unauthored neighbour. One missing capability, two symptoms, and the fix for
+both is a ranked `afford` in `Targets.js`.
+
+Recorded, not fixed: it is `Targets.js`, and whether ring 4 *should* win over a nearer hook is a
+level-authoring question as much as a code one.
+
+### §506.4 `multiplyScalar(0.5)` is untouched, and the reason is now stronger
+
+It was never the problem, so there is nothing to trade. It is the drop-off, it is presumably there to
+stop a step-off launching you across the level, and changing it would alter every hook in the game.
+
+### §506.5 The arm caught my own overstatement, which is what it is for
+
+T8's counterexample first asserted that the crouch release chains **zero** times. It went red at
+**2 of 9**. The ×0.5 drop-off is not an absolute blocker — it is a much worse launch: swept like for
+like, `bail` chains from **7 of 7** arrival speeds and `crouch` from **2 of 7**. The assertion now
+pins the measured difference rather than the tidy story, because *an arm that asserts the tidy
+version of a mechanism is an arm that will be wrong the moment the mechanism is only mostly tidy.*
+
+That is the second time in two rounds that the thing I was most confident about was the thing the
+measurement removed, and both times the confidence came from reading one branch of a two-branch
+mechanism.
+
+### §506.6 Suite
+
+**852 arms, 852 pass, 0 fail.** The camera lane has landed `CameraRig.js`; D8, L1b and the CameraRig
+framing arm are all green again.

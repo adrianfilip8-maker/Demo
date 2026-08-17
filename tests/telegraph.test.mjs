@@ -356,3 +356,110 @@ test('telegraph: hookGrab reports the ring it grabbed, not the one grabbed last'
 
   console.log('[T7] cloned payloads keep their own ring; the live reference reports the last one for both');
 });
+
+/* ====================================================================== */
+/* T8 — the authored ring chain is completable, and a committed driver     */
+/* ====================================================================== */
+
+test('telegraph: the authored hook chain chains — the release that carries you is `bail`, not `crouch`', async () => {
+  /* ── WHY THIS EXISTS, AND WHAT IT CORRECTS ────────────────────────────────────────────────
+   * §505.1 recorded a hypothesis: `HookSwing`'s release does `velocity.multiplyScalar(0.5)`, so
+   * flying to a ring 7+ m away might not be drivable at all — which would make the authored
+   * four-ring chain, on the critical path to the vault, uncompletable.
+   *
+   * **The hypothesis is false, and it was my driver's fault.** There are TWO releases:
+   *
+   *     bail   jump / buffered jump / interact / attack, after `hookMinSwing`
+   *            -> velocity x `hookRelease` 1.15, PLUS `hookUpKick` 2.4 of lift   <- the chain release
+   *     crouch after `hookMinSwing`
+   *            -> velocity x 0.5                                                <- the drop-off
+   *
+   * Four drivers across two lanes held `crouch`. That is the deliberate step-off, not the launch.
+   * A second error compounded it: starting Sly hanging directly below the ring at rest is the
+   * pendulum's stable equilibrium, so the swing never swings — release speed came out 1.65 m/s at
+   * every hold from 12 to 80 frames, which should have read as an instrument fault immediately
+   * (§442.3) and instead read as "the chain is hard".
+   *
+   * ── WHAT THIS ARM PINS ────────────────────────────────────────────────────────────────────
+   * Sly arrives at a ring with real speed, grabs, swings, and bails toward the next ring.
+   *
+   * ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : legs ring1->ring2 (8.16 m) and ring2->ring3 (7.46 m), which reach the INTENDED
+   *               next ring across every arrival speed swept, 6 to 18 m/s.
+   *   fails  on : RUN in-arm — the same legs released with `crouch` instead, which is the drop-off
+   *               path and does not carry.
+   *   does NOT  : measure telegraph LEADS. It proves the chain is drivable, which is the
+   *   discrim.    precondition §505.1 said was missing; pairing leads still needs a full drive
+   *               from the kiosk lintel. Nor does it pin leg ring3->ring4: that leg closes to
+   *               0.66 m of ring 4 — 4x inside `hookAuto` 2.9 — but `afford('hook')` returns a
+   *               DIFFERENT hook in reach and Sly grabs that one instead, via `toTarget`. Real
+   *               behaviour, recorded in §506, not asserted here.
+   */
+  const { realWorld: rw, hardReset: hr, DT: dt } = await import('./_moveset.mjs');
+  const { TUNE: T } = await import('../src/player/Controller.js');
+  const { engine, c } = await rw();
+  const RINGS = [[4.2, 14.8, 4.5], [1.0, 14.5, -3.0], [-4.0, 13.9, -8.5]].map((a) => new THREE.Vector3(...a));
+
+  function aim(dx, dz) {
+    const l = Math.hypot(dx, dz) || 1;
+    engine.camera.rotation.set(0, Math.atan2(-dx / l, -dz / l), 0, 'YXZ');
+    engine.camera.updateMatrixWorld(true);
+  }
+
+  /** Arrive at ring `ri` at `v` m/s aimed at the next, grab, swing `hold` frames, release. */
+  function leg(ri, v, hold, release) {
+    const A = RINGS[ri], B = RINGS[ri + 1];
+    const dir = new THREE.Vector3(B.x - A.x, 0, B.z - A.z).normalize();
+    const start = A.clone().addScaledVector(dir, -2.0); start.y = A.y - T.hookL;
+    hr(engine, c, start, Math.PI);
+    c.grounded = false; c.sm.set('fall');
+    c.velocity.copy(dir).multiplyScalar(v);
+    let relAt = -1, released = false, closest = Infinity;
+    for (let i = 0; i < 400; i++) {
+      aim(B.x - c.position.x, B.z - c.position.z);
+      engine.input.beginFrame(dt);
+      engine.input.move.x = 0; engine.input.move.y = 1;
+      if (c.sm.name === 'hookSwing') { if (relAt < 0) relAt = i; if (i - relAt === hold) engine.input.hold(release); }
+      engine.time = i * dt; c.update(dt, i * dt);
+      if (relAt >= 0 && !released && c.sm.name !== 'hookSwing') released = true;
+      if (released) {
+        closest = Math.min(closest, c.position.distanceTo(B));
+        if (c.sm.name === 'hookSwing' && c.anchor.distanceTo(B) < 0.5) return { grabbed: true, closest };
+        if (c.grounded || c.position.y < 0) break;
+      }
+    }
+    return { grabbed: false, closest, everSwung: relAt >= 0 };
+  }
+
+  /* Arrival speeds (of 7) from which SOME release phase reaches the next ring. */
+  const SPEEDS = [6, 8, 10, 12, 14, 16, 18];
+  const HOLDS = [10, 14, 18, 20, 24, 28, 32, 40];
+  const chainsFrom = (ri, release) => SPEEDS.filter(
+    (v) => HOLDS.some((hold) => leg(ri, v, hold, release).grabbed)).length;
+
+  /* ── WHAT: both legs chain on the bail release, from every arrival speed ── */
+  for (let ri = 0; ri < 2; ri++) {
+    const n = chainsFrom(ri, 'jump');
+    assert.equal(n, SPEEDS.length,
+      `leg ring${ri + 1}->ring${ri + 2} reached the next ring from only ${n}/${SPEEDS.length} `
+      + 'arrival speeds. The authored chain is on the critical path to the vault; if it needs a '
+      + 'narrow arrival speed that is a difficulty finding, and if it needs none it is a route '
+      + 'defect. Either way it is not "uncompletable", which is what §505.1 suspected.');
+  }
+
+  /* ── WHICH: the counterexample, RUN ──
+   * My first version of this asserted crouch chains ZERO times and the arm went red at 2 of 9.
+   * The ×0.5 drop-off is not an absolute blocker; it is a much worse launch. The claim is
+   * therefore the MEASURED difference and not the story I had about it — an arm that asserts
+   * the tidy version of a mechanism is an arm that will be wrong the moment the mechanism is
+   * only mostly tidy. */
+  const bail = chainsFrom(0, 'jump');
+  const crouch = chainsFrom(0, 'crouch');
+  assert.ok(crouch < bail,
+    `crouch reached the next ring from ${crouch}/${SPEEDS.length} arrival speeds and bail from `
+    + `${bail}. If the ×0.5 drop-off carries a chain as well as the ×1.15 launch does, the two `
+    + 'release paths are not distinct and the explanation above is wrong.');
+
+  console.log(`[T8] both swept legs chain on \`bail\` at ${bail}/${SPEEDS.length} arrival speeds; `
+    + `\`crouch\` manages ${crouch}/${SPEEDS.length} — worse, but not zero`);
+});
