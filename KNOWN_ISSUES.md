@@ -34843,6 +34843,49 @@ can render it.
 Two rows remain unresolved by the same arithmetic: `roll` clears at 94% and is fine; `dive`'s
 duration is a fall time rather than a constant and is **unmeasured**.
 
+### §432.4 CORRECTION — the ceiling is an upper bound on delivery, and every number above is optimistic
+
+Recorded one round later by the lane that found the class, and it makes the class worse rather
+than smaller. **`FRAMES.tau` is never the delivery time of anything.**
+
+Every framing channel feeds at least one *further* blend before it reaches a pixel, and the boom
+feeds two: `_frame.dist` → `_boomWant` (`zoomTime`) → `boom` (`zoomTime`/`recoverTime`). FOV goes
+through `_fovCur` (`fovTime`); the lateral offset through `_sideSign`; the pivot through the follow
+spring. **19 blend sites against 7 authored channels.**
+
+Measured end to end on a jump-apex dive:
+
+```
+  the FRAMES channel   reaches  73%
+  the FOV on screen    reaches  43%
+  the BOOM on screen   reaches   5%      5.29 m against an authored 3.20 m
+```
+
+**The Cane Slam does not pull in at all**, and the gap between the number a channel-level
+instrument reports and the number a player sees is more than an order of magnitude.
+
+So `1 − exp(−n·dt/τ)` is an **upper bound on delivery, never the delivery** — and **`land`'s 45%
+above is itself an overstatement.** Every figure in §432 is a ceiling on a ceiling. The lane's own
+words: *"I was one layer short of the screen for the whole of the last round."*
+
+> **§432.4 — Measure at the screen, not at the last variable you can name.** A value that blends
+> through a chain has as many ceilings as the chain has stages, and the one you can most easily
+> instrument is the first. §430.2 caught the *legible channel vs the felt channel* inside one
+> stage; this is the same error one layer up, and it was invisible for exactly the same reason —
+> the accessible number was plausible, ordered correctly against its neighbours, and wrong.
+
+The `dive` result inverts under it too. `DiveAttack` descends at a constant 18 m/s so the crossover
+is `diveSpeed × 3τ` = **4.86 m of fall** — and flat ground yields 2.52 m from a jump, 4.56 m from a
+double jump, **both under it.** So **on open ground the Cane Slam can never reach its own framing,
+and from any architecture it always does.** The framing is not broken; its *variance* is the
+finding, and the loudest move in the game has two visual identities with nothing telling the player
+which one they are getting.
+
+Longest clock in the file is `ceilTau` at **1.103 s** — 199 frames to 95%, gated on moving under a
+ceiling, so a doorway crossed in under a second delivers about half of it. Reported rather than
+measured: **no driven route in this project spends 3.3 s moving under a lintel**, which is its own
+small finding.
+
 ## §431 — The collect loop, driven: 8 of 13 legs connect, and the one that looked like a gap was furniture
 
 Twelve bottles were proved reachable in §423. **Reachable is not connected.** R2's question was
