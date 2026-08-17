@@ -36667,3 +36667,125 @@ Driven together rather than separately, which was the point of the round.
 No interaction defect was found between the six. The three findings above are all older than they
 are.
 
+
+---
+
+## §447 — Running §446.3's detector: 220 hits, two real clusters, and the refinement that a missing seam is not a bug
+
+§446.3 proposed a detector — *a workaround appearing independently in more than two places is a
+defect report nobody wrote down, and the cheap grep is assignments to a private field from outside
+its own class* — and predicted that every cluster of two or more is an unfiled defect. That
+prediction is testable, so this is the test. **Report only; nothing here is fixed.**
+
+### §447.1 Method, and the two false-positive families it had to grow past
+
+Sweep `src/`, `tests/` and `tools/` for assignments to an `_`-prefixed member through a receiver
+that is not `this`, then attribute each field to the class that **declares** it, so "outside the
+owning class" is decided by the declaration site rather than by which file the write sits in.
+311 files, **220 writes, 118 distinct fields** after two corrections that the first pass got wrong:
+
+- **`this` aliases.** `src/fx/*` uses `const self = this` inside `onBeforeRender` closures in five
+  places. The first pass reported `self._stash` as a 12-site, 3-file cluster — it would have been
+  the second-largest finding in the sweep, and it is `this._stash`.
+- **Private *methods* are declarations too.** The owner map was built from `this._f =` writes only,
+  which silently demoted `c._bindCollision = () => {}` — a test overwriting a private method on a
+  live Controller — to "not a class private". That is a 4-site cluster in 2 files, and it was
+  invisible until methods were added to the map.
+
+Then three tiers, because pooling these under one label is what §442 caught the camera lane doing:
+
+```
+  TIER A  cross-FILE write to a field a src/ class declares      34 fields ·  71 sites
+  TIER B  same-file, cross-class (a module and its own helper)    5 fields ·  10 sites
+  TIER C  not a class private at all                             78 fields · 139 sites
+```
+
+**Tier C is 63 % of the raw hits and none of it is the category.** It is `window.__X` / `globalThis.__X`
+browser-harness namespaces in `tools/` (the bulk), plus `_`-fields stamped onto foreign objects the
+writer owns outright — a THREE material, a pooled particle handle, an audio buffer, a collider
+record. Two of them were **name-collision false positives that only a hand-check could remove**:
+`Lighting.js`'s `s._light` and `h._live` are Lighting's own plain-object fields (declared at
+`Lighting.js:948` and `:886`), attributed by the detector to `Guard` and `SparkleField` purely
+because those classes happen to declare same-named `this._x`. A detector that matches on a *name*
+will always do this, and the cost of not checking is a fabricated cross-module dependency.
+
+### §447.2 The result: two multi-file clusters, and one of them is the training case
+
+Split by whether more than one file found the same thing, because that is where §446.3's "five lanes
+each patched it and none filed it" character actually lives.
+
+**MULTI-FILE (≥ 2 files) — 2 clusters**
+
+| cluster | sites / files | invariant the owner does not maintain | compensation |
+|---|---|---|---|
+| `_needSpawnSnap` | 14 / 5 | the spawn snap is armed **for the spawn** — `teleport()` did not spend it | **vestigial** since §446 |
+| `_colReal` + `_calibrated` + `_bindCollision` + `_capOff` | 16 writes, 6 idiom-sites / 3 files | **`Controller` offers no way to be given a collision world** | **load-bearing** |
+
+The second is the genuinely new hit. `_bindCollision()` runs unconditionally at the top of every
+`update()` and re-reads `engine.get('collision')`, so a caller-supplied `col` survives exactly zero
+frames. Anyone wanting a synthetic collision must set three private fields and **overwrite a private
+method** — `tests/_moveset.mjs:177` says so in its own comment: *"the stub is the collision; do not
+let init swap it"*. `traversal.test.mjs:4000` and `sweepcensus.mjs:192` run the same idiom in reverse
+to force a recalibration. Four install sites, two inverse, three files, no accessor.
+
+**SINGLE-FILE, MULTI-SITE — 2 clusters.** Weaker evidence by construction: one lane found each, so
+"nobody filed it" is much less surprising.
+
+- **`_frame`, 6 sites, `traversal.test.mjs`.** `mark()`, `afford()` and `probeLedge()` memoise on
+  `_frame`, which only advances inside `update()`, and **there is no public way to invalidate those
+  memos.** A probe that moves Sly and re-asks gets the previous answer. Load-bearing, and the file
+  records the cost at line 1724: *"which is precisely how `combatStrafe` went missing from the first
+  run of this census."*
+- **`_skyOpen` + `_encloseTarget` + `_encloseAt`, 5 writes, `holdscope.test.mjs`.** LIGHTING's
+  enclosure probe cache, cleared to *"test the bare compare"*. Same shape, smaller.
+
+**SINGLETONS — ~26 fields, one file each.** Per the coordinator's split these are *a private field
+used as a public one*, a milder and different thing, and they do not pool:
+
+- **`_bounceReq` is the only `src/` → `src/` write to another class's private field in the entire
+  shipped codebase.** `Controller.bounce()` writes it (`Controller.js:2001`); `Bounce.enter()` reads
+  and clears it (`Moveset.js:362`) — a request/consume handshake with no accessor. The sweep found
+  38 `src/`→foreign private writes and 37 of them are annotations on plain objects, THREE objects or
+  collider records that the writing module made. What makes this one worth a line rather than a
+  shrug is that **the codebase already contains the right idiom**: `takeJump()` exists to consume the
+  jump buffer exactly this way. `_bounceReq` is the one that did not get one.
+- **Instrumentation, not compensation.** `_absorb`, `_scatterPalms`, `_push`, `_emit` are prototype
+  patches in `decalstat` / `vegwater` / `basketvary` / `fxfeel`. The ones showing 2 sites are
+  patch-and-restore of a **single** instrumentation, so the raw site count over-reads them by 2×.
+  `_sweepLandFrame` (`recover.test.mjs:369`) and the `_needSpawnSnap` re-arm (`:631`) are §443/§446
+  ablations — deliberate falsifiers, the opposite of a workaround.
+- **Per-run state scrubs** (`_pending`, `_pendingFrom`, `_safeT`, `_landFrame`, `_left`, `_line`,
+  `_spent`, `_hold`, `_offRec`, `_assistUsed`, `_lastResolved`, `_lx/_ly/_lz`, `_cache`, `_t`,
+  `_used`). §424 already retired the tests' version of this by rebuilding the moveset instead of
+  enumerating fields — `hardReset` says so at length. **The enumeration it retired is still alive in
+  `tools/sweepcensus.mjs:138`**, which is the one place §424's argument never reached.
+
+**Tier B** (`_dirty`, `_stamp`, `_deathMax`, `_holdLook`, `_patchWarned`) is a class collaborating
+with its own helper inside one module — `Particles`↔`Batch`, `Collision`↔`rec`. Not the category.
+
+### §447.3 The verdict, and the refinement
+
+**The prediction holds, and the class is small.** Two multi-file clusters, one of which is
+`_needSpawnSnap` itself, so the detector produced exactly **one new finding** at full strength — and
+that is the honest number rather than a stretched list. `_needSpawnSnap` was not singular, but it was
+the extreme: 5 files against the next-largest 3.
+
+The refinement is what separates them, and it changes what the detector is for:
+
+> **A cluster that compensates for a missing SEAM is a design gap. A cluster that compensates for the
+> owner failing its own stated invariant is a bug.** Only the second kind is an unfiled defect.
+
+Three of the four clusters are the first kind — there is no `useCollision()`, no memo invalidation,
+no enclosure reset, and every site is doing something the owner has no vocabulary for. Adding the
+seam would be an improvement and its absence has never shipped a wrong frame. `_needSpawnSnap` is the
+only one of the four in the second category: the owner had a stated invariant, `teleport()` broke it,
+and the workarounds were hiding a live 17.5 m teleport rather than a missing convenience.
+
+So the grep is worth keeping and its yield is one bug per ~220 hits. **The discriminator to apply to
+each cluster is: does the owner claim, anywhere, to maintain what the callers are patching?** For the
+stub-collision cluster the answer is no — `_bindCollision`'s docblock says it re-binds every frame
+and it does. For `_needSpawnSnap` the answer was yes, in `_safetyNet`'s comment, which described the
+snap as scoped to the spawn while the code scoped it to the frame.
+
+Nothing here is fixed. The three seams are named so a person can decide whether they are worth
+adding; `_bounceReq` and the `sweepcensus.mjs:138` enumeration are noted for whoever owns those files.
