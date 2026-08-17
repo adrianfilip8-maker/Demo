@@ -350,8 +350,20 @@ test('P-A1: a rope coil is set dress and carries no gameplay volume', () => {
      is a pin.** Moving it DOWNWARD without a recorded reason is the same failure as moving it
      upward, and it is the easier one to commit because removing a collider feels like tidying.
      The lane that made this change flagged it as needing the same conversation as an addition
-     before it made it, which is why the change is here at all. */
-  assert.equal(REG.length, 268, 'collider registrations unchanged by this seal');
+     before it made it, which is why the change is here at all.
+
+     ── 268 → 269: one `groundProxy`, the bridge at flight A's foot (§482.3) ───────────────────
+     ARCHITECTURE, not PROPS, and it is an ADDITION, which is the direction this pin is most
+     obviously for. The tomb descent's flight A ends at (−6.06, −5.6) and the mid landing begins
+     at x −9.6: **3.54 m of open air at the same height**, which a walker cannot cross and which
+     nothing had ever noticed because TERRAIN's collision proxy roofed the entire stairwell until
+     §480. `groundProxy(A, -9.6, -5.9, -5.6, -56.3, -54.2)` closes it. Every other tag is
+     byte-identical — this is `ground` +1 and nothing else, checked against the histogram rather
+     than inferred from the total, exactly as the 272 → 268 entry above requires.
+
+     The seal did its job and caught a change made three files away, which is the whole argument
+     for a level-wide total over a per-module one. */
+  assert.equal(REG.length, 269, 'collider registrations unchanged by this seal');
   assert.equal(P.stats.decals, 46, 'contact decals unchanged by this seal');
   assert.equal(P._fx.length, 24, 'fx emitters unchanged');
   assert.equal(P._lights.length, 24, 'lights unchanged');
