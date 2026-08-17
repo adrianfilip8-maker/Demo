@@ -33866,3 +33866,131 @@ Still open, and neither is mine to take:
   cannot be entered without a driven Controller. The original is scraped and pinned, so a change
   to it fails the arm rather than silently making the ladder bottle's 0.700 m fiction — but a
   replication is still a replication, and the honest fix is a probe that drives the real state.
+
+## §424 — SCOPE: the state-driving harness already exists, twice, and the round to spend is not the one commissioned
+
+Commissioned to scope a harness that boots a `Controller` and drives it into a named state, on the
+premise that *"anything that needs a Controller state has three options — replicate its entry
+conditions, scrape and pin, or not test it."* **That premise is wrong, and correcting it is the
+deliverable.** Two such harnesses are already built, work, and are asserted green on every suite
+run. Both are private to `tests/traversal.test.mjs`.
+
+Written as an estimate, not a build. Nothing in this section changes any file.
+
+### §424.1 What exists
+
+**A stub-world driver.** `censusSetup(name)` (`traversal.test.mjs:993`) is a per-state table of
+*one world and one starting pose per state*, and it covers effectively all 32 registered states —
+synthetic hook, pole, spire and rail affordances, a `BLANK_WALL` and a `LEDGE_WALL`, a ladder wall
+with a rung count, a **finite** vent for `crawl` (its own comment records that an infinite one
+reports `crawl` as a trap, "which is a statement about the harness and not about the moveset"),
+and stub guards for `combatStrafe`/`pickpocket`.
+
+**A real-world driver.** `realWorld()` + `hardReset()` + `driveRoute(engine, c, start, yaw,
+frames, drive, watch)` (`traversal.test.mjs:1257/1310/1557`) boots Terrain, Architecture, Props and
+Collision — 273 colliders, 115,676 triangles, one BVH — and drives Sly through the **shipped
+temple** with scripted input, returning the state path and the frame each state was first entered.
+
+Coverage of the real-world driver, from its own green assertions:
+
+```
+  reach: routes table          13 states from spawn on plain input
+  reach: attach states         10 more, asserted deepEqual(missing, []) in the shipped level
+  ledgeHang                    driven via arrive('ledgeHang')
+  land                         partial and documented — a sub-frame race, 12 of 40 phases
+  spireLand / ledgeHang        swept for FEASIBILITY across the level: where each is possible
+  ------------------------------------------------------------------------------------------
+  24 of 32 driven through play in the real level; the residue has stub routes
+```
+
+The states with a stub route but no proven real-world approach are **spireLand, ledgeClimb,
+railSlide, railWalk, poleSwing, crawl** — six.
+
+So the work is **extraction, not invention.** The expensive part of this job — finding an approach
+in a real level for each attach state — is done and shipped.
+
+### §424.2 The real cost is not the harness; it is that nothing caches
+
+`realWorld()` has no cache and is called **20 times** in one file. Measured:
+
+```
+  world boot (repeated, same process)   7.8, 7.0, 4.8, 5.0, 5.7 s     — no warm-up gain
+  fresh Controller (mean of 20)         0.3 ms
+  120-frame drive                       102 ms
+  traversal.test.mjs alone              127 s   of a 181 s suite
+  => ~110 s of that 127 s is 20 world boots
+```
+
+**Roughly 60% of the suite's wall-clock is one file rebuilding the same immutable world twenty
+times.** This has nothing to do with state driving and is worth more than the thing I was asked to
+scope.
+
+Caching is safe, and that was checked rather than assumed: `Controller` registers **no colliders**
+(`grep registerCollider src/player/Controller.js` is empty) and touches the world only by adding a
+debug mesh to the scene, so the BVH cannot be mutated by a driven probe. The two shared-engine
+hazards are `engine.events` accumulating between probes — which `hardReset` already clears — and
+scene accumulation, which is inert headlessly.
+
+### §424.3 One measurement changes the design, and retires a defect class
+
+```
+  fresh Controller                       0.3 ms
+  fresh Controller => fresh states       true    (Controller.js:619 builds a new moveset)
+```
+
+`hardReset` exists to scrub the private fields of *shared* state instances, and it enumerates them
+by hand: `WallClimb._left/_line/_hold/_pick`, `HookSwing._spent`, `RailSlide._offRec`. Its comment
+records what that list is for — *"A player never teleports between rungs; a probe harness does."*
+
+**A fresh Controller costs 0.3 ms and gets fresh state instances, so the list is unnecessary.** And
+it should go, because it is already wrong in two ways that a hand-maintained list is always
+eventually wrong in:
+
+- `idle._bored` is a private mutable field on a registered state and is **not in the list**.
+- `RailSlide._offRec` is **assigned lazily**, so it does not exist on a fresh instance at all — a
+  reflective sweep cannot enumerate it, and neither can a reader. The list can only ever contain
+  the fields somebody remembered.
+
+That is the same object as §418.3's failure mode one layer down: a hand-written enumeration of
+things you must not forget, with nothing checking that you did not.
+
+### §424.4 The estimate: one round, and two I would not spend
+
+**Round 1 — extract, cache, and prove. Recommended, self-contained, low risk.**
+Move `stubEngine`, `StubInput`, `stubCollision`, `censusSetup`, `realWorld`, `driveRoute` into a
+shared `tests/_moveset.mjs`; cache the world and mint a fresh `Controller` per probe; delete
+`hardReset`'s private-field list as a consequence rather than as a chore; migrate two consumers as
+proof. **It pays for itself on the clock alone** — ~110 s off a 181 s suite — independently of
+whether anything else follows.
+
+The two proof consumers pick themselves, because both were written **today** and both hit exactly
+this gap:
+
+- `tests/recover.test.mjs` R2 went vacuous mid-round and its own comment says why: *"The first
+  draft set an attach state with `sm.set('ledgeHang')` and then probed: `LedgeHang.enter` SNAPS
+  SLY TO A LEDGE, so he was at (0, −1.62, 0) with no platform under him, `narrowGround()` refused,
+  and the attach gate under test never ran."* The arm now sets the state and then hand-repairs
+  what `enter()` did. A driver hands back a real attach pose.
+- `tests/camlead.test.mjs` imports `Controller` and drives none of it: 13 state-name references,
+  all `mv.stateName = 'wallRun'` on a fake movement object.
+
+And my own `cluevault` R2 cling replication is a third: `driveRoute` already reaches `wallClimb` in
+the real level and the ladder test already tracks distinct rungs, so driving to
+`notch-pylon-e-w-5` and reading `c.position` is a consumer of Round 1, not new machinery.
+
+**Round 2 — the six residual states, given real-world approaches. Optional, genuinely research.**
+Each needs a place in the temple and an approach that works, which is the part that took the
+traversal lane its rounds. Its failure mode is named and it is the one I have spent two rounds
+catching: **a driver that silently degrades to teleport-and-set is worse than no driver**, because
+it returns a pose that looks driven. If this is spent, the acceptance bar is that every state
+either arrives through `update()` or reports that it did not — never a fallback.
+
+**Round 3 — migrating the ~46 string-fixture sites. I would not spend this, and not because of
+cost.** They are spread over 8 files and each is a judgement, not a mechanical move. Several
+should stay strings: `audio.test.mjs` mapping a `playerState` name to a footstep cue is testing a
+lookup table, and booting a 5 s world to exercise it would make the test slower, more fragile and
+no more truthful. The right unit is "does this site reason about *entry conditions*", and only
+some do. A wholesale migration would convert honest fast tests into slow ones to satisfy a rule.
+
+> The one-line answer: **it is one round, because the two rounds that would have been expensive
+> were already spent by another lane and left in a file nobody else can import.**
