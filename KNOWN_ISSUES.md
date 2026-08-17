@@ -38092,3 +38092,28 @@ not path-scoped, so an explicit-path add still commits whatever a sibling has st
 --cached --stat` between staging and committing, treating any unexpected file as a stop**, is now
 run on every commit in this lane. The index was verified empty before this round began and the
 world lane's `EgyptLevel.js` was confirmed unstaged and left alone.
+
+### §503.7 The check ran, passed, and the collision happened anyway — because the race is AFTER it
+
+Recorded because it happened to this commit, on the round that adopted the check.
+
+`git diff --cached --stat` was run between staging and committing and reported exactly the two
+intended files, 127 insertions. The commit that followed produced **`progress/records/HARDWARE-REVIEW.md`,
+48 insertions** — the camera lane's work, under this lane's message — and left both of my files
+unstaged again. Something reset and re-populated the shared index in the window between the check
+and the commit.
+
+**So the check as §460.4 states it is necessary and still not sufficient, for the same structural
+reason it was written to fix.** `git diff --cached` samples the index at a moment; `git commit`
+reads it at a later one; the gap is where the race lives, and a check that only runs before the
+commit can only ever catch a collision that has already finished.
+
+The rule that actually holds, and the one this lane now runs:
+
+> **Verify AFTER the commit, not only before.** `git show --stat HEAD` immediately after committing,
+> and treat a mismatch against what you staged as a failed commit to be fixed forward.
+
+Fixed forward rather than rewritten: `583c223` keeps this lane's message on the camera lane's
+content, and the real content is in the commit that follows it. Their work is intact and pushed, so
+rewriting shared history to repair a byline would cost more than saying so — §443.7's trade, made
+again for the same reason.
