@@ -358,6 +358,23 @@ export const TUNE = {
  *   stiff  multiplier on the spring times (>1 = softer, stiller)
  *   tau    blend time into this framing (never a cut)
  *   vtrack 1 = this state's vertical motion is sustained, not ballistic — see `_follow`
+ *
+ * ── `tau` IS A CLAIM ABOUT A DURATION, AND THE STATE HAS ONE TOO ─────────────────────────────
+ * `_blendFrame` eases every channel above with this `tau`, so the most of a row that a residency
+ * of `n` frames can EVER deliver is `1 − exp(−n·dt/τ)`. Those two columns had never been compared
+ * and one row loses outright:
+ *
+ *   `land` — `Land` runs `landSoftTime` 0.09 s = 5.4 frames against `tau` 0.14 s. Ceiling **47 %**,
+ *   measured 45 % on a driven landing; a hard landing at `landHardTime` 0.19 s reaches 74 %.
+ *   **This framing has never been on screen** and cannot be, at any frame rate, on any route.
+ *
+ * `air` is the interesting one rather than the broken one: a long fall holds it 171 frames and
+ * delivers 100 %, a glide hinge holds it 7 and delivers 32 %, ordinary hops 10–27 and deliver
+ * 60–81 %. **What a player sees for `air` depends on how they got there.** `roll` clears at 94 %;
+ * `dive`'s duration is a fall time, not a constant, and is unmeasured.
+ * `tests/camdrive.test.mjs` D3 holds all of this; the note beside `_pivotGoal` carries the table.
+ * Not retuned here — dropping `land.tau` to ~0.03 s makes it deliverable and turns a blend into
+ * very nearly a cut on every landing in the game, which is a feel decision, not a defect fix.
  */
 const FRAMES = {
   idle:       { dist:  0.00, height:  0.00, lead: 0.35, fov:  0.0, pitch:  0.0 * DEG, side: 0.00, stiff: 1.15, tau: 0.35 },

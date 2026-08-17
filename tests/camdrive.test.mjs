@@ -27,9 +27,25 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { realWorld, hardReset, V, DT } from './_moveset.mjs';
 import { CameraRig, TUNE } from '../src/player/CameraRig.js';
+import { TUNE as CTUNE } from '../src/player/Controller.js';
+
+/** `FRAMES` read from source — §388: a second copy of the table is a table that will disagree. */
+const FRAMES = (() => {
+  const src = readFileSync(new URL('../src/player/CameraRig.js', import.meta.url), 'utf8');
+  const b = src.slice(src.indexOf('const FRAMES = {'), src.indexOf('\n};', src.indexOf('const FRAMES = {')));
+  const out = {};
+  for (const m of b.matchAll(/^ {2}([a-z_]+):\s*\{([^}]*)\}/gm)) {
+    const o = {};
+    for (const kv of m[2].matchAll(/(\w+):\s*(-?[\d.]+)/g)) o[kv[1]] = Number(kv[2]);
+    out[m[1]] = o;
+  }
+  if (Object.keys(out).length < 15) throw new Error(`FRAMES scan found ${Object.keys(out).length} rows`);
+  return out;
+})();
 
 const _fwd = new THREE.Vector3(), _rel = new THREE.Vector3(), _subj = new THREE.Vector3();
 
@@ -99,7 +115,7 @@ function replay(samples, collision, mode) {
       const inFront = _rel.dot(_fwd) > cam.near;          // §419 — see the file header
       const ndcY = inFront ? _subj.clone().project(cam).y : null;
       out.push({ key: rig._frameKey, sp, lead, inFront, ndcY, stiff: rig._frame.stiff,
-        camDist: cam.position.distanceTo(_subj) });
+        dist: rig._frame.dist, camDist: cam.position.distanceTo(_subj) });
     }
     return out;
   } finally { TUNE.leadMode = keep; }
@@ -306,4 +322,128 @@ test('D2: full compensation priced on driven trajectories, per framing and per o
   assert.ok(anyDelta > 0.2,
     `the largest lead difference between the two modes is ${anyDelta.toFixed(4)} m. `
     + '`TUNE.leadMode` is not reaching `_pivotGoal`, so every row above is one measurement printed twice.');
+});
+
+/* ====================================================================== */
+/* D3 — is an authored framing ever the framing a player sees?             */
+/* ====================================================================== */
+
+/** Split a replay into contiguous framing residencies and score `dist`-channel delivery. */
+function residencies(frames) {
+  const out = [];
+  let cur = null;
+  for (let i = 0; i < frames.length; i++) {
+    const f = frames[i];
+    if (!cur || f.key !== cur.key) { if (cur) out.push(cur); cur = { key: f.key, n: 0, d0: f.dist, peak: 0 }; }
+    cur.n++;
+    const target = FRAMES[cur.key]?.dist ?? 0;
+    const span = target - cur.d0;
+    /* A residency that STARTS at the authored value has nothing to blend and is trivially
+       delivered; scoring it as 0 would make a still camera look like a broken one. */
+    cur.peak = Math.abs(span) > 0.02 ? Math.max(cur.peak, (f.dist - cur.d0) / span) : 1;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+test('D3: which authored framings a player actually sees, and the one that is unreachable', async () => {
+  /* `FRAMES.tau` is a promise about how long a framing takes to blend in. A state's residency is
+     how long the player is in it. **Nobody had ever compared the two columns.** `_blendFrame`
+     eases every channel with `ease(cur, target, tau, dt)`, so the most of an authored framing a
+     residency of `n` frames can EVER deliver is `1 − exp(−n·dt/τ)` — a ceiling that has nothing
+     to do with the follow spring and everything to do with how long the state lasts.
+   *
+   * Two results, and the second is the one worth having:
+   *
+   *   `air`  is route-dependent, exactly as the settled/chopped split in D2 said. A long fall
+   *          holds it 171 frames and delivers 100 %. A glide hinge holds it 7 and delivers 32 %.
+   *          Short platforming hops sit in between. So **the framing a player sees for `air`
+   *          depends on how they got there**, and "does the player see it" has no single answer.
+   *
+   *   `land` is unreachable BY CONSTRUCTION, and that is a statement about the table rather than
+   *          about a route. `Land` runs `landSoftTime` 0.09 s — 5.4 frames — and `FRAMES.land.tau`
+   *          is 0.14 s, so the ceiling is `1 − exp(−0.09/0.14)` = **47 %**. No route, no player and
+   *          no machine can ever see more than half of the `land` framing. It has been authored,
+   *          maintained and reasoned about for the life of this file and it has never once been on
+   *          screen.
+   *
+   * Reported, not fixed. The one-line change is `FRAMES.land.tau`, and dropping it to ~0.03 s
+   * would make the framing deliverable *and* turn a blend into something much closer to a cut,
+   * which is a feel decision of exactly the class §422.3 refused to make from a lane.
+   *
+   * DOMAIN (§418.3)
+   *   passes on : the long fall and the glide — `air` at 171 frames and `glide` at 175 both
+   *               deliver ≥ 95 % of their authored `dist`, so a state whose residency outlasts
+   *               its own blend does get seen.
+   *   fails on  : `land` on the same runs (6 frames against a 25-frame blend, peak 45 %) and the
+   *               `air` hinge on the glide (7 frames, 32 %). Both measured on the same routes as
+   *               the passing rows, so the ceiling is known to discriminate rather than to be a
+   *               property of the scorer. */
+  const routes = [
+    ['flat run + jumps', await trace(V(0, 0.1, 30), 0, 300,
+      (inp, i) => { inp.move.y = -1; if (i % 50 >= 18 && i % 50 < 23) inp.hold('jump'); else inp.let_go('jump'); }, null)],
+    ['long fall', await trace(V(0, 18, 34), 0, 200, (inp) => { inp.move.y = -1; },
+      (c) => { c.grounded = false; c.sm.set('fall'); })],
+    ['glide', await trace(V(0, 18, 34), 0, 240,
+      (inp, i, cc) => { inp.move.y = -1; if (!cc.grounded) inp.hold('glide'); else inp.let_go('glide'); },
+      (c) => { c.grounded = false; c.sm.set('fall'); })],
+  ];
+
+  const seen = new Map();     // framing -> { visits, frames, minN, maxN, bestPeak, worstPeak }
+  console.log('\n[D3] framing residencies, and how much of the authored `dist` each delivered');
+  console.log('     route            framing    visits  frames  len min/max  need95  peak best/worst');
+  for (const [label, t] of routes) {
+    const res = residencies(replay(t.samples, t.collision, 'floor'));
+    const byKey = new Map();
+    for (const r of res) { if (!byKey.has(r.key)) byKey.set(r.key, []); byKey.get(r.key).push(r); }
+    for (const [key, rs] of byKey) {
+      const tau = FRAMES[key]?.tau ?? 0.3;
+      const need = 3 * tau / DT;
+      const ns = rs.map((r) => r.n);
+      const pk = rs.map((r) => Math.max(0, Math.min(1, r.peak)));
+      console.log(`     ${label.padEnd(16)} ${key.padEnd(10)} ${String(rs.length).padStart(6)} `
+        + `${String(ns.reduce((a, b) => a + b, 0)).padStart(7)}  ${String(Math.min(...ns)).padStart(3)}/${String(Math.max(...ns)).padStart(4)}`
+        + `${need.toFixed(0).padStart(9)}   ${(100 * Math.max(...pk)).toFixed(0).padStart(3)}% / ${(100 * Math.min(...pk)).toFixed(0).padStart(3)}%`);
+      const s = seen.get(key) || { visits: 0, frames: 0, minN: Infinity, maxN: 0, best: 0, worst: 1 };
+      s.visits += rs.length;
+      s.frames += ns.reduce((a, b) => a + b, 0);
+      s.minN = Math.min(s.minN, ...ns); s.maxN = Math.max(s.maxN, ...ns);
+      s.best = Math.max(s.best, ...pk); s.worst = Math.min(s.worst, ...pk);
+      seen.set(key, s);
+    }
+  }
+
+  /* The ceiling, derived rather than measured: `1 − exp(−n·dt/τ)`. */
+  const ceiling = (n, tau) => 1 - Math.exp(-(n * DT) / tau);
+  const landFrames = CTUNE.landSoftTime / DT;
+  const landCeil = ceiling(landFrames, FRAMES.land.tau);
+  console.log(`\n[D3] land: state runs landSoftTime ${CTUNE.landSoftTime}s = ${landFrames.toFixed(1)} frames, `
+    + `FRAMES.land.tau ${FRAMES.land.tau}s -> ceiling ${(100 * landCeil).toFixed(0)}%`);
+  const land = seen.get('land');
+  if (land) console.log(`[D3] land measured: ${land.visits} visits, len ${land.minN}..${land.maxN}, best peak ${(100 * land.best).toFixed(0)}%`);
+
+  /* PASSING: a state that outlasts its own blend is seen. */
+  for (const key of ['air', 'glide']) {
+    const s = seen.get(key);
+    assert.ok(s && s.best >= 0.95,
+      `'${key}' never delivered more than ${(100 * (s?.best ?? 0)).toFixed(0)}% of its authored framing on `
+      + 'any of these routes — including the long ones, so nothing here is seen and D3 measures a broken scorer');
+  }
+  /* FAILING: the ceiling is real, and it bites. */
+  assert.ok(landCeil < 0.55,
+    `land's ceiling is ${(100 * landCeil).toFixed(0)}% — it is deliverable now, so either tau or `
+    + 'landSoftTime moved and this finding has been fixed. Say so rather than keeping the arm.');
+  if (land) {
+    assert.ok(land.best <= landCeil + 0.06,
+      `land measured ${(100 * land.best).toFixed(0)}% against a derived ceiling of ${(100 * landCeil).toFixed(0)}%. `
+      + 'Measurement above the analytic bound means the scorer is wrong, not the framing.');
+  }
+  /* And the route-dependence of `air`, which is the question this arm was asked. */
+  const air = seen.get('air');
+  assert.ok(air.maxN > 100 && air.minN < 30,
+    `air residencies span ${air.minN}..${air.maxN} frames. If they no longer straddle its ${(3 * FRAMES.air.tau / DT).toFixed(0)}-frame `
+    + 'blend, the route-dependence this arm reports has gone and the split in D2 should be revisited');
+  assert.ok(air.worst < 0.5,
+    `the worst air residency delivered ${(100 * air.worst).toFixed(0)}% — every visit now gets most of its `
+    + 'framing, so "the framing depends on how you got there" is no longer true');
 });

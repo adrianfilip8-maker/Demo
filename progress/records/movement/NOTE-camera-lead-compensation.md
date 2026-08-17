@@ -109,6 +109,47 @@ defect at exactly the speeds it bites, since the raw cap binds while the trail k
 Four of eight framings never reach their bind speed in this game; four do. That changes what the
 constant means, not what it is, and it is why this is not a constant edit.
 
+---
+
+## Correction 3: `FRAMES.tau` and state residency are two columns nobody had compared
+
+Asked to characterise `air`'s settle behaviour, the measurement found a second clock in front of
+the follow spring and a bigger result behind it.
+
+`_blendFrame` eases every framing channel with `ease(cur, target, tau, dt)`. So the most of an
+authored framing that a residency of `n` frames can **ever** deliver is `1 − exp(−n·dt/τ)` — a
+ceiling with nothing to do with the follow spring and everything to do with how long the state
+lasts. Measured on driven routes, scoring the `dist` channel:
+
+```
+  route              framing   visits  frames   len min/max   need 95%   peak best/worst
+  flat run + jumps   air          3      255       28/182        47        100% /  73%
+  flat run + jumps   land         1        6        6/  6        25         45% /  45%
+  long fall          air          1      171      171/171        47        100% / 100%
+  glide              glide        1      175      175/175        72        100% / 100%
+  glide              air          1        7        7/  7        47         32% /  32%
+  temple approach    air          7      117       10/ 27        47         81% /  60%
+```
+
+**`air` has no single answer, and that is the answer.** A long fall holds it 171 frames and
+delivers 100 %; a glide hinge holds it 7 and delivers 32 %; ordinary platforming hops around the
+temple hold it 10–27 frames and deliver 60–81 %. The framing a player sees for `air` genuinely
+depends on how they got there.
+
+**`land` is unreachable by construction, and that is a statement about the table.** `Land` runs
+`landSoftTime` 0.09 s = 5.4 frames; `FRAMES.land.tau` is 0.14 s. Ceiling **47 %**, measured peak
+**45 %**. A hard landing at `landHardTime` 0.19 s reaches 74 %. **No route, no player and no
+machine has ever seen more than half of the `land` framing.** It has been authored, maintained and
+reasoned about for the life of the file and has never once been on screen.
+
+Reported, not fixed. The one-line change is `FRAMES.land.tau` → ~0.03 s, and that makes the framing
+deliverable *and* turns a blend into something much closer to a cut on every landing in the game.
+Same class of decision as full compensation, and it wants the same eyes.
+
+Worth checking against the rest of the table by the same arithmetic: `roll` runs `rollTime` 0.44 s
+against `tau` 0.16 → 94 % ceiling, fine. `dive`'s duration is a fall time and is not a constant, so
+it is unmeasured. Every other framing belongs to a state a player can stay in.
+
 ## Known limits of this instrument, stated rather than discovered later
 
 - **The camera is a passive observer.** In the game its yaw decides what "forward" means, so a
