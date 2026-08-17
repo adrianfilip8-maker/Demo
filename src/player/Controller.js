@@ -323,30 +323,49 @@ export const TUNE = {
      this block only names the first one, which was a bare `3.2` repeated in three places in
      Moveset.js (§5 wants feel constants here, not inline).
 
-     ── KNOWN BUG, diagnosed and deliberately NOT fixed in this change ──────────────────────────
-     `landImpact` is read in `_probeGround` as `-velocity.y` on the frame Sly first grounds — but
-     `move()` runs `_moveVertical` FIRST, and the swept capsule is what actually stops a fall: it
-     sets `v.y = 0` before the probe ever looks. The probe only wins the race when the frame before
-     touchdown happens to leave Sly inside its 0.06 m snap band. Measured over the sub-frame phase
-     of a standard jump arc: **the probe wins 12 times in 40 and the sweep wins 28**, so whether a
-     landing registers at all is decided by arithmetic the player cannot see, and on a fast descent
-     (>3.6 m/s, i.e. any drop over ~0.27 m) it is decided against. A 14 m drop was measured landing
-     in total silence — `land` never entered, no `landed` event for FX or AUDIO, no shake.
+     ── THE LANDING RACE, FIXED (§438) ─────────────────────────────────────────────────────────
+     `landImpact` was read in `_probeGround` as `-velocity.y`, but `move()` runs `_moveVertical`
+     first and the swept capsule — which is what actually stops a fall — zeroed `v.y` before the
+     probe ever looked. The probe only won when the frame before touchdown happened to leave Sly
+     inside its 0.06 m band: 12 wins in 40 sub-frame phases. Driven on the shipped temple that
+     produced **silent landings at 0.5, 4, 6 and 10 m and audible ones at 1, 2.5, 8 and 15 m** —
+     not ordered by arrival speed, so a player could not learn it. Half of all landings had no
+     `land` state, no `landed` event, no sound, no shake and no impact pose.
 
-     The fix is one line (capture `-v.y` in `_moveVertical` before zeroing it) and it is not landed
-     here, because it is not one line in effect: with the measurement corrected, every ordinary
-     jump reliably arrives at **10.474 m/s** — measured against the shipped `gravity()` at 60 Hz,
-     apex 2.356 m — which is above `landHard` 9.0. So the correct measurement turns *every jump in
-     the game* into a hard landing with a 0.19 s control tax and a camera shake. Fixing the number
-     therefore forces re-deriving `landHard`, and that is a feel decision that wants a playtest.
-     The derivation I would propose, from this moveset's own arcs: `landBeat` = `jumpV0` 11.0
-     ("a landing interrupts you when you arrive faster than you can launch yourself" — it clears
-     the routine jump and the 9.386 double jump), and `landHard` = 14.5, just over the fastest
-     arrival the moveset can reach under its own power (jump + double jump stacked: apex 4.262 m,
-     landing 14.304 m/s), i.e. the first landing that was not a move you meant.
-     Written up in `progress/records/movement/NOTE-movement-audit.md` for arbitration. ---- */
+     `_moveVertical` now records the arrival it is about to erase and `_probeGround` consumes it
+     on the same frame. **8 of 8 sampled heights fire.** The same record fixes a second defect:
+     a capsule leaning on a face at a ledge sat in `fall` with `grounded=false` for 60 s while the
+     sweep was hitting a floor 1 mm below it and the probe was measuring past to the next surface
+     0.107 m down.
+
+     ── AND `landHard` RE-DERIVED, BECAUSE THE FIX FORCED IT ───────────────────────────────────
+     With arrivals measured correctly, every ordinary jump lands at 10.474 m/s — above the old
+     `landHard` 9.0 — so the repair alone would have made *every jump in the game* a hard landing
+     with a 0.19 s control tax and a shake. The threshold is therefore derived from the arcs this
+     moveset and this level actually produce, measured rather than chosen:
+
+         what he can do to himself      10.474 … 14.186 m/s
+                                        plain jump … jump+double stacked, and 14.186 is a hard
+                                        ceiling: swept over 21 double-jump press timings, from
+                                        apex to 40 frames late, nothing exceeds it
+         authored descents              7.59 · 9.55 · 24.00 · 25.55 · 35.93 · 46.99 m/s
+                                        the two small ones are step-downs below a plain jump; the
+                                        first genuine fall is the 12 m descent to the vault
+
+     The two populations are separated by an empty band **14.186 … 24.00 m/s**, 9.8 m/s wide, and
+     the rule that reads off it is the one the moveset already implies: **`landHard` is the first
+     landing that was not a move you meant.** 15.0 sits 0.81 m/s (5.7 %) above everything he can
+     do under his own power and 9.0 m/s below the first authored fall. In player terms it is a
+     drop of 4.69 m — and the highest apex the moveset can reach is 4.262 m, so the hard landing
+     begins exactly where his own jumping stops being able to cause it.
+
+     `landBeat` stays 3.2: with the race fixed every real landing speaks, which is the point.
+
+     FEEL REVIEW OWED. These are numbers, not a verdict — nobody has heard or seen them on a
+     machine that renders. Flagged for hardware arbitration with the distribution above, so the
+     reviewer is judging a defensible number rather than a coin flip. ---- */
   landBeat:     3.2,     // enter `land` above this arrival speed. Shipped value, formerly inline.
-  landHard:     9.0,     // above this it is `land_hard` + shake + root impulse. Shipped value.
+  landHard:     15.0,    // above this it is `land_hard` + shake + root impulse. Derived above (§438).
   landSoftTime: 0.09,
   landHardTime: 0.19,
 
@@ -579,6 +598,12 @@ export class Controller {
     this.hitWall = false;
     this.hitCeiling = false;
     this.landImpact = 0;
+    /* What the swept capsule saw on the frame it stopped a fall — the arrival speed and the
+       resolved height. Read by `_probeGround` on that frame only. See `_moveVertical`. */
+    this._sweepLandVy = 0;
+    this._sweepLandY = 0;
+    this._sweepLandNormal = new THREE.Vector3(0, 1, 0);
+    this._sweepLandFrame = -1;
     /* The frame `landImpact` was written on. `Land.canEnter` gates on it so a stale impact from
        two seconds ago cannot re-fire the landing beat; it read an undefined field, every
        comparison was `NaN <= 2` = false, and the polled entry to `land` was therefore dead —
@@ -939,6 +964,42 @@ export class Controller {
       _gndRes.hit = false;
     }
 
+    /**
+     * The swept capsule stopped a fall on a walkable floor THIS frame, so we are on it.
+     *
+     * `groundCheck` and the sweep can disagree about which surface is under the feet, and when
+     * they do the sweep is right — it is what physically stopped the motion. Measured case: a
+     * capsule leaning on a face at a ledge, sweep hitting a floor normal 1 mm below it, probe
+     * reporting the next surface down 0.107 m away and refusing it because the airborne band is
+     * 0.06 m. The result was `grounded=false` held indefinitely, and everything gated on
+     * `grounded` wrong for as long as a player leaned. §438.
+     *
+     * Deliberately narrow: same frame only, walkable slope only (tested here, not at the write
+     * site), and it fills the ground record
+     * from the sweep rather than inventing one. The rising guard below still applies, so this
+     * cannot re-ground a jump on its launch frame.
+     */
+    if (!_gndRes.hit && this._sweepLandFrame === this._frame) {
+      /* Carry the sweep's OWN normal. Substituting `UP` here was a regression caught by
+         `traversal.test.mjs`'s slope arm: it does not fill a gap, it **asserts a flat floor**,
+         and `this.groundSlope = _gndRes.slope` publishes that to the shedding logic, the
+         animation set and the camera. A 45° walkable ramp reported as `slope = 0` is a lie, and
+         a substituted constant that is right most of the time is the §418 shape.
+         The gate is the probe path's own walkability test rather than `_moveVertical`'s
+         `normal.y > 0.3` (that is ~72°, far steeper than walkable) — the write site records any
+         floor-ish contact; only a walkable one may ground him. */
+      const n = this._sweepLandNormal;
+      const slope = Math.acos(Math.min(1, Math.max(-1, n.y)));
+      if (slope <= walkable + 0.02) {
+        _gndRes.hit = true;
+        _gndRes.y = this._sweepLandY;
+        _gndRes.normal.copy(n);
+        _gndRes.slope = slope;
+        _gndRes.tag = _gndRes.tag || 'ground';
+        _gndRes.material = _gndRes.material || 'stone';
+      }
+    }
+
     const wasGrounded = this.grounded;
     // Rising: never let a probe re-ground us or a jump dies on frame one.
     const canGround = _gndRes.hit && this.velocity.y <= 0.02;
@@ -950,7 +1011,14 @@ export class Controller {
       this.groundSlope = _gndRes.slope;
       this.groundTag = _gndRes.tag;
       this.groundMaterial = _gndRes.material;
-      if (!wasGrounded) { this.landImpact = -this.velocity.y; this._landFrame = this._frame; }
+      if (!wasGrounded) {
+        /* The arrival speed is whichever of the two saw it — `-velocity.y` when the probe won the
+           race, the sweep's captured value when it did not. Before this, the sweep winning meant
+           `landImpact` came out 0 and the landing was silent. */
+        const swept = this._sweepLandFrame === this._frame ? this._sweepLandVy : 0;
+        this.landImpact = Math.max(-this.velocity.y, swept);
+        this._landFrame = this._frame;
+      }
       this.position.y = _gndRes.y;
       if (this.velocity.y < 0) this.velocity.y = 0;
     }
@@ -1467,10 +1535,35 @@ export class Controller {
     } else {
       this.position.copy(r.position);
     }
-    /* The landing-impact bug documented on TUNE.landBeat lives on this line: `v.y` is the true
-       arrival speed and zeroing it here is what leaves `_probeGround` nothing to measure. Left
-       as-is on purpose — see that note; the fix is not landable without re-deriving `landHard`. */
-    if (r.normal.y > 0.3 && v.y < 0) { v.y = 0; }
+    /**
+     * The sweep is the authority on arriving, and it now says so instead of erasing the evidence.
+     *
+     * ── What used to happen (the landing coin flip) ──────────────────────────────────────────
+     * `v.y` here IS the true arrival speed. Zeroing it left `_probeGround` — which reads
+     * `-velocity.y` a few lines later — nothing to measure, so `landImpact` came out 0 and
+     * `Land.canEnter` refused. The probe only ever won when the frame before touchdown happened
+     * to leave Sly inside its 0.06 m band: measured 12 wins in 40 sub-frame phases. Driven on the
+     * shipped temple that produced **silent landings at 0.5, 4, 6 and 10 m and audible ones at
+     * 1, 2.5, 8 and 15 m** — not ordered by speed, so unlearnable. §438.
+     *
+     * ── And the same erasure hid a second defect ─────────────────────────────────────────────
+     * A capsule leaning on a face at a ledge sat in `fall` with `grounded=false` for 60 s of game
+     * time while `groundCheck` reported solid ground 0.107 m below its feet — outside the 0.06 m
+     * airborne band, so the probe refused it forever. But the downward sweep was hitting a floor
+     * normal (0.00, 0.99, −0.14) at `toi` 0.002, one millimetre away: **the capsule was standing
+     * on a surface the probe was measuring past.** The sweep knew and threw the fact away.
+     *
+     * So the contact is recorded rather than discarded. `_probeGround` consumes it on the same
+     * frame and only on the same frame — `_landFrame`/`_sweepFrame` gating is already this file's
+     * idiom for exactly that.
+     */
+    if (r.normal.y > 0.3 && v.y < 0) {
+      this._sweepLandVy = -v.y;
+      this._sweepLandY = this.position.y;
+      this._sweepLandNormal.copy(r.normal);
+      this._sweepLandFrame = this._frame;
+      v.y = 0;
+    }
     else if (r.normal.y < -0.3 && v.y > 0) { v.y = 0; this.hitCeiling = true; }
     else { v.y = 0; }
   }
