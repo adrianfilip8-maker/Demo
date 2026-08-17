@@ -36790,181 +36790,6 @@ snap as scoped to the spawn while the code scoped it to the frame.
 Nothing here is fixed. The three seams are named so a person can decide whether they are worth
 adding; `_bounceReq` and the `sweepcensus.mjs:138` enumeration are noted for whoever owns those files.
 
-## §449 — The lead census was a single-speed sample, two rows are held by a cap nobody suspected, and the counterexample §438.4 predicted now has an instance
-
-§444.1 said `FRAMES.lead` is inert on 11 of 19 rows and stopped there. That is a true sentence that
-leaves nobody able to act, and it is also — measured again at the right speeds — the wrong count for
-the wrong reason on two rows. Four items: the corrected census, the split that makes it actionable,
-the priced recommendation, and the rule this whole episode implies about §438.
-
-### §449.1 The census was read at one speed, and speed is not a detail here
-
-§444.1's table evaluated all nineteen rows at `runSpeed` 7.2 m/s. **That was a sample, and the sample
-was the instrument (§440).** The delivered lead is a metre quantity sitting under a metre cap, so
-`sneak` read at 7.2 m/s is not `sneak`, and `rail_slide` read at 7.2 m/s is not `rail_slide` either —
-its whole reason to exist is `railMax` 15.
-
-Re-driven on the shipped rig at the speed each row actually occurs at, every speed a `Controller.TUNE`
-constant or a measured consequence of one:
-
-```
-  13 of 19 floored, not 11 — and the two additions are floored by a DIFFERENT CONSTANT
-
-    max( min(leadTime × f.lead, leadMax / v) − followTimeH × f.stiff , 0 ) × v − deadzoneH
-                                 ^^^^^^^^^^^
-    §444.1's formula had no such term, which is why the two rows it added were invisible to it.
-
-  FLOORED BY `stiff`     idle walk sneak crawl balance spire dive ledge_hang climb land combat
-  FLOORED BY `leadMax`   hook_swing  −0.037 m   (cap 0.219 s < trail 0.240 s; authored 0.272 s never applies)
-                         rail_slide  +0.022 m   (cap 0.117 s < trail 0.128 s; authored 0.323 s never applies)
-  DELIVER                run 0.612 · run_fast 0.729 · roll 0.607 · wall_run 0.308 · air 0.217 · glide 0.207
-```
-
-`leadMax` 1.75 is **calibrated against delivered metres and applied to authored ones** — the source
-comment on the `full` arm says so in as many words, and nobody noticed that the `floor` arm applies it
-in the other space. Above `leadMax / (followTimeH × f.stiff)` m/s the cap lands below the trail and the
-floor takes over no matter what the row authors: 7.29 m/s for the swing, 13.67 for the rail, both of
-which are their ordinary operating speeds. **No value of `leadTime` or `f.lead` moves either row at
-all**, run rather than argued — `leadTime` at 1.00, nearly six times shipped, leaves both exactly where
-they were, while `leadMax` 3.0 frees exactly those two and reclassifies nothing else.
-
-And of the six rows that do deliver, **three have no registered state that routes to them.** `walk`,
-`run` and `run_fast` are authored rows nothing can reach: `Move` falls through to the `idle` framing
-because the speed ladder was never wired. So **four rows a player can actually meet deliver any lead
-at all** — `air`, `glide`, `roll`, `wall_run` — and one of those four is reached mostly by wall *clings*
-rather than wall runs (§442.2).
-
-**A correction of exactly the class this finding is about, committed inside the finding.** §444.1 and
-the source both said `air` authors 1.20 *"with the comment 'lead hard'"*. **`air` has no comment.**
-"lead hard" belongs to `run`/`run_fast`, two rows above it in `FRAMES` — a comment attributed to the
-wrong row, which is precisely what §442 was. `hook_swing`'s *"Lead frames the landing"* is correctly
-attributed, and it is the one authored intention that plainly does not arrive.
-
-One instrument note, kept because it is about instruments and not about this constant: the closed form
-is a continuous-time steady state and the shipped spring is discrete at 1/60 s, so it **understates**
-delivered lead by a measured 0.0080 × v metres — half a frame of travel; 1 cm at a sneak, 12 cm at rail
-speed. It never flips the sign of the margin, so the classification is unaffected, but every absolute
-metre in this section is the driven number rather than the derived one (§442.3: measure the
-composition).
-
-### §449.2 Eight of the inert rows are inert on purpose, and the table says so
-
-This is the part that turns an alarming number into an actionable one, and there is **evidence for it
-in the authoring rather than only an opinion**:
-
-> Across all nineteen rows, `lead` and `stiff` are **anti-correlated, r = −0.35**.
-
-An author compensating for the trail by hand would have raised `lead` *with* `stiff`. Instead the
-stiller a row is authored, the *less* lead it asks for — both knobs reached for in the same direction.
-On those rows the inertness is intent expressed twice:
-
-```
-  spire       lowest lead in the file (0.15) AND highest stiff (1.90)   "…and go very still"
-  balance     second-lowest lead (0.20), second-highest stiff (1.60)     same comment
-  ledge_hang  lead 0.20  — "the point is what's ABOVE"; the shot is vertical
-  sneak/crawl lead 0.50 at 1.4 and 1.15 m/s — "close, tight, low. Intimate and tense"
-  climb       vtrack: 1 — the move is vertical; horizontal lead is not its channel
-  dive        DiveAttack.enter cuts horizontal velocity to 30%; the channel is the drop
-  combat      the orbit's channel is side: 0.30, which opens toward the circle
-  idle        correct AS AUTHORED — it is the standing-still framing
-```
-
-**Eight rows want no lead and get none, which is the system working.** What is left is small enough to
-act on:
-
-```
-  hook_swing   lead 1.60 under "Lead frames the landing" — and the ONE row that breaks the
-               anti-correlation, high lead AND high stiff, i.e. the only place an author asked
-               for both and the two knobs genuinely conflict.  Delivers −3.7 cm.
-  rail_slide   lead 1.90, the highest authored value in the file, on the fastest move.  +2.2 cm.
-  land         margin −0.001 s. Nobody chose that.  −4.1 cm.
-  idle-as-move NOT a lead defect: ordinary running is framed by the standing-still row because
-               the walk/run/run_fast ladder is unrouted. Belongs to whoever owns that ladder.
-```
-
-`air` is **not** in this set — it delivers 21.7 cm, thin against 1.20 but not inert. §444.1's
-headline row was the wrong one to be alarmed about.
-
-**A negative on the sibling lane's rule, recorded because a negative is worth as much here.** That
-lane's rule is *a workaround appearing independently in more than two places is a defect report nobody
-wrote down*. Searched: no caller anywhere in `src/` hand-writes a velocity look-ahead, and the
-`_pivotGoal` floor is the only compensation in the tree. The in-table version of the same question —
-did authors inflate `lead` to fight `stiff`? — is answered by the r = −0.35 above, and it is *no*. The
-two knobs were authored as independent intentions and multiplied at a third place. Nobody worked
-around this because **nobody knew it was happening**, which is a different failure from five lanes each
-patching the same field and is worth telling apart from it.
-
-### §449.3 Priced, with a recommendation, and not shipped
-
-All five candidate levers measured per row in metres on screen, plus the driven cost on four real
-temple routes: item 6 of `progress/records/HARDWARE-REVIEW.md`. The short version:
-
-```
-  leadTime      moves NONE of the eight deliberately-still rows at either value tried, and moves
-                hook_swing and rail_slide at NO value whatsoever
-  followTimeH   most effective and most global — it is the whole follow's horizontal smoothing
-  deadzoneH     uniform +5/+10 cm, wakes nothing, and costs the still frame 5× / 11× more pivot
-                travel during a fidget — it spends the one thing it exists for
-  leadMax       surgical: every other row identical to baseline to the digit
-  f.lead        repairs `land`; cannot repair hook_swing or rail_slide at any value
-```
-
-**Recommended: `leadTime` 0.17 → 0.24. One constant.** Not the lever that fixes the most rows — it
-fixes what a player meets on every jump while being provably unable to touch the eight still rows, and
-its headroom is derived rather than chosen: `land` wakes at 0.180 and the first deliberately-still row
-(`dive`) at 0.315, so every value in **0.180 … 0.315** delivers `land` and leaves all eight floored.
-That is a band, like item 1's 9 m/s band, not a nudge.
-
-**`glide` pays.** It is the only row that loses something it did not ask to change — already
-delivering, longest uninterrupted residency in the game at 100 %, so a change there is fully visible
-where `land`'s 23 frames show a fraction. In item 5's own units: `ndcY` −0.514 → −0.551, against
-−0.648 under `leadMode: 'full'`. **28 % of what full compensation would cost the same row.** Motion
-cost carries item 2's signature — p99 step flat and reversals flat-or-down on all four driven routes,
-i.e. continuous motion rather than snapping.
-
-`hook_swing` stays broken under that recommendation, deliberately. Its repair is `leadMax`, a
-structural defect in a different constant, and folding it into a feel bump is how a measured result
-stops being attributable — the same reason `combatStrafe` was reported rather than fixed alongside the
-three framings it resembled.
-
-### §449.4 What this does to §438, which is less than it looks and sharper
-
-§438 counted sixteen expensive errors across five lanes and found **none** were caught by reading the
-code, concluding that budget belongs on drives and external referents rather than on review. §438.4
-predicted a class that would be invisible to that table. **This is the instance.**
-
-Everything about the lead floor was derivable in closed form from `TUNE` and `FRAMES` — two constants
-written two hundred lines apart and multiplied at a third — and **three rounds of driving the temple
-missed it**, because every instrument was pointed at delivery *measured* and not one asked what
-delivery was *bounded by*.
-
-The rule, stated so it can be used:
-
-> **Running answers "what does this do?" It cannot answer "what is this bounded by?", because a bound
-> is invisible in every sample that sits underneath it.** When a channel comes back smaller than
-> authored, derive the ceiling before investigating the mechanism. A closed-form bound is minutes of
-> algebra; a driven census can repeat forever without finding one.
-
-And the tell, since the rule needs one: **one row underdelivering is a tuning question; many rows
-underdelivering by different amounts with no route in common is a bound.** That pattern was sitting in
-the published delivery table for three rounds and was read every time as nine separate tuning
-questions.
-
-This does not overturn §438 — it bounds it, and the way it bounds it is §440 turned on §438 itself.
-**§438's sixteen are a sample of errors that had already been FOUND, and the finding method biases the
-sample.** An error discoverable by reading tends to be caught early and cheap, which disqualifies it
-from a table of *expensive* errors; an error that only driving can reach survives to become expensive
-and lands in the table. So "none of the sixteen were caught by reading" is partly a statement about
-what makes an error expensive, not only about what review is worth. §438's conclusion stands for the
-class it sampled — errors of behaviour — and this is an error of *bound*, which that class does not
-contain.
-
-Nothing here is retuned. The constants stand at `leadTime` 0.17, `leadMax` 1.75, `followTimeH` 0.16,
-`deadzoneH` 0.10; `tests/camdrive.test.mjs` D9 holds the corrected census by mechanism, with both
-failing inputs run.
-
----
-
 ## §449 — PLAYTEST II: the telegraph goes dark exactly during the chain it was built for
 
 Continuation of §447, same drive, same tree. This is the interaction result the round was for: two
@@ -37069,3 +36894,184 @@ The pattern across the two that did interact is one thing said twice: **both wer
 single instance of the event they fix, and the level delivers both as sequences.** A threshold
 derived from one jump meets a level of ledges; a lead measured on one grab meets a chain of rings.
 
+## §450 — The lead census was a single-speed sample, two rows are held by a cap nobody suspected, and the counterexample §438.4 predicted now has an instance
+
+> **Renumbered from §449.** Written and staged as §449; the working copy was swept into another
+> lane's commit (`6ab7980`) which named §449 for its own section, so both went out in one push and
+> theirs carries the attribution. Same resolution as §444, which was swept the same way. **This is
+> the ninth time this session that shared-tree staging has moved someone's uncommitted work**, and
+> the only defence that has ever worked is committing with explicit paths the moment a file is
+> coherent rather than at the end of a run.
+
+§444.1 said `FRAMES.lead` is inert on 11 of 19 rows and stopped there. That is a true sentence that
+leaves nobody able to act, and it is also — measured again at the right speeds — the wrong count for
+the wrong reason on two rows. Four items: the corrected census, the split that makes it actionable,
+the priced recommendation, and the rule this whole episode implies about §438.
+
+### §450.1 The census was read at one speed, and speed is not a detail here
+
+§444.1's table evaluated all nineteen rows at `runSpeed` 7.2 m/s. **That was a sample, and the sample
+was the instrument (§440).** The delivered lead is a metre quantity sitting under a metre cap, so
+`sneak` read at 7.2 m/s is not `sneak`, and `rail_slide` read at 7.2 m/s is not `rail_slide` either —
+its whole reason to exist is `railMax` 15.
+
+Re-driven on the shipped rig at the speed each row actually occurs at, every speed a `Controller.TUNE`
+constant or a measured consequence of one:
+
+```
+  13 of 19 floored, not 11 — and the two additions are floored by a DIFFERENT CONSTANT
+
+    max( min(leadTime × f.lead, leadMax / v) − followTimeH × f.stiff , 0 ) × v − deadzoneH
+                                 ^^^^^^^^^^^
+    §444.1's formula had no such term, which is why the two rows it added were invisible to it.
+
+  FLOORED BY `stiff`     idle walk sneak crawl balance spire dive ledge_hang climb land combat
+  FLOORED BY `leadMax`   hook_swing  −0.037 m   (cap 0.219 s < trail 0.240 s; authored 0.272 s never applies)
+                         rail_slide  +0.022 m   (cap 0.117 s < trail 0.128 s; authored 0.323 s never applies)
+  DELIVER                run 0.612 · run_fast 0.729 · roll 0.607 · wall_run 0.308 · air 0.217 · glide 0.207
+```
+
+`leadMax` 1.75 is **calibrated against delivered metres and applied to authored ones** — the source
+comment on the `full` arm says so in as many words, and nobody noticed that the `floor` arm applies it
+in the other space. Above `leadMax / (followTimeH × f.stiff)` m/s the cap lands below the trail and the
+floor takes over no matter what the row authors: 7.29 m/s for the swing, 13.67 for the rail, both of
+which are their ordinary operating speeds. **No value of `leadTime` or `f.lead` moves either row at
+all**, run rather than argued — `leadTime` at 1.00, nearly six times shipped, leaves both exactly where
+they were, while `leadMax` 3.0 frees exactly those two and reclassifies nothing else.
+
+And of the six rows that do deliver, **three have no registered state that routes to them.** `walk`,
+`run` and `run_fast` are authored rows nothing can reach: `Move` falls through to the `idle` framing
+because the speed ladder was never wired. So **four rows a player can actually meet deliver any lead
+at all** — `air`, `glide`, `roll`, `wall_run` — and one of those four is reached mostly by wall *clings*
+rather than wall runs (§442.2).
+
+**A correction of exactly the class this finding is about, committed inside the finding.** §444.1 and
+the source both said `air` authors 1.20 *"with the comment 'lead hard'"*. **`air` has no comment.**
+"lead hard" belongs to `run`/`run_fast`, two rows above it in `FRAMES` — a comment attributed to the
+wrong row, which is precisely what §442 was. `hook_swing`'s *"Lead frames the landing"* is correctly
+attributed, and it is the one authored intention that plainly does not arrive.
+
+One instrument note, kept because it is about instruments and not about this constant: the closed form
+is a continuous-time steady state and the shipped spring is discrete at 1/60 s, so it **understates**
+delivered lead by a measured 0.0080 × v metres — half a frame of travel; 1 cm at a sneak, 12 cm at rail
+speed. It never flips the sign of the margin, so the classification is unaffected, but every absolute
+metre in this section is the driven number rather than the derived one (§442.3: measure the
+composition).
+
+### §450.2 Eight of the inert rows are inert on purpose, and the table says so
+
+This is the part that turns an alarming number into an actionable one, and there is **evidence for it
+in the authoring rather than only an opinion**:
+
+> Across all nineteen rows, `lead` and `stiff` are **anti-correlated, r = −0.35**.
+
+An author compensating for the trail by hand would have raised `lead` *with* `stiff`. Instead the
+stiller a row is authored, the *less* lead it asks for — both knobs reached for in the same direction.
+On those rows the inertness is intent expressed twice:
+
+```
+  spire       lowest lead in the file (0.15) AND highest stiff (1.90)   "…and go very still"
+  balance     second-lowest lead (0.20), second-highest stiff (1.60)     same comment
+  ledge_hang  lead 0.20  — "the point is what's ABOVE"; the shot is vertical
+  sneak/crawl lead 0.50 at 1.4 and 1.15 m/s — "close, tight, low. Intimate and tense"
+  climb       vtrack: 1 — the move is vertical; horizontal lead is not its channel
+  dive        DiveAttack.enter cuts horizontal velocity to 30%; the channel is the drop
+  combat      the orbit's channel is side: 0.30, which opens toward the circle
+  idle        correct AS AUTHORED — it is the standing-still framing
+```
+
+**Eight rows want no lead and get none, which is the system working.** What is left is small enough to
+act on:
+
+```
+  hook_swing   lead 1.60 under "Lead frames the landing" — and the ONE row that breaks the
+               anti-correlation, high lead AND high stiff, i.e. the only place an author asked
+               for both and the two knobs genuinely conflict.  Delivers −3.7 cm.
+  rail_slide   lead 1.90, the highest authored value in the file, on the fastest move.  +2.2 cm.
+  land         margin −0.001 s. Nobody chose that.  −4.1 cm.
+  idle-as-move NOT a lead defect: ordinary running is framed by the standing-still row because
+               the walk/run/run_fast ladder is unrouted. Belongs to whoever owns that ladder.
+```
+
+`air` is **not** in this set — it delivers 21.7 cm, thin against 1.20 but not inert. §444.1's
+headline row was the wrong one to be alarmed about.
+
+**A negative on the sibling lane's rule, recorded because a negative is worth as much here.** That
+lane's rule is *a workaround appearing independently in more than two places is a defect report nobody
+wrote down*. Searched: no caller anywhere in `src/` hand-writes a velocity look-ahead, and the
+`_pivotGoal` floor is the only compensation in the tree. The in-table version of the same question —
+did authors inflate `lead` to fight `stiff`? — is answered by the r = −0.35 above, and it is *no*. The
+two knobs were authored as independent intentions and multiplied at a third place. Nobody worked
+around this because **nobody knew it was happening**, which is a different failure from five lanes each
+patching the same field and is worth telling apart from it.
+
+### §450.3 Priced, with a recommendation, and not shipped
+
+All five candidate levers measured per row in metres on screen, plus the driven cost on four real
+temple routes: item 6 of `progress/records/HARDWARE-REVIEW.md`. The short version:
+
+```
+  leadTime      moves NONE of the eight deliberately-still rows at either value tried, and moves
+                hook_swing and rail_slide at NO value whatsoever
+  followTimeH   most effective and most global — it is the whole follow's horizontal smoothing
+  deadzoneH     uniform +5/+10 cm, wakes nothing, and costs the still frame 5× / 11× more pivot
+                travel during a fidget — it spends the one thing it exists for
+  leadMax       surgical: every other row identical to baseline to the digit
+  f.lead        repairs `land`; cannot repair hook_swing or rail_slide at any value
+```
+
+**Recommended: `leadTime` 0.17 → 0.24. One constant.** Not the lever that fixes the most rows — it
+fixes what a player meets on every jump while being provably unable to touch the eight still rows, and
+its headroom is derived rather than chosen: `land` wakes at 0.180 and the first deliberately-still row
+(`dive`) at 0.315, so every value in **0.180 … 0.315** delivers `land` and leaves all eight floored.
+That is a band, like item 1's 9 m/s band, not a nudge.
+
+**`glide` pays.** It is the only row that loses something it did not ask to change — already
+delivering, longest uninterrupted residency in the game at 100 %, so a change there is fully visible
+where `land`'s 23 frames show a fraction. In item 5's own units: `ndcY` −0.514 → −0.551, against
+−0.648 under `leadMode: 'full'`. **28 % of what full compensation would cost the same row.** Motion
+cost carries item 2's signature — p99 step flat and reversals flat-or-down on all four driven routes,
+i.e. continuous motion rather than snapping.
+
+`hook_swing` stays broken under that recommendation, deliberately. Its repair is `leadMax`, a
+structural defect in a different constant, and folding it into a feel bump is how a measured result
+stops being attributable — the same reason `combatStrafe` was reported rather than fixed alongside the
+three framings it resembled.
+
+### §450.4 What this does to §438, which is less than it looks and sharper
+
+§438 counted sixteen expensive errors across five lanes and found **none** were caught by reading the
+code, concluding that budget belongs on drives and external referents rather than on review. §438.4
+predicted a class that would be invisible to that table. **This is the instance.**
+
+Everything about the lead floor was derivable in closed form from `TUNE` and `FRAMES` — two constants
+written two hundred lines apart and multiplied at a third — and **three rounds of driving the temple
+missed it**, because every instrument was pointed at delivery *measured* and not one asked what
+delivery was *bounded by*.
+
+The rule, stated so it can be used:
+
+> **Running answers "what does this do?" It cannot answer "what is this bounded by?", because a bound
+> is invisible in every sample that sits underneath it.** When a channel comes back smaller than
+> authored, derive the ceiling before investigating the mechanism. A closed-form bound is minutes of
+> algebra; a driven census can repeat forever without finding one.
+
+And the tell, since the rule needs one: **one row underdelivering is a tuning question; many rows
+underdelivering by different amounts with no route in common is a bound.** That pattern was sitting in
+the published delivery table for three rounds and was read every time as nine separate tuning
+questions.
+
+This does not overturn §438 — it bounds it, and the way it bounds it is §440 turned on §438 itself.
+**§438's sixteen are a sample of errors that had already been FOUND, and the finding method biases the
+sample.** An error discoverable by reading tends to be caught early and cheap, which disqualifies it
+from a table of *expensive* errors; an error that only driving can reach survives to become expensive
+and lands in the table. So "none of the sixteen were caught by reading" is partly a statement about
+what makes an error expensive, not only about what review is worth. §438's conclusion stands for the
+class it sampled — errors of behaviour — and this is an error of *bound*, which that class does not
+contain.
+
+Nothing here is retuned. The constants stand at `leadTime` 0.17, `leadMax` 1.75, `followTimeH` 0.16,
+`deadzoneH` 0.10; `tests/camdrive.test.mjs` D9 holds the corrected census by mechanism, with both
+failing inputs run.
+
+---
