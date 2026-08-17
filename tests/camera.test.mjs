@@ -188,7 +188,10 @@ test('freeCam: the harness bypass is total — no capture can ever see this file
   run(engine, rig, 2.0, (t, dt, mv) => {
     mv.position.z -= 7.2 * dt;
     mv.velocity.set(0, 0, -7.2);
-    mv.stateName = 'run_fast';
+    /* `move`, not `run_fast`: this arm only needs A moving state, and `run_fast` is not one —
+       it is a CLIP name. It was never a state, its framing row has been deleted (§463), and
+       leaving it here would leave a test asserting against a name nothing produces. */
+    mv.stateName = 'move';
   });
 
   assert.equal(engine.camera.position.distanceTo(posed), 0, 'freeCam let the rig move the camera');
