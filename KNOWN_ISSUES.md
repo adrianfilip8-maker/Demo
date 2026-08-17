@@ -39631,3 +39631,47 @@ largely merged (71 % vs 97 %) — the one consequence nobody predicted and still
 looked at.** `tools/camlook.mjs` runs all four sequences; the run needs roughly half an hour of the
 capture lock at 960 × 540, and it should be re-run at 1920 × 1080 for anything about character
 readability.
+
+### §466.5 A second frame arrived and contradicted the first on both of its headline observations
+
+`shots/camlane-run-rig-live.png` — same boot, same build, 50 frames later, `move` at running speed.
+It disagrees with §466.2 on the two things §466.2 was most confident about, and the disagreement is
+the finding:
+
+```
+                          idle frame (01)              running frame (02)
+  ink outline weight      heavy, uniform with depth    thin and subtle; depth reads correctly
+  character readability   a pale blob, no face          face, ears, cap, cane, tail, boots all clear
+  overall cast            warm orange sand              cool blue-grey stone
+```
+
+**Neither of my two headline observations survived the second frame.** "The ink is the same weight at
+every distance" and "the character does not read as a character" were both true *of that frame* and
+neither is a property of the build. Sly is perfectly legible here; the outlines are restrained; the
+depth is fine.
+
+**This is §440 turned on my own eyes, and it is the reason this entry is being written rather than
+quietly corrected.** The whole point of the render pass was that every instrument in this project
+measures a quantity somebody thought to measure — and the first thing an unmeasured look produced was
+two confident claims from a single sample, one of which I had already flagged with a resolution caveat
+and the other of which I had not. **One frame is a sample. A visual observation needs the same domain
+discipline as a numeric one: what would this look like if the claim were false, and have I got that
+case in hand?**
+
+What survives both frames, and is therefore worth something:
+
+* **The dark rounded inset on the staircase appears in both**, at the same place, sitting slightly
+  proud of the step. Consistent across lighting, so it is a real fixture rather than a lighting
+  artefact — and it may well be intended.
+* **The rope coil is the most legible prop in both frames.**
+* **The camera does not visibly change between a stand and a full run**, which is what the numbers
+  predicted: `move` uses the `idle` framing and only `distSpeedGain` +0.27 m and `fovSpeedGain` +5.4°
+  apply. Sheet item 8 is the question of whether that is enough, and these two frames are the first
+  evidence a person can hold next to it — though a still pair is a weak instrument for it, because the
+  effect is a change *over time* and neither frame contains time.
+
+**What actually looks worth chasing, now that the first two candidates are withdrawn:** the cast shifts
+a long way between the two frames — warm sand to cool blue-grey in 0.83 s of world time. Some of that is
+his moving into the staircase's shade, and the background right side is still warm in both. Whether the
+rest is exposure adaptation moving faster than it should is a rendering question, not a camera one, and
+it is stated here as unresolved rather than as a defect.
