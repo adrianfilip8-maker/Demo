@@ -1604,8 +1604,11 @@ export class CameraRig {
     want += this._routeUpW * TUNE.routeDist;   // room in frame for the vertical line
     if (this.mode === 'cinematic') want += 1.4;
     want = clamp(want, TUNE.distHardMin, TUNE.distMax + 3);
-    this._boomWant = smoothDamp(this._boomWant, want, this._boomWantVel || 0, TUNE.zoomTime, dt);
-    this._boomWantVel = _sdVel;
+    /* SITE 1 of 2 collapsed. `_boomWant` used to `smoothDamp` toward `want` at `zoomTime`, which
+       smoothed a signal `_blendFrame` has already eased at the framing's own `tau`. See the
+       block above `_castBoom` for why the chain depth was the defect and what it cost. */
+    this._boomWant = want;
+    this._boomWantVel = 0;
 
     const pitch = this._effectivePitch();
     const cp = Math.cos(pitch), sp = Math.sin(pitch);
@@ -1626,18 +1629,57 @@ export class CameraRig {
       this._boomHold = Math.max(0, this._boomHold - dt);
       if (this._boomHold <= 0) {
         if (occluded) this._recovering = true;
-        const slow = this._recovering;
-        this.boom = smoothDamp(
-          this.boom, capped, this._boomVel,
-          slow ? TUNE.recoverTime : TUNE.zoomTime, dt,
-          slow ? TUNE.recoverSpeed : 14
-        );
-        this._boomVel = _sdVel;
-        if (this.boom >= this._boomWant - 0.02) this._recovering = false;
+        if (this._recovering) {
+          /* RECOVERY IS UNTOUCHED. `recoverDelay` / `recoverTime` / `recoverSpeed` are a whole
+             authored behaviour with their own measurements (see `recoverSpeed`), and collapsing
+             them would have deleted a design rather than shortened a chain. */
+          this.boom = smoothDamp(
+            this.boom, capped, this._boomVel, TUNE.recoverTime, dt, TUNE.recoverSpeed);
+          this._boomVel = _sdVel;
+          if (this.boom >= this._boomWant - 0.02) this._recovering = false;
+        } else {
+          // SITE 2 of 2 collapsed — the FREE-AIR extension only.
+          this.boom = capped;
+          this._boomVel = 0;
+        }
       }
     }
     this.boom = clamp(this.boom, TUNE.distHardMin, TUNE.distMax + 3);
   }
+
+  /* ──────────────────────────────────────────────────────────────────────────────────────────
+   * THE BOOM CHAIN, COLLAPSED — two of nineteen blend sites, and why.
+   *
+   * `FRAMES.tau` was never the delivery time of anything. Every authored channel passes through
+   * at least one more blend before a pixel, and the boom passed through TWO: `_frame.dist`
+   * (framing `tau`) → `_boomWant` (`zoomTime`) → `this.boom` (`zoomTime`). Measured end to end,
+   * a dive from a standard jump apex reached 73 % of the `dist` channel and **5 % of the boom**.
+   * Delivery tracked chain depth, not `tau`: `pitch` is one blend from the screen and closed on
+   * 8 of 9 framings; the boom was three and missed on 7 of 9.
+   *
+   * Collapsed here to the depth `pitch` already has, in free air only. Measured on driven
+   * trajectories through the shipped temple, absolute-weighted `Σ|got| / Σ|asked|`
+   * (`tests/camdrive.test.mjs`, and the tables in
+   * `progress/records/movement/NOTE-camera-lead-compensation.md`):
+   *
+   *     land   6% → 52%   (1.11 m of 2.13 m)      combat  35% → 73%      dive  61% → 88%
+   *     roll  65% → 89%                            idle    43% → 63%      air   13% → 32%
+   *     glide 100% → 100%                          sneak  100% → 100%
+   *
+   * **The two rows that already closed cost nothing** — `glide` and `sneak` are unchanged. That
+   * was the condition this change was held on, and it was re-measured after MOVEMENT's landing
+   * repair rather than before: the repair made 2.5× as many landings register, so `land` now asks
+   * for 2.13 m instead of 0.83 m and the collapse delivers 1.11 m against 0.44 m. Worth more
+   * after the repair than when it was priced.
+   *
+   * ── THE COST, AND IT IS A FEEL QUESTION FOR HARDWARE ──────────────────────────────────────
+   * Over the identical trajectories: **mean |Δboom| 11.35 → 15.27 mm/frame (+35 %) and direction
+   * reversals 38 → 52 in 1852 frames.** The p99 single-frame step is UNCHANGED, 108.6 →
+   * 111.9 mm, because the occlusion pull-ins were deliberately left alone — so this adds small
+   * continuous movement, not snaps. Stated as motion and reversals rather than as a percentage
+   * of delivery, because that is the quantity a person watching this on hardware is judging.
+   * FLAGGED FOR HARDWARE REVIEW on exactly that number.
+   * ────────────────────────────────────────────────────────────────────────────────────────── */
 
   /**
    * Sphere-cast the sightline (AGENTS.md §4.6). Four casts: the boom itself, a whisker either

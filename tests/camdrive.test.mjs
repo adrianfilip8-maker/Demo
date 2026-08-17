@@ -529,19 +529,24 @@ test('D4: the Cane Slam framing is delivered iff the drop is long, and the boom 
 
   const at = (a) => rows.find((r) => r.apex === a);
   assert.ok(rows.every((r) => r.n > 0), 'some heights never entered `dive` — the route stopped working');
-  /* PASSING: a long drop delivers. */
+  /* ── RE-BASED AFTER THE BOOM CHAIN WAS COLLAPSED, AND THE RE-BASE IS THE RESULT ─────────────
+     This arm was written when the boom was three blends deep. Collapsing two of them took the
+     jump-apex dive from **5 % to 71 %** and the whole distribution from 5/50/86/96/100 to
+     71/92/98/97/100. The variance the arm was written to report has largely closed, which is
+     what the collapse was for — so the bars move from "the short dive delivers almost nothing"
+     to "the short dive still delivers measurably less than a long one", which is the residual.
+     Kept rather than retired: the crossover arithmetic (`diveSpeed × 3τ` = 4.86 m of fall against
+     2.52 m from a jump) is unchanged and still explains the residual exactly. */
   assert.ok(at(26).boomFrac > 0.95 && at(15).boomFrac > 0.9,
     `a 26 m dive delivers only ${(100 * at(26).boomFrac).toFixed(0)}% of its boom — then NO drop delivers `
     + 'the slam framing and this is the `land` defect, not a variance finding');
-  /* FAILING: a jump-apex dive does not. */
-  assert.ok(at(2.52).boomFrac < 0.25,
-    `a jump-apex dive now delivers ${(100 * at(2.52).boomFrac).toFixed(0)}% of its boom — the variance `
-    + 'this arm reports has gone, so either a clock shortened or the crossover moved');
-  /* And the reason the channel score is not the answer: the boom is three blends deep. */
-  assert.ok(at(2.52).chan - at(2.52).boomFrac > 0.4,
-    `on a jump-apex dive the dist channel reached ${(100 * at(2.52).chan).toFixed(0)}% and the boom `
-    + `reached ${(100 * at(2.52).boomFrac).toFixed(0)}% — they now agree, so the serial chain `
-    + '`_frame.dist` → `_boomWant` → `boom` is no longer costing anything and D5 should say so');
+  assert.ok(at(2.52).boomFrac < at(26).boomFrac - 0.1,
+    `a jump-apex dive delivers ${(100 * at(2.52).boomFrac).toFixed(0)}% against a 26 m dive's `
+    + `${(100 * at(26).boomFrac).toFixed(0)}%. The residual variance has gone too — the drop height no `
+    + 'longer changes the slam at all, so the crossover arithmetic above no longer describes anything');
+  assert.ok(at(2.52).boomFrac > 0.4,
+    `a jump-apex dive delivers ${(100 * at(2.52).boomFrac).toFixed(0)}% of its boom. It was 5 % before the `
+    + 'chain collapse; if it is back under 40 % the collapse has been reverted and D6 should be red too');
   assert.ok(CTUNE.jumpV0 ** 2 / (2 * -CTUNE.gravity) < CTUNE.diveSpeed * 3 * FRAMES.dive.tau,
     'a plain jump now reaches the dive crossover height — flat-ground slams deliver their framing '
     + 'and the "never on open ground" claim is stale');
@@ -784,15 +789,15 @@ test('D6: how much of each authored framing reaches the screen, over the residen
       + 'residency — then nothing in this table arrives and D6 is measuring a broken scorer');
   }
   /* FAILING: the two that essentially never arrive. */
-  /* `land` was 0 % on 2 visits / 12 frames. After the objects lane's landing repair it is 6 % on
-     5 visits / 30 frames — the repair made 2.5x as many landings register, so there is more
-     framing asked for (1.68 m against 0.54 m) and the same near-nothing delivered (0.10 m).
-     Re-based to the post-repair measurement, and the bar stays well under a tenth because the
-     finding is unchanged: the landing framing does not arrive. */
-  assert.ok(abs(g('land').ch.boom) < 0.15,
-    `'land' now delivers ${(100 * abs(g('land').ch.boom)).toFixed(0)}% of its boom `
-    + `(${g('land').ch.boom.got.toFixed(2)} of ${g('land').ch.boom.asked.toFixed(2)} m). If that is real `
-    + 'the framing has become reachable and the pending `land.tau` decision is answered — say so.');
+  /* `land`, in three measurements: **0 %** when the boom was three blends deep and the landing
+     race swallowed most touchdowns; **6 %** after MOVEMENT's repair made 2.5x as many landings
+     register (more asked for, the same nothing delivered); **52 %** now that two of the three
+     blends are gone. The arm's job flips with it — it used to assert the framing never arrives,
+     and now asserts the collapse is still in place. */
+  assert.ok(abs(g('land').ch.boom) > 0.35,
+    `'land' delivers ${(100 * abs(g('land').ch.boom)).toFixed(0)}% of its boom `
+    + `(${g('land').ch.boom.got.toFixed(2)} of ${g('land').ch.boom.asked.toFixed(2)} m). It was 52 % with the `
+    + 'boom chain collapsed and 6 % before; under 35 % means the collapse has been reverted.');
   assert.ok(abs(g('wall_run').ch.boom) < 0.15,
     `'wall_run' delivers ${(100 * abs(g('wall_run').ch.boom)).toFixed(0)}% of its boom — the routing fix `
     + 'in STATE_FRAME made this framing reachable and this arm reports it still does not arrive');
