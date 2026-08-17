@@ -36433,3 +36433,237 @@ in this project could reach at all until this commit, appearing unbidden on the 
 first arm written after the repair.
 
 Suite 842/842.
+
+---
+
+## §447 — PLAYTEST: the tomb is sealed by the terrain collider, and the hard landing starts at a 3.15 m hop
+
+First end-to-end drive of the level since the six commits `7f2495f`…`309d6b5` landed. Nothing below
+is a regression from any of them — all three findings are pre-existing and all three are things a
+player meets in the first ten minutes. They are reported in the order a player hits them by severity,
+not by route order.
+
+Everything here was driven through `realWorld()` on the shipped level, on HEAD `e153df9`, and every
+occupancy claim is a `capsuleSweep` at `CAPSULE_H` 1.80 / radius 0.34 rather than a ray.
+
+### §447.1 The tomb — route steps 7 and 8 — cannot be entered at all
+
+`sand_collision`, TERRAIN's desert collision proxy, is one mesh spanning
+**x[−168, 168] y[−5.90, 23.64] z[−144, 192]** and it is registered `ground`. The complex mask
+flattens it to y ≈ 0 across the whole playspace, which is invisible everywhere the temple floor is
+*also* y = 0 — the courtyard, the hall, the descent landing. The tomb is the only part of this level
+that goes **below** y = 0, and the sand lies over it like a lid.
+
+A capsule swept straight down from y = +3 at every point of the authored descent:
+
+```
+  flight A mid   ( 0.0, −56.5)   stops y  0.009      flight B mid   (−4.0, −57.9)  stops y  0.019
+  flight A foot  (−6.0, −56.8)   stops y  0.268      vault-floor wp ( 0.4, −57.6)  stops y  0.010
+  mid landing    (−11.6, −56.8)  stops y −0.001
+```
+
+every one of them on `sand_collision`. **Census over the whole vault — 154 columns on a 2 m grid,
+x[−13, 13] z[−77, −57] — gives 0 that admit a capsule to the vault floor.** The tomb is sealed from
+above at every point, not at one.
+
+**Both faces, because a lid measured from one side is half a reading.** From above, a capsule rests
+with feet at y −0.001. From below, standing on the mid landing (`proxy:ground`, y −5.600) and swept
+up, the capsule stops with feet at y −1.281, so the ceiling is y ≈ 0.52. The slab is
+**y [0.00, 0.52]** and it is 0.52 m thick — thin, and completely closed.
+
+**The stair underneath is built, correct and walkable.** That is what makes this a collision defect
+rather than a level-design one. Treads and landings take a 1.80 m capsule with room:
+
+```
+  flight A lower  floor −3.650  fits  headroom 0.85     mid landing   floor −5.600  fits  headroom 4.07
+  flight A foot   floor −5.347  fits  headroom 3.94     flight B mid  floor −9.071  fits  headroom 5.45
+  crypt (0,−12,−65)  floor −12.000  fits  headroom 6.00
+```
+
+Both proxy ramps are within `slopeWalkableDeg` 50 (29.5° and 32.4°). Nothing about the stair is
+wrong; it is roofed.
+
+**Driven, six ways, on HEAD.** Hold forward from the descent landing toward each authored heading and
+toward the vent, 700 frames each. The deepest y reached by any of them is **−0.000** against a vault
+floor at −12:
+
+```
+  landing -> WEST down flight A     end (−1.92, 0.02, −56.46)   lowest y  0.017
+  landing -> EAST to flight A head  end ( 3.00, 0.03, −56.21)   lowest y  0.030
+  mid-landing XZ -> EAST flight B   end (−3.38, 0.62, −58.03)   lowest y  0.015
+  landing -> NORTH                  end ( 0.00, 1.00, −61.58)   lowest y  0.050
+  vent mouth -> SOUTH, crouched     end (−21.00, −0.00, −49.56) lowest y −0.000
+  vent mouth -> SOUTH, standing     end (−21.00, −0.00, −49.56) lowest y −0.000
+```
+
+The control is a drive that **does** descend on the same tree and the same driver — walking south off
+stage 2 falls 5.25 m to the paving and lands at (0.00, 0.00, 24.44). So this is the level refusing,
+not the driver failing.
+
+**The stealth alternate is sealed by the same lid**, so there is no second way in: the vent mouth at
+(−21, 0, −49.5) is standable, and its descending shaft at (−21, ·, −54.5) reports floor y 0.010. Both
+the `crawl` and standing drives end 0.06 m from where they started.
+
+**Why a green suite did not see it.** `tests/collectroute.test.mjs` V3 — the arm whose failure message
+is literally *"the collect loop does not close and the vault reward is unwinnable"* — opens with
+`const start = new THREE.Vector3(0, −11.95, −60)`. It **teleports into the vault** and drives inside
+it. `cluevault.test.mjs` R2 places bottles and measures magnet radii in the same room. Every arm that
+touches the tomb starts inside the tomb, so the suite has thoroughly tested a room's interior and has
+never once asked whether the room has a door. That is §437.1's shape at level scale: reachability and
+delivery are two tests, and only one of them was written.
+
+**Not fixed here.** The repair is TERRAIN's, not the level's — the innermost ring is
+`{ half: 76.8, step: 0.8, hole: 0 }` and something has to stop the sand covering the stairwell — and
+it is one lane's call whether that is a hole in the ring, a mask, or moving the descent. It is one
+line's worth of decision and several lines' worth of consequence, so it is reported rather than
+guessed at.
+
+### §447.2 The hard landing begins at a 3.15 m hop, and the terrace the route makes you climb is above it
+
+`landHard` 15.0 was derived (§443.3) against population A = *"what the player can do under his own
+power"* = **jump and double-jump from flat ground**, ceiling 14.586 m/s. That derivation is correct
+and it reproduces exactly. What it does not cover is the thing a player in a vertical traversal level
+spends the whole game doing: **jumping off something.** Driven as a height ladder onto courtyard
+paving, one variable:
+
+```
+  jump off a ledge of height h        h 2.80  14.586      h 3.10  14.986      h 3.20  15.386 **HARD**
+  walk off a ledge of height h        h 4.60  14.800      h 4.70  14.800      h 4.80  15.200 **HARD**
+```
+
+The rungs are 0.400 m/s apart — one frame of gravity, exactly the quantum §443.3 established, which
+is the check that these are the same ladder and not a second instrument.
+
+**So the crossovers are 3.15 m jumped and 4.75 m walked**, and both are ordinary. Measured against
+the level's own registered standable surfaces — every `ledge`/`ground` rec whose top face takes a
+capsule, sampled just outside its footprint on four sides:
+
+```
+  standable elevated surfaces with a drop off the edge      101
+    >= 3.15 m — a JUMP off the edge lands HARD               85
+    >= 4.75 m — a WALK off the edge lands HARD               71
+```
+
+On the authored route itself, driven:
+
+```
+  stage-2 deck, walk south off the edge     15.600 **HARD**   lands (0.00, 0.00, 24.44)
+  stage-2 deck, jump south off the edge     19.053 **HARD**
+  stage-1 deck, jump east off the edge      14.253            lands (13.63, 0.00, 11.00)
+```
+
+Step 1 of the route makes stage 2 a required waypoint. Stepping back off it in the direction you
+arrived from is a hard landing — 0.19 s of control tax, a screen shake and a root impulse — for
+walking off a terrace.
+
+**The 15.600 needed its composition measured and it is not the 3.20 m it looks like.** Stage 2's south
+edge is z 16.6 and stage 1's deck runs to z 19.4, so the drop *should* be 3.20 m onto stage 1. It is
+not: flight 2's `groundProxy` spans z 16.6…19.3 at top y 5.25, so walking south off stage 2 you are
+still at deck height until z 19.3, and stage 1's deck ends 0.10 m later at 19.4. **A 0.10 m lip is
+not a landing for a capsule of radius 0.34 moving at walk speed** — it sails over and falls the full
+5.25 m to the paving. East and west are different because the terrace parapet at |x| 8.8…10.0,
+y 3.0…3.5 breaks the same fall into two soft ones (8.400 then 12.400). So the way up is not the way
+down, and only on the south face.
+
+**This is a feel judgement, not a defect, and it is exactly the one HARDWARE-REVIEW item 1 asks for**
+— *"if ordinary play produces hard landings, 15.0 is too low"*. The band 14.586…23.749 is real, but
+it separates flat-ground jumps from authored descents, and the shipped level is mostly neither.
+Whoever arbitrates it should know the number is 3.15 m, not 4.4 m.
+
+### §447.3 The self-inflicted verticals HARDWARE-REVIEW left open do NOT move the band — a clean negative
+
+Item 1's caveat: *"Wall-run exits, magnetism yanks and enemy bounces are self-inflicted verticals the
+sweep never launched, so if one of those turns out to arrive above 14.586 the band's lower edge
+moves."* Driven on the shipped level. It does not move.
+
+**Wall exits.** Approaches derived by searching every `wall` rec for standable ground 3–7 m out whose
+run-up stays within 0.25 m of level — 67 found, the first 8 driven at 5 take-off timings each. 26
+beats reached `wallRun`/`wallJump`, producing 68 landings. **Worst arrival 12.400 m/s, zero hard
+landings.** A wall exit launches at `wallJumpUp` 0.94 × `jumpV0` = 10.34 m/s, below a ground jump's
+own 11.0, and the wall run's height gain is spent before the exit rather than added to it.
+
+**The Cane Slam cannot produce one by construction**, and this is worth recording because
+`diveSpeed` is 18 — above `landHard` — so it looks like the obvious counterexample.
+`DiveAttack.update` sets `c.landImpact = 0` and returns `'idle'` directly, so a dive never reaches
+`Land` and never emits `landed`. It emits `caneSlam` + its own `diveShake` instead. The 18 m/s never
+meets the threshold.
+
+**Everything that did land hard, landed hard because it fell**, not because a move launched it: a
+hook release from ring 3 at y 14.8 (24.458–26.151), a rail jump off `roof-w` at y 19.35 (30.186), a
+magnet yank to the obelisk pyramidion at y 27 (32.400). All three are population B by any reading.
+
+So `landHard`'s ceiling stands at 14.586 and the band's lower edge is unchanged. §447.2 is a question
+about which population the *level* puts the player in, not about the ceiling.
+
+### §447.4 Route steps 1–6 connect; step 1's stair does not, and the recovery is undocumented
+
+Walked from spawn with forward held, camera-relative, re-aimed each frame.
+
+```
+  spawn (0,0,30) -> stage-1 deck        CONNECTS   arrives y 1.96 at 83 frames, no stalls
+  stage-1 deck -> stage-2 deck          BLOCKED    stops at (0.00, 1.96, 19.64), 697 stall frames
+```
+
+The stop is the flight-2 `groundProxy` south face at z 19.30 plus the 0.34 m capsule radius = 19.64,
+which is the collider, measured, and not a wedge — §436's answer applies and forward-held-into-a-wall
+is a wall. The 50.28° stair is the documented hole in `EgyptLevel.js`, so the *stop* is known. What
+is not written down anywhere is **what the player is supposed to do instead**, and driving it gives a
+better answer than the source's note does: the source says a double jump clears the 3.20 m rise, and
+a 30-timing sweep confirms **24 of 30 arrive on stage 2**. But the mechanism is not the double jump.
+Traced frame by frame it is a **jump → `ledgeClimb` → jump → `ledgeClimb` ladder** off the stair
+proxy's own lip:
+
+```
+   6  jump        y=2.15   →  17 ledgeClimb y=3.63  →  35 jump y=5.45  →  64 ledgeClimb y=7.38
+  82  move        y=9.00   ← the kiosk lintel, route step 2's target, reached without stage 2
+```
+
+Six of thirty timings therefore skip stage 2 entirely and land the player straight on the step-2
+waypoint. That is forgiving rather than broken, and it is worth knowing that the route's step 1→2
+boundary is soft: the beat the source describes and the beat the player performs are different moves.
+
+Steps 4–6 connect cleanly and without stalls, driven on the ground:
+
+```
+  hall doorway -> hall floor      OK  43f      nave -> inner gate (0,0,−52)   OK 133f
+  hall floor -> mid nave z−36     OK 132f      gate -> descent landing −57    OK  40f
+```
+
+and then §447.1 takes over.
+
+**Where it stops being obvious what to do next**, in order: (1) the top of the stage-1 deck, where the
+stair in front of you is not climbable and nothing indicates the jump; (2) the descent landing, which
+is the end of the game as currently built.
+
+### §447.5 Two failed beats, recorded as failed beats
+
+Neither is evidence about the level.
+
+- **Pole climb of the obelisk.** Driving at the shaft from (0, 5.3, 8.0) with `interact` produced
+  `hookSwing@22`, not `poleClimb` — a hook ring took priority. `HookSwing.canEnter` fires on
+  `pressed('interact')` within `hookGrab` and `TELEGRAPH_KINDS` ranks `hook` first, so the grab is
+  ordered as designed. The pole beat needs a start outside hook range and I did not re-derive one.
+  Nothing is claimed about the obelisk pole or about §8.1's Ninja Spire Landing alternative.
+- **First wall-run attempt.** Driving north from (14, 0, 44) reached `tiptoe`/`wallCling` and never
+  `wallRun`, apex 1.09 m — a site outside the courtyard on narrow terrain, and a walk speed under
+  `wallRunEnter` 3.2. Discarded and replaced with the 67-site search in §447.3, which is what the
+  numbers there come from. The first run's zero hard landings are not counted anywhere.
+
+### §447.6 What was checked for interaction between the six commits and came back clean
+
+Driven together rather than separately, which was the point of the round.
+
+- **Terrace solidity (`7f2495f`) against the route.** Stage 1 and stage 2 are solid on every face
+  driven; the walk from spawn no longer passes through the building and no drive reached the interior
+  of either stage. The stop at z 19.64 is the flight-2 proxy, not the terrace side.
+- **The telegraph (`8a3af14`) fires during ordinary traversal**, which is the thing §441 could not
+  observe because there was no publisher. On the stage-1 → kiosk climb it emitted at frames
+  39, 53, 64, 82, 96, 121, 138, 159 — edge-triggered on hold identity, one emit per change of hold,
+  and it kept firing across `ledgeClimb` transitions rather than going silent mid-chain.
+- **The landing repair (`57c2c9e`) fires on every landing that clears `landBeat`.** No silent landing
+  appeared in any drive in this section. The arrivals that produced no `landed` event were all
+  double-jump arrivals whose fall was under 0.10 m — below `landBeat` 3.2 by design, not silence.
+
+No interaction defect was found between the six. The three findings above are all older than they
+are.
+
