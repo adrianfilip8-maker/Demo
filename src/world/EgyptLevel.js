@@ -910,10 +910,32 @@ function courtyard(A) {
    *
    * So every available repair either moves `slopeWalkableDeg` — which would be §141.1, changing
    * a threshold after seeing which side a result landed on — or re-authors the terrace spacing
-   * or the step count, which is a level-design decision and not a collision fix. The stage-1
-   * deck is reachable after this commit; stage 2 is still walled, and that is a routed question
-   * rather than a silent hole. `tests/terracestair.test.mjs` pins the 50.28 deg so this cannot
-   * be quietly "fixed" by widening the limit.
+   * or the step count, which is a level-design decision and not a collision fix.
+   * `tests/terracestair.test.mjs` pins the 50.28 deg so this cannot be quietly "fixed" by
+   * widening the limit.
+   *
+   * ── Is stage 2 meant to be walked up at all? Driven, because the answer changes the repair ──
+   * Yes: §8.1 above says *"Climb: paving 0 -> stage 1 (y 2.0) -> stage 2 (y 5.2). Both
+   * `ground`."* — a walk on ground, not a traversal verb — and its step 2 then needs a double
+   * jump **from stage 2** onto the kiosk lintel, so stage 2 is a required waypoint rather than
+   * optional height. So this stair is not decoration and the flight-2 gap is a real hole.
+   *
+   * Driven on `_moveset.mjs`'s realWorld(), measured rather than assumed:
+   *
+   *     max single jump   2.38 m      max double jump   3.88 m   (swept over hold duration;
+   *                                                               a tapped jump is cut to 0.98)
+   *     stage 1 -> 2 rise 3.20 m  -> a well-timed double jump clears it, the stair does not
+   *
+   * Two things fall out of that and both belong to whoever takes this next:
+   *
+   *  · §8.1's *"DOUBLE JUMP (2.5 + 1.9 = 4.4 m > 3.8 m)"* is optimistic. The delivered maximum
+   *    is 3.88 m, so the kiosk-lintel hop in step 2 clears its 3.8 m by **8 cm**, not by 60.
+   *  · **The terraces have no side collision.** Both decks are 1 m `groundProxy` slabs and the
+   *    `masonryShell` forming their faces registers nothing, so the underside of stage 2 sits at
+   *    y 4.2 over a stage-1 deck at y 2.0 — **2.20 m of clearance against a 1.80 m capsule.**
+   *    Walking north from the stage-1 deck goes straight *under* the second terrace and out the
+   *    far side at z -10. That is a larger defect than this stair angle and is deliberately not
+   *    fixed in the same commit as a stair.
    */
   const st2 = K.stairFlight({ steps: 7, rise: 0.46, run: 0.7, width: 5.2, rng: R });
   A.add('court', 'sandstone_worn', K.place(st2, { x: 0, y: t1.y, z: t2.z1 + 2.6, ry: -Math.PI / 2 }));
