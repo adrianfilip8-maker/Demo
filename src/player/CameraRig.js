@@ -89,6 +89,23 @@ export const TUNE = {
   pitchMin: -70 * DEG,          // below the pivot, looking up
   pitchMax: 75 * DEG,           // nearly overhead, looking down
   pitchDefault: 11 * DEG,
+  /* Vertical look gain, as a fraction of horizontal. A GAIN, not a filter — rule 1 forbids
+     low-passing the look input and this is untouched by that: it is frame-independent, has no
+     state and no lag, and the hand still moves the frame on the frame it moves.
+
+     Two independent arguments, and neither is a playtest, so this is labelled as what it is —
+     a feel constant adopted on argument:
+       · the reference sets exactly this ratio and sets nothing else about sensitivity:
+         `camera_parent.gd` runs `yaw_sens = 1.0` and `pitch_sens = 0.75` every physics frame,
+         and they are the only two sensitivity numbers in the file. (Its `avg_distance` scale is
+         initialised to 1 and never written, so it does nothing — recorded in the provenance
+         note above.)
+       · the axes are not the same length. Yaw is unbounded; pitch travels 145° end to end
+         (`pitchMin` −70 to `pitchMax` +75). At equal gain the vertical axis therefore hits its
+         stop in a fraction of the mouse travel the horizontal axis has, and a stick that stops
+         reads as a camera that is fighting you.
+     Applied in `_orbit` only, so the debug fly-cam keeps a 1:1 look. */
+  lookPitchScale: 0.75,
   distMin: 2.5,
   distMax: 9.0,
   distDefault: 5.4,
@@ -126,6 +143,31 @@ export const TUNE = {
      than pin. An ARBITRARY constant should be re-derived; an UNDER-DETERMINED one should be
      evaluated by eye. This is the second, so it is on the list as a feel question needing
      frames, and it is not re-tuned from this lane's measurements.
+
+     WHAT THE REFERENCE SAYS, asked directly, because it is the only other Sly camera anyone
+     here can read. It does not pin a size. It says the term should not be large, and it says so
+     three times over:
+
+       · **no speed→boom term at all.** `camera_smooth_follow` writes the boom as
+         `lerp(cam_container.position, Vector3(0, 0.5, camera_length + 7.0), 0.175)`, and its
+         `camera_length` is `pitch/PI*2` immediately `clamp`ed to `[0, 0]` — dead. Constant boom,
+         no speed, no pitch.
+       · **no speed→FOV term either.** `camera_parent.gd` drives `target_fov` to 75.0 always,
+         85.0 only when an authored `target.adj_fov` asks for attention. Speed is not consulted.
+       · **and its one apparently-huge speed term is not one.** The follow target carries
+         `velocity * (delta / lerp_val)` ≈ 0.667 s of look-ahead at 60 Hz, four times ours — and
+         `lerp_val` is the per-frame alpha of the very stage it feeds, whose ramp lag is
+         `h(1−a)/a` = 0.650 s. It is a lag compensator, agreeing with its own smoothing to 2.5 %.
+         See the floor in `_pivotGoal`, which is what that reading produced.
+
+     So the reference spends its entire speed budget on cancelling its own lag and leaves zero
+     for the boom and zero for the lens. That is corroboration for argument 2, from a design that
+     had the same choice and made it harder than we did: our `fovSpeedGain` already delivers a
+     speed cue the reference does not have at all, and at 5.4 m of boom a 0.30 m dolly is +5.6 %
+     of length and ~2.6 % of apparent size. **0.30 stands, now on three arguments rather than
+     two, and the third is the one that says it should not grow.** Still not re-tuned here: a
+     reference with no such term cannot pin a non-zero one, and pretending otherwise would be
+     inventing precision out of a negative result.
 
      Deliberately NOT done here: lighting the `run_fast` framing row as well. Its `fov` +4.6
      ADDS to `fovSpeedGain` +5.4 in `_write`, and the two have never been live at once; that
@@ -333,7 +375,50 @@ const FRAMES = {
   combat:     { dist: -0.90, height:  0.10, lead: 0.50, fov: -2.0, pitch:  1.5 * DEG, side: 0.30, stiff: 0.90, tau: 0.18 },
 };
 
-/** Substring → framing key. Order matters: longest/most specific first. */
+/**
+ * Exact state-name → framing. **The state namespace, which is not the clip namespace.**
+ *
+ * `STATE_RULES` below is a substring table written in the CLIP vocabulary (`wall_run`,
+ * `rail_walk`, `ledge_hang`) and it was being fed STATE names, which `Moveset.js` registers in
+ * camelCase (`wallRun`, `railWalk`, `ledgeHang`). Lowercasing camelCase never inserts an
+ * underscore, so every snake_case rule was unreachable — and worse than unreachable, because a
+ * *shorter* rule then caught the name and answered confidently:
+ *
+ *   `wallRun`   → `run`   'wallrun'.indexOf('run') === 4, and `['run','run']` sits at index 2,
+ *                          above `['wall','wall_run']`. So the `wall_run` framing — the one with
+ *                          `side 0.35` and `vtrack 1` — was reached by `wallClimb`, `wallCling`
+ *                          and `wallJump` and never by the move it is named for, and
+ *                          `_blendFrame` gates the wall-side probe on `_frameKey === 'wall_run'`,
+ *                          so **the bank was dead during a wall run.**
+ *   `railWalk`  → `walk`  'railwalk'.indexOf('walk') === 4. `balance` (`dist 2.10`, `pitch +5°`,
+ *                          `stiff 1.60` — the tightrope) was reached by nothing at all.
+ *   `ledgeHang` → `idle`  `ledge_hang` (`dist −0.70`, `height 1.15`, `pitch −13°` — *"drop under
+ *                          the lip and look up past it"*) had never once been applied.
+ *
+ * Diagnosed and pinned by `tests/traversal.test.mjs` arm 24, which was written to redden the
+ * moment the fix landed; this is that fix, and the arm now asserts the routed answers instead.
+ * An exact map rather than more substring rules, because the defect is that two namespaces were
+ * being matched loosely against each other — tightening the match is the repair, and adding
+ * `['wall_run', …]` to a substring table that already contains `['run', …]` would not have been.
+ *
+ * **Only the three the arm named as CONTRADICTIONS are listed**, i.e. a state landing on a
+ * framing that says the opposite of what the state is doing. The states that merely *fall
+ * through* to `idle` are left exactly where they route today and are design questions, not
+ * routing typos — `move` (documented at length in `tests/camspeed.test.mjs`: wiring the
+ * walk/run/run_fast ladder is a feel decision), and `hurt`, `toTarget`, `bounce`, `skid`,
+ * `pickpocket`. One more belongs on that list and is reported rather than changed here:
+ * **`combatStrafe` → `idle`**, while the `combat` framing it is named for (`side 0.30`,
+ * `dist −0.90`) is reached only by `combo`. Same class as the three above; not in this change
+ * because it was not in the diagnosis, and smuggling a fourth fix into a three-fix arm is how a
+ * measured result stops being attributable.
+ */
+const STATE_FRAME = {
+  wallRun:   'wall_run',
+  railWalk:  'balance',
+  ledgeHang: 'ledge_hang',
+};
+
+/** Substring → framing key, for names not in `STATE_FRAME`. Order matters: most specific first. */
 const STATE_RULES = [
   ['run_fast', 'run_fast'], ['sprint', 'run_fast'], ['run', 'run'],
   ['walk', 'walk'],
@@ -801,9 +886,14 @@ export class CameraRig {
     this._lastResolved = stateName;
     let key = 'idle';
     if (stateName) {
-      const s = stateName.toLowerCase();
-      for (let i = 0; i < STATE_RULES.length; i++) {
-        if (s.indexOf(STATE_RULES[i][0]) !== -1) { key = STATE_RULES[i][1]; break; }
+      // Exact state name first — see `STATE_FRAME`. The substring table below is the clip
+      // namespace and only gets the names the state namespace has no answer for.
+      key = STATE_FRAME[stateName] || key;
+      if (!STATE_FRAME[stateName]) {
+        const s = stateName.toLowerCase();
+        for (let i = 0; i < STATE_RULES.length; i++) {
+          if (s.indexOf(STATE_RULES[i][0]) !== -1) { key = STATE_RULES[i][1]; break; }
+        }
       }
     }
     this._frameKey = key;
@@ -1121,7 +1211,7 @@ export class CameraRig {
     let touched = false;
     if (!cinematic && (lx !== 0 || ly !== 0)) {
       this.yaw = wrapPi(this.yaw - lx);
-      this.pitch = clamp(this.pitch + ly, TUNE.pitchMin, TUNE.pitchMax);
+      this.pitch = clamp(this.pitch + ly * TUNE.lookPitchScale, TUNE.pitchMin, TUNE.pitchMax);
       touched = true;
       this._recentreT = -1;                 // any mouse input cancels an assist in flight
     }
@@ -1260,13 +1350,68 @@ export class CameraRig {
 
     out.set(_pPos.x, y, _pPos.z);
 
-    // Lead the look-at along the ground velocity — more of it the faster he's going, so you
-    // are always looking where you'll be, not where you were.
-    const lead = TUNE.leadTime * f.lead * leadScale;
-    let lx = _pVel.x * lead, lz = _pVel.z * lead;
-    const ll = Math.hypot(lx, lz);
-    if (ll > TUNE.leadMax) { const k = TUNE.leadMax / ll; lx *= k; lz *= k; }
-    out.x += lx; out.z += lz;
+    /* Lead the look-at along the ground velocity — more of it the faster he's going, so you are
+     * always looking where you'll be, not where you were.
+     *
+     * ── AND A FLOOR, BECAUSE THAT SENTENCE WAS FALSE AT EVERY SPEED THAT MATTERS ─────────────
+     * The lead is applied to the *goal*; what reaches the screen is the goal minus the follow
+     * spring's own trail. A critically-damped `smoothDamp` tracking a constant-velocity target
+     * settles exactly `smoothTime × v` behind it, and `smoothTime` here is `followTimeH × stiff`
+     * — so `f.stiff`, documented only as "multiplier on the spring times (>1 = softer, stiller)",
+     * silently subtracts from `f.lead`. Two knobs, one delivered quantity, and nothing measured
+     * the sum. Worse, `leadMax` bounds the lead and NOTHING bounds the trail, so above the speed
+     * where the clamp binds the net lead falls linearly with speed and changes sign.
+     *
+     * Measured on the shipped rig, steady state, signed along travel (+ = ahead of the player):
+     *
+     *     framing        v      authored   delivered
+     *     idle(=move)   7.20      0.428      -0.939     ← ordinary running
+     *     hook_swing    8.00      1.750      -0.207     ← "Lead frames the landing"
+     *     rail_slide   12.00      1.750       0.212
+     *     sneak         1.40      0.119      -0.250
+     *     air           7.20      1.469       0.217
+     *     run           7.20      1.714       0.612
+     *
+     * Ordinary running looked a metre BEHIND Sly, and the hook swing — the move `Controller.js`
+     * calls the best-feeling in the game, whose framing comment is *"Lead frames the landing"* —
+     * delivered −21 cm of an authored 1.75 m.
+     *
+     * The reference does not have this defect and reading it is how the shape was found.
+     * `player__sly.gd:camera_smooth_follow` offsets its follow target by `velocity * (delta /
+     * lerp_val)` with `lerp_val` 0.025 at 60 Hz — apparently a colossal 0.667 s of look-ahead,
+     * four times ours. It is not look-ahead at all: the same `lerp_val` is the per-frame alpha of
+     * the stage being fed, whose steady-state ramp lag is `h(1−a)/a` = 0.650 s. **Their lead is
+     * their own smoothing lag, cancelled to within 2.5 %**, which is what lets them run a stage
+     * four times heavier than ours and still track a running character exactly.
+     *
+     * So the floor, and it is deliberately only a floor: raise the lead to the trail when the
+     * authored lead is smaller, never lower it when it is larger. That corrects a SIGN and
+     * touches nothing that was already positive — `run`, `rail_slide` and `air` above are
+     * unchanged to the digit. Full compensation is the other available answer and is NOT taken:
+     * it would move `run` from +0.61 m to the `leadMax` 1.75 m and the hook swing by 1.96 m, and
+     * `leadMax` was calibrated against the *delivered* number, so honouring the authored one
+     * means re-deriving the cap as well. Same call, and the same reason, as the `landImpact`
+     * block in `Controller.TUNE`: a correct measurement that forces a feel re-derivation is not
+     * a one-line fix, and it wants frames.
+     *
+     * `deadzoneH` is deliberately outside the floor. It adds a further 10 cm of trail, but it is
+     * a deadzone and not a lag — constant, not velocity-proportional, and cancelling it would
+     * destroy the still frame it exists to produce. */
+    /* Worked in SECONDS of travel rather than metres, and that is a correctness point rather than
+       a style one: expressed as a scale on the lead VECTOR, the floor has no direction to apply
+       when the authored lead is zero, so a framing with `lead: 0` would silently keep the full
+       trail. No shipped framing has one (`spire` 0.15 is the smallest), which is exactly why the
+       hole would have sat there — it was found by running `leadTime` 0 as L1's failing input in
+       `tests/camlead.test.mjs`, not by reading this back. The velocity is the direction; the lead
+       and the trail are both times along it. */
+    const sp = Math.hypot(_pVel.x, _pVel.z);
+    if (sp > 1e-6) {
+      let secs = TUNE.leadTime * f.lead * leadScale;
+      if (secs * sp > TUNE.leadMax) secs = TUNE.leadMax / sp;   // the authored cap, unchanged
+      const trailSecs = TUNE.followTimeH * f.stiff;             // …and the floor, never a ceiling
+      if (secs < trailSecs) secs = trailSecs;
+      out.x += _pVel.x * secs; out.z += _pVel.z * secs;
+    }
 
     const aim = this.mode === 'aim' || !!(this.engine.input?.down?.('focus'));
     const side = f.side * this._sideSign + (aim ? 0.45 : 0);

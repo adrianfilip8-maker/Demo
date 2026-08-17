@@ -3803,8 +3803,10 @@ test('CameraRig: the five consumers of `right`, two of which must not move', asy
 /* ====================================================================== */
 
 test('CameraRig: which framing every state actually gets, and the entries nothing can reach', async () => {
-  /* Round 20 fixed the wall-run BANK so it leans into the wall. This is why that bank has never
-   * fired during a wall run at all, and it is a bigger defect than the sign was.
+  /* Round 20 fixed the wall-run BANK so it leans into the wall. This arm found why that bank had
+   * never fired during a wall run at all — a bigger defect than the sign was — and the fix now
+   * lives in `CameraRig.STATE_FRAME`. The diagnosis below is kept verbatim because it is what the
+   * fix was written against; the assertions at the bottom are the ones that changed.
    *
    * ── The mechanism ───────────────────────────────────────────────────────────────────────────
    * `_resolveFrame` lowercases the STATE name and takes the first `STATE_RULES` entry that is a
@@ -3873,27 +3875,69 @@ test('CameraRig: which framing every state actually gets, and the entries nothin
   console.log(`\n[frame] rules no state name can reach (${deadRules.length}/${ruleKeys.length}): ${deadRules.join(', ')}`);
   console.log(`[frame] framings no state reaches (${deadFramings.length}/${frameKeys.length}): ${deadFramings.join(', ')}`);
 
-  /* THE FINDINGS, pinned at their current values so each reddens the moment it is corrected.
-     Every one of these says what the fix looks like, because an arm that only says "this is
-     wrong" makes the next reader re-derive what right would be. */
-  assert.equal(routed.get('wallRun'), 'run',
-    `wallRun now routes to '${routed.get('wallRun')}'. If that is 'wall_run', the fix has landed — ` +
-    'and the wall-side probe and the bank are live during a wall run for the first time.');
-  assert.equal(routed.get('railWalk'), 'walk',
-    `railWalk now routes to '${routed.get('railWalk')}' — if that is 'balance', the fix has landed`);
-  assert.equal(routed.get('ledgeHang'), 'idle',
-    `ledgeHang now routes to '${routed.get('ledgeHang')}' — if that is 'ledge_hang', the fix has landed`);
-  assert.equal(routed.get('move'), 'idle',
-    `move now routes to '${routed.get('move')}'. This one is a DESIGN change, not a defect fix: ` +
-    'it means somebody wired speed-tiered framing, and the walk/run/run_fast entries are live.');
+  /* ── THE FIX HAS LANDED, and this arm now asserts the routed answers ─────────────────────────
+     `CameraRig.STATE_FRAME` puts an exact state-name map in front of the substring table, for
+     exactly the three names above. The arm keeps its shape — it still resolves every registered
+     state through the live rig and still derives the dead sets from source — because the value
+     was never the three equalities, it was the census that found them.
 
-  /* The dead sets, as counts rather than lists, so adding a state or a rule does not redden this
-     for the wrong reason — only a change in how MUCH is unreachable does. */
+     DOMAIN (§418.3)
+       passes on : the shipped rig. Measured after the change: wallRun -> wall_run,
+                   railWalk -> balance, ledgeHang -> ledge_hang.
+       fails on  : the rig as it shipped before `STATE_FRAME` existed — this arm's previous
+                   revision asserted 'run' / 'walk' / 'idle' for the same three names and was the
+                   red arm that the fix was written against (1 of 56 failing, observed). The
+                   `substr` recomputation below re-derives those three answers live, so the
+                   failing input is not a memory of an old run: it is computed every time this
+                   arm executes and asserted to DIFFER from what the rig answers. */
+  const substr = (n) => {
+    const s = n.toLowerCase();
+    for (let i = 0; i < ruleKeys.length; i++) if (s.indexOf(ruleKeys[i]) !== -1) return ruleKeys[i];
+    return null;
+  };
+  console.log(`\n[frame] substring answers for the three: wallRun -> ${substr('wallRun')} · `
+    + `railWalk -> ${substr('railWalk')} · ledgeHang -> ${substr('ledgeHang')}`);
+
+  assert.equal(routed.get('wallRun'), 'wall_run',
+    `wallRun routes to '${routed.get('wallRun')}'. If that is 'run', \`STATE_FRAME\` has been ` +
+    'dropped and the wall-side probe and the bank are dead during a wall run again.');
+  assert.equal(routed.get('railWalk'), 'balance',
+    `railWalk routes to '${routed.get('railWalk')}' — 'walk' means the exact map is gone`);
+  assert.equal(routed.get('ledgeHang'), 'ledge_hang',
+    `ledgeHang routes to '${routed.get('ledgeHang')}' — 'idle' means the exact map is gone`);
+  /* The failing input, computed rather than remembered: the substring table STILL answers the
+     three wrong values, and the rig no longer agrees with it. If these ever coincide, either the
+     rule table was rewritten (fine, but then this arm is measuring nothing) or `STATE_FRAME`
+     stopped being consulted (not fine). */
+  assert.equal(substr('wallRun'), 'run', 'the substring table no longer answers `run` for wallRun');
+  assert.ok(routed.get('wallRun') !== substr('wallRun') &&
+            routed.get('railWalk') !== substr('railWalk'),
+    'the rig now agrees with the substring table on the two names the exact map exists to ' +
+    'override, so the override is not running and these equalities pass for the wrong reason');
+
+  /* ── The two the census reports rather than fixes ─────────────────────────────────────────── */
+  assert.equal(routed.get('move'), 'idle',
+    `move routes to '${routed.get('move')}'. This one is a DESIGN change, not a defect fix: ` +
+    'it means somebody wired speed-tiered framing, and the walk/run/run_fast entries are live.');
+  assert.equal(routed.get('combatStrafe'), 'idle',
+    `combatStrafe routes to '${routed.get('combatStrafe')}' — the fourth member of the class the ` +
+    "three fixes above belong to (`combat`'s `side 0.30`/`dist −0.90` is reached only by `combo`), " +
+    'deliberately NOT fixed with them so the three stay attributable. If this is now `combat`, ' +
+    'somebody made that call and this arm should record it rather than fail.');
+
+  /* The dead rule count is UNCHANGED by the fix and that is correct, not an oversight: the exact
+     map sits in FRONT of the substring table, so the table's own reachability is exactly the
+     property it always was. Left as a count so adding a state or a rule cannot redden it. */
   assert.ok(deadRules.length >= 10,
     `only ${deadRules.length} rules are unreachable now (was 14): ${deadRules.join(', ')} — if that ` +
     'dropped, the namespace mismatch is being repaired and this arm should say so');
-  assert.ok(deadFramings.includes('balance') && deadFramings.includes('ledge_hang'),
-    `balance and ledge_hang are no longer unreachable (dead: ${deadFramings.join(', ')}) — the fix has landed`);
+  /* The dead FRAMINGS did change, and they collapsed onto exactly one thing: the speed ladder.
+     Asserted as a set rather than a count, because "which three" is the whole result — every
+     authored framing in the table is now reachable except the walk/run/run_fast rungs, and those
+     are unreachable for the `move -> idle` reason above rather than for a namespace one. */
+  assert.deepEqual(deadFramings.slice().sort(), ['run', 'run_fast', 'walk'],
+    `framings nothing reaches: ${deadFramings.join(', ')} — before the fix this also held ` +
+    '`balance` and `ledge_hang`; if either is back, the exact map has been dropped');
   /* The lever: this arm is worthless if `_resolveFrame` answers the same thing for everything. */
   assert.ok(usedFramings.size >= 10,
     `only ${usedFramings.size} distinct framings are reachable — the resolver is not discriminating, ` +
