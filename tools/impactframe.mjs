@@ -596,6 +596,29 @@ if (args.includes('--search')) {
   }
   cells.sort((x, y) => y.rank - x.rank);
   const geomT = ((Date.now() - t0) / 1000).toFixed(1);
+  /* ── THE RANK'S OPTIMUM SITS AT THE NARROWEST LENS SWEPT, WHICH IS A WARNING ─────────────
+     `rank = flat * slyH`. `flat` rises with elevation; `slyH` rises as `d * tan(fov/2)` falls;
+     and the ring's width sets a floor under `d * tan(fov/2)`. So the maximum is pinned to that
+     floor and pushes toward the LONGEST lens available — meaning the winner is chosen by where
+     the list of lenses stops, not by the geometry.
+     **A tiebreak whose optimum is at a swept boundary has not found an optimum, it has found
+     the edge of the sweep.** Printing the best cell per lens makes that visible instead of
+     letting one number hide it, and turns the lens into a composition choice — which is what it
+     is — rather than an artefact of the array literal above. */
+  const byLens = new Map();
+  for (const c of cells) {
+    const b = byLens.get(c.fov);
+    if (!b || c.rank > b.rank) byLens.set(c.fov, c);
+  }
+  console.log(`\n   best admissible cell per lens — the rank peaks at whichever lens is longest,`
+    + ` so this is a composition choice and not a measurement:`);
+  for (const fov of [...byLens.keys()].sort((a, b) => a - b)) {
+    const c = byLens.get(fov);
+    console.log(`     fov ${String(fov).padStart(2)} · rank ${c.rank.toFixed(1).padStart(6)}`
+      + ` · d ${String(c.d).padStart(4)} m h ${String(c.hh).padStart(5)} m`
+      + ` · ellipse ${c.flat.toFixed(3)} · sly ${c.slyH.toFixed(0)} px`
+      + ` · elevation ${(Math.atan2(c.hh, c.d) * 180 / Math.PI).toFixed(1)}°`);
+  }
   console.log(`\n   geometry: ${geomCells} cells swept in ${geomT} s · ${cells.length} clear every bar but occlusion`);
   console.log(`   probing the top ${Math.min(PROBE_CELLS, cells.length)} by rank for a clear sightline`);
 
