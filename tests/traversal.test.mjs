@@ -2648,7 +2648,15 @@ test('crawl: reachable by traversal — the walk-in failed on lateral drift, not
 /* ====================================================================== */
 
 test('slopes: a pure cardinal stick holds its line — the ground snap no longer travels', async () => {
-  /* Arm 17 found the vent walk-in failing because a pure −X stick slid Sly 4.6 m in +z. That is
+  /* DOMAIN (§418.3), recorded retrospectively while the knowledge was still fresh:
+   *   passes on : the level's 3–15° walkable grades, post-fix   -> drift ratio 0.0121
+   *   fails on  : the same grades, pre-34295c5                  -> 0.3180, mean lateral 0.8069 m
+   * Both figures are measured on the SAME sampled faces, so the bar's domain is one input set
+   * observed in two states of the code rather than two different populations. `sumRes > 1.0`
+   * below is the second half: it fails on a Collision layer that stopped resolving lateral at
+   * all, which is the "fix" that would make the drift bar pass for the wrong reason.
+   *
+   * Arm 17 found the vent walk-in failing because a pure −X stick slid Sly 4.6 m in +z. That is
    * not a vent fact. Three questions, all driven:
    *
    * **Flat ground: no drift.** Four cardinals on the spawn paving give |across| ≤ 0.005 m over
@@ -3932,7 +3940,19 @@ function rampCollision(deg) {
 }
 
 test('slopes: standing still does not travel, and a face too steep to stand on still sheds', async () => {
-  /* `_moveVertical` had the same shape as the ground snap — `position.copy(r.position)` on a
+  /* DOMAIN (§418.3). This arm has TWO bars pulling opposite ways, so it needs two pairs, and the
+   * reason the synthetic ramp exists is that half the domain is absent from the level:
+   *   "does not travel"  passes on : walkable ramps 3–15°, post-bf076ce  -> |downhill| < 0.01 m
+   *                      fails on  : the same ramps pre-fix              -> mean 0.2816, max 2.1644 m
+   *   "still sheds"      passes on : SYNTHETIC 55° and 65° ramps         -> drop 0.4193 / 0.5111 m
+   *                      fails on  : a walkability gate widened past 50° -> shedding goes to zero
+   * The shed pair CANNOT be built from this level: its steepest face is 47.9° against a 50° limit,
+   * so every grade here is authored standable and the failing input for the first bar and the
+   * passing input for the second do not coexist in the geometry. That is why the ramp is
+   * synthetic and says so — not for convenience, because the domain is otherwise half-empty and
+   * the "still sheds" bar would have been unfalsifiable while looking fine.
+   *
+   * `_moveVertical` had the same shape as the ground snap — `position.copy(r.position)` on a
    * purely vertical request — and gravity re-contacts the surface every single frame, so every
    * frame donated a little downhill. Standing still with NO INPUT on a 3–15° grade in the real
    * level travelled a mean of 0.2816 m and a maximum of **2.1644 m** in 90 frames.
@@ -4060,7 +4080,18 @@ test('§409 census: capsuleSweep says WHY it hit, and every caller in src is enu
 
   /* ---- 1. the discriminator, all four quadrants on the REAL collision layer -------------- */
   /* A flag that cannot say one of its answers is not a flag (§409.3), so `sweepHit` is shown
-     here to be neither constant, nor an alias of `hit`, nor an alias of `!hit`. */
+     here to be neither constant, nor an alias of `hit`, nor an alias of `!hit`.
+   *
+   * DOMAIN (§418.3) — the two inputs, recorded while the domain was still in front of me:
+   *   passes on : `contact`, a 3.5 m drop onto the floor at (0,·,30)   -> sweepHit true
+   *   fails on  : `depen`,  a zero-length request straddling that floor -> sweepHit false
+   * Both are IN THIS ARM, which is the point: the domain of `sweepHit` is the 2x2 of
+   * {swept, not swept} x {pushed out, not pushed out}, and all four cells are constructed here
+   * and asserted. No bar below can be vacuous while its own counter-case sits four lines away.
+   * The `depen` cell is the one that costs thought — a zero-length request makes the sweep loop
+   * break under `minSweep` WITHOUT casting, so a `hit` there can only be the push-out. That is
+   * the construction that makes the cell reachable at all; without it this bar would be §407's
+   * shape and nobody would know. */
   const RAD = TUNE.radius, H = TUNE.height, OPT = { skipOneWay: false };
   const g0 = collision.groundCheck(V(0, 90, 30), RAD, 300);
   assert.ok(g0?.hit, 'no ground under the census probe point — the fixture moved');
@@ -4105,7 +4136,16 @@ test('§409 census: capsuleSweep says WHY it hit, and every caller in src is enu
 
   /* ---- 2. every caller, statically, so an unexercised one cannot hide ------------------- */
   /* The walk below can only see callers it happens to run. This scan sees all of them, which is
-     what makes this a census rather than a sample: a seventh caller anywhere under src/ trips it. */
+     what makes this a census rather than a sample: a seventh caller anywhere under src/ trips it.
+   *
+   * DOMAIN (§418.3), and this one was OBSERVED rather than argued:
+   *   passes on : `src/` as it stands                                    -> 3 sites
+   *   fails on  : a copy of `src/` with one extra `col.capsuleSweep(...)`
+   *               appended to Collision.js                                -> 4 sites, bar RED
+   * Run against both trees before this comment was written. It matters that the failing input is
+   * a NEW CALLER and not a moved line: another lane shifted `CameraRig.js:1381` to `:1426` while
+   * this arm was being written and the count did not budge, which is the discrimination the bar
+   * is supposed to have and the reason it counts invocations rather than pinning positions. */
   const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
   const walkDir = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => {
     const p = path.join(d, e.name);
@@ -4162,7 +4202,28 @@ test('§409 census: capsuleSweep says WHY it hit, and every caller in src is enu
   /* `_calibrate` calls `capsuleSweep` DIRECTLY rather than through `_sweep`, which is exactly the
      shape of the blind spot: §409.2 was assembled by recalling consumers of the wrapper. It reads
      `hit` bare and its answer is LATCHED into `_capOff` for every subsequent sweep, where every
-     other site gets a fresh answer next frame. */
+     other site gets a fresh answer next frame.
+   *
+   * DOMAIN (§418.3) — and writing it down is what exposed the problem, so it is stated plainly:
+   *   passes on : the real level, standing at (0,·,30)     -> sweepHit true, _capOff 0
+   *   fails on  : NO INPUT IN THE CURRENT LEVEL.
+   *
+   * `assert.equal(cal?.sweepHit, true)` is a bar I cannot make red. The probe drops 3.5 m from
+   * 3 m above ground that `groundCheck` just found, so the sweep MUST cross it and the loop
+   * cannot come back empty — the same structural argument that makes the bare `hit` read safe is
+   * what makes the bar unfalsifiable. **That is §407's shape, in an arm I wrote while auditing
+   * for §407's shape.**
+   *
+   * It is kept, deliberately, as a TRIPWIRE rather than a discriminating bar, and the difference
+   * is the honesty of this comment. Its domain is not today's inputs but tomorrow's edits: change
+   * the probe to start below known ground, or to sweep a distance shorter than `probeUp`, and the
+   * depenetration-only answer becomes reachable and this fires. §407's failure was not having an
+   * unfalsifiable bar; it was believing one was discriminating. A tripwire that says so is fine.
+   * If you ever make the failing case reachable, replace this with the bound, not a wider window.
+   *
+   * `assert.equal(c._capOff, 0)` beside it is NOT in that position: it goes red on any collision
+   * module reporting the capsule CENTRE, which `Controller._calibrate` explicitly supports and
+   * warns about. Different bar, reachable domain, left as an ordinary assertion. */
   /* Stand him on known ground and re-bind, so the probe runs against the REAL layer. Skipping the
      re-bind was worth catching: a freshly built Controller has not bound anything yet and answers
      from `FLAT`, so the probe reported `undefined` — an arm that had been reading the stand-in. */
@@ -4190,6 +4251,21 @@ test('§409 census: capsuleSweep says WHY it hit, and every caller in src is enu
  * anything, which shows up as the position it resolved to. One must descend and one must not.
  */
 test('§409: the summit-lip pair — same hit, same toi, opposite correct answers', async () => {
+  /* DOMAIN (§418.3) — the strongest form available, because the failing input is CODE that
+   * existed and the red was watched happen:
+   *   passes on : `Controller._moveHorizontal` as it stands, with the snap bounded by
+   *               `Math.min(byToi, byResolve)`      -> depen −0.42 m, contact +0.34 m
+   *   fails on  : that same line reverted to `drop * dn.toi`, which is what shipped before
+   *               34295c5                            -> depen +0.34 m, arm RED with its own message
+   * Reverted, ran, watched it go red, restored. The 0.76 m gap between the two arms IS the defect,
+   * so the bar's domain and the bug's domain are the same set — which is the property to aim for
+   * and the reason this arm needed no separate calibration case.
+   *
+   * The two inputs are also both CONSTRUCTED here rather than hunted for in the level: `mode`
+   * selects a depenetration-only answer or a genuine contact, identical on `hit` and on `toi`.
+   * A real summit lip produces the first about once in 76 sweeps (§412.2) and this arm would then
+   * depend on finding one; a stub makes the rare cell of the domain reachable on demand. That is
+   * the same move as the synthetic 55°/65° ramp in the `slopes` arm, for the same reason. */
   const DROP = TUNE.stepHeight + TUNE.groundSnap;
 
   /** Upward probes report clear (so the step-up runs); downward probes answer per `mode`. */

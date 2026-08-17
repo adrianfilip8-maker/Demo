@@ -31462,6 +31462,20 @@ lines because it is not specific to this file:
 - **Re-read the base from HEAD immediately before `hash-object`, and re-check `git rev-parse HEAD`
   immediately before `git commit`.** The gap between those two is the whole exposure.
 
+**Restore with `git checkout -- <path>`, never from a saved copy.** The command re-reads the
+index at the moment it runs; a snapshot taken earlier in the round is a stale base wearing a
+restore's clothing. The blob technique protects the COMMIT — this protects the cleanup afterwards,
+which is the step nobody thinks of as a write. And re-run it *after* the last commit of your
+sequence, not once at the start: `update-index` never touches the working tree, so every blob
+commit any lane makes leaves every working copy one section behind, including your own.
+
+*Third distinct way this file was damaged in one day, and the pattern is now unmistakable:* a
+stash, an `rm -rf` of files untracked in one tree and tracked in another, and a restore from a
+stale snapshot. **All three were tidying operations. None of them was the work.** On a branch with
+concurrent lanes the dangerous commands are the housekeeping ones, precisely because they are the
+ones run without reading first — §410.4 observed this about rollback and it generalises: the
+command you do not think of as a write is the one that writes over somebody else.
+
 And one step missing from the recipe entirely: **afterwards, restore the working copy.**
 `update-index` deliberately does not touch the working tree, so once the commit lands, the file on
 disk is still your pre-merge buffer — now missing your own commit *and* every other lane's. The
