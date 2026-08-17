@@ -8,6 +8,82 @@ import * as THREE from 'three';
  * See AGENTS.md §4 for the contract this implements.
  */
 
+/**
+ * Frames per second, measured against the WALL CLOCK.
+ *
+ * The counter this replaces accumulated `Engine.dt` — the SIMULATION delta, which `renderFrame`
+ * clamps to 1/20 s and multiplies by `timeScale`. Two consequences, and both of them empty the
+ * readout of meaning exactly where a reader needs it:
+ *
+ *   · **It saturated at 20.** Below 20 fps every frame contributes exactly 1/20 to the
+ *     accumulator, so `frames / accum` is 20 whatever the machine is doing. There is no input
+ *     below 20 fps on which the old expression could return anything else. Measured in this
+ *     container during a driven play session: the game presented **0.70 frames per second** and
+ *     `Debug.js`'s on-screen readout said **21**.
+ *   · **Slow motion made it go UP.** Thief-o-Vision sets `timeScale` below 1, which shrinks every
+ *     frame's contribution, so the reported rate rises while the game visibly slows.
+ *
+ * A frame rate is frames per second of real time, so real time is what this accumulates.
+ *
+ * It is an object rather than three more fields on Engine for one reason: Engine needs a WebGL
+ * context and a DOM to exist, so nothing about it can be driven from a test. This can be handed
+ * a synthetic clock, which is what lets `tests/enginefps.test.mjs` show the meter reading 60 on
+ * one input and 0.7 on another — the two inputs the old expression could not have.
+ */
+export class FpsMeter {
+  constructor(windowSec = 0.5) {
+    this.windowSec = windowSec;
+    this.fps = 0;
+    /**
+     * How many windows have closed — i.e. how many times `fps` has been *published*.
+     *
+     * `fps` starts at 0 and a genuinely stalled machine also publishes 0, so the value alone
+     * cannot distinguish "not measured yet" from "measured, and it is dreadful". Anything that
+     * needs to tell those apart (a readout deciding whether to print a number, a test asserting
+     * on the first published value) reads this instead of guessing from `fps`.
+     */
+    this.windows = 0;
+    this._accum = 0;
+    this._frames = 0;
+    this._last = -1;
+  }
+
+  /**
+   * Forget the previous timestamp.
+   *
+   * Called whenever the loop is (re)started, so that the wall-clock gap spent stopped — a pause,
+   * a backgrounded tab, a screenshot harness holding the loop for a minute between steps — is not
+   * charged to the next frame as if it had taken a minute to draw.
+   */
+  reset() { this._last = -1; this._accum = 0; this._frames = 0; }
+
+  /**
+   * Record one presented frame at monotonic `nowMs` and return the current estimate.
+   *
+   * The first call after a reset establishes the origin: it has no interval behind it, so it
+   * contributes neither time nor a frame, and `fps` holds its previous value until a real
+   * interval has been seen. An interval that is non-positive or absurd (a clock stepped
+   * backwards, a suspended process) is dropped rather than allowed into the window.
+   */
+  sample(nowMs) {
+    if (this._last >= 0) {
+      const d = (nowMs - this._last) / 1000;
+      if (d > 0 && d < 60) { this._accum += d; this._frames++; }
+    }
+    this._last = nowMs;
+    if (this._accum >= this.windowSec && this._frames > 0) {
+      const raw = this._frames / this._accum;
+      /* Integer above 10, one decimal below it. Rounding to an integer throughout is what the old
+         counter did, and at the rates this fix exists to expose it re-hides them: 0.70 fps would
+         print as "1 fps", which is the same lie one digit smaller. */
+      this.fps = raw >= 10 ? Math.round(raw) : Math.round(raw * 10) / 10;
+      this.windows++;
+      this._accum = 0; this._frames = 0;
+    }
+    return this.fps;
+  }
+}
+
 const QUALITY_PRESETS = {
   low:   { pixelRatio: 1.0, shadowMap: 1024, shadowCascades: 1, aniso: 4,  msaa: 0, ssao: false, volumetrics: false, particles: 0.35, texSize: 512 },
   med:   { pixelRatio: 1.0, shadowMap: 2048, shadowCascades: 2, aniso: 8,  msaa: 0, ssao: true,  volumetrics: true,  particles: 0.7,  texSize: 1024 },
@@ -112,8 +188,11 @@ export class Engine {
     };
 
     this.warnings = [];
+    /* `ms` is the CPU time spent inside `renderFrame`, and only that. GL commands complete
+       asynchronously, so on a software rasteriser it reads 18-45 ms while frames are arriving
+       1.4 s apart. `fps` is the honest cost figure; `ms` is where that cost was spent in JS. */
     this.stats = { fps: 0, drawCalls: 0, triangles: 0, programs: 0, ms: 0 };
-    this._fpsAccum = 0; this._fpsFrames = 0;
+    this._fps = new FpsMeter();
 
     this._onResize = this._onResize.bind(this);
     window.addEventListener('resize', this._onResize);
@@ -217,6 +296,7 @@ export class Engine {
 
   start() {
     this.clock.start();
+    this._fps.reset();
     this._looping = true;
     this._raf = requestAnimationFrame(this._tick);
   }
@@ -234,6 +314,7 @@ export class Engine {
     if (this._looping) return;
     this._looping = true;
     this.clock.getDelta();       // discard the gap spent paused
+    this._fps.reset();           // ...and do not bill the next frame for it either
     this._raf = requestAnimationFrame(this._tick);
   }
 
@@ -273,14 +354,11 @@ export class Engine {
     this.stats.drawCalls = info.render.calls;
     this.stats.triangles = info.render.triangles;
     this.stats.programs = info.programs?.length ?? 0;
-    this.stats.ms = performance.now() - t0;
-
-    this._fpsAccum += this.dt || 1 / 60;
-    this._fpsFrames++;
-    if (this._fpsAccum >= 0.5) {
-      this.stats.fps = Math.round(this._fpsFrames / this._fpsAccum);
-      this._fpsAccum = 0; this._fpsFrames = 0;
-    }
+    const t1 = performance.now();
+    this.stats.ms = t1 - t0;
+    /* Wall clock, NOT `this.dt` — see FpsMeter's header for what accumulating the simulation
+       delta did to this number below 20 fps and under `timeScale`. */
+    this.stats.fps = this._fps.sample(t1);
   }
 
   /* ===================== misc ======================================== */
