@@ -549,3 +549,163 @@ test('L1: landHard sits in a band that neither population can reach', async () =
   console.log(`[L1] counterexample: landHard ${OLD} sits below A's floor ${selfLow.toFixed(3)} — `
     + 'every jump in the game would be a hard landing');
 });
+
+/* ====================================================================== */
+/* R5 — the spawn snap is armed for the SPAWN, and a teleport spends it    */
+/* ====================================================================== */
+
+test('R5: a freshly-minted Controller no longer eats its first frame teleporting to the floor', async () => {
+  /* ── WHAT THIS IS ─────────────────────────────────────────────────────────────────────────
+   * `Controller._needSpawnSnap` exists so that `init()`, which places Sly at `SPAWN` before
+   * COLLISION is live, gets him dropped onto the real floor on the first frame it IS. It was
+   * scoped to "the first live frame" and never to "the spawn", and `teleport()` did not spend
+   * it — so a Controller placed by hand and then stepped had a 38 m ground cast applied to
+   * wherever it had been put. On the shipped temple that was a 17.5 m fall in ONE frame,
+   * arriving grounded in state `idle`.
+   *
+   * The cost was not to the game (`src` mints exactly one Controller, at `main.js:205`, and its
+   * one armed frame happens at `SPAWN` where the snap moves it −0.0000 m). The cost was that
+   * **no test in this project could start a beat airborne** — a probe that asked for a height
+   * silently got the ground — which is how a telegraph beat was twice reported as
+   * "did not reproduce". Six sites across five files had each found the field and cleared it by
+   * hand without naming it; `realWorld()` was the one that had not, and it is the one that bit.
+   *
+   * ── MECHANISM, NOT OUTCOME (§439) ────────────────────────────────────────────────────────
+   * "he is still airborne" is satisfied by a dozen stories — a shortened cast, a changed gate,
+   * a different probe order. So the ablation restores the pre-repair code EXACTLY, by re-arming
+   * the single boolean the repair spends, and re-runs the identical drops. Nothing on the
+   * measurement path is stubbed: the BVH, the capsule, the cast and the position are all real;
+   * what is put back is one private flag, and what is read is where Sly ends up.
+   *
+   * The third case is the one that stops this being a deletion. A repair that simply removed
+   * the snap would pass both halves above, so the arm also drives the BOOT path — position
+   * written directly, no teleport, exactly as `init()` does (measured: `init()` calls
+   * `teleport()` zero times) — and requires that it still snaps.
+   *
+   * ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : a fresh Controller teleported to (4.2, y, 4.5) for y in 2.5 … 30 and stepped
+   *               once — he stays within a frame of gravity of where he was put.
+   *   fails  on : the same drops with `_needSpawnSnap` re-armed after the teleport (RUN below,
+   *               in-arm) — every one of them arrives at the terrace deck, y 2.000, grounded.
+   *   does NOT discriminate : the snap's REACH, or its upward face. Once `teleport()` spends
+   *               the arm, the only position the snap can act on is the spawn, so the ±(8, 30) m
+   *               cast this arm leaves in place is untestable from here and deliberately
+   *               untouched. Nor does it see whether a level whose spawn is NOT already on the
+   *               floor is snapped correctly — `SPAWN` is, so case 3 below measures that the
+   *               mechanism RAN, not that it moved him.
+   */
+  const { engine } = await realWorld();
+  const HEIGHTS = [2.5, 5, 8.95, 12, 19.5, 25, 30];
+  const AT = new THREE.Vector3(4.2, 0, 4.5);
+  /* One frame of free fall — the most a stepped Controller may legitimately move downward from
+     rest. Derived from the tune rather than written down, so a gravity change cannot make this
+     arm quietly permissive. `TUNE.gravity` is signed (−24); this bound is a magnitude. */
+  const TICK = Math.abs(TUNE.gravity) * DT * DT;
+
+  async function virgin() {
+    const c = new Controller(engine);
+    await c.init();
+    return c;
+  }
+  function step(c) {
+    engine.input.beginFrame(DT);
+    engine.input.move.x = 0; engine.input.move.y = 0;
+    c.update(DT, 0);
+  }
+
+  /* 1 — the repair. A fresh Controller per row, because the defect was per-INSTANCE. */
+  const kept = [];
+  for (const y of HEIGHTS) {
+    const c = await virgin();
+    hardReset(engine, c, new THREE.Vector3(AT.x, y, AT.z));
+    step(c);
+    kept.push({ y, end: c.position.y, grounded: c.grounded, state: c.sm.name, group: c.sm.group });
+    c.dispose?.();
+  }
+
+  /* 2 — the ablation: put the one flag back, change nothing else. */
+  const snapped = [];
+  for (const y of HEIGHTS) {
+    const c = await virgin();
+    hardReset(engine, c, new THREE.Vector3(AT.x, y, AT.z));
+    c._needSpawnSnap = true;                 // exactly what teleport() now spends
+    step(c);
+    snapped.push({ y, end: c.position.y, grounded: c.grounded });
+    c.dispose?.();
+  }
+
+  /* 3 — the boot path, unchanged: position written directly, no teleport. */
+  const boot = await virgin();
+  const bootArmed = boot._needSpawnSnap;
+  step(boot);
+  const bootSpent = !boot._needSpawnSnap;
+  boot.dispose?.();
+
+  /* 4 — a shot-staged frame cannot reach the snap either, and not only because of the flag:
+         `Debug.setShot` raises `engine.debug.freeCam` before it steps, and `update()` returns
+         on it above `_probeEnvironment`. Measured here rather than read off the source, because
+         it is the fact the "does this reach the shipped game" answer rests on. */
+  const shot = await virgin();
+  shot.position.set(AT.x, 19.5, AT.z);       // direct write: the arm is still live
+  engine.debug.freeCam = true;
+  step(shot);
+  engine.debug.freeCam = false;
+  const shotY = shot.position.y;
+  const shotArmed = shot._needSpawnSnap;
+  shot.dispose?.();
+
+  /* ── WHAT ── */
+  for (const r of kept) {
+    assert.ok(r.y - r.end <= TICK + 1e-9,
+      `teleported to y ${r.y} and stepped once, Sly ended at y ${r.end.toFixed(3)} — a drop of `
+      + `${(r.y - r.end).toFixed(3)} m in one frame, against a free-fall bound of `
+      + `${TICK.toFixed(5)} m. Something is still moving him further than gravity can.`);
+    assert.equal(r.grounded, false,
+      `teleported to y ${r.y}, Sly reports grounded after one frame — the harness accepted a `
+      + 'height and handed back the floor, which is the whole defect');
+    /* NOT `state === 'fall'`. That is what I wrote first and the level refused it: at y 12 over
+       (4.2, 4.5) the auto hook-grab fires on frame 1, because there is a ring in reach — real
+       behaviour, and behaviour that was UNREACHABLE from a fresh Controller until this repair.
+       Asserting `fall` would have been a probe written from my picture of the level rather than
+       from the level (§435.4). The claim this arm is entitled to is that he is not on the floor. */
+    assert.notEqual(r.group, 'ground',
+      `teleported to y ${r.y}, Sly is in "${r.state}" (group "${r.group}") after one frame — a `
+      + 'ground state at altitude is the snap, whatever it calls itself');
+  }
+
+  /* ── WHICH — the counterexample, RUN ── */
+  for (const r of snapped) {
+    assert.ok(r.grounded && r.y - r.end > 0.4,
+      `re-arming _needSpawnSnap at y ${r.y} left Sly at y ${r.end.toFixed(3)} (grounded `
+      + `${r.grounded}). The ablation is meant to reconstruct the pre-repair snap; if it no `
+      + 'longer snaps, this arm is passing for a reason that has nothing to do with the repair.');
+  }
+  const decks = new Set(snapped.map((r) => r.end.toFixed(3)));
+  assert.equal(decks.size, 1,
+    `the ablation should land every height on the same deck under (${AT.x}, ${AT.z}); it landed `
+    + `on ${[...decks].join(', ')}, so it is not the single cast this repair is about`);
+
+  /* ── AND THE MECHANISM IS STILL THERE ── */
+  assert.ok(bootArmed,
+    'a freshly constructed Controller must arrive with the spawn snap armed — init() places Sly '
+    + 'before COLLISION is live and something has to put him on the floor');
+  assert.ok(bootSpent,
+    'the boot path (position written directly, no teleport, exactly as init() does) did not '
+    + 'spend the spawn snap on its first live frame. The repair has removed the mechanism rather '
+    + 'than scoping it, and a level whose spawn sits off the floor will now start Sly in the air.');
+
+  /* ── AND THE SHOT PATH ── */
+  assert.equal(shotY, 19.5,
+    `with engine.debug.freeCam raised, one update moved Sly from 19.5 to ${shotY.toFixed(3)}. `
+    + 'Debug.setShot steps the Controller with freeCam up; if physics runs under it, a staged '
+    + 'frame is not the pose the shot asked for.');
+  assert.ok(shotArmed,
+    'a freeCam update spent the spawn snap. It returns above _probeEnvironment precisely so a '
+    + 'posed frame runs no physics, and this says it no longer does.');
+
+  console.log(`[R5] ablation: re-arming _needSpawnSnap drops all ${HEIGHTS.length} heights `
+    + `(${HEIGHTS[0]}…${HEIGHTS[HEIGHTS.length - 1]} m) onto y ${snapped[0].end.toFixed(3)} in one frame`);
+  console.log(`[R5] repaired, frame 1 states by height: `
+    + kept.map((r) => `${r.y}m ${r.state}`).join(' · ')
+    + ' — the non-`fall` rows are airborne entries the harness could not reach at all before');
+});

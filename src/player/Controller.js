@@ -962,6 +962,12 @@ export class Controller {
   /* ==================================================================== */
 
   _probeEnvironment() {
+    /* `init()` places Sly at `SPAWN` before COLLISION exists, so the first frame it IS live
+       drops him onto the real floor. Armed once in the constructor, spent here — and also spent
+       by `teleport()`, which is the half that was missing: see that method for the 17.5 m
+       single-frame snap this gate used to apply to any freshly-minted Controller that had been
+       placed by hand. The `fallback` test is what makes it "the first LIVE frame" rather than
+       "frame 1": under `FLAT` the cast would report the y = 0 plane and snap him to it. */
     if (this._needSpawnSnap && !this.col.fallback) {
       this._needSpawnSnap = false;
       this._snapToGroundBelow(8);
@@ -1896,6 +1902,36 @@ export class Controller {
   teleport(vec3, yaw) {
     if (vec3) this.position.set(vec3.x, vec3.y, vec3.z);
     if (typeof yaw === 'number') { this.yaw = yaw; this._prevYaw = yaw; }
+    /**
+     * Spend the spawn snap. **A teleport is somebody saying exactly where Sly is**, and the
+     * pending snap is an answer to a question about a position that no longer exists.
+     *
+     * `_needSpawnSnap` is armed in the constructor and consumed by `_probeEnvironment` on the
+     * first frame collision is live, where it runs `_snapToGroundBelow(8)` — a cast from
+     * `y + 8` reaching 38 m down. It was scoped to "the first live frame" and never to "the
+     * spawn", so a Controller teleported before its first update had that cast applied to
+     * wherever it had been put. Measured on the shipped temple, one fresh Controller per row,
+     * `hardReset` to (4.2, y, 4.5) then one `update()`:
+     *
+     *     y  -2  ->  2.000   +4.000        y  8.95 ->  2.000   -6.950
+     *     y   0  ->  2.000   +2.000        y 19.5  ->  2.000  -17.500
+     *     y   1  ->  2.000   +1.000        y 31.9  ->  2.000  -29.900
+     *     y 2.5  ->  2.000   -0.500        y 32.1  -> 32.093   -0.007  (out of reach)
+     *
+     * Both signs: the cast starts 8 m ABOVE him and takes the first ground below that, so a
+     * position under a deck is lifted onto it just as one above is dropped to it. Grounded,
+     * state `idle`, in one frame, deterministically, on the first update of every new instance.
+     *
+     * The boot path is untouched by construction rather than by luck: `init()` writes
+     * `this.position` directly and calls `teleport()` **zero** times (measured), so the snap
+     * still fires exactly where it is meant to. At `SPAWN` it moves Sly −0.0000 m, which is
+     * what a snap that has nothing to correct should measure.
+     *
+     * The reach is deliberately NOT narrowed. After this line the only position the snap can
+     * ever act on is the spawn, where it measures zero, so bounding it would be tuning a
+     * number no measurement can see.
+     */
+    this._needSpawnSnap = false;
     this.velocity.set(0, 0, 0);
     this.grounded = false;
     this.coyote = 99;
