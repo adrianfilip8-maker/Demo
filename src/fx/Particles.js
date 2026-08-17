@@ -2613,7 +2613,7 @@ export class Particles {
 
     on('landed', (e) => this._onLand(e?.force ?? 6, e?.pos, e?.surface));
     on('caneHit', (e) => this._onCaneHit(e?.index ?? 1, e?.pos, e?.dir));
-    on('caneSlam', (e) => this._onDiveImpact(e?.pos, e?.radius ?? 1.2));
+    on('caneSlam', (e) => this._onDiveImpact(e?.pos, e?.radius ?? 1.2, e?.material));
     on('spireLand', (e) => this._onLand(4, e?.pos));
     on('wallRun', (e) => this._burstAt('footstep_stone', e?.pos, e?.normal));
     on('wallJump', (e) => this._burstAt('land_dust', e?.pos, UP, 0.5));
@@ -3450,16 +3450,54 @@ export class Particles {
     }
   }
 
-  _onDiveImpact(pos, radius) {
+  /**
+   * The Cane Slam's impact, on the surface it actually landed on.
+   *
+   * ── The field was there the whole time (§428.4) ────────────────────────────────────────────
+   * `Moveset.js:347` publishes `caneSlam` with `material: c.groundMaterial` — COLLISION's own tag
+   * for the surface under his feet, correct at the moment of the landing. **All three subscribers
+   * read `pos` and `radius` and dropped it**, so a slam on the desert and a slam on the temple
+   * paving produced identical particles. The census that found it also found the contradiction
+   * that makes it worth fixing rather than deleting: the *same file* deliberately withholds
+   * material from `caneHit`, with a comment explaining that a swing is not a contact with
+   * anything and a wrong material is worse than none. The author reasoned about this once and got
+   * the harder case right; this is the easy case, and it was never wired up.
+   *
+   * ── Nothing new is authored here ───────────────────────────────────────────────────────────
+   * `smashFor()` is the existing COLLISION-tag → recipe map, already used by `smash()`. The three
+   * materials a player can actually stand on in this level are `stone` (140 standable colliders),
+   * `sand` (1 — the desert) and `wood` (2), and all three have their own entry in that table and
+   * their own cue in `Sfx.stepFor`. No material reachable by a slam needed inventing.
+   *
+   * ── What changes, stated exactly ───────────────────────────────────────────────────────────
+   * The shipped effect was a mix that is right for neither surface: `dive_dust`'s own defaults are
+   * `sandLight/sandMid` — **identical to `SMASH.sand.dustCol`** — while `dive_debris` defaults to
+   * `limeMid/sandDark`, limestone. So it threw limestone chips inside a sand cloud everywhere.
+   * Now the dust and the chips agree with each other and with the ground.
+   *
+   * `dive_spark` is **gated on `R.spark`**, which is non-null for `metal` alone — the SMASH table
+   * calls metal "the only material that throws light". Sparks were firing off sand.
+   *
+   * The emitters themselves stay the dive vocabulary (`dive_dust`, not `SMASH`'s `land_dust`) and
+   * the decals stay `crack`/`scuff`. Those are the slam's own marks, sized for it; swapping in the
+   * break vocabulary's `dust_ring`/`scorch` would be authoring a new look rather than reading a
+   * published field, which is not what this is.
+   *
+   * **No shot is affected.** `_stageImpact` stages the canonical `impact` frame from its own
+   * `STAGE_IMPACT` list and never calls this — checked, and it is the only reason this could be
+   * done without a capture round.
+   */
+  _onDiveImpact(pos, radius, material) {
     const mv = this.engine.get('movement');
     const p = pos || mv?.position;
     if (!p) return;
     _v3.copy(p); _v3.y += 0.06;
     const s = (radius || 1.2) / 1.2;
+    const R = smashFor(material);
     this._emit('dive_ring', _v3, { dir: UP, scale: s });
-    this._emit('dive_dust', _v3, { dir: UP, scale: s });
-    this._emit('dive_spark', _v3, { dir: UP, scale: s });
-    this._emit('dive_debris', _v3, { dir: UP, scale: s });
+    this._emit('dive_dust', _v3, { dir: UP, scale: s, color0: R.dustCol[0], color1: R.dustCol[1] });
+    if (R.spark) this._emit(R.spark, _v3, { dir: UP, scale: s });
+    this._emit('dive_debris', _v3, { dir: UP, scale: s, color0: R.col[0], color1: R.col[1] });
     this.decal('crack', _v3, UP, { size: 2.2 * s, life: 14 });
     this.decal('scuff', _v3, UP, { size: 3.4 * s, life: 10, alpha: 0.5 });
   }

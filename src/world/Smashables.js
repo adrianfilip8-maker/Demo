@@ -322,7 +322,16 @@ export class Smashables {
 
     /* The Cane Slam. Omnidirectional by nature — he lands on the paving cane-first and
        everything around him goes — so no facing is passed, and the radius is the event's own
-       (`Controller.TUNE.diveRadius`) rather than a second copy of it here. */
+       (`Controller.TUNE.diveRadius`) rather than a second copy of it here.
+
+       `p.material` is deliberately NOT read, and this is the one subscriber for which that is
+       correct. §428.4 found all three `caneSlam` subscribers dropping the field, and AUDIO and FX
+       now read it — but theirs is a question about the GROUND he landed on, and this one is about
+       the JAR that broke. A basket standing on limestone is still wicker. The material published
+       here would be the wrong answer to the question this file asks, so `_break` resolves it from
+       `KINDS[p.kind]` instead. Recorded rather than left silent: "unread and said so" is the shape
+       §428.4 asks for, and an unexplained omission beside two fixed ones reads as one that was
+       missed. */
     on('caneSlam', (p) => {
       if (!p?.pos) return;
       const r = Number.isFinite(p.radius) ? p.radius : TUNE.slamFallback;

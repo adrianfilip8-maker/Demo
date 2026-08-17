@@ -1299,7 +1299,31 @@ export class Audio {
       this.play('cane_swing', { position: p?.pos, index: p?.index || 1 });
       this.play('cane_hit', { position: p?.pos, index: p?.index || 1, delay: 0.055 });
     });
-    on('caneSlam', (p) => this.play('dive_boom', { position: p?.pos }));
+    /**
+     * The Cane Slam, on the surface he actually landed on (§428.4).
+     *
+     * `dive_boom` is the weight of the impact and is material-independent — that part was always
+     * right. What was missing is the transient on top of it: `Moveset.js:347` has published
+     * `material: c.groundMaterial` with every slam since the event existed, and this handler read
+     * `pos` and dropped it, so a slam into the desert and a slam onto the temple paving were the
+     * same sound.
+     *
+     * The second layer is **`_onSmash`'s own recipe, unchanged** — `stepFor(material)` at rate
+     * 0.62, the footstep-as-material-impact argument spelled out in that method's header. Reusing
+     * its numbers rather than picking new ones is deliberate: a second, differently-felt set of
+     * material transients is exactly the drift this file refuses elsewhere, and the slam is the
+     * same physical event as a break with a bigger body behind it.
+     *
+     * Every surface a player can stand on in this level — `stone`, `sand`, `wood` — has its own
+     * `STEP` recipe, so nothing was authored for this. `flesh` and `misc` fall back to stone and
+     * appear on no collider in the level; `water` has a cue but no standable collider.
+     *
+     * NOT VERIFIED BY EAR, for the reason `_onSmash` gives: captures are silent by construction.
+     */
+    on('caneSlam', (p) => {
+      this.play('dive_boom', { position: p?.pos });
+      this.play(stepFor(p?.material), { position: p?.pos, rate: 0.62, volume: 1.0, gait: 'run' });
+    });
     /* ── Contacts, voiced by what was actually touched ──────────────────────────────────────
        These eight lines each used to name a fixed recipe, because the events carried no
        material and there was nothing else to name. MOVEMENT now publishes `material` on all of
