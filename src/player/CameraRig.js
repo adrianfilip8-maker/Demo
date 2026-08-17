@@ -1560,8 +1560,27 @@ export class CameraRig {
         if (secs * sp > TUNE.leadMax) secs = TUNE.leadMax / sp;
         secs += trailSecs;
       } else {
-        if (secs * sp > TUNE.leadMax) secs = TUNE.leadMax / sp;  // the authored cap, unchanged
-        if (secs < trailSecs) secs = trailSecs;                  // …and the floor, never a ceiling
+        /* ── THE CAP IS IN NET SPACE HERE TOO, AND IT WAS NOT ───────────────────────────────
+           This arm used to read `if (secs*sp > leadMax) secs = leadMax/sp` BEFORE the floor —
+           i.e. it capped the RAW authored lead — which is the exact thing the `full` arm three
+           lines above says must not be done, for the exact reason it gives: the raw cap binds
+           while the trail keeps growing, so above `leadMax / (followTimeH × f.stiff)` m/s the
+           cap lands BELOW the trail, the floor takes over, and the row delivers −`deadzoneH`
+           however much lead it authors. The block at the head of this comment named that
+           failure mode ("`leadMax` bounds the lead and NOTHING bounds the trail") and the
+           shipped arm then did it.
+
+           Measured consequence, at each row's own speed: `hook_swing` above 7.29 m/s and
+           `rail_slide` above 13.67 m/s were pinned at the floor, and **no value of `leadTime`
+           or `f.lead` could move either** — `leadTime` at 1.00, nearly 6× shipped, left both
+           exactly where they were, because the cap bound first. The swing authors 1.60 under
+           "Lead frames the landing" and delivered −3.7 cm.
+
+           Floor first, then cap the NET lead. `leadMax` now means what it was calibrated to
+           mean — a bound on the lead that REACHES THE SCREEN — in both arms rather than one.
+           The constant is untouched at 1.75; only the stage it is applied at changed. */
+        if (secs < trailSecs) secs = trailSecs;                  // the floor, never a ceiling
+        if ((secs - trailSecs) * sp > TUNE.leadMax) secs = trailSecs + TUNE.leadMax / sp;
       }
       out.x += _pVel.x * secs; out.z += _pVel.z * secs;
     }

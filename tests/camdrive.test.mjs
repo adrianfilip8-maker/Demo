@@ -1018,143 +1018,193 @@ test('D8: FRAMES.lead is inert on most of the table, and it is derivable rather 
     + 'an authored 1.60 and the comment "Lead frames the landing"');
 });
 
+
 /* ====================================================================== */
-/* D9 — the same census at each row's OWN speed, attributed by mechanism    */
+/* D9 — `leadMax` bounds the DELIVERED lead, driven                        */
 /* ====================================================================== */
 
-test('D9: 13 of 19 rows are floored at their own speed, and two of them by `leadMax` not `stiff`', () => {
-  /* D8 above evaluates every row at `runSpeed`. That is a SAMPLE, and it is the instrument
-     (§440): the delivered lead is a metre quantity sitting under a metre cap, so reading `sneak`
-     or `rail_slide` at a running speed does not describe either of them. Re-read at the speed each
-     row actually occurs at, two more rows turn out to be floored — and they are floored by a
-     DIFFERENT CONSTANT, which is the part that matters, because it changes what repairs them.
+/**
+ * Steady-state signed lead along travel, read off the SHIPPED rig.
+ *
+ * Open sky rather than the BVH, and that is D1's result rather than a convenience: replayed
+ * through the real collision and through open sky, one recorded route gives the same framing
+ * numbers to three decimals, because a constant-velocity ground run occludes nothing. What the
+ * stub got wrong in the old arbitration was the MOTION, and this driver holds velocity itself.
+ */
+function settledLead(stateName, speed, { grounded = true, seconds = 14 } = {}) {
+  const movement = {
+    position: new THREE.Vector3(), velocity: new THREE.Vector3(),
+    grounded, stateName, yaw: Math.PI,
+  };
+  const L = new Map();
+  const engine = {
+    input: new LookInput(), camera: new THREE.PerspectiveCamera(TUNE.fovBase, 16 / 9, 0.1, 2000),
+    scene: new THREE.Scene(), movement, collision: OPEN_SKY,
+    time: 0, dt: 0, timeScale: 1, width: 1920, height: 1080, quality: 'high',
+    debug: { freeCam: false }, warn() {}, has() { return false; },
+    on(e, f) { if (!L.has(e)) L.set(e, new Set()); L.get(e).add(f); return () => {}; },
+    emit() {},
+    get(n) { return n === 'movement' ? movement : n === 'collision' ? OPEN_SKY : null; },
+  };
+  const rig = new CameraRig(engine);
+  rig.init?.();
+  movement.velocity.set(0, 0, -speed);
+  rig.snap?.(true);
+  for (let i = 0; i < Math.round(seconds / DT); i++) {
+    movement.position.z -= speed * DT;
+    engine.dt = DT; engine.time += DT;
+    rig.update(DT);
+  }
+  return { lead: -(rig.pivot.z - movement.position.z), key: rig._frameKey };
+}
+
+function withTune(patch, fn) {
+  const keep = {};
+  for (const k of Object.keys(patch)) { keep[k] = TUNE[k]; TUNE[k] = patch[k]; }
+  try { return fn(); } finally { for (const k of Object.keys(keep)) TUNE[k] = keep[k]; }
+}
+
+/**
+ * Each row: the STATE NAME that reaches it, the speed it occurs at, and why that speed.
+ *
+ * The state name is not optional decoration and is not the framing key. Driving the literal string
+ * `'wall_run'` resolves to the `run` framing — `'wall_run'.indexOf('run')` is 5 and `['run','run']`
+ * sits above `['wall','wall_run']` in `STATE_RULES` — and `'combat'` resolves to `idle`, matching no
+ * rule at all. That is §442's defect in the shape of a test harness, and the first draft of this arm
+ * had it. Real registered state names, therefore, and the resolved key is asserted per row.
+ *
+ * The three marked SYNTHETIC are the point rather than an exception: **no registered state routes to
+ * `walk`, `run` or `run_fast`.** They are driven by the only names that reach them, which no move
+ * produces, and the census below proves nothing else does.
+ */
+const OWN_SPEED = {
+  idle:       ['move',         CTUNE.runSpeed,       true,  'runSpeed — `move` falls through to `idle`, so this IS ordinary running'],
+  walk:       ['walk',         CTUNE.walkSpeed,      true,  'walkSpeed — SYNTHETIC, no state routes here'],
+  run:        ['run',          CTUNE.runSpeed,       true,  'runSpeed — SYNTHETIC, no state routes here'],
+  run_fast:   ['run_fast',     CTUNE.runSpeed,       true,  'runSpeed — SYNTHETIC, no state routes here'],
+  sneak:      ['sneak',        CTUNE.sneakSpeed,     true,  'sneakSpeed'],
+  crawl:      ['crawl',        CTUNE.crawlSpeed,     true,  'crawlSpeed'],
+  hook_swing: ['hookSwing',    8.0,                  false, 'tangential swing speed; a 75\u00b0 pendulum peaks at 8.85 m/s'],
+  rail_slide: ['railSlide',    CTUNE.railMax,        false, 'railMax — the speed the row exists for'],
+  balance:    ['railWalk',     CTUNE.railWalk,       true,  'railWalk'],
+  spire:      ['spireLand',    CTUNE.spireWobble,    true,  'spireWobble — standing on a pinnacle'],
+  dive:       ['dive',         CTUNE.runSpeed * 0.3, false, 'DiveAttack.enter multiplies horizontal velocity by 0.3'],
+  wall_run:   ['wallRun',      CTUNE.wallRunSpeed,   false, 'wallRunSpeed'],
+  ledge_hang: ['ledgeHang',    CTUNE.shimmy,         false, 'shimmy'],
+  climb:      ['poleClimb',    CTUNE.poleUp,         false, 'poleUp'],
+  glide:      ['paraglide',    CTUNE.glideSpeed,     false, 'glideSpeed'],
+  land:       ['land',         CTUNE.runSpeed,       true,  'runSpeed — a landing keeps the horizontal speed it arrived with'],
+  roll:       ['roll',         CTUNE.rollSpeed,      true,  'rollSpeed'],
+  air:        ['fall',         CTUNE.runSpeed,       false, 'runSpeed — a jump retains horizontal speed'],
+  combat:     ['combatStrafe', CTUNE.strafeSpeed,    true,  'strafeSpeed'],
+};
+const SYNTHETIC = new Set(['walk', 'run', 'run_fast']);
+
+test('D9: `leadMax` bounds the delivered lead, not the authored one — driven, not re-derived', () => {
+  /* **THE FIRST VERSION OF THIS ARM WAS THE BUG IT WAS WATCHING FOR.** It classified each row by
+     re-deriving `min(leadTime × f.lead, leadMax / v) < followTimeH × f.stiff` inside the test. The
+     `_pivotGoal` repair then landed, moved `hook_swing` from −0.037 m to +0.219 m, and **the arm
+     stayed green**, because it had never asked the rig anything — it was checking the formula
+     against itself. §439, in the arm whose docblock cited §439. Every number below now comes out
+     of `settledLead`, which drives the shipped `CameraRig`.
    *
-   *     max( min(leadTime × f.lead, leadMax / v) − followTimeH × f.stiff , 0 ) × v − deadzoneH
+   * ── WHAT WAS WRONG, AND WHY IT WAS A BUG RATHER THAN A MISSING SEAM ──────────────────────────
+   * `leadMax` is a bound on the lead. The floor arm applied it to the AUTHORED lead — before the
+   * floor — so above `leadMax / (followTimeH × f.stiff)` m/s the cap landed BELOW the spring's own
+   * trail, the floor took over, and the row delivered −`deadzoneH` no matter what it authored.
    *
-   * Whichever term the inner `min` picks names the culprit:
-   *
-   *     FLOORED BY `stiff`    the authored lead is smaller than the trail. 11 rows. `leadTime`,
-   *                           `f.lead` and `followTimeH` all move these.
-   *     FLOORED BY `leadMax`  the 1.75 m cap lands BELOW the trail. `hook_swing` above 7.29 m/s,
-   *                           `rail_slide` above 13.67 m/s — both of which are their ordinary
-   *                           operating speeds. **No value of `leadTime` or `f.lead` moves these
-   *                           at all**, which is why the distinction is not cosmetic.
-   *
-   * The cap is calibrated against DELIVERED metres (see `TUNE.leadMax`) and applied to AUTHORED
-   * ones. That is a defect and not a feel question; the feel question is priced as item 6 of
-   * `progress/records/HARDWARE-REVIEW.md`.
+   * The discriminator for bug-vs-seam is whether the owner claims to maintain what is violated,
+   * and here it claims it three times, all in this file:
+   *   · `_pivotGoal`'s own header — *"`leadMax` bounds the lead and NOTHING bounds the trail, so
+   *     above the speed where the clamp binds the net lead falls linearly with speed and changes
+   *     sign."* The failure mode, named exactly, by the function that then did it.
+   *   · the `full` arm, three lines from the defect — *"`leadMax` moves to NET space here —
+   *     capping the raw would re-create the defect at exactly the speeds it bites."*
+   *   · `TUNE.leadMax`'s calibration note — *"calibrated against the delivered number."*
+   * A claimed invariant, violated in the sibling branch of the same `if`. **Bug.**
    *
    * DOMAIN (§418.3)
-   *   passes on : the shipped table at the speeds `Controller.TUNE` gives each move.
-   *   fails on  : the SAME table with `leadMax` lifted to 3.0, RUN below — `hook_swing` and
-   *               `rail_slide` both escape the floor, and no other row's classification changes.
-   *               That is what proves the attribution is to the cap rather than to `stiff`: if
-   *               `stiff` were holding them, lifting the cap would do nothing. A second failing
-   *               input is run alongside it — `leadTime` at 1.00, nearly 6× shipped — under which
-   *               those same two rows stay floored, which is the same claim from the other side.
-   *   does NOT discriminate : whether any of this is visible, and whether the eight rows this arm
-   *               calls deliberately-still are in fact deliberate. That reading is argued from the
-   *               authoring — `lead` and `stiff` are anti-correlated across the table, so the
-   *               stiller a row is authored the less lead it asks for — and an argument from
-   *               authoring is not something a test can hold. */
-  const T = TUNE;
-  const C = CTUNE;
-
-  /* Each row at the speed it actually occurs at. Every value is a `Controller.TUNE` constant or a
-     measured consequence of one — never a guess, because a guessed speed would make this arm a
-     restatement of D8 with different numbers. */
-  const SPEED = {
-    idle:       [C.runSpeed,       'runSpeed — `move` falls through to `idle`, so this IS ordinary running'],
-    walk:       [C.walkSpeed,      'walkSpeed'],
-    run:        [C.runSpeed,       'runSpeed'],
-    run_fast:   [C.runSpeed,       'runSpeed — LOCO.maxSpeed = runSpeed; nothing on the ground is faster'],
-    sneak:      [C.sneakSpeed,     'sneakSpeed'],
-    crawl:      [C.crawlSpeed,     'crawlSpeed'],
-    hook_swing: [8.0,              'tangential swing speed, the value camlead L1 uses; a 75° pendulum peaks at 8.85'],
-    rail_slide: [C.railMax,        'railMax — the speed the row exists for'],
-    balance:    [C.railWalk,       'railWalk'],
-    spire:      [C.spireWobble,    'spireWobble — standing on a pinnacle'],
-    dive:       [C.runSpeed * 0.3, 'DiveAttack.enter multiplies horizontal velocity by 0.3'],
-    wall_run:   [C.wallRunSpeed,   'wallRunSpeed'],
-    ledge_hang: [C.shimmy,         'shimmy'],
-    climb:      [C.poleUp,         'poleUp'],
-    glide:      [C.glideSpeed,     'glideSpeed'],
-    land:       [C.runSpeed,       'runSpeed — a landing keeps the horizontal speed it arrived with'],
-    roll:       [C.rollSpeed,      'rollSpeed'],
-    air:        [C.runSpeed,       'runSpeed — a jump retains horizontal speed'],
-    combat:     [C.strafeSpeed,    'strafeSpeed'],
-  };
-
-  /** Which term of the floor is binding, at speed `v`, under an optional TUNE override. */
-  const classify = (f, v, o = {}) => {
-    const leadTime = o.leadTime ?? T.leadTime;
-    const leadMax = o.leadMax ?? T.leadMax;
-    const authored = leadTime * f.lead;
-    const cap = leadMax / v;
-    const trail = T.followTimeH * f.stiff;
-    const raw = Math.min(authored, cap);
-    if (raw >= trail) return 'delivers';
-    return cap < authored ? 'leadMax' : 'stiff';
-  };
-
-  const shipped = {};
-  console.log('\n[D9] framing        v      f.lead f.stiff   floored by   why');
-  for (const [k, f] of Object.entries(FRAMES)) {
-    const [v, why] = SPEED[k];
-    shipped[k] = classify(f, v);
-    const authored = T.leadTime * f.lead, cap = T.leadMax / v, trail = T.followTimeH * f.stiff;
-    const note = shipped[k] === 'delivers' ? ''
-      : shipped[k] === 'leadMax' ? `cap ${cap.toFixed(3)}s < trail ${trail.toFixed(3)}s (authored ${authored.toFixed(3)}s never applies)`
-        : `authored ${authored.toFixed(3)}s < trail ${trail.toFixed(3)}s, short by ${(trail - authored).toFixed(4)}s`;
-    console.log(`[D9] ${k.padEnd(12)} ${v.toFixed(2).padStart(6)} ${f.lead.toFixed(2).padStart(7)} ${f.stiff.toFixed(2).padStart(7)}`
-      + `   ${shipped[k].padEnd(10)}   ${note || why}`);
+   *   passes on : the repaired rig. Delivered lead is non-decreasing in speed on every row and
+   *               saturates at `leadMax − deadzoneH`; `hook_swing` delivers +0.219 m at swing
+   *               speed against −0.037 m before.
+   *   fails on  : `leadMax` 0.30, RUN below on `rail_slide` at `railMax`. At that setting the cap
+   *               is 0.020 s against a trail of 0.128 s, so a GOAL-space cap is provably swallowed
+   *               by the floor and the row must read −`deadzoneH`; a NET-space cap must saturate
+   *               at `leadMax − deadzoneH`. The two answers are 0.15 m apart and the arm asserts
+   *               the second and rejects the first. (Measured on the pre-repair rig, this row read
+   *               +0.022 m at the shipped `leadMax` — the floor value — against +1.772 m now.)
+   *   does NOT discriminate : whether 1.75 m is the right bound, or whether `rail_slide` newly
+   *               delivering the full cap is wanted. The repair makes the constant mean what it
+   *               says; what it should be is a feel question and is item 6 of the hardware sheet. */
+  const rows = Object.keys(FRAMES);
+  const delivered = {};
+  console.log('\n[D9] framing      state             v  f.lead f.stiff delivered                why that speed');
+  for (const k of rows) {
+    const [st, v, grounded, why] = OWN_SPEED[k];
+    const r = settledLead(st, v, { grounded });
+    assert.equal(r.key, k,
+      `driving state name '${k}' resolved to framing '${r.key}', so this row is measuring a different `
+      + 'framing than it is named for — which is exactly what §442 was about');
+    delivered[k] = r.lead;
+    console.log(`[D9] ${k.padEnd(12)} ${st.padEnd(13)} ${v.toFixed(2).padStart(6)} `
+      + `${FRAMES[k].lead.toFixed(2).padStart(6)} ${FRAMES[k].stiff.toFixed(2).padStart(7)} `
+      + `${r.lead.toFixed(3).padStart(9)}${SYNTHETIC.has(k) ? '  (unreachable)' : '              '}  ${why}`);
   }
-  const flooredNow = Object.keys(shipped).filter((k) => shipped[k] !== 'delivers');
-  const byCap = Object.keys(shipped).filter((k) => shipped[k] === 'leadMax');
-  console.log(`[D9] ${flooredNow.length}/19 floored at their own speed; ${byCap.length} of those by leadMax: ${byCap.join(' ')}`);
+  const floored = rows.filter((k) => delivered[k] <= 0);
+  console.log(`[D9] ${floored.length}/19 deliver no lead at their own speed: ${floored.join(' ')}`);
 
-  assert.deepEqual(byCap.sort(), ['hook_swing', 'rail_slide'],
-    `the set of rows floored by the \`leadMax\` cap rather than by \`stiff\` is now [${byCap.join(', ')}], `
-    + 'and it was [hook_swing, rail_slide]. Those two are the rows no `lead` or `leadTime` edit can '
-    + 'repair, so the set changing means a repair that used to be impossible has become possible — or '
-    + 'the reverse. Either way it is a change in what is fixable and must not land silently.');
+  /* The two rows the cap used to pin, now asserted by their DRIVEN value. */
+  assert.ok(delivered.hook_swing > 0.15,
+    `'hook_swing' delivers ${delivered.hook_swing.toFixed(3)} m at swing speed. It read −0.037 m while `
+    + '`leadMax` was applied to the authored lead, against an authored 1.60 and the comment "Lead '
+    + 'frames the landing". If this has gone back under 0.15 the cap has returned to goal space.');
+  assert.ok(delivered.rail_slide > 1.0,
+    `'rail_slide' delivers ${delivered.rail_slide.toFixed(3)} m at railMax. It read +0.022 m — the floor `
+    + 'value — while the cap was applied to the authored lead, against the highest authored `lead` in '
+    + 'the file.');
 
-  assert.ok(flooredNow.length >= 12,
-    `only ${flooredNow.length} of 19 rows are floored at their own speed (was 13): ${flooredNow.join(', ')}`);
-
-  /* The eight argued to be deliberately still. If one of these starts leading, a camera has begun
-     running ahead of a careful or stationary player, which is the shot these rows exist to refuse. */
+  /* The eight rows argued to be deliberately still. The repair must not have woken any of them:
+     it moves only rows where the cap was binding, and none of these ever reach it. */
   for (const k of ['idle', 'sneak', 'crawl', 'balance', 'spire', 'ledge_hang', 'climb', 'combat']) {
-    assert.notEqual(classify(FRAMES[k], SPEED[k][0]), 'delivers',
-      `'${k}' now delivers lead at its own speed (${SPEED[k][0]} m/s). It is one of the rows argued to `
-      + 'be inert ON PURPOSE — a camera that runs ahead of a stationary or careful player is the wrong '
-      + 'shot — so this is a change in what a player sees and wants a person, not a green suite.');
+    assert.ok(delivered[k] <= 0,
+      `'${k}' now delivers ${delivered[k].toFixed(3)} m at its own speed. It is one of the rows argued `
+      + 'to be inert ON PURPOSE — `lead` and `stiff` are anti-correlated across the table, so its '
+      + 'authoring asks for stillness twice — and a camera that runs ahead of a careful player is the '
+      + 'shot these rows exist to refuse.');
   }
 
-  /* ── THE FAILING INPUTS, RUN ─────────────────────────────────────────────────────────────────
-     Lift the cap: if `leadMax` is what holds the swing and the rail, they escape and nothing else
-     moves. Raise `leadTime` instead: if `leadMax` is what holds them, they DON'T escape however
-     far it goes. Both are run, because either one alone leaves the attribution arguable. */
-  const lifted = {}, driven = {};
-  for (const [k, f] of Object.entries(FRAMES)) {
-    lifted[k] = classify(f, SPEED[k][0], { leadMax: 3.0 });
-    driven[k] = classify(f, SPEED[k][0], { leadTime: 1.00 });
+  /* ── MONOTONICITY: the signature of a cap in the right space ─────────────────────────────────
+     A goal-space cap makes delivered lead RISE and then COLLAPSE as speed grows, because the cap
+     stops growing while the trail does not. A net-space cap makes it rise and then FLATTEN. That
+     shape is the mechanism, so it is what gets asserted rather than any single number. */
+  for (const k of ['hook_swing', 'rail_slide', 'run_fast', 'air', 'roll']) {
+    let peak = -Infinity, peakAt = 0, worstDrop = 0, dropAt = 0;
+    for (let v = 0.5; v <= 20; v += 0.25) {
+      const d = settledLead(OWN_SPEED[k][0], v, { grounded: OWN_SPEED[k][2] }).lead;
+      if (d > peak) { peak = d; peakAt = v; }
+      if (peak - d > worstDrop) { worstDrop = peak - d; dropAt = v; }
+    }
+    console.log(`[D9] ${k.padEnd(12)} sweep 0.5→20 m/s: peak ${peak.toFixed(3)} m @ ${peakAt.toFixed(2)}, `
+      + `worst fall from peak ${worstDrop.toFixed(3)} m @ ${dropAt.toFixed(2)}`);
+    assert.ok(worstDrop < 0.05,
+      `'${k}' delivers ${worstDrop.toFixed(3)} m LESS lead at ${dropAt.toFixed(2)} m/s than at its peak `
+      + `(${peak.toFixed(3)} m @ ${peakAt.toFixed(2)} m/s). Going faster is giving you less look-ahead, `
+      + 'which is the signature of a cap applied to the authored lead while the trail keeps growing.');
   }
-  console.log(`[D9] leadMax 1.75->3.0 : ${byCap.map((k) => `${k} ${shipped[k]}->${lifted[k]}`).join(' · ')}`);
-  console.log(`[D9] leadTime 0.17->1.00: ${byCap.map((k) => `${k} ${shipped[k]}->${driven[k]}`).join(' · ')}`);
 
-  for (const k of byCap) {
-    assert.equal(lifted[k], 'delivers',
-      `'${k}' is still floored with \`leadMax\` at 3.0, so this arm's failing input does not fail and the `
-      + 'passing classification above proves nothing');
-    assert.equal(driven[k], 'leadMax',
-      `'${k}' escapes the floor at \`leadTime\` 1.00, so it is not held by the cap after all and D9 has `
-      + 'attributed it to the wrong constant');
-  }
-  /* …and lifting the cap must not be a blunt instrument that reclassifies the whole table, or the
-     two rows above would just be riding a global change. */
-  const alsoMoved = Object.keys(shipped).filter((k) => !byCap.includes(k) && shipped[k] !== lifted[k]);
-  assert.deepEqual(alsoMoved, [],
-    `lifting \`leadMax\` also reclassified [${alsoMoved.join(', ')}], so it is not the surgical lever this `
-    + 'arm reports it to be');
+  /* ── THE FAILING INPUT, RUN ──────────────────────────────────────────────────────────────────
+     `leadMax` 0.30 on `rail_slide` at railMax: cap 0.020 s against a trail of 0.128 s. A goal-space
+     cap is swallowed by the floor and the row reads −deadzoneH; a net-space cap saturates. */
+  const tiny = withTune({ leadMax: 0.30 }, () => settledLead('railSlide', CTUNE.railMax, { grounded: false }).lead);
+  const goalSpaceAnswer = -TUNE.deadzoneH;
+  const netSpaceAnswer = 0.30 - TUNE.deadzoneH;
+  console.log(`[D9] failing input — leadMax 0.30, rail_slide @ ${CTUNE.railMax}: delivered ${tiny.toFixed(3)} m `
+    + `(goal-space cap would give ${goalSpaceAnswer.toFixed(3)}, net-space ${netSpaceAnswer.toFixed(3)})`);
+  assert.ok(Math.abs(tiny - goalSpaceAnswer) > 0.10,
+    `with \`leadMax\` at 0.30 the row delivers ${tiny.toFixed(3)} m, which is the −deadzoneH the FLOOR `
+    + 'produces. The cap is being applied to the authored lead again and is being swallowed by the floor '
+    + '— the exact defect this arm exists to catch.');
+  assert.ok(tiny > netSpaceAnswer - 0.05,
+    `with \`leadMax\` at 0.30 the row delivers ${tiny.toFixed(3)} m rather than saturating near `
+    + `${netSpaceAnswer.toFixed(3)} m, so the cap is not bounding the DELIVERED lead`);
 });
