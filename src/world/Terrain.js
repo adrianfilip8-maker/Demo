@@ -60,7 +60,7 @@ const TUNE = {
   driftLee: 3.6,          // the longer, lower tail streaming off the east side
 
   /* --- Nile -------------------------------------------------------------- */
-  nileEast: -266, nileBank: -284, nileWest: -452, nileFar: -472,
+  nileEast: -66, nileBank: -84, nileWest: -252, nileFar: -272,
   waterY: -3,
 
   /* --- world extent ------------------------------------------------------ */
