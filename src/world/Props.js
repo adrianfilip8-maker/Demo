@@ -713,6 +713,24 @@ export class Props {
     const R = this.rng;
     /* Surface + ~1.0 m, so the bottle floats at chest height over the beat it marks rather than
        sitting in the floor. Every y here is checked against the registered collider under it. */
+    /**
+     * ── THIS ARRAY IS GROUPED BY BEAT, NOT BY PATH. It is not a collection order. ──────────
+     * Anything walking these in index order takes a route no player would: bottles 3, 4 and 5
+     * sit at **z +31.5, +36.3 and +34.0**, which is BEHIND spawn's z 30, on the entry pylon. So
+     * index order goes terrace (z 17.5 → 7.5), then all the way back past spawn to the pylon,
+     * then forward again.
+     *
+     * Measured rather than asserted, because without the number the objection reads as taste:
+     *
+     *     index order   270.6 m      forces 24.0 m of net travel back toward and past spawn
+     *     route order   251.6 m      entry pylon taken on the way in, as a forward pass meets it
+     *
+     * **The order a forward pass encounters them is 3, 4, 5, 0, 1, 2, 6, 7, 8, 9, 10, 11** — the
+     * entry pylon first because you walk out of spawn into it, then the terrace, then the hall
+     * roofs, the inner pylon and the vault. `tests/collectroute.test.mjs` drives that order; if
+     * a spot moves, that is the file to re-derive it in. Recorded here rather than only in the
+     * ledger so the next reader of this array does not infer a sequence from an index.
+     */
     const spots = [
       [-2.2, 3.00, 17.5],    // terrace stage 1 (ground y 2.0) — §8.1 step 1
       [5.4, 6.20, 9.0],      // terrace stage 2 (ground y 5.2) — §8.1 step 1
