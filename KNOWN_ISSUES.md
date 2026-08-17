@@ -31816,6 +31816,98 @@ five bar defects. **The instruments are the harder half**, because a bar that ca
 is a property of the bar and can be reasoned about from the bar alone, while an instrument
 measuring the wrong quantity is only visible from outside the measurement.
 
+### §411.21 #28 — the sphinx drift's index escaped its row, and a mask would have fixed half of it
+
+The chain audit's remaining routed item. §411.8 flagged `sphinxDrift` as the one post-flush stage
+crossing into the complex pad without a mask — up to 0.478 m, about 5 m inside the boundary — and
+called it *"harmless today; unmasked in principle."* Measured properly, **masking was the wrong
+diagnosis**, and the thing it would have fixed was half the defect.
+
+`Props.TUNE.sphinxZ` is eight stations, [40 … 84], so the valid indices are 0..7. `sphinxDrift`'s
+guard band is `z 34…90` — **wider than the row it indexes** — and its
+`Math.round((z − 40) / step)` was unclamped. So the rounding invented two pedestals:
+
+```
+k = −1  ->  z 33.71    INSIDE the complex pad (north edge 37.5)
+k =  8  ->  z 90.29    past the end of the avenue
+```
+
+Each grew a full drift mound around a sphinx that does not exist. The southern one put **0.490 m
+of sand on the temple's paving at (6, 34)**: along the pedestal line the profile goes −0.044 m at
+z 33, **+0.433 m at z 34**, 0.233, 0.108, 0.060 — a detached lump with flush paving beside it and
+nothing standing on it. 681 pad samples sat above the 0.055 m anti-z-fight sink because of it.
+
+Clamped to the row, verified against the shipped tree:
+
+```
+eight real stations (z 37…87)     max |delta| 0.000000 m   bit-identical
+inside the complex pad            0.490 m removed at (6.0, 34.0)
+north phantom (k = 8)             0.498 m removed at z 90.0
+pad samples above the sink        4843 -> 4311
+```
+
+**A mask would have hidden the southern mound and left the northern one standing**, because the
+defect was never masking — it is an index escaping its row, and the complex just happened to be
+where one end of the overshoot landed. That is the argument for auditing a chain rather than
+patching its third instance: the audit asked what every stage *does*, and the answer for this one
+was not the question the symptom posed.
+
+**And the control for the fix was wrong on the first pass.** Probing "the real pedestals" as
+`z ∈ [pz − 5, pz + 5]` put z 35…36.86 inside the probe — which is the phantom's own reach — so it
+reported 0.331 m of change at a station that had not moved. Caught in seconds, because the number
+was supposed to be zero and was not. Re-scoped to z 37…87, clear of both phantom zones, it reads
+0.000000. The clamp bound is also now a named `LAST` rather than `px`, which is an *x-coordinate*
+that happens to equal 7 — right answer, wrong provenance, and it would have survived any change to
+the station count while silently meaning something else.
+
+### §411.22 Why arms should re-measure rather than pin, and when controls are cheap
+
+**The case for live measurement, stated as a principle rather than an anecdote.**
+
+`recoverSpeed` 2.4 → 6.0 invalidated a nave-occlusion percentage measured three screens away, and
+**nothing static could have connected them.** Not an import graph — `CameraRig` does not import the
+level. Not a grep — the two share no identifier. Not review — the constants are in different files
+and different subsystems, and the reasoning that linked them lived in a commit message. The
+dependency ran through *the level's response to the camera*: a slower recovery made columns appear
+to cut the boom, which made the dolly appear too large, which set a constant.
+
+`camspeed` C2 caught it on the next run, and the reason is structural rather than lucky:
+
+> **The arm re-measures its own comparison every run instead of asserting a stored number.**
+
+Had C2 pinned "1.60 costs 11.6 % of frames" as a literal, it would have gone green forever on a
+world that no longer behaves that way — or red for a reason nobody could act on. Because it
+re-derives the comparison, it could say the one useful thing: *the reason for choosing 0.30 over
+1.60 no longer holds.*
+
+That is the strongest argument this project has produced for live-measuring arms. **Pinned numbers
+are cheaper and they cannot notice when the world changes underneath them.** A pinned value is a
+claim about a measurement; a re-derived one is a claim about the world. Only the second can be
+contradicted by the world.
+
+**The asymmetry in what controls cost, which is the practical half.**
+
+```
+§411.5   1 cm threshold                         found after a round of work
+§411.12  bbox grew as subject receded           found after a round of work
+§411.14  gap conflating blocked/recovering      found after a round of work
+§411.18  gate measuring the wrong quantity      found after a round of work
+§411.20  readPNG .width/.height; sky tol 649.7  found in MINUTES, before use
+§411.21  control overlapping the fix region     found in SECONDS, on the first run
+```
+
+Six instrument defects. The first four each cost a round, and the last two cost almost nothing.
+**The only difference is when the control ran** — before the instrument was trusted, or after it
+had produced a number worth believing. The defects were not easier; the self-test on `readPNG` was
+two lines and would have been identical had it run a round later.
+
+> A control is the same work whenever you run it. Its *cost* is everything you built on the
+> instrument before it ran.
+
+That is why "verify the change, not the gate" and "self-test the instrument before use" are the
+same discipline seen from two ends, and why neither is a talisman: both are cheap, and both are
+only worth anything when executed at the point where the number is still cheap to throw away.
+
 ---
 
 ## §414 — The fourth instance, and the first where the vacuity was in the SAMPLING
