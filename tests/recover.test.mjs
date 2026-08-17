@@ -743,3 +743,94 @@ test('R5: a freshly-minted Controller no longer eats its first frame teleporting
     + kept.map((r) => `${r.y}m ${r.state}`).join(' · ')
     + ' — the non-`fall` rows are airborne entries the harness could not reach at all before');
 });
+
+/* ====================================================================== */
+/* R6 — stuck is not slow: the safety net's second failure mode           */
+/* ====================================================================== */
+
+test('R6: a capsule that is airborne, unattached and going nowhere is recovered; one that is merely still is not', async () => {
+  /* ── WHY THIS EXISTS ──────────────────────────────────────────────────────────────────────
+   * `_safetyNet` triggered on HEIGHT alone (`voidY` −220). §503 drove a capsule pinned at a
+   * 57.64° face in the tomb stairwell: the ground was 6 mm under its feet, `_probeGround`
+   * refused it — correctly, since grounding on a 57.64° face would be the bug — so `grounded`
+   * never latched, `Jump.canEnter`'s `canGroundJump()` never returned true, coyote expired, and
+   * **no input produced a jump.** Backing off, walking either way and jumping were all driven:
+   * all four moved the capsule under 7 mm in 180 frames. Stationary, airborne, out of options,
+   * at y −6.58 — nowhere near `voidY`, so nothing noticed, while `_recordSafeStance` had held a
+   * good recovery point the whole time.
+   *
+   * ── THE ARM IS BUILT ON THE MECHANISM, NOT THE COORDINATES, AND HAD TO BE ────────────────
+   * The world lane has since closed that face: re-driven, (−9.26, −6.58, −56.60) now settles to
+   * `tiptoe`, grounded, in 10 frames. An arm pinned to those coordinates would today be green
+   * for the wrong reason and would have been testing a surface rather than a predicate. So the
+   * pin below is produced by holding the capsule still — airborne and unattached — which is the
+   * condition the predicate actually reads, by whatever cause.
+   *
+   * ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : a capsule held airborne, unattached and motionless — recovered at exactly
+   *               `stuckTime`, to the frame.
+   *   fails  on : RUN in-arm below — the same drive with the capsule GROUNDED, and again with it
+   *               free to fall. Neither is recovered, at ten times the window.
+   *   does NOT  : whether the recovery point is a good one. That is R1/R2's job. Nor does it see
+   *   discrim.    a capsule moving slowly but genuinely — it pins the two ends, not the boundary
+   *               at `stuckDist`, and it cannot say whether 3.0 s feels long to a player.
+   */
+  const { engine, c } = await realWorld();
+  const HOLD = new THREE.Vector3(0, 12, 30);
+  const FRAMES = Math.round(TUNE.stuckTime / DT);
+
+  /**
+   * Drive `n` frames from `at`, optionally pinning the capsule in place. Returns the rescue frame
+   * or −1.
+   *
+   * The grounded control STANDS ON REAL GROUND rather than setting `c.grounded = true`. My first
+   * version set the flag at y 12 and the arm went red: `_probeGround` runs inside `update()` and
+   * correctly cleared it, so the "standing still" control was a capsule in mid-air with a stale
+   * boolean — §435.4 inside the arm meant to catch it. The control is only a control if the world
+   * agrees with it.
+   */
+  function run(n, at, { pin = false, airborne = true } = {}) {
+    hardReset(engine, c, at.clone(), Math.PI);
+    engine.warnings.length = 0;
+    if (airborne) { c.grounded = false; c.sm.set('fall'); }
+    for (let i = 0; i < n; i++) {
+      engine.input.beginFrame(DT);
+      engine.input.move.x = 0; engine.input.move.y = 0;
+      if (pin) { c.position.copy(at); c.velocity.set(0, 0, 0); }
+      engine.time = i * DT;
+      c.update(DT, i * DT);
+      if (engine.warnings.some((w) => /stuck airborne/.test(w))) return i;
+    }
+    return -1;
+  }
+
+  /* ── WHAT ── */
+  const rescued = run(FRAMES * 3, HOLD, { pin: true });
+  assert.equal(rescued, FRAMES,
+    `a capsule held airborne, unattached and motionless was recovered on frame ${rescued}, not `
+    + `${FRAMES} (= stuckTime ${TUNE.stuckTime}s). The watchdog is not counting the window it says.`);
+
+  /* ── WHICH — the counterexamples, RUN ── */
+  const still = run(FRAMES * 10, new THREE.Vector3(0, 0.2, 30), { airborne: false });
+  assert.ok(c.grounded,
+    'the standing control is not actually standing — it must rest on real ground, or it is a '
+    + 'second airborne case wearing a boolean');
+  assert.equal(still, -1,
+    `a capsule standing perfectly still ON THE GROUND was "recovered" at frame ${still}. Stuck is `
+    + 'not slow: a player who stops moving is the most ordinary thing in the game and must never '
+    + 'be teleported for it.');
+
+  const falling = run(FRAMES * 10, HOLD, { pin: false });
+  assert.equal(falling, -1,
+    `a capsule left free to fall was recovered at frame ${falling}. Motion resets the anchor, so `
+    + 'anything actually travelling — a long drop, a slide down a face — must never trip this.');
+
+  /* ── AND THE EXEMPTION THAT IS NOT BY NAME ── */
+  assert.ok(TUNE.stuckTime > TUNE.wallClingMax,
+    `stuckTime ${TUNE.stuckTime} does not clear wallClingMax ${TUNE.wallClingMax}. wallCling is `
+    + 'group `air`, not `attach`, so it is stationary, airborne and unexempted — it is safe only '
+    + 'because it self-terminates first, and that ordering is the whole reason 3.0 was chosen.');
+
+  console.log(`[R6] recovered at frame ${rescued} = ${TUNE.stuckTime}s exactly; still-on-ground and `
+    + `free-fall both survive ${FRAMES * 10} frames untouched`);
+});

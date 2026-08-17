@@ -399,6 +399,19 @@ export const TUNE = {
      two casts is free — theirs pays nine casts at 60 Hz for a node nothing reads until you die.
      ---- */
   voidY:       -220,     // absolute last resort; the level's lowest legal floor is -12
+  /* The `stuck` half of the safety net (§504). `voidY` catches a player who fell OUT of the world;
+     these catch one who is in it and cannot move — airborne, stationary, with no way to jump
+     because `grounded` cannot latch on an unwalkable face.
+
+     Neither number is chosen. `stuckTime` has to clear the longest LEGITIMATE stationary airborne
+     episode the moveset can produce, and that is `wallCling`, which self-terminates at
+     `wallClingMax` 2.0 s; every other air state either moves or is in the `attach` group and
+     exempt. 3.0 s is that ceiling plus a full second. `stuckDist` has to sit above the drift a
+     genuinely pinned capsule shows and below anything a moving one does: the tomb pin measured
+     0.000-0.006 m over 180 frames against every input tried (§503.3), so 0.25 m is ~40x the
+     observed drift and still a quarter of a body width. */
+  stuckTime:      3.0,
+  stuckDist:      0.25,
   safePoll:     0.30,    // seconds between supported-stance samples
 };
 
@@ -652,6 +665,9 @@ export class Controller {
     /* Whether the current airborne episode began from the ground — see `onStateChanged`. Defaults
        TRUE so an unclassified fall is soft: a landing nobody can attribute must not cost control. */
     this._airControlled = true;
+    /* The stuck watchdog's anchor and clock — see `_safetyNet`. */
+    this._stuckAt = SPAWN.clone();
+    this._stuckT = 0;
 
     /* ---- ledge probe result ---- */
     this.ledge = { ok: false, y: 0, x: 0, z: 0, nx: 0, nz: 1, rec: null };
@@ -750,7 +766,7 @@ export class Controller {
       // After `_hazards`, so `hurtCooldown` reflects THIS frame and a stance inside a hazard is
       // refused rather than certified one frame before the damage lands.
       this._recordSafeStance(dt);
-      this._safetyNet();
+      this._safetyNet(dt);
     }
 
     this.stateName = this.sm.name;
@@ -951,7 +967,68 @@ export class Controller {
     this.safeOk = true;
   }
 
-  _safetyNet() {
+  /**
+   * Stuck is not slow, and the difference is the whole predicate.
+   *
+   *   grounded            -> NOT stuck. A player standing still is stationary and completely fine;
+   *                          this is the false positive that matters most and it is excluded first.
+   *   `attach` group      -> NOT stuck. A hang, a hook, a pole, a rail and a spire perch are all
+   *                          holds the player is choosing to keep, with no time limit by design.
+   *   moved > `stuckDist` -> NOT stuck, and the anchor resets. A slow slide down a face is motion;
+   *                          only a capsule that is going nowhere accumulates.
+   *
+   * `wallCling` is deliberately NOT exempted even though it is stationary and airborne: it is
+   * group `air`, not `attach`, and it self-terminates at `wallClingMax` 2.0 s, which is why
+   * `stuckTime` 3.0 clears it. Exempting it by name would also exempt a capsule pinned against
+   * the same wall, which is the case this exists for.
+   */
+  _stuck(dt) {
+    if (!(dt > 0)) return false;
+    if (this.grounded || this.sm.group === 'attach') {
+      this._stuckT = 0;
+      this._stuckAt.set(this.position.x, this.position.y, this.position.z);
+      return false;
+    }
+    if (this.position.distanceToSquared(this._stuckAt) > TUNE.stuckDist * TUNE.stuckDist) {
+      this._stuckT = 0;
+      this._stuckAt.set(this.position.x, this.position.y, this.position.z);
+      return false;
+    }
+    this._stuckT += dt;
+    return this._stuckT >= TUNE.stuckTime;
+  }
+
+  /**
+   * Two failures, not one. `voidY` catches falling OUT of the world; `_stuck` catches being in it
+   * and unable to move.
+   *
+   * **The stuck case is inescapable by construction, which is why a watchdog is the only fix.**
+   * Driven at the tomb pin (§503): the ground is 6 mm under the feet but 57.64° steep, so
+   * `_probeGround` refuses it — correctly, since grounding on a 57.64° face would be the bug —
+   * and `grounded` never latches. `Jump.canEnter` needs `canGroundJump()`, coyote expires, and
+   * there is then no input that produces a jump. Backing off, walking either way and jumping were
+   * all driven and all moved the capsule under 7 mm in 180 frames. The player is stationary,
+   * airborne and out of options while `_recordSafeStance` has held a good recovery point the
+   * whole time.
+   *
+   * **This is the class fix; closing the 57.64° face is the instance.** The next unwalkable face
+   * anybody authors puts a player back in exactly this state, and nothing in `Controller` would
+   * notice.
+   *
+   * **Those coordinates no longer reproduce, and that is the argument for building it this way.**
+   * Re-driven against the world lane's current geometry, the capsule at that point settles to
+   * `tiptoe`, `grounded true`, y −6.695 within 10 frames — they closed the 57.64° face. The
+   * instance is gone and the class is not: the predicate asks only whether Sly is airborne,
+   * unattached and has not moved, so it fires the same way at the next unwalkable face anybody
+   * authors, and it is pinned to no coordinate that a level edit can move out from under it.
+   */
+  _safetyNet(dt) {
+    if (this._stuck(dt)) {
+      this.engine.warn('movement: stuck airborne and unable to move; returning to the last supported stance.');
+      if (this.safeOk) this.teleport(this.safePoint, this.safeYaw);
+      else this.teleport(SPAWN, SPAWN_YAW);
+      return;                       // `teleport` re-anchors the watchdog; nothing else this frame
+    }
     if (this.position.y > TUNE.voidY && Number.isFinite(this.position.y)) return;
     /* Falling out of the world used to cost the whole traverse: `SPAWN` is (0, 0, 30) and §8.1's
        ascent ends 26 m up a pylon on the far side of the level. A recovery point that is always
@@ -1988,6 +2065,9 @@ export class Controller {
     // A teleport ends whatever airborne episode was in progress; the next one is re-classified
     // from wherever the caller put him, and until then an unattributable fall is soft.
     this._airControlled = true;
+    // …and the watchdog re-anchors, or a teleport INTO the air reads as 3 s of not moving.
+    this._stuckAt.set(this.position.x, this.position.y, this.position.z);
+    this._stuckT = 0;
     this.velocity.set(0, 0, 0);
     this.grounded = false;
     this.coyote = 99;
