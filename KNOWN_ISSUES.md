@@ -39485,3 +39485,79 @@ Each rule was correct about the failure it was written for and silent about the 
 
 Not rewritten: `34ebfa5` keeps my message over both sections. §443.7's trade, made a third time —
 rewriting shared history to repair a byline costs more than saying so, and the content is safe.
+
+## §465 — The instrument-error family, collected, and what closing the bank seam would cost
+
+Two short items to close this lane's round: a checklist that has been accumulating one entry at a
+time, and the price of a seam that is being left open on purpose.
+
+### §465.1 Five species of instrument error, all found in this project, all cheap to check for
+
+Each of these cost a real finding here, and each is checkable in under a minute *before* believing a
+number. They are collected because they are not variants of one another — they fail at different
+places in the chain from question to answer.
+
+```
+  §439  an instrument built from the same assumption as the thing it measures cannot falsify
+        that assumption.                    → D9 classified rows by re-deriving the formula, so a
+                                              repair moved hook_swing 26 cm and the arm stayed green
+  §440  sampling is an instrument too, and it fails more quietly than a stub, because a sample
+        looks like evidence.                → the lead census read every row at runSpeed; two rows
+                                              were floored by a cap that is invisible at one speed
+  §450  running answers "what does this do", never "what is this bounded by" — a bound is
+        invisible in every sample beneath it.  → the lead floor was closed-form and three rounds
+                                              of driving missed it
+  §464  THE DRIVER IS AN INSTRUMENT. A harness built to exercise a move will shape the quantity
+        you time with it.                   → script F taps jump every 9 frames DURING a wall run,
+                                              so as a stopwatch it ended the run it was timing:
+                                              24 frames reported, 18-frame median actually
+  §463  A SOURCE-SCANNING INSTRUMENT CANNOT TELL CODE FROM COMMENT. Any arm that greps source has
+        a domain that silently includes documentation.  → quoting four deleted rules verbatim in
+                                              a docblock put them straight back into the census
+                                              that reads that block, and reddened it
+```
+
+The last two are new this round and the fifth is the one with the widest blast radius here,
+because **this project writes very long docblocks and several arms scan source to avoid keeping a
+second copy of a table** (§388). Those two practices are individually right and interact badly:
+the §388 scan exists so the table cannot drift, and the docblock exists so the reasoning cannot be
+lost, and the scanner reads both. Any arm using a source scan should either strip comments before
+matching or match on a pattern that documentation cannot accidentally satisfy.
+
+**The shape underneath all five**, which is worth more than the list: *an instrument answers the
+question it was pointed at, and every one of these is a case where the question it was pointed at
+was not the question being asked.* The check is always the same — **say out loud what the
+instrument would report if the claim were false, then confirm that input exists and run it.**
+That is §418.3's DOMAIN block, and four of the five above would have been caught by writing one
+honestly.
+
+### §465.2 The wall-run bank seam: left open, and what closing it would take
+
+`_blendFrame` rolls the horizon into the wall on a **literal 0.22 s**, and `_wallSide` — the sign
+that decides which way — is refreshed by a raycast pair on a **0.1 s cadence**. Neither reads
+`FRAMES.tau`, so the row's signature cue is invisible to the only knob that appears to control the
+row (§464.3). Classified a **seam rather than a bug**: `FRAMES` authors seven channels, `tau`
+blends exactly those seven, there is no `roll:` in any row, and the amount comes from a global
+`TUNE.wallRoll`. Nothing claims `tau` governs it, so nothing is violated.
+
+**Not closed, and this is what closing it would cost**, recorded so the next person prices it
+rather than rediscovers it:
+
+* **An eighth `FRAMES` channel (`roll`), blended by `tau` like the rest.** The cheap-looking
+  option and the most invasive: every one of the sixteen rows acquires a value it did not have,
+  `_blendFrame` acquires an eighth `ease`, and the wall bank stops being a global cue and becomes
+  authored per framing. That is a bigger change than the defect justifies, and it would put a roll
+  on fifteen rows that never wanted one.
+* **Or a per-row `rollTau`, read only where it exists.** Smaller, and it makes `FRAMES` a table
+  with optional keys, which is what `vtrack` already is — so there is precedent. Cost is that
+  `tau` still does not mean "blend time into this framing", it means "blend time for the seven
+  original channels", and the next reader hits the same surprise one field later.
+* **Or leave the clock global and document it at `tau`.** Free, changes no pixels, and is the only
+  option that does not risk the fifteen rows that are working. It does not remove the surprise, it
+  labels it.
+
+**The measured cost of not closing it is bounded and small**: the bank delivers 78 % of
+`TUNE.wallRoll` at the shipped clock, and 90 % at 0.14. So this is a seam with a 12-point
+consequence on one channel of one framing, and all three repairs above are more disruptive than
+that. **Recorded, priced, and deliberately left alone** — the clock candidates are item 9 of the
+hardware sheet, where a person can move the literal without any of this restructuring.
