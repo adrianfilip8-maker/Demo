@@ -33417,3 +33417,232 @@ kept and they are not counted as evidence.
 - `Pickups.debugInfo()` and `Smashables.debugInfo()` are both defined and called by nothing in
   `src/`. Not new, not introduced here, and listed so the next §357.1 audit does not have to
   rediscover them.
+
+---
+
+## §422 — The reference camera has no speed reactivity at all, and three of our own framings had never been applied
+
+The player lane was asked to complete the camera and controls against
+`Sly-Cooper--A-Thief-in-Godot` — `Scripts/player__sly.gd` (1,260 lines) and `Scripts/camera_parent.gd`
+(106) — and told the deliverable was not "port the list" but **what does the reference do that we do
+not, and of those, which are worth having.** The answer turned out to be almost none of it, and the
+round's value came from what reading it exposed **in our own file**. That is the finding, so it goes
+first: *the useful output of a comparison can be entirely on your own side of it.*
+
+### §422.1 The comparison, and the refusals are most of it
+
+**Camera** (`camera_parent.gd` + `player__sly.gd:camera_smooth_follow`):
+
+```
+  mechanic                            ours                          verdict
+  ─────────────────────────────────────────────────────────────────────────────────────────
+  obstruction: ray to cam, spring     sphere sweep + 5 whiskers +   REFUSE. ours is strictly
+    the container to the hit point      overlap bisection             more capable
+  FOV opens on an attention target    routeFov, +3% on a 52 base    ALREADY TAKEN (round 20)
+  ambient pitch settle, spring .015   _ceilSettle, tau 1.103        ALREADY TAKEN (round 20)
+  four probe nodes L/R/U/D            WHISKERS, graded authority    ALREADY TAKEN (round 20)
+  move/still debounce, 5 frames       _movingDebounced              ALREADY TAKEN (round 20)
+  rotation_spring 0.15 on yaw/pitch   mouse is never filtered       REFUSE (rule 1), as before
+  pitch/yaw sensitivity 0.75 : 1.0    one scalar for both axes      TAKE -> lookPitchScale
+  velocity prediction in the follow   leadTime x FRAMES.lead        REFUSE as a lead, TAKE as
+    target, ~0.667 s of it                                            a lag identity (below)
+  follow gain scaled by camera        maxFollowH cap, and a         REFUSE: theirs is singular
+    distance (their own comment          vertical error/hold ramp      at dist 4 and negative
+    "multiply if too far away")                                       past it. Broken as written
+  vertical follow: a +/-2 m DEADBAND  continuous, tau 0.46 s,       REFUSE. a 2.52 m jump peaks
+    while airborne, hard                deadzoneV 0.22                at 1.66 m of error, so under
+                                                                      their rule a full-height jump
+                                                                      never moves the frame at all,
+                                                                      then catches up all at once
+  vertical follow on the ground:      spring, softened by error     REFUSE, and it is measurably
+    gain INVERSE in the error           and by one-signed hold        backwards: a 0.2 m stair
+                                                                      corrects at tau 66 ms, which
+                                                                      is the exact bob our rule 2
+                                                                      exists to remove
+  pivot offset 1 m along FACING       velocity lead only            REFUSE: the pivot is also the
+    even at a standstill                                              occlusion cast origin, so
+                                                                      moving it off the character
+                                                                      moves what "clear" means
+  pitch limits +45 / -85 (up 45)      -70 / +75                     REFUSE: no argument either way
+  first-person / binocucom mode       'aim' shoulder mode           REFUSE for this round: a new
+                                                                      verb, and the brief weights
+                                                                      feel above verbs
+  speed -> boom                       distSpeedGain 0.30            THEIRS IS ZERO (§422.3)
+  speed -> FOV                        fovSpeedGain 6.0              THEIRS IS ZERO (§422.3)
+```
+
+**Controls** (`player__sly.gd`):
+
+```
+  mechanic                            ours                          verdict
+  ─────────────────────────────────────────────────────────────────────────────────────────
+  target magnetism                    Targets.js + `toTarget`       ALREADY TAKEN (IMPORT §2)
+  coyote time                         0.110 s                       REFUSE theirs: 5 FRAMES, so
+                                                                      83 ms at 60 Hz and 35 at 144
+  jump buffer                         140 ms of game time           REFUSE theirs: spatial, via a
+                                                                      floor ray, unbounded in time
+  step-up onto stairs                 stepHeight 0.42 in            ALREADY HAVE
+                                        _moveHorizontal
+  decaying air control, 1.0 -> 0.125  flat airControl 0.55          REFUSE. Real gap and a real
+    over ~0.44 s of fall                                              difference in feel, but it is
+                                                                      a COMMITMENT axis that fights
+                                                                      every assist this project
+                                                                      ships (ledgeAssist, ledgeSnap,
+                                                                      magnetism), and 0.125 was
+                                                                      chosen against a 4 m/s game
+  two-stage gravity: x2.5 until       -24 flat, apexHang on the     REFUSE. Every jump height,
+    vy = -6.5, then x1.0                 rise, maxFall -40             landBeat/landHard, the
+                                                                      Targets kH/kV/kT derivation
+                                                                      table and level.test.mjs's
+                                                                      ballistic mirror are joint on
+                                                                      this constant
+  triple jump, additive, curve-       double jump, sets v0; the     REFUSE the third jump; the
+    sampled on arrival vy               curve already lives in        curve is already imported
+                                        Targets.js                    where it belongs
+  dynamic walkable slope: 0 deg       SLOPE.walkable 50 deg fixed   REFUSE, no domain: §418.5
+    when descending or near an edge                                   already established the
+                                                                      steepest face here is 47.9
+  target scoring: -dist + align*      smallest PREDICTED BALLISTIC  REFUSE: ours answers "is the
+    dist*0.25, +0.125 if above          MISS inside `catch`           arc already going there",
+                                                                      which is the better question
+  last-supported-stance respawn       _safetyNet -> SPAWN at        WORTH HAVING, not this round:
+    (all 9 floor rays hit)              voidY -220                    recovery, not moment-to-moment
+  +4 m/s consolation on a failed      nothing on release('timeout') WORTH HAVING, not this round.
+    magnet lock                                                       Derivable as 0.5 x jumpV0 =
+                                                                      5.5 via the existing kV 1.375
+  stun zeroes air jumps               `hurt` state                  ALREADY HAVE
+  ledge re-grab cooldown 0.2 s        hangLock                      ALREADY HAVE
+  smoke bomb / mega jump / L1-R2      none                          REFUSE: new verbs
+```
+
+**Only one row in either table was taken as a mechanic** — the pitch/yaw sensitivity ratio. The
+other two changes this round came out of our own file, and would not have been found without
+reading theirs.
+
+### §422.2 Three authored framings had never once been applied, and the census that found it was already written
+
+`tests/traversal.test.mjs` arm 24 had diagnosed this and pinned it as a **tripwire written to redden
+when fixed** — its assertion messages literally read *"if that is 'balance', the fix has landed"*.
+This round landed it. `_resolveFrame` matched camelCase STATE names against a substring table
+written in the snake_case CLIP vocabulary; lowercasing camelCase never inserts an underscore, so
+every snake_case rule was unreachable and — worse — a *shorter* rule caught the name and answered
+confidently:
+
+```
+  wallRun   -> run    'wallrun'.indexOf('run') === 4, and ['run','run'] sits above
+                      ['wall','wall_run'].  `_blendFrame` gates the wall-side probe on
+                      `_frameKey === 'wall_run'`, so THE BANK WAS DEAD for the entire move
+                      it is named for — including through round 20, which fixed its SIGN.
+  railWalk  -> walk   `balance` (dist 2.10, pitch +5 deg, stiff 1.60 — the tightrope) was
+                      reached by nothing at all.
+  ledgeHang -> idle   `ledge_hang` (dist -0.70, height 1.15, pitch -13 deg — "drop under the
+                      lip and look up past it") had never been applied.
+```
+
+The fix is an exact state-name map in front of the substring table, for exactly those three. **Only
+the three the census called contradictions.** The names that merely *fall through* to `idle` are
+design questions rather than routing typos and are left where they route — `move` (the speed ladder,
+documented at length in `camspeed.test.mjs`), `hurt`, `toTarget`, `bounce`, `skid`, `pickpocket` —
+and one more is **reported rather than changed**: `combatStrafe` -> `idle`, while the `combat`
+framing it is named for is reached only by `combo`. Same class as the three. Not fixed with them,
+because smuggling a fourth into a three-fix arm is how a measured result stops being attributable.
+
+The dead-framing set collapses from five to exactly `{walk, run, run_fast}` — the speed ladder, which
+is precisely the one item that census reports rather than fixes. That set is now asserted as a set
+rather than a count, because *which three* is the whole result.
+
+### §422.3 `FRAMES.lead` did not mean what it says, and `stiff` is why
+
+The lead is applied to the follow **goal**; what reaches the frame is the goal minus the spring's own
+trail, and a critically-damped `smoothDamp` tracking a constant-velocity target settles exactly
+`smoothTime x v` behind it. `smoothTime` here is `followTimeH x stiff`. So `f.stiff` — documented
+only as *"multiplier on the spring times (>1 = softer, stiller)"* — silently subtracts from `f.lead`,
+and nothing had ever measured the sum. Worse: **`leadMax` bounds the lead and nothing bounds the
+trail**, so above the crossover the net lead falls linearly with speed and changes sign.
+
+Measured on the shipped rig, steady state, signed along travel (+ = ahead of the player):
+
+```
+  framing        v (m/s)   authored   delivered
+  idle (= move)    7.20      0.428      -0.939     <- ordinary running
+  hook_swing       8.00      1.750      -0.207     <- "Lead frames the landing"
+  sneak            1.40      0.119      -0.250
+  balance          2.40      0.082      -0.633
+  run              7.20      1.714      +0.612
+  air              7.20      1.469      +0.217
+```
+
+**Ordinary running looked a metre behind Sly**, and the hook swing — the move `Controller.js` calls
+the best-feeling in the game — delivered -21 cm of an authored 1.75 m.
+
+`_pivotGoal` now floors the lead at the trail. **A floor, not compensation**, and the distinction is
+the whole of the risk management: it corrects a *sign* and leaves every framing that was already
+leading unchanged to three decimals. Full compensation is the other available answer and is refused —
+it would move `run` to the `leadMax` cap and the hook swing by 1.96 m, and `leadMax` was calibrated
+against the *delivered* number, so honouring the authored one means re-deriving the cap too. Same
+call, and the same reason, as the `landImpact` block in `Controller.TUNE`: a correct measurement that
+forces a feel re-derivation is not a one-line fix, and it wants frames.
+
+**The reference is where the shape came from, and it does not have this defect.**
+`camera_smooth_follow` offsets its follow target by `velocity * (delta / lerp_val)` with `lerp_val`
+0.025 at 60 Hz — apparently 0.667 s of look-ahead, four times ours, and the obvious reading is "they
+lead much harder". They do not lead at all. The same `lerp_val` is the per-frame alpha of the stage
+being fed, whose steady-state ramp lag is `h(1-a)/a` = 0.650 s. **Their lead is their own smoothing
+lag, cancelled to within 2.5 %** — which is what lets them run a stage four times heavier than ours
+and still track a running character exactly. A number that looks like an aggressive feel choice and
+is actually an identity; you cannot get that from the constant, only from the code around it.
+
+### §422.4 The `distSpeedGain` answer is a negative result, and it is still an answer
+
+The standing question was whether the reference's camera suggests a principled size for the +0.30 m
+boom dolly. Asked directly, it says three things and none of them is a number:
+
+- **no speed -> boom term at all.** The boom is `lerp(cam_container.position, Vector3(0, 0.5,
+  camera_length + 7.0), 0.175)` and `camera_length` is `pitch/PI*2` immediately `clamp`ed to
+  `[0, 0]`. Dead code over a constant 7.0 m boom.
+- **no speed -> FOV term either.** `target_fov` is 75.0 always, 85.0 only on an authored
+  `target.adj_fov`. Speed is never consulted.
+- **and its one large-looking speed term is the lag identity above**, not a cue.
+
+So the reference spends its entire speed budget cancelling its own lag and leaves zero for the boom
+and zero for the lens. **A reference with no such term cannot pin a non-zero one**, and pretending
+otherwise would be inventing precision out of a negative result. What it *can* do is corroborate: the
+surviving argument for 0.30 was that the framing channel already carries the speed cue, and here is a
+comparable design that carries it in neither channel and does not miss it. 0.30 stands on three
+arguments instead of two, the third says it should not grow, and it is still not re-tuned from this
+lane's measurements.
+
+### §422.5 §418.3 caught the person writing the bar, twice in one round
+
+`tests/camlead.test.mjs` is four arms, all with `DOMAIN (§418.3)` blocks, and the blocks did work
+rather than decorating:
+
+- **L1's failing input found a hole in the fix.** The floor's first draft was a scale on the lead
+  *vector*, so when the authored lead is zero there is no direction to apply and the full trail
+  survives. No shipped framing has `lead: 0` — which is exactly why it would have sat there
+  indefinitely. Running `leadTime` 0 as the arm's named failing input exposed it in one command, and
+  the floor was reworked into seconds of travel along the velocity. **The failing input is not a
+  formality to satisfy after the fact; it is the cheapest test of the fix that exists.**
+- **L1b's first draft put `railSlide` at `railMax` on the wrong side of its own discriminator.** It
+  is not "already leading" at 15 m/s — 1.750 authored against 1.920 of trail — and the arm said so
+  the first time it ran. Rewritten to use the same state at *two* speeds, 9.5 and 15.0, straddling
+  the `leadMax / (followTimeH x stiff)` = 13.67 m/s crossover, which demonstrates the mechanism
+  instead of asserting it.
+
+A discriminator that catches the person writing it is the only kind worth having. Project §418.3
+coverage moves from 4 arms to 8; the denominator is now 785.
+
+### §422.6 And the one adopted mechanic, labelled as what it is
+
+`lookPitchScale` 0.75. `camera_parent.gd` sets `yaw_sens = 1.0` and `pitch_sens = 0.75` every physics
+frame and those are the only two sensitivity numbers in the file. It is a **gain, not a filter** —
+frame-independent, no state, no lag — so rule 1 ("the mouse is never filtered") is untouched, and the
+comment at the constant says so, because a reader will reach for that rule. A second argument
+supports it independently: the axes are not the same length. Yaw is unbounded; pitch travels 145 deg
+end to end, so at equal gain the vertical axis hits its stop in a fraction of the travel the
+horizontal one has.
+
+Neither argument is a playtest, and the constant is labelled in the source as a feel value adopted on
+argument rather than measured. That label is the point. `distSpeedGain` above is on the same list for
+the same reason, and the difference between an under-determined constant and an arbitrary one is
+whether anyone wrote down which it is.
