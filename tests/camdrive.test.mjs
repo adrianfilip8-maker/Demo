@@ -115,7 +115,8 @@ function replay(samples, collision, mode) {
       const inFront = _rel.dot(_fwd) > cam.near;          // §419 — see the file header
       const ndcY = inFront ? _subj.clone().project(cam).y : null;
       out.push({ key: rig._frameKey, sp, lead, inFront, ndcY, stiff: rig._frame.stiff,
-        dist: rig._frame.dist, camDist: cam.position.distanceTo(_subj) });
+        dist: rig._frame.dist, fov: rig._frame.fov, boom: rig.boom, camFov: rig._fovCur,
+        camDist: cam.position.distanceTo(_subj) });
     }
     return out;
   } finally { TUNE.leadMode = keep; }
@@ -446,4 +447,175 @@ test('D3: which authored framings a player actually sees, and the one that is un
   assert.ok(air.worst < 0.5,
     `the worst air residency delivered ${(100 * air.worst).toFixed(0)}% — every visit now gets most of its `
     + 'framing, so "the framing depends on how you got there" is no longer true');
+});
+
+/* ====================================================================== */
+/* D4 — `dive`, the one framing whose residency is a fall time             */
+/* ====================================================================== */
+
+test('D4: the Cane Slam framing is delivered iff the drop is long, and the boom is the worst channel', async () => {
+  /* D3 closed every framing row by arithmetic except this one: `DiveAttack` descends at a
+     constant `diveSpeed` 18 m/s, so its residency is `height / 18` and its ceiling is a
+     DISTRIBUTION rather than a number. The crossover falls straight out of the same identity:
+     `diveSpeed × 3τ` = 18 × 0.27 = **4.86 m of fall** to reach 95 % of the framing.
+   *
+   * Flat-ground play tops out below that. A plain jump apex is 2.52 m and a jump stacked with a
+   * double jump is 4.56 m, so **on open ground the Cane Slam can never reach its own framing.**
+   * From any architecture it always does.
+   *
+   * ── AND THE SINGLE-CLOCK CEILING IS AN OVERSTATEMENT, WHICH IS THE BIGGER RESULT ────────────
+   * D3 scored the `dist` CHANNEL. The channel is not the boom. `_frame.dist` feeds `_boomWant`
+   * (`zoomTime` 0.16 s) which feeds `this.boom` (another 0.16 s), so the boom is THREE blends
+   * deep and the FOV is two (`_frame.fov` → `_fovCur` at `fovTime` 0.30 s). Measured end to end
+   * on a dive from a standard jump apex: the channel reaches 73 %, the FOV reaches 43 %, and the
+   * **boom reaches 5 %** — 5.29 m against an authored 3.20 m, i.e. it does not pull in at all.
+   * The single-clock ceiling overstates the boom by more than an order of magnitude.
+   *
+   * DOMAIN (§418.3)
+   *   passes on : dives from 15 m and 26 m — the boom reaches ≥ 96 % and the FOV ≥ 100 %, so a
+   *               long enough drop does deliver the authored slam.
+   *   fails on  : the dive from a standard jump apex, on the same instrument — boom 5 %. Both
+   *               measured, so the bound is known to discriminate between drop heights rather
+   *               than to be a property of the scorer. */
+  const rows = [];
+  for (const apex of [2.52, 4.56, 8, 15, 26]) {
+    const v0 = Math.sqrt(2 * -CTUNE.gravity * apex);
+    const fired = { yes: false };
+    const t = await trace(V(0, 0.2, 30), 0, 260, (inp, i, cc) => {
+      if (i === 1) { cc.pendingLaunch = v0; cc.sm.set('jump'); }
+      if (i > 3 && cc.velocity.y < 0 && !fired.yes) { inp.hold('attack'); fired.yes = true; }
+      else inp.let_go('attack');
+    }, (c) => { c._needSpawnSnap = false; });
+    const fr = replay(t.samples, t.collision, 'floor');
+    const idx = [];
+    for (let i = 0; i < fr.length; i++) if (fr[i].key === 'dive') idx.push(i);
+    if (!idx.length) { rows.push({ apex, n: 0 }); continue; }
+    const s = idx[0], e = idx[idx.length - 1];
+    const dT = FRAMES.dive.dist, fT = FRAMES.dive.fov;
+    let chan = 0;
+    for (const i of idx) chan = Math.max(chan, (fr[i].dist - fr[s].dist) / (dT - fr[s].dist));
+    const boomAuth = TUNE.distDefault + dT;
+    const fovAuth = TUNE.fovBase + fT;
+    rows.push({ apex, n: idx.length,
+      ceil: 1 - Math.exp(-(idx.length * DT) / FRAMES.dive.tau),
+      chan,
+      boomFrac: (TUNE.distDefault - fr[e].boom) / (TUNE.distDefault - boomAuth),
+      fovFrac: (fr[e].camFov - TUNE.fovBase) / (fovAuth - TUNE.fovBase),
+      boom: fr[e].boom, fov: fr[e].camFov });
+  }
+  console.log(`\n[D4] diveSpeed ${CTUNE.diveSpeed} m/s · FRAMES.dive.tau ${FRAMES.dive.tau}s · `
+    + `crossover ${(CTUNE.diveSpeed * 3 * FRAMES.dive.tau).toFixed(2)} m of fall`);
+  console.log(`[D4] flat ground reaches: jump apex ${(CTUNE.jumpV0 ** 2 / (2 * -CTUNE.gravity)).toFixed(2)} m · `
+    + `+ double ${((CTUNE.jumpV0 ** 2 + CTUNE.doubleJumpV0 ** 2) / (2 * -CTUNE.gravity)).toFixed(2)} m`);
+  console.log('[D4] apex(m)  frames   ceiling  dist-channel |   BOOM delivered      FOV delivered');
+  for (const r of rows) {
+    console.log(`[D4] ${String(r.apex).padStart(6)}  ${String(r.n).padStart(6)}  ${(100 * r.ceil).toFixed(0).padStart(6)}%  `
+      + `${(100 * r.chan).toFixed(0).padStart(11)}%  | ${(100 * r.boomFrac).toFixed(0).padStart(4)}% (${r.boom.toFixed(2)} m)   `
+      + `${(100 * r.fovFrac).toFixed(0).padStart(4)}% (${r.fov.toFixed(2)}°)`);
+  }
+
+  const at = (a) => rows.find((r) => r.apex === a);
+  assert.ok(rows.every((r) => r.n > 0), 'some heights never entered `dive` — the route stopped working');
+  /* PASSING: a long drop delivers. */
+  assert.ok(at(26).boomFrac > 0.95 && at(15).boomFrac > 0.9,
+    `a 26 m dive delivers only ${(100 * at(26).boomFrac).toFixed(0)}% of its boom — then NO drop delivers `
+    + 'the slam framing and this is the `land` defect, not a variance finding');
+  /* FAILING: a jump-apex dive does not. */
+  assert.ok(at(2.52).boomFrac < 0.25,
+    `a jump-apex dive now delivers ${(100 * at(2.52).boomFrac).toFixed(0)}% of its boom — the variance `
+    + 'this arm reports has gone, so either a clock shortened or the crossover moved');
+  /* And the reason the channel score is not the answer: the boom is three blends deep. */
+  assert.ok(at(2.52).chan - at(2.52).boomFrac > 0.4,
+    `on a jump-apex dive the dist channel reached ${(100 * at(2.52).chan).toFixed(0)}% and the boom `
+    + `reached ${(100 * at(2.52).boomFrac).toFixed(0)}% — they now agree, so the serial chain `
+    + '`_frame.dist` → `_boomWant` → `boom` is no longer costing anything and D5 should say so');
+  assert.ok(CTUNE.jumpV0 ** 2 / (2 * -CTUNE.gravity) < CTUNE.diveSpeed * 3 * FRAMES.dive.tau,
+    'a plain jump now reaches the dive crossover height — flat-ground slams deliver their framing '
+    + 'and the "never on open ground" claim is stale');
+});
+
+/* ====================================================================== */
+/* D5 — every clock in the file, and the chains they form                  */
+/* ====================================================================== */
+
+/**
+ * The chains, authored — and the count is checked against a source scan below so this cannot
+ * quietly stop describing the file. Each entry is one player-visible quantity and the ordered
+ * list of blends between `FRAMES` and the screen.
+ */
+const CHAINS = [
+  { out: 'boom (metres)',      stages: ['_frame.dist  (FRAMES.tau)', '_boomWant (zoomTime)', 'this.boom (zoomTime / recoverTime)'] },
+  { out: 'camera.fov (deg)',   stages: ['_frame.fov   (FRAMES.tau)', '_fovCur (fovTime)'] },
+  { out: 'lateral offset (m)', stages: ['_frame.side  (FRAMES.tau)', '_sideSign (0.35 s)'] },
+  { out: 'pivot x/z (m)',      stages: ['_frame.lead+stiff (FRAMES.tau)', 'follow spring (followTimeH x stiff)'] },
+  { out: 'pivot y (m)',        stages: ['_frame.height (FRAMES.tau)', 'follow spring (followTimeV x stiff)'] },
+  { out: 'roll (rad)',         stages: ['_wallSide probe (ceilPoll-style, 0.1 s)', '_roll (0.22 s)'] },
+];
+
+test('D5: FRAMES.tau is never the delivery time of anything — the clock census', () => {
+  /* The generalisation of D3 and D4, and it is a statement about the whole file rather than the
+     framing table. **Every channel `FRAMES` authors passes through at least one more blend before
+     it reaches the screen, and the boom passes through two more.** So the single-clock ceiling
+     `1 − exp(−n·dt/τ)` is an UPPER BOUND on delivery, never the delivery — measured in D4, a
+     jump-apex dive reaches 73 % of the `dist` channel and 5 % of the boom.
+   *
+   * That is why `land`'s 45 % is also an overstatement, and why "the framing blends in `tau`
+   * seconds" was never true of anything a player can see.
+   *
+   * The longest clock in the file is `ceilTau` 1.103 s — 199 frames to 95 % — and it is the one
+   * adopted from the reference. It is gated on *moving under a ceiling*, so a doorway crossed in
+   * under a second delivers about half of it. Reported here rather than measured; no driven route
+   * in this file spends 3.3 s moving under a lintel.
+   *
+   * DOMAIN (§418.3)
+   *   passes on : the shipped file — the scan finds ≥ 14 blend sites, and the authored chains
+   *               below each name a stage that exists in it.
+   *   fails on  : a file where the chains have collapsed. Asserted two ways: the scan must find
+   *               more blend sites than there are `FRAMES` channels (7), and the boom chain's
+   *               end-to-end cost must be visible in D4 — which it is, at 73 % vs 5 %. If either
+   *               went away the census would still print a table, and that is the failure this
+   *               bar exists to catch. */
+  const src = readFileSync(new URL('../src/player/CameraRig.js', import.meta.url), 'utf8');
+  const sites = [...src.matchAll(/^\s*(?:this\.)?([\w.]+)\s*=\s*(ease|smoothDamp)\(/gm)]
+    .map((m) => ({ target: m[1], kind: m[2] }));
+  console.log(`\n[D5] ${sites.length} blend sites in CameraRig.js (${sites.filter((s) => s.kind === 'ease').length} ease, `
+    + `${sites.filter((s) => s.kind === 'smoothDamp').length} smoothDamp)`);
+
+  const f = (tau) => `${tau.toFixed(3)}s -> ${(3 * tau / DT).toFixed(0)} frames to 95%`;
+  console.log('[D5] the clocks, longest first:');
+  const clocks = [
+    ['_ceilW           ceilTau', TUNE.ceilTau],
+    ['_routeSideW/UpW  routeOut', TUNE.routeOut],
+    ['boom recovery    recoverTime', TUNE.recoverTime],
+    ['FRAMES.spire.tau (longest row)', FRAMES.spire.tau],
+    ['_routeUpW        routeIn', TUNE.routeIn],
+    ['_sideSign        (literal)', 0.35],
+    ['_fovCur          fovTime', TUNE.fovTime],
+    ['follow y         followTimeV', TUNE.followTimeV],
+    ['_speedSm / _roll (literal)', 0.22],
+    ['follow x/z       followTimeH', TUNE.followTimeH],
+    ['_boomWant        zoomTime', TUNE.zoomTime],
+    ['FRAMES.dive.tau  (shortest row)', FRAMES.dive.tau],
+  ].sort((a, b) => b[1] - a[1]);
+  for (const [name, tau] of clocks) console.log(`       ${name.padEnd(32)} ${f(tau)}`);
+
+  console.log('[D5] serial chains from FRAMES to the screen:');
+  for (const ch of CHAINS) console.log(`       ${ch.out.padEnd(20)} ${ch.stages.length} stages: ${ch.stages.join('  ->  ')}`);
+
+  assert.ok(sites.length >= 14,
+    `only ${sites.length} blend sites found in CameraRig.js — the source scan has stopped working, so `
+    + 'the census below is describing a file it cannot see');
+  assert.ok(sites.length > 7,
+    `${sites.length} blend sites against 7 FRAMES channels — if these were equal, every authored `
+    + 'channel would reach the screen through exactly its own blend and this whole census would be moot');
+  assert.ok(CHAINS.every((c) => c.stages.length >= 2),
+    'a chain in the authored table has only one stage — then `FRAMES.tau` IS its delivery time and '
+    + 'the census is describing a file that no longer matches it');
+  assert.equal(CHAINS.find((c) => c.out.startsWith('boom')).stages.length, 3,
+    'the boom chain is no longer three stages deep; D4 attributes a 73%-vs-5% gap to exactly that '
+    + 'depth, so the two claims have to move together');
+  /* `ceilTau` is the longest clock and it came from the reference; if it stops being the longest,
+     something in this file grew a slower one and nobody measured what it costs. */
+  assert.equal(clocks[0][1], TUNE.ceilTau,
+    `the longest clock is now ${clocks[0][0]} at ${clocks[0][1]}s, not ceilTau ${TUNE.ceilTau}s`);
 });

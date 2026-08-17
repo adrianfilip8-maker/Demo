@@ -147,8 +147,53 @@ deliverable *and* turns a blend into something much closer to a cut on every lan
 Same class of decision as full compensation, and it wants the same eyes.
 
 Worth checking against the rest of the table by the same arithmetic: `roll` runs `rollTime` 0.44 s
-against `tau` 0.16 → 94 % ceiling, fine. `dive`'s duration is a fall time and is not a constant, so
-it is unmeasured. Every other framing belongs to a state a player can stay in.
+against `tau` 0.16 → 94 % ceiling, fine. Every other framing belongs to a state a player can stay
+in. That leaves `dive`, below.
+
+## Correction 4: `dive` is a distribution, and its variance is the finding
+
+`DiveAttack` descends at a constant `diveSpeed` 18 m/s, so its residency is `height / 18` and the
+crossover falls out of the same identity: `18 × 3τ` = **4.86 m of fall** to reach 95 %. Driven from
+five drop heights:
+
+```
+  apex (m)   dive frames   ceiling   dist channel  |   BOOM delivered      FOV delivered
+    2.52          8          77 %        73 %      |    5 %  (5.29 m)      43 %  (53.51°)
+    4.56         15          94 %        93 %      |   50 %  (4.31 m)      59 %  (54.06°)
+    8           26          99 %        99 %      |   86 %  (3.50 m)      78 %  (54.73°)
+   15           49         100 %       100 %      |   96 %  (3.29 m)     102 %  (55.55°)
+   26           85         100 %       100 %      |  100 %  (3.21 m)     100 %  (55.50°)
+```
+
+Flat ground reaches 2.52 m from a jump and 4.56 m stacking a double jump — both under the 4.86 m
+crossover. **On open ground the Cane Slam can never reach its own framing; from any architecture it
+always does.** So this is the second of the two outcomes: the framing is fine, and its *variance* is
+the finding. The same move has two visual identities and nothing tells the player which one they
+are getting.
+
+## Correction 5, which is the general form and makes 3 and 4 worse
+
+**`FRAMES.tau` is never the delivery time of anything.** Every channel it authors passes through at
+least one more blend before the screen, and the boom passes through two:
+
+```
+  boom (m)          _frame.dist   (FRAMES.tau)  ->  _boomWant (zoomTime)  ->  boom (zoomTime/recoverTime)
+  camera.fov (deg)  _frame.fov    (FRAMES.tau)  ->  _fovCur (fovTime)
+  lateral offset    _frame.side   (FRAMES.tau)  ->  _sideSign (0.35 s)
+  pivot x/z         _frame.lead+stiff           ->  follow spring (followTimeH x stiff)
+  pivot y           _frame.height               ->  follow spring (followTimeV x stiff)
+  roll              _wallSide probe (0.1 s)     ->  _roll (0.22 s)
+```
+
+19 blend sites in the file, against 7 `FRAMES` channels. The single-clock ceiling
+`1 − exp(−n·dt/τ)` is therefore an **upper bound on delivery, never the delivery** — measured, a
+jump-apex dive reaches 73 % of the `dist` channel and **5 % of the boom**, a gap of more than an
+order of magnitude. `land`'s 45 % is an overstatement for the same reason.
+
+The longest clock in the file is `ceilTau` **1.103 s** — 199 frames to 95 %, and it is the one
+adopted from the reference. It is gated on *moving under a ceiling*, so a doorway crossed in under a
+second delivers about half of it. Reported rather than measured: no driven route in this file spends
+3.3 s moving under a lintel, which is itself worth knowing.
 
 ## Known limits of this instrument, stated rather than discovered later
 

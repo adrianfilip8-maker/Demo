@@ -370,11 +370,23 @@ export const TUNE = {
  *
  * `air` is the interesting one rather than the broken one: a long fall holds it 171 frames and
  * delivers 100 %, a glide hinge holds it 7 and delivers 32 %, ordinary hops 10–27 and deliver
- * 60–81 %. **What a player sees for `air` depends on how they got there.** `roll` clears at 94 %;
- * `dive`'s duration is a fall time, not a constant, and is unmeasured.
- * `tests/camdrive.test.mjs` D3 holds all of this; the note beside `_pivotGoal` carries the table.
- * Not retuned here — dropping `land.tau` to ~0.03 s makes it deliverable and turns a blend into
- * very nearly a cut on every landing in the game, which is a feel decision, not a defect fix.
+ * 60–81 %. **What a player sees for `air` depends on how they got there.** `roll` clears at 94 %.
+ *
+ * `dive` is the row whose residency is a FALL TIME, so its ceiling is a distribution: at
+ * `diveSpeed` 18 m/s the crossover is `18 × 3τ` = **4.86 m of fall**, and flat ground reaches
+ * 2.52 m from a jump and 4.56 m with a double jump. **On open ground the Cane Slam can never
+ * reach its own framing**; from any architecture it always does.
+ *
+ * ── AND THE CEILING IS AN UPPER BOUND, NEVER THE DELIVERY ────────────────────────────────────
+ * All of the above scores a `FRAMES` CHANNEL. The channel is not the screen. Every one of them
+ * feeds at least one more blend, and the boom feeds two: `_frame.dist` → `_boomWant` (`zoomTime`)
+ * → `this.boom` (`zoomTime`/`recoverTime`), with FOV two deep through `_fovCur` (`fovTime`).
+ * Measured end to end on a dive from a standard jump apex: the `dist` channel reaches 73 %, the
+ * FOV reaches 43 %, and **the boom reaches 5 %** — 5.29 m against an authored 3.20 m, i.e. the
+ * slam does not pull in at all. So `land`'s 45 % is likewise an overstatement, and "the framing
+ * blends in `tau` seconds" was never true of anything a player can see.
+ * `tests/camdrive.test.mjs` D3/D4/D5 hold all of this; the note beside `_pivotGoal` carries the
+ * tables. Not retuned here — every candidate fix is a feel decision, not a defect fix.
  */
 const FRAMES = {
   idle:       { dist:  0.00, height:  0.00, lead: 0.35, fov:  0.0, pitch:  0.0 * DEG, side: 0.00, stiff: 1.15, tau: 0.35 },
