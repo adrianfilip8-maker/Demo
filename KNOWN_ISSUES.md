@@ -34396,3 +34396,126 @@ one instrument before it was pointed at the right API**, which is `tests/eventbu
 "a census that cries wolf is worse than no census" arriving again. The corrected census: every
 action in `KEY_BINDINGS` is read except `quality` (F2) and `middle` (MMB), and no action is read
 that is not bound.
+
+## §428 — The boot path censused: the wiring is clean, and 25 payload fields are not
+
+Four questions asked of the assembled game before the first real playtest. Census only; nothing
+fixed, and nothing needed fixing at boot. Three of the four answers are **clean**, and the fourth
+is the one the bottle census predicted would be the interesting level.
+
+### §428.1 Registered but never updated — none
+
+All 22 `MANIFEST` modules define `update()`, including whichever of the six character models the
+`?char=` selector resolves (the shipped default is `SlyModelDLRig`). `Engine.renderFrame` skips a
+module with no `update` **silently** — `if (typeof mod.update !== 'function') continue;` — so this
+was worth checking rather than assuming, and it comes back empty.
+
+Two things found while checking, neither a defect:
+
+- `Smashables.update()` is a deliberate no-op with a comment saying so — a smashable is inert
+  until hit. Registered, updated, does nothing, on purpose.
+- **A module can stop updating mid-session and only say so once.** On a throw, `renderFrame`
+  warns and then assigns `mod.update = () => {}` to stop the console flood. That is the right
+  call for a demo — the frame keeps rendering — but it means "this module updated at boot" is not
+  the same claim as "this module is still updating". Worth knowing during a playtest, because the
+  symptom is a system quietly ceasing rather than a crash.
+
+### §428.2 Built but never added, or added and never visible — none
+
+Answered by **walking the built scene** rather than by grepping for `scene.add`, after the grep
+version produced a false positive: it missed `engine?.scene?.add(this.root)` and reported the
+shipped character model as an orphan.
+
+```
+  scene objects 342 · meshes 334 · zero-geometry 0 · invisible 260
+  roots: architecture:colliders 248 · architecture 43 · props 26 · terrain 16 · movement:placeholder 1
+```
+
+**Every one of the 260 invisible meshes is a collision proxy** — `architecture:colliders`,
+`sand_collision`, `proxy:ground/ledge/wall/pole/spire` — which is what they are for. Nothing is
+built and orphaned, and nothing carries empty geometry. Sub-module roots that never call
+`scene.add` themselves all reach it through a parent: `Vegetation` and `Water` add to
+`terrain.group`, `Trails` to `Particles.root`, `Cane` and `GuardModel` to their owners.
+
+**Stated limit:** this covers `terrain`, `architecture`, `props` and `collision` — the modules
+that boot headless. `character`, `fx`, `hud`, `lighting`, `postfx` need WebGL or a DOM and are
+outside what any instrument in this project can reach today. The answer is clean for the world
+half and *unmeasured*, not clean, for the render half.
+
+### §428.3 Bus events — the hand-kept list is exactly right
+
+Rebuilt the publisher/subscriber census independently, then compared:
+
+```
+  54 events · 51 published · 51 subscribed
+  published, never subscribed   binocucomState, land, paused
+  subscribed, never published   binocucom, prompt, unregisterTarget
+```
+
+**Identical to `tests/eventbus.test.mjs`'s `DEAD_PUBLICATIONS` and `DEAD_SUBSCRIPTIONS`, name for
+name.** Somebody has been keeping that list by hand and it is correct — which is the answer to
+whether it can still be trusted, and it is a better answer than a new list would have been.
+
+### §428.4 Payload fields nobody reads — 25, across 16 events
+
+This is the level `clue` hid at: both ends wired, the event alive, and a *field* in the payload
+that no subscriber ever looks at.
+
+```
+  damage           amount* source id type      health          charms purse charmCoins
+  targetLocked     miss                        targetReached   group
+  targetReleased   target reason               clue            found total
+  resize           width height                guardPickpocket pos
+  treasureBanked   id total                    treasurePickup  id
+  treasureDropped  id                          caneSlam        material
+  enemyBounce      guard                       hookRelease     vel
+  jumped           v0                          targetJump      vy
+```
+
+`*` `damage.amount` is the one that is *documented* as ignored — `Health.applyDamage` carries the
+comment *"`p.amount` is read and discarded, on purpose and visibly. Every hit costs one charm."*
+That is the shape the other 24 should be in: unread and **said so**, rather than unread and
+looking load-bearing.
+
+Three of them are worth separating out, because they are not all the same kind:
+
+- **`caneSlam.material` is the sharpest.** `Moveset` publishes `material: c.groundMaterial` on the
+  slam, and all three subscribers — `Audio`, `Particles`, `Smashables` — read `pos` and `radius`
+  and drop it. Meanwhile the same file's `caneHit` **deliberately withholds** material, with a
+  long comment: *"a cane swing is not a contact with anything ... a wrong material is worse than
+  none."* At the slam the material is genuinely known, genuinely correct, published, and thrown
+  away — so a Cane Slam on sand and on limestone sound and look identical. That is a quality gap
+  with the fix already sitting in the payload, and it belongs to the FX/audio lane.
+- **`resize.width/height` are redundant by design.** Both subscribers take no parameter and
+  re-derive from the renderer, and `PostFX.js:2004` explains why: a derived constant refreshed by
+  events goes stale in whichever path forgets to forward one. Correct, and the payload should
+  probably stop pretending otherwise.
+- **`clue.found/total`** are §421's originals. Still unread at the event level — the set is now
+  consumed inside `Pickups.clueComplete()`, not off the bus — so they are informational, and this
+  census re-finds them exactly where it should.
+
+### §428.5 The instrument was wrong three times, all three plausibly
+
+Recorded because it is the same class this session keeps producing, and because the first two
+would have shipped as findings.
+
+1. **It invented 18 events.** `Particles._emit(name, position, opts)` spawns a *particle emitter*,
+   not a bus event. The wrapper probe reads only the first 400 characters of an `_emit` body
+   looking for `engine.emit`, that body is longer, so the probe found nothing — and I had coded
+   "found nothing" as "assume bus". `dive_debris`, `cane_arc`, `torch_smoke` and fifteen more
+   appeared as dead publications. `tests/eventbus.test.mjs` had already got this right by
+   defaulting the other way; **the fix was to adopt the shipped rule, not to invent one.**
+2. **It reported all six `damage` fields unread.** The body-finder took the first `{` after the
+   method name, and `applyDamage(p = {})` has a default-value brace in its parameter list, so it
+   parsed an empty body.
+3. **It followed one level of forwarding, and `targetLocked` needs two.** `on(...) →
+   _onTargetLocked(e) → _targetFx(e)`, where `e.target` and `e.point` are actually read. Four
+   fields called dead that are live.
+
+Thirty candidates went in, twenty-five came out. **Every one of the five false positives read as
+an ordinary finding** — a plausible name on a plausible event with a plausible reason it might
+have been forgotten. Nothing about the output distinguished them; only opening each handler did.
+
+> §426 said a ranked list of the slowest files is not a list of problems. This is the same
+> sentence one level down: **a list of unread fields is not a list of defects, and a list produced
+> by an unverified scraper is not even a list of unread fields.**
