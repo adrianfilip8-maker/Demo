@@ -33994,3 +33994,90 @@ some do. A wholesale migration would convert honest fast tests into slow ones to
 
 > The one-line answer: **it is one round, because the two rounds that would have been expensive
 > were already spent by another lane and left in a file nobody else can import.**
+
+## §425 — §424 round 1 built: the numbers, the leak the cache introduced, and two migrations refused
+
+Round 1 of §424 is landed. `tests/_moveset.mjs` holds the state-driving harness;
+`traversal.test.mjs` imports every piece of it back and defines none.
+
+```
+  suite   180,622 ms  ->  127,763 ms      like for like, 798/798 green
+  traversal.test.mjs      127 s  ->  50 s      56/56 green, same arm count
+```
+
+**The suite saves less than the file does, and the difference is not noise.** `node --test` runs
+files in parallel, so traversal's 77 s comes off the critical path rather than off the total and
+53 s of it reaches the wall clock. Both numbers are reported because the file number is the one
+that would mislead if quoted alone.
+
+### §425.1 Looking for what the cache breaks found a real leak
+
+The cache is safe on the axis §424 checked — `Controller` registers no colliders, so no driven
+probe can reach the BVH — and the Controller is minted fresh per call at 0.3 ms so callers get
+what they always got. But *"is the world immutable"* is not the only question sharing an engine
+raises, and the second one had a defect behind it.
+
+`Controller.init` subscribes to five bus events (`enemyBounce`, `hurt`, `shot`, `registerTarget`,
+`unregisterTarget`). With a per-call engine those listeners died with it. With a shared one they
+accumulate. Measured before fixing rather than argued about:
+
+```
+  two realWorld() calls, one registerTarget emit
+  the FIRST controller's target list:  15 -> 16
+```
+
+After N calls a single emit would be handled N times, by N controllers nobody holds. The retired
+Controller is now disposed on handout. **The general lesson is the one §419 keeps producing in
+new clothes: a safety argument is about the axis you thought of.** "The world is read-only" was
+true and was not sufficient, because the shared object was not only the world.
+
+### §425.2 The field list is deleted, and one site depended on it
+
+`hardReset`'s hand-maintained list of private state fields is gone rather than fixed — it was
+already wrong twice (`idle._bored` never in it; `RailSlide._offRec` assigned lazily, so no sweep
+and no reader can enumerate it from a fresh instance). A whole fresh moveset has no stale fields
+by construction. The rebuild is semantically neutral because `teleport()` already ends in
+`sm.set('fall'); sm.set('idle')` — it changes which *object* is idle, not which state.
+
+One site in traversal depended on the old ordering and would have failed silently rather than
+loudly: `feasibleFrom` captured `c.sm.get(name)` **before** calling `hardReset`, so after a
+rebuild it would have polled a detached instance — one that still answers `canEnter(c)`
+plausibly, because `canEnter` reads the controller rather than itself. Its fetch moved below the
+reset. That is the same shape as the R3 false alarm: an object that keeps answering after it has
+stopped being the right object to ask.
+
+### §425.3 The proof consumer, and the two that were refused
+
+`cluevault` R2's cling reading no longer replicates three lines of `WallClimb.enter` with the
+original scraped and pinned against drift. It **drives the real pylon ladder** —
+`Controller.update()` polls `WallClimb.canEnter` and runs the real `enter()` — asserts the rung
+caught is `notch-pylon-e-w-5` and not a neighbour, and never falls back to a computed pose.
+
+The driven capsule base is **(11.418, 11.040, 36.067)**: the coordinate the replication computed,
+to the millimetre. The copy was right, which is exactly what makes the swap safe rather than a
+rewrite — and it is also the only reason anyone can now tell.
+
+**The two consumers named for migration were examined and not migrated**, on the reasoning that
+retired round 3:
+
+- `recover.test.mjs` R2 wants an attach-group pose at a *chosen* point. Its own comment already
+  records why a real ledge is the wrong instrument there — *"a rail 20 m up is somewhere Sly WAS,
+  not somewhere he can be put back"*. Driving it would move the arm off the question it asks.
+- `camlead.test.mjs` L3 tests which camera framing a state **name** routes to, and its failing
+  input is `stateName 'move'` against the same wall — the pre-fix defect itself, and an input no
+  driven run can produce, because you cannot drive Sly into `move` while wall-running.
+
+Both are lookup-table tests using string fixtures correctly. Migrating them would have satisfied
+the shape of the assignment and made two arms worse, which is the failure mode the round was
+approved on the understanding of avoiding.
+
+### §425.4 A third world builder, left on purpose
+
+`camspeed.test.mjs:163` runs the same four-module build sequence. It is **not** folded in: it
+builds into a camera-rig engine rather than `stubEngine()`, and it boots once at module scope, so
+the cache buys it nothing and folding it in would couple two lanes for no measured gain. Recorded
+in the module header as weighed rather than missed. `vegwater.test.mjs:80` is not a fourth — it is
+a Terrain-only fixture.
+
+The standing rule this leaves: **`realWorld` lives in one file. A second one appearing beside it
+is the defect §424 exists to prevent, and the check is one grep.**
