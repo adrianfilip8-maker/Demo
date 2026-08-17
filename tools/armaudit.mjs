@@ -1,13 +1,16 @@
 /**
  * armaudit.mjs — which arms in a test file cannot fail, and which assert nothing new?
  *
- * Today produced five independent instances of one defect class, found by four lanes, every one of
- * them **by accident in the course of other work**: a bar no camera could pass (§407), a bar no
- * frame could fail because a neighbour entailed it (§408.3), a predicate that could not say "no" on
- * one of its paths (§409), a symmetry probe whose sampling was commensurate with what it sampled
- * (§414), and this file's own sibling `sweepcensus` printing a total as a breakdown (§412.2).
+ * One session produced **nine** independent instances of one defect class across four lanes, every
+ * one found **by accident in the course of other work** — consolidated as §418. Among them: a bar
+ * no camera could pass (§407), a bar no frame could fail because a neighbour entailed it (§408.3),
+ * a predicate that could not say "no" on one of its paths (§409), a symmetry probe whose sampling
+ * was commensurate with what it sampled (§414), and this file's own sibling `sweepcensus` printing
+ * a total as a breakdown (§412.2).
  *
- * Knowing the class does not prevent writing one. So this is the systematic version.
+ * Knowing the class does not prevent writing one — three lanes reintroduced it inside the very
+ * work written to demonstrate it, this file included (see the tripwire note at §418.5, and the
+ * over-matching detector below). So this is the systematic version.
  *
  * ── The two questions, and what counts as evidence for each ──────────────────────────────────
  *
@@ -26,12 +29,32 @@
  * human look — two sites in one arm asserting the same measured quantity where one threshold
  * strictly dominates the other — and says so rather than pretending to have proved anything.
  *
+ * **3. Has anyone asked either question of this arm?** (§418.3) The three modes above find bars
+ * that are vacuous NOW. This finds the larger set: bars nobody has checked either way. Every arm
+ * is scanned for a `DOMAIN (§418.3)` block naming a `passes on :` and a `fails on :` case, and the
+ * gap is REPORTED, never failed — the discipline is prospective, so reddening the suite would only
+ * punish arms that predate it. Runs standalone in under a second with `--domain-only`.
+ *
+ * Two things it deliberately does not flatten:
+ *   · an arm whose failing case is honestly recorded as UNREACHABLE counts as documented, not as
+ *     a gap. §418.5: a bar with no failing input is a TRIPWIRE, which is a legitimate thing to
+ *     have; what is not legitimate is not knowing which one you wrote. Scoring the honest label as
+ *     a failure would teach people to delete the label rather than the ambiguity.
+ *   · arms named "(calibration)" are counted as PRIOR ART. Their whole job is to remove a guard
+ *     and show a sibling can go red — §418.3's failing input, expressed as an arm instead of a
+ *     comment, years before the rule was written.
+ *
  * ── The rule this exists to enforce ──────────────────────────────────────────────────────────
  * Same as §412.1's, in a different costume: **an audit that enumerates by reading the code misses
  * exactly the assertions the reader's model of the code does not reach.** So it enumerates by
  * running.
  *
- *   node tools/armaudit.mjs [tests/traversal.test.mjs] [--invert N] [--only <substring>]
+ * And what it CANNOT do, stated because a coverage number invites the wrong reading: a DOMAIN
+ * block is a claim by its author, not a proof. This tool checks that the question was ASKED and
+ * answered in writing. Whether the two named inputs are real is `--invert`'s job for one of them
+ * and nobody's job for the other. 56/56 here would not mean the suite is sound.
+ *
+ *   node tools/armaudit.mjs [tests/traversal.test.mjs] [--domain-only] [--invert N] [--only <s>]
  */
 import { readFileSync, existsSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -76,6 +99,83 @@ for (let i = 0; i < lines.length; i++) {
   if (/^\s*(\/\/|\*|\/\*)/.test(lines[i])) continue;      // a mention in prose, not a call
   staticSites.push({ line: i + 1, method: m[1], arm: armAt(i + 1), text: lines[i].trim() });
 }
+
+/* ---- §418.3 coverage: does the arm name the two inputs? ------------------------------------
+ * Modes A-C find bars that are vacuous NOW. This finds bars nobody has checked either way, which
+ * is the larger set and the one §418.3 is aimed at. It is REPORTED, never failed: the discipline
+ * is prospective, so turning it into a red suite would only punish the arms that predate it.
+ *
+ * The distinction §418.5 draws is enforced here rather than flattened. An arm whose failing case
+ * is honestly recorded as unreachable — "NO INPUT", "NOT REACHABLE" — counts as DOCUMENTED, not
+ * as a gap. The rule is not "every bar must be falsifiable"; a bar with no failing input is a
+ * TRIPWIRE and that is a legitimate thing to have. The rule is that you must have found out which
+ * one you wrote, and said so. Counting the honest tripwire as a failure would teach people to
+ * delete the label rather than the ambiguity.
+ */
+const DOMAIN_TAG = /DOMAIN\s*\(§418\.3\)/;
+for (let k = 0; k < arms.length; k++) {
+  const a = arms[k];
+  /* Search the arm AND the comment block above `test(` — a doc comment there is the natural place
+     for it and scanning only the body would report those arms as undocumented. */
+  const floor = k === 0 ? 1 : arms[k - 1].end + 1;
+  const from = Math.max(floor, a.start - 40);
+  const text = lines.slice(from - 1, a.end).join('\n');
+  a.hasTag = DOMAIN_TAG.test(text);
+  a.hasPass = /passes\s+on\s*:/i.test(text);
+  a.hasFail = /fails\s+on\s*:/i.test(text);
+  /* Scope the unreachable-case test to the `fails on :` LINES, not the whole window. Scanning the
+     window matched the phrase "with NO INPUT" in two arms' scenario prose — they describe standing
+     still, not an unreachable domain — and reported 3 tripwires where there is 1. A detector whose
+     hits are mostly false costs attention instead of coverage, which is the same objection this
+     file raises to the entailment pass, committed here inside the fix for it. */
+  const failLines = text.split('\n').filter((l) => /fails\s+on\s*:/i.test(l));
+  a.tripwire = a.hasTag && failLines.some((l) => /NO INPUT|NOT REACHABLE|no failing input/i.test(l));
+  a.domain = a.hasTag && a.hasPass && a.hasFail ? 'documented' : a.hasTag ? 'partial' : 'none';
+}
+
+/* ---- §418.3 report, printed FIRST because it is the cheap half and needs no run ------------- */
+function reportDomains() {
+  const by = (k) => arms.filter((a) => a.domain === k);
+  const doc = by('documented'), part = by('partial'), none = by('none');
+  const trip = arms.filter((a) => a.tripwire);
+  console.log(`\n=== §418.3 COVERAGE: ${doc.length} of ${arms.length} arms name both inputs ===`);
+  console.log(`    documented ${doc.length}  ·  partial ${part.length}  ·  MISSING ${none.length}`);
+  /* Not a category of its own — an arm can hold ordinary bars AND one tripwire, which is exactly
+     what the §409 census arm holds. Counting it as a third bucket would have said the arm was
+     wholly unfalsifiable, which is false and would have hidden the bars that do discriminate. */
+  if (trip.length) {
+    console.log(`    of the documented, ${trip.length} record a failing case as UNREACHABLE — tripwires,`);
+    console.log('    legitimate under §418.5 precisely because they are labelled:');
+    for (const a of trip) console.log(`      :${String(a.start).padEnd(5)} ${a.name.slice(0, 80)}`);
+  }
+  if (part.length) {
+    console.log('\n  PARTIAL — has the block, names only one side:');
+    for (const a of part) console.log(`    :${String(a.start).padEnd(5)} ${a.name.slice(0, 84)}`);
+  }
+  /* Credit the practice that predates the rule. Several arms here carry a sibling named
+     "(calibration)" whose whole job is to remove a guard and show the subject arm CAN go red —
+     §418.3's failing input, expressed as an arm instead of a comment. Counting those as MISSING
+     would be reporting the discipline's absence in a file that already has it in an older form,
+     and would make the headline number mean less than it appears to. */
+  const calib = arms.filter((a) => /\(calibration\)/i.test(a.name));
+  if (calib.length) {
+    console.log(`\n  PRIOR ART — ${calib.length} arms are themselves a failing-input demonstration for a`);
+    console.log('  sibling, which is §418.3 in an older form (an arm, not a comment):');
+    for (const a of calib) console.log(`    :${String(a.start).padEnd(5)} ${a.name.slice(0, 84)}`);
+    console.log('  Those subjects are better covered than the raw MISSING count suggests. The comment');
+    console.log('  form is still worth adding: it survives the sibling being renamed or deleted.');
+  }
+  if (none.length) {
+    console.log('\n  MISSING — no DOMAIN block. Not a defect; an unanswered question:');
+    console.log('    what input makes this arm pass, and what input makes it RED?');
+    for (const a of none) console.log(`    :${String(a.start).padEnd(5)} ${a.name.slice(0, 84)}`);
+  }
+  console.log('\n  Reported, never failed. The discipline is prospective (§418.3): it is found while');
+  console.log('  deciding what a bar MEANS, which is the only moment its domain is in front of you.');
+  console.log('  Retrofitting it to an old arm means reconstructing a domain someone else had.');
+}
+reportDomains();
+if (argv.includes('--domain-only')) process.exit(0);
 
 /* ---- 2. runtime evidence -------------------------------------------------------------------- */
 const REUSE = strAfter('--reuse');
@@ -154,14 +254,17 @@ for (const a of arms) {
   for (const s of mine) {
     const q = /assert\.ok\(\s*([A-Za-z_$][\w$.[\]()'"]*)\s*(>=|>|<=|<)/.exec(s.text);
     if (!q) continue;
-    const key = `${q[1]} ${DIR[q[2]]}`;
+    // JSON, not a raw separator: an earlier version joined with a NUL byte, which works but
+    // makes `grep` classify this file as BINARY — hiding the auditor from exactly the kind of
+    // source scan its own census arm depends on. A tool that cannot be grepped cannot be audited.
+    const key = JSON.stringify([q[1], DIR[q[2]]]);
     if (!byExpr.has(key)) byExpr.set(key, []);
     byExpr.get(key).push({ ...s, op: q[2] });
   }
   for (const [key, group] of byExpr) {
     if (group.length < 2) continue;
     cand++;
-    const [expr, dir] = key.split(' ');
+    const [expr, dir] = JSON.parse(key);
     console.log(`\n  ${a.name}`);
     console.log(`    "${expr}" bounded from ${dir === 'lower' ? 'BELOW' : 'ABOVE'} ${group.length}x — the weaker one asserts nothing new:`);
     for (const g of group) console.log(`      :${g.line}  ${g.text.slice(0, 100)}`);
