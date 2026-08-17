@@ -33277,3 +33277,143 @@ whoever picks this up.**
 **Licence, restated because this section quotes behaviour.** The reference repository states no
 licence. Everything above describes what its code *does* and what its structure *is*. Nothing was
 copied, ported or transliterated, and §364.3's exclusions were not touched.
+
+## §421 — The ninth §357.1 was not a missing publisher, and no census could have found it
+
+The clue bottles were assigned as "machinery wired at one end only". The census says something
+more specific and more useful: **both ends were wired.** `PropKit.clueBottle()` draws a bottle,
+`Props._clueBottles()` places twelve on the authored route, `Pickups` runs the collect loop and
+publishes `clue`, `Audio.js:1377` plays a built and tested `clue_bottle` sting. Four seams, all
+four joined, and `tests/eventbus.test.mjs` had already deleted `clue` from its dead list — which
+was correct.
+
+### §421.1 The census, as found
+
+```
+  clueBottle()        PropKit.js:1144   exported, imported by Props and Pickups     WIRED
+  placement           Props.js:701      12 spots, one per vertical beat, kind 'clue' WIRED
+  adoption            Pickups.js:412    reads Props._collect, hides the deco twin    WIRED
+  collect loop        Pickups.js:602    own radius (0.55), own bob/spin              WIRED
+  publisher           Pickups.js:685    emit('clue', { pos, found, total })          WIRED
+  audio subscriber    Audio.js:1377     play('clue_bottle', { position: p.pos })     WIRED
+  ---------------------------------------------------------------------------------------
+  consumer of `found`/`total`           nothing, anywhere in src/                    ABSENT
+  HUD glyph 'clue'    Icons.js:465      falls through `default:` to sparkle          absent
+  the R1/R2/R3 placement proofs         claimed in the Props.js header; NOT IN TREE  ABSENT
+```
+
+Two of those matter and the third is a §401 echo.
+
+**The set was never consumed.** `found` and `total` have ridden on every `clue` event since the
+publisher landed, into a subscriber that reads `p?.pos` and nothing else. Twelve bottles were
+twelve identical chimes; finishing the set changed nothing anywhere. That is §357.1's shape one
+notch further along than §239's, and it defeats the instrument built for §239:
+
+> A publisher/subscriber census asks *does anything emit this, and does anything listen*. Both
+> answers here were yes. **The dead end was a FIELD in a payload that both ends handled** — and
+> a register that counts events cannot see inside one.
+
+`tests/eventbus.test.mjs` is a good instrument and it was not blind here; it was pointed one
+level too coarse. That is §418.1's second group again — an instrument answering honestly about
+the wrong quantity — and it is why `tests/cluevault.test.mjs` separates **V1** (the four seams,
+green throughout the entire period the feature was inert) from **V2** (something reads `total`).
+V1 would have passed on every day of that period. Only V2 discriminates.
+
+**The R1/R2/R3 proofs do not exist.** `Props.js:672-688` states that all twelve bottle spots are
+"checked headlessly against the real `Collision` on three tests" and gives results — 12/12 on a
+downward ray, 0.08–0.70 m on reachability, 12/12 not reachable from the floor. `grep -rl "clue"
+tests/` returns three files and none of them is that test. The numbers may well be true; there is
+nothing in the tree that re-checks them. Recorded as found, not fixed — a real headless
+Collision boot is a round of its own, and the header is stale rather than wrong.
+
+### §421.2 The payoff, and why it is one treasure
+
+The bottles now open the vault, and the vault holds the **Eye of Ra** — which the game has been
+asking for since the first frame and did not contain. `HUD.js:338` prints *"Steal the Eye of Ra"*
+on the objective card at `init`; `HUD.js:515` has Bentley saying *"The Eye of Ra is in the vault
+under the hall"*. `Pickups.TREASURES` held a scarab, a collar and an ingot. **The level stated an
+objective it had no object for** — the same defect as an event with no publisher, one layer up,
+and it had been on screen the whole time.
+
+The reward routes through machinery already live at both ends — carry slowdown, drop-on-CHASE,
+the fence walk, the HUD carry card, the Audio banking sting — so it needed **no new subscriber**.
+That is the test of whether a payoff is modest: an unlock pointing at a system that does not
+exist would have been a *tenth* §357.1, written by the lane sent to close the ninth.
+
+Two dead subscriptions closed, and `DEAD_SUBSCRIPTIONS` goes 5 → 3:
+
+- **`objective`** — its entry said *"the event is the hook a mission script would use"* and there
+  was no mission script. The vault beat is the first one. It republishes the **same** title
+  deliberately, because `HUD.objective()` stores a non-transient objective as `_objBase`; a title
+  about a vault would have replaced the level's standing goal permanently.
+- **`propSmashed`** — `src/world/Smashables.js` is the mechanic half its brief asked for. Three
+  FX catalogue entries with no reader at all (`dust_ring`, `scorch`, `PAL.crevice`) reach a
+  screen for the first time as a consequence.
+
+Two of that brief's four suggested mechanics are deliberately **not** built, and both refusals
+are measurements rather than preferences:
+
+- **No respawn.** A smashable pays coins and `Wallet.credit` has no debit path anywhere in
+  `src/`, so a respawning one is a coin printer with a two-second cycle. Dropping the timer also
+  drops the five-raycast dance the brief singled out from `smashable.gd` — that careful code
+  exists to stop a respawn landing on the player, and there is no respawn. **The one thing worth
+  carrying was carried by not needing it.**
+- **No colliders.** `Collision.build()` rebuilds the entire triangle soup and BVH from every
+  record; there is no per-record removal. One jar's collider costs a full rebuild, so breaking
+  one on a cane swing is not affordable. Smashables are props you run through.
+
+The resolve geometry is **copied from `Guard.js:1770`, not invented** — the same 2.2 m planar
+radius and the same `dot >= 0.1` cone — so a jar and a guard in front of one swing behave alike.
+One term is added: a vertical bound of one player height, because Guard.js flattens to the plan
+and gets away with it (a guard is always within a body height of the player's feet) while a jar
+can be on a ledge. Without it a swing on the nave deck breaks the courtyard 15 m below.
+
+### §421.3 §418.3 applied to 30 new arms, and the failure mode it has of its own
+
+Every arm in `tests/cluevault.test.mjs` (14) and `tests/smashables.test.mjs` (16) carries a
+`DOMAIN (§418.3)` block. Against a project baseline of 4 of 751, that is the discipline's first
+run at scale. What it caught, in the order it caught it:
+
+**One instrument pointed at the wrong quantity — caught only because it disagreed.** The PREREG
+arm scrapes the cane's reach out of `Guard.js` so the copy cannot silently stop being one. The
+first version scraped the whole file and returned **1.4**, from an unrelated proximity test
+hundreds of lines above the `caneHit` handler. It went red against entirely correct code. Had it
+happened to return 2.2 from some other line, the arm would have passed forever while asserting
+nothing. §418.1's second group, live, in the arm written to prevent it.
+
+**Three recorded numbers were wrong.** Writing the two inputs down forces you to have them, and
+three of the first ones I wrote were from memory: the closest clue-bottle pair is 8.38 m at spots
+9/10, not the pair I named; and *both* rejected Eye placements fail the reach test (2.24 m and
+0.76 m against a 0.50 m contact radius) where I had recorded one of them as passing it. All three
+corrected to what a run produced.
+
+**And the rule has a failure mode of its own, which is the finding here.** Two DOMAIN blocks were
+written as *"seen — the first draft did X"*. **There was no such first draft.** The claims were
+plausible reconstructions of what a wrong version would have looked like, and they were written
+in the same confident voice as the six blocks whose counterexamples had genuinely been run.
+
+> §418.3 says record the input you have **seen** it fail on. A remembered failure is not a seen
+> one, and a *reconstructed* failure is not a remembered one. Prose describing a counterexample
+> is exactly as unfalsifiable as the bar it was written to justify — the defect moves up one
+> level and puts on a lab coat.
+
+The fix is mechanical and cost about ten minutes: every non-in-arm counterexample was **run** —
+scrape mutations against modified copies of the source, the naive predicate evaluated beside the
+real one, the unseeded rng compared against the seeded one — and the blocks rewritten to say what
+those runs produced. Where a counterexample can be run inside the arm, it now is; eleven of the
+thirty do this, so the failing half re-executes on every suite run rather than sitting in a
+comment that ages.
+
+Two arms are labelled **TRIPWIRE (§418.5)** with the structural argument for why no failing input
+exists — `_openVault`'s frame-count bar (the only call site is behind a `taken` latch that has
+already fired) and both geometry-presence bars (every key in the table has a branch). They are
+kept and they are not counted as evidence.
+
+### §421.4 The residue
+
+- `Props.js`'s clue-bottle header claims three placement tests that are not in the tree (§421.1).
+- `Icons.glyph('clue')` has no case and falls through to `sparkle`. Two lines in `src/ui/Icons.js`,
+  left for whoever owns that file rather than taken while another lane may be in it.
+- `Pickups.debugInfo()` and `Smashables.debugInfo()` are both defined and called by nothing in
+  `src/`. Not new, not introduced here, and listed so the next §357.1 audit does not have to
+  rediscover them.
