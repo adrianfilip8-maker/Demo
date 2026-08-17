@@ -3599,6 +3599,29 @@ test('CameraRig: which framing every state actually gets, and the entries nothin
   console.log(`\n[frame] substring answers for the three: wallRun -> ${substr('wallRun')} · `
     + `railWalk -> ${substr('railWalk')} · ledgeHang -> ${substr('ledgeHang')}`);
 
+  /* THE HISTORICAL TABLE, RECONSTRUCTED AND RUN, because the live one can no longer produce the
+     failing answers. The four rules that pointed at the deleted speed ladder — and `['run','run']`
+     is the one that caused this whole family — went with those rows, so `substr('wallRun')` is now
+     `null` rather than `'run'`. That is the trap being REMOVED rather than overridden, which is
+     strictly better and which also destroys this arm's original failing input. So it is rebuilt:
+     the pre-deletion rule order is restated here as the historical artefact it now is, and the
+     wrong answers are recomputed from it live rather than remembered. */
+  const RULES_BEFORE_LADDER_DELETION = ['run_fast', 'sprint', 'run', 'walk', ...ruleKeys];
+  const substrOld = (n) => {
+    const t = n.toLowerCase();
+    for (let i = 0; i < RULES_BEFORE_LADDER_DELETION.length; i++) {
+      if (t.indexOf(RULES_BEFORE_LADDER_DELETION[i]) !== -1) return RULES_BEFORE_LADDER_DELETION[i];
+    }
+    return null;
+  };
+  console.log(`[frame] the table AS IT WAS answers: wallRun -> ${substrOld('wallRun')} · `
+    + `railWalk -> ${substrOld('railWalk')}   (both now removed from the live table)`);
+  assert.equal(substrOld('wallRun'), 'run',
+    'the reconstructed pre-deletion table no longer answers `run` for wallRun, so this arm\'s '
+    + 'failing input has stopped failing and the passing answers below prove nothing');
+  assert.equal(substrOld('railWalk'), 'walk',
+    'the reconstructed pre-deletion table no longer answers `walk` for railWalk');
+
   assert.equal(routed.get('wallRun'), 'wall_run',
     `wallRun routes to '${routed.get('wallRun')}'. If that is 'run', \`STATE_FRAME\` has been ` +
     'dropped and the wall-side probe and the bank are dead during a wall run again.');
@@ -3610,16 +3633,34 @@ test('CameraRig: which framing every state actually gets, and the entries nothin
      three wrong values, and the rig no longer agrees with it. If these ever coincide, either the
      rule table was rewritten (fine, but then this arm is measuring nothing) or `STATE_FRAME`
      stopped being consulted (not fine). */
-  assert.equal(substr('wallRun'), 'run', 'the substring table no longer answers `run` for wallRun');
-  assert.ok(routed.get('wallRun') !== substr('wallRun') &&
-            routed.get('railWalk') !== substr('railWalk'),
-    'the rig now agrees with the substring table on the two names the exact map exists to ' +
-    'override, so the override is not running and these equalities pass for the wrong reason');
+  assert.ok(routed.get('wallRun') !== substrOld('wallRun') &&
+            routed.get('railWalk') !== substrOld('railWalk'),
+    'the rig now agrees with the pre-deletion substring table on the two names the exact map ' +
+    'exists to override, so the override is not running and these equalities pass for the wrong ' +
+    'reason');
+  /* And the trap is gone from the LIVE table as well as overridden in front of it, which is a
+     different and better state than the fix originally achieved. With run -> run deleted, the
+     substring table's own answer for `wallRun` is now the `wall` rule — which maps to `wall_run`,
+     i.e. **the substring table now AGREES with `STATE_FRAME` instead of contradicting it.** The
+     exact map went from load-bearing to belt-and-braces. Asserted as agreement rather than as
+     `null`, because `null` was the wrong prediction: the rule that matches is a correct one. */
+  const ruleMap = Object.fromEntries(
+    [...rulesBlock.matchAll(/\['([a-z_]+)',\s*'([a-z_]+)'\]/g)].map((m) => [m[1], m[2]]));
+  const substrFraming = (n) => (substr(n) === null ? null : ruleMap[substr(n)]);
+  console.log(`[frame] live substring table now resolves wallRun -> ${substr('wallRun')} -> `
+    + `${substrFraming('wallRun')} (was run -> run)`);
+  assert.equal(substrFraming('wallRun'), 'wall_run',
+    `the live substring table resolves wallRun to '${substrFraming('wallRun')}', not 'wall_run'. A `
+    + 'rule that shadows the `wall` rule is back, and the §442 trap with it — the exact map would '
+    + 'still cover this one name, but the next state ending in "run" would not be covered.');
 
   /* ── The two the census reports rather than fixes ─────────────────────────────────────────── */
   assert.equal(routed.get('move'), 'idle',
-    `move routes to '${routed.get('move')}'. This one is a DESIGN change, not a defect fix: ` +
-    'it means somebody wired speed-tiered framing, and the walk/run/run_fast entries are live.');
+    `move routes to '${routed.get('move')}'. Ordinary running is framed by the standing-still row, `
+    + 'and that is now a DESIGN question rather than a dead-entry one: the walk/run/run_fast rows '
+    + 'were deleted (§463) because nothing could reach them and they read as coverage. If this '
+    + 'answer has changed, somebody decided how running should be framed — item 8 of the hardware '
+    + 'sheet — and that decision wants a person, not a green suite.');
   /* The fourth member, reported by the previous revision of this arm and fixed one round later
      so it stayed attributable. `combat`'s `side 0.30` is applied along `_sideSign`, which is
      derived from the LATERAL component of velocity — and during an orbit the lateral component
@@ -3641,9 +3682,15 @@ test('CameraRig: which framing every state actually gets, and the entries nothin
      Asserted as a set rather than a count, because "which three" is the whole result — every
      authored framing in the table is now reachable except the walk/run/run_fast rungs, and those
      are unreachable for the `move -> idle` reason above rather than for a namespace one. */
-  assert.deepEqual(deadFramings.slice().sort(), ['run', 'run_fast', 'walk'],
-    `framings nothing reaches: ${deadFramings.join(', ')} — before the fix this also held ` +
-    '`balance` and `ledge_hang`; if either is back, the exact map has been dropped');
+  /* **NOTHING IN `FRAMES` IS UNREACHABLE.** This used to read `['run','run_fast','walk']`, and
+     before the exact map it also held `balance` and `ledge_hang`. The last three were not routed
+     to — they were deleted, because three authored rows nothing can reach read as coverage and
+     two published censuses counted them as delivering framings. An empty set is a far stronger
+     invariant than a known-set: it cannot be satisfied by adding a row and updating a list. */
+  assert.deepEqual(deadFramings, [],
+    `framings nothing reaches: ${deadFramings.join(', ')}. Every row in FRAMES must be reachable by `
+    + 'some registered state — an unreachable row is authored, tuned, invisible, and counted as '
+    + 'coverage by anything that reads the table.');
   /* The lever: this arm is worthless if `_resolveFrame` answers the same thing for everything. */
   assert.ok(usedFramings.size >= 10,
     `only ${usedFramings.size} distinct framings are reachable — the resolver is not discriminating, ` +

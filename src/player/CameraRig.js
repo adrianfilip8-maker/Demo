@@ -463,10 +463,44 @@ export const TUNE = {
  */
 const FRAMES = {
   idle:       { dist:  0.00, height:  0.00, lead: 0.35, fov:  0.0, pitch:  0.0 * DEG, side: 0.00, stiff: 1.15, tau: 0.35 },
-  walk:       { dist:  0.20, height: -0.04, lead: 0.90, fov:  0.6, pitch:  0.0 * DEG, side: 0.00, stiff: 1.00, tau: 0.30 },
-  /* Running: back and a little lower so the horizon opens up, and lead hard. */
-  run:        { dist:  0.90, height: -0.16, lead: 1.40, fov:  2.4, pitch: -1.5 * DEG, side: 0.00, stiff: 0.92, tau: 0.28 },
-  run_fast:   { dist:  1.60, height: -0.28, lead: 1.85, fov:  4.6, pitch: -2.5 * DEG, side: 0.00, stiff: 0.85, tau: 0.26 },
+  /* ── THE walk / run / run_fast ROWS WERE HERE, AND WERE DELETED ────────────────────────────
+     They were authored, tuned, and reachable by nothing — for the whole life of this file. Every
+     census this table has produced had to carve them out by hand, and two published ones failed
+     to: they counted `run` and `run_fast` among the framings that "escape properly" when nothing
+     can reach either. **Three unreachable rows read as coverage**, and that is the entire reason
+     they are gone. The shipped set is now the set that can be reached.
+
+     They were not dead authoring and not a lost router branch. The ladder is LIVE — on the other
+     side of the game. `Moveset.Move.update` picks the clip with
+     `sp < 3.4 ? 'walk' : sp < 6.3 ? 'run' : 'run_fast'`, `Clips.js` defines all three, and
+     `Animation.js` blends them 8 ways. What was missing was only the camera half, and it was
+     DECLINED ON THE RECORD rather than forgotten — `tests/camspeed.test.mjs` chose the continuous
+     `distSpeedGain` instead, "rather than lighting up that ladder, which would also double-count
+     against `fovSpeedGain`". A live decision, recorded in a different file from the rows it
+     governs, which is why it misled everyone who read the table.
+
+     And they could not be wired now even if wanted, measured (§461):
+       · the middle rungs are not places a player is. Over `move` frames on three driven routes,
+         `run_fast` owns 70–88 % and `walk`+`run` hold 5–15 % between them. `Move`'s own comment
+         says the walk speed is "the blend point ANIMATION crosses on the way there" — those
+         thresholds sequence an acceleration crossfade, they do not name three speeds anyone sits
+         at. A third threshold set exists again in `Audio.js` (`sp > 4.6`), agreeing with neither.
+       · so the camera would change rung 2.1–4.6 times a second against a `tau` of 0.26–0.35 s,
+         and never settle on one.
+       · and it double-counts: at full run the boom would go to +1.87 m and the lens to +10.0°,
+         parking the camera at 81 % of the player's own maximum zoom unasked.
+
+     THE AUTHORED NUMBERS ARE NOT LOST, because they are the only record of how big their author
+     wanted the speed effect to be, and that question is still open:
+
+         walk      dist 0.20   height -0.04   lead 0.90   fov +0.6   pitch  0.0°   stiff 1.00   tau 0.30
+         run       dist 0.90   height -0.16   lead 1.40   fov +2.4   pitch -1.5°   stiff 0.92   tau 0.28
+         run_fast  dist 1.60   height -0.28   lead 1.85   fov +4.6   pitch -2.5°   stiff 0.85   tau 0.26
+
+     `run_fast.dist` 1.60 against `distSpeedGain` 0.30 is a 5.9× disagreement about one thing, and
+     it is item 8 of `progress/records/HARDWARE-REVIEW.md`. If the answer there is that ordinary
+     running should be framed as running, the way back is ONE row routed from `move` — not this
+     ladder — and it comes back with its number re-derived rather than restored. */
   /* Sneaking: close, tight, low. Intimate and tense — you feel the guard's cone. */
   sneak:      { dist: -1.70, height: -0.36, lead: 0.50, fov: -4.5, pitch:  1.5 * DEG, side: 0.18, stiff: 1.25, tau: 0.34 },
   crawl:      { dist: -1.90, height: -0.62, lead: 0.50, fov: -3.0, pitch:  4.0 * DEG, side: 0.00, stiff: 1.20, tau: 0.34 },
@@ -545,8 +579,20 @@ const STATE_FRAME = {
 
 /** Substring → framing key, for names not in `STATE_FRAME`. Order matters: most specific first. */
 const STATE_RULES = [
-  ['run_fast', 'run_fast'], ['sprint', 'run_fast'], ['run', 'run'],
-  ['walk', 'walk'],
+  /* The four rules that pointed at the deleted speed ladder went with it — written here without
+     their brackets on purpose, because `tests/traversal.test.mjs` scans this block with a regex
+     and cannot tell code from comment, so quoting them verbatim puts them straight back into the
+     instrument's view of the table (observed, one commit ago):
+         run_fast -> run_fast    sprint -> run_fast    run -> run    walk -> walk
+     Removing them is provably a no-op on routing and was verified as one — all 32 registered
+     states were driven through this resolver before and after, and the map is identical. It has to
+     be: nothing reached those three keys, so no state can lose a match it was winning. `['sprint',
+     …]` was doubly dead, naming a state `buildMoveset` has never produced.
+     **The run -> run rule is the one that caused §442**: `'wallRun'.toLowerCase()` contains `run`
+     at index 4, so it beat the wall -> wall_run rule below and the wall-run framing was reached by
+     everything except a wall run. That was fixed by adding `wallRun` to `STATE_FRAME` above; the
+     rule is now gone as well, so the trap cannot be re-sprung by a future state whose name happens
+     to end in "run" — `overrun`, say. Same story for walk -> walk and `railWalk`. */
   ['sneak', 'sneak'], ['crouch', 'sneak'], ['tiptoe', 'sneak'],
   ['crawl', 'crawl'],
   ['hook', 'hook_swing'],

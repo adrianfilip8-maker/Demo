@@ -197,31 +197,44 @@ test('L1b: the floor is one-sided — framings that already led are untouched', 
   /* The other half of the claim, and the reason full lag compensation was refused: this change
      must move ONLY the framings whose delivered lead had the wrong sign.
    *
-   * The strongest row in here is `railSlide` at TWO speeds, because it is the same framing on
-   * both sides of the crossover and so it demonstrates the mechanism rather than asserting it:
-   * `leadMax` bounds the lead and NOTHING bounds the trail, so above `leadMax / (followTimeH ×
-   * stiff)` = 13.67 m/s the authored lead stops growing while the trail keeps going. At
-   * `railSpeed` 9.5 the floor is inactive; at `railMax` 15.0 it binds. That crossover is the
-   * whole defect, in one state.
+   * ── THIS ARM'S SHOWPIECE ROW WAS REPAIRED OUT FROM UNDER IT (§460.1) ─────────────────────────
+   * It used to carry `railSlide` at TWO speeds as the same framing on both sides of a crossover:
+   * `leadMax` bounded the lead while nothing bounded the trail, so above
+   * `leadMax / (followTimeH × stiff)` = 13.67 m/s the cap landed below the trail and the floor
+   * took over. `railSpeed` 9.5 sat on the inactive side, `railMax` 15.0 on the binding side.
    *
-   * (This arm's first draft asserted `railSlide` at `railMax` was on the INACTIVE side. It is
-   * not — 1.750 authored against 1.920 of trail — and the arm said so. Recorded because a
-   * discriminator that catches the person writing it is the only kind worth having.)
+   * **That crossover no longer exists.** `_pivotGoal` now caps the NET lead rather than the
+   * authored one, so the cap can never sink below the trail, and `railSlide` is floor-inactive at
+   * every speed — `railMax` included, where it went from +0.022 m (the floor value) to +1.772 m.
+   * The row is kept at BOTH speeds precisely because it used to differ across them: if the cap
+   * ever returns to authored space, `railMax` drops back under the trail and this arm reddens.
+   *
+   * (An earlier draft asserted `railSlide` at `railMax` was on the INACTIVE side, was wrong at the
+   * time — 1.750 authored against 1.920 of trail — and the arm said so. It is on that side now for
+   * real, for a different reason. Recorded because "the assertion I first wrote turns out to be
+   * true" is exactly the shape that gets waved through without anyone checking why.)
+   *
+   * `run` has left the inactive list because the `run` framing no longer exists: it was one of
+   * three rows nothing could reach, and it was deleted rather than wired (§463). `roll` replaces
+   * it — a real state, reachable, and further clear of the trail than `run` ever was.
    *
    * DOMAIN (§418.3)
-   *   passes on : `run` at runSpeed and `railSlide` at railSpeed — authored lead exceeds the
-   *               trail, floor inactive, delivered value identical to the pre-change rig
-   *               (0.612 m, measured before and after).
-   *   fails on  : `move` at runSpeed, `sneak` at sneakSpeed and `railSlide` at railMax — authored
-   *               lead is BELOW the trail, so the floor binds and the delivered value moves
-   *               (−0.939 → −0.043, −0.250 → −0.089). Asserted below as the discriminator: if
-   *               the floor bound on everything, or on nothing, these two sets would agree. */
-  const inactive = [['run', RUN, true], ['railSlide', CTUNE.railSpeed, false]];
-  const active = [['move', RUN, true], ['sneak', CTUNE.sneakSpeed, true], ['railSlide', CTUNE.railMax, false]];
+   *   passes on : `roll` at rollSpeed and `railSlide` at BOTH railSpeed and railMax — authored
+   *               lead exceeds the trail, the floor is inactive, and one-sidedness means the
+   *               delivered value is whatever the authoring asked for.
+   *   fails on  : `move` at runSpeed, `sneak` at sneakSpeed and `land` at runSpeed — authored lead
+   *               is BELOW the trail, so the floor binds and the delivered value moves
+   *               (−0.939 → −0.043, −0.250 → −0.089). Asserted below as the discriminator: if the
+   *               floor bound on everything, or on nothing, these two sets would agree.
+   *   does NOT discriminate : whether the floor SHOULD be one-sided. That is item 7 of the
+   *               hardware sheet and it is a feel question. */
+  const inactive = [['roll', CTUNE.rollSpeed, true], ['railSlide', CTUNE.railSpeed, false],
+                    ['railSlide', CTUNE.railMax, false]];
+  const active = [['move', RUN, true], ['sneak', CTUNE.sneakSpeed, true], ['land', RUN, true]];
 
   for (const [st, v, g] of inactive) {
     const r = settledLead(st, v, { grounded: g });
-    const authoredLen = Math.min(TUNE.leadTime * (FRAME_LEAD[r.key] ?? 0) * v, TUNE.leadMax);
+    const authoredLen = TUNE.leadTime * (FRAME_LEAD[r.key] ?? 0) * v;  // uncapped: since §460.1 the cap bounds the NET lead and cannot decide flooring
     const trail = TUNE.followTimeH * r.stiff * v;
     console.log(`[L1b] ${st.padEnd(10)} key ${r.key.padEnd(11)} authored ${authoredLen.toFixed(3)} `
       + `> trail ${trail.toFixed(3)} -> floor inactive · delivered ${r.lead.toFixed(3)}`);
@@ -231,7 +244,7 @@ test('L1b: the floor is one-sided — framings that already led are untouched', 
   }
   for (const [st, v, g] of active) {
     const r = settledLead(st, v, { grounded: g });
-    const authoredLen = Math.min(TUNE.leadTime * (FRAME_LEAD[r.key] ?? 0) * v, TUNE.leadMax);
+    const authoredLen = TUNE.leadTime * (FRAME_LEAD[r.key] ?? 0) * v;  // uncapped: since §460.1 the cap bounds the NET lead and cannot decide flooring
     const trail = TUNE.followTimeH * r.stiff * v;
     console.log(`[L1b] ${st.padEnd(10)} key ${r.key.padEnd(11)} authored ${authoredLen.toFixed(3)} `
       + `< trail ${trail.toFixed(3)} -> floor binds   · delivered ${r.lead.toFixed(3)}`);

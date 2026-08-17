@@ -964,6 +964,12 @@ test('D8: FRAMES.lead is inert on most of the table, and it is derivable rather 
    *     escapes, barely       air 0.159 m · hook_swing 0.130 m · glide 0.238 m   (at runSpeed)
    *     escapes properly      run 0.554 · wall_run 0.454 · roll 0.447 · run_fast 1.185 · rail_slide 1.304
    *
+   * **Two of those rows no longer exist and one of the numbers was never real.** `run` and
+   * `run_fast` were unreachable and have been deleted (§463); `run_fast` 1.185 and
+   * `rail_slide` 1.304 were computed without the `leadMax` clamp, which was binding on both.
+   * D9 below holds the census that replaced this one — at each row's own speed, driven rather
+   * than derived. This arm is kept for the closed form and for its own historical record.
+   *
    * `air` authors 1.20 ("lead hard") and delivers **16 cm**. `hook_swing` authors 1.60 with the
    * comment *"Lead frames the landing"* and delivers **13 cm**. `land` sits 0.001 s below
    * break-even — a knife edge, on the wrong side.
@@ -972,8 +978,8 @@ test('D8: FRAMES.lead is inert on most of the table, and it is derivable rather 
    * about the ratio, not about the metres. The metres were always derivable.
    *
    * DOMAIN (§418.3)
-   *   passes on : the shipped table — `run_fast` and `rail_slide` carry real lead (1.19 m, 1.30 m
-   *               at runSpeed), so the mechanism is not uniformly dead and the census discriminates.
+   *   passes on : the shipped table — `rail_slide` and `roll` carry real lead at runSpeed, so the
+   *               mechanism is not uniformly dead and the census discriminates.
    *   fails on  : the 11 rows at or below break-even, asserted by name. If that set shrinks
    *               somebody has re-authored `lead` or `stiff` and the delivered lead has changed
    *               for real, which is a feel change and must not land silently.
@@ -1004,9 +1010,12 @@ test('D8: FRAMES.lead is inert on most of the table, and it is derivable rather 
       + 'has started doing something, which is a change in what a player sees');
   }
   /* The discriminator: the mechanism is not uniformly dead. */
-  assert.ok(delivered(FRAMES.rail_slide, RUN) > 1.0 && delivered(FRAMES.run_fast, RUN) > 1.0,
-    'no framing delivers more than a metre of lead at runSpeed, so "11 of 19 are inert" is a '
-    + 'statement about the formula rather than about the table');
+  /* `run_fast` was the second half of this discriminator and is gone — it was one of three rows
+     nothing could reach, deleted rather than wired (§463). `rail_slide` carries it alone now, and
+     `roll` is added as a reachable second so a single row cannot be the whole argument. */
+  assert.ok(delivered(FRAMES.rail_slide, RUN) > 1.0 && delivered(FRAMES.roll, RUN) > 0.4,
+    'no framing delivers real lead at runSpeed, so "most of the table is inert" is a statement '
+    + 'about the formula rather than about the table');
   /* And the two whose authored intent most contradicts their delivery, pinned by name. */
   assert.ok(delivered(FRAMES.air, RUN) < 0.30,
     `'air' now delivers ${delivered(FRAMES.air, RUN).toFixed(3)} m of lead; it was 0.159 m against an `
@@ -1073,15 +1082,14 @@ function withTune(patch, fn) {
  * rule at all. That is §442's defect in the shape of a test harness, and the first draft of this arm
  * had it. Real registered state names, therefore, and the resolved key is asserted per row.
  *
- * The three marked SYNTHETIC are the point rather than an exception: **no registered state routes to
- * `walk`, `run` or `run_fast`.** They are driven by the only names that reach them, which no move
- * produces, and the census below proves nothing else does.
+ * There used to be three rows marked SYNTHETIC here — `walk`, `run` and `run_fast`, driven by names
+ * no move produces, because **no registered state routed to them.** They have been deleted rather
+ * than wired (§463): three authored rows nothing can reach read as coverage, and two published
+ * censuses — including this file's D8 — counted them as framings that deliver. Every row below is
+ * now reachable by a real state, which is why the set is empty and the map is a plain one.
  */
 const OWN_SPEED = {
   idle:       ['move',         CTUNE.runSpeed,       true,  'runSpeed — `move` falls through to `idle`, so this IS ordinary running'],
-  walk:       ['walk',         CTUNE.walkSpeed,      true,  'walkSpeed — SYNTHETIC, no state routes here'],
-  run:        ['run',          CTUNE.runSpeed,       true,  'runSpeed — SYNTHETIC, no state routes here'],
-  run_fast:   ['run_fast',     CTUNE.runSpeed,       true,  'runSpeed — SYNTHETIC, no state routes here'],
   sneak:      ['sneak',        CTUNE.sneakSpeed,     true,  'sneakSpeed'],
   crawl:      ['crawl',        CTUNE.crawlSpeed,     true,  'crawlSpeed'],
   hook_swing: ['hookSwing',    8.0,                  false, 'tangential swing speed; a 75\u00b0 pendulum peaks at 8.85 m/s'],
@@ -1098,7 +1106,7 @@ const OWN_SPEED = {
   air:        ['fall',         CTUNE.runSpeed,       false, 'runSpeed — a jump retains horizontal speed'],
   combat:     ['combatStrafe', CTUNE.strafeSpeed,    true,  'strafeSpeed'],
 };
-const SYNTHETIC = new Set(['walk', 'run', 'run_fast']);
+const SYNTHETIC = new Set();  // was walk/run/run_fast — those rows were deleted (§463)
 
 test('D9: `leadMax` bounds the delivered lead, not the authored one — driven, not re-derived', () => {
   /* **THE FIRST VERSION OF THIS ARM WAS THE BUG IT WAS WATCHING FOR.** It classified each row by
@@ -1151,7 +1159,7 @@ test('D9: `leadMax` bounds the delivered lead, not the authored one — driven, 
       + `${r.lead.toFixed(3).padStart(9)}${SYNTHETIC.has(k) ? '  (unreachable)' : '              '}  ${why}`);
   }
   const floored = rows.filter((k) => delivered[k] <= 0);
-  console.log(`[D9] ${floored.length}/19 deliver no lead at their own speed: ${floored.join(' ')}`);
+  console.log(`[D9] ${floored.length}/${rows.length} deliver no lead at their own speed: ${floored.join(' ')}`);
 
   /* The two rows the cap used to pin, now asserted by their DRIVEN value. */
   assert.ok(delivered.hook_swing > 0.15,
@@ -1177,7 +1185,7 @@ test('D9: `leadMax` bounds the delivered lead, not the authored one — driven, 
      A goal-space cap makes delivered lead RISE and then COLLAPSE as speed grows, because the cap
      stops growing while the trail does not. A net-space cap makes it rise and then FLATTEN. That
      shape is the mechanism, so it is what gets asserted rather than any single number. */
-  for (const k of ['hook_swing', 'rail_slide', 'run_fast', 'air', 'roll']) {
+  for (const k of ['hook_swing', 'rail_slide', 'air', 'roll', 'wall_run']) {
     let peak = -Infinity, peakAt = 0, worstDrop = 0, dropAt = 0;
     for (let v = 0.5; v <= 20; v += 0.25) {
       const d = settledLead(OWN_SPEED[k][0], v, { grounded: OWN_SPEED[k][2] }).lead;
