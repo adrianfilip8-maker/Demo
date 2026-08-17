@@ -507,6 +507,32 @@ export class Terrain {
 
   /* ── public query API ─────────────────────────────────────────────────── */
 
+  /**
+   * The sand's height **for collision**, which is `heightAt` everywhere except inside a
+   * `PROXY_OPENINGS` rect, where it is NaN — meaning "TERRAIN has no surface here".
+   *
+   * ── Why this exists, and why §480 was half a repair (§484) ────────────────────────────────
+   * TERRAIN publishes the same surface twice: the collision proxy mesh built by
+   * `_buildCollisionProxy`, and the analytic `heightAt` used for placement, drift and refinement.
+   * §480 cut the stairwell out of the **mesh** and nothing out of the **function** — and
+   * `Collision.groundCheck` falls back to the analytic surface whenever its BVH cast finds
+   * nothing (`else if (!found && pos.y - th <= md)`, `Collision.js`). So a walker on the tomb
+   * stair, whose short ground probe misses the ramp below, was handed sand at y ≈ 0.039 and stood
+   * on it. Measured at (2.0, ·, −56.6): the BVH-reaching probe returns the ramp at −0.875, the
+   * short probe returns `sand_collision` at **+0.039**, and the driver stood on the second.
+   *
+   * That is why the flood fill and the driven walk disagreed for a whole round. Both were right
+   * about the representation they were reading.
+   *
+   * **`heightAt` itself is deliberately NOT changed.** It is the placement surface — `EgyptLevel`'s
+   * `groundY()` sits props on it, `drift`, `sphinxDrift` and the ring builder all consult it — and
+   * a NaN there would scatter geometry rather than open a hole. The opening is a *collision*
+   * statement, so it belongs on the collision accessor only.
+   */
+  collisionHeightAt(x, z) {
+    return pointInOpening(x, z) ? NaN : this.heightAt(x, z);
+  }
+
   /** World y of the sand surface. Cached bilinear near the play area, analytic outside. */
   heightAt(x, z) {
     const c = this._cache;

@@ -559,7 +559,12 @@ export class Collision {
     const terrain = this.engine?.get?.('terrain');
     if (terrain?.heightAt) {
       let th = NaN;
-      try { th = terrain.heightAt(pos.x, pos.z); } catch { th = NaN; }
+      /* `collisionHeightAt` is `heightAt` plus TERRAIN's collision openings — NaN where the sand
+         has been cut out of the proxy, so this fallback does not hand back a surface the mesh no
+         longer has. Without it, cutting the proxy is only half a repair: the BVH stops reporting
+         the sand and this branch puts it straight back for any probe whose cast came up empty.
+         See `Terrain.collisionHeightAt` (§484). Optional, so a TERRAIN without it still works. */
+      try { th = terrain.collisionHeightAt ? terrain.collisionHeightAt(pos.x, pos.z) : terrain.heightAt(pos.x, pos.z); } catch { th = NaN; }
       if (Number.isFinite(th) && th <= pos.y + lift + 1e-3) {
         if (isTerrain) {
           res.y = th;

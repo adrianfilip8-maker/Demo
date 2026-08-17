@@ -95,19 +95,23 @@ test('D1 the tomb descent shaft is OPEN from above — the lid that sealed the l
       'descent again — the §480 lid. The vault floor is −12.');
   }
 
-  /* The shaft must connect deep, not merely dent. Somewhere on the landing a straight drop has
-     to carry a capsule to vault depth; measured on the repaired tree the best is −11.05. */
-  let deepest = 99;
-  for (let x = 3.5; x >= -4; x -= 0.25) {
-    for (let z = -54.2; z >= -59.2; z -= 0.25) {
-      const g = collision.groundCheck(V(x, 2.0, z), R, 6);
-      if (!g.hit || g.y < -0.6) continue;               // start on the landing, not in the well
-      deepest = Math.min(deepest, dropTo(collision, x, z, g.y + 0.05));
-    }
-  }
-  assert.ok(deepest <= -10.0,
-    `the deepest a capsule falls from anywhere on the descent landing is y ${deepest.toFixed(2)}. ` +
-    'The shaft has to reach vault depth (−12) or the tomb is sealed however open the top looks.');
+  /**
+   * The shaft must connect deep, not merely dent: somewhere inside it, a straight drop has to
+   * carry a capsule to vault depth.
+   *
+   * ── This assertion was re-derived, because its first form passed for the wrong reason ──────
+   * It used to sample "cells on the landing" as `groundCheck(y 2.0) >= -0.6` and drop from each,
+   * reporting -11.05. That start set was **defined by the lid**: cells over the open shaft only
+   * reported ground near y 0 because `groundCheck` was falling back to TERRAIN's analytic sand
+   * (§484). With the analytic half closed those cells correctly report the ramp at -0.9…-5.8, the
+   * start set shrinks to the real landing, and the same code reports -6.51 — which reads as a
+   * regression and is the opposite. An assertion whose sample is chosen by the defect moves when
+   * the defect is fixed, so it is scored from a FIXED point inside the shaft instead.
+   */
+  const deep = dropTo(collision, -4.0, -57.7);
+  assert.ok(deep <= -10.0,
+    `a capsule dropped in the stairwell at (-4.0, -57.7) rests at y ${deep.toFixed(2)}. The shaft ` +
+    'has to reach vault depth (−12) or the tomb is sealed however open the top looks.');
 });
 
 test('D1b the opening is BOUNDED to the stairwell — the desert is not thinned to buy it', async () => {
@@ -283,7 +287,7 @@ test('R2: the route legs that connect, and the one that does not', async () => {
    *            for the same reason: a hook chain is not a walk.
    */
   const { collision, arch } = await realWorld();
-  const WALK = Math.cos(50 * Math.PI / 180), G = 0.5, STEP = 0.42;
+  const WALK = Math.cos(50 * Math.PI / 180), G = 0.4, STEP = 0.42;
   /**
    * LOCAL probe, from just above the walker's current height — not from the sky.
    *
@@ -300,25 +304,48 @@ test('R2: the route legs that connect, and the one that does not', async () => {
     const occ = collision.capsuleSweep(p, p.clone(), R, H);
     return (occ.depenHit && occ.depenDepth > 0.05) ? null : g.y;
   };
-  /** Can a walker get from a to b, staying on standable ground within stepHeight each move? */
-  const connects = (ax, ay, az, bx, by, bz, budget = 20000) => {
-    const key = (x, z) => `${Math.round(x / G)},${Math.round(z / G)}`;
+  /**
+   * Can a walker get from a to b, staying on standable ground within stepHeight each move?
+   *
+   * ── The visited set is keyed by HEIGHT as well as XZ, and that is the whole arm (§484) ─────
+   * `stand()` probes 2.4 m from the walker's own plane, which is what a walker experiences — so
+   * the SAME XZ cell is standable at different heights depending on the height you arrive at.
+   * Keyed on XZ alone, a shallow first visit claims the cell and locks out the deeper approach,
+   * and the tomb descent — a ramp that doubles back under itself — reported unwalkable at y -8.75
+   * for a whole round. The tell was the instrument contradicting itself: the frontier's own
+   * neighbour printed "PASSES (should have been explored)" while the flood had stopped.
+   *
+   * ── And the goal test must include Y ───────────────────────────────────────────────────────
+   * `descent-landing` (0, 0, -57) is 0.72 m from `vault-floor` (0.4, -12, -57.6) in XZ and 12 m
+   * above it. An XZ-only goal returned CONNECTED from the start cell without taking a step. A
+   * reachability test that ignores the axis the defect lives on returns true for the thing it
+   * exists to refute; this one was caught by asking the flood for its path and getting ONE CELL.
+   */
+  const connects = (ax, ay, az, bx, by, bz, budget = 30000) => {
+    const key = (x, z, y) => `${Math.round(x / G)},${Math.round(z / G)},${Math.round(y / 0.5)}`;
+    /* Bounded to the corridor between the endpoints, generously. Unbounded, a 0.5 m flood escapes
+       into the hall and spends two minutes answering a question about five metres of stair. */
+    const lo = { x: Math.min(ax, bx) - 14, z: Math.min(az, bz) - 14 };
+    const hi = { x: Math.max(ax, bx) + 14, z: Math.max(az, bz) + 14 };
     const y0 = stand(ax, az, ay); if (y0 == null) return false;
-    const seen = new Set([key(ax, az)]);
+    const seen = new Set([key(ax, az, y0)]);
     const q = [[ax, az, y0]];
+    /* BEST-FIRST, not breadth-first. A plain BFS from the hall floor expands uniformly across
+       1700 m2 of nave before it threads the 6 m gate, and exhausts its budget doing it — which
+       reads as "no path" and is really "no patience". Ordering by remaining distance costs one
+       sort per pop and finds the same paths; it can only make the search give up LATER, never
+       accept something a step rule rejected. */
     while (q.length && seen.size < budget) {
+      q.sort((p, r) => (Math.hypot(p[0] - bx, p[1] - bz) - Math.hypot(r[0] - bx, r[1] - bz)));
       const [cx, cz, cy] = q.shift();
-      /* THE GOAL TEST MUST INCLUDE Y, and this is not pedantry: `descent-landing` (0, 0, -57)
-         and `vault-floor` (0.4, -12, -57.6) are 0.72 m apart in XZ and 12 m apart vertically, so
-         an XZ-only goal reported the tomb leg CONNECTED from its own start cell without taking a
-         single step. A reachability test that ignores the axis the defect lives on returns true
-         for the thing it exists to refute. */
-      if (Math.hypot(cx - bx, cz - bz) < 1.2 && Math.abs(cy - by) < 1.0) return true;
+      if (Math.hypot(cx - bx, cz - bz) < 1.2 && Math.abs(cy - by) < 1.2) return true;
       for (const [dx, dz] of [[G, 0], [-G, 0], [0, G], [0, -G]]) {
-        const nx = cx + dx, nz = cz + dz, k = key(nx, nz);
-        if (seen.has(k)) continue;
+        const nx = cx + dx, nz = cz + dz;
+        if (nx < lo.x || nx > hi.x || nz < lo.z || nz > hi.z) continue;
         const ny = stand(nx, nz, cy);
         if (ny == null || Math.abs(ny - cy) > STEP) continue;
+        const k = key(nx, nz, ny);
+        if (seen.has(k)) continue;
         seen.add(k); q.push([nx, nz, ny]);
       }
     }
@@ -329,6 +356,9 @@ test('R2: the route legs that connect, and the one that does not', async () => {
   const CONNECTED = [
     ['hall-floor', 'inner-gate'],
     ['inner-gate', 'descent-landing'],
+    /* PROMOTED (§484). The tomb descent walks: the analytic half of the §480 lid is closed and a
+       driven walk follows the flood's own path from the landing to y -10.88 on flight B. */
+    ['descent-landing', 'vault-floor'],
   ];
   const wp = Object.fromEntries(arch.api.route.map(([n, x, y, z]) => [n, { x, y, z }]));
   for (const [a, b] of CONNECTED) {
@@ -336,9 +366,13 @@ test('R2: the route legs that connect, and the one that does not', async () => {
       `route leg '${a}' -> '${b}' is no longer walkable at stepHeight ${STEP} / slopeWalkable 50. ` +
       'A lid over the path is the first thing to check.');
   }
-  /* The open one, measured and reported rather than asserted, so its state is visible in the log
-     without pinning a defect as though it were intended. */
-  const tomb = connects(wp['descent-landing'].x, wp['descent-landing'].y, wp['descent-landing'].z,
-                        wp['vault-floor'].x, wp['vault-floor'].y, wp['vault-floor'].z);
-  console.log(`  R2 descent-landing -> vault-floor walkable: ${tomb}  (§482.3 open; promote to CONNECTED when true)`);
+  /* END TO END, which is the assertion this file was written to be able to make and could not
+     until §484: the hall floor is where the courtyard's great south doorway drops you, and the
+     vault floor is the last standable waypoint on the route. One flood, no waypoint stepping
+     stones, so it cannot pass by being handed the middle of its own answer. */
+  assert.ok(connects(wp['hall-floor'].x, wp['hall-floor'].y, wp['hall-floor'].z,
+                     wp['vault-floor'].x, wp['vault-floor'].y, wp['vault-floor'].z, 120000),
+    'the hall floor no longer reaches the vault floor on foot. That is the whole back third of ' +
+    'the level, and a lid over the descent is the first thing to check — in BOTH of TERRAIN\'s ' +
+    'representations, the proxy mesh and the analytic collisionHeightAt (§484).');
 });

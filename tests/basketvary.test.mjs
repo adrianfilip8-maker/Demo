@@ -352,18 +352,21 @@ test('P-A1: a rope coil is set dress and carries no gameplay volume', () => {
      The lane that made this change flagged it as needing the same conversation as an addition
      before it made it, which is why the change is here at all.
 
-     ── 268 → 269: one `groundProxy`, the bridge at flight A's foot (§482.3) ───────────────────
-     ARCHITECTURE, not PROPS, and it is an ADDITION, which is the direction this pin is most
-     obviously for. The tomb descent's flight A ends at (−6.06, −5.6) and the mid landing begins
-     at x −9.6: **3.54 m of open air at the same height**, which a walker cannot cross and which
-     nothing had ever noticed because TERRAIN's collision proxy roofed the entire stairwell until
-     §480. `groundProxy(A, -9.6, -5.9, -5.6, -56.3, -54.2)` closes it. Every other tag is
-     byte-identical — this is `ground` +1 and nothing else, checked against the histogram rather
-     than inferred from the total, exactly as the 272 → 268 entry above requires.
+     ── 268 → 269 → 268, and the round trip is the record ─────────────────────────────────────
+     §482.3 added one `groundProxy` to bridge 3.54 m of open air between flight A's foot and the
+     tomb's mid landing, and this pin caught it — an ADDITION from three files away in a different
+     module, which is the whole argument for a level-wide total over a per-module one.
 
-     The seal did its job and caught a change made three files away, which is the whole argument
-     for a level-wide total over a per-module one. */
-  assert.equal(REG.length, 269, 'collider registrations unchanged by this seal');
+     §484 then took it back out, and that is the more interesting half. The gap existed because
+     flight A started at x 3.6, which is 3.6 m east of the lane the player arrives in and inside
+     the east Anubis's footprint. Anchoring the flight to the approach (`A_HEAD = 0`) puts its foot
+     at x −9.66 — the mid landing's own east edge to 6 cm — so the gap it was bridging stopped
+     existing. **A proxy added to span a gap is evidence that something upstream is misplaced**,
+     and the bridge was pinning the symptom rather than the cause.
+
+     Checked against the histogram both times rather than inferred from the total: `ground`
+     53 → 54 → 53, every other tag byte-identical, as the 272 → 268 entry above requires. */
+  assert.equal(REG.length, 268, 'collider registrations unchanged by this seal');
   assert.equal(P.stats.decals, 46, 'contact decals unchanged by this seal');
   assert.equal(P._fx.length, 24, 'fx emitters unchanged');
   assert.equal(P._lights.length, 24, 'lights unchanged');

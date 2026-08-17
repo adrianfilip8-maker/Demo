@@ -2460,12 +2460,31 @@ function tomb(A) {
    *     does not become defect 1 again in a new place.
    */
   const A_RUN = 14 * 0.69, A_RISE = 14 * 0.4, A_ANG = Math.atan2(A_RISE, A_RUN);
+  /**
+   * ── Flight A's head is anchored to the APPROACH, not to a coordinate (§484) ────────────────
+   * It used to start at x 3.6, and that is 3.6 m east of the lane the player actually arrives in.
+   * The gate corridor runs x ±3.4 and ends at z −55.7; the Anubis pair (`Props._tomb()`) stands at
+   * x ±2.6 occupying x 1.9…3.8 and −3.8…−1.9, so **the only open lane through the gate is |x| <
+   * 1.9** — and in that lane the old flight's surface was already 1.2…1.9 m below the corridor.
+   * Measured across the lip: at x 1.4 the corridor is y 0.00 and the ramp −1.22; at x 0.2, −1.92.
+   * A walker met a 1.2 m cliff where the route says "walk down"; the one place the stair WAS flush
+   * with the corridor, x 3.6, is inside the east statue's footprint.
+   *
+   * `A_HEAD = 0` puts the top tread on the corridor's own centre line, and the foot then lands at
+   * −9.66 — which is the mid landing's east edge (x −9.6) to 6 cm, so the flight now meets the
+   * platform it was always meant to reach and the bridge proxy that used to span that gap is
+   * deleted rather than left as redundant floor under a stair.
+   *
+   * The statues are NOT the defect and are not moved: §483.1 measured them standing on floor,
+   * roofing nothing, with 3.8 m of clear gap. They are a gateway, and the stair now starts inside it.
+   */
+  const A_HEAD = 0;
   const fA = K.stairFlight({ steps: 14, rise: 0.4, run: 0.69, width: 3.2, rng: R, cheek: 0.9 });
-  A.add('tomb', 'sandstone_worn', K.place(fA, { x: 3.6, y: 0, z: -55.6, ry: Math.PI }));
-  /* stairFlight climbs +X from its origin, so mirror it: descend west from x 3.6 to -6.06.
+  A.add('tomb', 'sandstone_worn', K.place(fA, { x: A_HEAD, y: 0, z: -55.6, ry: Math.PI }));
+  /* stairFlight climbs +X from its origin, so mirror it: descend west from A_HEAD to A_HEAD-9.66.
      Box centre = top-face midpoint minus the half-thickness normal, so the TOP lands on the art. */
   A.proxy(new THREE.BoxGeometry(Math.hypot(A_RUN, A_RISE), 1.2, 3.2), { tag: 'ground', material: 'stone' },
-    { x: (3.6 - A_RUN / 2) + 0.6 * Math.sin(A_ANG), y: -A_RISE / 2 - 0.6 * Math.cos(A_ANG), z: -55.6, rz: A_ANG });
+    { x: (A_HEAD - A_RUN / 2) + 0.6 * Math.sin(A_ANG), y: -A_RISE / 2 - 0.6 * Math.cos(A_ANG), z: -55.6, rz: A_ANG });
 
   const B_RUN = 16 * 0.63, B_RISE = 16 * 0.4, B_ANG = Math.atan2(B_RISE, B_RUN);
   /* Flight B's HIGH end is anchored to the mid landing it has to meet — x -9.9 is inside the
@@ -2479,9 +2498,9 @@ function tomb(A) {
     { x: (B_TOP_X + B_RUN / 2) + 0.6 * Math.sin(B_ANG), y: -12.0 + B_RISE / 2 - 0.6 * Math.cos(B_ANG), z: -57.9, rz: -B_ANG });
 
   groundProxy(A, -13.6, -9.6, -5.6, -59.4, -54.2);        // mid landing
-  /* Flight A's foot -> the mid landing: 3.54 m of open air at y -5.6, closed. Kept clear of
-     flight B's z band (-59.5..-56.3) so it cannot lid the flight below it. */
-  groundProxy(A, -9.6, -5.9, -5.6, -56.3, -54.2);
+  /* The bridge that used to close flight A's 3.54 m foot gap is DELETED (§484): with the flight
+     anchored to the approach its foot lands at x -9.66, inside the mid landing, so there is no
+     gap left to bridge and the proxy would only be redundant floor two metres under a stair. */
   vol(A, 'tomb', 'sandstone_block', -13.8, -9.4, -6.5, -5.6, -59.6, -54.0, { jitter: 0.03 });
   for (const sx of [-1, 1]) wallProxy(A, -14.2, 4.4, -12.4, 0.4, sx > 0 ? -54.4 : -60.0, sx > 0 ? -53.8 : -59.4);
   vol(A, 'tomb', 'mudbrick', -14.2, 4.4, -12.4, 0.4, -54.4, -53.6, { jitter: 0.04 });
