@@ -34656,3 +34656,106 @@ and if `camdrive` never lands the bound is correct as it stands. Recorded becaus
 external evidence that the extraction did the thing it was argued for — **a second lane driving
 real states instead of assigning `stateName` as a string** — and because the instrument that
 noticed was a census written to measure how much this project depends on one file.
+
+## §430 — The other 24 unread fields, triaged: the second `caneSlam.material` does not exist
+
+§428.4 censused 25 payload fields published and read by nobody. §429 fixed the one that was a real
+dropped feature. **The remaining 24 are not one thing**, and the point of sorting them is that a
+list of unread fields reads as a to-do list, which is the single most likely way this census does
+harm. Every one was triaged by opening the consumer — the census instrument was wrong on 5 of 30
+candidates and nothing in its output distinguished them.
+
+```
+  A  unread, no consumer, keep and document                15
+  B  a real feature dropped, with the fix in the payload     0
+  C  redundant — the information already reaches the reader   9
+```
+
+### §430.1 The B bucket is empty, and four candidates had to be opened to find that out
+
+All four look exactly like `caneSlam.material` from the name. All four fail on the **consumer**
+side, which is the half a payload census cannot see:
+
+- **`jumped.v0`** was the strongest. `landed` publishes `force` and *both* its consumers scale by
+  it — AUDIO plays `land_hard` at `force: f / 9`, FX sizes `_onLand` by it — while `jumped`
+  publishes `v0` and AUDIO plays a flat `play('jump', { position })`. Every jump in the game
+  sounds identical and the launch speed is right there. **And wiring it would change nothing:**
+  `SFX.jump.build` never reads `o.force`. The generic parameter exists on `play()`, but a recipe
+  has to consult it and only `land_hard` does. Making a jump scale with its launch is authoring a
+  recipe, not reading a dropped field. *This is the one that would have been built.*
+- **`hookRelease.vel`** — `rope_creak` does not read `force` either, and `vel` is published as a
+  **live reference** to `c.velocity`.
+- **`targetJump.vy`** — `target_jump` has no speed-keyed parameter; scaling it is a new look.
+- **`treasureBanked.total`** — the HUD's purse is already fed by the `coin` event that
+  `_bankTreasure` emits two lines above the publish site. Wiring it gives one number two sources,
+  which is the divergence `Pickups`' wallet header exists to warn about.
+
+What made `caneSlam.material` different, stated so the next candidate can be tested against it:
+**a complete catalogue keyed on exactly the published value already existed** (`smashFor`,
+`stepFor`) and was already used by a sibling handler. None of these four has that.
+
+### §430.2 The sharpest redundancy is the one whose name says the opposite
+
+**`health.charms`.** The obvious reading — "the player collects charms and the HUD never shows how
+many" — is false. `Health.hp` is `this.down ? 0 : 1 + this.charms`, and the HUD draws `hp` as the
+pip row. **The charm count has been on screen the whole time**; the field is a second way of
+saying it. A fix here would have added a widget duplicating the pips.
+
+The rest of bucket C, each with the information's real route:
+
+```
+  health.purse, health.charmCoins   charmProgress is the publisher's own stated interpretation
+                                    of that pair; its comment says the pair cannot express the
+                                    capped case without restating bank()'s clamp
+  clue.found, clue.total            the same two numbers reach the player as the toast text, and
+                                    the set is consumed inside Pickups by clueComplete()
+  guardPickpocket.pos               FX and AUDIO already burst at the PLAYER's position on the
+                                    sibling `pickpocket` event — within arm's reach by definition
+  resize.width, resize.height       both subscribers take no parameter and re-derive from the
+                                    renderer, because a constant refreshed by events goes stale
+                                    in whichever path forgets to forward one (PostFX says so)
+  treasureBanked.total              see above
+```
+
+`guardPickpocket.pos` is worth a second look: the naive finding is "nothing reacts at the guard",
+and the truth is that the reaction exists on a **different event**. A field census sees one event
+at a time and cannot find that.
+
+### §430.3 Four of the 24 cannot be wired in one line even if someone wanted to
+
+`enemyBounce.guard`, `hookRelease.vel`, `guardPickpocket.pos` and `targetReleased.target` are
+**live references to mutable engine state** — a Guard, the controller's velocity vector, a guard's
+position vector, the target object. AUDIO defers (`play` schedules), so any consumer reading them
+after the emit returns reads whatever the game has since done to them. §237's aliasing trap.
+
+For these, "unread" is not the whole problem: they are **unsafe to read as published**, and
+closing one means changing the publisher to copy first. Recorded so nobody costs themselves a
+round discovering it at the consumer.
+
+### §430.4 What was documented, and what was deliberately not
+
+§429's rule — *a published field should be read, or carry a line saying why it is not* — applied
+to the six publish sites where a reader is most likely to reach for the wrong fix: `Engine`'s
+`resize`, `Pickups`' `clue` and `treasureBanked`, and all three `Targets` payloads. `targetReleased`
+was the most misleading of them: its FX handler takes **no parameter at all**, under its own
+comment that a release is the assist giving up and §2.1.6's grammar has no failure mark. The
+absence was already deliberate and already explained — at the subscriber, where nobody adding a
+field would look.
+
+The remaining bucket-A fields — `damage.source/id/type`, `treasureDropped.id`, `treasurePickup.id`,
+`enemyBounce.guard` — are reported here and **left uncommented on purpose**. `Guard.js`,
+`Health.js` and `Moveset.js` already carry explanatory prose at those sites, and `damage.amount`'s
+"read and discarded, on purpose and visibly" sits three words from `source`, `id` and `type`. More
+comment there is noise, and noise is how the one that matters stops being read.
+
+### §430.5 The triage is pinned, and its control is the field that moved
+
+Five arms in `tests/payloadtriage.test.mjs`, every counterexample in-arm. The one worth naming is
+**T5's control**: it asserts five sampled fields are still unread *and* that `caneSlam.material` —
+the one field known to have changed buckets — reads as wired in both AUDIO and FX. A staleness
+check with no positive case passes by being blind, which is the failure this project has now
+caught in four separate instruments.
+
+> The census's own warning, carried forward one level: **a list of unread fields is not a list of
+> defects.** Twenty-four fields, and the honest answer for twenty-four of them is "leave it, and
+> say why".
