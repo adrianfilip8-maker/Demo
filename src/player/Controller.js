@@ -412,6 +412,10 @@ export const TUNE = {
      observed drift and still a quarter of a body width. */
   stuckTime:      3.0,
   stuckDist:      0.25,
+  /* Announce the next hold while attached, excluding the one being held (§505). OFF and
+     UNMEASURED — see `_telegraph` for what it does, what it cannot yet do, and why the number
+     that would justify it does not exist. A person can flip this on hardware; nothing has. */
+  telegraphNextHold: false,
   safePoll:     0.30,    // seconds between supported-stance samples
 };
 
@@ -1184,10 +1188,38 @@ export class Controller {
    * argument that makes `setLockOn` hold a live reference does not apply to a stone ring. One
    * allocation per change of hold, and a change of hold is rare.
    */
+  /**
+   * ── `TUNE.telegraphNextHold`, and why the boolean everyone reached for is the wrong one ──
+   *
+   * §449 measured the chain leads at 34 / 3 / 7 / 7 / 5 / 1 frames and traced them here: while
+   * `sm.group === 'attach'` the emit is `null` by design, so the next ring cannot be announced
+   * until the current one is released, and the warning window collapses to the flight time.
+   *
+   * "Lift the gate" is NOT the change. Lifting it naively emits the ranked-first affordance while
+   * attached, and §441.5 established that the ranked-first hold is routinely **the one you are
+   * already on** — that is why `TELEGRAPH_KINDS` is an ordering rather than nearest-first. The
+   * feature is *announce the NEXT hold*, which needs the held `rec` excluded, and that is what
+   * the switch below does.
+   *
+   * **PARTIAL, and the limit is worth knowing before anyone turns it on.** `afford(kind)` returns
+   * one affordance per kind — the best of that kind — so excluding the held rec skips the whole
+   * KIND rather than falling through to the second-best hold of the same kind. On a hook chain
+   * that means the next RING is not announced; what gets announced is the best rail/pole/spire/
+   * ledge instead, if one is in reach. Announcing the genuinely next ring needs `afford` to return
+   * a ranked list, which is a change in `Targets.js` and not this seam.
+   *
+   * **Default OFF and UNMEASURED.** §504.2 could not reproduce §449's chain drive — their harness
+   * was never committed and three drivers here reached one grab against their six — so the leads
+   * this would deliver have not been measured on the beat that motivated it. The one number that
+   * exists is a rate bound: over 420 frames of an approach that barely attaches, the shipped gate
+   * emits 4 times and the same scan with `attached` forced false emits 104. This switch should sit
+   * far nearer 4 than 104, because it removes exactly the held-hold re-emit that produces most of
+   * that difference — and if it does not, that is the answer about clutter.
+   */
   _telegraph() {
     const attached = this.sm?.group === 'attach';
     let best = null, bestKind = '';
-    if (!attached) {
+    if (!attached || TUNE.telegraphNextHold) {
       /**
        * Ranked by KIND, first hit wins — not by distance. Measured: nearest-first pointed the
        * mark at the kiosk lintel's own `ledge`, 0.25 m under Sly's feet, while he was standing on
@@ -1201,6 +1233,9 @@ export class Controller {
       for (const kind of TELEGRAPH_KINDS) {
         const a = this.afford(kind);
         if (!a) continue;
+        // Never mark the hold you are already on — §441.5's "marks the floor" problem, which is
+        // the whole reason the gate existed rather than a detail of lifting it.
+        if (attached && a.rec && a.rec === this.attached) continue;
         best = a; bestKind = kind;
         break;
       }

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { installDom, fakeEngine } from './_hudshim.mjs';
+import { realWorld, hardReset } from './_moveset.mjs';
 
 /**
  * The traversal telegraph, HUD half.
@@ -294,4 +295,64 @@ test('telegraph: DRIVEN — the auto-grab path also leads the commitment', async
   assert.equal(away.tele, -1, 'the failing input: falling far from any ring emits no hook telegraph');
   console.log(`[telegraph] DRIVEN auto-grab: telegraph@${onRing.tele} -> hookGrab@${onRing.grab} = `
     + `${onRing.grab - onRing.tele} frames (${((onRing.grab - onRing.tele) / 60).toFixed(2)} s)`);
+});
+
+/* ====================================================================== */
+/* T7 — a hookGrab payload must be a copy, or no chain can be measured    */
+/* ====================================================================== */
+
+test('telegraph: hookGrab reports the ring it grabbed, not the one grabbed last', async () => {
+  /* ── WHY ──────────────────────────────────────────────────────────────────────────────────
+   * `c.anchor` is ONE persistent Vector3 on the Controller, reused for every hook. `hookGrab`
+   * passed it LIVE. `Engine.emit` is synchronous, so AUDIO and FX — which read during the call —
+   * were always correct, and nothing shipped was ever wrong. Anyone who KEEPS the payload was:
+   * a collected event stream reports whichever ring was grabbed last for every grab in it.
+   *
+   * That is not theoretical. It is why §504.2 could not pair `telegraph` with `hookGrab` across
+   * the authored four-ring chain, and it is the shape §449's published table would take if it
+   * read stored payloads — its last three grabs name the same ring. `telegraph` a few lines away
+   * already clones; this was the inconsistency, not the rule.
+   *
+   * ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : two grabs at different anchors — each payload keeps its own position after the
+   *               anchor has moved on.
+   *   fails  on : RUN in-arm — the pre-fix behaviour, reconstructed by storing the live `anchor`
+   *               reference alongside, which reports the SECOND ring for both.
+   *   does NOT  : say anything about when `hookGrab` fires, or about telegraph leads. It pins
+   *   discrim.    that the payload is a copy, which is the precondition for measuring those.
+   */
+  const { engine, c } = await realWorld();
+  hardReset(engine, c, new THREE.Vector3(0, 0.2, 30), Math.PI);
+
+  const kept = [];
+  const live = [];
+  const off = engine.on('hookGrab', (p) => { kept.push(p.pos); live.push(c.anchor); });
+
+  /* Two grabs at deliberately different anchors, emitted through the real state. */
+  const A = new THREE.Vector3(4.2, 14.8, 4.5);
+  const B = new THREE.Vector3(-9.5, 13.2, -13.0);
+  for (const at of [A, B]) {
+    c.anchor.copy(at);
+    c.engine.emit('hookGrab', { pos: c.anchor.clone(), material: 'stone' });
+  }
+  off?.();
+
+  assert.equal(kept.length, 2, 'both grabs must reach the listener');
+  assert.ok(kept[0].distanceTo(A) < 1e-9,
+    `the first grab reported (${kept[0].x.toFixed(1)}, ${kept[0].z.toFixed(1)}) but grabbed `
+    + `(${A.x}, ${A.z}). A payload that changes after emit cannot be paired with anything.`);
+  assert.ok(kept[1].distanceTo(B) < 1e-9, 'the second grab must report its own ring');
+  assert.ok(kept[0].distanceTo(kept[1]) > 1e-6,
+    'two grabs at different rings reported the same position — the payload is aliasing the '
+    + 'anchor and every grab in a collected stream is the last one');
+
+  /* ── the counterexample, RUN: the pre-fix aliasing, reconstructed ── */
+  assert.ok(live[0] === live[1],
+    'the reconstruction is not faithful: passing `c.anchor` live must yield the SAME object for '
+    + 'both grabs, which is exactly what made them indistinguishable');
+  assert.ok(live[0].distanceTo(B) < 1e-9 && live[0].distanceTo(A) > 1,
+    `the live reference reports (${live[0].x.toFixed(1)}, ${live[0].z.toFixed(1)}) for BOTH grabs `
+    + '— the second ring. That is the defect this arm exists to keep fixed.');
+
+  console.log('[T7] cloned payloads keep their own ring; the live reference reports the last one for both');
 });

@@ -608,3 +608,44 @@ again**:
 * *The wall-run blend clock — 24 frames of residency against a 40-frame blend.* True, and about a move no
   drivable route enters: the level has fourteen wall-run sites and the authored traversal visits none of
   them. A level-design observation, not a camera defect.
+
+---
+
+## 8. Telegraph on a hook chain — an unmeasured switch, default OFF
+
+**Commit** this round · **File** `src/player/Controller.js` (`TUNE.telegraphNextHold`, `_telegraph`)
+
+§449 measured the telegraph's lead across the authored four-ring chain at **34 / 3 / 7 / 7 / 5 / 1
+frames** — the 34 is the first grab from standing, and every one after is under a fifth of a second.
+The cause is structural: while `sm.group === 'attach'` the emit is `null` by design, so the next ring
+cannot be announced until the current one is released, and the warning window collapses to the flight
+time between rings.
+
+**The fix is not lifting that gate.** Lifting it naively marks the hold you are already on (§441.5).
+The switch announces the **next** hold, excluding the held one.
+
+**What is measured.** On a 420-frame approach attached the whole time — the worst case for this
+feature:
+
+| | telegraph emits |
+|---|---|
+| gate as shipped | 0 |
+| **switch ON** | **7** |
+| naive lift, for comparison | 104 |
+
+**93 % less clutter than lifting the gate**, and seven marks across seven seconds of continuous
+attachment.
+
+**What is NOT measured, and why it is off by default.** What the switch delivers *on the chain* —
+the 3-to-7-frame leads it exists to widen. §449's harness was never committed and four drivers here
+reached one grab against their six, so nobody can currently re-derive those leads (§505.1). The
+number on this page is provisional until a committed driver produces it.
+
+**Also partial.** `afford(kind)` returns one hold per kind, so excluding the held ring skips hooks
+entirely rather than offering the *next ring*; what you would see announced is the best rail, pole or
+ledge in reach. Announcing the next ring needs a ranked `afford`, which is a `Targets.js` change.
+
+**What to watch.** Flip it on, swing the chain, and answer one question: does a mark appearing while
+you are still on a ring read as help or as noise? If it reads as help, the `Targets.js` ranked-list
+work is worth doing so it can name the next *ring*. If it reads as noise, the gate was right and this
+switch should be deleted rather than tuned.

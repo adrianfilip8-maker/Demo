@@ -937,7 +937,21 @@ class HookSwing extends State {
     c.velocity.addScaledVector(_a, -vr);
     c.grounded = false;
     c.oneShot('hook_grab');
-    c.engine.emit('hookGrab', { pos: c.anchor, material: a?.rec?.material });
+    /**
+     * `.clone()`, and the clone is the whole point (§505).
+     *
+     * `c.anchor` is ONE persistent `Vector3` on the Controller, reused for every hook. Passing it
+     * live is correct for the shipped consumers — `Engine.emit` is synchronous, so AUDIO and FX
+     * read it during the call, at which moment it is right. It is wrong for anyone who KEEPS the
+     * payload: a collected event stream reports whichever ring was grabbed LAST for every grab in
+     * it, so the six grabs of the authored chain are indistinguishable and cannot be paired with
+     * the `telegraph` that preceded each.
+     *
+     * That is not a theoretical hazard: it is why §504.2's attempt to measure the chain's
+     * telegraph leads failed, and it would have been why the next lane's did. `telegraph` a few
+     * lines away already clones (`best.point.clone()`); this is the inconsistency, not the rule.
+     */
+    c.engine.emit('hookGrab', { pos: c.anchor.clone(), material: a?.rec?.material });
   }
   update(c, dt) {
     const L = TUNE.hookL;

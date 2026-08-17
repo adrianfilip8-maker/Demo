@@ -38509,3 +38509,98 @@ Checked properly, in a `git worktree` at HEAD so no sibling lane's uncommitted w
 **all four pass.** Every failure in the shared working tree comes from another lane's in-flight
 edits to `src/player/CameraRig.js` and `src/player/Controller.js`. HEAD itself is green.
 
+
+---
+
+## §505 — The chain leads are unreproducible because the harness was never committed, and the payload that would pair them was aliasing
+
+Three items: the reproduction gap resolved (as a negative), a real defect found inside my own
+previous report, and the feature built with its clutter question measured and its lead question
+still open.
+
+### §505.1 The reproduction gap: there is no harness to read
+
+§504.2 could not reproduce §449's 34 / 3 / 7 / 7 / 5 / 1. The instruction was to read their
+apparatus rather than rebuild. **It does not exist in the tree.** Searched exhaustively — the ring
+coordinates `(1.0, 14.5, −3.0)` and `(−4.0, 13.9, −8.5)` appear in exactly one file,
+`src/world/EgyptLevel.js`, which is the level authoring them. No test and no tool drives that chain.
+
+So the published leads come from an **uncommitted apparatus**, and that is the finding: a number
+quoted to the user and placed on the review sheet cannot currently be re-derived by anyone. Not an
+accusation — §449 was a playtest round and playtest drives are ad hoc by nature — but it is exactly
+the case §501.1 was written for, and the resolution is that the number should be treated as
+provisional until a committed driver produces it.
+
+A fourth driver was attempted here and reached **one grab against their six**. The reason is
+visible in the moveset rather than in the driver: `HookSwing`'s release
+(`Moveset.js:995`) does `c.velocity.multiplyScalar(0.5)` — **a release halves your speed**, so
+flying from one ring to the next 6+ m away after releasing is not obviously drivable at all. That is
+a hypothesis about why the chain is hard to drive, not a conclusion, and it is written down so the
+next attempt starts there.
+
+### §505.2 `hookGrab`'s payload was aliasing, and my previous report of it was wrong
+
+§504.2 said *"`hookGrab`'s payload carries no `point` to pair a telegraph against."* **That was my
+instrument error, not a defect** — the field is `pos`, not `point` (`Moveset.js:940`), and my probe
+read `payload.point` and got `undefined`. Correcting it here because it was reported upward as a
+defect and acted on.
+
+**There was a real defect underneath, and it is a different one.** The payload was
+`{ pos: c.anchor }` — and `c.anchor` is ONE persistent `Vector3` on the Controller, reused for every
+hook. Passing it live is correct for everything shipped: `Engine.emit` is synchronous, so AUDIO and
+FX read it during the call, when it is right. It is wrong for anyone who **keeps** the payload — a
+collected event stream reports whichever ring was grabbed *last* for every grab in it.
+
+Fixed: `c.anchor.clone()`. `telegraph` four lines away already cloned (`best.point.clone()`), so
+this was the inconsistency rather than the rule.
+
+**And it casts a specific doubt on §449's table, which is worth stating precisely.** A reader of
+stored payloads would see every grab report the final ring. §449's table shows four distinct rings
+and then **three consecutive grabs on the same one**, `(−9.5, 13.2, −13.0)` — which is the exact
+signature this aliasing produces at the tail. That is consistent with the aliasing *and* with three
+genuine re-grabs of the last ring, and without their harness the two cannot be separated. Recorded
+as a doubt with its mechanism, not as a correction.
+
+`telegraph.test.mjs` T7 pins the copy, with the pre-fix aliasing reconstructed and RUN in-arm: the
+live reference reports the second ring for both grabs, which is the defect kept fixed.
+
+### §505.3 The feature: clutter measured, leads still open
+
+Built behind `TUNE.telegraphNextHold`, **default off**. It is not "lift the gate":
+
+> Lifting the gate naively emits the ranked-first affordance while attached, and §441.5 established
+> that the ranked-first hold is routinely **the one you are already on**. So the change is
+> *announce the next hold, excluding the held `rec`* — a different feature from the one the gate
+> switches off.
+
+`c.attached` is the held rec, so the exclusion is one line at the existing seam.
+
+**The clutter question is answered, and the answer is good.** Driven on a 420-frame approach that
+is attached for **all 420 frames** — the worst case for this feature, since the gate is what is
+being tested:
+
+```
+  gate as shipped                    0 emits
+  next-hold switch ON                7 emits
+  naive lift (`attached` forced false)   104 emits      §504.2's baseline
+```
+
+**7 against 104 — a 93 % reduction.** Excluding the held rec removes essentially all of the clutter
+a naive lift would add, which is what was predicted and is now measured. Seven marks across seven
+seconds of continuous attachment is not clutter.
+
+**The lead question is still open**, because it needs the chain and the chain is not drivable here
+(§505.1). What the switch would deliver on the beat that motivated it is unmeasured, and the switch
+says so in its own docblock.
+
+**PARTIAL, and a person must know this before flipping it.** `afford(kind)` returns one affordance
+per kind, so excluding the held rec skips the whole **kind** rather than falling through to the
+second-best hold of the same kind. On a hook chain the next RING is therefore not announced; what
+gets announced is the best rail/pole/spire/ledge in reach, if any. Announcing the genuinely next
+ring needs `afford` to return a ranked list — a change in `Targets.js`, not at this seam. The 7
+emits above are that partial behaviour, not the full feature.
+
+### §505.4 Suite
+
+**851 arms: 848 pass, 3 fail** — D8, L1b and the CameraRig framing arm, all the camera lane's
+uncommitted `CameraRig.js`. `P-A1` has gone green since last round; the world lane fixed it.
