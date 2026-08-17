@@ -1010,8 +1010,151 @@ test('D8: FRAMES.lead is inert on most of the table, and it is derivable rather 
   /* And the two whose authored intent most contradicts their delivery, pinned by name. */
   assert.ok(delivered(FRAMES.air, RUN) < 0.30,
     `'air' now delivers ${delivered(FRAMES.air, RUN).toFixed(3)} m of lead; it was 0.159 m against an `
-    + 'authored 1.20 "lead hard"');
+    + 'authored 1.20. (This arm used to say that 1.20 came "with the comment \'lead hard\'". It does '
+    + 'not: `air` carries no comment, and "lead hard" belongs to `run`/`run_fast` two rows above it '
+    + 'in FRAMES. D9 owns the corrected attribution.)');
   assert.ok(delivered(FRAMES.hook_swing, RUN) < 0.30,
     `'hook_swing' now delivers ${delivered(FRAMES.hook_swing, RUN).toFixed(3)} m; it was 0.130 m against `
     + 'an authored 1.60 and the comment "Lead frames the landing"');
+});
+
+/* ====================================================================== */
+/* D9 — the same census at each row's OWN speed, attributed by mechanism    */
+/* ====================================================================== */
+
+test('D9: 13 of 19 rows are floored at their own speed, and two of them by `leadMax` not `stiff`', () => {
+  /* D8 above evaluates every row at `runSpeed`. That is a SAMPLE, and it is the instrument
+     (§440): the delivered lead is a metre quantity sitting under a metre cap, so reading `sneak`
+     or `rail_slide` at a running speed does not describe either of them. Re-read at the speed each
+     row actually occurs at, two more rows turn out to be floored — and they are floored by a
+     DIFFERENT CONSTANT, which is the part that matters, because it changes what repairs them.
+   *
+   *     max( min(leadTime × f.lead, leadMax / v) − followTimeH × f.stiff , 0 ) × v − deadzoneH
+   *
+   * Whichever term the inner `min` picks names the culprit:
+   *
+   *     FLOORED BY `stiff`    the authored lead is smaller than the trail. 11 rows. `leadTime`,
+   *                           `f.lead` and `followTimeH` all move these.
+   *     FLOORED BY `leadMax`  the 1.75 m cap lands BELOW the trail. `hook_swing` above 7.29 m/s,
+   *                           `rail_slide` above 13.67 m/s — both of which are their ordinary
+   *                           operating speeds. **No value of `leadTime` or `f.lead` moves these
+   *                           at all**, which is why the distinction is not cosmetic.
+   *
+   * The cap is calibrated against DELIVERED metres (see `TUNE.leadMax`) and applied to AUTHORED
+   * ones. That is a defect and not a feel question; the feel question is priced as item 6 of
+   * `progress/records/HARDWARE-REVIEW.md`.
+   *
+   * DOMAIN (§418.3)
+   *   passes on : the shipped table at the speeds `Controller.TUNE` gives each move.
+   *   fails on  : the SAME table with `leadMax` lifted to 3.0, RUN below — `hook_swing` and
+   *               `rail_slide` both escape the floor, and no other row's classification changes.
+   *               That is what proves the attribution is to the cap rather than to `stiff`: if
+   *               `stiff` were holding them, lifting the cap would do nothing. A second failing
+   *               input is run alongside it — `leadTime` at 1.00, nearly 6× shipped — under which
+   *               those same two rows stay floored, which is the same claim from the other side.
+   *   does NOT discriminate : whether any of this is visible, and whether the eight rows this arm
+   *               calls deliberately-still are in fact deliberate. That reading is argued from the
+   *               authoring — `lead` and `stiff` are anti-correlated across the table, so the
+   *               stiller a row is authored the less lead it asks for — and an argument from
+   *               authoring is not something a test can hold. */
+  const T = TUNE;
+  const C = CTUNE;
+
+  /* Each row at the speed it actually occurs at. Every value is a `Controller.TUNE` constant or a
+     measured consequence of one — never a guess, because a guessed speed would make this arm a
+     restatement of D8 with different numbers. */
+  const SPEED = {
+    idle:       [C.runSpeed,       'runSpeed — `move` falls through to `idle`, so this IS ordinary running'],
+    walk:       [C.walkSpeed,      'walkSpeed'],
+    run:        [C.runSpeed,       'runSpeed'],
+    run_fast:   [C.runSpeed,       'runSpeed — LOCO.maxSpeed = runSpeed; nothing on the ground is faster'],
+    sneak:      [C.sneakSpeed,     'sneakSpeed'],
+    crawl:      [C.crawlSpeed,     'crawlSpeed'],
+    hook_swing: [8.0,              'tangential swing speed, the value camlead L1 uses; a 75° pendulum peaks at 8.85'],
+    rail_slide: [C.railMax,        'railMax — the speed the row exists for'],
+    balance:    [C.railWalk,       'railWalk'],
+    spire:      [C.spireWobble,    'spireWobble — standing on a pinnacle'],
+    dive:       [C.runSpeed * 0.3, 'DiveAttack.enter multiplies horizontal velocity by 0.3'],
+    wall_run:   [C.wallRunSpeed,   'wallRunSpeed'],
+    ledge_hang: [C.shimmy,         'shimmy'],
+    climb:      [C.poleUp,         'poleUp'],
+    glide:      [C.glideSpeed,     'glideSpeed'],
+    land:       [C.runSpeed,       'runSpeed — a landing keeps the horizontal speed it arrived with'],
+    roll:       [C.rollSpeed,      'rollSpeed'],
+    air:        [C.runSpeed,       'runSpeed — a jump retains horizontal speed'],
+    combat:     [C.strafeSpeed,    'strafeSpeed'],
+  };
+
+  /** Which term of the floor is binding, at speed `v`, under an optional TUNE override. */
+  const classify = (f, v, o = {}) => {
+    const leadTime = o.leadTime ?? T.leadTime;
+    const leadMax = o.leadMax ?? T.leadMax;
+    const authored = leadTime * f.lead;
+    const cap = leadMax / v;
+    const trail = T.followTimeH * f.stiff;
+    const raw = Math.min(authored, cap);
+    if (raw >= trail) return 'delivers';
+    return cap < authored ? 'leadMax' : 'stiff';
+  };
+
+  const shipped = {};
+  console.log('\n[D9] framing        v      f.lead f.stiff   floored by   why');
+  for (const [k, f] of Object.entries(FRAMES)) {
+    const [v, why] = SPEED[k];
+    shipped[k] = classify(f, v);
+    const authored = T.leadTime * f.lead, cap = T.leadMax / v, trail = T.followTimeH * f.stiff;
+    const note = shipped[k] === 'delivers' ? ''
+      : shipped[k] === 'leadMax' ? `cap ${cap.toFixed(3)}s < trail ${trail.toFixed(3)}s (authored ${authored.toFixed(3)}s never applies)`
+        : `authored ${authored.toFixed(3)}s < trail ${trail.toFixed(3)}s, short by ${(trail - authored).toFixed(4)}s`;
+    console.log(`[D9] ${k.padEnd(12)} ${v.toFixed(2).padStart(6)} ${f.lead.toFixed(2).padStart(7)} ${f.stiff.toFixed(2).padStart(7)}`
+      + `   ${shipped[k].padEnd(10)}   ${note || why}`);
+  }
+  const flooredNow = Object.keys(shipped).filter((k) => shipped[k] !== 'delivers');
+  const byCap = Object.keys(shipped).filter((k) => shipped[k] === 'leadMax');
+  console.log(`[D9] ${flooredNow.length}/19 floored at their own speed; ${byCap.length} of those by leadMax: ${byCap.join(' ')}`);
+
+  assert.deepEqual(byCap.sort(), ['hook_swing', 'rail_slide'],
+    `the set of rows floored by the \`leadMax\` cap rather than by \`stiff\` is now [${byCap.join(', ')}], `
+    + 'and it was [hook_swing, rail_slide]. Those two are the rows no `lead` or `leadTime` edit can '
+    + 'repair, so the set changing means a repair that used to be impossible has become possible — or '
+    + 'the reverse. Either way it is a change in what is fixable and must not land silently.');
+
+  assert.ok(flooredNow.length >= 12,
+    `only ${flooredNow.length} of 19 rows are floored at their own speed (was 13): ${flooredNow.join(', ')}`);
+
+  /* The eight argued to be deliberately still. If one of these starts leading, a camera has begun
+     running ahead of a careful or stationary player, which is the shot these rows exist to refuse. */
+  for (const k of ['idle', 'sneak', 'crawl', 'balance', 'spire', 'ledge_hang', 'climb', 'combat']) {
+    assert.notEqual(classify(FRAMES[k], SPEED[k][0]), 'delivers',
+      `'${k}' now delivers lead at its own speed (${SPEED[k][0]} m/s). It is one of the rows argued to `
+      + 'be inert ON PURPOSE — a camera that runs ahead of a stationary or careful player is the wrong '
+      + 'shot — so this is a change in what a player sees and wants a person, not a green suite.');
+  }
+
+  /* ── THE FAILING INPUTS, RUN ─────────────────────────────────────────────────────────────────
+     Lift the cap: if `leadMax` is what holds the swing and the rail, they escape and nothing else
+     moves. Raise `leadTime` instead: if `leadMax` is what holds them, they DON'T escape however
+     far it goes. Both are run, because either one alone leaves the attribution arguable. */
+  const lifted = {}, driven = {};
+  for (const [k, f] of Object.entries(FRAMES)) {
+    lifted[k] = classify(f, SPEED[k][0], { leadMax: 3.0 });
+    driven[k] = classify(f, SPEED[k][0], { leadTime: 1.00 });
+  }
+  console.log(`[D9] leadMax 1.75->3.0 : ${byCap.map((k) => `${k} ${shipped[k]}->${lifted[k]}`).join(' · ')}`);
+  console.log(`[D9] leadTime 0.17->1.00: ${byCap.map((k) => `${k} ${shipped[k]}->${driven[k]}`).join(' · ')}`);
+
+  for (const k of byCap) {
+    assert.equal(lifted[k], 'delivers',
+      `'${k}' is still floored with \`leadMax\` at 3.0, so this arm's failing input does not fail and the `
+      + 'passing classification above proves nothing');
+    assert.equal(driven[k], 'leadMax',
+      `'${k}' escapes the floor at \`leadTime\` 1.00, so it is not held by the cap after all and D9 has `
+      + 'attributed it to the wrong constant');
+  }
+  /* …and lifting the cap must not be a blunt instrument that reclassifies the whole table, or the
+     two rows above would just be riding a global change. */
+  const alsoMoved = Object.keys(shipped).filter((k) => !byCap.includes(k) && shipped[k] !== lifted[k]);
+  assert.deepEqual(alsoMoved, [],
+    `lifting \`leadMax\` also reclassified [${alsoMoved.join(', ')}], so it is not the surgical lever this `
+    + 'arm reports it to be');
 });

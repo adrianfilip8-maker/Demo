@@ -217,21 +217,56 @@ export const TUNE = {
   followLeashV: 2.6,
 
   /* ---- velocity lead ------------------------------------------------------ */
-  /* **`FRAMES.lead` is inert on 11 of 19 rows, and that is derivable rather than sampled.**
+  /* **`FRAMES.lead` is inert on 13 of 19 rows, and TWO different constants do it.**
      `_pivotGoal` floors the lead at the follow spring's own trail, so what reaches the screen is
-        max(leadTime × f.lead − followTimeH × f.stiff, 0) × speed − deadzoneH
-     and the sign of that margin decides whether `f.lead` does anything at all. Negative on
-     `idle walk sneak crawl balance spire dive ledge_hang climb land combat` — for those the
-     delivered lead is exactly −`deadzoneH` at every speed and the authored number has no effect.
-     `air` authors 1.20 ("lead hard") and delivers 0.159 m; `hook_swing` authors 1.60 under the
-     comment "Lead frames the landing" and delivers 0.130 m; `land` sits 0.001 s the wrong side of
-     break-even. Only `run_fast` and `rail_slide` carry more than a metre.
+
+        max( min(leadTime × f.lead, leadMax / v) − followTimeH × f.stiff , 0 ) × v − deadzoneH
+
+     and whichever term that inner `min` picks says which constant is to blame — which matters,
+     because the two want different repairs:
+
+       FLOORED BY `stiff`   idle walk sneak crawl balance spire dive ledge_hang climb land combat
+                            the authored lead is simply smaller than the trail. Fixable by
+                            `leadTime`, by that row's `f.lead`, or by `followTimeH`.
+       FLOORED BY `leadMax` hook_swing (−0.037 m) · rail_slide (+0.022 m)
+                            the 1.75 m cap lands BELOW the trail, which happens above
+                            `leadMax / (followTimeH × f.stiff)` m/s — 7.29 for the swing, 13.67
+                            for the rail. **No value of `leadTime` or `f.lead` moves these at
+                            all**, measured, because the cap binds first. `leadMax` was
+                            calibrated against DELIVERED metres and is applied to AUTHORED ones.
+       DELIVER              run 0.612 · run_fast 0.729 · roll 0.607 · wall_run 0.308 ·
+                            air 0.217 · glide 0.207 — and **nothing routes to `run`, `run_fast`
+                            or `walk`**, so four rows a player can meet deliver any lead at all.
+
+     Two corrections this census cost, both of the §442 class and both in its own first draft:
+       · the numbers were published at `runSpeed` for every row. Delivered lead is a metre
+         quantity under a metre cap, so a row must be read at ITS OWN speed — `railMax` 15,
+         `sneakSpeed` 1.4, a dive's 30 % horizontal retention. Doing that moved two rows from
+         "escapes" to "floored" and is the whole reason `leadMax` showed up.
+       · **`air` was quoted as authoring 1.20 "lead hard". It has no comment at all** — "lead
+         hard" belongs to `run`/`run_fast` two rows above it in `FRAMES`. A comment attributed to
+         the wrong row, which is exactly what §442 was about. `hook_swing`'s "Lead frames the
+         landing" is correctly attributed and is the one authored intention that plainly does not
+         arrive.
+
+     One instrument note. The closed form above is a CONTINUOUS-time steady state and the shipped
+     spring is discrete at 1/60 s, so it understates the delivered lead by a measured 0.0080 × v
+     metres — half a frame of travel; 1 cm at a sneak, 6 cm at a run, 12 cm at rail speed. It
+     never changes the SIGN of the margin, so the floored/not-floored split is unaffected, but
+     every absolute metre figure here is the DRIVEN one rather than the derived one.
+
      Found chasing a 92 %-vs-26 % spread in the delivery table that turned out to be a ratio of two
      small numbers — the goal lead is 1.25 m throughout a jump and the pivot sits 1.35–1.78 m
      behind it, on the ground as well, so it was never a jump problem. `tests/camdrive.test.mjs`
-     D8 holds the census. NOT retuned: raising `lead` or lowering `stiff` changes what a player
-     sees on eleven rows at once. */
+     D8 holds the runSpeed census and D9 the own-speed one with the mechanism attribution.
+     NOT retuned here. The levers are priced per row and per metre, with a recommendation and the
+     row that pays for it, as item 6 of `progress/records/HARDWARE-REVIEW.md`. */
   leadTime: 0.17,               // seconds of travel to lead by, ×frame.lead
+  /* Applied to the AUTHORED lead in `_pivotGoal`'s floor arm, and calibrated against the
+     DELIVERED one — see the block above. That mismatch is what holds `hook_swing` and
+     `rail_slide` at the floor, and it is a defect rather than a feel question. Not repaired
+     alongside a `leadTime` bump on purpose: folding a structural correction into a feel change is
+     how a measured result stops being attributable. */
   leadMax: 1.75,
   /* Which of the two answers to the lead/trail defect is in force. See `_pivotGoal`.
        'floor'  ship: raise the lead to the spring's trail when the authored value is smaller.
