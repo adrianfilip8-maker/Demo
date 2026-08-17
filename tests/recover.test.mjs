@@ -308,7 +308,7 @@ function dropOnto(engine, c, h) {
 test('R4: every ordinary drop height now lands audibly, and the race is gone', async () => {
   /* ── THIS ARM USED TO PIN THE DEFECT. IT NOW PINS THE REPAIR. Read that before editing it. ──
    *
-   * Until §438 it asserted that **at least 3 of 8 drop heights were SILENT**, and that silence was
+   * Until §443 it asserted that **at least 3 of 8 drop heights were SILENT**, and that silence was
    * not ordered by arrival speed. That was correct and deliberate: `Controller.TUNE`'s landing
    * block documented a race in which `_moveVertical` zeroed `v.y` before `_probeGround` could read
    * it, so `landImpact` came out 0 and `Land.canEnter` refused. Silent meant *completely* silent —

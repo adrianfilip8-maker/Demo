@@ -35960,3 +35960,173 @@ D7 carries the third domain line §439 added, and this is the first arm where it
 **sample** rather than a stub: `combatStrafe`, `wallRun`, `railSlide`, `poleClimb` and `hookSwing`
 produce no frames on these routes, so the audit is silent about them. Saying so is the whole point.
 A sample looks like evidence in a way a stub does not, which is exactly why it needs the line more.
+
+## §443 — The landing that fired on a coin flip and the capsule that never landed at all: one erasure behind both, and a threshold I first derived with the wrong instrument
+
+Two defects in `Controller`, reported separately by two different rounds, with a single line of code
+behind both. Then the threshold the repair forced, which I derived twice because the first derivation
+measured a quantity nothing in the game compares against.
+
+### §443.1 The erasure
+
+`_probeGround` computed the landing impact as `-velocity.y`. But `move()` runs `_moveVertical`
+**first**, and the swept capsule — the thing that actually stops a fall — sets `v.y = 0` on contact.
+By the time the probe looked, the arrival was gone. The probe only won when the frame before
+touchdown happened to leave Sly inside its 0.06 m band: **12 wins in 40 sub-frame phases.**
+
+Driven on the shipped temple, eight straight drops:
+
+```
+    0.5 m  SILENT      1   m  fires
+    4   m  SILENT      2.5 m  fires
+    6   m  SILENT      8   m  fires
+    10  m  SILENT      15  m  fires
+```
+
+Silent meant *completely* silent — no `land` state, so no `landed` event, so no sound, no screen
+shake, no impact pose. Half of all landings, on the first thing anybody does in this game, and **not
+ordered by arrival speed**, so no player could ever learn the rule. It was a coin flip on the phase
+of the last airborne frame.
+
+The repair is four lines: `_moveVertical` records the arrival it is about to erase
+(`_sweepLandVy`, `_sweepLandY`, `_sweepLandNormal`, `_sweepLandFrame`) and `_probeGround` consumes it
+**on the same frame and only on the same frame** — the `_landFrame`/`_sweepFrame` gating this file
+already uses everywhere else. Eight of eight now fire, at 5.312 / 6.901 / 10.875 / 13.802 / 16.885 /
+19.350 / 21.783 / 26.537 m/s.
+
+### §443.2 The same record fixes a second defect that was reported as a third thing entirely
+
+The floating capsule came in from a different round: a capsule leaning on a face at a ledge sat in
+`fall` with `grounded === false` for **60 s**, while the sweep was hitting a floor 1 mm below it and
+the ground probe was measuring straight past that to the next surface 0.107 m down. Two symptoms,
+two rounds, two bug reports — one erasure. The record the landing repair introduces is exactly the
+evidence the grounding check was missing, so `_probeGround` now falls back to it when its own cast
+misses.
+
+**This is the thing worth carrying forward.** The landing race read as an audio/feel bug and the
+floating capsule read as a collision bug, and they were filed by different lanes on different
+rounds. Neither report contained the word that connected them. What connected them was opening
+`_moveVertical` and noticing that a value was being *discarded* rather than *not computed* — and a
+discarded value has, by definition, more than one consumer who might have wanted it.
+
+### §443.3 The threshold the repair forced, and the instrument that got it wrong
+
+With arrivals reported correctly, `landHard` 9.0 was suddenly **below a plain jump** (10.874 m/s).
+The repair alone would have made every jump in the game a hard landing — a 0.19 s control tax, a
+screen shake and a root impulse, on every hop, forever. So the threshold had to be re-derived.
+
+I derived it twice.
+
+The **first** derivation measured arrival as `max(-velocity.y from the previous frame, landImpact)`.
+That is a sensible-looking quantity and it is not the one `Land.enter` compares against `landHard`.
+The value actually compared is `landImpact`, which is one frame of gravity — 0.400 m/s — higher.
+Every number in the first derivation was therefore one tick low, and one of the sentences it
+produced was outright false: *"the highest apex the moveset can reach is 4.262 m, so the hard landing
+begins exactly where his own jumping stops being able to cause it."* The real maximum apex is
+4.502 m, which is **above** the 4.441 m whose arrival equals `landHard`. The sentence was elegant,
+symmetrical and wrong, and it was wrong because the number under it came from an instrument that was
+not reading the field the code reads.
+
+The **second** derivation reads `landed.force` — the value `Land.enter` actually received, captured
+off the bus at emit. Both populations, measured on the real integrator and the real floor:
+
+```
+  A  what he can do to himself     6.196 … 14.586 m/s     1550 arcs: a 31 x 50 grid of
+                                                          hold/release/press timings at 1-frame
+                                                          resolution. Highest apex 4.502 m
+  B  authored route descents       7.753 · 23.749 · 25.368 m/s
+                                                          dropped for real, not solved for, from
+                                                          `architecture.api.route`
+```
+
+Disjoint, with an **empty band 14.586 … 23.749 m/s**, 9.16 m/s wide. The rule that reads off it is
+the one the moveset already implies: *`landHard` is the first landing that was not a move you meant.*
+
+The margin has to be quoted in the right units, because **arrivals are quantized.** The sweep records
+the velocity the move was made with, so every arrival sits on a ladder spaced one frame of gravity
+apart. Population A's top three rungs are 14.586, 14.186, 13.786. `landHard` 15.0 clears the top rung
+by 0.414 m/s — **1.04 rungs**. A whole step, but only just one. The first derivation's "0.81 m/s
+(5.7 %)" was both the wrong number and the wrong kind of number: a percentage of a continuous
+quantity that is not continuous.
+
+**The feel review is still owed, and it is now precisely scoped.** The measurement fixes the *band*.
+Every value in 14.586 … 23.749 separates the same two populations identically. Where 15.0 sits inside
+a 9 m/s window is a judgement nobody has made on a machine that renders — nobody has heard the shake
+or felt the 0.19 s. The reviewer is now placing a number inside a measured window instead of guessing
+one, which is the only part of this a measurement could have done for them.
+
+### §443.4 Pinning the mechanism, and an ablation that is deliberately not a stub
+
+`R4` used to assert an outcome: 8 of 8 drop heights fire. That claim is satisfied by any number of
+stories — a widened band, a lowered `landBeat`, a different probe, a repair that works for an
+unrelated reason. It now pins three facts that together support exactly one:
+
+- **WHAT was written.** `landed.force` equals the arrival carried into the contact frame plus exactly
+  one gravity tick, to 1e-6, at every height. Not zero, not a constant, not a different quantity.
+- **WHEN.** Emit frame, `_landFrame` and the first grounded frame are the same frame.
+- **WHICH source won.** `_sweepLandFrame` is pinned to −1 by `Object.defineProperty`, switching off
+  the two consumption sites and nothing else, and the identical drops are re-run. **Four of the eight
+  go completely silent.**
+
+The ablation is the load-bearing half, and its shape is the point. §439 established that *an
+instrument built from the same assumption as the thing it measures cannot falsify that assumption* —
+`camlead` L3's stub put the wall exactly where the probe was looking. An arm that stubbed the arrival
+speed and then asserted the landing beat fires would be that same shape. So the ablation stubs
+nothing on the measurement path: the launch, gravity, capsule and floor are untouched and the arrival
+speed is real; what is removed is a private frame stamp, and what is read is a bus event downstream
+of it. It can fail, and half the sample shows it failing to be trivial — 4 of 8 heights still fire
+without the repair, because on those the ground probe caught the arrival on its own.
+
+It also audits itself. The silent set the ablation reproduces — **0.5, 4, 6, 10 m** — is the
+pre-repair set recorded in `Controller.TUNE` by a different instrument before this arm existed. An
+ablation that did not reproduce it would not be a reconstruction of the old code, and its silence
+would be evidence of nothing. That check is written into the arm as an assertion with that message,
+not into this ledger as a claim.
+
+### §443.5 `does NOT discriminate`, on both arms
+
+- `R4` does not discriminate **any threshold.** It never asks which landings are hard, so `landHard`
+  could be any value and nothing in it moves. Nor does it see landings with horizontal motion, on
+  slopes, or onto one-way surfaces — every drop is a straight vertical launch onto flat ground at
+  spawn. And it cannot separate the two sources below ~8 mm of fall, where the arrival is itself
+  under one tick; the shallowest height sampled is 60× that.
+- `L1` does not discriminate **the number.** Every threshold in (14.586, 23.749] separates the same
+  two populations, and `L1` passes for all of them. It pins the band and the quantum, not the choice.
+  Its population A is also incomplete *by construction*: it is jump and double-jump from flat ground.
+  Wall-run exits, magnetism yanks (`magYankGain` 11.0) and enemy bounces are self-inflicted verticals
+  it never launches, so the ceiling it reports is a ceiling for the arcs it sampled.
+
+### §443.6 Four wrong answers I produced about my own repair, in order
+
+Every one of them was internally consistent, and every one was caught by making the arm say something
+sharper rather than by re-reading the code.
+
+1. **The grounding fallback asserted a flat floor.** My first version set `_gndRes.normal = UP` and
+   `slope = 0` when consuming the sweep record. That value is published to shedding, animation and
+   the camera. `traversal`'s slopes arm went red immediately. The fix carries `_sweepLandNormal`
+   through and derives the slope from it — and forced a correction to my own docblock, which claimed
+   the fallback accepted "walkable normals only" when the write-site gate is `normal.y > 0.3`, about
+   72°. The walkability test now lives at the consumption site, where the claim is true.
+2. **"The sweep always wins."** An overclaim. At small drops the probe is still inside its band and
+   legitimately supplies the number; `landImpact` is a `max` of two sources, not a handover.
+3. **Sampling a settling micro-contact.** Capturing on the first frame `grounded` reads true caught a
+   later re-contact, reporting `landImpact 0.000` at 0.5 m.
+4. **Sampling after `update()` returns.** The worst of the four, because it was perfectly consistent:
+   every height reported `landImpact 0.000 · sweep 0.400`. Both fields are overwritten *by the
+   landing being measured* — `Land.enter` consumes `landImpact` (`Moveset.js:172`) and `Land.update`
+   then runs its own `gravity`+`move` in the same frame, re-arming the sweep with the 0.400 m/s of a
+   body at rest. A table that is identical at every drop height should have read as an instrument
+   fault immediately; it did not, because 0.400 is a plausible number.
+
+The general form: **a field on a live object is only meaningful at a moment, and a test that reads it
+at a different moment gets a real value that answers a different question.** The event payload was
+the right place to read from all along, because a payload is a copy taken at the instant the code
+under test decided something.
+
+### §443.7 Attribution note
+
+The corrected `TUNE` derivation text landed inside commit `8a3af14`, which belongs to the telegraph
+lane — we were both editing `src/player/Controller.js` and their commit swept my working-tree hunk in
+with theirs. The content is correct and in HEAD; the authorship line on that hunk is not mine. Noted
+here rather than rewritten, because rewriting shared history to fix a byline is a worse trade than
+saying so.

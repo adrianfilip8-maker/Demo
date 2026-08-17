@@ -323,7 +323,7 @@ export const TUNE = {
      this block only names the first one, which was a bare `3.2` repeated in three places in
      Moveset.js (§5 wants feel constants here, not inline).
 
-     ── THE LANDING RACE, FIXED (§438) ─────────────────────────────────────────────────────────
+     ── THE LANDING RACE, FIXED (§443) ─────────────────────────────────────────────────────────
      `landImpact` was read in `_probeGround` as `-velocity.y`, but `move()` runs `_moveVertical`
      first and the swept capsule — which is what actually stops a fall — zeroed `v.y` before the
      probe ever looked. The probe only won when the frame before touchdown happened to leave Sly
@@ -380,7 +380,7 @@ export const TUNE = {
      measured window rather than guessing one. If it wants to move, it is a one-line change here
      and L1 will keep it honest about the edges. ---- */
   landBeat:     3.2,     // enter `land` above this arrival speed. Shipped value, formerly inline.
-  landHard:     15.0,    // above this it is `land_hard` + shake + root impulse. Derived above (§438).
+  landHard:     15.0,    // above this it is `land_hard` + shake + root impulse. Derived above (§443).
   landSoftTime: 0.09,
   landHardTime: 0.19,
 
@@ -1005,7 +1005,7 @@ export class Controller {
      * capsule leaning on a face at a ledge, sweep hitting a floor normal 1 mm below it, probe
      * reporting the next surface down 0.107 m away and refusing it because the airborne band is
      * 0.06 m. The result was `grounded=false` held indefinitely, and everything gated on
-     * `grounded` wrong for as long as a player leaned. §438.
+     * `grounded` wrong for as long as a player leaned. §443.
      *
      * Deliberately narrow: same frame only, walkable slope only (tested here, not at the write
      * site), and it fills the ground record
@@ -1643,7 +1643,7 @@ export class Controller {
      * `Land.canEnter` refused. The probe only ever won when the frame before touchdown happened
      * to leave Sly inside its 0.06 m band: measured 12 wins in 40 sub-frame phases. Driven on the
      * shipped temple that produced **silent landings at 0.5, 4, 6 and 10 m and audible ones at
-     * 1, 2.5, 8 and 15 m** — not ordered by speed, so unlearnable. §438.
+     * 1, 2.5, 8 and 15 m** — not ordered by speed, so unlearnable. §443.
      *
      * ── And the same erasure hid a second defect ─────────────────────────────────────────────
      * A capsule leaning on a face at a ledge sat in `fall` with `grounded=false` for 60 s of game
