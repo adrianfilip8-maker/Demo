@@ -35588,3 +35588,83 @@ not, and the sampling is biased in an obvious direction: every technique listed 
 happens to run. If there is a class that only code review catches, this table cannot see it, and
 the absence of any such entry is not evidence that none exists. What the table does support is
 narrower and still worth acting on — **of the errors we caught, reading was never how.**
+
+---
+
+## §439 — RETRACTION: `wall_run`'s boom is not occluded, its bank has never fired, and I proved the wrong one of those with a stub built to agree
+
+§437.1 used `wall_run` as the case study for *"fixing a route is not the same as delivering a
+framing"* and attributed its 5 % boom delivery to the wall occluding the camera. **That attribution
+is wrong, and instrumenting the mechanism instead of the outcome falsified it in one run.** Three
+published claims of mine fall with it, and the third is the one worth keeping.
+
+### §439.1 The boom is not occluded. It is cut by 3 cm.
+
+Instrumented on the route that produces the `wall_run` framing, comparing the boom the rig *wants*
+against the boom it *gets*:
+
+```
+  ACTUAL   boom 5.99   want 6.02   cut 0.03 m
+  PINNED   boom 6.07   want 6.07   cut 0.01 m
+```
+
+Three centimetres. The occlusion story was a plausible reading of a low number and I published it
+without pointing an instrument at the cut itself. **§437.1's own sentence applies to §437.1: I
+tested that the framing did not arrive and claimed to know why.**
+
+### §439.2 What is actually wrong is worse, and it is the bank
+
+On the same route, over 121 frames of `wall_run` framing:
+
+```
+  _wallSide non-zero        0 / 121 frames
+  |_roll| > 0.02 rad        0 / 121 frames
+  max |roll|                0.00000 rad      (wallRoll 0.0960)
+  |camera.right · wallNormal|   mean 0.000
+```
+
+The probe points **exactly along** the wall and never at it. The geometry says why: the wall normal
+is (0, 0, 1) and the run direction is (0, 0, −1). **Head-on.** `Moveset.WallRun.enter` already
+carries the sentence that explains it — *"a head-on approach has `n · right` ≈ 0 and no side either
+way; only glancing runs could ever show it"* — written about the clip side, and true of the camera
+for the same reason.
+
+So the wall-run bank, whose sign was fixed in round 20 and whose routing this lane fixed this
+session, **has still never fired.** Two repairs, both correct, neither sufficient, and the reason
+is in a comment in a different file that both repairs walked past.
+
+A fourth thing surfaced on the way and is not yet resolved: the 121 frames of `wall_run` **framing**
+were produced by `wallClimb` / `wallCling` / `wallJump`, not by the `wallRun` state at all. Whether
+a lateral wall run is reachable anywhere in this level is open, and it is the question the next
+round on this should start from rather than the boom.
+
+### §439.3 And the arm that said the bank works was built so it could not disagree
+
+`tests/camlead.test.mjs` L3 asserts the bank fires. It passes. Its `OneWall` stub answers a hit for
+whichever cast points at its chosen side, and `_probeWallSide` casts along ±`rig.right` — **the stub
+places the wall exactly where the probe is looking, by construction.** It can only ever demonstrate
+that probe, gate and roll sign are wired together. For two rounds its green was read as delivery
+evidence, by me, including in the report that called the bank "94–106 % delivered".
+
+This is §437.1 turned on the lane that wrote it, one round later, and the mechanism is identical:
+**a wiring test counted as a delivery test.** The arm is kept and retitled — a wiring test is worth
+having as long as it says it is one — with a `does NOT discriminate` line added to its domain
+block, which is a third category §418.3 did not have and probably should:
+
+> **passes on / fails on / does not discriminate.** The first two make a bar honest about its
+> domain. The third makes it honest about its *reach*, and it is the line that would have stopped
+> this stub being quoted as a measurement.
+
+### §439.4 The general lesson, which is not the one §437 drew
+
+§437.1 said a reachability test and a delivery test are two tests. True, and insufficient. This
+round adds:
+
+> **An instrument built from the same assumption as the thing it measures cannot falsify that
+> assumption.** The stub assumed the wall is beside you; so does the probe; so the pair agree in
+> every world including the ones where the level disagrees with both.
+
+The cheap defence is the one that worked here and it is not a better stub: **point an instrument at
+the mechanism rather than the outcome.** "The framing delivers 5 %" is an outcome and supports any
+number of stories. "The boom is cut by 0.03 m and `_wallSide` is 0 for 121 frames" is a mechanism
+and supports exactly one.
