@@ -2827,13 +2827,19 @@ test('slopes: a pure cardinal stick holds its line — the ground snap no longer
      exactly as it always did. What changed is that the ground snap no longer takes it. Asserting
      both halves matters: if someone "fixes" this by editing the collision layer instead, the
      drift would also go to zero, and this arm would tell them they changed a module that guards
-     and the camera share rather than the one that had the defect. */
+     and the camera share rather than the one that had the defect.
+
+     The pair is `sumRes` here and the `ratio` bar ABOVE — this section adds the sweep half only.
+     It used to re-assert `ratio < 0.05` on this line as well, which was **found by
+     `tools/armaudit.mjs` and is a zero-information assertion**: `ratio` is a `const` computed once
+     and never recomputed, so a second identical bound on it 44 lines later cannot fail unless the
+     first already did. Note that INVERSION scores that line as live — flipping it turns the arm
+     red — so the audit's inversion sweep could not see it and the entailment pass could. That is
+     §415's whole point, and it was demonstrated on my own arm. */
   assert.ok(sumRes > 1.0,
     `the sweep now reports only ${sumRes.toFixed(3)} m of resolved lateral. Collision has been ` +
     'changed, not the Controller — and Collision.capsuleSweep is shared with GUARDS and the ' +
     'camera boom, so that is a much wider blast radius than this defect needed.');
-  assert.ok(ratio < 0.05,
-    'the character is importing the sweep lateral again — see the ground snap in _moveHorizontal');
 });
 
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {

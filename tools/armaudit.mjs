@@ -58,8 +58,13 @@ const lines = src.split('\n');
 /* ---- 1. static inventory: every assert site, and the arm that lexically owns it ------------ */
 const arms = [];                       // { name, start, end }
 for (let i = 0; i < lines.length; i++) {
-  const m = /^test\(\s*(['"`])([\s\S]*?)\1\s*,/.exec(lines[i]);
-  if (m) arms.push({ name: m[2], start: i + 1, end: lines.length });
+  const m = /^test\(\s*(['"`])((?:[^\\]|\\.)*?)\1\s*,/.exec(lines[i]);
+  /* Un-escape the JS string literal. The SOURCE spells an apostrophe `\'`; the runtime test name
+     has no backslash, so passing the raw text to `--test-name-pattern` matched nothing, the arm
+     never ran, and its assertions came back "unreached". Two of them did, and they were an
+     instrument artefact reported as a property of the suite — which is the failure this whole tool
+     is about, so it is fixed rather than filtered. */
+  if (m) arms.push({ name: m[2].replace(/\\(['"`\\])/g, '$1'), start: i + 1, end: lines.length });
 }
 for (let k = 0; k < arms.length - 1; k++) arms[k].end = arms[k + 1].start - 1;
 const armAt = (ln) => arms.find((a) => ln >= a.start && ln <= a.end)?.name || '(top level)';
