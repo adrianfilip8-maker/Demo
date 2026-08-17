@@ -36790,6 +36790,30 @@ snap as scoped to the spawn while the code scoped it to the frame.
 Nothing here is fixed. The three seams are named so a person can decide whether they are worth
 adding; `_bounceReq` and the `sweepcensus.mjs:138` enumeration are noted for whoever owns those files.
 
+### §448.4 AMENDMENT — what a clean sweep is NOT evidence of
+
+Appended rather than folded into the text above, because this ledger is append-only and the sentences
+above were published and quoted before this was understood.
+
+The camera lane ran this detector against `leadMax` — a cap calibrated in *delivered* metres and
+applied to *authored* ones, so no value of the knob that appears to control those rows moves them —
+and **the sweep came back empty.** Nothing in `src/` hand-writes a velocity look-ahead to compensate
+for that bound. The bound is real and the detector is silent about it.
+
+The reason splits the class again, and it bounds what this grep can ever do:
+
+> **A defect that is known and routed around leaves fingerprints. A silent bound leaves none.**
+> `_needSpawnSnap` was patched in six places because six people HIT it. `leadMax` is patched nowhere
+> because nobody knew it was happening.
+
+So the detector finds *defects somebody has already met*, and its silence is evidence about that
+class only. **A clean sweep is not a clean codebase**, and quoting one as such would be §418.3's
+failure in a new place — a green that structurally cannot see the thing it is being offered for.
+
+This applies directly to §500's `landHard`: nothing in the codebase compensated for the threshold
+having been derived on a plane, because the flat-ground ceiling was never contradicted by anything
+that ran. That defect is a member of the silent class, and this detector would never have found it.
+
 ## §449 — PLAYTEST II: the telegraph goes dark exactly during the chain it was built for
 
 Continuation of §447, same drive, same tree. This is the interaction result the round was for: two
@@ -37075,3 +37099,158 @@ Nothing here is retuned. The constants stand at `leadTime` 0.17, `leadMax` 1.75,
 failing inputs run.
 
 ---
+
+---
+
+## §500 — `landHard` was derived on a plane and the level is not one: the empty band is gone, and no single threshold replaces it
+
+§443.3 derived `landHard` 15.0 from two populations separated by an empty band 9.16 m/s wide.
+§447.2 then drove the shipped level and found the hard landing starts at a **3.15 m hop**. Both are
+correct. This re-derives population A against the level's actual standable surfaces and reports what
+comes back, which is **not a new number**.
+
+### §500.1 The flaw was the population, not the arithmetic
+
+§443.3's population A was *"what the player can do under his own power"* and it was measured as jump
+and double-jump **from flat ground** — 1550 arcs, ceiling 14.586 m/s. Every number in it reproduces.
+What it never contained was the thing a vertical-traversal level consists of: **standing on
+something.** On a plane, arrival speed and intent are correlated, so a speed threshold could proxy
+for intent. The level decouples them, and the proxy stops working.
+
+### §500.2 Instrument provenance, including the half that did not reproduce
+
+§447.2's census is the input, per instruction, and reproducing its counts is the audit that this is
+the same surface set. Enumerating `ground`/`ledge` recs whose top face takes a capsule at any point
+of a 3×3 grid, edges sampled just outside the footprint on four sides:
+
+```
+  §447.2 published    101 standable elevated surfaces with a drop
+  reproduced here     101      EXACT, and stable across grid (3 or 5) and offset (0.34–0.50)
+  §447.2 published     85 >= 3.15 m  ·  71 >= 4.75 m
+  measured here        64          ·  56          — NOT reproduced
+```
+
+**The surface set is theirs; the per-edge drop measurement is not.** Their counts are used as
+published. The discrepancy is recorded rather than reconciled because nothing in the verdict below
+turns on it — 64 and 85 say the same thing about the level.
+
+The arrival instrument was validated against §447.2's own driven ladder before being used:
+
+```
+  WALK  h 4.60 -> 14.800   4.70 -> 14.800   4.80 -> 15.200      3 of 3 EXACT — theirs
+  JUMP  h 2.80 -> 14.586   3.10 -> 14.986   3.20 -> 15.386      mine reads 15.674 / 16.074 / 16.074
+```
+
+So my walk harness is theirs and **my jump harness is not** — it launches ~1.1 m/s harder. Every jump
+figure below is therefore quoted from §447.2 and none is measured here. **A closed form was tried
+first (§444.1) and abandoned**: it missed the driven jump ladder by 1.8 m/s, and per §442.3 the
+explanation for a wrong number is reached from the same picture that produced it, so it was replaced
+by driving rather than repaired.
+
+### §500.3 Population A, rebuilt — and the band is gone
+
+189 driven walk-offs from the level's reachable edges (`landed.force` off the bus, the field
+`Land.enter` actually compares). Surfaces below y 0 are excluded: §447.1 established the tomb is
+sealed, and a "standable surface" nobody can reach is not a population member. A first pass that did
+not exclude them reported a 51 m drop off a vault ledge as population A's ceiling, which is §435.4 —
+an enumeration from the collider list, never asked whether a player can get there.
+
+```
+  population A on flat ground (§443.3)      6.196 … 14.586 m/s
+  population A on the LEVEL, walk only      4.000 … 29.600 m/s      median 17.200
+  population B, authored descents           7.753 · 23.749 · 25.368
+              + §447.3's                    24.458 … 26.151 · 30.186 · 32.400
+```
+
+**The empty band 14.586 … 23.749 does not exist.** 67 reachable edges produce a plain walk-off
+arrival at or above population B's floor. The ceiling of what a player does to himself rose from
+14.586 to **29.600** — above five of the seven population-B members. The rungs are still 0.400 m/s
+apart at the top (26.400 · 27.200 · 27.600 · 28.000 · 28.400 · 29.600), which is the §443.3 quantum
+and the check that this is one ladder rather than a second instrument.
+
+**And the median matters more than the ceiling.** 17.200 m/s is the median walk-off on this level,
+against a threshold of 15.0. More than half the level's edges are a hard landing for walking off
+them.
+
+### §500.4 No single threshold replaces it, and this is the finding
+
+A decision table, produced so a person can arbitrate. **It is not a recommendation and it does not
+contain an answer**, because there is no value in it that does the job:
+
+```
+  landHard | walk-off edges HARD (of 189) | population B members that go SOFT
+    15.000 |  103   54%                   | 7.753
+    20.000 |   87   46%                   | 7.753
+    23.749 |   67   35%                   | 7.753
+    25.000 |   60   32%                   | 7.753, 23.749, 24.458
+    28.000 |   22   12%                   | 7.753, 23.749, 25.368, 24.458, 26.151
+    29.600 |    0    0%                   | 7.753, 23.749, 25.368, 24.458, 26.151
+```
+
+There is **no row with zero self-inflicted hard landings and every authored descent still hard.** The
+first threshold that stops punishing ordinary walk-offs (29.600) has already gone soft on five of the
+seven authored descents, including both of §443.3's upper two.
+
+That is not a tuning problem. It is the rule failing:
+
+> `landHard` is the first landing that was not a move you meant.
+
+**Walking off a 3 m terrace and walking off a 17 m roof are the same act at different heights, and
+arrival speed is exactly the quantity that cannot tell them apart.** On flat ground intent and speed
+were correlated and one could stand in for the other; on this level they are independent. **Arrival
+speed alone is no longer sufficient and the rule needs a second term** — candidates, named and not
+chosen: whether the departure was an input the player made, whether the descent lay on an authored
+route, whether a traversal affordance was live and declined during the fall. Picking a number that
+splits an overlap would be choosing which half of the level to be wrong about.
+
+`landBeat` 3.2 is untouched and not in question. **`landHard` is deliberately left at 15.0**: it is
+wrong in play, every alternative in the table is wrong differently, and changing it without the
+second term would move the damage rather than reduce it.
+
+### §500.5 The stage-2 15.600 is a collider defect and it does not carry the argument
+
+§447.2 flagged that walking south off stage 2 is not the 3.20 m drop it looks like. Measured — a
+capsule dropped from y 12 down the z axis at x 0:
+
+```
+  z 16.80 … 19.30   rests y 5.254      the deck, continuous
+  z 19.35           rests y 3.839      a notch, well under one capsule diameter wide
+  z 19.50           rests y 5.190      back up
+  z 20.00           rests y 0.013      the paving, 5.25 m down
+```
+
+A discontinuity roughly 0.15 m wide in the ground proxies, which a capsule of radius 0.34 at walk
+speed sails straight over — so the fall is 5.25 m and the arrival is 15.600. **This is a collision
+geometry defect and it belongs to the world lane, not to the landing threshold.**
+
+It is excluded from population A on those grounds, **and excluding it changes nothing**, which is the
+point worth recording. The band is killed by 67 other edges at arrivals up to 29.600. One 15.600
+outlier caused by a 15 cm notch was never load-bearing, and checking that before folding it in is
+what stopped it from being quoted as though it were.
+
+### §500.6 Why nothing in the codebase compensated for this
+
+Per §448.4: this defect is a member of the **silent** class. No workaround anywhere in `src/` or
+`tests/` hand-corrects a landing arrival, because the flat-ground ceiling was never contradicted by
+anything that ran — every arm that measured landings measured them at spawn, on the courtyard floor,
+which is a plane. The §446.3 detector would never have found this, and that is the bound §448.4 now
+states.
+
+### §500.7 Open seams filed for whoever picks them up
+
+Not built this round; the threshold was live and these are not.
+
+- **`Controller.useCollision(col)`** — §448.2's cluster. `_bindCollision()` re-reads
+  `engine.get('collision')` at the top of every `update()`, so a caller-supplied `col` survives zero
+  frames. Installing a stub currently costs `_colReal` + `_calibrated` + `_capOff` **and overwriting
+  the private method**, at four sites across `tests/_moveset.mjs`, `tests/traversal.test.mjs` and
+  `tools/sweepcensus.mjs`. A design gap, not a bug — the owner never claimed otherwise.
+- **A probe-memo invalidator** — `mark()`, `afford()` and `probeLedge()` memoise on `_frame`, which
+  only advances inside `update()`, so a harness that moves Sly and re-asks gets the previous answer
+  and must bump `_frame` by hand (6 sites in `traversal.test.mjs`). The recorded cost is at
+  `traversal.test.mjs:1724`: *"precisely how `combatStrafe` went missing from the first run of this
+  census."*
+- **`Controller.takeBounce()`** — `_bounceReq` is the only `src/`→`src/` write to another class's
+  private field in the shipped codebase: `Controller.bounce()` writes it, `Bounce.enter()`
+  (`Moveset.js:362`) reads and clears it. The correct idiom is already one screen away — `takeJump()`
+  consumes the jump buffer exactly this way.

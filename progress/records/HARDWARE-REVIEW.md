@@ -60,20 +60,40 @@ speaks.
 > measured `max(-velocity.y last frame, landImpact)`, which is one gravity tick below the field
 > `Land.enter` actually compares against `landHard`; every number in it was a tick low.
 
-**What to watch.** Jump around normally: no landing should cost you control. Then take one of the level's
-real drops. The hard landing should feel like something that happened *to* you rather than something you
-did. If ordinary play produces hard landings, 15.0 is too low; if the big authored falls feel weightless,
-it is too high.
+> ### ⚠ SECOND CORRECTION — the band below does not exist, and this item is no longer a free judgement
+>
+> Everything from **"What to watch"** to the end of this item was written against a population measured
+> **on flat ground**, and the shipped level is not flat. It is struck through in meaning rather than
+> deleted, because it was quoted to two lanes. Read §500 before acting on any of it.
+>
+> - **"Jump around normally: no landing should cost you control" is false on this level.** The hard
+>   landing starts at a **3.15 m hop** and a **4.75 m walk-off** (§447.2, driven). Of the level's 101
+>   standable elevated surfaces, **85 are above the jump line and 71 above the walk line**.
+> - **The 14.586 … 23.749 band is gone.** Rebuilt against the level's real surfaces, a plain walk-off
+>   reaches **29.600 m/s** and the median walk-off is **17.200** — above the threshold itself. 67
+>   reachable edges already arrive at or above population B's floor. The two populations overlap.
+> - **The caveat immediately below came back CLEAN and it was the wrong caveat.** §447.3 drove wall
+>   exits (worst 12.400, zero hard), and the Cane Slam cannot produce one by construction. Nothing
+>   moved the ceiling — what moved it was *standing on the level at all*, which nobody had listed as a
+>   self-inflicted vertical because it is not a move.
+> - **So there is no number to choose.** §500.4's table has no row with zero ordinary hard landings and
+>   every authored descent still hard. `landHard` stays at **15.0** pending a second term in the rule,
+>   because every alternative is wrong differently rather than less.
 
-**How much room you have.** More than the single number suggests, and this is the useful part. Every value
-in **14.586 … 23.749** separates the same two populations identically — the measurement fixes the *band*,
-not the choice inside it, and `recover.test.mjs` L1 passes for all of them. So this is a free judgement
-across a 9 m/s window, not a nudge. Below 14.586 you start making the player's own jumps hard; above
-23.749 the 12 m descent to the vault lands soft. Between those, trust your ears.
+**What to watch, revised.** Two questions, and only the second is still a free judgement.
 
-**One caveat on the ceiling.** Population A is jump and double-jump from flat ground. Wall-run exits,
-magnetism yanks and enemy bounces are self-inflicted verticals the sweep never launched, so if one of
-those turns out to arrive above 14.586 the band's lower edge moves. Worth a deliberate try on hardware.
+1. **Is a walk-off of an ordinary terrace supposed to hurt?** On this level it does, at 15.0, more than
+   half the time. Walk south off the stage-2 deck — a required route waypoint — and it lands **15.600,
+   hard**. (That specific arrival is a collider defect, §500.5: a 15 cm notch in the ground proxies turns
+   a 3.20 m step into a 5.25 m fall. It is filed for the world lane. It is *not* why the band is gone.)
+2. **If the answer is no, what tells a terrace from a roof?** Not arrival speed — §500.4 shows it cannot,
+   because they are the same act at different heights. The rule needs a second term and the candidates
+   are named in §500.4. **That is a design decision, not a tuning one**, and it is the thing actually
+   owed here now.
+
+**What is still safe to say.** `landBeat` 3.2 is not in question — every landing speaking is right, and
+§443.1's coin-flip silence is genuinely fixed. The arrival quantum is 0.400 m/s and every threshold sits
+on that ladder, so any future choice moves in whole steps.
 
 ---
 

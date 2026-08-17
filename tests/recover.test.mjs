@@ -465,7 +465,22 @@ test('L1: landHard sits in a band that neither population can reach', async () =
    *               window. Where 15.0 sits inside it is a feel decision, owed to hardware review,
    *               not a measurement. Nor is population A complete: it is jump and double-jump
    *               from flat ground. Wall-run exits, magnetism yanks (`magYankGain` 11.0) and
-   *               enemy bounces are self-inflicted verticals this arm never launches. */
+   *               enemy bounces are self-inflicted verticals this arm never launches.
+   *
+   *   ── §500: THIS ARM'S HEADLINE IS FALSE ON THE SHIPPED LEVEL, AND IT STILL PASSES ──
+   *   The band is real between the two populations THIS ARM MEASURES, and both of them are
+   *   measured at spawn on the courtyard floor, which is a plane. Rebuilt against the level's
+   *   101 standable surfaces, a plain WALK off a reachable edge reaches 29.600 m/s and the
+   *   median walk-off is 17.200 — above `landHard` itself — so the 14.586…23.749 band does not
+   *   exist in play and 67 edges already arrive inside population B. §500.4 shows no single
+   *   threshold separates them.
+   *
+   *   This arm is deliberately NOT widened to cover that. Its populations are the ones §443.3
+   *   derived the number from, and it exists to pin that derivation against drift. What is
+   *   added here is the disclaimer, because the failure mode §418.3 exists to prevent is
+   *   exactly this: a green arm titled "landHard sits in a band that neither population can
+   *   reach" being quoted for a claim about the LEVEL that it structurally cannot see. It
+   *   cannot see the level. It has never stood on anything. */
   const TICK = -TUNE.gravity * DT;
   const { engine, c, mods } = await realWorld();
 
