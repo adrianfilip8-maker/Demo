@@ -61,9 +61,11 @@ either alone leaves landings under-read.
 ## 3. The wall run does not look like a wall run
 
 Routing it correctly this session made the `wall_run` framing reachable for the first time, and its
-boom still delivers **5 %** (0.13 m of 2.59 m). The bank arrives (94–106 %), so the horizon does
-roll — but the camera never pulls back to show the wall. Measured cause: the wall itself occludes
-the boom, so this one is geometry, not chain depth, and no camera constant reaches it.
+boom still delivers **5 %** (0.13 m of 2.59 m). **The bank does not arrive either** — `_wallSide` is
+0 on 121 of 121 driven frames and `_roll` is exactly 0.00000, because this level's wall runs are
+head-on and the probe casts sideways (`KNOWN_ISSUES.md` §438). An earlier revision of this note said
+the bank arrives at 94–106 % and that the boom was occluded; both were wrong, and the boom is cut by
+3 cm. So a wall run currently reads as a plain jump: no bank, no pull-back.
 
 ## 4. There is one ground speed on a keyboard
 

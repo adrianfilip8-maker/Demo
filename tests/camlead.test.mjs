@@ -287,18 +287,35 @@ test('L2: vertical look is geared below horizontal, by exactly lookPitchScale', 
 /* L3 — the wall-run bank, live for the first time                         */
 /* ====================================================================== */
 
-test('L3: a wall run banks the horizon, and it takes the wall to do it', () => {
+test('L3: the wall-side probe is wired and gated correctly — WIRING ONLY, see the domain note', () => {
   /* The consequence of the `wallRun -> wall_run` routing fix. `_blendFrame` gates the wall-side
      probe on `_frameKey === 'wall_run'`, so while `wallRun` routed to the `run` framing the probe
      never ran and `_roll` was pinned at exactly 0 for the entire move.
    *
+   * ── WHAT THIS ARM PROVES, AND WHAT IT DOES NOT (retitled after being caught) ─────────────────
+   * `OneWall` answers a hit for whichever cast points at its chosen side, and `_probeWallSide`
+   * casts along ±`rig.right`. **The stub places the wall exactly where the probe is looking, by
+   * construction.** So this arm can only ever demonstrate that the probe, the gate and the roll
+   * sign are wired together correctly. It cannot say whether a wall run in the real level puts a
+   * wall there, and for two rounds its green was read as though it could.
+   *
+   * Driven against the shipped temple, on the route that produces `wall_run` framing:
+   * `_wallSide` is non-zero on **0 of 121 frames** and `_roll` is exactly **0.00000**. The
+   * geometry says why — the wall normal is (0, 0, 1) and the run direction is (0, 0, −1), i.e.
+   * head-on, and `Moveset.WallRun.enter`'s own comment already says *"a head-on approach has
+   * `n · right` ≈ 0 and no side either way; only glancing runs could ever show it."*
+   *
+   * The arm is KEPT, retitled, because a wiring test is worth having as long as it says it is
+   * one. What is forbidden is a wiring test being counted as delivery evidence — §437.1, which
+   * this lane wrote about somebody else's fix one round before failing it here.
+   *
    * DOMAIN (§418.3)
-   *   passes on : stateName 'wallRun' with a wall on the right — `_roll` settles non-zero and
-   *               signed toward the wall.
-   *   fails on  : the SAME wall with stateName 'move'. `move` routes to `idle`, the probe is
-   *               gated off, and `_roll` stays 0 — which is precisely the pre-fix condition, so
-   *               the failing input is the defect itself rather than an invented one. Asserted
-   *               below, not assumed. */
+   *   passes on : stateName 'wallRun' with `OneWall` on the right — `_roll` settles non-zero and
+   *               signed toward the wall. A CONSTRUCTED input, and that is the point of the note.
+   *   fails on  : the SAME stub wall with stateName 'move'. `move` routes to `idle`, the probe is
+   *               gated off, and `_roll` stays 0 — precisely the pre-routing-fix condition.
+   *   does NOT discriminate : whether the level ever presents a wall to either side. That is a
+   *               question about geometry and this stub cannot hold it. */
   const run = (stateName, side) => {
     const engine = baseEngine(new OneWall(side));
     const rig = new CameraRig(engine);

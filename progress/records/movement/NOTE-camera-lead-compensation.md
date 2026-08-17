@@ -114,8 +114,14 @@ which is the useful shape: the worst steps are occlusion pull-ins and those were
 Collapsing does not add snaps; it adds small continuous movement.
 
 **And it separates two causes that looked like one.** `land` 0 → 53 % is chain depth. `wall_run`
-5 → 8 % is not — its boom is governed by the wall it is running along, so no amount of chain
-shortening reaches it. Before this run both were simply "the framing does not arrive".
+5 → 8 % is not — chain shortening does not reach it.
+
+> **RETRACTED, and see `KNOWN_ISSUES.md` §438.** This note previously said `wall_run`'s boom is
+> "governed by the wall it is running along". Instrumented, the boom is cut by **0.03 m** — it is
+> not occluded at all. What is actually wrong is the bank: `_wallSide` is 0 on 121 of 121 frames
+> and `_roll` is exactly 0.00000, because the level's wall runs are head-on and the probe casts
+> sideways. The chain-collapse numbers above are unaffected; only the explanation of `wall_run`'s
+> row was wrong.
 
 Still a human's call: +33 % of continuous boom motion against `land` going from nothing to half.
 
