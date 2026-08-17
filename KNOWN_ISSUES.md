@@ -33703,3 +33703,98 @@ Neither argument is a playtest, and the constant is labelled in the source as a 
 argument rather than measured. That label is the point. `distSpeedGain` above is on the same list for
 the same reason, and the difference between an under-determined constant and an arbitrary one is
 whether anyone wrote down which it is.
+
+## §423 — The claimed proofs were true, and writing them down falsified two of my own instruments
+
+`Props.js:670-688` stated for months that all twelve clue-bottle spots were *"checked headlessly
+against the real `Collision` on three tests"* and printed the results. **No such test existed.**
+§416's shape, and §421's vault reward promoted it from cosmetic to blocking: a bottle you cannot
+reach is now a set you cannot finish and a treasure you cannot get.
+
+The proofs are now `tests/cluevault.test.mjs` R0–R3, run against the built level — Terrain,
+Architecture and Props, 273 colliders, 115,676 triangles, one BVH, ~4 s shared by four arms.
+
+### §423.1 The verdict on the claims: the decoration was true
+
+```
+  R1  a downward ray finds a real surface        12/12    drops 0.561 – 5.460 m
+  R2  inside the 2.40 m magnet from the nearest
+      place a PLAYER can actually be             12/12    0.080 – 0.700 m
+  R3  NOT reachable from the courtyard floor     12/12
+```
+
+`Props.js` claimed *"0.08–0.70 m, worst case the ladder bottle"* and named rung
+`notch-pylon-e-w-5`. **Both bounds reproduce to the digit and the rung is the right one.** Two
+numbers in its surrounding prose did not survive and are corrected in place: the pylon face under
+the ladder bottle is **5.460 m** below it, not 5.93, and the stale §8.1 cornice coordinate falls
+**13.600 m**, not "the full 15".
+
+That outcome is worth stating plainly because it is the less interesting half. A claimed check
+that nothing performed turned out to be *accurate*. The value of the round is not that it caught
+a lie; it is that the numbers are now re-derived on every suite run instead of being remembered.
+
+### §423.2 R3's first instrument was wrong, and it is §419 transposed exactly
+
+The first version asked `Collision.groundCheck` whether standable ground exists at courtyard level
+within a magnet radius of each bottle. It reported **bottle 0 (terrace stage 1) REACHABLE at
+2.100 m from (−2.20, 0.00, 17.50)** — one of twelve, a real defect, blocking the vault.
+
+The ground is real. It is the desert **TERRAIN, buried under the terrace platform.** No player can
+occupy it. Adding a headroom ray — `Controller.TUNE.height` of clear space above the candidate —
+blocks **97 of 97** candidates there, and R3 is 12/12.
+
+> **"Ground exists here" is not "a player can stand here"**, precisely as §419.2's *"in frustum
+> and not behind terrain" is not "visible".* Both are a query that answers a necessary condition
+> being read as the sufficient one.
+
+The dangerous property is the direction of the error. **The level was right and the instrument was
+wrong** — the harder case to notice, because a false alarm agrees with a plausible worry and
+invites you to go fix the level. Had I trusted it, I would have moved a bottle that was correctly
+placed. Both instruments now run on every pass and are asserted to disagree on exactly that
+bottle, so neither the bar nor its correction can rot silently.
+
+### §423.3 R0's floors did not discriminate, and only running the counterexample said so
+
+R0 asserts the harness built the whole world, following `traversal.test.mjs`'s hard-won habit —
+*"a harness that omits a module does not fail; it runs, it returns, and its numbers are
+plausible."* I wrote floors of 200 colliders and 50,000 triangles, and a `DOMAIN` block claiming
+they caught a missing PROPS.
+
+Running it (§418.9, and the first time the new clause changed an outcome rather than a sentence):
+
+```
+  with PROPS      273 colliders   115,676 tris   8 hazard recs    R1 12/12
+  without PROPS   253 colliders    51,222 tris   0 hazard recs    R1 12/12
+```
+
+**Both floors clear comfortably.** Worse, R1 still reports 12/12 — bottle 3 simply lands on the
+architecture ledge at y 9.000 instead of the PROPS surface at y 9.439. A different world, answered
+confidently, with no assertion disturbed. That is traversal.test.mjs's warning reproduced rather
+than quoted.
+
+The fix is **not** raising the floors to 260 and 100,000: that is §141.1, moving a threshold after
+seeing where the result landed, and it would encode this week's collider count as a law. The fix is
+a term with a structural reason — `hazard` colliders are braziers, braziers are PROPS' and nobody
+else's, so the count goes 8 → 0 and cannot be reached by any other module. The floors stay as
+tripwires and are **labelled** as such rather than counted as evidence.
+
+> The general form, and it is the reason §418.9 earns its cost: **a bar you have not run against
+> its counterexample is a bar whose sensitivity you are guessing at.** I would have shipped those
+> two floors believing they guarded the harness. They guard nothing.
+
+### §423.4 Residue closed and residue remaining
+
+`Icons.glyph('clue')` had no case, so all twelve toasts fell through `default:` to the generic
+sparkle — nothing broke and nothing warned, which is exactly why it survived. Taken (Icons.js was
+clean at the time; `git status` checked first). Its arm asserts the fallback is byte-identical
+across two unknown names *before* comparing against it, so the bar cannot pass on a comparison
+that has stopped being able to fail.
+
+Still open, and neither is mine to take:
+
+- **`Pickups.debugInfo()` and `Smashables.debugInfo()`** are defined and called by nothing in
+  `src/`. Pre-existing; listed so the next §357.1 audit does not rediscover them.
+- **`WallClimb.enter`'s capsule placement is replicated** in R2's cling reading, because the state
+  cannot be entered without a driven Controller. The original is scraped and pinned, so a change
+  to it fails the arm rather than silently making the ladder bottle's 0.700 m fiction — but a
+  replication is still a replication, and the honest fix is a probe that drives the real state.
