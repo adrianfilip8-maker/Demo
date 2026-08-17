@@ -202,8 +202,6 @@ const DEAD_BY_DECISION = ['binocucom'];
 /**
  * Dead because nobody has built the other half yet. **This** is the to-do list.
  *
- *   objective         the HUD renders an objective card and `HUD.init` sets the only one that ever
- *                     appears, by direct call. The event is the hook a mission script would use.
  *   propSmashed       both FX halves of a prop coming apart exist and **nothing breaks props yet**.
  *                     `Particles.smash()` throws the debris, the contact puff and (on metal) the
  *                     sparks, and leaves a `dust_ring` — or a `scorch`, metal only; `Audio._onSmash()`
@@ -224,6 +222,20 @@ const DEAD_BY_DECISION = ['binocucom'];
  *   unregisterTarget  `Controller.js:378` can drop a magnetism target; nothing ever asks it to. The
  *                     `registerTarget` counterpart IS published (§223), so this is half a pair.
  *
+ * ── `objective` was deleted from here, and the deletion is the deliverable ──────────────────────
+ * This line said *"the event is the hook a mission script would use"*, and there was no mission
+ * script. There is now one beat of one: `Pickups._openVault()` publishes `objective` when the
+ * twelfth clue bottle is found, so the level's standing goal — "Steal the Eye of Ra", printed on
+ * the card since `HUD.init` and never achievable because no Eye of Ra existed — gains a subtitle
+ * saying the vault is open, and a treasure behind it. See `tests/cluevault.test.mjs` V6/V7/V8.
+ *
+ * Worth recording what made this the RIGHT publisher rather than a convenient one: `objective` is
+ * not `prompt`. Publishing `prompt` retires the HUD's affordance fallback permanently, which is
+ * why that line is still here; publishing `objective` sets `_objBase` and is restored after a
+ * carry, so the only cost of getting it wrong is a wrong card. The vault beat also deliberately
+ * republishes the SAME title, because `HUD.objective()` treats a non-transient objective as the
+ * new standing goal and a title about a vault would have replaced the level's own.
+ *
  * ── `clue` was deleted from here, which is what closing an UNBUILT line looks like ──────────────
  * `Audio.js` had a built, tested `clue_bottle` sting and a live `on('clue')` subscriber, and
  * **nothing in the game was a clue** — `PropKit.clueBottle()` was exported and never imported.
@@ -243,10 +255,10 @@ const DEAD_BY_DECISION = ['binocucom'];
  * does. That is the property that makes the register worth trusting, and the only way to keep it is
  * to actually delete lines when they stop being true.
  */
-const DEAD_UNBUILT = ['objective', 'prompt', 'propSmashed', 'unregisterTarget'];
+const DEAD_UNBUILT = ['prompt', 'propSmashed', 'unregisterTarget'];
 
 const DEAD_SUBSCRIPTIONS = [...DEAD_BY_DECISION, ...DEAD_UNBUILT];
-if (DEAD_SUBSCRIPTIONS.length !== 5) throw new Error('DEAD_SUBSCRIPTIONS miscounted');
+if (DEAD_SUBSCRIPTIONS.length !== 4) throw new Error('DEAD_SUBSCRIPTIONS miscounted');
 if (DEAD_BY_DECISION.some((k) => DEAD_UNBUILT.includes(k))) throw new Error('an event is in both buckets');
 
 /**

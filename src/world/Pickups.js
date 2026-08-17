@@ -3,7 +3,18 @@ import { rng, WORLD_SEED } from '../core/Rand.js';
 import { coin as coinGeo, clueBottle, ingot, scarab, collar, place, mergeAll } from './PropKit.js';
 
 /**
- * Pickups — the collect loop. Coins, treasure, and the fence they are carried to.
+ * Pickups — the collect loop. Coins, clue bottles, treasure, and the fence they are carried to.
+ *
+ * ── The clue bottles and the vault (§357.1, the ninth) ─────────────────────────────────────
+ * The bottle feature arrived in four pieces built by four lanes and joined at three of its four
+ * seams: `PropKit.clueBottle()` draws one, `Props._clueBottles()` places twelve on the authored
+ * route, this file collects them and publishes `clue`, and `Audio.js` plays a built and tested
+ * `clue_bottle` sting. What nothing did was **consume the set**. `found` and `total` went out on
+ * every collection into a listener that reads neither, so twelve bottles were twelve identical
+ * chimes and completing them changed nothing — a collectible with no collection.
+ *
+ * The end of the set is `_openVault()`. See its docblock for why the payoff is one treasure and
+ * not a system, and for the second dead subscription (`objective`) that closing this one closed.
  *
  * ── Why this file exists (§239, and what §239 got half-right) ──────────────────────────────
  * `src/fx/Particles.js:2221`, `src/ui/HUD.js:391` and `src/audio/Audio.js:1251` each subscribe
@@ -154,6 +165,32 @@ export const TREASURES = [
   { id: 'scarab', name: 'Scarab of Khepri', value: 180, shape: 'scarab', pos: [2.2, 9.35, 8.4] },
   { id: 'collar', name: 'Wesekh of Ra',     value: 240, shape: 'collar', pos: [23.0, 9.4, -13.0] },
   { id: 'ingot',  name: 'Ingot of Amun',    value: 320, shape: 'ingot',  pos: [0.0, -11.75, -72.0] },
+  /**
+   * The Eye of Ra — the vault's prize, and the one treasure that is not lying in the open.
+   *
+   * `HUD.js:338` has printed **"Steal the Eye of Ra"** on the objective card since the HUD was
+   * written, and `HUD.js:515` has Bentley saying *"The Eye of Ra is in the vault under the
+   * hall"* on the Binocucom. There was no Eye of Ra anywhere in `src/`. The game has stated its
+   * own objective from the first frame and the object it names did not exist — the same defect
+   * as §239's coin, one layer up: a goal is a contract too, and this one had no publisher
+   * either.
+   *
+   * `locked: 'clues'` is the only gate in this file. While it holds the mesh is not drawn and
+   * `stepPickup` never sees it, so an ungated player cannot brush past the vault and take it.
+   *
+   * Position: dead centre on the front lip of Ra's plinth (`Props.js` puts `falconRa` at
+   * `L.vault.z - 3.2 = -75.2`; `Statues.falconRa`'s base is `chunkAt(-1.00, 1.00, 0, 0.52,
+   * -0.90, 0.90)`, so its top is `L.vault.y + 0.52 = -11.48` and its front face is `z = -74.3`).
+   * The Eye floats 0.28 m over that lip under the sun disc — `Statues.js:594` calls that disc
+   * "the brightest single shape in the tomb", which is the light this is staged to catch.
+   *
+   * 500 is the top of the ladder on purpose: `Guard.js` rolls 45-90 for a temple guard and
+   * 80-150 for a heavy, and the ingot — the deepest treasure before this one — is 320. The Eye
+   * costs twelve bottles AND the walk back out, so it has to be worth more than the thing you
+   * could already carry out of the same room.
+   */
+  { id: 'eye', name: 'Eye of Ra', value: 500, shape: 'eye', pos: [0.0, -11.20, -74.30],
+    locked: 'clues' },
 ];
 
 /** Where loot turns into money. Beside spawn (0,0,30) — the way in, and the way out. */
@@ -350,7 +387,9 @@ export class Pickups {
     this.wallet = new Wallet(TUNE);
     this.coins = [];        // { pos, kind, value, taken, phase }
     this.clues = [];        // { pos, taken, magnet, phase, home } — Sly's clue bottles
-    this.treasures = [];    // { id, name, value, pos, taken, banked, mesh, phase }
+    this.clueCount = 0;     // bottles found; the vault opens when it reaches clues.length
+    this.vaultOpen = false; // latched by `_openVault`, so the beat cannot fire twice
+    this.treasures = [];    // { id, name, value, pos, taken, banked, mesh, phase, locked }
     this.fence = new THREE.Vector3().fromArray(FENCE.pos);
 
     this._geoms = [];
@@ -506,6 +545,19 @@ export class Pickups {
     const R = this.rng;
     if (shape === 'scarab') return place(scarab({ len: 0.42, rng: R }), { y: -0.05 });
     if (shape === 'ingot') return place(ingot({ w: 0.46, h: 0.16, d: 0.26, rng: R }), {});
+    /* The Eye of Ra: an upright sun disc with a stepped rim, not a big coin. `coin()` is
+       already a disc lathe and the only primitive in PropKit that is one, so the shape is two
+       of them — a 0.30 m face standing proud of a 0.34 m backing plate, which gives the 4 cm
+       rim that reads as beaten gold rather than as currency. `rx` stands it up: a cylinder's
+       axis is +Y, and `Props._collectibles` rotates coins by the same quarter turn to lay them
+       FLAT, so leaving it out here is what would make this a coin. The update loop spins it
+       about Y, so it presents face, edge, face — the sun disc turning. */
+    if (shape === 'eye') {
+      return mergeAll([
+        place(coinGeo(0.30, 0.08), { rx: Math.PI / 2 }),
+        place(coinGeo(0.34, 0.04), { rx: Math.PI / 2, z: -0.05 }),
+      ]);
+    }
     if (shape === 'collar') {
       const parts = [];
       collar({ r: 0.34, rows: 4, rng: R }).drain((_key, geo) => parts.push(geo));
@@ -605,7 +657,11 @@ export class Pickups {
     }
 
     for (const tr of this.treasures) {
-      if (tr.taken || tr.banked) continue;
+      /* `locked` is checked here rather than inside `stepPickup`, which is a pure function over
+         one pickup and must stay that way — the gate is a property of this level's economy, not
+         of the magnet law. A locked treasure is not merely invisible: it never enters the
+         magnet at all, so walking through the vault with eleven bottles cannot snag it. */
+      if (tr.taken || tr.banked || tr.locked) continue;
       if (stepPickup(tr, player, dt, TUNE)) this._takeTreasure(tr);
     }
 
@@ -649,7 +705,7 @@ export class Pickups {
 
     for (const tr of this.treasures) {
       if (!tr.mesh) continue;
-      tr.mesh.visible = !tr.taken && !tr.banked;
+      tr.mesh.visible = !tr.taken && !tr.banked && !tr.locked;
       if (!tr.mesh.visible) continue;
       const y = tr.magnet ? tr.pos.y : tr.home + Math.sin(t * TUNE.treasureRate + tr.phase) * TUNE.treasureBob;
       tr.mesh.position.set(tr.pos.x, y, tr.pos.z);
@@ -660,9 +716,31 @@ export class Pickups {
   /* --------------------------------------------------------------------- */
 
   _collectCoin(c) {
-    const milestone = this.wallet.credit(c.value);
-    this._coin(c.value, c.pos);
+    this.award(c.value, c.pos);
+  }
+
+  /**
+   * Pay coins from somewhere that is not a coin. **Public, and the reason it is public matters.**
+   *
+   * The wallet header above records the trap in detail: `coin` is banked by `Wallet.credit()`
+   * here AND by `Health.js:148` into the charm purse, through two independent paths off one
+   * event. A second module emitting `coin` directly would therefore move the purse, the HUD and
+   * the FX and leave `Wallet.coins` behind — a divergence with no assertion that catches it and
+   * no visual that looks wrong until a charm is awarded for an empty wallet.
+   *
+   * `src/world/Smashables.js` needed to pay for a broken jar. Rather than let it publish, it
+   * calls this, and `_coin` remains what its own docblock says it is: the one event shape and
+   * the only place it is built. Any future coin source — a chest, a guard's dropped purse — is
+   * expected to come through here for the same reason.
+   *
+   * @param {number} value  coins to credit. Doubles as Audio's chime count, capped at 6.
+   * @param {THREE.Vector3} pos  where it happened; copied, never retained.
+   */
+  award(value, pos) {
+    const milestone = this.wallet.credit(value);
+    this._coin(value, pos);
     if (milestone) this._emit('toast', { text: `${milestone} coins`, icon: 'coin' });
+    return milestone;
   }
 
   /**
@@ -687,6 +765,78 @@ export class Pickups {
       text: `Clue bottle ${this.clueCount} / ${this.clues.length}`,
       icon: 'clue',
     });
+    if (this.clueComplete()) this._openVault(c.pos);
+  }
+
+  /**
+   * Is the set finished? **`total > 0` is the whole assertion**, and it is not defensive noise.
+   *
+   * `this.clues` is populated by adopting `Props._collect`. With PROPS absent — headless boot,
+   * an early frame, a level that never placed bottles — the array is empty, and the natural
+   * spelling `found >= total` is `0 >= 0`, which is TRUE. The vault would spring open on the
+   * first update of a level containing no bottles at all, and nothing would look wrong: the Eye
+   * would simply be sitting there.
+   *
+   * That is the same arithmetic that made `bottle_manager._ready()` in the reference compute
+   * `bottles_count = bottles_count_max - bottles.size()` and get identically zero — a set-size
+   * expression evaluated at a moment when the set is not yet what it will be. Different sign,
+   * same trap, and worth naming because this file's own header already records that PROPS may
+   * be absent or reshaped and that adoption must degrade safely.
+   */
+  clueComplete() {
+    const total = this.clues.length;
+    return total > 0 && (this.clueCount || 0) >= total;
+  }
+
+  /**
+   * The twelfth bottle opens the vault. This is the whole payoff and it is deliberately small.
+   *
+   * ── Why a treasure and not a new system ───────────────────────────────────────────────────
+   * In Sly 2 and 3 the bottles buy the combination to a safe and the safe holds an ability. This
+   * project has no ability system and is not getting one, so an unlock that pointed at one would
+   * be a tenth §357.1 machine wired at one end — the exact defect the clue bottles were sitting
+   * in. The reward therefore routes entirely through plumbing that is ALREADY live at both ends:
+   * the Eye becomes a normal treasure, and `_takeTreasure` / `_dropTreasure` / `_bankTreasure`
+   * give it carry-slowdown, drop-on-CHASE, the fence walk, the HUD carry card (`HUD.js:650-652`)
+   * and the Audio banking sting (`Audio.js:1380`) for free. Not one new subscriber is required
+   * for the reward itself, which is the test of whether a payoff is modest.
+   *
+   * ── `objective` — a listed dead subscription, closed ──────────────────────────────────────
+   * `tests/eventbus.test.mjs` lists `objective` under DEAD_UNBUILT: *"the HUD renders an
+   * objective card and `HUD.init` sets the only one that ever appears, by direct call. The event
+   * is the hook a mission script would use."* Opening the vault is the first thing in this game
+   * that is a mission beat, so it is the right publisher and this is the second dead end the
+   * clue bottles close. The census file's own doctrine is that the line is DELETED when it
+   * lands, not moved to a "fixed" list, and it has been.
+   *
+   * The title is deliberately UNCHANGED from `HUD.js:338`'s. `HUD.objective()` stores a
+   * non-transient objective as `_objBase` and restores it after a carry ends, so rewriting the
+   * title here would permanently replace the level's standing goal with a line about a vault.
+   * Only the subtitle moves — the goal was always "Steal the Eye of Ra"; what changed is that
+   * it is now possible.
+   */
+  _openVault(at) {
+    const tr = this.treasures.find((t) => t.locked === 'clues');
+    if (!tr || this.vaultOpen) return;
+    this.vaultOpen = true;
+    tr.locked = null;
+
+    this._emit('toast', { text: 'The vault is open — the Eye of Ra', icon: 'eye' });
+    this._emit('objective', {
+      title: 'Steal the Eye of Ra',
+      sub: `The vault under the hall — all ${this.clues.length} clue bottles found`,
+    });
+
+    /* A glint on the Eye itself, so the thing that changed is visible from wherever the last
+       bottle was taken. `spawn()` is FX's own public direct-call path (`Particles.js:2765`, the
+       same one PROPS uses for braziers) rather than a new bus event nobody subscribes to.
+       `coin_sparkle` is the catalogue's existing "a pickup announces itself" curve. Guarded:
+       FX is absent headless, and a decoration must never cost the player his unlock. */
+    try {
+      const fx = this.engine.get?.('fx');
+      fx?.spawn?.('coin_sparkle', { position: tr.pos });
+      if (at) fx?.spawn?.('coin_sparkle', { position: at });
+    } catch { /* see above */ }
   }
 
   /**
@@ -778,6 +928,7 @@ export class Pickups {
       placed: this.stats.coins, treasuresPlaced: this.stats.treasures,
       remaining: this.coins.reduce((n, c) => n + (c.taken ? 0 : 1), 0),
       cluesPlaced: this.stats.clues, cluesFound: this.clueCount || 0,
+      vaultOpen: !!this.vaultOpen,
       lastPocket: this._lastPocket || null,
     };
   }
