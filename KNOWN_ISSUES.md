@@ -35087,3 +35087,101 @@ already derived for the ladder, or accepting the compositional answer §431 give
 proven, none blocked by geometry) as the strongest available evidence until then.
 
 Held, with the terrace fix, for a round where both can be done properly.
+
+## §434 — The per-beat drive: 4 of 12, three more false defects, and the blocker is recovery
+
+Decision (b) is done and committed. Decision (a) is started, funded and **partial**, and the
+number is **4 of 12 clue bottles in one continuous drive** — which I do not believe is the
+level's number, for reasons that are the substance of this section.
+
+### §434.1 What the level actually offers, which changed the approach
+
+The route is not walked, it is *played*, and the level authors the mechanics for it:
+
+```
+  15 traversal targets   notch-pylon-e-mouth · hook-main-0..6 · hook-low-0..3 · 3 spires
+  6 rails                approach · pylon-drop · roof-w · roof-e · hall-cable · pylon-summit
+  26 handholds           notch-pylon-e-w x13 · notch-pylon-e-e x13
+  4 vents                the hall north-west corner to the vault west shelf
+```
+
+`notch-pylon-e-mouth` at (10.9, 2.6, 37.1) is a target sitting at the ladder foot — the assist
+is *designed* to put you on the ladder. Building beat scripts against that vocabulary rather
+than against raw geometry is what moved the number at all.
+
+Three beats now work end to end:
+
+- **The ladder, completely.** From rung 0 it catches **all twelve rungs**, y 2.10 → 28.95. The
+  earlier 7-rung result was an artefact of starting halfway up.
+- **The target assist.** Walk at `notch-pylon-e-mouth`, tap jump, `toTarget` fires and delivers.
+- **The rail drop.** `rail:pylon-drop` carries him from the pylon to the SE architrave and
+  bottle 3 collects.
+
+One continuous drive from spawn: **4/12 bottles, the scarab treasure carried, 16 coins**, all
+through the real `Pickups` module reading a real driven `Controller`.
+
+### §434.2 Three more false defects, and the control that caught all three
+
+Every stall this round read like a level defect. **Every one was exonerated by the same check.**
+
+```
+  ladder mouth   driver stalls at x 8.2, 2.79 m short; a 3.1 m plinth face on the straight line
+                 COLD START from (8, 38.5) — 1.5 m further out — reaches it at 0.03 m, wallClimb
+  kiosk lintel   driver pinned at (3.0, 7.8, 8.4); one ray reads floor 7.47 under feet 7.41,
+                 headroom BLOCKED at 0.34 m
+                 COLUMN shows floor 5.20 to ceiling 7.75 — a 2.55 m room
+                 COLD STARTS from that point and three neighbours all reach the lintel in 400 f
+```
+
+With §433's near-miss that is **four in two rounds**, all with the same shape: a clearance
+number that looks like a defect, and a level that is fine. The generalisation the coordinator
+drew from §433 held every time:
+
+> A clearance reading is only a clearance reading if you have seen **both** faces. One ray gives
+> you the distance to a ceiling; it never gives you the size of a space.
+
+And the control that did the work was not the probe. It was **re-running from a cold start at the
+same point** — asking whether the position is escapable at all, which is a question whose answer
+could come out either way. The probe explains; the cold start decides.
+
+### §434.3 The blocker is recovery, and that is a precise claim
+
+The driver reaches (3.0, 7.8, 8.4) and stops. A cold start *from that exact position*, same
+input, reaches the kiosk lintel in 400 frames. So the position is not the problem — **the state
+he arrives in is.**
+
+I added the obvious missing behaviour, a back-off-and-re-approach, since every dead run ended
+the same way: wedged against a face, holding forward for thousands of frames, while a player
+would step back. It fires, and it is not enough — he shuffles between z 8.5 and 11.3 at y 7.8
+and never gets up. So the remaining gap is state-dependent recovery, not navigation, and it is
+more than a round's work.
+
+**That is the honest reading of 4/12: a statement about the driver, and the fourth consecutive
+time this instrument's output has been about itself rather than about the level.** Nothing found
+this round argues the loop is broken. Nothing found this round proves it closes either.
+
+### §434.4 An unfalsifiable success message, in my own tooling
+
+The recovery behaviour appeared to change nothing — byte-identical output, frame for frame. The
+edit had never landed: a `str.replace` that silently no-ops on a missed anchor, followed by
+`print("recovery added")` **conditioned on nothing**.
+
+The same defect class this session has been chasing for twenty sections, in the scaffolding I was
+using to chase it. The fix is the one §418.9 already prescribes: the second attempt asserts the
+anchor exists *and* asserts the replacement is present afterwards, and only then prints. A
+success message that cannot fail is a bar that cannot fail.
+
+Worth recording because scratch tooling is exactly where this goes unnoticed — nobody reviews it,
+it has no tests, and its output is trusted precisely because it is trivial.
+
+### §434.5 What the number needs
+
+Not another iteration of this driver. A competent traversal agent for this level needs
+state-aware recovery, per-beat approach vectors, and chaining through the hook and spire sets —
+each of which is the size of the ladder script, and the ladder script took the traversal lane its
+own rounds to derive. The compositional evidence (§431: 8 of 13 legs, none blocked by geometry)
+plus this round's three working beats is the strongest available position, and it is short of the
+one number.
+
+Recorded as unfinished rather than dressed up. The `patrol` C3 red is the coordinator's and was
+not touched; `src/ai/Patrol.js` was left alone throughout.
