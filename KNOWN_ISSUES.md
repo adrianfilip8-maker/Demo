@@ -36133,12 +36133,12 @@ saying so.
 
 ---
 
-## §443 — `FRAMES.lead` is inert on 11 of 19 rows, and the wall run is a level-design finding rather than a camera one
+## §444 — `FRAMES.lead` is inert on 11 of 19 rows, and the wall run is a level-design finding rather than a camera one
 
 Three items. The first two are corrections to what the delivery table means; the third closes a
 thread by declining to repair anything.
 
-### §443.1 The `jump` lead was never a jump problem, and the column is mostly inert
+### §444.1 The `jump` lead was never a jump problem, and the column is mostly inert
 
 Sent to chase `air`'s `lead` delivering 92 % on fall-started spans and 26 % on jump-started ones —
 the most player-facing number on the table, since every jump passes through it.
@@ -36177,7 +36177,7 @@ rows at once.
 and `FRAMES` in closed form, and it took three rounds of driving the temple to notice. The
 instruments were all pointed at delivery *measured*; nobody asked what delivery was *bounded by*.
 
-### §443.2 The Cane Slam identity merge is a second review item, not a footnote
+### §444.2 The Cane Slam identity merge is a second review item, not a footnote
 
 The boom-chain collapse's cost was reported as motion — +35 % mean |Δboom|, 38 → 52 reversals,
 p99 unchanged. That is one thing a reviewer arbitrates. There is a second, and it was not
@@ -36198,7 +36198,7 @@ It is flagged separately in the source because a reviewer has to be *told* to lo
 thing that changed is a difference that stopped existing**, and nobody notices one of those by
 accident.
 
-### §443.3 The level has 14 wall-run sites and no route uses any of them
+### §444.3 The level has 14 wall-run sites and no route uses any of them
 
 §440 found a lateral wall run reachable — 50 lateral entries of 62, at 14 sites. D7 found the
 `wallRun` state produces **zero frames** on any drivable camera route. Both are true, and the
@@ -36222,7 +36222,7 @@ question becomes live with it. Two of `wall_run`'s three framing channels are me
 delivering nothing for a different reason each — the boom because the frames measured were
 `wallCling` (§442.2), the bank because head-on runs have no side (§440.2).
 
-### §443.4 The route-coverage finding hiding inside D7's silence
+### §444.4 The route-coverage finding hiding inside D7's silence
 
 D7's `does NOT discriminate` line names five states that produce no frames on any drivable route:
 **`combatStrafe`, `wallRun`, `railSlide`, `poleClimb`, `hookSwing`.** That list was written to make
