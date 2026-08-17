@@ -35500,3 +35500,91 @@ had an uncommitted re-base to 23/9 in the shared tree, so changing it would have
 over someone's in-flight state (§418.6). The observation is the deliverable. If it is worth acting
 on, the one assertion with a remaining job is `elsewhere >= 6` — coverage must not collapse back to
 the concentration the arm was written to report.
+
+## §438 — Sixteen expensive errors across five lanes, and not one was caught by reading the code
+
+A cross-lane count, written by the coordinator because no single lane can see it. The census lane
+ended its third round with an observation about its own six:
+
+> *"Every one found by moving something or by disbelieving a number, none by reading the code that
+> produced it."*
+
+That holds across every lane this session, and it is worth having as a number rather than as an
+impression, because it prices verification effort.
+
+### §438.1 The count
+
+An error qualifies here if it **would have published cleanly** — produced a plausible number, a
+named finding, or a shipped edit that a reader had no local reason to doubt. Errors visible on
+inspection are excluded; they are cheap and they inflate a tally that is only useful if it stays
+expensive.
+
+| lane | error | caught by |
+|---|---|---|
+| census | the 0.7 fps movement table | disbelieving the number |
+| census | 5.63 m single jump, from a spawn inside a collision box | checking against `TUNE` |
+| census | `onStage2` calling someone 5 m up "on the deck" | driving it |
+| census | four stair treads stacked at the origin, unset `_mergeFn` | disbelieving the geometry |
+| census | v2's ray-vs-capsule probe — 450 cells and a named candidate | **driving the candidate** |
+| census | drive start positions read out of a recycled pool | reading `-Infinity` as impossible |
+| objects | "headroom BLOCKED at 0.34 m" — a 2.55 m room | probing the whole column |
+| objects | the ladder mouth "unreachable" at 2.79 m | **cold start from the same point** |
+| objects | the kiosk lintel, the same shape again | **cold start from the same point** |
+| objects | the recovery edit that silently no-opped, `print` conditioned on nothing | byte-identical output |
+| objects | "recovery fires and is not enough" — wrong mechanism, right outcome | re-measuring the escape |
+| objects | an "open courtyard" control that was not open | **measuring the control** |
+| camera | `wall_run` boom at 47% by mean, 5% in metres | computing both and comparing |
+| camera | `_resolveFrame` matching camelCase states against snake_case clips | driving the states |
+| coordinator | `obelisk_watch` clearance 1.100 m — measured against my own rectangles | **a second instrument** |
+| coordinator | §418.3 blocks citing a draft that never ran | asking where the run was |
+
+Sixteen. **Zero caught by reading the source that produced them.**
+
+### §438.2 The three instruments that actually work
+
+Sorted by what did the catching, the list collapses to three techniques and nothing else:
+
+1. **Move an agent.** Six of sixteen. The census lane's formulation is exact: *a ranking is a list
+   of claims about what an agent can do, and the only thing that settles it is moving an agent.*
+   The objects lane's cold start is the same instrument aimed at a state rather than a position —
+   it asks whether a situation is escapable at all, and it can come out either way, which is what
+   makes it a test rather than a demonstration.
+2. **Disbelieve a number against something outside the computation.** Five of sixteen. Not
+   scepticism in general — every one of these was caught by a specific external referent: what the
+   building obviously is, a constant in `TUNE`, `-Infinity` being impossible, a 21 m stroll not
+   being a walk-through.
+3. **Run a second, independently-built instrument over the same claim.** Three of sixteen,
+   including both of mine. My clearance probe and `patrol` C1 disagreed by 0.6 m and the probe was
+   wrong; nobody found that by rereading the probe, and nobody would have.
+
+The remaining two were caught by measuring the control itself, which is technique 3 pointed at the
+apparatus rather than at the claim, and is the rarest and most valuable of the lot — a broken
+control fails **silently and in the flattering direction**, and nothing downstream can detect it.
+
+### §438.3 What this prescribes
+
+Code review is not the defence against this class and there is now sixteen-for-sixteen evidence for
+that. The errors are not *in* the code in a way a reader can see: the code does exactly what it
+says, over a model of the world that is wrong. Reading it confirms the model.
+
+So the budget goes on drives, on external referents, and on second instruments — in that order.
+Three specific consequences already adopted:
+
+- **§435.3** — a calibration must fire on the class the check *claims*, not the class it covers.
+- **§435.4** — a probe written from the author's model of the world is a test of the model. The
+  census lane's sharpening is the more dangerous half: a probe can model the **agent's body**
+  wrong, and unlike the level, the body never appears as a value anywhere to be checked.
+- **§436** — resistance is not entrapment, and the only way to tell them apart is to try leaving.
+
+And one that follows directly from the table: **a pooled or reused return value read after further
+calls is a value with a shelf life.** `Collision.groundCheck` returns pooled storage and supports an
+`out` parameter for exactly this reason, which makes the hazard worse rather than better — the safe
+path exists and the unsafe one is the default.
+
+### §438.4 The honest limit of this section
+
+This is a count of errors that were *found*. It says nothing about the rate of errors that were
+not, and the sampling is biased in an obvious direction: every technique listed is one this project
+happens to run. If there is a class that only code review catches, this table cannot see it, and
+the absence of any such entry is not evidence that none exists. What the table does support is
+narrower and still worth acting on — **of the errors we caught, reading was never how.**
