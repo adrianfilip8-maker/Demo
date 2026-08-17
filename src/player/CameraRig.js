@@ -219,6 +219,19 @@ export const TUNE = {
   /* ---- velocity lead ------------------------------------------------------ */
   leadTime: 0.17,               // seconds of travel to lead by, ×frame.lead
   leadMax: 1.75,
+  /* Which of the two answers to the lead/trail defect is in force. See `_pivotGoal`.
+       'floor'  ship: raise the lead to the spring's trail when the authored value is smaller.
+                Corrects the SIGN; leaves every framing that already led untouched.
+       'full'   the open question: make `FRAMES.lead` deliver what it says.
+     This is a switch in shipped source rather than a scratch copy of the file, and that is a
+     §388 decision rather than a convenience: the arbitration table in
+     `progress/records/movement/NOTE-camera-lead-compensation.md` is priced by running BOTH arms
+     of this switch, and a second implementation living in a scratch file is one that drifts from
+     the code it claims to describe the moment either moves. Neither arm is dead —
+     `tests/camdrive.test.mjs` exercises both against the shipped temple on every run. It stops
+     being a switch when the frames answer; until then, having it is what keeps the two numbers
+     comparable. */
+  leadMode: 'floor',
   fallLeadTime: 0.05,           // drop the look-at when plummeting…
   fallLeadMax: 1.0,
   fallPitch: 10 * DEG,          // …and tip the camera down to show the landing
@@ -1405,13 +1418,23 @@ export class CameraRig {
      * a one-line fix, and it wants frames.
      *
      * That question is packaged rather than left as a sentence:
-     * `progress/records/movement/NOTE-camera-lead-compensation.md` carries the three-way table
-     * (pre-floor / shipped / full) for nine framings with the apparent-size and screen-position
-     * deltas, and the finding that makes it decidable — **ordinary running is the SMALLEST of
-     * the nine at +7.6 %**, and the decision actually lives in `hook_swing` (+25.4 %),
-     * `rail_slide` at top speed (+32.6 %) and `air` (+22.7 %). It also shows the cost is not
-     * "raise `leadMax`": four framings would need it applied in NET space instead of raw, which
-     * changes what the constant means.
+     * `progress/records/movement/NOTE-camera-lead-compensation.md`, priced against the DRIVEN
+     * temple by `tests/camdrive.test.mjs` rather than an open-sky stub. Two corrections that
+     * revision cost, both worth carrying here because they are about instruments and not about
+     * this constant:
+     *   · **the stub was wrong about the trajectory, not the occlusion.** Replayed through the
+     *     real BVH and through open sky, one recorded route gives the same `ndcY` to three
+     *     decimals — occlusion contributes zero. The stub held `velocity.y` at 0, so `fallLead`
+     *     and `fallPitch` never engaged; a real glide descends at −3.2 m/s and reads −0.534,
+     *     which is the playtest lane's live −0.532. Adding occlusion to the stub would have
+     *     changed nothing and looked like a fix.
+     *   · **the floor's guarantee is a STEADY-STATE guarantee.** A 7-frame `air` hinge between
+     *     `move` and `paraglide` sits at −0.256 m, 2.5× outside the bound, while a 108-frame
+     *     `air` on open desert sits inside it. Whether a state settles is a property of the
+     *     route, not of the state, so a row that never settles cannot be arbitrated on its mean.
+     * The decision now clearly lives in `glide` — 80 % of its route, settled, `ndcY` −0.534 →
+     * −0.676 under full. `rail_slide` has been dropped from the table entirely: the playtest lane
+     * found it unreachable in play, and its +32.6 % was the largest number in the first revision.
      *
      * `deadzoneH` is deliberately outside the floor. It adds a further 10 cm of trail, but it is
      * a deadzone and not a lag — constant, not velocity-proportional, and cancelling it would
@@ -1426,9 +1449,18 @@ export class CameraRig {
     const sp = Math.hypot(_pVel.x, _pVel.z);
     if (sp > 1e-6) {
       let secs = TUNE.leadTime * f.lead * leadScale;
-      if (secs * sp > TUNE.leadMax) secs = TUNE.leadMax / sp;   // the authored cap, unchanged
-      const trailSecs = TUNE.followTimeH * f.stiff;             // …and the floor, never a ceiling
-      if (secs < trailSecs) secs = trailSecs;
+      const trailSecs = TUNE.followTimeH * f.stiff;
+      if (TUNE.leadMode === 'full') {
+        /* Deliver the authored lead. `leadMax` moves to NET space here — capping the raw would
+           re-create the defect at exactly the speeds it bites, since the raw cap binds while the
+           trail keeps growing. That relocation is the real cost of this arm and is why it is a
+           question rather than a constant edit. */
+        if (secs * sp > TUNE.leadMax) secs = TUNE.leadMax / sp;
+        secs += trailSecs;
+      } else {
+        if (secs * sp > TUNE.leadMax) secs = TUNE.leadMax / sp;  // the authored cap, unchanged
+        if (secs < trailSecs) secs = trailSecs;                  // …and the floor, never a ceiling
+      }
       out.x += _pVel.x * secs; out.z += _pVel.z * secs;
     }
 

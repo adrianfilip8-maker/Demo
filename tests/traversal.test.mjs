@@ -2881,9 +2881,16 @@ test('census: which of the 32 states any test in this project has ever entered',
   assert.deepEqual(never, [],
     `${never.length} states are entered by nothing in tests/: ${never.join(', ')}. That is a real ` +
     'coverage hole; add a driven route or record why there cannot be one.');
-  assert.ok(elsewhere.length <= 8,
-    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6) — coverage has ` +
-    `spread, which is good: update this bound. ${elsewhere.join(', ')}`);
+  /* Was 6, then 11. The five that arrived are `toTarget`, `wallClimb`, `wallCling`, `doubleJump`
+     and `paraglide`, and they arrived from `camdrive.test.mjs` — the camera lane pricing the lead
+     question needed REAL trajectories rather than a stub player, so it drives `realWorld()` and
+     picks those up incidentally. That is the shape this bound exists to notice: the arm's own
+     message says "coverage has spread, which is good: update this bound", and this is that
+     update rather than a bound widened to make a red arm green. 14 leaves headroom for the next
+     file to do the same without a maintenance failure. */
+  assert.ok(elsewhere.length <= 14,
+    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, then 11) — coverage ` +
+    `has spread, which is good: update this bound. ${elsewhere.join(', ')}`);
   assert.ok(onlyMine.length >= 20,
     `only ${onlyMine.length} states are traversal-only — if that dropped, other lanes have started ` +
     'driving the moveset and this arm should say so rather than assert the old concentration');
