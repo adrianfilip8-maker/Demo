@@ -38989,3 +38989,98 @@ inside the shaft.
   corridor → stair head → west, and the landing sits north of the flight serving nothing. It is
   harmless and it is a level-design question, not a collision one, so it is left where it is.
 
+
+---
+
+## §507 — The exclusion existed all along: `afford` gains "not this one", and the telegraph now names the next ring
+
+§506.3 found one missing capability with two symptoms. Building it turned out to be plumbing rather
+than construction, and only half of it was needed.
+
+### §507.1 `Collision.nearest` has supported `opts.ignoreRec` the whole time
+
+Before designing a ranked query I read the layer underneath, and the exclusion was already there:
+
+```js
+  const ignore = opts?.ignoreRec || null;
+  …
+  if (!e || e.tagId !== tagId || e.rec === ignore) continue;
+```
+
+`afford` simply never passed it. So "make `afford` able to say *not this one*" is a parameter, not a
+feature — the same shape as §448.2's missing seam, where the owner had the capability and no
+vocabulary to reach it. **Reading the layer below before designing the layer above is what made this
+a two-line change instead of a ranked-list rewrite.**
+
+### §507.2 What was built, and how the memo stays honest
+
+`afford(tag, ignoreRec = null)`. A **second bank of slots** (`_affEx`) memoised on `frame` AND
+`ignore`, exactly as `lock`/`pick` already memoise on `frame` + `wide`.
+
+Separate banks rather than one, because both answers are needed **on the same frame**: the moveset
+asks `afford('hook')` for the nearest while `_telegraph` asks for the next one that is not the held
+ring. A shared slot would have made whichever ran second overwrite the first. No new cache to
+hand-clear — §448.2's `_frame` cluster is six sites and this deliberately does not make it seven.
+
+`_nearOpt` is shared scratch, so `ignoreRec` is set on every path and cleared after; the cone-miss
+and no-cone paths get a **separate** opts object, because passing `_nearOpt` there would have
+silently added a facing cone to two queries that are deliberately omnidirectional. That is a
+one-branch-of-two error of exactly the kind §506.5 is about, avoided by having just written it down.
+
+### §507.3 It changes WHAT is announced, not just how often
+
+Driven on the same 420-frame approach, attached for all 420 frames:
+
+```
+  naive lift, no exclusion at all (§504.2)        104 emits
+  exclusion in `_telegraph` only  (§505.3)          7 emits   all rail/ledge — never a ring
+  exclusion plumbed into `afford` (this)             3 emits   ALL HOOKS, one of them the next
+                                                              chain ring, announced at 8.99 m
+                                                              while still hanging on ring 1
+```
+
+The 7 → 3 drop is the smaller half. The point is the third column: skipping the held rec inside
+`_telegraph` skipped the whole **kind**, so a hook chain fell through to the best rail or ledge.
+Pushing the exclusion down into the query keeps the kind and moves to the next hold **of that kind**
+— which is the feature the gate was hiding. `TUNE.telegraphNextHold` remains default **off**; what
+changed is that turning it on now does the thing it was named for.
+
+### §507.4 What was NOT built, and what it would take
+
+**Exclusion answers *"not this one"*. It cannot answer *"prefer the authored one"*,** and that is
+§506.3's other symptom — leg 3→4 closing to 0.66 m of ring 4 and grabbing a nearer unauthored hook.
+Visible in the measurement above too: two of the three emits name hooks that are not chain rings,
+because they are nearer.
+
+A filter cannot express a preference; that needs a **score**. The cheap shape, not built here:
+
+> a `bias`/`priority` field on the collider rec, folded into `Collision.nearest`'s existing
+> `score = d * facingPenalty(…)`. Authored rings carry a bias, unauthored scenery hooks do not, and
+> the level expresses which holds a chain should prefer.
+
+**Deliberately not built, for two reasons.** It touches the scoring path of every affordance query
+in the game and `Collision.js` is another lane's this round; and per the standing instruction,
+*whether ring 4 should win is a level-authoring question, not mine.* The capability to express it is
+now one field and one multiply away, and the world lane owns the choice.
+
+### §507.5 Scope call, stated
+
+The ranked-list version — `afford` returning N holds and callers picking — was **not** built. Both
+call sites need "not this one" and neither needs "the third-nearest", so a list would have been a
+general query with no user. The narrower thing unblocks the telegraph completely and leaves the
+preference question properly with the level. If a third call site ever wants ranking, the exclusion
+is a strict subset of it and nothing here is in the way.
+
+### §507.6 Suite, and a note about measuring it right now
+
+`T9` pins the capability: an excluded query returns a different rec, both memos coexist on one
+frame, and `afford(tag, null)` is asserted identical to `afford(tag)` so no existing caller changed.
+
+**125/125 across every suite that touches `afford` or the Controller** — telegraph, traversal,
+targets, recover, camdrive, cluevault, collectroute, wedge.
+
+The full 853-arm suite is **not stably measurable this round**: the world lane is actively writing
+`Collision.js`, `EgyptLevel.js`, `Terrain.js` and a new `tombdoor.test.mjs`, and consecutive full
+runs disagree with each other — `R2` red then green, `P-A1` green then red, with no change from me
+in between. Reported rather than averaged, because a suite result taken while its inputs are being
+rewritten is not a measurement.

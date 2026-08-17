@@ -463,3 +463,59 @@ test('telegraph: the authored hook chain chains — the release that carries you
   console.log(`[T8] both swept legs chain on \`bail\` at ${bail}/${SPEEDS.length} arrival speeds; `
     + `\`crouch\` manages ${crouch}/${SPEEDS.length} — worse, but not zero`);
 });
+
+/* ====================================================================== */
+/* T9 — afford can be asked for "the next one, not this one"              */
+/* ====================================================================== */
+
+test('telegraph: afford takes an exclusion, and the memo for it is separate from the plain query', async () => {
+  /* ── WHY ──────────────────────────────────────────────────────────────────────────────────
+   * One missing capability had two symptoms (§506.3): the telegraph could not skip past the hold
+   * being gripped, and a chain flight could not prefer the authored ring over a nearer hook.
+   * `Collision.nearest` has supported `opts.ignoreRec` all along — it was simply never plumbed
+   * through `afford`, so callers had no way to say "not this one".
+   *
+   * ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : `afford(tag, rec)` returning a DIFFERENT hold from `afford(tag)` when the
+   *               nearest one is excluded, and both answers being available on the same frame.
+   *   fails  on : RUN in-arm — the same two calls with no exclusion, which must agree.
+   *   does NOT  : express a PREFERENCE. Exclusion answers "not this one"; it cannot answer
+   *   discrim.    "prefer the authored ring over a nearer unauthored hook", which is the other
+   *               half of §506.3 and needs a score, not a filter. See §507.
+   */
+  const { realWorld: rw, hardReset: hr, DT: dt } = await import('./_moveset.mjs');
+  const { engine, c } = await rw();
+
+  /* Stand where several hooks are in reach — the kiosk lintel, the chain's own entry. */
+  hr(engine, c, new THREE.Vector3(2.2, 9.0, 8.4), Math.PI);
+  engine.input.beginFrame(dt); engine.input.move.x = 0; engine.input.move.y = 0;
+  c.update(dt, 0);
+
+  const plain = c.afford('hook');
+  assert.ok(plain && plain.rec, 'the probe needs at least one hook in reach to say anything');
+  const nearestRec = plain.rec;
+  const nearestPt = plain.point.clone();
+
+  /* ── WHAT: excluding the nearest returns a different hold, on the same frame ── */
+  const next = c.afford('hook', nearestRec);
+  assert.ok(next, 'excluding the nearest hook returned nothing — there is a second hook in reach '
+    + 'from the lintel, so this is the exclusion suppressing the whole query rather than one rec');
+  assert.notEqual(next.rec, nearestRec,
+    'afford(tag, rec) returned the very rec it was told to ignore');
+  assert.ok(next.point.distanceTo(nearestPt) > 0.5,
+    `the excluded query returned a hold ${next.point.distanceTo(nearestPt).toFixed(2)} m from the `
+    + 'one excluded — that is the same hold, so the exclusion did not reach Collision.nearest');
+
+  /* ── AND the plain memo is intact on the same frame: two banks, not one ── */
+  const plainAgain = c.afford('hook');
+  assert.equal(plainAgain.rec, nearestRec,
+    'asking for the excluded hold poisoned the plain memo — the moveset asks `afford(hook)` on '
+    + 'the same frame the telegraph asks for the next one, and both answers must be correct');
+
+  /* ── WHICH: the counterexample, RUN — no exclusion, the two calls must agree ── */
+  assert.equal(c.afford('hook', null).rec, nearestRec,
+    'afford(tag, null) disagreed with afford(tag). A null exclusion must be the plain query, or '
+    + 'every existing caller has quietly changed behaviour.');
+
+  console.log('[T9] exclusion reaches Collision.nearest; plain and excluded memos coexist on one frame');
+});

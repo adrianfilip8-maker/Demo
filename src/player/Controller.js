@@ -452,7 +452,12 @@ const UP = new THREE.Vector3(0, 1, 0);
 const DOWN = new THREE.Vector3(0, -1, 0);
 
 const _sweepOpt = { skipOneWay: false };
-const _nearOpt = { facing: _fwd, maxAngle: TUNE.hookCone };
+const _nearOpt = { facing: _fwd, maxAngle: TUNE.hookCone, ignoreRec: null };
+/* Cone-less exclusion opts. A separate object because `_nearOpt` carries a facing/cone that the
+   no-cone and cone-miss paths must NOT acquire — passing `_nearOpt` there would silently add a
+   cone filter to two queries that are deliberately omnidirectional. */
+const _nearOptNoCone = { ignoreRec: null };
+const _nearOptPlain = (rec) => { _nearOptNoCone.ignoreRec = rec; return _nearOptNoCone; };
 const TAGS_VENT = ['vent'];
 const TAGS_HAZARD = ['hazard'];
 const TAGS_VISION = ['hook', 'rail', 'pole', 'spire', 'ledge', 'vent'];
@@ -499,7 +504,7 @@ const FLAT = {
 
 /** One persistent affordance slot per tag, so nothing pooled is retained across frames. */
 function affSlot() {
-  return { frame: -1, ok: false, point: new THREE.Vector3(), tangent: new THREE.Vector3(0, 1, 0), t: 0, distance: Infinity, rec: null };
+  return { frame: -1, ignore: null, ok: false, point: new THREE.Vector3(), tangent: new THREE.Vector3(0, 1, 0), t: 0, distance: Infinity, rec: null };
 }
 
 /* Per-tag discovery config. Ranges are deliberately generous — Sly's traversal reads as
@@ -679,6 +684,13 @@ export class Controller {
     this.wall = { ok: false, nx: 0, nz: 0, ny: 0, dist: 0, rec: null, tag: '' };
 
     this._aff = { hook: affSlot(), rail: affSlot(), pole: affSlot(), spire: affSlot(), ledge: affSlot() };
+    /* A SECOND bank, for `afford(tag, ignoreRec)`. Separate rather than shared so an excluded
+       query can never poison the plain one: `_telegraph` asks "the next hold, not this one" on the
+       same frame the moveset asks "the nearest hold", and both answers have to be available and
+       correct. Memoised on `frame` AND `ignore`, exactly as `lock`/`pick` memoise on
+       `frame` + `wide` — no new cache to hand-clear (§448.2's `_frame` cluster is six sites and
+       this deliberately does not make it seven). */
+    this._affEx = { hook: affSlot(), rail: affSlot(), pole: affSlot(), spire: affSlot(), ledge: affSlot() };
     /* Persistent mark slots, memoised per frame exactly like `_aff` above and for the same
        reason: `canEnter` runs for every candidate above the current priority, so a resolver it
        calls must be free the second time. `body` is a GUARDS-owned object — held only for the
@@ -1231,11 +1243,12 @@ export class Controller {
        * cone and in range is the more decision-relevant hold even when a ledge is closer.
        */
       for (const kind of TELEGRAPH_KINDS) {
-        const a = this.afford(kind);
+        /* Ask for "the next hold of this kind, not the one I am on" (§507). Before the exclusion
+           was plumbed through `afford`, the held ring came back, was skipped, and the whole KIND
+           was skipped with it — so on a hook chain the mark fell through to the best rail or
+           ledge instead of naming the next ring. */
+        const a = this.afford(kind, attached ? this.attached : null);
         if (!a) continue;
-        // Never mark the hold you are already on — §441.5's "marks the floor" problem, which is
-        // the whole reason the gate existed rather than a detail of lifting it.
-        if (attached && a.rec && a.rec === this.attached) continue;
         best = a; bestKind = kind;
         break;
       }
@@ -1355,26 +1368,33 @@ export class Controller {
   }
 
   /** Nearest affordance of `tag`, memoised for the frame. Never returns pooled state. */
-  afford(tag) {
+  afford(tag, ignoreRec = null) {
     const cfg = AFFORD[tag];
-    const s = this._aff[tag];
+    const s = ignoreRec ? this._affEx[tag] : this._aff[tag];
     if (!cfg || !s) return null;
-    if (s.frame === this._frame) return s.ok ? s : null;
+    if (s.frame === this._frame && s.ignore === ignoreRec) return s.ok ? s : null;
     s.frame = this._frame;
+    s.ignore = ignoreRec;
     s.ok = false;
     const col = this.col;
     if (typeof col.nearest !== 'function') return null;
     _qpos.copy(this.position); _qpos.y += cfg.eye;
     let r = null;
+    /* `ignoreRec` is passed straight to `Collision.nearest`, which has supported it as
+       `opts.ignoreRec` all along — the capability existed and was simply never plumbed through
+       here. `_nearOpt` is shared scratch, so it is set on every path and cleared after, or the
+       next plain caller inherits an exclusion nobody asked for. */
+    _nearOpt.ignoreRec = ignoreRec;
     if (cfg.cone > 0) {
       _nearOpt.facing = _fwd.lengthSq() > 0.1 ? _fwd : this.faceDir;
       _nearOpt.maxAngle = cfg.cone;
       r = col.nearest(_qpos, tag, cfg.range, _nearOpt);
       // A cone miss shouldn't hide a hook Sly is flying straight into.
-      if (!r) r = col.nearest(_qpos, tag, TUNE.hookAuto);
+      if (!r) r = col.nearest(_qpos, tag, TUNE.hookAuto, ignoreRec ? _nearOptPlain(ignoreRec) : undefined);
     } else {
-      r = col.nearest(_qpos, tag, cfg.range);
+      r = col.nearest(_qpos, tag, cfg.range, ignoreRec ? _nearOptPlain(ignoreRec) : undefined);
     }
+    _nearOpt.ignoreRec = null;
     if (!r || !r.point) return null;
     s.point.copy(r.point);
     if (r.tangent && r.tangent.lengthSq() > 1e-6) s.tangent.copy(r.tangent).normalize();
