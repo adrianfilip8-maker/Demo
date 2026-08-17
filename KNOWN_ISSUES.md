@@ -32913,6 +32913,39 @@ to it holds one subject or two, and it held two.
 worker wrote another instance afterwards, including inside the arm written to demonstrate the
 lesson. Knowing did not help. Running did.
 
+### §418.9 §418.3 can be satisfied in prose without being satisfied in fact
+
+The sharpest objection to this rule came from the lane applying it hardest, and it is a hole in
+the rule rather than in the lane's work. Writing 30 `DOMAIN (§418.3)` blocks in one round, it
+found that **two of them said "seen — the first draft did X" when there was no such first draft.**
+
+> A remembered failure is not a seen one; a reconstructed one is not even remembered.
+
+Both were plausible. Both were written in the same confident voice as the blocks whose
+counterexamples had genuinely been run. Nothing in the format distinguishes them — and the format
+was designed by me on the premise that writing the two inputs down forces you to have them.
+**It does not. It forces you to produce two sentences.**
+
+The lane then ran every counterexample that was not already executed inside its arm — scrape
+mutations against modified source copies, the naive predicate beside the real one, unseeded
+against seeded rng — and rewrote the blocks to say what the runs produced. Three recorded numbers
+were wrong and became measurements.
+
+> **§418.9 — The failing input must have been RUN, and the block must say where.** Not
+> "the first draft did X"; a command, a modified copy, an arm that executes its own
+> counterexample. Eleven of that round's thirty do it in-arm, which is the strongest form: the
+> counterexample is not described, it is evaluated every time the suite runs.
+>
+> **Prefer in-arm. Where that is impossible, name the artefact** — the file you mutated, the
+> value you planted, the run you watched go red. A `DOMAIN` block with no locatable evidence is
+> the same object as the bar it was invented to prevent: a claim with no failing case behind it.
+
+This is §418.4's corollary turning on §418.3 itself. *A control on the estimator is not a control
+on its input* — and a rule requiring evidence is not a rule requiring the evidence to exist.
+
+Recorded here rather than only in the lane's own section because §418.3 is mine, and a rule's
+author is the wrong person to let its first serious defect sit in someone else's entry.
+
 ### §418.5 Two refinements, both from applying §418.3 within the hour
 
 **An unfalsifiable bar is allowed. Believing it discriminates is not.** Applying the rule to its
