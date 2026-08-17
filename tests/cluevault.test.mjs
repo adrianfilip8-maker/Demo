@@ -574,3 +574,398 @@ test('V12 TRIPWIRE — the Eye has a geometry, and it is not the coin mesh', asy
   assert.ok(eye.mesh.geometry.attributes.position.count > 24,
     'the Eye\'s geometry is degenerate');
 });
+
+/* ============================================================================================
+   5. R1 / R2 / R3 — the placement proofs `Props.js` has been claiming and did not have
+
+   `Props.js:672-688` states that all twelve bottle spots are "checked headlessly against the
+   real `Collision` on three tests" and prints the results — 12/12, 0.08-0.70 m, 12/12. There
+   was no such test anywhere in the tree. That is §416's exact shape, a procedure naming a check
+   nothing performed, and the vault reward promoted it from cosmetic to blocking: a bottle you
+   cannot reach is now a set you cannot finish and a treasure you cannot get.
+
+   These are those three tests. They are written against the REAL level — Terrain, Architecture
+   and Props built, colliders registered, one BVH — because the claim is about the built world
+   and a stub floor would answer a different question. ~4 s, once, shared by all four arms.
+============================================================================================ */
+
+/**
+ * The whole world in MANIFEST order, exactly as `tests/traversal.test.mjs:realWorld()` does it
+ * and for the reason its header gives: **a harness that omits a module does not fail.** It runs,
+ * it returns, and its numbers are plausible. Architecture alone is not the level — TERRAIN
+ * registers the desert and PROPS registers its own colliders, and eleven of the twelve bottles
+ * are checked against surfaces those two modules own.
+ */
+let WORLD = null;
+async function realWorld() {
+  if (WORLD) return WORLD;
+  const { Terrain } = await import('../src/world/Terrain.js');
+  const { Architecture } = await import('../src/world/Architecture.js');
+  const { Props } = await import('../src/world/Props.js');
+  const { Collision } = await import('../src/world/Collision.js');
+
+  const listeners = new Map();
+  const engine = {
+    scene: new THREE.Scene(), renderer: null, camera: null,
+    time: 0, dt: 0, timeScale: 1, width: 1920, height: 1080, quality: 'high',
+    warnings: [], events: [], debug: { freeCam: false, showColliders: false, wireframe: false },
+    has() { return false; },
+    warn(m) { this.warnings.push(String(m)); },
+    on(e, f) { if (!listeners.has(e)) listeners.set(e, new Set()); listeners.get(e).add(f); return () => listeners.get(e).delete(f); },
+    emit(e, p) { this.events.push({ evt: e, payload: p }); for (const f of listeners.get(e) || []) f(p); },
+    get() { return null; },
+    registerCollider() {},
+  };
+  const queued = []; const mods = {}; let collision = null;
+  engine.get = (m) => (m === 'collision' ? collision : mods[m] || null);
+  engine.registerCollider = (mesh, opts = {}) => {
+    const rec = {
+      mesh, tag: opts.tag || 'ground', climbable: !!opts.climbable,
+      material: opts.material || 'stone', oneWay: !!opts.oneWay, ...opts,
+    };
+    if (collision?.add) collision.add(rec); else queued.push(rec);
+    return rec;
+  };
+  mods.terrain = new Terrain(engine); await mods.terrain.init();
+  mods.architecture = new Architecture(engine); await mods.architecture.init();
+  mods.props = new Props(engine); await mods.props.init();
+  collision = new Collision(engine);
+  for (const r of queued) collision.add(r);
+  await collision.init();
+  WORLD = { engine, collision, mods };
+  return WORLD;
+}
+
+const DOWN = new THREE.Vector3(0, -1, 0);
+const UP = new THREE.Vector3(0, 1, 0);
+
+/**
+ * PREREG-clue1 (§141.1), registered before the first ray was cast and derived throughout:
+ *
+ *   R1 probe depth   20 m   deep enough to distinguish a MISS from the 13.6 m fall the stale
+ *                           §8.1 cornice coordinate takes, which a 3 m probe would report as
+ *                           the same answer
+ *   R2 bound        2.40 m  `Pickups.TUNE.magnet`
+ *   R2 stand height 0.90 m  `Pickups.TUNE.grabHeight` — `stepPickup` measures the capsule
+ *                           CENTRE, and the harness must use its arithmetic, not its own
+ *   R3 datum        0.42 m  `Controller.TUNE.stepHeight` — "the courtyard floor" is everything
+ *                           you can walk onto from spawn without a traversal beat, and one step
+ *                           height is exactly that definition
+ *   R3 headroom     1.80 m  `Controller.TUNE.height`
+ */
+const PROBE = 20;
+
+test('R0 the harness built the whole level, not part of it', async () => {
+  /**
+   * traversal.test.mjs's own habit, and its own hard-won reason: with only Architecture built,
+   * a correct method produced correct numbers about a game that does not exist. Floors rather
+   * than an exact count, because three other lanes add colliders and an equality here would be
+   * a tripwire on their work rather than on mine.
+   *
+   * DOMAIN (§418.3 / §418.9)
+   * PASSES ON: the shipped boot — 273 colliders, 115,676 triangles, **8 `hazard` recs**,
+   *            26 handholds on 1 rec.
+   * FAILS ON:  RUN — the same harness with `mods.props = new Props(engine); await
+   *            mods.props.init();` replaced by a comment. **The hazard count is the only term
+   *            here that catches it, and I know that because running the counterexample proved
+   *            the other two do not:** without PROPS the boot still has 253 colliders and 51,222
+   *            triangles, which clear the 200 and 50,000 floors comfortably. Braziers are PROPS'
+   *            and nobody else's, so `hazard` goes 8 → 0. The floors were vacuous against the
+   *            input this arm exists for; they are kept as tripwires against a larger collapse
+   *            and are labelled as such rather than counted.
+   *
+   * Worth recording what the omission does NOT do: R1 below still reports 12/12 without PROPS.
+   * Bottle 3 simply lands on the architecture ledge at y 9.000 instead of the PROPS surface at
+   * y 9.439 — a different world, answered confidently, with no assertion disturbed. That is
+   * traversal.test.mjs's warning reproduced rather than quoted.
+   */
+  const { collision } = await realWorld();
+  assert.ok(collision.ready, 'the BVH built with no triangles — nothing is solid');
+  /* TRIPWIRE (§418.5): these two do not discriminate on a missing PROPS — see the block above. */
+  assert.ok(collision.recs.length >= 200,
+    `only ${collision.recs.length} colliders — a module did not register`);
+  assert.ok(collision.stats.tris >= 50000,
+    `only ${collision.stats.tris} triangles in the BVH`);
+  /* This one does. */
+  const hazards = collision.recs.filter((r) => r.tag === 'hazard').length;
+  assert.ok(hazards > 0,
+    'no `hazard` colliders in the world — PROPS did not initialise, and eleven of the twelve ' +
+    'bottles are about to be measured against surfaces it owns');
+  const holdRecs = collision.recs.filter((r) => r.handholds?.length);
+  assert.equal(holdRecs.length, 1,
+    `${holdRecs.length} recs carry handholds; WallClimb.find's authoring contract is one ladder ` +
+    'per rec and R2 below reads the rungs off that rec');
+  console.log(`\n[clue] world: ${collision.recs.length} colliders · ` +
+    `${collision.stats.tris.toLocaleString()} tris · ${hazards} hazards (PROPS) · ` +
+    `${holdRecs[0].handholds.length} handholds`);
+});
+
+test('R1 a downward ray finds a real surface under every bottle', async () => {
+  /**
+   * DOMAIN (§418.3 / §418.9)
+   * PASSES ON: the twelve — 12/12 hit, drops 0.561 m (peristyle architrave) to 5.460 m (the
+   *            ladder bottle, whose only floor is the battered pylon face far below it).
+   * FAILS ON:  RUN in-arm — (500, 50, 500) and (0, 50, 200), both past the terrain's extent,
+   *            MISS at a 300 m probe. The bar is falsifiable in this world and both sides are
+   *            evaluated every run.
+   *
+   * NOT a reachability test. The ladder bottle hits a surface 5.46 m below it and is still the
+   * one bottle in the level you cannot take from a floor; that is R2's question, and keeping it
+   * out of here is why R1 can be 12/12 honestly.
+   */
+  const { collision } = await realWorld();
+  const rows = [];
+  let inspected = 0;
+  for (let i = 0; i < CLUE_SPOTS.length; i++) {
+    const [x, y, z] = CLUE_SPOTS[i];
+    const r = collision.raycast(new THREE.Vector3(x, y, z), DOWN, PROBE);
+    assert.ok(r.hit, `bottle ${i} at (${x}, ${y}, ${z}) has no surface under it within ${PROBE} m`);
+    rows.push({ i, drop: y - r.point.y, y: r.point.y, tag: r.tag });
+    inspected++;
+  }
+  assert.equal(inspected, CLUE_SPOTS.length);
+  assert.ok(inspected >= 8, `§211.1: inspected ${inspected} bottles`);
+
+  const drops = rows.map((r) => r.drop);
+  console.log(`[clue] R1 ${inspected}/${inspected} found a surface · drop ` +
+    `${Math.min(...drops).toFixed(3)}-${Math.max(...drops).toFixed(3)} m`);
+
+  /* The failing half, run: outside the terrain there is nothing to hit. */
+  for (const p of [[500, 50, 500], [0, 50, 200]]) {
+    assert.equal(collision.raycast(new THREE.Vector3(...p), DOWN, 300).hit, false,
+      `a ray at (${p}) now finds ground — the world has grown and this counterexample is stale, ` +
+      'so R1 has stopped being falsifiable and must be relabelled a tripwire');
+  }
+});
+
+/** `WallClimb.enter`'s capsule placement, replicated — and pinned to the original below. */
+function clingBaseAt(hold, ctune) {
+  const n = new THREE.Vector3(hold.normal?.x ?? 0, 0, hold.normal?.z ?? 0);
+  if (n.lengthSq() < 1e-6) return null;
+  n.normalize();
+  return new THREE.Vector3(
+    hold.point.x + n.x * (ctune.radius + 0.05),
+    hold.point.y - ctune.hangReach,
+    hold.point.z + n.z * (ctune.radius + 0.05),
+  );
+}
+
+test('R2 every bottle is inside the magnet from the nearest place a player can actually be', async () => {
+  /**
+   * The arm that needed thinking about rather than writing, exactly as `Props.js`'s header says.
+   * For eleven of them "where a player can be" is standing on the surface R1 found, capsule
+   * centre at `surface + grabHeight`. For the ladder bottle it is **not**: its only floor is the
+   * pylon face 5.46 m below, and it is taken from a CLING.
+   *
+   * `clingBaseAt` replicates three lines of `WallClimb.enter`, which is a drift risk, so the
+   * original is scraped and pinned below — the §239 method: never copy a contract, extract it.
+   *
+   * DOMAIN (§418.3 / §418.9)
+   * PASSES ON: the twelve — 0.080 m (east pylon deck) to 0.700 m (the ladder bottle, from rung
+   *            `notch-pylon-e-w-5`). `Props.js`'s header claims "0.08-0.70 m, worst case the
+   *            ladder bottle". **Both bounds reproduce to the digit, and it named the right
+   *            rung** — the decoration was true.
+   * FAILS ON:  TWO, both RUN in-arm.
+   *            (a) the stale §8.1 cornice coordinate (-9.5, 13.6, -15.2), whose nearest surface
+   *                is the courtyard paving 13.600 m below: 12.700 m against a 2.40 m bound.
+   *            (b) the ladder bottle measured the way the other eleven are — from the floor
+   *                under it — which is 4.560 m and fails. That is the header's own point ("a
+   *                test that only knew about floors called that bottle unreachable") turned
+   *                into an executing assertion instead of a sentence.
+   */
+  const { collision } = await realWorld();
+  const { TUNE: CTUNE } = await import('../src/player/Controller.js');
+
+  /* Pin the replication to the original. */
+  const enterSrc = /enter\(c\) \{[\s\S]*?c\.position\.set\(([\s\S]*?)\);/.exec(
+    SRC('src/player/Moveset.js').slice(SRC('src/player/Moveset.js').indexOf('class WallClimb')));
+  assert.ok(enterSrc, 'WallClimb.enter no longer places the capsule with a position.set()');
+  assert.ok(/TUNE\.radius \+ 0\.05/.test(enterSrc[1]) && /TUNE\.hangReach/.test(enterSrc[1]),
+    'WallClimb.enter\'s capsule placement has changed; `clingBaseAt` above is now a copy of ' +
+    'something that no longer exists and the ladder bottle\'s reach number is fiction');
+
+  const holds = collision.recs.find((r) => r.handholds?.length)?.handholds ?? [];
+  assert.ok(holds.length >= 20, `§211.1: only ${holds.length} handholds found`);
+
+  const floorReach = (spot) => {
+    const r = collision.raycast(new THREE.Vector3(spot[0], spot[1], spot[2]), DOWN, PROBE);
+    if (!r.hit) return Infinity;
+    return Math.hypot(0, spot[1] - (r.point.y + TUNE.grabHeight), 0);
+  };
+  const clingReach = (spot) => {
+    const b = new THREE.Vector3(spot[0], spot[1], spot[2]);
+    let best = Infinity, id = null;
+    for (const h of holds) {
+      const base = clingBaseAt(h, CTUNE);
+      if (!base) continue;
+      const d = Math.hypot(base.x - b.x, (base.y + TUNE.grabHeight) - b.y, base.z - b.z);
+      if (d < best) { best = d; id = h.id; }
+    }
+    return { d: best, id };
+  };
+
+  const rows = [];
+  for (let i = 0; i < CLUE_SPOTS.length; i++) {
+    const s = CLUE_SPOTS[i];
+    const floor = floorReach(s);
+    const cling = clingReach(s);
+    const best = Math.min(floor, cling.d);
+    rows.push({ i, floor, cling, best, how: floor <= cling.d ? 'floor' : `cling ${cling.id}` });
+    assert.ok(best <= TUNE.magnet,
+      `bottle ${i} at (${s}) is ${best.toFixed(3)} m from the nearest place a player can be, ` +
+      `past the ${TUNE.magnet} m magnet — it cannot be collected, and the vault cannot be opened`);
+  }
+  assert.equal(rows.length, CLUE_SPOTS.length);
+
+  const best = rows.map((r) => r.best);
+  const worst = rows.reduce((a, b) => (b.best > a.best ? b : a));
+  console.log(`[clue] R2 ${rows.length}/${rows.length} inside the ${TUNE.magnet} m magnet · ` +
+    `${Math.min(...best).toFixed(3)}-${Math.max(...best).toFixed(3)} m · ` +
+    `worst bottle ${worst.i} by ${worst.how}`);
+
+  /* The header's claim, checked rather than repeated. */
+  assert.ok(Math.max(...best) - 0.70 < 0.005 && Math.min(...best) - 0.08 < 0.005,
+    `Props.js's header claims 0.08-0.70 m; measured ${Math.min(...best).toFixed(3)}-` +
+    `${Math.max(...best).toFixed(3)} m. One of the two is now wrong and both are checkable.`);
+  assert.ok(/^cling notch-pylon-e-w-5$/.test(worst.how),
+    `the header names rung notch-pylon-e-w-5 as the worst case; measured ${worst.how}`);
+
+  /* Failing half (a): the stale coordinate. */
+  const staleD = floorReach([-9.5, 13.6, -15.2]);
+  assert.ok(staleD > TUNE.magnet,
+    `the stale §8.1 cornice coordinate now measures ${staleD.toFixed(3)} m and PASSES this bar — ` +
+    'the counterexample is stale and R2 has stopped discriminating');
+  assert.ok(clingReach([-9.5, 13.6, -15.2]).d > TUNE.magnet,
+    'the stale coordinate is now within cling reach of a rung, so it is no longer a counterexample');
+
+  /* Failing half (b): the ladder bottle read as a floor bottle. */
+  const ladder = rows.find((r) => r.how.startsWith('cling'));
+  assert.ok(ladder, 'no bottle is taken from a cling any more — the ladder beat has gone');
+  assert.ok(ladder.floor > TUNE.magnet,
+    `the ladder bottle is now ${ladder.floor.toFixed(3)} m from the floor beneath it, i.e. ` +
+    'reachable without climbing — the one bottle whose purpose is the cling has lost it');
+});
+
+test('R3 no bottle can be taken from the courtyard floor — each one costs the traversal', async () => {
+  /**
+   * "The courtyard floor" is defined, not gestured at: any standable ground within one
+   * `Controller.TUNE.stepHeight` of y = 0, which is precisely everything you can walk onto from
+   * spawn without a traversal beat. The sweep is a disc of `magnet` radius around each bottle,
+   * because a player does not have to stand directly under one to take it.
+   *
+   * ── The first version of this arm was wrong, and it is §419's lesson transposed ────────────
+   * It asked `groundCheck` whether ground exists at courtyard level and reported **bottle 0
+   * (terrace stage 1) REACHABLE at 2.100 m from (-2.20, 0.00, 17.50)**. The ground is real: it
+   * is the desert TERRAIN, buried under the terrace platform. No player can occupy it. Adding
+   * the headroom ray — `Controller.TUNE.height` of clear space above the candidate — blocks
+   * **97 of 97** candidates there and the bottle is not reachable after all.
+   *
+   * > "Ground exists here" is not "a player can stand here", exactly as §419.2's "in frustum
+   * > and not behind terrain" is not "visible". The level was right and the instrument was
+   * > wrong, which is the harder direction to notice because the instrument agreed with a
+   * > plausible worry.
+   *
+   * DOMAIN (§418.3 / §418.9)
+   * PASSES ON: the twelve with the headroom check — 12/12 not reachable.
+   * FAILS ON:  RUN in-arm — the identical sweep WITHOUT the headroom check finds bottle 0
+   *            reachable at 2.100 m. Both instruments run on every suite pass and must disagree
+   *            on exactly that bottle, so neither the bar nor its correction can rot silently.
+   */
+  const { collision } = await realWorld();
+  const { TUNE: CTUNE } = await import('../src/player/Controller.js');
+
+  /** @returns {?{d:number, x:number, y:number, z:number}} the nearest courtyard-level stand. */
+  const courtyardReach = (spot, requireHeadroom) => {
+    const [bx, by, bz] = spot;
+    let best = null, candidates = 0, blocked = 0;
+    for (let ring = 0; ring <= 10; ring++) {
+      const rr = (ring / 10) * TUNE.magnet;
+      const steps = ring === 0 ? 1 : 24;
+      for (let k = 0; k < steps; k++) {
+        const a = (k / steps) * Math.PI * 2;
+        const px = bx + Math.cos(a) * rr, pz = bz + Math.sin(a) * rr;
+        const g = collision.groundCheck(
+          new THREE.Vector3(px, CTUNE.stepHeight + 0.05, pz), CTUNE.radius, 2.0);
+        if (!g.hit || Math.abs(g.y) > CTUNE.stepHeight) continue;
+        const d = Math.hypot(px - bx, (g.y + TUNE.grabHeight) - by, pz - bz);
+        if (d > TUNE.magnet) continue;
+        candidates++;
+        if (requireHeadroom &&
+            collision.raycast(new THREE.Vector3(px, g.y + 0.05, pz), UP, CTUNE.height).hit) {
+          blocked++;
+          continue;
+        }
+        if (!best || d < best.d) best = { d, x: px, y: g.y, z: pz };
+      }
+    }
+    return { best, candidates, blocked };
+  };
+
+  let inspected = 0, totalCandidates = 0, totalBlocked = 0;
+  for (let i = 0; i < CLUE_SPOTS.length; i++) {
+    const r = courtyardReach(CLUE_SPOTS[i], true);
+    assert.equal(r.best, null,
+      `bottle ${i} at (${CLUE_SPOTS[i]}) can be taken from the courtyard floor — ` +
+      `${r.best?.d.toFixed(3)} m from (${r.best?.x.toFixed(2)}, ${r.best?.y.toFixed(2)}, ` +
+      `${r.best?.z.toFixed(2)}). It costs no traversal and it is a coin, not a clue.`);
+    totalCandidates += r.candidates;
+    totalBlocked += r.blocked;
+    inspected++;
+  }
+  assert.equal(inspected, CLUE_SPOTS.length);
+  console.log(`[clue] R3 ${inspected}/${inspected} out of reach from the courtyard · ` +
+    `${totalCandidates} candidate stands found at floor level, ${totalBlocked} blocked by headroom`);
+
+  /* §211.1: if the sweep found no candidates at all it proved nothing, and the whole arm would
+     pass on a world with no ground in it. */
+  assert.ok(totalCandidates > 0,
+    'the sweep found no courtyard-level standing spots anywhere near any bottle, so 12/12 was ' +
+    'reached by inspecting nothing');
+
+  /* The failing half, run: the same sweep without the headroom ray finds bottle 0. */
+  const naive = courtyardReach(CLUE_SPOTS[0], false);
+  assert.ok(naive.best,
+    'the headroom-free sweep no longer reports bottle 0 as reachable — the counterexample this ' +
+    'arm was corrected against is gone, and the headroom check is now unfalsifiable here');
+  assert.ok(naive.best.d <= TUNE.magnet && Math.abs(naive.best.y) <= CTUNE.stepHeight,
+    'the naive counterexample has drifted off the courtyard datum');
+});
+
+/* ============================================================================================
+   6. the toast icon
+============================================================================================ */
+
+test('V13 the clue toast draws a bottle, not the unknown-icon fallback', async () => {
+  /**
+   * `_collectClue` has always published `icon: 'clue'` and `Icons.glyph` had no case for it, so
+   * every one of the twelve toasts fell through `default:` to the generic sparkle. Not a bug —
+   * nothing broke, nothing warned — which is why it survived: the fallback is indistinguishable
+   * from a deliberate choice unless you go looking for the case that is not there.
+   *
+   * DOMAIN (§418.3 / §418.9)
+   * PASSES ON: the shipped tree — `glyph('clue')` differs from the fallback and carries §2.1.6's
+   *            pickup blue #8fd8ff, the same colour `Props.MATERIALS.glass` and
+   *            `Pickups._clueMat` draw the bottle in.
+   * FAILS ON:  RUN in-arm — two genuinely unknown names produce byte-identical output, which is
+   *            what `glyph('clue')` did before this case existed. That equality is asserted
+   *            below, so if the fallback ever stops being deterministic this arm says so instead
+   *            of quietly passing on a comparison that can no longer fail.
+   */
+  const Ico = await import('../src/ui/Icons.js');
+
+  /* The fallback really is one shape, byte for byte — otherwise the comparison below is noise. */
+  assert.equal(Ico.glyph('no-such-icon-a'), Ico.glyph('no-such-icon-b'),
+    'two unknown icon names no longer produce the same fallback, so "differs from the fallback" ' +
+    'has stopped meaning anything');
+
+  assert.notEqual(Ico.glyph('clue'), Ico.glyph('no-such-icon-a'),
+    'the clue toast is still drawing the generic sparkle');
+  assert.ok(Ico.glyph('clue').includes('#8fd8ff'),
+    'the clue glyph is not §2.1.6 pickup blue — the toast and the bottle in the world disagree');
+
+  /* And the icon the module actually asks for is the one that now exists. */
+  assert.ok(/icon: 'clue'/.test(stripComments(PICKUPS_SRC)),
+    'PICKUPS no longer tags its clue toast `clue`, so this glyph has no caller');
+  assert.ok(/icon: 'eye'/.test(stripComments(PICKUPS_SRC)) && Ico.glyph('eye') !== Ico.glyph('no-such-icon-a'),
+    'the vault toast asks for an icon that falls through to the fallback');
+});

@@ -669,22 +669,33 @@ export class Props {
    *
    * ── "On the route" is asserted here and PROVEN against the built level ────────────────
    * Placement claims are cheap and two of these were wrong when first written — one 0.30 m
-   * inside a kiosk pier, one over a hole that fell the full 15 m to the paving. So all twelve
-   * are checked headlessly against the real `Collision` on three tests, and the numbers are the
+   * inside a kiosk pier, one over a hole that fell 13.60 m to the paving. So all twelve are
+   * checked headlessly against the real `Collision` on three tests, and the numbers are the
    * reason to believe the sentence above rather than the sentence itself:
    *
-   *   R1  a downward ray finds a real surface under it        — 12/12
+   *   R1  a downward ray finds a real surface under it        — 12/12, drops 0.561–5.460 m
    *   R2  from the nearest place a PLAYER can actually be, the bottle is inside the pickup
-   *       magnet (2.40 m): measured 0.08–0.70 m, worst case the ladder bottle
+   *       magnet (2.40 m): measured 0.080–0.700 m, worst case the ladder bottle
    *   R3  it is NOT reachable from the courtyard floor        — 12/12 cost the traversal
+   *
+   * **Those three tests are `tests/cluevault.test.mjs` R1/R2/R3, and until that file was written
+   * they did not exist.** This block printed their results for months with nothing in the tree
+   * performing them — §416's shape exactly, and the vault reward promoted it from cosmetic to
+   * blocking, because a bottle you cannot reach is now a set you cannot finish. Run against the
+   * built level, R1 and R2 reproduce the claims above to the digit and R3 holds 12/12. Two
+   * numbers in the prose did not survive and are corrected here: the pylon face under the ladder
+   * bottle is **5.460 m** below it, not 5.93, and the stale §8.1 cornice coordinate falls
+   * **13.600 m**, not "the full 15".
    *
    * R2 is the test that needed thinking about rather than writing. For eleven of them "where a
    * player can be" is standing on the surface under the bottle, capsule centre at
    * `surface + grabHeight`. For the ladder bottle it is **not**: the only thing under it is the
-   * battered pylon face 5.93 m below, and it is collected from a *cling* — capsule centre where
-   * `WallClimb.enter` puts it on rung `notch-pylon-e-w-5`, which measures 0.70 m. A test that
+   * battered pylon face 5.460 m below, and it is collected from a *cling* — capsule centre where
+   * `WallClimb.enter` puts it on rung `notch-pylon-e-w-5`, which measures 0.700 m. A test that
    * only knew about floors called that bottle unreachable, and it is the one bottle in the level
-   * whose whole purpose is that you have to be climbing to take it.
+   * whose whole purpose is that you have to be climbing to take it. Both halves of that are now
+   * assertions rather than sentences: R2 requires the floor-only reading of that bottle to FAIL
+   * (4.560 m against a 2.40 m magnet) and the cling reading to pass.
    *
    * ── The manager half, adapted from the reference and NOT copied ───────────────────────
    * `bottle.gd` / `bottle_manager.gd` in NoahChase/Sly-Cooper--A-Thief-in-Godot (HEAD 6479957,

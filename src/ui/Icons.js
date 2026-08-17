@@ -461,10 +461,33 @@ export function sparkle(cls = '', color = C.spark) {
   `, cls);
 }
 
+/**
+ * Sly's clue bottle — the corked glass the twelve-bottle set is made of.
+ *
+ * `C.spark` #8fd8ff is the same §2.1.6 pickup blue `Props.MATERIALS.glass` and
+ * `Pickups._clueMat` both draw the bottle in, so the toast and the object in the world are one
+ * colour rather than two. House rules as the header states them: the dark thickness shape
+ * offset downward, the ink silhouette, one hard specular notch and no gradient.
+ */
+export function clueBottle(cls = '') {
+  return wrap('0 0 46 46', `
+    <path d="M15.4 21.4c0-3.4 2.2-4.6 2.2-7.4V12h10.8v2c0 2.8 2.2 4 2.2 7.4v17.4a3.4 3.4 0 0 1-3.4 3.4H18.8a3.4 3.4 0 0 1-3.4-3.4z"
+          fill="${C.inkSoft}" stroke="${C.ink}" stroke-width="3.4" stroke-linejoin="round"/>
+    <path d="M15.4 17.4c0-3.4 2.2-4.6 2.2-7.4V8h10.8v2c0 2.8 2.2 4 2.2 7.4v17.4a3.4 3.4 0 0 1-3.4 3.4H18.8a3.4 3.4 0 0 1-3.4-3.4z"
+          fill="${C.spark}" stroke="${C.ink}" stroke-width="3.4" stroke-linejoin="round" opacity=".95"/>
+    <rect x="16.4" y="4.2" width="13.2" height="6.2" rx="2" fill="${C.goldD}"
+          stroke="${C.ink}" stroke-width="3.2"/>
+    <path d="M19.6 22.6h6.8v9.4h-6.8z" fill="${C.paint}" stroke="${C.ink}" stroke-width="2.4"/>
+    <path d="M18.9 14.4a9 9 0 0 0-.7 4.2v10.2" stroke="${C.goldSpec}" stroke-width="2.8"
+          stroke-linecap="round" opacity=".85"/>
+  `, cls);
+}
+
 /** Small utility glyphs for toasts. */
 export function glyph(name, cls = '') {
   switch (name) {
     case 'coin': return coin(cls);
+    case 'clue': return clueBottle(cls);
     case 'eye': return eyeOfRa(cls);
     case 'cooper': return cooperMark(cls);
     case 'alert':
