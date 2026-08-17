@@ -37398,6 +37398,20 @@ there is no number, and there is no rule over the descent either.
   what it is for, but its `bandHi` should not be quoted as an authored fall. Its domain block already
   disclaims the level (§500); this adds *what the population itself is*.
 
+### §501.8 The one measurement here that is geometric rather than driven, and how to close it
+
+§501.2's cornice walk-off is established from the capsule profile (standable y 17.004, hall floor
+y 0.004) plus the 189-edge driven census, **not** from a drive of that exact departure. The drive was
+attempted and returned SILENT: the capsule placed at (−9.5, 16.94, −15.4…−15.0) never reported a
+landing inside a 1600-frame budget.
+
+What would close it, so the next lane does not re-derive it: the budget is not the problem — a 17 m
+fall is ~71 frames. The capsule is not falling at all, which points at the departure point rather
+than the fall. Either it is resting on the stepped lip at z −16.25…−15.75 (rests y 15.364 / 15.300 /
+12.896, all within a capsule of the start), or it is entering an `attach` state on the way down —
+the hall has hooks. **Log `c.sm.name` per frame for that one drop and it will say which in one run.**
+The geometry is not in question; only whether the arrival is 27-ish or something else.
+
 ## §460 — `leadMax` was applied at the wrong stage, and the arm I wrote to watch for it was the same bug
 
 *First section in this lane's assigned block §460–§479. Numbers are no longer taken next-free: nine
@@ -37721,3 +37735,110 @@ occurrence this session and both had the same cause — concurrent lanes staging
 so it is a process property rather than an accident. `git add` with explicit paths does not help the
 lane that commits *second*; only the committer checking `git status` before committing does.
 
+
+---
+
+## §502 — The hard landing gets its second term: not how fast you arrived, but whether you chose to leave
+
+§501 rejected candidate 1 — *"was it a controlled departure?"* — because it made population B soft.
+**That rejection was wrong, and the paragraph that invalidated it was the next one I wrote.**
+§501.3 opened population B and found a 1.2 m hook release, a walk-off, and a staircase. Every one of
+those is a move the player meant. A term that makes them soft is the term *working*.
+
+The requirement was never "keep population B hard". It is:
+
+> A landing is hard when **the descent was not a controlled departure** — the player lost a grip,
+> was knocked off, or fell out of a traversal beat. Walking off an edge, jumping, releasing a hook
+> and walking down a stair are all controlled, **at any height**.
+
+That needs no separation by speed at all. It only needs to be *true*.
+
+### §502.1 The machine already carried it, at one site
+
+`StateMachine.set()` passes `prev` into `enter` and funnels every transition through
+`Controller.onStateChanged(next, prev)` — the method whose existing `freeWall()` comment already
+says *"done here rather than in seven `enter`s because the machine already funnels every transition
+through this method."* So the term costs one field and one site, not a tag on each of the ~40
+`return 'fall'` sites in `Moveset.js`:
+
+```
+  entering an `air` state from a `ground` state        -> _airControlled = true
+  entering an `air` state from one of BEAT_LOST        -> _airControlled = false
+  anything else (jump -> fall at apex, fall -> dive)   -> left alone; a continuation, not a new episode
+```
+
+`Land.enter` then reads `f >= TUNE.landHard && !c._airControlled`. `landHard` stays **15.0** and
+`landBeat` stays **3.2** — every landing still speaks (§443.1); what changes is which ones cost
+control.
+
+**The eight ground states were verified before relying on them.** Every ground-group route into the
+air is exactly `if (!c.grounded) return 'fall'` — Idle, Move, Sneak, Crouch, Roll (plus a coyote
+guard), Skid, Land, Tiptoe. There is no second meaning to disambiguate. That is why this half is
+unambiguous while the attach half is not.
+
+### §502.2 `BEAT_LOST` is a list and not a group test, because the group does not carry it
+
+The first implementation used `prev.group !== 'air'`, on my assumption that the wall states were
+`attach`. **Measured: `wallCling`, `wallRun`, `wallClimb` and `wallJump` are all group `air`.** So a
+lost grip was an air → air transition and the rule skipped it in silence — the flag stayed whatever
+it had been, and the B arm of the verification came back reading `controlled=true` at every height.
+
+That is §435.4 inside my own repair: a rule written from my picture of the state table rather than
+from the state table. The group separates `attach` holds from wall work; it does not separate *left
+on purpose* from *fell off*. The list is explicit and was checked against all 31 shipped states.
+
+### §502.3 The verification is a controlled experiment, and that is the point
+
+Same heights, same arrivals to the millimetre, differing **only** in how the descent began:
+
+```
+  from y     4        8        12       17       20
+  arrival   13.600   19.600   24.000   28.400   30.800     identical in both arms
+  began on a wall     soft     HARD     HARD     HARD     HARD
+  began on the ground soft     soft     soft     soft     soft
+```
+
+Speed is held constant and the new term alone decides. That is the experiment §500.4 proved was
+impossible with speed as the only input — at 19.600 m/s the old rule had exactly one answer
+available and it had to be wrong for one of these two rows.
+
+Across the level: of the 188 driven walk-offs, **158 are now classified controlled** and land soft
+however fast they arrive, including the 29.600 m/s one. The median walk-off, 17.200 m/s, no longer
+costs control.
+
+### §502.4 The 29 that are still hard are the term working, not a residual
+
+29 walk-offs still land hard, and the traced state sequences say why:
+
+```
+  top 17.0  28.000 m/s   railSlide(C) -> fall(U) -> land(U)
+  top 17.0  27.600 m/s   railSlide(C) -> fall(U) -> land(U)
+```
+
+The walk-off dropped them onto a **rail**, they rode it, and then they came off the end. That is
+losing a traversal beat, and it is exactly what the term is for. It was found by instrumenting the
+sequence rather than by explaining the count (§442.3) — the count alone would have read as a 15 %
+failure rate.
+
+### §502.5 The residual that IS a residual, stated because it is real
+
+**A deliberate hook or rail release reads as uncontrolled.** `HookSwing` returns `'fall'` from two
+lines that mean opposite things — a `crouch` release the player chose, and the hook going out of
+range — and the state name cannot tell them apart. So a chosen 25 m drop off a hook still lands hard.
+
+Erring toward *"that was an event"* on a 25 m fall is the tolerable half of this, and closing it is
+the ~40-site tagging job §502.1 avoids. If someone wants it closed, that is the price and it is the
+only thing that buys it.
+
+### §502.6 What this did not change
+
+`landHard` 15.0 and `landBeat` 3.2 are both untouched. No threshold was re-derived, no number was
+picked out of an overlap, and §500.4's decision table is now moot rather than wrong — it priced the
+options available when speed was the only term. Per-surface authoring (§501.6) remains the answer if
+this level ever wants *specific* drops to hurt regardless of how they began; this term is about
+whether the drop was the player's decision, which is a different question and the one the moveset's
+own rule was always asking.
+
+Landing-relevant suites green: recover, traversal, payloadtriage, audio, telegraph, collectroute —
+116/116. The full suite is deliberately not re-run: `Terrain.js` and `CameraRig.js` are dirty with
+two other lanes' work in progress and a full run would be measuring them, not this.

@@ -402,6 +402,14 @@ export const TUNE = {
   safePoll:     0.30,    // seconds between supported-stance samples
 };
 
+/**
+ * Leaving one of these for the air is losing a traversal beat, not choosing to drop — the input to
+ * the hard landing's second term (§502, and `onStateChanged` for why this is a list not a group).
+ * `hurt` is here because being knocked off is the clearest uncontrolled descent in the game.
+ */
+const BEAT_LOST = new Set(['wallCling', 'wallRun', 'wallClimb', 'hookSwing', 'railSlide',
+  'railWalk', 'poleClimb', 'poleSwing', 'ledgeHang', 'toTarget', 'hurt']);
+
 const SPAWN = new THREE.Vector3(0, 0, 30);
 const SPAWN_YAW = Math.PI;
 const DEG = Math.PI / 180;
@@ -641,6 +649,9 @@ export class Controller {
        `landed` event, so no FX dust and no footfall from AUDIO. −99 rather than 0 so frame 1 of a
        session cannot look like a landing. */
     this._landFrame = -99;
+    /* Whether the current airborne episode began from the ground — see `onStateChanged`. Defaults
+       TRUE so an unclassified fall is soft: a landing nobody can attribute must not cost control. */
+    this._airControlled = true;
 
     /* ---- ledge probe result ---- */
     this.ledge = { ok: false, y: 0, x: 0, z: 0, nx: 0, nz: 1, rec: null };
@@ -1847,6 +1858,48 @@ export class Controller {
        `enter`s because the group already says exactly this and the machine already funnels every
        transition through this method. */
     if (next.group === 'attach') this.freeWall();
+    /**
+     * How this airborne episode BEGAN — the second term the hard landing needs (§502).
+     *
+     * `landHard` was a pure speed threshold, and §500 measured that speed cannot separate the two
+     * things it is asked to: walking off a 3 m terrace and walking off a 17 m cornice are the same
+     * act on the same kind of surface, differing only in height, and height is what arrival speed
+     * already measures. On the shipped level the MEDIAN walk-off arrives at 17.200 m/s against a
+     * threshold of 15.0, so more than half of every edge in the game was a control tax.
+     *
+     * The distinction that does work is not a property of the fall at all — it is how the fall
+     * started, and the machine already carries it. Every ground-group state's only route into the
+     * air is `if (!c.grounded) return 'fall'` (Idle, Move, Sneak, Crouch, Roll, Skid, Land, Tiptoe
+     * — verified, all eight), which means *stopped being supported while standing on something*.
+     * A `Jump` also begins from the ground. Both are departures the player made.
+     *
+     *   from `ground`   walked off an edge, or jumped  -> CONTROLLED
+     *   from BEAT_LOST  lost a cling / wall / hook / rail / pole / hang, or was knocked out of
+     *                   `hurt`                          -> not controlled
+     *   anything else   jump -> fall at apex, fall -> dive: a continuation, NOT a new episode,
+     *                   so the flag is deliberately left alone rather than recomputed
+     *
+     * **`BEAT_LOST` is an explicit list and not a group test, and that is load-bearing.** The first
+     * version of this used `prev.group !== 'air'`, on the assumption that the wall states were
+     * `attach`. Measured: `wallCling`, `wallRun`, `wallClimb` and `wallJump` are all group **`air`**,
+     * so a lost grip was air -> air and the rule skipped it silently. The group separates `attach`
+     * holds from wall work; it does not separate "left on purpose" from "fell off", which is the
+     * distinction this needs. Verified against the shipped state table, all 31 states.
+     *
+     * Done here for the same reason `freeWall()` above is: the machine funnels every transition
+     * through this method, so it costs one site instead of a tag on each of the ~40 `return 'fall'`
+     * sites in `Moveset.js`.
+     *
+     * KNOWN RESIDUAL, stated because it is a real error and it is the RIGHT direction: a
+     * *deliberate* hook or rail release reads as uncontrolled, because `HookSwing` returns `'fall'`
+     * from two lines that mean opposite things (a `crouch` release and the hook going out of
+     * range) and the state name cannot tell them apart. So a chosen 25 m drop off a hook still
+     * lands hard. Erring toward "that was an event" on a 25 m fall is the tolerable half of this.
+     */
+    if (next.group === 'air' && _prev) {
+      if (_prev.group === 'ground') this._airControlled = true;
+      else if (BEAT_LOST.has(_prev.name)) this._airControlled = false;
+    }
     this.engine.emit('playerState', next.name);
   }
 
@@ -1932,6 +1985,9 @@ export class Controller {
      * number no measurement can see.
      */
     this._needSpawnSnap = false;
+    // A teleport ends whatever airborne episode was in progress; the next one is re-classified
+    // from wherever the caller put him, and until then an unattributable fall is soft.
+    this._airControlled = true;
     this.velocity.set(0, 0, 0);
     this.grounded = false;
     this.coyote = 99;

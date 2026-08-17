@@ -172,9 +172,20 @@ class Land extends State {
     const f = c.landImpact;
     c.landImpact = 0;
     const rolling = c.down('crouch') && c.speedXZ() > 3.0;
-    this._t = rolling ? 0.24 : f >= TUNE.landHard ? TUNE.landHardTime : TUNE.landSoftTime;
-    c.oneShot(rolling ? 'land_roll' : f >= TUNE.landHard ? 'land_hard' : 'land_soft');
-    if (f >= TUNE.landHard) {
+    /**
+     * TWO terms, not one (§502). `landHard` is the speed floor; `_airControlled` is how the fall
+     * began. A hard landing is a fast arrival out of a descent the player did NOT choose — lost a
+     * grip, was knocked off, fell out of a traversal beat. Walking or jumping off an edge is a
+     * departure he made, at any height, so it stays soft however fast it arrives.
+     *
+     * Speed alone could not do this: §500 measured the median walk-off on the shipped level at
+     * 17.200 m/s against a threshold of 15.0, and §501 showed the two populations are the same act
+     * at different heights. `landBeat` is untouched — every landing still speaks (§443.1).
+     */
+    const hard = f >= TUNE.landHard && !c._airControlled;
+    this._t = rolling ? 0.24 : hard ? TUNE.landHardTime : TUNE.landSoftTime;
+    c.oneShot(rolling ? 'land_roll' : hard ? 'land_hard' : 'land_soft');
+    if (hard) {
       c.engine.emit('shake', Math.min(0.3, f * 0.018));
       c.anim?.addImpulse?.({ bone: 'root', dir: DOWN, strength: Math.min(1, f / 18), decay: 9 });
     }

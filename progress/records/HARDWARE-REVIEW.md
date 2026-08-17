@@ -105,7 +105,40 @@ speaks.
 > walkable. Nobody falls into the vault; they walk down. The band `landHard` was placed inside was
 > bounded below by a walk-off and above by a stair.
 
-**The decision you are actually being asked to make.** Not a number, and not a rule over the descent.
+> ### ✅ FOURTH CORRECTION (§502) — SHIPPED. The second term exists after all, and the decision below is no longer owed
+>
+> §501 rejected "was it a controlled departure?" because it made population B soft — **and that
+> rejection was wrong.** Population B is a 1.2 m hook release, a walk-off and a staircase (§501.3).
+> All three are moves the player meant. Making them soft is the term working.
+>
+> **Shipped:** a landing is hard when it was fast **and** the descent was not a controlled
+> departure. `Controller.onStateChanged` records whether the airborne episode began from a ground
+> state (walked off, or jumped) or from a lost traversal beat; `Land.enter` requires both.
+> **`landHard` stays 15.0 and `landBeat` stays 3.2** — every landing still speaks, and no threshold
+> was re-derived.
+>
+> The verification is a controlled experiment — same heights, identical arrivals, only the departure
+> differs:
+>
+> ```
+>   arrival            13.600   19.600   24.000   28.400   30.800
+>   began on a wall     soft     HARD     HARD     HARD     HARD
+>   began on the ground soft     soft     soft     soft     soft
+> ```
+>
+> Of 188 driven walk-offs, **158 now land soft however fast they arrive** — including the 29.600 m/s
+> one. The median walk-off no longer costs control. The 29 still hard were traced and are correct:
+> the walk-off dropped them onto a rail, they rode it, and came off the end.
+>
+> **What to watch on hardware, and it is now a small question.** Walk off things and jump off things
+> at every height the level offers: none of it should cost you control, only sound and squash. Then
+> lose a wall cling or come off the end of a rail at height: that should. The one residual to listen
+> for is a *deliberate* hook release from high up — it currently reads as hard, because `HookSwing`
+> cannot distinguish a chosen release from losing the hook (§502.5). If that feels wrong, the fix is
+> a ~40-site tagging job and that is the only thing that buys it.
+
+**~~The decision you were being asked to make~~** (superseded by §502 above, kept because it was
+quoted). Not a number, and not a rule over the descent.
 
 1. **Do you want some drops on this level to hurt and others not to?** If yes, it has to be **authored
    per surface** — a flag on the collider, a volume, or a property of the landing surface. Every term

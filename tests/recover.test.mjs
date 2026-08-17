@@ -480,7 +480,26 @@ test('L1: landHard sits in a band that neither population can reach', async () =
    *   added here is the disclaimer, because the failure mode §418.3 exists to prevent is
    *   exactly this: a green arm titled "landHard sits in a band that neither population can
    *   reach" being quoted for a claim about the LEVEL that it structurally cannot see. It
-   *   cannot see the level. It has never stood on anything. */
+   *   cannot see the level. It has never stood on anything.
+   *
+   *   ── §501.3: AND ITS POPULATION B CANNOT TELL A DROP FROM A STAIRCASE ──
+   *   `descents` below is built as `route[i-1][2] - route[i][2]` — the height difference between
+   *   consecutive waypoints — and then dropped onto flat ground. That construction cannot see what
+   *   is BETWEEN the waypoints. Opened one at a time, L1's three "authored route descents" are:
+   *
+   *       7.753   hook-chain -> hall-front-cornice   dy  1.20   a 1.2 m HOOK RELEASE
+   *      25.368   hall-front-cornice -> hall-floor   dy 13.60   a WALK-OFF off a standable ledge
+   *      23.749   descent-landing -> vault-floor     dy 12.00   a STAIRCASE
+   *
+   *   §447.1 measured that stair and found it built, correct and walkable — flight A −3.650 /
+   *   −5.347, mid landing −5.600, flight B −9.071, crypt −12.000, both ramps inside
+   *   `slopeWalkableDeg` 50. **Nobody falls 12 m into the vault; they walk down.** So `bandHi` here
+   *   is the arrival of a fall nobody takes, and it must not be quoted as an authored descent.
+   *
+   *   Left standing rather than rebuilt, deliberately: this arm exists to pin §443.3's derivation
+   *   against drift, and that derivation used exactly these numbers. Changing the population would
+   *   make it stop doing the one job it has. What is added is that the population is not what its
+   *   name says. */
   const TICK = -TUNE.gravity * DT;
   const { engine, c, mods } = await realWorld();
 
