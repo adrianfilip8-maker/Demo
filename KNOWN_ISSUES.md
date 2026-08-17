@@ -32913,6 +32913,30 @@ to it holds one subject or two, and it held two.
 worker wrote another instance afterwards, including inside the arm written to demonstrate the
 lesson. Knowing did not help. Running did.
 
+### §418.10 `git commit --only <path>` silently defeats the constructed-blob procedure
+
+Found by the camera lane and it is a live trap in a procedure four lanes have been running all
+session. **`git commit --only <path>` commits the WORKING TREE content of that path**, not the
+index. The §411.13 blob technique writes its object with `update-index --cacheinfo` and never
+touches the working tree — so combining the two silently commits the wrong thing: the
+working-tree file, which is either unchanged (a no-op commit) or, worse, another lane's in-flight
+state.
+
+The blob procedure requires a **plain `git commit`**, with the index verified beforehand to hold
+exactly the one path. `git diff --cached --stat` is that verification and it was already in the
+procedure — for the wrong reason. It was there to check *which lines*; it also checks *whether
+anything at all*.
+
+Audited on this branch: every ledger section committed by blob this session is present in `HEAD`
+(§414, §418.5–.9, §419, §419.5 all resolve), so nothing was lost. That is luck plus habit rather
+than the procedure, and the procedure now says so.
+
+The general shape is worth naming because it is a third instance of one thing today: **`--only`
+reads the working tree, `git checkout --` reads the index, and `update-index` writes the index
+without touching the working tree.** Three commands, three different answers to "which copy", and
+all three have now damaged or nearly damaged this file — §406.3's stash, §410.4's stale restore,
+and this. *On a shared file, know which copy each command is talking about before running it.*
+
 ### §418.9 §418.3 can be satisfied in prose without being satisfied in fact
 
 The sharpest objection to this rule came from the lane applying it hardest, and it is a hole in
