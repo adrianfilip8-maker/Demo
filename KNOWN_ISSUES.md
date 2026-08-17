@@ -32391,3 +32391,72 @@ almost everything with staged stills.
 > that accumulates over a sprite's life is under-sampled by exactly the verification method this
 > project relies on most.** When a still is the instrument, ask what the frame would look like at
 > the other end of the life you are not photographing.
+
+## §416 — "Taken at the plateau" was a procedure naming a check nothing performed
+
+Commissioned as a sweep: every measured extent in this project is described as *"taken at the
+|dL| plateau"*, and that phrase assumes a plateau exists. It does for a figure with a hard
+silhouette. It does not for a 19-puff cloud with no edge. So which recorded extents were taken at
+a genuine plateau, and which took a threshold and called it one?
+
+### §416.1 The census, and it is three sites
+
+The phrase, in every form, across `tools/`, `tests/`, `src/` and this ledger:
+
+```
+  tools/impactframe.mjs:108   "taken on the plateau where the bbox is stable across
+                               thresholds rather than at a chosen one"      the PROCEDURE
+  tools/impactframe.mjs:124   sly:  plateau |dL| 16..64                     GENUINE
+  KNOWN_ISSUES.md:30611       dust: "plateau stable |dL| 4..16"             FALSE
+```
+
+(Every other `plateau` in the tree is a terrain plateau or a toon band — a different word.)
+
+### §416.2 The one that is false, measured on two independent captures
+
+§407.3 recorded the dust as *"x 404..930 (526 px), rows 248..521 (274 px), plateau stable
+|dL| 4..16"*. Over exactly that range, on `fxrim4-impact` and again on `fxrim5-impact`:
+
+```
+  |dL|>4    x 372..833   rows 244..499
+  |dL|>8    x 374..828   rows 247..497
+  |dL|>16   x 397..824   rows 248..495
+  spread across 4..16:  x0 25 px, x1 9 px
+```
+
+25 px of travel on the left bound is not a plateau, and `tools/armextent.mjs` — which finds the
+longest run of consecutive cuts whose bbox agrees within 2 px — reports **NO PLATEAU** for this
+subject at any range from 2 to 64. The reason is structural and therefore tree-independent: a
+cloud of soft-edged puffs has no hard edge, so its bbox is a function of the threshold and there
+is no "the" extent to record.
+
+The original capture is gone and cannot be re-checked, so this is not proof that the 2026-08-16
+frame lacked a plateau. It is proof that the claim does not reproduce on either capture since,
+and that the subject cannot have one for a reason that does not depend on which frame it was.
+
+### §416.3 The actual defect, which is not the number
+
+**No tool that could detect a plateau existed until `armextent.mjs` was written today.** The
+plateau in every prior extent was asserted by reading a table of thresholds and judging the
+numbers close enough. That is a procedure naming a stability check that nothing performed — and
+for `sly` the judgement happened to be right, which is exactly why it survived.
+
+> **§416 — A procedure that names a check must contain the check.** "Taken at the plateau" is a
+> claim that a stability test was run and passed. If no code runs it, the phrase is describing an
+> intention, and its accuracy depends on whoever last eyeballed the table. The remedy is not more
+> care: it is that the tool detects the plateau, reports its range, and says NO PLATEAU when there
+> is none — which turns "the extent" from an assumption into an output that can be absent.
+
+This is §411/§414's shape once more and the fifth instance of the family this session, but the
+distinguishing feature is worth keeping: the previous four were checks that ran and could only
+give one answer. **This is a check that never ran at all, and was cited by name in three places.**
+A reader auditing the header would find the procedure correct, the number plausible, and no way
+to discover that nothing had executed it.
+
+### §416.4 What it changes, which is less than it sounds
+
+`sly`'s plateau is real — `armextent` finds it at |dL| 16..64 and the recorded bounds move ≤1 px.
+`dust` is now recorded as the WIDEST signal level with `NO PLATEAU` stated in the source, which is
+the correct handling for a containment target. No verdict moves. The value of the sweep is that
+the phrase now means something everywhere it appears, and that a future extent cannot inherit the
+claim without the tool producing it.
