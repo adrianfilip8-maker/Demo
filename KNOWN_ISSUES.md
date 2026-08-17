@@ -36309,3 +36309,127 @@ So the §438 prescription needs its complement, and the two do not compete:
 The tell for the second case is cheap and worth having: **an authored constant whose delivered value
 is small and stubborn across every route you try.** Three rounds of "it delivers 5%, then 26%, then
 16 cm" is not noisy data. It is a clamp, and the way to find a clamp is to read the expression.
+
+---
+
+## §446 — The 17.5 m first-frame snap was the spawn snap, unscoped: five lanes each worked around the field and none named it
+
+§444's harness note left a defect open and said so: a freshly-minted `Controller`, teleported to an
+airborne position and stepped once, arrived on the terrace deck at y 2 — a 17.5 m fall in one frame,
+`grounded`, state `idle` — and the cause was unfound. `realWorld()` burned the frame off rather than
+claiming a repair. This is the cause, the blast radius, and the repair.
+
+### §446.1 The cause
+
+`Controller._needSpawnSnap` is armed in the constructor and consumed by `_probeEnvironment` on the
+first frame COLLISION is live, where it runs `_snapToGroundBelow(8)` — a ground cast from `y + 8`
+reaching 38 m down. It exists for a real reason: `init()` places Sly at `SPAWN` before COLLISION
+exists, so something has to put him on the floor once it does.
+
+It was scoped to **the first live frame** and never to **the spawn**, and `teleport()` did not spend
+it. So the spawn's ground cast was applied to wherever a caller had just put him.
+
+Measured on the shipped temple, one fresh Controller per row, `hardReset` to (4.2, y, 4.5) then one
+`update()` — instrumented at `_snapToGroundBelow` itself, not inferred from the end position:
+
+```
+    y  -2  ->  2.000   +4.000        y  8.95 ->  2.000   -6.950
+    y   0  ->  2.000   +2.000        y 19.5  ->  2.000  -17.500
+    y   1  ->  2.000   +1.000        y 31.9  ->  2.000  -29.900
+    y 2.5  ->  2.000   -0.500        y 32.1  -> 32.093   -0.007   out of reach
+```
+
+**Both signs, and nobody had seen the upward one.** The cast starts 8 m *above* him and takes the
+first ground below *that*, so a capsule under a deck is lifted onto it exactly as one above is
+dropped to it — up to 8 m, measured at 0.5 / 1.5 / 3 / 6 / 7.5 m below the deck, all landing on it.
+Every previous look at this defect had probed from above, so it read as "a fall".
+
+§444's ruling-out was correct on both counts. `_calibrate` is not involved, and neither is §443's
+`_sweepLandFrame` (−1 against a `_frame` that is already 1 by the time the gate is read).
+
+### §446.2 It does not reach the shipped game, and the margin is thinner than the answer sounds
+
+`src/` constructs exactly one `Controller`, at `main.js:205` in the MANIFEST loop. There is no
+respawn path, no level transition and no re-mint that builds a second one; every other
+`new Controller` in the repo is in `tests/` or `tools/`. That single instance spends its armed frame
+at `SPAWN`, where the snap moves him **−0.0000 m**. The one thing standing between this and a player
+was that the snap's only live firing had nothing to correct.
+
+`Debug.setShot` — the path §444 flagged — is safe for a second and independent reason, and this was
+measured in-arm rather than read off the source, because the whole answer rests on it: `setShot`
+raises `engine.debug.freeCam` before it steps, and `update()` returns on that flag *above*
+`_probeEnvironment`. A freeCam update moves Sly 0.000 m and leaves the arm unspent.
+
+The other two shipped `teleport` callers — `Health.js:312`'s checkpoint respawn and `_safetyNet`'s
+fell-out-of-the-world — step a Controller whose arm was spent at boot. They were safe by *ordering*.
+After the repair they are safe by *construction*, which is the difference worth having: the next
+person to add a respawn, a level transition or a shot-staging tool does not have to know this.
+
+### §446.3 The evidence was already in the tree, six times over
+
+```
+  tests/traversal.test.mjs:1176, 2043, 2138, 2182, 3749, 3801, 4078
+  tests/recover.test.mjs:287, 475
+  tests/camdrive.test.mjs:501, 733, 863
+  tests/_moveset.mjs:179  (makeSim)
+  tools/sweepcensus.mjs:140
+```
+
+Every one of them is `c._needSpawnSnap = false` on the line after a `hardReset` or a `teleport`.
+**Five lanes each independently found this field, cleared it locally, and not one filed it.** The
+one builder that had not was `realWorld()`, and that is the one that bit — costing two rounds in
+which a telegraph beat was reported as "did not reproduce", and costing the whole project the
+ability to start any test airborne.
+
+This is §438's shape again with a new tell. The hazard was not hidden; it was *annotated*, five
+times, in five files, by five people who each treated it as local grit. **A workaround that appears
+independently in more than two places is a defect report that nobody wrote down** — and the cheap
+check for it is a grep for assignments to a private field from outside its own class.
+
+### §446.4 The repair, and what it deliberately does not touch
+
+One line in `teleport()`: spend the arm. A teleport is somebody saying exactly where Sly is, and a
+pending snap is an answer to a question about a position that no longer exists.
+
+The boot path is untouched **by construction, not by luck** — `init()` writes `this.position`
+directly and calls `teleport()` zero times, and that was measured by instrumenting `teleport` during
+`init`, not assumed from reading it. `realWorld()`'s frame-burn is removed in the same commit: a burn
+that no longer burns anything is a frame of simulation nobody can account for.
+
+**The cast's ±(8, 30) m reach is deliberately left alone.** It is wildly over-scoped for what it
+does — correct a spawn placed before collision existed — and after the repair the only position it
+can ever act on is `SPAWN`, where it measures zero. Narrowing it would be tuning a number no
+measurement can see, which is §444.1's error run forwards instead of backwards. The six redundant
+workarounds are likewise left in place: deleting six lines across five lanes' files buys nothing and
+risks a merge for each.
+
+Nothing was added to `HARDWARE-REVIEW.md`. This repair has no tunable and no feel component — it is
+a scoping bug with one correct answer, not a number somebody has to sit in front of a screen to
+judge.
+
+### §446.5 R5, and the arm that caught me writing my own picture of the level
+
+`recover.test.mjs` R5. The ablation restores the pre-repair code *exactly*, by re-arming the single
+boolean the repair spends, and re-runs the identical drops — nothing on the measurement path is
+stubbed, since the BVH, the capsule, the cast and the position are all real and what is put back is
+one private flag. It also drives the **boot** path, because a repair that simply deleted the snap
+would pass both other halves of the arm.
+
+`does NOT discriminate`: the cast's reach or its upward face. Once `teleport()` spends the arm, the
+only position the snap can act on is the spawn, so the ±(8, 30) m reach is unreachable from this arm
+and the arm says so rather than implying coverage it does not have.
+
+**My first version of R5 asserted `state === 'fall'` and the level refused it.** At y 12 over
+(4.2, 4.5) the auto hook-grab fires on frame 1, because there is a ring in reach. That is §435.4
+catching me inside my own arm — a probe written from my picture of the level rather than from the
+level. The arm now asserts he is not in a *ground* group, and logs the frame-1 states:
+
+```
+  2.5 m fall · 5 m fall · 8.95 m fall · 12 m hookSwing · 19.5 m fall · 25 m fall · 30 m fall
+```
+
+The `hookSwing` row is the payoff rather than an inconvenience. It is an airborne entry that no test
+in this project could reach at all until this commit, appearing unbidden on the first frame of the
+first arm written after the repair.
+
+Suite 842/842.
