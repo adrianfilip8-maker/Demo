@@ -401,21 +401,31 @@ const FRAMES = {
  * being matched loosely against each other — tightening the match is the repair, and adding
  * `['wall_run', …]` to a substring table that already contains `['run', …]` would not have been.
  *
- * **Only the three the arm named as CONTRADICTIONS are listed**, i.e. a state landing on a
- * framing that says the opposite of what the state is doing. The states that merely *fall
- * through* to `idle` are left exactly where they route today and are design questions, not
- * routing typos — `move` (documented at length in `tests/camspeed.test.mjs`: wiring the
- * walk/run/run_fast ladder is a feel decision), and `hurt`, `toTarget`, `bounce`, `skid`,
- * `pickpocket`. One more belongs on that list and is reported rather than changed here:
- * **`combatStrafe` → `idle`**, while the `combat` framing it is named for (`side 0.30`,
- * `dist −0.90`) is reached only by `combo`. Same class as the three above; not in this change
- * because it was not in the diagnosis, and smuggling a fourth fix into a three-fix arm is how a
- * measured result stops being attributable.
+ * **The first three entries are the ones the arm named as CONTRADICTIONS** — a state landing on a
+ * framing that says the opposite of what the state is doing.
+ *
+ * `combatStrafe` is the fourth of that class and arrived one round later, deliberately: it was
+ * *reported* rather than fixed alongside the three, because it was not in the original diagnosis
+ * and smuggling a fourth fix into a three-fix arm is how a measured result stops being
+ * attributable. Its shape is identical — the `combat` framing is named for the lock-on orbit and
+ * was reached only by `combo`, so the one state whose entire job is circling a mark was framed as
+ * a standing idle. It earns its entry twice over, because `combat`'s `side: 0.30` is applied
+ * along `_sideSign`, which `_blendFrame` derives from the LATERAL component of velocity — and
+ * during a `combatStrafe` orbit the lateral component *is* the motion. The framing opens toward
+ * the direction of the circle. In `idle` (`side: 0.00`) that channel was multiplied by zero.
+ *
+ * The states that merely *fall through* to `idle` stay exactly where they route and are design
+ * questions rather than routing typos: `move` (documented at length in
+ * `tests/camspeed.test.mjs` — wiring the walk/run/run_fast ladder is a feel decision), `hurt`,
+ * `toTarget`, `bounce`, `skid`, `pickpocket`. `pickpocket` is the nearest of those to a fifth
+ * — `sneak`'s close, low, tense framing is arguably what a creep-up wants — and it is named here
+ * so the next reader inherits the question rather than rediscovering it.
  */
 const STATE_FRAME = {
-  wallRun:   'wall_run',
-  railWalk:  'balance',
-  ledgeHang: 'ledge_hang',
+  wallRun:      'wall_run',
+  railWalk:     'balance',
+  ledgeHang:    'ledge_hang',
+  combatStrafe: 'combat',
 };
 
 /** Substring → framing key, for names not in `STATE_FRAME`. Order matters: most specific first. */

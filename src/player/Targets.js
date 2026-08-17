@@ -71,6 +71,7 @@ export const THEIRS = {
   snapLerp: 0.2,       // 0.2 / (d + 0.2)
   noClip: 1.5,
   release: 2.0,
+  failBoost: 4.0,      // `velocity.y += 4.0` on their two TO_TARGET failure paths
 };
 
 /**
@@ -115,6 +116,7 @@ export const DERIVATION = [
   { key: 'magNoClip',     from: 'noClip',     dim: 'Lh',  note: 'THE other non-obvious one: capsule off, so geometry cannot wedge the assist' },
   { key: 'magRelease',    from: 'release',    dim: 'Lv',  note: 'lands on 2.52 m — exactly our jump apex, i.e. "a target you can no longer reach"' },
   { key: 'magCurveDomain', from: 'jumpV0',    dim: 'v',   note: 'their jump curve sampled clamp(vy, ±8) = ±JUMP_VELOCITY' },
+  { key: 'magFailBoost',  from: 'failBoost',  dim: 'v',   note: 'their "nice jump boost if failed" — 0.5×JUMP_VELOCITY, so 0.5×jumpV0 here' },
 ];
 
 /** Resolve `DERIVATION` against a TUNE block. Returns { key: expectedValue }. */
@@ -354,8 +356,32 @@ export class TargetField {
     return true;
   }
 
+  /**
+   * Drop the assignment. `reason` is not decoration: one of them pays out.
+   *
+   * `player__sly.gd` adds `velocity.y += 4.0` on both of its TO_TARGET **failure** paths — the
+   * 20-frame stall and the 10-second timer — with the comment *"nice jump boost if failed"*. It
+   * does **not** pay on the fell-below path, and neither do we: falling out of the bottom of an
+   * assist is the assist correctly declining, and lifting Sly out of it would be the homing
+   * behaviour the release exists to end. The one payer here is `'timeout'` — `magMaxTime`
+   * 1.375 s, our nearest thing to their stall — so a lock that ran out of time hands back a
+   * little height instead of dropping the player like a stone in the middle of a move they were
+   * being told would work.
+   *
+   * `magFailBoost` is 5.5 m/s, and it is not a new constant: it is `THEIRS.failBoost` 4.0
+   * through the existing `kV` 1.375, which lands it on exactly `0.5 × jumpV0` — half a jump, the
+   * same fraction of a jump theirs was. `Math.max` rather than `+=` on purpose: this is a floor
+   * under the exit velocity, not an impulse, so a lock that times out while Sly is already
+   * rising fast keeps his own arc and is never *added* to. Theirs adds, and adding is how an
+   * assist that failed becomes a bigger launch than one that worked.
+   */
   release(reason) {
     const t = this.target;
+    if (reason === 'timeout' && this.locked) {
+      const v = this.c.velocity;
+      const boost = this.c.tune().magFailBoost;
+      if (v.y < boost) v.y = boost;
+    }
     if (!t) { this.locked = false; this.status = 'idle'; return; }
     // A cooldown, not a flag: the player is usually still inside the volume they just failed out
     // of, and re-assigning on the next frame is a lock-up rather than an assist.

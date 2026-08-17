@@ -306,6 +306,7 @@ export const TUNE = {
   magNoClip:      2.475,     // theirs 1.5 ×kLh — capsule bypassed inside this, non-notch only
   magRelease:     2.52083,   // theirs 2.0 ×kLv — and 2.52 m is exactly our own jump apex
   magCurveDomain: 11.0,      // theirs clamp(vy, ±8) ×kV
+  magFailBoost:   5.5,       // theirs +4.0 "nice jump boost if failed" ×kV — = 0.5 × jumpV0
   /* ---- no counterpart in theirs; derived from our numbers alone ---- */
   magCatch:       1.008,     // runSpeed × jumpBufferMs. Magnetism forgives the same timing error
                              // the input layer already forgives — 140 ms — and nothing wider.
@@ -349,8 +350,22 @@ export const TUNE = {
   landSoftTime: 0.09,
   landHardTime: 0.19,
 
-  /* ---- safety ---- */
+  /* ---- safety. -------------------------------------------------------------------------------
+     `safePoll` is how often the last SUPPORTED stance is re-sampled. Adapted from
+     `player__sly.gd`'s `collision_detect()`, which stamps a `collision point` node at the
+     player's origin on every physics frame in which **all nine of its floor rays** are
+     colliding, and `return_to_safe()`, which teleports there. The idea is the one worth having:
+     the recovery point is not a checkpoint an author placed, it is *the last place the player
+     demonstrably stood on solid ground*, which is always exactly as far back as it needs to be.
+
+     Ours is that idea on our own probes. `narrowGround()` already answers "is the surface under
+     his feet broad enough to walk on normally" with two casts instead of nine, and it is the
+     same question their ray fan was asking. 0.30 s rather than their every-frame, because a
+     recovery point 30 cm of walking stale is indistinguishable from a fresh one and 3.3 Hz of
+     two casts is free — theirs pays nine casts at 60 Hz for a node nothing reads until you die.
+     ---- */
   voidY:       -220,     // absolute last resort; the level's lowest legal floor is -12
+  safePoll:     0.30,    // seconds between supported-stance samples
 };
 
 const SPAWN = new THREE.Vector3(0, 0, 30);
@@ -446,6 +461,13 @@ export class Controller {
     /* ---- read by CAMERA, HUD and the debug overlay every frame ---- */
     this.position = SPAWN.clone();
     this.velocity = new THREE.Vector3();
+    /* The last stance `_recordSafeStance` was willing to certify. `safeOk` stays false until one
+       has actually been sampled, so `_safetyNet` never teleports Sly to a spawn-shaped guess and
+       calls it a recovery. */
+    this.safePoint = SPAWN.clone();
+    this.safeYaw = SPAWN_YAW;
+    this.safeOk = false;
+    this._safeT = 0;
     this.yaw = SPAWN_YAW;
     this.stateName = 'idle';
     this.grounded = true;
@@ -656,6 +678,9 @@ export class Controller {
       this.sm.update(dt);
       this._postTimers(dt);
       this._hazards(dt);
+      // After `_hazards`, so `hurtCooldown` reflects THIS frame and a stance inside a hazard is
+      // refused rather than certified one frame before the damage lands.
+      this._recordSafeStance(dt);
       this._safetyNet();
     }
 
@@ -830,10 +855,48 @@ export class Controller {
     }
   }
 
+  /**
+   * Remember the last place Sly demonstrably stood on solid ground.
+   *
+   * Adapted from `player__sly.gd`'s `collision_detect()` / `return_to_safe()` pair — see
+   * `TUNE.safePoll` for what was taken and what was not. Three gates, and each one is there
+   * because the point is only worth having if arriving at it is survivable:
+   *
+   *   · `grounded` and the `ground` group — never an attached pose. `sweepTo` puts Sly wherever
+   *     the rail or the pole says, and half of those are 20 m up a shaft with nothing under them.
+   *   · `!narrowGround()` — our two-cast equivalent of their nine-ray fan. A parapet edge or a
+   *     spire tip is somewhere Sly *was*, not somewhere he can be put back.
+   *   · `hurtCooldown <= 0` — he was not standing in something that hurt him. This costs no new
+   *     query: `_hazards` has already run this frame and set it. Without it the recovery point
+   *     drifts into the spike pit that killed him, which is the one place it must never be.
+   */
+  _recordSafeStance(dt) {
+    this._safeT -= dt;
+    if (this._safeT > 0) return;
+    this._safeT = TUNE.safePoll;
+    if (!this.grounded || this.sm.group !== 'ground') return;
+    if (this.hurtCooldown > 0) return;
+    if (this.narrowGround()) return;
+    this.safePoint.copy(this.position);
+    this.safeYaw = this.yaw;
+    this.safeOk = true;
+  }
+
   _safetyNet() {
     if (this.position.y > TUNE.voidY && Number.isFinite(this.position.y)) return;
-    this.engine.warn('movement: fell out of the world; respawning.');
-    this.teleport(SPAWN, SPAWN_YAW);
+    /* Falling out of the world used to cost the whole traverse: `SPAWN` is (0, 0, 30) and §8.1's
+       ascent ends 26 m up a pylon on the far side of the level. A recovery point that is always
+       exactly as far back as it needs to be is the entire value of the reference's version, and
+       the SPAWN fallback stays for the case it cannot cover — dying before ever standing on
+       anything, which is reachable, because `init` places Sly and `_needSpawnSnap` only snaps him
+       down on the first frame COLLISION is live. */
+    if (this.safeOk) {
+      this.engine.warn('movement: fell out of the world; returning to the last supported stance.');
+      this.teleport(this.safePoint, this.safeYaw);
+    } else {
+      this.engine.warn('movement: fell out of the world; respawning.');
+      this.teleport(SPAWN, SPAWN_YAW);
+    }
   }
 
   /* ==================================================================== */

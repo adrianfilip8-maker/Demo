@@ -3883,13 +3883,13 @@ test('CameraRig: which framing every state actually gets, and the entries nothin
 
      DOMAIN (§418.3)
        passes on : the shipped rig. Measured after the change: wallRun -> wall_run,
-                   railWalk -> balance, ledgeHang -> ledge_hang.
+                   railWalk -> balance, ledgeHang -> ledge_hang, combatStrafe -> combat.
        fails on  : the rig as it shipped before `STATE_FRAME` existed — this arm's previous
-                   revision asserted 'run' / 'walk' / 'idle' for the same three names and was the
-                   red arm that the fix was written against (1 of 56 failing, observed). The
-                   `substr` recomputation below re-derives those three answers live, so the
-                   failing input is not a memory of an old run: it is computed every time this
-                   arm executes and asserted to DIFFER from what the rig answers. */
+                   revision asserted 'run' / 'walk' / 'idle' / 'idle' for the same four names and
+                   was the red arm that the fix was written against (1 of 56 failing, observed).
+                   The `substr` recomputation below re-derives those answers live, so the failing
+                   input is not a memory of an old run: it is computed every time this arm
+                   executes and asserted to DIFFER from what the rig answers. */
   const substr = (n) => {
     const s = n.toLowerCase();
     for (let i = 0; i < ruleKeys.length; i++) if (s.indexOf(ruleKeys[i]) !== -1) return ruleKeys[i];
@@ -3919,11 +3919,16 @@ test('CameraRig: which framing every state actually gets, and the entries nothin
   assert.equal(routed.get('move'), 'idle',
     `move routes to '${routed.get('move')}'. This one is a DESIGN change, not a defect fix: ` +
     'it means somebody wired speed-tiered framing, and the walk/run/run_fast entries are live.');
-  assert.equal(routed.get('combatStrafe'), 'idle',
-    `combatStrafe routes to '${routed.get('combatStrafe')}' — the fourth member of the class the ` +
-    "three fixes above belong to (`combat`'s `side 0.30`/`dist −0.90` is reached only by `combo`), " +
-    'deliberately NOT fixed with them so the three stay attributable. If this is now `combat`, ' +
-    'somebody made that call and this arm should record it rather than fail.');
+  /* The fourth member, reported by the previous revision of this arm and fixed one round later
+     so it stayed attributable. `combat`'s `side 0.30` is applied along `_sideSign`, which is
+     derived from the LATERAL component of velocity — and during an orbit the lateral component
+     is the whole motion, so the framing opens toward the direction of the circle. In `idle`
+     (`side 0.00`) that channel was multiplied by zero. */
+  assert.equal(routed.get('combatStrafe'), 'combat',
+    `combatStrafe routes to '${routed.get('combatStrafe')}' — 'idle' means the exact map is gone`);
+  assert.equal(substr('combatStrafe'), null,
+    `the substring table now answers '${substr('combatStrafe')}' for combatStrafe; it answered ` +
+    'nothing at all, which is why the exact map had to carry this one');
 
   /* The dead rule count is UNCHANGED by the fix and that is correct, not an oversight: the exact
      map sits in FRONT of the substring table, so the table's own reachability is exactly the
