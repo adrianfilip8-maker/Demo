@@ -38698,3 +38698,294 @@ mechanism.
 
 **852 arms, 852 pass, 0 fail.** The camera lane has landed `CameraRig.js`; D8, L1b and the CameraRig
 framing arm are all green again.
+
+## §463 — The three unreachable framings are deleted, and a pooled row's composition is a fact about the route
+
+Two items. The first is the decision that closes §461; the second is a rule that applies to every table
+this lane has published.
+
+### §463.1 Deleted, not wired, and the deletion bought a repair nobody asked for
+
+`walk`, `run` and `run_fast` were authored, tuned and reachable by nothing for the whole life of the
+file. They are gone, with the four `STATE_RULES` entries that pointed at them.
+
+**Why deletion rather than wiring**, given §461 found the ladder is live on the animation side: the
+middle rungs are acceleration transients rather than speeds anyone occupies (`run_fast` owns 70–88 % of
+`move` frames), the camera would change rung 2.1–4.6 times a second against a `tau` of 0.26–0.35 s and
+never settle, and it double-counts to +1.87 m of boom and +10.0° of lens at full run. Against that, what
+wiring would buy is already delivered continuously — the camera does **not** read identically standing
+and sprinting; it moves 5.400 → 5.670 m of boom and 52.0 → 57.4° of lens. **The open question is size,
+not routing**, and it is item 8 of the hardware sheet.
+
+**The authored numbers are preserved verbatim at the deletion site**, because `run_fast.dist` 1.60
+against `distSpeedGain` 0.30 is the upper endpoint of that question. If the answer is that running
+should be framed as running, the way back is **one row routed from `move`**, re-derived — not this
+ladder.
+
+**Proved safe by measurement rather than by argument.** All 32 registered states driven through the
+resolver before and after: the state → framing map is identical. It has to be — nothing reached those
+keys, so no state could lose a match it was winning.
+
+**And the deletion repaired §442 at source rather than overriding it.** Removing `['run','run']` means
+the substring table now resolves `wallRun` through the `wall` rule to `wall_run` — it **agrees** with
+`STATE_FRAME` instead of contradicting it. The exact map went from load-bearing to belt-and-braces, and
+a future state ending in "run" can no longer be caught. The traversal arm now asserts that agreement and
+reconstructs the pre-deletion table in-test to keep a failing input that still fails.
+
+**The invariant is now an empty set**: `deadFramings` is asserted `[]` rather than a known list of three.
+An empty-set invariant cannot be satisfied by adding a row and updating a list.
+
+**One self-inflicted trap, caught by the arm it broke.** Documenting the removed rules verbatim inside
+`STATE_RULES` put them straight back into the traversal arm's view of the table — **a source-scanning
+instrument cannot tell code from comment**, so a comment quoting deleted code resurrects it for anything
+that reads the file with a regex. Rewritten without brackets. The general form: *prose about code, inside
+code, is still code to a scanner.*
+
+### §463.2 A pooled row's composition is a statement about the route set, not about the row
+
+The `idle` framing was reported as **51 % `idle` / 49 % `move`** by the framing-attribution audit and as
+**17.5 % / 82.5 %** by §461, over 538 frames. Both were measured, both are correct, and **the spread is
+the result**:
+
+> **How much of a pooled row is any given state is a property of the routes that were driven, not of the
+> row.** A traversal-heavy route set makes `idle` a running framing; a stand-heavy one makes it an idle
+> one. Neither number is the row's identity, because the row does not have one.
+
+That retires the framing-attribution question as a thing with a single answer, and it applies to every
+composition table this lane has published — the delivery table, D6, D7, the boom-chain before/after.
+**Every published composition needs its route set quoted beside it or it means nothing**, and the
+percentage on its own is not portable to a reader driving something else.
+
+It also explains a disagreement that looked like an error and was not, which is worth separating from
+the several this session that *were*: §442's misattribution was a row measuring a different move, and
+that is a defect. This is the same row measured over different play, and that is data.
+
+## §464 — The wall-run clock: the 24-frame residency was the driver's, and the bank is on a different clock entirely
+
+Given the boom-chain treatment — delivery, cost elsewhere, and the motion signature rather than the
+percentage. The conclusion is that there is no defect in the clock and two real findings underneath it.
+
+### §464.1 The residency was a property of the driver, not of the move
+
+The standing figure was **24 frames of residency against a 40-frame blend, capping delivery at 84 %**.
+Driven again on the real temple across eight sites with a flat run-up:
+
+```
+  site                    chain-jump driver   sustain driver
+  (-12.4, 5.9)                    9 frames         85 frames
+  (-2.6, 10.4)                    1                 1
+  (-18.5, 13.9)                   2                18
+  (0.5, 15.4)                     2                 2
+  (-29.0, -17.5)                  2                29
+  (-29.0, -11.0)                  3                15
+  (-29.0, -5.5)                   2                15
+  (-29.0, 1.5)                    5                20
+                                            median 18 f = 0.300 s
+```
+
+**`traversal.test.mjs` script F taps jump every 9 frames *during* the wall run** — it exists to chain
+wall-jumps and measure their material payloads, and it does that well. Used to measure residency it
+*is* the residency: it ends the run it is timing. A driver that holds forward after one approach jump
+gives a median of 18 frames and a maximum of 85.
+
+**§440 again, one level up.** That rule was written about sampling — a sample looks like evidence in a
+way a stub does not. Here the sample was fine and **the driver** was the instrument: the trajectory was
+real, the state was real, the frames were real, and the number still described the input script. *Ask
+what the harness was built to do before quoting a number it produced as a property of the game.*
+
+### §464.2 A shorter blend does deliver, and the cost has the boom chain's signature
+
+Measured by replaying the same recorded trajectories through **variant builds** of `CameraRig` with the
+constant changed — not by evaluating `1 − exp(−n·dt/τ)`, because an instrument that computes the ceiling
+formula cannot falsify a claim about the ceiling formula (§439). Over the five takes short enough for
+the clock to bind:
+
+```
+  wall_run.tau   3τ      dist   side  pitch height    mean |Δpivot−player|   p99 step   reversals
+  0.22 (ship)    40 f     91%    80%    76%    86%           22.60 mm         74.5 mm       2
+  0.16           29 f     95%    88%    86%    91%           24.14 mm         74.3 mm       2
+  0.12           22 f     97%    94%    93%    95%           25.48 mm         74.2 mm       2
+  0.08           14 f     99%    98%    98%    99%           27.04 mm         74.1 mm       2
+```
+
+**Delivery at the shipped clock is 76–91 %, not 84 %** — and on the two longest takes it is 100 %. The
+84 % was the ceiling for a 24-frame residency, and that residency was the driver's.
+
+**The cost carries item 2's signature exactly**: mean pivot motion +13 % at `tau` 0.12, **p99
+single-frame step unchanged at 74.2 mm, reversals unchanged at 2.** Continuous motion, no new snapping.
+
+**And what it costs on other rows is nothing, which is the difference from the boom chain.** `tau` is
+read per-framing — `const tau = f.tau` — so `wall_run.tau` is a one-row constant. The boom chain was a
+*shared* mechanism and that is why collapsing it was structural and this is not. **No blend length
+problem exists**: 3τ at 0.12 is 22 frames against a median residency of 18, and at 0.08 it is 14.
+
+### §464.3 The bank — the row's signature cue — does not read `FRAMES.tau` at all
+
+```
+  _blendFrame:  this._roll = ease(this._roll, -this._wallSide * TUNE.wallRoll, 0.22, dt);
+```
+
+A **literal 0.22**, and `_wallSide` is refreshed by a probe on a 0.1 s cadence. So every candidate above
+moves `dist`, `height`, `lead`, `fov`, `pitch`, `side` and `stiff` — and leaves the bank exactly where
+it was. Swept on its own clock:
+
+```
+  _roll clock    |roll| delivered (of wallRoll 0.096)   mean |Δroll|/frame
+  0.22 (ship)                 78%                          0.893 mrad
+  0.14                        90%                          1.070 mrad
+  0.09                        97%                          1.179 mrad
+```
+
+**Seam, not defect**, by the discriminator — and worth recording because the same test returned "bug"
+twice this session and this is what its other answer looks like. `FRAMES` authors seven channels and
+`tau` blends exactly those seven; `tau` is documented as *"blend time into this framing"* and the bank
+is **not one of the framing's channels** — there is no `roll:` in any row. It is a global cue
+(`TUNE.wallRoll`) gated on the framing key, living in `_blendFrame` where it looks like a channel. Nothing
+claims `tau` governs it, so nothing is violated. What is true is that **the row's most distinctive cue is
+invisible to the only knob that looks like it controls the row.**
+
+### §464.4 And the framing is still partly measuring a different move
+
+```
+  site              framing residency   of which wallRun
+  (-12.4, 5.9)           133 f              85 f   64%     rest wallCling
+  (-2.6, 10.4)           136 f               1 f    1%     rest wallCling
+  (-29.0, -5.5)           37 f              15 f   41%     rest wallCling
+  five other sites                                100%
+```
+
+§442.2 persists in a milder form: `wallCling` also routes to `wall_run`, so on three of eight takes the
+row is substantially a cling. **On one of them it is 99 % cling.** And the bank fires on only **four of
+eight** takes — `_wallSide` is 0 on the rest, which is §440.2's "head-on runs have no side" measured
+across sites rather than argued at one.
+
+**Nothing is retuned.** `wall_run.tau` stands at 0.22 and the `_roll` clock at 0.22; the candidates and
+their costs are item 9 of `progress/records/HARDWARE-REVIEW.md`. The one thing that is *not* a feel
+question — that a published residency figure came from a driver built to do something else — is fixed by
+this entry rather than by a constant.
+
+---
+
+## §484 — The last 3.25 m: a lid I had only half cut, and a stair 3.6 m east of the door
+
+**The demo has an ending.** Driven from the hall floor with no teleport, a walker reaches the vault
+at y −10.63. Two defects stood in the way; both were found by asking an instrument for its artefact
+rather than for its verdict, and one of them was mine.
+
+### §484.1 The artefact came first, and it contradicted itself twice before it was true
+
+The frontier probe was written to print the path, its length, and — for the deepest reachable cell —
+each neighbour with the reason it was rejected. The first run said:
+
+```
+  DEEPEST reachable cell: (1.20, -1.338, -56.60)      path length 13 cells
+  d(-0.40, 0.00) -> ground -1.570   PASSES (should have been explored)
+```
+
+A frontier whose own neighbour passes every test is not a frontier. **The visited set was keyed on
+XZ alone**, while `stand()` probes 2.4 m from the walker's own plane — so the same XZ cell is
+standable at *different heights depending on the height you arrive at*, and on a ramp that doubles
+back under itself a shallow first visit claimed the cell and locked out the deeper approach. Keyed
+by height as well, the same flood reached **(1.20, −12.000, −58.60) in 66 cells**.
+
+That is the third instrument error of this shape in two rounds, and the diagnostic was the same one
+each time: **the printout disagreed with itself.** Not a suspicion, a contradiction on the page.
+
+### §484.2 §480 cut one of TERRAIN's two representations of the same surface
+
+With the flood fixed, flood and driver still disagreed — and this time both were right about what
+they were reading. The driver stood at y +0.04 where the flood had ground at −0.875. Measured at
+(2.0, ·, −56.6):
+
+```
+  groundCheck from y 0.89, maxDist 2.4   ->  -0.875   proxy:ground   (flight A's ramp)
+  groundCheck from y 0.04, maxDist 0.66  ->  +0.039   sand_collision (the desert)
+```
+
+**TERRAIN publishes the same surface twice** — the collision proxy mesh built by
+`_buildCollisionProxy`, and the analytic `heightAt` used for placement, drift and refinement. §480
+cut the stairwell out of the mesh and nothing out of the function, and `Collision.groundCheck` falls
+back to the analytic surface whenever its BVH cast finds nothing:
+
+```js
+} else if (!found && pos.y - th <= md) { res.y = th; res.tag = 'ground'; ... found = true; }
+```
+
+So a walker on the stair, whose short ground probe misses the ramp below, was handed sand at y 0.039
+and stood on it. **The lid was still there analytically**, and every arm in `tombdoor.test.mjs`
+passed because they all use `capsuleSweep`, which has no such fallback. The arms were true and the
+level was still sealed.
+
+`Terrain.collisionHeightAt` is `heightAt` plus the openings — NaN inside a cut — and `groundCheck`
+prefers it when present. **`heightAt` itself is deliberately unchanged**: it is the placement
+surface, and a NaN there would scatter props rather than open a hole. The opening is a collision
+statement, so it lives on the collision accessor.
+
+> **A repair to a surface with two representations is not done until both are cut.** The mesh and
+> the function are the same claim in two languages, and the test that only speaks one of them will
+> pass.
+
+### §484.3 The stair was 3.6 m east of the door, and the statues are still innocent
+
+Even with both lids cut, the walk from the *hall* stopped at (0.40, −0.18, −56.00) — perched on the
+gate corridor's north lip. Measured across the lip, per x:
+
+```
+  x  3.4 .. 1.8    corridor y 1.06  ->  1.06     (this is the ANUBIS, not the floor)
+  x  1.4           corridor y 0.00  ->  -1.22    step 1.22
+  x  0.2           corridor y 0.00  ->  -1.92    step 1.92
+  x -0.2 .. -1.4   corridor y 0.00  ->  MISS     open shaft
+```
+
+The gate corridor runs x ±3.4; the Anubis pair stands at x ±2.6 occupying x 1.9…3.8 and −3.8…−1.9,
+so **the only open lane through the gate is |x| < 1.9** — and in that lane the flight's surface was
+already 1.2…1.9 m below the corridor. The one place the stair *was* flush with y 0 is x 3.6, which
+is inside the east statue's footprint. A walker met a 1.2 m cliff where the route says "walk down".
+
+`A_HEAD = 0` anchors the top tread to the corridor's own centre line. The foot then lands at
+**x −9.66 — the mid landing's east edge to 6 cm** — so the flight meets the platform it was always
+meant to reach, and §482.3's bridge proxy is **deleted** rather than left as redundant floor under a
+stair.
+
+**The statues are not the defect and were not moved.** §483.1 measured them standing on floor,
+roofing nothing, with 3.8 m of clear gap. They are a gateway; the stair now starts inside it. The
+useful generalisation is narrower than "props block things": *a prop can be innocent of occlusion and
+still define where the traversable lane is*, and the lane is what geometry has to be anchored to.
+
+> **A proxy added to span a gap is evidence that something upstream is misplaced.** The bridge was
+> pinning the symptom. `basketvary` P-A1 recorded the collider count going 268 → 269 → 268, and the
+> round trip is the record worth keeping.
+
+### §484.4 What it is now, driven
+
+```
+  flood   hall-floor -> vault-floor    139 cells   profile 0.0 -> 0.3 -> -0.9 -> -3.4 -> -6.3 -> -9.4
+  driven  hall floor, no teleport      final (-1.23, -10.63, -57.60), grounded, waypoint 138/139
+          one landing at 11.6 m/s — soft, below `landHard` 15.0
+```
+
+`tombdoor.test.mjs` gains the arm it was written to be able to make and could not until now: **R2
+asserts a walk from the hall floor to the vault floor in one flood**, no waypoint stepping stones, so
+it cannot pass by being handed the middle of its own answer. The tomb leg is promoted out of the
+"open" log line into `CONNECTED`.
+
+D1's second assertion was **re-derived rather than re-pinned**, and the reason generalises: it used to
+sample "cells on the landing" as `groundCheck >= -0.6` and drop from each. That start set was
+*defined by the lid* — cells over the open shaft only looked like landing because of the analytic
+sand. With the analytic half closed the set shrank to the real landing and the same code reported
+−6.51 against a −10.0 bar, which reads as a regression and is the opposite. **An assertion whose
+sample is chosen by the defect moves when the defect is fixed.** It now scores from a fixed point
+inside the shaft.
+
+### §484.5 Still open, and deliberately not touched
+
+- **The stealth vent** remains sealed, for §480.4's measured reason: `vent` is not in `SOLID_TAGS`
+  and ARCHITECTURE registers no floor under the shaft, so cutting it would replace a sealed passage
+  with a fall into nothing. `D3` pins that and says to delete itself when the floor is built.
+- **The wedge** at (−9.26, −6.58, −56.60) — `fall`, `grounded === false`, ground 0.00 m under the
+  feet — is `Controller`/`Collision`'s and is routed to the landing lane. It is no longer on the
+  walking line, so it does not block the ending.
+- **`descent-landing`** is now geometrically redundant: with flight A anchored at x 0 the walk goes
+  corridor → stair head → west, and the landing sits north of the flight serving nothing. It is
+  harmless and it is a level-design question, not a collision one, so it is left where it is.
+

@@ -11,7 +11,7 @@ moves it** — because in three of the five the obvious lever is the wrong one.
 None of these is a bug report. If something feels right, the answer is "leave it", and that answer is
 worth recording too.
 
-**Items 7 and 8 are a different kind of entry and are marked as such.** Items 1–6 shipped and ask
+**Items 7, 8 and 9 are a different kind of entry and are marked as such.** Items 1–6 shipped and ask
 *is this right?* Items 7 and 8 have **not** shipped; item 8 is not even a proposal, only a question
 with both of its answers measured. Item 7: it is a change priced so that it can be decided, because the
 measurement that motivates it moves what a player sees on more than one row at once and no headless
@@ -587,6 +587,69 @@ as the **upper endpoint** of a range, not as framings to route to.
 
 ---
 
+## 9. The wall-run framing arrives at 76–91 % — how snappy should it be? — *priced, not shipped*
+
+**Nothing has changed.** `wall_run.tau` stands at 0.22 and the bank's clock at 0.22.
+
+This item exists because the number that made it look broken was wrong. The standing figure was *24
+frames of residency against a 40-frame blend, capping delivery at 84 %*. **That residency came from a
+test driver that taps jump every 9 frames during the wall run** — it was built to chain wall-jumps, and
+used as a stopwatch it ends the run it is timing. Driven again with a driver that just holds forward,
+across eight sites with a flat run-up: **1, 2, 15, 15, 18, 20, 29, 85 frames — median 18 (0.30 s).**
+
+So the real delivery at the shipped clock is **76–91 %**, and 100 % on the two longest takes. Not
+broken. The question is whether 76 % of a −1.0° pitch and 80 % of a 0.35 m shoulder offset, arriving
+over 0.4 s, is *snappy enough for a move that lasts 0.3 s.*
+
+| `wall_run.tau` | 3τ | dist | side | pitch | height | mean pivot motion | p99 step | reversals |
+|---|---|---|---|---|---|---|---|---|
+| **0.22** (ships) | 40 f | 91 % | 80 % | 76 % | 86 % | 22.60 mm | 74.5 mm | 2 |
+| 0.16 | 29 f | 95 % | 88 % | 86 % | 91 % | 24.14 mm | 74.3 mm | 2 |
+| **0.12** | 22 f | 97 % | 94 % | 93 % | 95 % | 25.48 mm | 74.2 mm | 2 |
+| 0.08 | 14 f | 99 % | 98 % | 98 % | 99 % | 27.04 mm | 74.1 mm | 2 |
+
+**The cost is the same shape as item 2** — +13 % mean pivot motion at 0.12 with the **p99 single-frame
+step unchanged and reversals unchanged**, which is the evidence it adds continuous movement rather than
+a snap. **And it costs nothing on any other row**: `tau` is read per-framing, so this is a one-row
+constant, unlike the boom chain which was shared.
+
+**The catch, and it is the reason this is not simply "set it to 0.12".** The bank — the horizon roll
+into the wall, which is the whole visual identity of the move — **does not read `tau` at all**:
+
+```
+  this._roll = ease(this._roll, -this._wallSide * TUNE.wallRoll, 0.22, dt);   ← a literal
+```
+
+Every value in the table above leaves the bank exactly where it is. It has its own clock, and its own
+prices:
+
+| bank clock | roll delivered (of `wallRoll` 0.096) | mean \|Δroll\| |
+|---|---|---|
+| **0.22** (ships) | 78 % | 0.893 mrad |
+| 0.14 | 90 % | 1.070 mrad |
+| 0.09 | 97 % | 1.179 mrad |
+
+**What to watch.** Run at a wall from a flat approach and let the run play out without tapping jump. Two
+separate questions, and they need separating by eye because no headless measure distinguishes them:
+does the camera *arrive* in time (that is `tau`), and does the horizon *tilt* in time (that is the bank's
+literal 0.22). If the shot feels late but level, it is `tau`. If it feels placed but flat, it is the bank.
+
+**Two things that will limit what you see, both measured and neither fixable by a clock.**
+
+* **The bank fires on four of eight sites.** `_wallSide` probes ±1.3 m along the camera's right; a
+  head-on run has no side to find, so there is nothing to roll into. Half the wall runs in the temple
+  are bankless by geometry.
+* **The framing is shared with `wallCling`.** On three of eight takes the `wall_run` framing is
+  substantially a cling — 64 %, 41 %, and one at **1 % wall run / 99 % cling**. Anything you judge about
+  "the wall-run framing" on those sites is partly a judgement about hanging on a wall.
+
+**Recommendation if you want one number to try: `tau` 0.12 and the bank clock 0.14 together**, because
+changing only the first makes the shot arrive faster while the horizon stays behind, which is likely to
+read worse than either alone. That pairing costs +13 % pivot motion and +20 % roll rate, with p99 and
+reversals flat.
+
+---
+
 ## What is *not* on this sheet
 
 Decisions that were settled by measurement and need no review: the patrol route rewrite, the terrace
@@ -611,7 +674,7 @@ again**:
 
 ---
 
-## 8. Telegraph on a hook chain — an unmeasured switch, default OFF
+## 10. Telegraph on a hook chain — an unmeasured switch, default OFF
 
 **Commit** this round · **File** `src/player/Controller.js` (`TUNE.telegraphNextHold`, `_telegraph`)
 
