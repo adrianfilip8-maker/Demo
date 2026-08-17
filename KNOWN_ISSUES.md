@@ -34759,3 +34759,73 @@ caught in four separate instruments.
 > The census's own warning, carried forward one level: **a list of unread fields is not a list of
 > defects.** Twenty-four fields, and the honest answer for twenty-four of them is "leave it, and
 > say why".
+
+---
+
+## §430 — Correctly wired, correctly resolved, and structurally unable to finish
+
+A third defect class, distinct from the two this session has spent itself on, and it was found by
+asking how long a state *lasts* rather than what it *does*.
+
+`_blendFrame` eases every framing channel with its row's own `tau`. So the most of an authored
+framing that a residency of `n` frames can **ever** deliver is `1 − exp(−n·dt/τ)` — a ceiling that
+has nothing to do with the follow spring and everything to do with how long the player is in the
+state. **`FRAMES.tau` and state residency are two columns nobody had ever put beside each other.**
+
+One row loses outright:
+
+```
+  land   landSoftTime 0.09 s = 5.4 frames   ·   FRAMES.land.tau = 0.14 s
+         analytic ceiling 47%   ·   measured peak 45% on a driven landing
+         a HARD landing at landHardTime 0.19 s reaches 74%
+```
+
+**No route, no player and no machine has ever seen more than half of the `land` framing.** It has
+been authored, maintained and reasoned about for the life of the file, and it has never once been
+on screen.
+
+### §430.1 Why every check we had was blind to it
+
+This is **not** §422's routing defect wearing a new hat. `land` resolves *correctly*. It resolves
+correctly and then runs out of time — and that is invisible to all three instruments this project
+has built:
+
+- a **routing census** sees a correct key and stops;
+- a **delivery instrument** sees a framing genuinely blending toward its authored value;
+- a **settled-value instrument** measures where it converges and never asks whether the state
+  survives long enough to get there.
+
+> **§430 — A value that is correct, reachable and never reached is a fourth state, and nothing
+> that checks correctness can see it.** Where a system blends toward an authored target over time,
+> the authored value is a claim about a *duration* as much as about a number. Put the time
+> constant beside the residency and take the ratio; if the state is shorter than a few `tau` the
+> authored value is decoration.
+
+§357.1 is machinery wired at one end. §418 is a check that cannot discriminate. This is a value
+that cannot arrive. All three ship green, and all three are invisible to a reader who checks that
+the code is right.
+
+### §430.2 And the legible channel was not the consequential one
+
+The lane scored `dist`, because it is the most legible single number, and then said so rather than
+letting it stand:
+
+```
+  land.dist delta   0.10 m   ->  45% of it is 4.5 cm of boom, visually nothing
+  land.stiff        0.75     ->  same 45%, reaching 0.915 against air's 1.05 — the SNAP
+```
+
+Same defect, same percentage, and only one of the two would be felt. §419.5 and §419.7 again, this
+time caught by the measurer inside their own report — the number that is easiest to quote is not
+the number the player experiences.
+
+### §430.3 Held, not fixed
+
+The repair is one line — `FRAMES.land.tau` to about 0.03 s — and it makes the framing deliverable
+by turning a blend into very nearly a **cut, on every landing in the game.** That is the same class
+of decision as full lead compensation and it is held for the same reason: **choosing on arithmetic
+precisely where arithmetic runs out.** Both now wait on a person watching the game on hardware that
+can render it.
+
+Two rows remain unresolved by the same arithmetic: `roll` clears at 94% and is fine; `dive`'s
+duration is a fall time rather than a constant and is **unmeasured**.
