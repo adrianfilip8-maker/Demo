@@ -32908,6 +32908,37 @@ because its entailment pass joined map keys with a raw NUL byte. It worked perfe
 the auditor invisible to exactly the kind of source scan its own census arm depends on. **A tool
 that cannot be grepped cannot be audited.**
 
+### §418.8 The project baseline: 4 of 751 arms — and it is the better of the two answers
+
+The suite-wide measurement, taken **before** any remediation began, because a baseline gathered
+after that is not a baseline:
+
+```
+    65 test files · 751 arms · 2,875 assert sites
+    documented 4 · MISSING 747 · tripwire 1 · calibration-prior-art 4
+```
+
+**0.5%.** All four documented arms are the ones annotated by hand the day the rule was written,
+and all four `(calibration)` siblings sit in the same file. Outside `tests/traversal.test.mjs`
+the discipline does not exist anywhere in this project.
+
+Two readings were set out in advance, and this is the one to want. **A high number in files
+nobody had touched would have meant the rule already existed here and the day's nine slipped past
+it anyway** — a worse story, because it would mean the discipline is present and ineffective.
+0.5% means it is genuinely new work: harder to look at, better to have.
+
+**The denominator is cross-checked, and that is not ceremony.** An arm the parser fails to see is
+an arm dropped from the *bottom* of the fraction, which makes coverage look **better** than it
+is — so the error mode of a coverage tool is flattery. Static parse: 751 arms. `node --test`:
+751 tests. Exact agreement, independently derived. Same discipline as the mode-A pass refusing to
+report a zero when its hook matched nothing: **a measurement whose failure mode is a good number
+must prove its own denominator.**
+
+And `--all` runs every file through the *same* `parseArms` / `classifyDomains` / `parseSites`
+functions as the single-file pass rather than a second traversal, for the reason `framelib` and
+`ringextent` both exist: a second implementation drifts, and the baseline would quietly stop
+being one.
+
 ### §418.6 And the housekeeping corollary, since it happened a third time
 
 `update-index` never touches the working tree. **So every blob commit any lane makes leaves every
