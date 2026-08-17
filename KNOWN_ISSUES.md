@@ -33136,6 +33136,41 @@ haze alone erased a 206 m river, and props alone blocked a 10 m gap in ten shots
 Nothing shipped is invalidated: the shot certificates claim *geometry*, and geometry is what they
 measure. But the gap between "clear" and "visible" has a size now, and it is not small.
 
+### §419.6 A false alarm that AGREES with your prior is worse than one that contradicts it
+
+§423 records an instrument defect with a property none of the session's earlier ones had. Checking
+that twelve clue bottles are not reachable from the courtyard floor, the first version of the
+probe reported bottle 0 reachable at 2.100 m — a **blocking defect in a shipped placement.**
+
+The bottle is fine. The probe asked `groundCheck` for standable ground and found the desert
+terrain **buried under the terrace platform**, which no player can occupy: a headroom ray blocks
+97 of 97 candidates there. *"Ground exists here"* is not *"a player can stand here"* — §419.2's
+shape exactly, one layer down.
+
+What makes it worth its own entry is the **direction**:
+
+> **The level was right and the instrument was wrong, and the instrument's error looked like the
+> thing I was already worried about.**
+
+Every earlier instrument defect this session announced itself by being *implausible* — a subject
+growing as it receded, a 49× agreement with a prediction of 8.94 px, a spread of 5e-16 between
+separately computed quantities. Disbelief was the detector, and disbelief works because the number
+is surprising.
+
+This one was not surprising. It was **exactly the defect the round was commissioned to look for.**
+A census written to find unreachable bottles found an unreachable bottle, and the next step — go
+move it — would have damaged a correct placement and left the real defect in the instrument.
+
+> **§419.6 — A finding that confirms the hypothesis you set out with gets MORE scrutiny than one
+> that surprises you, not less.** Surprise is a free control and you do not get it here. The
+> substitute is to ask what else would produce this reading, before acting on it: the probe now
+> runs a headroom check alongside the ground check on every pass, and the two are asserted to
+> disagree on exactly that bottle.
+
+Both instruments now execute every run, which is §418.9's in-arm form applied to a *pair* rather
+than a bar: the counterexample is not that a threshold fires, it is that two instruments
+disagree, and the disagreement is the assertion.
+
 ### §419.5 The cheapest measurement is the one you reach for, and cheapness is uncorrelated with relevance
 
 §420 records a briefing error of mine: I sized a survey by line count, told a lane that
