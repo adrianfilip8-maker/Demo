@@ -1404,6 +1404,15 @@ export class CameraRig {
      * block in `Controller.TUNE`: a correct measurement that forces a feel re-derivation is not
      * a one-line fix, and it wants frames.
      *
+     * That question is packaged rather than left as a sentence:
+     * `progress/records/movement/NOTE-camera-lead-compensation.md` carries the three-way table
+     * (pre-floor / shipped / full) for nine framings with the apparent-size and screen-position
+     * deltas, and the finding that makes it decidable — **ordinary running is the SMALLEST of
+     * the nine at +7.6 %**, and the decision actually lives in `hook_swing` (+25.4 %),
+     * `rail_slide` at top speed (+32.6 %) and `air` (+22.7 %). It also shows the cost is not
+     * "raise `leadMax`": four framings would need it applied in NET space instead of raw, which
+     * changes what the constant means.
+     *
      * `deadzoneH` is deliberately outside the floor. It adds a further 10 cm of trail, but it is
      * a deadzone and not a lag — constant, not velocity-proportional, and cancelling it would
      * destroy the still frame it exists to produce. */
