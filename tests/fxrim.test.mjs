@@ -46,7 +46,8 @@ import { TUNE as TOON_TUNE } from '../src/render/ToonMaterial.js';
 import { TUNE as POSTFX_TUNE } from '../src/render/PostFX.js';
 import { W, H, SLY, camFor, discOf, project, boxOf, plateOf, overlapArea } from '../tools/framelib.mjs';
 import { inkAudit, buildOutlineShell } from '../src/render/Outline.js';
-import { RING_R_CROP, RING_SZ_MIN, RING_SZ_MAX, RING_SZ_NOJITTER, ATLAS_WINDOW }
+import { RING_R_CROP, RING_SZ_MIN, RING_SZ_MAX, RING_SZ_NOJITTER, ATLAS_WINDOW,
+  ringPlaneY, RING_STAGE_LIFT }
   from '../tools/ringextent.mjs';
 import { BAND_R, bandOfPolyline, bandOfPixels, boundaryOf, stamp, countOf, density }
   from '../tools/fxrimlib.mjs';
@@ -173,8 +174,22 @@ test('T3: the ring under test is the one Shots.js certifies, re-derived and not 
   assert.equal(out.radius, 1.2 * FX_TUNE.impactScale,
     'the staged ring radius is not the one impactframe framed');
 
-  /* At the DEFAULT segment count, because that is what `impactframe` used to write the line. */
-  const d = discOf(CAM, out.point.x, out.point.y, out.point.z, out.radius);
+  /* ── THE CERTIFICATE NOW QUOTES THE DRAWN RING, NOT THE RETURNED ONE ────────────────────
+     This arm used to project `out.radius` — `_stageImpact`'s returned 1.50 m — at `discOf`'s
+     default 24 segments, because that is what the old certificate stated. Both halves of that
+     have moved and the arm went red on the re-stage, correctly:
+
+       the RADIUS   the certificate now quotes the drawn quad's `RING_R_CROP` (5.664 m), which
+                    bounds every size draw, rather than the returned value that four consumers
+                    read and no sprite obeys (§405, §407);
+       the SEGMENTS  `impactframe` samples 180, not 24, because an inscribed polygon
+                    under-reports a circle by `1 - cos(pi/n)` — 9 px on this ring at 24, which
+                    is the permissive direction for a cropping test (§414).
+
+     Both are imported rather than restated, so this cannot drift from the tool that wrote the
+     line it checks. */
+  const d = discOf(CAM, out.point.x, ringPlaneY(out.point.y - RING_STAGE_LIFT), out.point.z,
+    RING_R_CROP, 180);
   assert.equal(Math.round(d.x1 - d.x0), wantW,
     `the shipped camera and staging now project the ring ${Math.round(d.x1 - d.x0)} px wide; the `
     + `certificate in Shots.js says ${wantW}`);

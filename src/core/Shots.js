@@ -677,95 +677,99 @@ export const SHOTS = {
     ],
   },
 
-  /* The Cane Slam — the loudest thing in the FX catalogue, and unseen until now.
-     (See the SHOT COUNT banner at the end of this object rather than an ordinal here.)
-     ────────────────────────────────────────────────────────────────────────────────────────
-     `Particles._stageImpact()` was written, is correct, and had never run: this file had no
-     entry named `impact`, so its dispatcher branch was unreachable, exactly as `alert`'s was.
-     `dive_ring`'s peak projected ink is 104x `alert_spot`'s, which makes it the largest single
-     sprite in the game by a factor of 7.6 over the next one, and nothing has ever framed it.
+  /* The Cane Slam — the loudest thing in the FX catalogue, and the hardest frame in this file.
+     RE-STAGED. The camera below is not the one this shot shipped with, and the reason is that
+     every extent the original certificate was written against turned out to be wrong.
 
-     WHAT IS ON THE FLOOR, at `TUNE.impactScale` 1.25: a ring reaching 1.50 m, a dust dome
-     1.88 m high, and two decals — crack at 2.75 m across and scuff at 4.25 m, the widest mark
-     and the one that decides the framing. `tools/impactframe.mjs` measures all of it.
+     ── WHY IT MOVED ────────────────────────────────────────────────────────────────────────
+     The shipped camera sat at (5.4, 4.4, -2.6) — azimuth 45.0°, distance 7.64 m. This one sits
+     at the SAME azimuth and the same lens, pulled back to 11 m and lowered to 3.25 m. Nothing
+     about the authored direction was wrong; the shot was simply too close for what it frames.
 
-     WHY A DISC AND NOT A BOX, which is the whole reason that tool exists rather than reusing
-     `alertframe`: a ground ring has no height and its silhouette is not its bounding square.
-     From a low camera a circle projects to a wide flat ellipse whose extremes are on the rim.
-     Projecting a box instead over-reports its vertical extent and under-reports its near/far
-     spread — and both errors point toward "it fits", which is the direction that ships a
-     cropped frame.
+     `dive_ring` draws an **11.33 m disc**, and at 7.64 m it ran off three edges:
 
-     THIS IS CANDIDATE C, at 1280x720:
+       shipped, at 7.64 m   1666 wide by 997 tall · margins l-193 r-193 t200 b-476   CROPPED l r b
+       here,    at 11.0 m   see the certified block below                             clear
 
-       sly    rows 202..451 (249 px) · margins l583 r583 t202 b269 · clear
-       ring   360 x 181 px · margins l460 r460 t341 b198 · clear
-       scuff  517 x 264 px · margins l381 r381 t318 b137
-       ellipse ratio 0.511 (bar 0.22) · the ring covers 44% of Sly's box (bar 55%)
+     (Those figures are deliberately NOT written in the `ring W x H px` form. `fxrim` T3 parses
+     the first such line out of this file and checks it against a live projection, so a
+     historical number in that shape would be picked up as the claim — which is exactly what
+     happened on the first draft of this comment, and the arm caught it.)
 
-     THE `sly` LINE ABOVE IS AN UPRIGHT-BOX PROXY AND NOT A SILHOUETTE. It is `boxOf` on a
-     0.62 x 1.80 m standing box. `dive_impact` is a slam — crouched and sprawling, wider than a
-     stance and shorter than one — so the proxy is wrong in both directions. Measured off the
-     shipped frame (`shots/fxrim-impact/impact-{A-ship,S-nosly}.png` at src tree
-     2b06133ddf675387; the figure is the pixels that vanish when the character root is hidden,
-     read at the |dL| > 12 plateau, stable from 12 through 48):
+     The original certificate stated 360 by 181 px, margins l460 r460 t341 b198, and called it
+     clear. That described `_stageImpact`'s RETURNED radius of 1.50 m — a circle 3.8x too small.
+     Every margin in it was a true statement about the wrong circle.
 
-       sly (MEASURED)  x 502..699 · rows 303..498 · 197 x 195 px
+     ── WHAT THIS FRAME MEASURES, AND WHERE THE NUMBERS COME FROM ──────────────────────────
+     `node tools/impactframe.mjs --shot impact`, on measured extents rather than proxies:
 
-     The proxy is 83 px too narrow, 54 px too tall, and its crown sits 101 px above his head.
-     The ring and scuff numbers are unaffected and were re-derived exactly (362 x 181 px at 720
-     rim samples; the 360 above is the 24-segment chord sag).
+       sly    148 x 162 px · margins l566 r566 t315 b243 · clear
+       ring   1183 x 367 px · margins l48 r48 t305 b48 · clear
+       scuff  394 x 113 px · margins l443 r443 t365 b242
+       dust   624 x 360 px · margins l328 r328 t219 b142
+       ellipse ratio 0.287 (bar 0.22) · no faults
 
-     ONE ADMISSION BAR TURNS ON THIS. `impactframe`'s FIGURE SWALLOWED divides the ring/subject
-     overlap by the subject's box area, so it inherits the proxy's error: 44.2% on the proxy,
-     **80.6% on the measured figure, against a 55% bar.** This shot passes that bar because the
-     box is too small, not because the ring leaves the figure room. The `sly N px tall` bar is
-     unaffected (195 px clears 110 either way), as are ellipse ratio, cropping and occlusion.
+     The subjects are camera-facing PLATES fitted to the pixels the renderer actually draws
+     (`framelib.plateOf`), not upright boxes: `boxOf` builds a ground-anchored cube whose
+     near-bottom corners fan past a sprawling silhouette, and on `dive_impact` that error was
+     20%. The ring is a disc of `sz_max / 0.8904 = 5.664 m` on the plane **y 0.148** — the six
+     terms are derived in `tools/ringextent.mjs` and are all larger than the 4.035 m that three
+     documents quoted, because `sz` is a random variable and 4.035 is its value with `_emit`'s
+     `R.range(0.8, 1.25)` jitter left out.
 
-     LEFT AS A FLAG, NOT REPAIRED. Re-scoring a shipped shot against a rule it now fails is a
-     decision about the shot rather than about the tool (§141.1), and the obvious fix — CPU-skin
-     the pose, which `charvis.mjs` already does — currently disagrees with the renderer by ~26 px
-     in x on this pose for reasons nobody has run down. See `tools/impactframe.mjs`'s header.
+     ── ONE BAR WAS WITHDRAWN, AND THAT IS NOT §141.1 ──────────────────────────────────────
+     The old certificate reported "the ring covers 44% of Sly's box (bar 55%)". **No camera has
+     ever been able to pass that bar.** Swept over 727,608 cameras: 605,304 clear the ellipse
+     bar, 50,680 clear the coverage bar, and **0 clear both.** The two do not pull opposite ways
+     as the tool claimed — they move together, and past ~18° of elevation coverage is the
+     constant 100%, because the ring is an annulus 8 m across and the figure stands in its hole.
 
-     AND THE `ring` LINE IS THE WRONG CIRCLE, WHICH IS THE SECOND BAR ON THIS FRAME. The 360 x
-     181 px above is `_stageImpact`'s returned `radius` of 1.2 * 1.25 = 1.50 m. The sprite the
-     renderer draws has a half-extent of 4.035 m — `mix(0.5, 6.25, (0.088/0.34)^0.36)`, an 8.07 m
-     quad — and PLANAR sprites are exempt from the screen-size ceiling. Measured in this frame by
-     unprojecting the `ring` batch's own light onto the impact plane: the bright annulus sits at
-     r = 3.0-4.5 m and the light ends at 4.75-5.0 m, while 1.50 m is the dim inner shoulder.
+     §141.1 forbids moving a threshold after seeing which side a result landed on, and it holds.
+     The claim here is that the quantity compared to 55% is constant over the whole admissible
+     domain, which is provable without reference to any candidate. **A bar may be replaced when
+     it is shown to carry no information; never when it is merely failed.** §407.1.
 
-       ring (MEASURED, r = 4.035 m)  margins l112 r112 t249 b-102 · 18.5% of the rim OUT OF FRAME
+     ── AND THE TIEBREAK COULD NOT BREAK THIS TIE ──────────────────────────────────────────
+     `impactframe` ranks survivors by `ellipse ratio x figure height`, on the stated reasoning
+     that the two pull against each other. On THIS shot they cannot: `slyH` depends only on
+     `d * tan(fov/2)`, and the ring's width pins exactly that product, so the figure reads
+     **201 px at the binding constraint for every lens from 20 to 50.** The composite is a
+     monotone function of elevation alone.
 
-     So "ring ... margins l460 r460 t341 b198 · clear" describes a circle 2.69x too small, and
-     the drawn ring is CROPPED at the bottom. Both this and the `sly` line are flagged rather
-     than repaired for the same reason, and the number itself is minted in
-     `Particles._stageImpact`'s return — see its header, where the derivation and the full list
-     of consumers live.
+     Worse, it points the wrong way. Every rank-maximal cell drives the figure to 110-125 px —
+     its admissible FLOOR — because elevation gains more than the shrinking man loses. On a
+     frame whose named failure is "the character is a detail inside his own effect", the
+     tiebreak selects the frame where the character is smallest.
 
-     Chosen over three other candidates that also passed every bar, by a stated tiebreak rather
-     than by taste: the product of the ring reading as a RING (the ellipse ratio) and the figure
-     reading as a FIGURE (its pixel height). Those pull opposite ways — elevation rounds the
-     ring and shrinks the man — and C maximises the pair at 127.4 against A 122.6, D 114.4 and
-     B 97.0.
+     So this camera was NOT chosen by rank (46.4, against a best of 64.5). It was chosen from
+     the third corner the tool now prints: **the largest figure among frames that read the
+     ground at least as well as `courtyard`**, the shipped canonical that looks most steeply
+     down the ground plane, at 0.28 by this same measure. That floor is taken from an existing
+     frame rather than picked. Within it, fov 38 at 11 m keeps the authored lens and sightline
+     and puts the ring's near rim at 5.34 m against a far rim at 16.66 m — a 3.1:1 sweep toward
+     the viewer, which is what sells the scale of the thing.
 
-     **The tiebreak is not a bar and must never be used as one.** The tool's calibration
-     candidate — close, low, the frame the instinct actually produces — scores 199.9, the
-     highest rank of all five, while cropping the scuff on three edges and the dust on two. The
-     composite ranks survivors; the derived bars decide who survives.
+     **The composition was mine. The bars decided who was eligible; nothing decided who won.**
 
-     WHERE, and the two rejected sites are why this carries a comment. The first draft slammed
-     at (0, 0, 20): the column over that point holds architecture at 1.56, 1.63, 2.00 and
-     2.92 m, so it is a slam in a 1.56 m crawlspace under the obelisk terrace. The second tried
+     ── WHERE, and the two rejected sites are why this carries a comment ───────────────────
+     Unchanged from the original staging, and the reasoning stands. The first draft slammed at
+     (0, 0, 20): the column over that point holds architecture at 1.56, 1.63, 2.00 and 2.92 m,
+     so it is a slam in a 1.56 m crawlspace under the obelisk terrace. The second tried
      (0, 0, -6), which has NO architecture floor at all — a gap in the paving, where the crack
-     and scuff would have landed on terrain the tool cannot see, or on nothing. Both were found
-     by printing the whole column over the impact point rather than by taking one ground query's
-     answer, and both would have rendered a perfectly plausible picture.
+     and scuff decals would have landed on terrain the tool cannot see, or on nothing. Both were
+     found by printing the whole column over the impact point rather than by taking one ground
+     query's answer, and both would have rendered a perfectly plausible picture.
 
-     NOT VERIFIED: whether the dust READS. `impactframe` is architecture-only and says nothing
-     about light or about FX. Per KNOWN_ISSUES §367 a capture can answer it, because FX is one
-     of the few systems that renders live in a shot. */
+     ── NOT VERIFIED ───────────────────────────────────────────────────────────────────────
+     Whether the dust READS. `impactframe` sees architecture triangles only — no props, no FX,
+     no decals, no terrain, no self-occlusion, and nothing at all about light. Per §367 a
+     capture can answer it, because FX is one of the few systems that renders live in a shot.
+
+     The plates are measured from `shots/fxrim5-impact` and the tool reports on every run
+     whether `src/` has moved since. It has. The margins above are geometry, and geometry does
+     not move with the emitters; the extents they are computed from can. */
   impact: {
-    pos: [5.4, 4.4, -2.6], target: [0.0, 0.6, -8.0], fov: 38, tod: 0.78,
+    pos: [7.78, 3.25, -0.22], target: [0.0, 0.6, -8.0], fov: 38, tod: 0.78,
     player: { pos: [0, 0, -8], yaw: 0.35, pose: 'dive_impact' },
   },
 };
