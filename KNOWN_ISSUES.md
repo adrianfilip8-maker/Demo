@@ -36130,3 +36130,103 @@ lane — we were both editing `src/player/Controller.js` and their commit swept 
 with theirs. The content is correct and in HEAD; the authorship line on that hunk is not mine. Noted
 here rather than rewritten, because rewriting shared history to fix a byline is a worse trade than
 saying so.
+
+---
+
+## §443 — `FRAMES.lead` is inert on 11 of 19 rows, and the wall run is a level-design finding rather than a camera one
+
+Three items. The first two are corrections to what the delivery table means; the third closes a
+thread by declining to repair anything.
+
+### §443.1 The `jump` lead was never a jump problem, and the column is mostly inert
+
+Sent to chase `air`'s `lead` delivering 92 % on fall-started spans and 26 % on jump-started ones —
+the most player-facing number on the table, since every jump passes through it.
+
+**Measured per frame rather than reasoned from the chain (§442.3, applied to my own next answer):
+the GOAL lead is 1.25 m throughout a jump and the pivot sits 1.35–1.78 m behind it — and it does
+that in `move` frames too.** Not a jump problem. The 92/26 spread is a ratio of two small numbers
+(the span is 0.36 m), not a 66-point difference anybody could see.
+
+The quantity that matters needs no driving at all. `_pivotGoal` floors the lead at the follow
+spring's own trail, so what reaches the screen is
+
+```
+  max(leadTime × f.lead − followTimeH × f.stiff, 0) × speed − deadzoneH
+```
+
+and the **sign of that margin** decides whether `f.lead` does anything whatsoever:
+
+```
+  FLOOR ALWAYS ACTIVE (11 of 19)   idle walk sneak crawl balance spire dive
+                                   ledge_hang climb land combat
+  escapes, barely                  air 0.159 m · hook_swing 0.130 m · glide 0.238 m
+  escapes properly                 run 0.554 · wall_run 0.454 · roll 0.447
+                                   run_fast 1.185 · rail_slide 1.304
+```
+
+`air` authors **1.20** — the comment says *"lead hard"* — and delivers **16 cm**. `hook_swing`
+authors **1.60** under *"Lead frames the landing"* and delivers **13 cm**. `land` sits **0.001 s**
+below break-even: a knife edge, on the wrong side.
+
+So the `lead` column of the published table is ratios, not metres, and the note now says so above
+the table. Not retuned: raising `lead` or lowering `stiff` changes what a player sees on eleven
+rows at once.
+
+**And note what kind of finding this is.** Everything about `lead` here was derivable from `TUNE`
+and `FRAMES` in closed form, and it took three rounds of driving the temple to notice. The
+instruments were all pointed at delivery *measured*; nobody asked what delivery was *bounded by*.
+
+### §443.2 The Cane Slam identity merge is a second review item, not a footnote
+
+The boom-chain collapse's cost was reported as motion — +35 % mean |Δboom|, 38 → 52 reversals,
+p99 unchanged. That is one thing a reviewer arbitrates. There is a second, and it was not
+predicted by anyone:
+
+```
+  dive boom delivery by drop height   2.52 / 4.56 / 8 / 15 / 26 m
+      before    5 / 50 / 86 / 96 / 100 %
+      after    71 / 92 / 98 / 97 / 100 %
+```
+
+A jump-apex dive used to look nothing like a full-height one. It now looks substantially the same.
+**Two authored visual identities have largely merged**, and the crossover arithmetic
+(`diveSpeed × 3τ` = 4.86 m of fall against 2.52 m from a jump) explains it exactly — which is why
+it was obvious in hindsight and was not obvious in advance.
+
+It is flagged separately in the source because a reviewer has to be *told* to look for it. **The
+thing that changed is a difference that stopped existing**, and nobody notices one of those by
+accident.
+
+### §443.3 The level has 14 wall-run sites and no route uses any of them
+
+§440 found a lateral wall run reachable — 50 lateral entries of 62, at 14 sites. D7 found the
+`wallRun` state produces **zero frames** on any drivable camera route. Both are true, and the
+resolution is not a camera repair:
+
+```
+  drives the wallRun STATE      traversal.test.mjs script F   — finds its approach by SEARCHING
+                                                                 every wall rec for a flat run-up
+  drives it via a forced pose   camlead L3 (stub), audio      — not driven at all
+  the authored twelve-bottle route (collectroute.test.mjs)    — never enters it
+```
+
+**Every route that reaches a wall run found the site by searching for it.** The level's authored
+traversal never asks for one. So the clock ceiling — 24 frames of residency against a 40-frame
+blend, 84 % before anything else — is a real number about a move the route does not contain, and
+tuning `wall_run.tau` would be tuning for a case no player currently meets.
+
+Recorded as a **level-design observation, not a camera defect**: fourteen authored sites for a move
+the intended path never visits. If the route should use one, that is a level change and the camera
+question becomes live with it. Two of `wall_run`'s three framing channels are meanwhile still
+delivering nothing for a different reason each — the boom because the frames measured were
+`wallCling` (§442.2), the bank because head-on runs have no side (§440.2).
+
+### §443.4 The route-coverage finding hiding inside D7's silence
+
+D7's `does NOT discriminate` line names five states that produce no frames on any drivable route:
+**`combatStrafe`, `wallRun`, `railSlide`, `poleClimb`, `hookSwing`.** That list was written to make
+an audit's silence explicit. Read the other way it is a coverage result in its own right: **five
+moves the level's drivable routes never exercise**, three of them signature traversal verbs.
+
+Nothing camera-side follows from it. It belongs to whoever owns what the routes are for.

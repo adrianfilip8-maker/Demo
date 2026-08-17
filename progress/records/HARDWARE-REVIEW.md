@@ -25,28 +25,49 @@ and 15 m — *not ordered by arrival speed*, so unlearnable.
 
 Silent meant completely silent: no `land` state, no `landed` event, so no sound, no shake, no impact pose.
 
-Fixing the race made every landing register — and every ordinary jump then arrived at 10.474 m/s, above
+Fixing the race made every landing register — and an ordinary jump then arrived at 10.874 m/s, above
 the old `landHard` of 9.0. So the correct measurement would have turned **every jump in the game** into a
 hard landing. The threshold had to move, and it was derived rather than chosen:
 
-| population | range |
-|---|---|
-| what the player can do under his own power | 10.474 – 14.186 m/s |
-| authored descents in the level | 24.00 · 25.55 · 35.93 · 46.99 m/s |
+| population | range | how measured |
+|---|---|---|
+| what the player can do under his own power | 6.196 – 14.586 m/s | 1550 arcs: a 31 × 50 grid of hold/release/press timings at 1-frame resolution |
+| authored route descents | 7.753 · 23.749 · 25.368 m/s | dropped for real, not solved for, from `architecture.api.route` |
 
-Two populations separated by an empty band **9.8 m/s wide**, and 14.186 is a hard ceiling — swept over 21
-press timings from apex to 40 frames late, nothing exceeds it. The rule taken from the moveset:
+Two populations separated by an empty band **9.16 m/s wide**, and 14.586 is a hard ceiling — nothing in
+1550 arcs exceeds it. The rule taken from the moveset:
 
 > `landHard` is the first landing that was not a move you meant.
 
-15.0 sits 5.7% above everything reachable under the player's own power and 9.0 m/s below the first
-authored fall — a **4.69 m drop**, against a maximum reachable apex of 4.262 m. `landBeat` stays at 3.2,
-so every real landing still speaks.
+The margin has to be quoted in the right units, because **arrivals are quantized**: the sweep records the
+velocity the move was made with, so every arrival sits on a ladder spaced one frame of gravity apart,
+0.400 m/s. The top three rungs the player can reach are 14.586, 14.186, 13.786. **15.0 clears the top rung
+by 1.04 rungs** — a whole step, but only just one. `landBeat` stays at 3.2, so every real landing still
+speaks.
+
+> **These numbers were corrected after this sheet was first written** (§443.3). The original entry quoted
+> 10.474 – 14.186 m/s, a 5.7 % margin, and "a 4.69 m drop against a maximum reachable apex of 4.262 m".
+> That last clause was false and it was the load-bearing one: it invited the conclusion that his own
+> jumping *geometrically cannot* cause a hard landing. The real maximum apex is **4.502 m**, which is
+> above the 4.441 m whose arrival equals `landHard`. He cannot cause one because the descent is quantized
+> and he never gets the extra frame of fall — not because he cannot get high enough. The first derivation
+> measured `max(-velocity.y last frame, landImpact)`, which is one gravity tick below the field
+> `Land.enter` actually compares against `landHard`; every number in it was a tick low.
 
 **What to watch.** Jump around normally: no landing should cost you control. Then take one of the level's
 real drops. The hard landing should feel like something that happened *to* you rather than something you
 did. If ordinary play produces hard landings, 15.0 is too low; if the big authored falls feel weightless,
 it is too high.
+
+**How much room you have.** More than the single number suggests, and this is the useful part. Every value
+in **14.586 … 23.749** separates the same two populations identically — the measurement fixes the *band*,
+not the choice inside it, and `recover.test.mjs` L1 passes for all of them. So this is a free judgement
+across a 9 m/s window, not a nudge. Below 14.586 you start making the player's own jumps hard; above
+23.749 the 12 m descent to the vault lands soft. Between those, trust your ears.
+
+**One caveat on the ceiling.** Population A is jump and double-jump from flat ground. Wall-run exits,
+magnetism yanks and enemy bounces are self-inflicted verticals the sweep never launched, so if one of
+those turns out to arrive above 14.586 the band's lower edge moves. Worth a deliberate try on hardware.
 
 ---
 
