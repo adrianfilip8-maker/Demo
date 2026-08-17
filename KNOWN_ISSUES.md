@@ -32324,6 +32324,37 @@ a critic-scored composition question, not a pixel verification of #17, and it ne
 registered bar. It must not be run as this one: at 0.73× the hull, `hero` will return a null and the
 null will be read as a missing lean. It already has been, three times.
 
+### §413.5 Confirmed by exact projection, and the combined figure is a trap
+
+§345's argument, and my re-derivation of it, both used `excursion × cos(view) × px/m`. That is a
+stand-in: it assumes the excursion lies in the frontal plane and that perspective does not matter.
+`tools/perchproject.mjs` now runs the **actual shot cameras** over the real bone positions, so the
+conclusion no longer rests on the approximation.
+
+```
+                         chest deviation from the hips-head line, px @ 1600x900
+shot        view°   LATERAL   sagittal   combined   vs 2.5 px hull   verdict
+hero          73      1.73      5.67       3.97         0.69x        BELOW HULL
+sly-perch     33     11.55      6.96       4.64         4.62x        RESOLVABLE
+```
+
+Against §345's cosine figures of 1.81 px and 10.84 px, that is agreement to ~4 % by an independent
+route. **`hero` is confirmed unable to answer the question**, and `sly-perch` confirmed able.
+
+**And the instrument nearly said the opposite.** Its first version measured the chest's deviation in
+the image plane without decomposing it, and reported `hero` at 3.97 px — **1.59x the hull,
+"marginal"** — which reads as *"hero nearly resolves it"*. It does not. That figure is dominated by
+the SAGITTAL curve: the chest sits 3.7 cm out laterally and 3.3 cm forward, and at a 73° bearing the
+camera is looking down the lateral axis and across the sagittal one, so what it shows is 5.67 px of
+fore/aft against 1.73 px of side. §345 said this in words — *"the ~17.5 px of screen-lateral
+excursion `hero` does show is ~90 % sagittal"* — and the tool reproduced it as an error before
+reproducing it as a measurement.
+
+Note the combined figure is *smaller* than the sagittal component alone. At an oblique bearing the
+two offsets project onto opposite sides of the reference line and partly cancel, so the combined
+number is not a conservative version of either. **A quantity that mixes two axes is not a weaker
+measurement of one of them; it is a measurement of neither.** Same shape as §412's `hit`.
+
 ### §413.4 The generalisation, which is §407's with the cost attached
 
 > **Ask whether the instrument can resolve the quantity BEFORE you queue for it, not after you
