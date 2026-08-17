@@ -39182,3 +39182,270 @@ The coordinator ran the full suite on a clean tree at `c373f19`: **853/853, exit
 authoritative green. The instability recorded in §507.6 belongs to the interval after it, while
 `Collision.js`, `EgyptLevel.js`, `Terrain.js` and `tombdoor.test.mjs` were being rewritten — and it
 is now resolved rather than outstanding.
+
+---
+
+## §485 — Spawn to the Eye, in one run: it reaches the first ring and stops there
+
+The acceptance test, run for the first time. **It does not complete.** One `Controller`, one
+`hardReset` at spawn, no teleport after it; legs 1–4 chain continuously to the hook chain's first
+ring at frame 1369, and leg 5 does not leave it. Where it stops is a **failed beat of my driver**,
+and the report says so rather than filing it as a level defect — but three things the run passed
+through on the way are worth a human's attention, and one of them is a level observation.
+
+### §485.1 What ran, in one continuous clock
+
+```
+  f0     spawn (0, 0, 30)
+  f411   leg 1  spawn -> terrace-1        WALK           OK
+  f712   leg 2  terrace-1 -> terrace-2    jump+ledgeClimb OK
+  f1350  leg 3  terrace-2 -> kiosk-lintel  (see §485.2)   OK
+  f1369  leg 4  kiosk-lintel -> ring 3     E-grab         OK   hookGrab
+  ----   leg 5  ring 3 -> ring 4           STOPS
+```
+
+Legs 6–10 are not reached by this run. They are proven separately and recently: `tombdoor` R2
+asserts **hall floor → vault floor in one flood**, and §484 drove it — so the back half of the route
+is not in doubt, it is simply downstream of the stop.
+
+### §485.2 Leg 3 completes by §8.1's ALTERNATIVE, and it ends in a 31 m/s hard landing
+
+The driver was aimed at the kiosk lintel and did not take the authored double jump. Walking from
+stage 2 toward (2.2, 9, 8.4) puts the obelisk shaft (0, ·, 11) directly on the line, so:
+
+```
+  f886   poleClimb    (1.22, 6.40, 12.29)      <- mounts the obelisk instead of jumping
+  f1161  jump         (1.20, 20.53, 12.27)     <- 22 m of pole climbed
+  f1171  spireLand    (0.00, 22.00, 11.00)     <- the pyramidion
+  f1283  land         (1.63, 6.30, 9.07)       landed 31.0 **HARD**
+```
+
+That is §8.1's own alternative — *"POLE CLIMB the obelisk all 22 m and SPIRE LAND on its pyramidion
+tip at y = 22, then drop to the kiosk"* — and **the drop it prescribes is 13 m, which arrives at
+31.0 m/s.** Against `landHard` 15.0 that is twice the threshold: a screen shake, a root impulse and
+0.19 s of lost control, as the *documented* way to complete step 2. A second landing at 4.4 m/s
+follows when he settles onto the lintel proper.
+
+Not a defect and not repaired — the route offers two ways up and this is the one a player walking
+straight at the target will find first, because the obelisk is between stage 2 and the kiosk. It is
+exactly the kind of thing only a full drive surfaces: both halves are individually correct and the
+composition hands the player a hard landing on the tutorial's second beat.
+
+### §485.3 Leg 5 is a FAILED BEAT, and here is precisely what the driver could not produce
+
+`tests/telegraph.test.mjs` T8 proves this leg completable from **7 of 7 arrival speeds, 6–18 m/s**,
+with the `bail` release. My continuous run reproduces the mechanic and still does not arrive:
+
+```
+  pumped to            11.31 m/s        (inside T8's proven 6-18 m/s band)
+  bail fires at         9.38 m/s        on the up-swing, alignment > 0.55
+  closest to ring 4     6.48 m          against `hookAuto` 2.9
+```
+
+The flight artefact says why:
+
+```
+  f+160  (4.76, 12.67, 3.35)  v=(3.5, -0.9, -8.5)  d=7.60
+  f+184  (4.52, 10.32, 0.53)  v=(-4.3, -10.5, -5.5) d=6.51   <- closest, and already 4 m below
+  f+208  (2.50,  4.12, -1.51) v=(-5.1, -20.1, -5.1) d=10.59
+```
+
+He leaves 2.2 m *below* ring 3 and ring 4 sits 0.3 m below ring 3 — so the launch has to gain
+~1.9 m over 8.16 m of travel, and it is descending before it is halfway. **What the driver could not
+produce is a bail phase whose projectile passes within `hookAuto` of the next ring.** T8 gets that
+by *arriving* at the ring at 6–18 m/s already aimed at the next one; a continuous run has to
+generate the speed by pumping, and pumping cannot choose the plane (§485.4).
+
+**Claimed:** my driver did not complete the leg. **Not claimed:** that a player cannot. T8 is the
+counter-evidence and it is in the suite.
+
+### §485.4 The level observation: the authored entry is 50° off the chain it enters
+
+Measured from the level's own coordinates rather than the drive:
+
+```
+  entry bearing, kiosk lintel -> ring 3        (0.456, -0.890)
+  chain leg ring3 -> ring4   len 8.16 m        50.3 deg off the entry
+  chain leg ring4 -> ring5   len 7.46 m        69.4 deg off
+  chain leg ring5 -> ring6   len 7.11 m        77.9 deg off
+```
+
+And `HookSwing`'s pump **cannot steer the plane at speed**: above 0.35 m/s the push is
+`dot(wishDir, velocityDir)` projected *onto the velocity*, so a sideways input contributes nothing;
+only below 0.35 m/s does the other branch push tangentially and re-aim the swing. So the swing plane
+is set by how you arrive and can only be re-aimed by first coming almost to rest — at which point
+there is nothing to pump.
+
+That is a real interaction between level layout and mechanic, and it is the shape of §8.1 step 3's
+difficulty: the authored entry drops you into a plane 50° away from the first leg you must fly.
+Whether that is intended difficulty or an oversight is a design call. **Not repaired**, per the
+instruction to produce the list first.
+
+### §485.5 Three driver bugs, all found by the printout contradicting itself
+
+The fourth, fifth and sixth instances of the diagnostic this session keeps earning.
+
+1. **`hookMinSwing` silently ate the release.** Holds swept from 10 frames; the gate is 0.18 s =
+   10.8 frames and `Moveset.js` says in as many words that a press before it opens is *"dropped
+   outright rather than deferred"*. Every early bail was a no-op.
+2. **A held key is not a press.** `StubInput.hold()` only marks `pressed` on a rising edge, and my
+   chain driver never released `jump`. After the first attempt every subsequent bail was silent.
+   Together, 1 and 2 printed `bail at 0.03 m/s -> no release` eight times, which reads exactly like
+   a level that refuses to let go.
+3. **The pump cancelled itself.** Aiming the camera at the TARGET every frame — which all three of
+   my earlier drivers did — makes `dot(wishDir, velocityDir)` positive on the out-swing and negative
+   on the return. Net zero. The printout showed the pendulum decaying 2.05 → 2.19 → 1.22 → 0.11 →
+   0.53 → 0.27 → 0.06 → 0.03 m/s while the driver believed it was pumping. Aiming along the
+   *velocity* instead took it to 11.31 m/s.
+
+Each was visible on the page before it was understood: eight identical near-zero speeds, or a bail
+that reports a speed and no release. **A table that is monotonically decaying while you are actively
+driving it is an instrument fault, not a difficulty finding** — the same shape §443.6 recorded for a
+table that was identical at every drop height.
+
+### §485.6 What a player meets, in order
+
+The sequence, which is the part no arm in this suite measures:
+
+1. **Hold forward from spawn and you stop at z 19.64**, on the stage-1 deck, facing a stair you
+   cannot climb (the documented 50.28°). Nothing tells you the answer is a jump.
+2. **The recovery is a jump into a ledge-climb**, not the double jump the source describes — and it
+   works from 24 of 30 timings, so it is forgiving once found.
+3. **Walking at the kiosk lintel mounts the obelisk instead**, because the shaft is on the line. You
+   climb 22 m, land on the pyramidion, and drop 13 m onto the lintel for a **31.0 m/s hard landing**.
+4. **The E-grab onto ring 3 is clean** — telegraph then `hookGrab`, and the telegraph fires
+   repeatedly on approach (f601, f667, f1243–f1350) so the hold is well signposted.
+5. **The chain is where it gets hard**, and §485.4 is why: you arrive swinging 50° away from where
+   you need to go, and the game gives you no way to turn the swing without first stopping it.
+
+Items 1 and 3 are the two a human should look at. Both are compositions of correct parts.
+
+
+### §485.7 CORRECTION to the "a player cannot wind up" finding — the pump works, the policy was the bug
+
+A note reached this lane mid-drive: peak swing speed after a lintel E-grab **6.21 m/s** against a
+6.00 m/s chaining floor, available only at the first swing's peak, with pumping making it *worse*
+(5.62 → 4.56 → 4.46 → 3.39 → 3.28 → 2.41 → 2.16), and the conclusion *"a player cannot wind up"*.
+
+**That decay is the same instrument fault §485.5 item 3 records, and it reproduces here on demand.**
+Driven from the authored E-grab, three input policies, everything else identical:
+
+```
+  A  no input, free pendulum        peak  4.30 m/s   2.22 3.09 2.23 2.45 2.22 1.88 ... 0.29
+  B  held toward the NEXT RING      peak  5.23 m/s   2.22 3.83 2.44 2.96 2.27 2.42 ... 0.29
+  C  held along the VELOCITY        peak 11.16 m/s   2.22 4.22 5.15 7.25 10.20 8.63 ...
+```
+
+Policy B is barely better than no input at all, and it decays — which is the reported series. Policy
+C **grows**, and reaches 11.16 m/s: not a 0.21 m/s margin over the 6.00 floor but 5.16 m/s, and not
+only at the first peak.
+
+The cause is in `HookSwing.update`: above 0.35 m/s the pump is
+`push = dot(wishDir, velocityDir)` applied *along the velocity*. Held toward a fixed point, that dot
+is positive on the out-swing and negative on the return, so the input **removes** on the way back
+what it added on the way out and `hookDamp` keeps the difference. Held along the motion it is +1
+every frame. A real swing is pumped with the motion, which is what the source comment says it
+modelled — *"a real swing is pumped at the bottom"*.
+
+**So the recommendation should not be adopted as written.** The lever proposed was ring spacing
+(8.16 m on the widest leg) on the grounds that the wind-up is unavailable. The wind-up *is*
+available. What my run could not do at 11.31 m/s of pumped speed is arrive within `hookAuto` 2.9 of
+ring 4 — and §485.4 says why, and it is not spacing: **the authored entry drops you into a swing
+plane 50.3° off the first leg's bearing, and the plane cannot be steered above 0.35 m/s.** Narrowing
+the rings does not fix a heading error; it shortens the throw you are making in the wrong direction.
+
+Recorded as a disagreement with a reproducible instrument rather than a verdict — `pumpcheck` is
+three policies over one E-grab and anyone can re-run it. **Six drivers across two lanes have now
+failed this leg and at least four of them failed it the same way**, which is itself the finding: the
+beat is not merely hard, it is hard in a manner that makes every naive driver produce a *plausible
+wrong number* instead of an obvious failure. That is why it has cost two lanes a round each.
+
+Nothing repaired. The open question for a person is whether a 50° entry offset into an unsteerable
+swing plane is the intended difficulty of §8.1 step 3.
+
+
+---
+
+## §509 — RETRACTION: the swing pump is not dead, and §508's explanation of the failed beat does not survive it
+
+Final round, and it corrects the section before it. Two measurements, one of which removes a claim I
+published last round and the coordinator forwarded.
+
+### §509.1 The pump works, and it works powerfully
+
+The question was whether `hookDamp` 0.30 cancels `hookPump` 7.0 generally. **It does not.** Three
+input policies on the same ring, same 2.0 m/s starting nudge, 15 s each:
+
+```
+  A  hold ONE direction  (what §508.3 measured)   peak  2.03 m/s   1.78 → 1.02 → 0.73 → 0.31  decays
+  B  push ALONG current motion, every frame       peak 13.43 m/s   2.58 → 8.31 → 12.71 → 13.43 → plateau
+  C  push AGAINST motion  (the control)           peak  1.90 m/s   0.92 → 0.01 → 0.05          collapses
+```
+
+**Policy B is a 45× energy gain and a 6.7× speed gain**, and C collapsing confirms the instrument
+reads the sign of the input rather than its presence.
+
+The closed form (§444.1) predicted the shape before the drive: net gain per frame needs
+`push · hookPump · min(1, sp/5) > sp · hookDamp`, so below 5 m/s any `push > hookDamp·5/hookPump =
+**0.214**` gains, and above it the swing plateaus at `push · hookPump / hookDamp` = **23.3 m/s** at
+push 1. Measured plateau 13.43 implies an effective push of 0.576, which is exactly right: `push` is
+the **horizontal** dot of `wishDir` against a *3-D* unit velocity, so a swing carrying vertical speed
+can never present push 1. The algebra and the drive agree, and the residual is explained rather than
+absorbed.
+
+### §509.2 §508.3 was wrong, and for the third time this session the cause was one sample
+
+> §508.3: *"`hookDamp` 0.30 removes energy faster than `hookPump` 7.0 adds it at this amplitude, so a
+> player cannot wind up."*
+
+**Retracted.** I measured one input pattern — the stick held toward the next ring — and generalised it
+to "pumping". On a pendulum a fixed stick direction gains on the half-swing toward it and loses on
+the half-swing away, netting ≈ 0 against damping that is always negative. **That is not the pump
+failing; that is the wrong input.** Pumping a swing means reversing with the swing, which is what
+`push`'s dot product is written to reward and what a player does instinctively.
+
+Same shape as the two before it: `BEAT_LOST` read one branch of a two-branch mechanism, the release
+hypothesis read one of two release paths, and this read one of infinitely many input patterns. The
+detector that would have caught all three: **when a mechanism has a parameter, measure across the
+parameter before describing the mechanism.**
+
+### §509.3 And that removes §508's explanation of the failed beat
+
+§508.2 framed the beat as a 0.21 m/s margin — 6.21 available against 6.00 required. That number was
+measured under policy A. Under policy B, driven from the lintel:
+
+```
+  peak swing speed from a lintel E-grab, pumping properly   11.34 m/s
+  T8's lowest chaining entry for ring1 → ring2               6.00 m/s
+```
+
+**Energy is not the binding constraint. There is 1.9× the requirement available.** And the chain
+*still does not complete* — bail thresholds of 6, 8, 10 and 12 m/s all reach ring 1 and no further.
+
+So: the **failed beat stands** (six drivers now), the **0.21 m/s margin does not explain it**, and the
+real cause is **unfound**. §508.4's route levers were priced against an explanation that no longer
+holds; ring spacing may still be the answer but nothing here argues for it any more. What is now
+known is narrower and firmer: a player can reach ring 1 and can wind up to nearly twice the speed the
+next ring needs, and something about the release — its direction, its timing window, or the geometry
+it must clear — is what does not connect.
+
+### §509.4 Price of the fix: there is nothing to fix, and no constant was touched
+
+The pump needed no repair, so `hookPump` and `hookDamp` are untouched — which is also the answer to
+"what would the pump have to be for a player to wind up a swing": **it already is that.** For the
+record, had it needed changing, the lever is visible in the closed form: the plateau is
+`hookPump/hookDamp` and the gain threshold is `hookDamp·5/hookPump`, so the two constants trade
+directly and either one moves both the ceiling and the ease of reaching it, under every hook in the
+game.
+
+The one thing worth a designer's attention is not a constant but a **teach**: the pump rewards
+reversing with the swing and punishes holding a direction, the difference between those is 2.03 m/s
+and 13.43 m/s, and nothing in the game says so.
+
+### §509.5 State at hand-off
+
+- `telegraphNextHold` remains **off**, as recommended (§508.5); hardware sheet item 8 unchanged.
+- §449's leads remain **unre-derived and provisional**.
+- The lintel chain is a **failed beat with an unfound cause** — §508.2's margin explanation is
+  retracted here rather than left standing.
+- No constants changed this round. No `src/` behaviour changed this round.
