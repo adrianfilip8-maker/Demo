@@ -85,16 +85,20 @@ design — `recoverDelay` 0.22 s, `recoverTime` 0.62 s, `recoverSpeed` 6.0. Coll
 have deleted a documented behaviour rather than shortened a chain, and the numbers would then be
 about a different camera.
 
+**Re-measured after the objects lane's `landImpact` repair — it holds** (§440.5). The repair made
+2.5x as many landings register, so `land` now asks for 2.13 m instead of 0.83 m and the collapse
+delivers 1.11 m against 0.44 m before. Post-repair figures in brackets.
+
 ```
   framing        boom SHIPPED -> COLLAPSED      in metres, got of asked
-  land                0%   ->   53%             0.00/0.54  ->  0.44/0.83
+  land                6%   ->   52%             0.10/1.68  ->  1.11/2.13
   combat             35%   ->   73%             0.96/2.70  ->  2.68/3.66
   dive               61%   ->   88%             3.47/5.65  ->  4.98/5.68
-  roll               60%   ->   86%             0.55/0.91  ->  0.81/0.94
-  idle (=move)       41%   ->   63%             5.18/12.69 ->  9.18/14.53
-  air                16%   ->   32%             1.34/8.49  ->  3.00/9.24
-  wall_run            5%   ->    8%             0.13/2.59  ->  0.21/2.72
-  glide             100%   ->  100%             2.65/2.65  ->  2.37/2.37
+  roll               65%   ->   89%             0.59/0.91  ->  0.85/0.95
+  idle (=move)       43%   ->   63%             5.33/12.52 ->  8.85/13.77
+  air                13%   ->   32%             1.19/8.86  ->  3.19/9.69
+  wall_run            8%   ->   10%             0.21/2.72  ->  0.28/2.80
+  glide             100%   ->  100%             2.65/2.65  ->  2.42/2.42
   sneak             100%   ->  100%             2.19/2.19  ->  2.20/2.20
 ```
 
@@ -116,7 +120,11 @@ Collapsing does not add snaps; it adds small continuous movement.
 **And it separates two causes that looked like one.** `land` 0 → 53 % is chain depth. `wall_run`
 5 → 8 % is not — chain shortening does not reach it.
 
-> **RETRACTED, and see `KNOWN_ISSUES.md` §439.** This note previously said `wall_run`'s boom is
+> **RETRACTED TWICE — see `KNOWN_ISSUES.md` §439 and §440.** The `wall_run` row above aggregates
+> `wallClimb`/`wallCling`/`wallJump`, which share the framing key and are not wall runs; a real
+> lateral wall run is reachable at 14 sites and lasts 24 frames against a 40-frame blend.
+>
+> **First retraction:** This note previously said `wall_run`'s boom is
 > "governed by the wall it is running along". Instrumented, the boom is cut by **0.03 m** — it is
 > not occluded at all. What is actually wrong is the bank: `_wallSide` is 0 on 121 of 121 frames
 > and `_roll` is exactly 0.00000, because the level's wall runs are head-on and the probe casts

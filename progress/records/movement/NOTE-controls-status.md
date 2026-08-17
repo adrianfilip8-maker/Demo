@@ -60,12 +60,21 @@ either alone leaves landings under-read.
 
 ## 3. The wall run does not look like a wall run
 
-Routing it correctly this session made the `wall_run` framing reachable for the first time, and its
-boom still delivers **5 %** (0.13 m of 2.59 m). **The bank does not arrive either** — `_wallSide` is
-0 on 121 of 121 driven frames and `_roll` is exactly 0.00000, because this level's wall runs are
-head-on and the probe casts sideways (`KNOWN_ISSUES.md` §439). An earlier revision of this note said
-the bank arrives at 94–106 % and that the boom was occluded; both were wrong, and the boom is cut by
-3 cm. So a wall run currently reads as a plain jump: no bank, no pull-back.
+Corrected twice; this is the settled reading (`KNOWN_ISSUES.md` §439, §440).
+
+A **lateral** wall run — running along a face rather than up it — is reachable at 14 sites and is
+the common entry: 50 of 62 scripted entries across the level. On one, the bank **does** fire and
+reaches **53 %** of `wallRoll` (max |roll| 0.05099 of 0.0960), with the probe pointing at the face
+(0.946). It is under-delivered, not dead: the run lasts 24 frames against a 40-frame blend, so its
+ceiling is 84 % before anything else, and `_wallSide` drives the roll for under half of it.
+
+On a **head-on** run — running *up* the wall — there is no side and the bank correctly does
+nothing. Two earlier revisions of this note were wrong in opposite directions: one said the bank
+arrives at 94–106 % (measured on a stub built so the probe could not miss), the other that it never
+fires (measured on one head-on route). The boom, separately, is cut by **3 cm** — never occluded.
+
+And the published `wall_run` row of the delivery table (`boom 5 %`) was measuring
+`wallClimb`/`wallCling`/`wallJump`, which share the framing key and are not wall runs.
 
 ## 4. There is one ground speed on a keyboard
 
