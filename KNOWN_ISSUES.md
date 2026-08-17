@@ -39561,3 +39561,73 @@ rather than rediscovers it:
 consequence on one channel of one framing, and all three repairs above are more disruptive than
 that. **Recorded, priced, and deliberately left alone** — the clock candidates are item 9 of the
 hardware sheet, where a person can move the literal without any of this restructuring.
+
+## §466 — The first frame anyone has looked at, and the whole screenshot corpus was taken with the camera switched off
+
+Partial. One frame, rendered from the shipped build with the **CameraRig driving the camera**, at
+`4cda3ea`. The capture run was still working through a fifty-frame run-up when this lane was asked to
+stop, so the landing, the two Cane Slams and the combat swing are not in hand. What is in hand is the
+first rendered evidence this project has that bears on the camera at all, plus the reason there was
+none before.
+
+### §466.1 Why there was no such frame until now
+
+`tools/shot.mjs` is the screenshot harness and it is not able to answer a camera question, by design:
+`setShot` sets `engine.debug.freeCam = true` and writes `cam.position` / `cam.lookAt` by hand. **Every
+one of the 76 committed frames in `shots/` was composed with the rig switched off.** That is the right
+choice for a shading critic — a fixed camera is what makes two frames comparable — and its consequence
+is that boom length, framing blends, lead, bank and occlusion recovery have never appeared in a
+picture. Every camera finding this session, including the boom-chain collapse that shipped, rests on
+headless drives alone.
+
+`tools/camlook.mjs` (`4cda3ea`) is the missing half: rig in charge, Controller driving the player, real
+key and mouse events, frames taken from rAF at a fixed 1/60, and per-frame telemetry beside the PNGs so
+a frame can be tied to the framing that produced it.
+
+### §466.2 What the frame shows — observation first
+
+`shots/camlane-idle-rig-live.png`, 960 × 540, `idle` framing, spawn, boom 5.4 m, fov 52°.
+
+**Things that look wrong, stated before any diagnosis:**
+
+1. **The ink outline is the same weight at every distance.** Floor tiles a metre away, the staircase
+   eight metres away and the architecture beyond all carry a dark line of roughly equal thickness. The
+   floor therefore reads as a stack of separately-cut slabs rather than as a floor, and the scene
+   flattens — the strongest single impression in the image, and **nothing in any instrument this
+   project has measures it.**
+2. **The character does not read as a character at gameplay distance.** He is roughly 90 px in a 540 px
+   frame. No face, no separation between cane and body, the tail a pale hook. He reads as a bottle with
+   a cap on it. *Caveat, stated because it is load-bearing: at 1080p that is ~180 px, so some of this is
+   the capture resolution and not the game.* It should be re-checked at 1920 × 1080 before anyone acts.
+3. **A hard-edged orange cast covers the right wall and the right half of the floor**, ending on a
+   straight vertical boundary. It does not read as a shadow edge; it reads as a light that stops.
+4. **Two small dark rounded rectangles float on the staircase**, one on the third step, sitting slightly
+   proud of the surface rather than lying on it.
+5. **The foreground pot is large, flat and two-tone**, with no surface detail at a distance where the
+   floor beside it has plenty.
+
+**What looks right:** the rope coils are the most legible objects in frame; the warm/cool split on the
+stone is attractive; the silhouette of the staircase and pylons composes well; the character sits
+centred at about 45 % frame height, which is a reasonable idle.
+
+### §466.3 The observation that bears on this lane's own work
+
+The camera decisions priced this session are **0.2 m of lead, 0.3 m of dolly, 0.06 of `ndcY`** — and at
+the shipped boom the protagonist occupies about a sixth of the frame with no readable detail. **The
+sizes this lane has been arbitrating are small relative to the thing a player would actually notice
+first.** That does not make items 7–9 wrong, and it is not an argument for larger numbers; it is an
+argument that **the boom length itself has never been questioned**, and it is the parameter every one
+of those items sits underneath. `distDefault` 5.4 m is the quantity to look at first on hardware, before
+any of the lead or clock questions, because it scales all of them.
+
+Recorded as an observation with one frame behind it, not a finding: one idle frame at 960 × 540 cannot
+settle a boom length, and saying so is the point of §440.
+
+### §466.4 What is still unseen
+
+Not captured, and each is a published number with no picture behind it: the `land` framing (6 % → 52 %),
+the `combat` framing (35 % → 73 %), and **the two Cane Slam identities that sheet item 3 says have
+largely merged (71 % vs 97 %) — the one consequence nobody predicted and still the one nobody has
+looked at.** `tools/camlook.mjs` runs all four sequences; the run needs roughly half an hour of the
+capture lock at 960 × 540, and it should be re-run at 1920 × 1080 for anything about character
+readability.
