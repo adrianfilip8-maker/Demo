@@ -11,8 +11,9 @@ moves it** — because in three of the five the obvious lever is the wrong one.
 None of these is a bug report. If something feels right, the answer is "leave it", and that answer is
 worth recording too.
 
-**Item 7 is a different kind of entry and is marked as one.** Items 1–6 shipped and ask *is this
-right?* Item 7 has **not** shipped: it is a change priced so that it can be decided, because the
+**Items 7 and 8 are a different kind of entry and are marked as such.** Items 1–6 shipped and ask
+*is this right?* Items 7 and 8 have **not** shipped; item 8 is not even a proposal, only a question
+with both of its answers measured. Item 7: it is a change priced so that it can be decided, because the
 measurement that motivates it moves what a player sees on more than one row at once and no headless
 drive can arbitrate that. It carries a recommendation rather than a menu, and it names what the
 recommendation costs and which row pays.
@@ -538,6 +539,51 @@ mid-band is that per-row trims stay available on either side of it.
 
 And one thing that will *not* change and should not be read as a failure: the hook swing. It is held by a
 different constant and is filed as its own question.
+
+---
+
+## 8. How much should the camera open up at a sprint? — *two authored answers, 5.9× apart*
+
+**Nothing has shipped and nothing is proposed.** This is a question that has never been posed, because
+its two answers live in different mechanisms and no instrument looked at both.
+
+`FRAMES` carries a three-rung speed ladder — `walk`/`run`/`run_fast`, `dist` 0.20/0.90/1.60, `fov`
+0.6/2.4/4.6 — and **no state routes to any of it.** The camera instead opens up continuously, through
+`distSpeedGain` 0.30 m and `fovSpeedGain` 6.0°. Both are authored answers to one question, and they
+disagree by a factor of six:
+
+| at full run (7.2 m/s) | boom added | lens added | boom length | apparent size |
+|---|---|---|---|---|
+| **as shipped** (continuous gains) | +0.270 m | +5.40° | 5.670 m | — |
+| **as the ladder authors** (adds to the above) | +1.870 m | +10.00° | 7.270 m | ≈ −60 % width |
+
+The player's own zoom range is 2.5–9.0 m from a base of 5.4, so the ladder's answer parks the camera at
+**81 % of the furthest the player can choose**, unasked.
+
+**Why this is not simply "wire the ladder".** The ladder is already live on the animation side —
+`Moveset.Move` picks the `walk`/`run`/`run_fast` *clip* at 3.4 and 6.3 m/s — but those thresholds
+sequence a crossfade **during acceleration**, which is not the same as three speeds a player sits at.
+Measured over `move` frames on three driven routes, `run_fast` owns **70–88 %** and the two lower rungs
+are transients worth 5–15 % between them, with the rung changing **2.1–4.6 times a second** against a
+camera blend of 0.26–0.35 s. Wired as framings, the camera would never settle on a rung. §461 has the
+full report.
+
+So the live question is not routing. It is **size**: the shipped speed effect is a 5 cm-per-metre-per-
+second dolly that a player may not notice at all, and the authored one is a 1.6 m pull-back that
+changes the shot. Nobody has looked at both and said which is right.
+
+**What to watch.** Stand, then walk, then run flat-out across the courtyard, and ask whether the camera
+*acknowledges* the speed. If a sprint feels identical to a stand, the shipped 0.30 is too small and the
+ladder's 1.60 is the direction. If it already reads, leave it — and the three ladder rows should then be
+marked as superseded rather than left looking reachable.
+
+**The lever, and it is not the ladder.** `TUNE.distSpeedGain` and `TUNE.fovSpeedGain` are continuous,
+reachable, and free of the three problems wiring the rows would bring. The ladder's numbers are useful
+as the **upper endpoint** of a range, not as framings to route to.
+
+**Decide this beside item 7.** They move the same row. Item 7's largest beneficiary is ordinary running
+— `move`, framed as `idle`, delivering −0.043 m of lead — and the ladder would hand that same row
+`run`'s +0.612 m or `run_fast`'s +1.244 m outright. Whichever is taken first makes the other smaller.
 
 ---
 
