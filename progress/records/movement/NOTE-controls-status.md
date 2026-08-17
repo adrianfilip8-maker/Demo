@@ -63,7 +63,7 @@ either alone leaves landings under-read.
 Routing it correctly this session made the `wall_run` framing reachable for the first time, and its
 boom still delivers **5 %** (0.13 m of 2.59 m). **The bank does not arrive either** — `_wallSide` is
 0 on 121 of 121 driven frames and `_roll` is exactly 0.00000, because this level's wall runs are
-head-on and the probe casts sideways (`KNOWN_ISSUES.md` §438). An earlier revision of this note said
+head-on and the probe casts sideways (`KNOWN_ISSUES.md` §439). An earlier revision of this note said
 the bank arrives at 94–106 % and that the boom was occluded; both were wrong, and the boom is cut by
 3 cm. So a wall run currently reads as a plain jump: no bank, no pull-back.
 
