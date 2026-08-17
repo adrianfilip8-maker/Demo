@@ -33025,3 +33025,71 @@ live edits (§406.3), an `rm -rf` of paths untracked in the rolled-back tree and
 recovered one (§410.4), and a restore from a stale snapshot. **All three were tidying operations.
 None of them was the work.** On a branch with concurrent writers the dangerous commands are the
 housekeeping ones, precisely because they are the ones run without reading first.
+
+---
+
+## §419 — "In frustum and not behind terrain" is not visibility, and it decided a shipped composition
+
+The `pyr1` float is **closed with the third answer: leave it, recorded.** The decision matters
+less than how it was reached, because reaching it falsified both gates the argument had been
+resting on — mine and the world lane's — and they were wrong in opposite directions, which is
+why neither looked suspicious alone.
+
+### §419.1 The float is invisible, and no earlier test could have said so
+
+`pyr1`'s mesh bottom hangs 10.330 m over the riverbed with 8 m of clear air beneath it, and the
+gap measures 23–31 px in four canonical frames. Every earlier test of it cast against **terrain
+only**. Cast through the **full BVH — architecture and props included** — the gap band is blocked
+in 10 of the 11 shots that frame it:
+
+```
+  hero 0/72   temple 0/66   courtyard 0/48   interior 0/57   traversal 0/72
+  combat 0/72  guard 0/20    sly-profile 0/72  alert 0/60     impact 0/72
+  dunes 18/72   <- the only shot that sees any of it
+```
+
+and in `dunes` the base sits behind the pylons and the dune ridge, 328 m away through heavy haze.
+
+### §419.2 Both gates were wrong, and they pointed opposite ways
+
+- **§411.15** called the Nile *"background, 3.1–4.9% of frame"* and approved moving it. In the
+  captured frames the river is **not visible at all** in either shot: aerial haze erases it. The
+  gate approved a move on the strength of a contribution that does not exist.
+- **§411.18** called the same move a skyline rewrite — *"a third of columns, worst 138 px"* — and
+  blocked it. The frames show the skyline **essentially unchanged**, because `dunes`'s horizon is
+  made of pyramid and architecture **meshes**, and `heightAt` contains neither. A terrain-only
+  horizon was measured, and nothing renders one.
+
+One root cause under both, in the lane's own words:
+
+> **"In frustum and not behind terrain" is not visibility. A projection test answers *where a
+> thing would be drawn*, never *whether anyone would see it*.**
+
+The two errors had opposite signs, so they never cancelled into an obviously wrong number and
+neither was individually implausible. **A pair of wrong gates that disagree is more convincing
+than either alone**, because the disagreement reads as a genuine trade-off being weighed.
+
+### §419.3 This implicates every tool in this project that says "clear"
+
+`framelib.clear()` — which `impactframe` and `alertframe` gate on, and which certified the
+re-staged `impact` — tests **architecture triangles only**. Its header says so, and says a
+candidate it likes can still be a bad frame. That warning is now measured rather than asserted:
+haze alone erased a 206 m river, and props alone blocked a 10 m gap in ten shots of eleven.
+
+Nothing shipped is invalidated: the shot certificates claim *geometry*, and geometry is what they
+measure. But the gap between "clear" and "visible" has a size now, and it is not small.
+
+### §419.4 And a refusal worth more than the deliverable
+
+The `recoverSpeed` side-by-side frames were commissioned by me and **cannot be shot.** `shot.mjs`
+renders static staged stills; flicker is temporal, and no single frame contains it. Two stills at
+2.4 and 6.0 would differ only in boom length — not the quantity in question — and would read as
+evidence about flicker while containing none.
+
+> Producing one to satisfy the form of the request would be §407 wearing a camera.
+
+The right instrument is the 60 Hz reversal count already run, with its saturation check in front
+of it. A frame pair would be *less* evidence than the measurement it was meant to corroborate.
+Refusing a commissioned artefact because it would answer a different question is the same
+discipline as §413's refusal to spend a capture on an unresolvable one — and both refusals came
+from the lane that would have been credited for delivering.
