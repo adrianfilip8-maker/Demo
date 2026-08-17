@@ -718,6 +718,51 @@ const RINGS = [
 const INNER_STEP = { low: 1.6, med: 0.96, high: 0.8, ultra: 0.6 };
 
 /**
+ * Rectangles cut out of the COLLISION proxy, in world XZ. Render rings are untouched.
+ *
+ * ── Why this exists (§480) ────────────────────────────────────────────────────────────────
+ * The proxy is one `ground` surface and `complexMask` holds it flush at y ≈ 0 across the whole
+ * playspace. That is invisible everywhere the temple floor is *also* y = 0 — the courtyard, the
+ * hall, the descent landing all coincide with it — and fatal in the one place the level goes
+ * **below** it. The tomb descent is a shaft from y 0 to the vault floor at y −12, and the sand
+ * lay over it as a 0.52 m lid: a capsule swept down from y +3 stopped at y ≈ 0 at every point of
+ * the authored descent, and a 154-column census over the vault on a 2 m grid found **zero** that
+ * admitted a capsule to the vault floor. Steps 7 and 8 of §8.1's route were unreachable and the
+ * demo had no ending.
+ *
+ * ── Why a rectangle and why THIS rectangle ────────────────────────────────────────────────
+ * The bounds are not chosen, they are the stairwell's own walls: `EgyptLevel.js`'s `tomb()`
+ * registers `wallProxy(A, -14.2, 4.4, -12.4, 0.4, …)` twice, at z −54.4…−53.8 and z −60.0…−59.4.
+ * So the well interior is exactly x[−14.2, 4.4] × z[−59.4, −54.4] and the cut is bounded by the
+ * masonry rather than by a number this file invented. TERRAIN builds before ARCHITECTURE in the
+ * MANIFEST and cannot ask, so the numbers are duplicated here with their source named — the same
+ * trade `TUNE.padX`/`padZ0`/`padZ1` already make for the §8.1 footprint.
+ *
+ * ── What was deliberately NOT done ────────────────────────────────────────────────────────
+ * The proxy is **not** thinned, lowered or coarsened anywhere else. A slab that seals one hole is
+ * holding up everything else that stands on sand, and the desert outside the complex is the floor
+ * for the approach, the avenue and the ridge. Only quads that actually meet an opening are
+ * touched, and those are refined rather than dropped, so the hole has a 0.5 m edge instead of a
+ * 4 m one.
+ */
+const PROXY_OPENINGS = [
+  /* Tomb descent stairwell — bounded by `tomb()`'s own north and south wall proxies. */
+  { id: 'tomb-descent', x0: -14.2, x1: 4.4, z0: -59.4, z1: -54.4 },
+];
+
+/** Sub-cells per axis on a proxy quad that meets an opening: 4.0 / 8 = 0.5 m of edge accuracy. */
+const OPENING_REFINE = 8;
+
+const pointInOpening = (x, z) => {
+  for (const o of PROXY_OPENINGS) if (x > o.x0 && x < o.x1 && z > o.z0 && z < o.z1) return true;
+  return false;
+};
+const quadMeetsOpening = (x0, x1, z0, z1) => {
+  for (const o of PROXY_OPENINGS) if (x1 > o.x0 && x0 < o.x1 && z1 > o.z0 && z0 < o.z1) return true;
+  return false;
+};
+
+/**
  * The minimal 2D-canvas surface `_canvas()` needs when there is no DOM.
  *
  * Deliberately NOT a general polyfill. It implements only the four operations the two bakes
@@ -1058,22 +1103,59 @@ Object.assign(Terrain.prototype, {
   _buildCollisionProxy() {
     const half = 168, step = 4.0;
     const n = Math.round(half * 2 / step), nv = n + 1;
-    const pos = new Float32Array(nv * nv * 3);
+    /* Growable, because quads that meet a `PROXY_OPENINGS` rect append a refined sub-lattice of
+       their own. The base 4 m lattice is written first and its indices are unchanged, so every
+       quad away from an opening is byte-for-byte the mesh that shipped before. */
+    const P = [];
     for (let j = 0; j < nv; j++) {
       const z = RING_CZ - half + j * step;
       for (let i = 0; i < nv; i++) {
         const x = RING_CX - half + i * step;
-        const k = (j * nv + i) * 3;
-        pos[k] = x; pos[k + 1] = this.heightAt(x, z); pos[k + 2] = z;
+        P.push(x, this.heightAt(x, z), z);
       }
     }
     const idx = [];
+    let cutCells = 0, refinedQuads = 0;
     for (let j = 0; j < n; j++) {
       for (let i = 0; i < n; i++) {
-        const a = j * nv + i, b = a + 1, c = a + nv, d = c + 1;
-        idx.push(a, c, b, b, c, d);
+        const qx0 = RING_CX - half + i * step, qz0 = RING_CZ - half + j * step;
+        if (!quadMeetsOpening(qx0, qx0 + step, qz0, qz0 + step)) {
+          const a = j * nv + i, b = a + 1, c = a + nv, d = c + 1;
+          idx.push(a, c, b, b, c, d);
+          continue;
+        }
+        refinedQuads++;
+        const m = OPENING_REFINE + 1, s = step / OPENING_REFINE, base = P.length / 3;
+        /* Corner heights of the COARSE quad. Sub-vertices on the quad's boundary take the
+           coarse linear interpolation rather than `heightAt`, so the refined patch shares a
+           watertight edge with its unrefined neighbours — the same stitch `_stitchedHeight`
+           performs between render rings, and without it the seam would leak a capsule. */
+        const y00 = this.heightAt(qx0, qz0), y10 = this.heightAt(qx0 + step, qz0);
+        const y01 = this.heightAt(qx0, qz0 + step), y11 = this.heightAt(qx0 + step, qz0 + step);
+        for (let jj = 0; jj < m; jj++) {
+          const v = jj / OPENING_REFINE, z = qz0 + jj * s;
+          for (let ii = 0; ii < m; ii++) {
+            const u = ii / OPENING_REFINE, x = qx0 + ii * s;
+            let y;
+            if (jj === 0) y = lerp(y00, y10, u);
+            else if (jj === OPENING_REFINE) y = lerp(y01, y11, u);
+            else if (ii === 0) y = lerp(y00, y01, v);
+            else if (ii === OPENING_REFINE) y = lerp(y10, y11, v);
+            else y = this.heightAt(x, z);
+            P.push(x, y, z);
+          }
+        }
+        for (let jj = 0; jj < OPENING_REFINE; jj++) {
+          for (let ii = 0; ii < OPENING_REFINE; ii++) {
+            if (pointInOpening(qx0 + (ii + 0.5) * s, qz0 + (jj + 0.5) * s)) { cutCells++; continue; }
+            const a = base + jj * m + ii, b = a + 1, c = a + m, d = c + 1;
+            idx.push(a, c, b, b, c, d);
+          }
+        }
       }
     }
+    this.proxyOpenings = { quads: refinedQuads, cells: cutCells, area: cutCells * (step / OPENING_REFINE) ** 2 };
+    const pos = new Float32Array(P);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setIndex(new THREE.Uint32BufferAttribute(idx, 1));

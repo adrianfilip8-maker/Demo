@@ -37023,7 +37023,16 @@ headline row was the wrong one to be alarmed about.
 **A negative on the sibling lane's rule, recorded because a negative is worth as much here.** That
 lane's rule is *a workaround appearing independently in more than two places is a defect report nobody
 wrote down*. Searched: no caller anywhere in `src/` hand-writes a velocity look-ahead, and the
-`_pivotGoal` floor is the only compensation in the tree. The in-table version of the same question —
+`_pivotGoal` floor is the only compensation in the tree.
+
+> **ADDENDUM (§460).** The silence of that detector is **not reassurance, and the next person should not
+> read it as such.** A workaround appearing in six places is the fingerprint of a defect somebody hit,
+> understood locally, and did not file. **A bound nobody knows about leaves no fingerprint at all** —
+> there is nothing to work around, because from every caller's point of view the system is behaving. So
+> the detector separates *known-and-routed-around* from *silent*, and only the first kind trips it. A
+> clean result from it means "no lane has hit this and coped", which is compatible with both "there is
+> no defect" and "there is a defect nobody has noticed". Here it was the second, twice over — the floor
+> and then `leadMax`. The in-table version of the same question —
 did authors inflate `lead` to fight `stiff`? — is answered by the r = −0.35 above, and it is *no*. The
 two knobs were authored as independent intentions and multiplied at a third place. Nobody worked
 around this because **nobody knew it was happening**, which is a different failure from five lanes each
@@ -37388,3 +37397,240 @@ there is no number, and there is no rule over the descent either.
   as a 12 m descent. Not changed here: L1 pins §443.3's derivation against drift and that is still
   what it is for, but its `bandHi` should not be quoted as an authored fall. Its domain block already
   disclaims the level (§500); this adds *what the population itself is*.
+
+## §460 — `leadMax` was applied at the wrong stage, and the arm I wrote to watch for it was the same bug
+
+*First section in this lane's assigned block §460–§479. Numbers are no longer taken next-free: nine
+collisions in one session is a process cost, not bad luck, and the block is the fix.*
+
+Three items. A repair, an instrument that failed the way it was written to catch, and what the repair
+did to a recommendation that had already been priced.
+
+### §460.1 A cap correct in itself, consumed at the wrong point in the chain
+
+`_pivotGoal`'s floor arm applied `leadMax` **before** the floor, to the authored lead. Above
+`leadMax / (followTimeH × f.stiff)` m/s the cap therefore landed **below the follow spring's own
+trail**, the floor took over, and the row delivered −`deadzoneH` however much lead it authored. That
+speed is **7.29 m/s for `hook_swing` and 13.67 for `rail_slide`** — both of them ordinary operating
+speeds for those moves, not edge cases.
+
+**The same family as the landing race** (§443): a number correct in itself, consumed at the wrong point
+in the chain, producing a row that cannot be tuned by the knob that appears to control it. `leadTime`
+at 1.00 — nearly six times shipped — moved neither row by a millimetre, run rather than argued.
+
+**Bug or missing seam?** The sibling lane's discriminator settles it: *does the owner claim, anywhere,
+to maintain what is being violated?* Here it claims it three times, all inside the same file:
+
+```
+  `_pivotGoal` header   "leadMax bounds the lead and NOTHING bounds the trail, so above the speed
+                         where the clamp binds the net lead falls linearly with speed and changes
+                         sign."     ← the failure mode named exactly, by the function that then did it
+  the `full` arm        "leadMax moves to NET space here — capping the raw would re-create the defect
+                         at exactly the speeds it bites."      ← three lines from the defect
+  TUNE.leadMax          "calibrated against the delivered number."
+```
+
+A claimed invariant, violated in the sibling branch of the same `if`. **Bug.** Repaired by flooring
+first and capping the net; the constant does not move. Measured at each row's own speed, **exactly
+three rows change and sixteen are identical to the digit**:
+
+```
+  hook_swing   −0.037 → +0.219 m    authored 1.60, under "Lead frames the landing"
+  rail_slide   +0.022 → +1.772 m    the highest authored lead in the file
+  run_fast     +0.729 → +1.244 m    (no state routes to this row)
+```
+
+None of the nine deliberately-still rows moves — the cap never bound on any of them. Floored rows go
+**13 → 11**, which is where §444.1 started, now for the right reason and with the right membership: of
+the eleven, **nine are floored on purpose, one is unreachable, and exactly one is an authored intention
+that never arrives** (`land`, at 0.001 s from break-even). The split is nine-to-one, not eight-to-three.
+
+Flagged rather than fixed: `rail_slide` now delivers the full 1.75 m cap and **nobody has ever seen that
+row** — `railSlide` produces zero frames on any drivable route (§444.4). The repair made a large change
+to a framing no measurement here can evaluate.
+
+### §460.2 The arm written to hold this census was the defect it describes
+
+D9 shipped one commit before the repair. It classified every row by **re-deriving the formula inside
+the test**. The repair then landed, moved `hook_swing` by 26 cm, and **the arm stayed green** — it had
+never asked the rig anything. It was checking the formula against itself.
+
+**That is §439 exactly — an instrument built from the same assumption as the thing it measures cannot
+falsify that assumption — committed in the arm whose own docblock cites §439.** The rule is easy to
+state and evidently not easy to apply to one's own next instrument: §450.4 said "running answers what
+does this do", and I then wrote a test that does not run anything.
+
+Rewriting it to drive the shipped `CameraRig` caught a second one in the first execution: **driving the
+literal string `'wall_run'` resolves to the `run` framing** (`'wall_run'.indexOf('run')` is 5, and
+`['run','run']` sits above `['wall','wall_run']` in `STATE_RULES`), and `'combat'` resolves to `idle`,
+matching no rule at all. **The framing key is not a state name** — §442's finding, reappearing in a test
+harness written by the lane that reported it. Real registered state names now, with the resolved key
+asserted per row so the harness cannot silently measure a different framing than it names.
+
+The arm now asserts the **shape** rather than a number, because the shape is the mechanism: a
+goal-space cap makes delivered lead rise with speed and then **collapse**; a net-space cap makes it rise
+and then **flatten**. Swept 0.5–20 m/s, the worst fall from peak is now 0.000 m on all five fast rows.
+The failing input is run — `leadMax` 0.30 on `rail_slide` at `railMax`, where a goal-space cap is
+provably swallowed by the floor (−0.100 m) and a net-space cap saturates (+0.322 m measured).
+
+### §460.3 A mechanical repair upstream of a feel knob invalidates that knob's pricing
+
+The hardware sheet already carried a priced recommendation of `leadTime` 0.17 → **0.24**, measured
+before this repair. The cap had been silently limiting what a `leadTime` rise could buy on every fast
+row, so with it repaired **the same lever is stronger and the same number over-delivers**: 0.24 now
+moves `glide` by 0.49 m where it used to move it by 0.33 m.
+
+Re-derived from the claim rather than from the published headline (§141.1 — never keep a number because
+it is the one already quoted): **0.22** delivers what 0.24 was chosen to deliver, and `glide`'s cost
+lands back at 28 % of what `leadMode: 'full'` would cost the same row, ndcY −0.514 → −0.552 against
+−0.648. The band is unchanged at **0.180 … 0.315**, re-measured on the repaired rig, because the cap
+never bound on any of the rows that set it.
+
+**The rule.** *A mechanical repair upstream of a feel knob changes what that knob buys, so a value
+chosen before the repair is not the same value after it — re-measure before the sheet goes to a human,
+and re-derive the choice from the claim rather than carrying the old number across.* This is cheap to
+do and invisible if skipped: the old number would still have been inside the band, still passed every
+test, and still been wrong by half a metre on the row that pays.
+
+Nothing about the `leadTime` proposal has shipped. `leadTime` stands at 0.17, `followTimeH` 0.16,
+`deadzoneH` 0.10, `leadMax` 1.75.
+
+---
+
+## §480 — The tomb's lid is off: TERRAIN's proxy roofed the descent, and the stair underneath is a second defect
+
+The repair for §447.1, plus the arm that would have caught it, plus what is still in the way. The
+lid is gone and verified twice; **the demo still has no ending**, and the reason is no longer
+TERRAIN's.
+
+### §480.1 The repair, and why it is a hole rather than a thinner slab
+
+`sand_collision` is one `ground` mesh, x[−168, 168] z[−144, 192], held flush at y ≈ 0 across the
+playspace by `complexMask`. `_buildCollisionProxy` now takes a list of rectangular openings and cuts
+them out. One opening ships:
+
+```
+  tomb-descent   x[-14.2, 4.4]  z[-59.4, -54.4]      18.6 x 5.0 m
+```
+
+**The bounds are not chosen, they are the stairwell's own walls.** `EgyptLevel.js`'s `tomb()`
+registers `wallProxy(A, -14.2, 4.4, -12.4, 0.4, …)` twice, at z −54.4…−53.8 and z −60.0…−59.4, so the
+cut is bounded by the masonry rather than by a number this lane invented. TERRAIN builds before
+ARCHITECTURE in the MANIFEST and cannot ask, so the numbers are duplicated with their source named —
+the same trade `TUNE.padX`/`padZ0`/`padZ1` already make for the §8.1 footprint.
+
+**The proxy is not thinned, lowered or coarsened anywhere.** A slab that seals one hole is holding up
+everything else that stands on sand — the approach, the avenue, the ridge. Only quads that actually
+*meet* an opening are touched, and those are **refined to 0.5 m and partially kept** rather than
+dropped, so the hole has a 0.5 m edge instead of a 4 m one. Sub-vertices on a refined quad's boundary
+take the coarse linear interpolation instead of `heightAt`, so the patch shares a watertight edge with
+its unrefined neighbours — the same stitch `_stitchedHeight` already performs between render rings,
+and without it the seam would leak a capsule. Render rings are untouched; this is a collision change
+only.
+
+### §480.2 Verified by the instrument that found it, and by one that did not
+
+The census that found the defect, re-run: a capsule swept down from y +3 at the authored descent
+stations now reaches real tomb geometry instead of resting on desert.
+
+```
+                                  before        after     lands on
+  flight A upper run (-5, -56.5)   ~0.00       -5.991     flight A ramp proxy
+  flight A lower run (-6, -56.8)    0.268      -5.771     flight A ramp proxy
+  flight B west      (-7, -56.8)   ~0.00       -9.696     flight B ramp proxy
+  mid landing     (-11.6, -56.8)   -0.001      -5.596     mid landing groundProxy
+  flight B deep      (-4, -57.7)   ~0.00      -11.053     flight B ramp proxy
+```
+
+**Both faces.** From below, standing on the mid landing at y −5.600 and sweeping up, the capsule used
+to stop with feet at −1.281 (ceiling y ≈ 0.52); it now clears past y +1. The slab that was y [0.00,
+0.52] is gone.
+
+**A second instrument, which is the point of verifying twice.** A straight drop from every standable
+cell of the descent landing — 616 of them on a 0.25 m grid — now reaches **y −11.05** at its deepest,
+against −0.001 before. The vault floor is −12.
+
+`tests/tombdoor.test.mjs` holds all of it, with the ablation run rather than asserted: emptying
+`PROXY_OPENINGS` turns **D1 and D2 red and leaves D1b and D3 green** — the two arms that claim the
+shaft is open fail without it, the two that claim the cut is bounded and the vent untouched are
+indifferent. An ablation that reddened all four would have meant these were one arm in four costumes.
+
+### §480.3 The stair under the lid does not connect, and that is ARCHITECTURE's
+
+**The shaft is open and the descent is still not walkable.** Flood-filled from the descent landing on
+a 0.4 m grid, allowing a move only where the height change is within `stepHeight` 0.42 — the same bar
+`_moveHorizontal` uses — and requiring a walkable normal against `slopeWalkableDeg` 50 and a 1.80 m
+capsule that fits:
+
+```
+  standable cells in the stairwell                      699
+  reachable BY WALKING from the descent landing         185   deepest y -0.15
+```
+
+185 cells, all of them at landing level. The flights exist — standable surfaces are present in bands
+at y −2…−3, −4…−5, −5…−6, −6…−7, −7…−8, −8…−9 — and **not one of them is step-connected to the
+landing.**
+
+The cause is measured, not inferred. `groundProxy(A, -3.6, 3.6, 0, -58.6, -55.4)` puts the descent
+landing at y 0 across x ±3.6. Flight A's ramp proxy runs its top face from **(x 2.762, y −0.442)** to
+**(x −5.852, y −5.314)**. The two overlap for 6.36 m of the flight's run, so **the landing is a lid
+over the top half of its own staircase** — the identical box-for-a-staircase shape as the terrace
+stair, one floor down. Walking west, the ground reads y 0.000 out to x −3.5 and then **−4.216 at
+x −4.0**: the first step of the tomb stair is a **3.9 m fall**, and driven it produces a
+**17.20 m/s hard landing**.
+
+There is a second gap below it. Flight A's foot is at (−5.852, −5.314) and the mid landing spans
+x[−13.6, −9.6] at y −5.6 — **3.75 m apart at the same height**, with flight B's upper run at −6.1…−7.4
+underneath. A driven descent falls through that gap and comes to rest at **(−9.26, −6.58, −56.60) in
+`fall`, `grounded === false`, with ground 0.00 m under its feet**, held there for the rest of the run.
+That is §436.4's floating capsule with a live reproduction on the authored route, and it is
+`Controller`/`Collision`'s, not this lane's.
+
+**So the honest status: the lid is off, and the tomb is still not reachable on foot.** A capsule can
+now fall to −11.05 where before it could not pass y 0, which is the difference between a sealed level
+and a broken staircase — but it is not an ending.
+
+**The recommendation, since the numbers name it.** The landing must not overlap the flight. Its z
+range (−58.6…−55.4) and the flight's (−57.2…−54.0) already overlap by only 1.8 m, so trimming the
+landing to z[−58.6, −57.25] removes the conflict without moving any art, and costs the player nothing
+because the gate approach arrives from the south. That alone does **not** finish it: the 3.75 m gap at
+flight A's foot still needs the flight lengthened or the mid landing extended east to x −5.9. Both are
+ARCHITECTURE's call and both are geometry, so neither is taken here.
+
+### §480.4 The stealth vent is sealed by the same slab and a terrain cut is NOT its repair
+
+Checked separately rather than assumed, because "there is no second way in" was true of both routes
+and one repair clearing only one was the obvious trap.
+
+`vent` **is not in `Collision.SOLID_TAGS`** — the four vent proxies are region markers for `crawl`,
+not floor. And **ARCHITECTURE registers no `ground` under the vent's sloping shaft at all**: probing
+beneath the sand at x −21 from z −52 southward finds nothing, at every station.
+
+```
+  z -49 .. -51   floor beneath the lid at y -1.00      (still inside the hall's own proxy)
+  z -52 .. -62   MISS — void
+```
+
+So cutting the vent out of the proxy would replace a sealed passage with a **fall into the void**,
+which is strictly worse than sealed. The opening deliberately stops at x −14.2 and the vent keeps its
+lid. `tombdoor.test.mjs` D3 pins the reason and says in its own failure message that the arm should be
+deleted and replaced with a reachability arm the moment somebody builds the vent floor — at which
+point extending the opening to (−21, ·, −49…−60) is the whole job.
+
+### §480.5 What the suite already knew and could not say
+
+`collectroute.test.mjs` V3's failure message is *"the collect loop does not close and the vault reward
+is unwinnable"* and its first line is `const start = new THREE.Vector3(0, -11.95, -60)`.
+`cluevault.test.mjs` R2 places twelve bottles and measures magnet radii in the same room. Every arm in
+this project that touches the tomb starts inside the tomb.
+
+The sibling-detector rule the camera lane published — *a workaround appearing independently in more
+than two places is a defect report nobody wrote down* — returns a **clean negative** here, and the
+negative is the interesting part. **Nothing in `src/` works around a sealed vault.** No spawn point, no
+checkpoint, no debug shortcut, no camera compensating for a room nobody reaches. A defect that is
+routed around leaves fingerprints; one that nobody has ever hit leaves none, and the suite's silence
+was not evidence of health. It was evidence that the question had never been asked.
+
+The distinction `tombdoor.test.mjs` exists to hold, written into its own docblock so it cannot later be
+quoted for the wrong half: **V3 tests the room, D1–D3 test the door, and neither tests the stair.**
+
