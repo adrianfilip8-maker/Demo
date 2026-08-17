@@ -11,11 +11,15 @@ moves it** — because in three of the five the obvious lever is the wrong one.
 None of these is a bug report. If something feels right, the answer is "leave it", and that answer is
 worth recording too.
 
-**Item 6 is a different kind of entry and is marked as one.** Items 1–5 shipped and ask *is this right?*
-Item 6 has **not** shipped: it is a change priced so that it can be decided, because the measurement
-that motivates it moves what a player sees on more than one row at once and no headless drive can
-arbitrate that. It carries a recommendation rather than a menu, and it names what the recommendation
-costs and which row pays.
+**Item 7 is a different kind of entry and is marked as one.** Items 1–6 shipped and ask *is this
+right?* Item 7 has **not** shipped: it is a change priced so that it can be decided, because the
+measurement that motivates it moves what a player sees on more than one row at once and no headless
+drive can arbitrate that. It carries a recommendation rather than a menu, and it names what the
+recommendation costs and which row pays.
+
+**Item 6 shipped and re-priced item 7 on its way past**, which is worth noticing as a pattern rather
+than an accident: a mechanical repair upstream of a feel knob changes what that knob buys, so a value
+chosen before the repair is not the same value after it.
 
 ---
 
@@ -225,193 +229,254 @@ instead of 6%, this is the first time it has been watchable.
 
 ---
 
-## 6. The velocity lead reaches four rows a player can meet — *priced, not shipped*
+## 6. `leadMax` was capping the authored lead, not the delivered one — *shipped*
 
-**Proposed** `TUNE.leadTime` **0.17 → 0.24** · **File** `src/player/CameraRig.js` · **Nothing has changed
-in source.** The nineteen framings each author a `lead`, and on most of them that number does nothing at
-all. This item says which ones, whether that is wrong, and what fixing it would cost.
+**Commit** `46c584e` · **File** `src/player/CameraRig.js` (`_pivotGoal`) · **The constant did not move.**
+1.75 stands; only the stage it is applied at changed.
 
-### What actually reaches the screen
+The floor arm applied `leadMax` *before* the floor, to the authored lead. Above
+`leadMax / (followTimeH × f.stiff)` m/s the cap therefore landed **below the follow spring's own
+trail**, the floor took over, and the row delivered −`deadzoneH` however much lead it authored.
+That threshold is 7.29 m/s for the hook swing and 13.67 for the rail — **both of them ordinary
+operating speeds for those moves**.
 
-`_pivotGoal` applies the lead to the follow *goal*, and the follow spring then trails the goal by its own
-smoothing time. So the authored number is not the delivered one:
+This was a bug rather than a missing seam, and the file settles that itself: `_pivotGoal`'s own
+header names the failure mode — *"`leadMax` bounds the lead and NOTHING bounds the trail, so above
+the speed where the clamp binds the net lead falls linearly with speed and changes sign"* — and the
+`full` arm, three lines from the defect, says *"`leadMax` moves to NET space here — capping the raw
+would re-create the defect at exactly the speeds it bites."* A claimed invariant, violated in the
+sibling branch of the same `if`.
+
+Floor first, cap the net. Measured at each row's own speed, **exactly three rows move and sixteen
+are identical to the digit**:
+
+| framing | before | after | |
+|---|---|---|---|
+| `hook_swing` | −0.037 m | **+0.219 m** | authored 1.60, under *"Lead frames the landing"* |
+| `rail_slide` | +0.022 m | **+1.772 m** | the highest authored `lead` in the file |
+| `run_fast` | +0.729 m | +1.244 m | no state routes to this row |
+
+**None of the nine deliberately-still rows moves at all** — the cap never bound on any of them.
+
+**What to watch.** The hook swing, which `Controller.js` calls the best-feeling move in the game and
+whose framing comment is *"Lead frames the landing."* Until this commit that comment described
+something that did not happen: the camera sat 3.7 cm **behind** Sly through the fast part of every
+swing. Swing a courtyard chain and look at whether the landing is now framed before you get there. If
+22 cm reads as too little, the lever is `hook_swing.lead` upward — it is live again and it was not.
+
+**One thing to flag rather than fix.** `rail_slide` now delivers the full 1.75 m cap, which is a large
+lead, and nobody has seen it: `railSlide` produces zero frames on any drivable route, so the rail is
+authored but unrouted. **If a route is ever given a rail, look at that row first** — it is the one
+place this repair made a big change that no measurement here could evaluate.
+
+---
+
+## 7. The velocity lead — *priced, not shipped*
+
+**Proposed** `TUNE.leadTime` **0.17 → 0.22** · **File** `src/player/CameraRig.js` · **Nothing has
+changed in source.** The nineteen framings each author a `lead`; on eleven of them that number does
+nothing. This item says which, whether that is wrong, and what fixing it would cost.
+
+> **Re-priced after item 6 landed.** This item first recommended 0.24, measured on the rig *before*
+> the `leadMax` repair — where the cap was silently limiting what a `leadTime` rise could buy on every
+> fast row. With the cap in the right place the same lever is stronger, so the same number now
+> over-delivers: 0.24 moves `glide` by 0.49 m where it used to move it by 0.33 m. **0.22 is the value
+> that delivers what 0.24 was chosen to deliver.** The band below is unchanged, because the cap never
+> bound on any of the rows that set it.
+
+### What reaches the screen
+
+`_pivotGoal` applies the lead to the follow *goal*, and the spring then trails the goal by its own
+smoothing time, so the authored number is not the delivered one:
 
 ```
-  delivered = max( min(leadTime × f.lead, leadMax / v) − followTimeH × f.stiff , 0 ) × v − deadzoneH
-                   \__ what the row asks for __/  \_ the cap _/   \___ the spring's own trail ___/
+  delivered = min( max( leadTime × f.lead − followTimeH × f.stiff , 0 ) × v , leadMax ) − deadzoneH
+                          \_ what the row asks for _/  \_ the spring's own trail _/
 ```
 
-Two constants can each independently cancel the whole authored value, and **which one does it decides
-which repair works**:
-
-* **`stiff` floors it** when `leadTime × f.lead` is simply smaller than `followTimeH × f.stiff`. Eleven
-  rows. Fixable by `leadTime`, by that row's `f.lead`, or by `followTimeH`.
-* **`leadMax` floors it** when the 1.75 m cap lands *below* the trail — which happens above
-  `leadMax / (followTimeH × f.stiff)` m/s. Two rows. **Not fixable by `leadTime` or by `f.lead` at any
-  value**, because the cap bites first. `leadMax` was calibrated against *delivered* metres and is
-  applied to *authored* ones, which is why it does something nobody intended at speed.
+`f.stiff` — documented only as *"multiplier on the spring times (>1 = softer, stiller)"* — silently
+subtracts from `f.lead`. Two knobs, one delivered quantity, and until this session nothing measured
+the sum.
 
 ### The census, at each row's own speed
 
-Measured by driving the shipped rig to steady state, at the speed each row actually occurs at
-(`Controller.TUNE`: `runSpeed` 7.2, `sneakSpeed` 1.4, `railMax` 15, `shimmy` 1.05, a dive's horizontal
-30 % retention, and so on). **Speed matters because the cap is a metre cap on a per-second quantity**, so
-one row's number cannot be read at another row's speed.
+Driven to steady state on the shipped rig, each row at the speed it actually occurs at
+(`runSpeed` 7.2, `sneakSpeed` 1.4, `railMax` 15, `shimmy` 1.05, a dive's 30 % horizontal retention).
+**Speed is not a detail**: the delivered lead is a metre quantity, so one row's number cannot be read
+at another row's speed — reading the whole table at `runSpeed` is what hid item 6 for three rounds.
 
 ```
-  row          v     authored  delivered   floored by
-  idle        7.20     0.35     -0.043     stiff   — short by 0.1245 s
-  walk        2.60     0.90     -0.079     stiff   — short by 0.0070 s      no state routes here
-  run         7.20     1.40     +0.612     —                                no state routes here
-  run_fast    7.20     1.85     +0.729     —                                no state routes here
-  sneak       1.40     0.50     -0.089     stiff   — short by 0.1150 s
-  crawl       1.15     0.50     -0.091     stiff   — short by 0.1070 s
-  hook_swing  8.00     1.60     -0.037     leadMax — cap 0.219 s < trail 0.240 s
-  rail_slide 15.00     1.90     +0.022     leadMax — cap 0.117 s < trail 0.128 s
-  balance     2.40     0.20     -0.081     stiff   — short by 0.2220 s
-  spire       0.10     0.15     -0.099     stiff   — short by 0.2785 s
-  dive        2.16     0.40     -0.082     stiff   — short by 0.0200 s
-  wall_run    4.80     1.30     +0.308     —
-  ledge_hang  1.05     0.20     -0.092     stiff   — short by 0.1740 s
-  climb       3.00     0.35     -0.076     stiff   — short by 0.1245 s
-  glide       5.60     1.50     +0.207     —
-  land        7.20     0.70     -0.041     stiff   — short by 0.0010 s      ← knife edge
-  roll        8.40     1.20     +0.607     —
-  air         7.20     1.20     +0.217     —
-  combat      4.60     0.50     -0.063     stiff   — short by 0.0590 s
+  row          v     authored  delivered
+  idle        7.20     0.35     -0.043     ← and this is ORDINARY RUNNING: `move` falls through here
+  walk        2.60     0.90     -0.079        no state routes to this row
+  run         7.20     1.40     +0.612        no state routes to this row
+  run_fast    7.20     1.85     +1.244        no state routes to this row
+  sneak       1.40     0.50     -0.089
+  crawl       1.15     0.50     -0.091
+  hook_swing  8.00     1.60     +0.219     ← repaired by item 6; was -0.037
+  rail_slide 15.00     1.90     +1.772     ← repaired by item 6; was +0.022
+  balance     2.40     0.20     -0.081
+  spire       0.10     0.15     -0.099
+  dive        2.16     0.40     -0.082
+  wall_run    4.80     1.30     +0.308
+  ledge_hang  1.05     0.20     -0.092
+  climb       3.00     0.35     -0.076
+  glide       5.60     1.50     +0.207
+  land        7.20     0.70     -0.041     ← margin -0.001 s. A knife edge, on the wrong side.
+  roll        8.40     1.20     +0.607
+  air         7.20     1.20     +0.217
+  combat      4.60     0.50     -0.063
 ```
 
-**Thirteen of nineteen floored, not eleven**, and the two additions — `hook_swing` and `rail_slide` — are
-floored by the cap rather than by `stiff`. Of the six that deliver, **three have no registered state that
-routes to them**: `walk`, `run` and `run_fast` are authored rows nothing can reach, because `Move` falls
-through to the `idle` framing and the speed ladder was never wired. So **four rows a player can actually
-meet deliver any lead at all: `air`, `glide`, `roll`, `wall_run`.**
+**Eleven of nineteen deliver no lead.** And of the eight that do, **three have no registered state
+routing to them** — `walk`, `run` and `run_fast` are authored rows nothing can reach, because `Move`
+falls through to the `idle` framing and the speed ladder was never wired. So **five rows a player can
+actually meet deliver any lead at all**: `hook_swing`, `rail_slide`, `wall_run`, `roll`, `air`,
+`glide` — six, of which `rail_slide` is on an unrouted move.
 
 ### Which of the inert rows are inert *on purpose*
 
-This is the part that decides whether anything should be done, and there is evidence for it in the table
-rather than only an opinion. **Across all nineteen rows `lead` and `stiff` are anti-correlated (r = −0.35).**
-An author compensating for the trail by hand would have raised `lead` *with* `stiff`; instead the stiller
-a row is authored, the less lead it asks for. The two knobs were reached for **in the same direction**, so
-on those rows the inertness is intent expressed twice, not an accident:
+This decides whether anything should be done, and there is evidence for it in the table rather than
+only an opinion. **Across all nineteen rows `lead` and `stiff` are anti-correlated (r = −0.35).** An
+author compensating for the trail by hand would have raised `lead` *with* `stiff`; instead the stiller
+a row is authored, the less lead it asks for. Both knobs were reached for **in the same direction**, so
+on these rows the inertness is intent expressed twice — in a quantity nobody was writing for an
+audience:
 
 | inert **on purpose** | the tell |
 |---|---|
-| `spire` | lowest `lead` in the table (0.15) **and** highest `stiff` (1.90). Comment: *"back and up to show the drop, and go very still."* |
+| `spire` | lowest `lead` in the file (0.15) **and** highest `stiff` (1.90). *"back and up to show the drop, and go very still."* |
 | `balance` | second-lowest `lead` (0.20), second-highest `stiff` (1.60), same comment |
-| `ledge_hang` | `lead` 0.20. *"drop under the lip and look up past it — the point is what's* above*"* — the shot is vertical |
+| `ledge_hang` | `lead` 0.20 — *"the point is what's* above*"*; the shot is vertical |
 | `sneak`, `crawl` | *"close, tight, low. Intimate and tense"* at 1.4 and 1.15 m/s. A camera that runs ahead of a creep is wrong |
-| `climb` | `vtrack: 1`. The move is vertical; horizontal lead is not its channel |
-| `dive` | `DiveAttack.enter` cuts horizontal velocity to 30 %. The dive's channel is the drop, and `stiff` 0.55 is the snap |
+| `climb` | `vtrack: 1` — the move is vertical; horizontal lead is not its channel |
+| `dive` | `DiveAttack.enter` cuts horizontal velocity to 30 %; the channel is the drop, and `stiff` 0.55 is the snap |
 | `combat` | the orbit's channel is `side: 0.30`, which opens toward the circle. Running ahead of a man circling a mark is the wrong shot |
 | `idle` | correct **as authored** — it is the standing-still framing |
 
-**Eight of those nine want no lead and get none, which is the system working.** That leaves the actionable
-set far smaller than "eleven rows are inert":
+**Nine rows want no lead and get none, which is the system working.** After item 6 that leaves an
+actionable set of exactly one, plus one that is not a lead question at all:
 
-| authored intention that never arrives | evidence it was meant to lead |
+| | |
 |---|---|
-| `hook_swing` | `lead` **1.60**, the second-highest in the table, under the comment ***"Lead frames the landing."*** It is also the one row that breaks the anti-correlation — high `lead` *and* high `stiff` (1.50) — i.e. the one place an author asked for both, and the only place the two knobs genuinely conflict. Delivers **−3.7 cm**. |
-| `rail_slide` | `lead` **1.90**, the highest authored value in the file, on the fastest move. Delivers **+2.2 cm**. |
-| `land` | margin **−0.001 s**. Not a decision anybody made — a knife edge on the wrong side. Delivers **−4.1 cm**. |
-| `idle`-as-`move` | not a lead defect at all. Ordinary running is framed by the *standing-still* row because the walk/run/run_fast ladder is unrouted. Belongs to whoever owns that ladder. |
+| **`land`** | margin **−0.001 s**. Not a decision anybody made — a knife edge on the wrong side. Delivers −4.1 cm at running speed. **This is the row this item is for.** |
+| `idle`-as-`move` | not a lead defect. Ordinary running is framed by the *standing-still* row because the walk/run/run_fast ladder is unrouted. Belongs to whoever owns that ladder. |
 
-`air` is **not** in this set: it delivers 21.7 cm, thin against an authored 1.20 but not inert.
+`air` is **not** in the set — it delivers 21.7 cm, thin against an authored 1.20 but not inert.
 
 ### What each lever does, all nineteen rows, metres on screen
 
-Measured, one lever at a time. A per-row `f.lead` edit is measured too: only the product
-`leadTime × f.lead` is ever read, so raising one row's `lead` is exactly that row run at the equivalent
-`leadTime`, which lets a per-row edit be driven rather than solved for.
+Measured one lever at a time on the repaired rig. A per-row `f.lead` edit is measured too: only the
+product `leadTime × f.lead` is ever read, so raising one row's `lead` is exactly that row run at the
+equivalent `leadTime`.
 
 ```
-  row          v    baseline  lead .20  lead .24  fTimeH .12  fTimeH .10  dead .05  dead 0  leadMax 3.0   'full'
-  idle        7.20    -0.043    -0.043    -0.043      -0.042      -0.041    +0.007  +0.057    -0.043     +0.386
-  walk *      2.60    -0.079    -0.027    +0.066      +0.007      +0.059    -0.029  +0.021    -0.079     +0.319
-  run *       7.20    +0.612    +0.648    +0.648      +0.878      +1.011    +0.662  +0.712    +0.612     +1.672
-  run_fast *  7.20    +0.729    +0.729    +0.729      +0.975      +1.098    +0.779  +0.829    +1.244     +1.708
-  sneak       1.40    -0.089    -0.089    -0.089      -0.089      -0.089    -0.039  +0.011    -0.089     +0.030
-  crawl       1.15    -0.091    -0.091    -0.091      -0.091      -0.091    -0.041  +0.009    -0.091     +0.007
-  hook_swing  8.00    -0.037    -0.037    -0.037      +0.274      +0.514    +0.013  +0.063    +0.219     +1.713
-  rail_slide 15.00    +0.022    +0.022    +0.022      +0.334      +0.575    +0.072  +0.122    +1.102     +1.772
-  balance     2.40    -0.081    -0.081    -0.081      -0.081      -0.081    -0.031  +0.019    -0.081     +0.000
-  spire       0.10    -0.099    -0.099    -0.099      -0.099      -0.099    -0.049  +0.001    -0.099     -0.097
-  dive        2.16    -0.082    -0.082    -0.065      -0.078      -0.054    -0.032  +0.018    -0.082     +0.065
-  wall_run    4.80    +0.308    +0.496    +0.745      +0.482      +0.569    +0.358  +0.408    +0.308     +1.000
-  ledge_hang  1.05    -0.092    -0.092    -0.092      -0.092      -0.091    -0.042  +0.008    -0.092     -0.056
-  climb       3.00    -0.076    -0.076    -0.076      -0.076      -0.075    -0.026  +0.024    -0.076     +0.102
-  glide       5.60    +0.207    +0.459    +0.529      +0.499      +0.646    +0.257  +0.307    +0.207     +1.372
-  land        7.20    -0.041    +0.103    +0.304      +0.169      +0.277    +0.009  +0.059    -0.041     +0.816
-  roll        8.40    +0.607    +0.643    +0.643      +0.877      +1.012    +0.657  +0.707    +0.607     +1.682
-  air         7.20    +0.217    +0.476    +0.498      +0.520      +0.672    +0.267  +0.317    +0.217     +1.426
-  combat      4.60    -0.063    -0.063    -0.063      -0.062      -0.062    -0.013  +0.037    -0.063     +0.328
+  row          v    baseline  lead .20  lead .22  lead .24  fTimeH .10  dead .05  leadMax 3.0   'full'
+  idle        7.20    -0.043    -0.043    -0.043    -0.043      -0.041    +0.007    -0.043     +0.386
+  walk *      2.60    -0.079    -0.027    +0.020    +0.066      +0.059    -0.029    -0.079     +0.319
+  run *       7.20    +0.612    +0.914    +1.116    +1.317      +1.011    +0.662    +0.612     +1.672
+  run_fast *  7.20    +1.244    +1.643    +1.708    +1.708      +1.612    +1.294    +1.244     +1.708
+  sneak       1.40    -0.089    -0.089    -0.089    -0.089      -0.089    -0.039    -0.089     +0.030
+  crawl       1.15    -0.091    -0.091    -0.091    -0.091      -0.091    -0.041    -0.091     +0.007
+  hook_swing  8.00    +0.219    +0.603    +0.859    +1.115      +0.940    +0.269    +0.219     +1.713
+  rail_slide 15.00    +1.772    +1.772    +1.772    +1.772      +1.775    +1.822    +2.947     +1.772
+  balance     2.40    -0.081    -0.081    -0.081    -0.081      -0.081    -0.031    -0.081     +0.000
+  spire       0.10    -0.099    -0.099    -0.099    -0.099      -0.099    -0.049    -0.099     -0.097
+  dive        2.16    -0.082    -0.082    -0.082    -0.065      -0.054    -0.032    -0.082     +0.065
+  wall_run    4.80    +0.308    +0.496    +0.620    +0.745      +0.569    +0.358    +0.308     +1.000
+  ledge_hang  1.05    -0.092    -0.092    -0.092    -0.092      -0.091    -0.042    -0.092     -0.056
+  climb       3.00    -0.076    -0.076    -0.076    -0.076      -0.075    -0.026    -0.076     +0.102
+  glide       5.60    +0.207    +0.459    +0.627    +0.795      +0.646    +0.257    +0.207     +1.372
+  land        7.20    -0.041    +0.103    +0.204    +0.304      +0.277    +0.009    -0.041     +0.816
+  roll        8.40    +0.607    +0.909    +1.111    +1.312      +1.012    +0.657    +0.607     +1.682
+  air         7.20    +0.217    +0.476    +0.649    +0.822      +0.672    +0.267    +0.217     +1.426
+  combat      4.60    -0.063    -0.063    -0.063    -0.063      -0.062    -0.013    -0.063     +0.328
 
   * no registered state routes to this row — it cannot appear on screen as things stand
 ```
 
 Read the columns for what each one *cannot* do:
 
-* **`leadTime`** never moves a single one of the eight deliberately-still rows, at either value. It also
-  never moves `hook_swing` or `rail_slide` **at any value whatsoever** — the cap, not the authored number,
-  is what is holding them.
-* **`followTimeH`** wakes everything that was meant to lead, including the two the cap holds, and also
-  leaves the eight still rows alone. It is the *most effective* lever and the most global: it is the
-  horizontal smoothing time of the entire follow, so it changes how the camera tracks on all nineteen rows
-  whether or not the steady-state lead moves.
-* **`deadzoneH`** is a uniform +5 cm or +10 cm on every row and wakes nothing. It buys almost no lead and
-  spends the thing it exists for: during a fidget in place the pivot travels **0.219 m at 0.10, 1.153 m at
-  0.05 and 2.456 m at 0** — 5× and 11× the motion in the shot the deadzone exists to hold still.
-* **`leadMax` 1.75 → 3.0** is the surgical one: **every other row is identical to baseline to the digit**,
-  and only the three the cap binds move. It is the only lever that repairs `hook_swing` without touching
-  the follow spring.
-* **`f.lead` per row** repairs `land` (0.70 → 1.03 delivers 0.30 m) and cannot repair `hook_swing` or
-  `rail_slide` at all — 1.75, 3.00, any value, delivers **+0.000** against baseline.
+* **`leadTime`** never moves a single one of the nine deliberately-still rows at any value tried.
+* **`followTimeH`** reaches everything `leadTime` reaches, and is the horizontal smoothing time of the
+  *entire* follow — it changes how the camera tracks on all nineteen rows whether or not the
+  steady-state lead moves. Most effective, most global.
+* **`deadzoneH`** is a uniform shift that wakes nothing, and it spends the one thing it exists for:
+  during a fidget in place the pivot travels **0.219 m at 0.10, 1.153 m at 0.05, 2.456 m at 0** — 5×
+  and 11× the motion in the shot the deadzone exists to hold still.
+* **`leadMax`** now moves only `rail_slide` (and `run_fast`, unreachable). Item 6 put it back in net
+  space; raising it further is a question about the bound, not about the floor.
+* **`f.lead` per row** repairs `land` (0.70 → 1.03 delivers 0.30 m) without touching anything else, and
+  is the alternative to the global bump if only `land` should change.
 
 ### The recommendation
 
-**Raise `TUNE.leadTime` from 0.17 to 0.24. One constant. Nothing else.**
+**Raise `TUNE.leadTime` from 0.17 to 0.22. One constant. Nothing else.**
 
-It is not the lever that fixes the most rows — `followTimeH` is. It is the lever that fixes the rows a
-player meets on **every jump in the game** while being provably unable to damage the rows built to be
-still, and whose headroom is a derived band rather than a taste:
+Not the lever that moves the most rows — `followTimeH` is. It is the lever that repairs the one row
+still carrying an authored intention that never arrives, while being provably unable to touch the nine
+rows built to be still, and whose headroom is **derived rather than chosen**:
 
 ```
   land wakes at leadTime 0.180        ← the row this is for
   the first deliberately-still row to wake is dive at 0.315, then combat at 0.320
-  -> every value in 0.180 … 0.315 delivers land and leaves all eight still rows floored
+  -> every value in 0.180 … 0.315 delivers `land` and leaves all nine still rows floored
 ```
 
-0.24 sits mid-band, so this is a free judgement across a window and not a nudge — the same shape as
-item 1's 9 m/s band. On the driven temple (four routes, 960 frames, real moveset and real BVH):
+0.22 sits mid-band. **The band is the measurement; the point inside it is not** — the same shape as
+item 1's 9 m/s window, and for the same reason: nothing headless can say whether 20 cm of lead at 5.4 m
+of boom *reads*. On the driven temple (four routes, 960 frames, real moveset and real BVH):
 
 | framing | frames | before | after |
 |---|---|---|---|
-| `land` | 23 | +0.050 | **+0.402** |
-| `glide` | 175 | +0.109 | **+0.438** |
-| `air` | 315 | −0.031 | **+0.183** |
-| `idle` (= `move`) | 308 | −0.107 | −0.009 |
-| `sneak` | 108 | +0.167 | +0.167 |
-
-**Deliberately not bundled:** `hook_swing` stays broken under this change, and that is on purpose. Its
-repair is `leadMax`, which is a *different* defect — a constant calibrated in delivered metres and applied
-to authored ones — and folding a structural correction into a feel bump is how a measured result stops
-being attributable. It is filed separately.
+| `land` | 23 | +0.050 | **+0.408** |
+| `glide` | 175 | +0.109 | **+0.454** |
+| `air` | 315 | −0.031 | **+0.138** |
+| `idle` (= `move`) | 308 | −0.107 | −0.038 |
+| `sneak` | 108 | +0.168 | +0.168 — unmoved |
 
 ### What it costs, and the row that pays
 
 **`glide` suffers most.** It is the only row that loses something it did not ask to change: it already
-delivered its authored lead, it has the longest uninterrupted residency in the game (175 of 175 frames,
-100 % delivery), and so a change there is fully visible where `land`'s 23 frames show only a fraction.
-More lead puts Sly further down-frame, which is exactly the tension item 5 above names — and it can be
-quoted in item 5's own units:
+delivered its authored lead, and it has the longest uninterrupted residency in the game — 175 of 175
+frames at 100 % delivery — so a change there is fully visible where `land`'s 23 frames show a fraction.
+More lead puts Sly further down-frame, which is exactly the tension item 5 names, and it can be quoted
+in item 5's own units:
 
 ```
   glide, where the character sits in frame (ndcY, - = down-frame)
       baseline            -0.514
       leadTime 0.20       -0.536
-      leadTime 0.24       -0.551      ← this proposal
+      leadTime 0.22       -0.552      ← this proposal
+      leadTime 0.24       -0.570
       leadMode 'full'     -0.648      ← the alternative already on this sheet as item 5
 ```
+
+So this costs `glide` **28 % of what full compensation would cost it**. That is the trade in one
+number: `land` gains 36 cm of lead, `glide` and `air` gain about the same, and `glide` pays by sitting
+a little lower in frame during the longest shot in the game.
+
+The motion cost, in the same three statistics item 2 uses (route `run + jumps`, the busiest):
+
+| | mean \|Δpivot−player\| | p99 step | reversals |
+|---|---|---|---|
+| baseline | 15.88 mm | 114.7 mm | 39 |
+| **leadTime 0.22** | **18.71 mm** | 123.2 mm | 35 |
+| `leadMode 'full'` | 25.39 mm | 113.9 mm | 35 |
+
+Reversals go **down**, which is the evidence this is continuous motion rather than snapping. For
+contrast, `leadMode: 'full'` costs +60 % on the same route.
+
+### What to watch
+
+Run and jump repeatedly over uneven ground. The question is whether landing now shows you where you
+are going instead of where you were — `land` is the row this is for, and until items 1 and 2 landed it
+was not watchable at all. Then glide the courtyard and decide whether Sly sits too low.
+
+**If glide is wrong, the lever is `glide.lead` 1.50 downward, not `leadTime` back down.** The point of
+choosing a value mid-band is that per-row trims stay available on either side of it.
+
+---
 
 So this costs `glide` **28 % of what full compensation would cost it**. That is the trade in one number:
 `land`, `air` and `glide` all gain roughly a third of a metre of lead, and `glide` pays for it by sitting
@@ -450,11 +515,12 @@ collision fix, `landBeat` staying at 3.2, the collision census (closed on a clea
 deepest on-route candidate dissolved into intended traversal or centimetre registration), and the
 framing-attribution audit.
 
-Open **defects** under investigation, which are not feel questions: `leadMax` 1.75 being calibrated in
-delivered metres and applied to authored ones, which is what holds `hook_swing` and `rail_slide` at the
-floor no matter what they author (item 6).
+Three entries that used to sit here are **closed and are recorded as closed so they are not chased
+again**:
 
-Two entries that used to sit here are **closed and are recorded as closed so they are not chased again**:
+* *`leadMax` 1.75 calibrated in delivered metres and applied to authored ones.* **Repaired** — it is now
+  item 6 above. It moved from an open defect to a shipped change with a feel consequence, which is why it
+  has an item rather than a line here.
 
 * *`jump`'s `lead` delivering 26 % where `fall` delivers 92 % under the same pooled row.* Driven per
   frame: the goal lead is 1.25 m throughout a jump and the pivot sits 1.35–1.78 m behind it — **and it
