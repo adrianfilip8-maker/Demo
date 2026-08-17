@@ -341,6 +341,45 @@ let _PREV = null;
  * because the engine is shared and a probe that counts events must not start with the previous
  * one's, which is the single hazard sharing an engine introduces.
  */
+
+/**
+ * Burn off a freshly-minted Controller's first update, so callers never receive it.
+ *
+ * ── The defect, measured ───────────────────────────────────────────────────────────────────
+ * `hardReset(engine, c, V(4.2, 19.5, 4.5))` followed by one `c.update()` put Sly on the terrace
+ * deck at **y 2 — a 17.5 m fall in a single frame, `grounded` true, state `idle`.** The same
+ * reset at the same height on the SECOND call left him at 19.49 and falling, and on the third.
+ * It is the first update of each new `Controller` instance, from any height:
+ *
+ *     call 1  y 19.5 -> y 2      grounded true    SNAPPED
+ *     call 2  y 19.5 -> y 19.49  grounded false   fall
+ *     call 3  y 19.5 -> y 19.49  grounded false   fall
+ *
+ * ── What this cost, and why it is a harness defect and not a curiosity ─────────────────────
+ * **No test in this project could start a beat airborne.** Every airborne-entry move — hook
+ * auto-grab, dive, glide entry, the second half of a double jump, wall-cling from a fall — was
+ * only reachable by first driving Sly off something, and a probe that asked for an airborne pose
+ * silently got a grounded one. A harness that ignores an argument it accepts is §357.1 in the
+ * test layer: the caller writes a height, the height is discarded, and nothing says so. It is
+ * exactly how a telegraph beat was reported as "did not reproduce" for two rounds.
+ *
+ * ── What it is NOT ────────────────────────────────────────────────────────────────────────
+ * Not `_calibrate`. That was the first hypothesis and it is wrong: forcing `_bindCollision()`
+ * before the reset sets `_calibrated` true and the snap still happens. The root cause is
+ * somewhere else in the first-update path and is **not identified** — this burns the frame off
+ * rather than claiming to have fixed it, and says so here so nobody reads a green suite as the
+ * underlying bug being closed. It is worth chasing: `Debug.setShot` also steps a fresh
+ * Controller, so a staged frame could inherit the same 17 m snap.
+ */
+function burnFirstFrame(engine, c) {
+  hardReset(engine, c, V(0, 0, 30), Math.PI);
+  engine.input.beginFrame(DT);
+  engine.input.move.x = 0; engine.input.move.y = 0;
+  c.update(DT, 0);
+  engine.events.length = 0;
+  engine.warnings.length = 0;
+}
+
 export async function realWorld() {
   if (_WORLD) {
     const { engine } = _WORLD;
@@ -362,6 +401,7 @@ export async function realWorld() {
     const c = new Controller(engine);
     await c.init();
     _PREV = c;
+    burnFirstFrame(engine, c);
     return { ..._WORLD, c };
   }
   const { Terrain } = await import('../src/world/Terrain.js');
@@ -394,6 +434,7 @@ export async function realWorld() {
   const c = new Controller(engine);
   await c.init();
   _PREV = c;
+  burnFirstFrame(engine, c);
   return { ..._WORLD, c };
 }
 

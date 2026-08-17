@@ -29,9 +29,9 @@ import { installDom, fakeEngine } from './_hudshim.mjs';
  *
  * Delivered lead, measured the same way as the 0-frame baseline that motivated the work:
  *
- *     E-grab (kiosk lintel -> ring 3)   telegraph@0, hookGrab@30   ->  30 frames, 0.50 s
- *     auto-grab (freefall onto ring 3)  did not reproduce in this harness — a FAILED BEAT,
- *                                       reported as such and not as a measurement
+ *     E-grab (kiosk lintel -> ring 3)      telegraph@0,  hookGrab@30  ->  30 frames, 0.50 s
+ *     auto-grab (fall from y 25 onto ring 3) telegraph@26, hookGrab@63  ->  37 frames, 0.62 s
+ *     auto-grab (fall from y 30)             telegraph@46, hookGrab@76  ->  30 frames, 0.50 s
  */
 
 async function bootHud() {
@@ -197,4 +197,101 @@ test('telegraph: DRIVEN — the game emits a hook mark before the player commits
 
   console.log(`[telegraph] DRIVEN E-grab: telegraph@${eGrab.tele} -> hookGrab@${eGrab.grab} = `
     + `${eGrab.grab - eGrab.tele} frames (${((eGrab.grab - eGrab.tele) / 60).toFixed(2)} s) lead, baseline was 0`);
+});
+
+test('telegraph: the harness can start a beat airborne, at a stated height', async () => {
+  /* The harness defect this pins. `hardReset` to (4.2, 19.5, 4.5) followed by one update put Sly
+   * on the terrace deck at y 2 — a 17.5 m fall in one frame, grounded, `idle` — on the FIRST
+   * update of each freshly-minted Controller, from any height. The second and third calls at the
+   * same height left him at 19.49 and falling. **No test in this project could start a beat
+   * airborne**, so every airborne-entry move was reachable only by first driving Sly off
+   * something, and a probe that asked for height silently got the ground.
+   *
+   * `realWorld()` now burns that frame off before handing the Controller over. Not identified as
+   * `_calibrate` — forcing `_bindCollision()` first sets `_calibrated` and the snap still happens;
+   * see `burnFirstFrame`'s note, which says the root cause is unfound rather than fixed.
+   *
+   * DOMAIN (§418.3 + the third line)
+   *   passes on : y 30, 19.5 and 8.95 — `grounded === false` at frame 0, within 2 cm of the
+   *               stated height, state `fall`.
+   *   fails  on : y 0.0 at spawn — genuinely on the ground, so `grounded === true`. Both run, so
+   *               the arm distinguishes "airborne when asked" from "never grounded".
+   *   cannot discriminate : whether the underlying first-frame snap is fixed. It is burned off,
+   *               not repaired, and `Debug.setShot` steps a fresh Controller the same way.
+   */
+  const { realWorld, hardReset, DT } = await import('./_moveset.mjs');
+  const { engine, c } = await realWorld();
+
+  const at = (y) => {
+    engine.input.clear();
+    hardReset(engine, c, new THREE.Vector3(4.2, y, 4.5), Math.PI);
+    engine.input.beginFrame(DT);
+    engine.input.move.x = 0; engine.input.move.y = 0;
+    c.update(DT, 0);
+    return { y: c.position.y, grounded: c.grounded, state: c.stateName };
+  };
+
+  for (const y of [30, 19.5, 8.95]) {
+    const r = at(y);
+    assert.equal(r.grounded, false, `asked for y ${y} airborne, got grounded at y ${r.y.toFixed(2)}`);
+    assert.ok(Math.abs(r.y - y) < 0.05,
+      `airborne start must hold its height: asked ${y}, got ${r.y.toFixed(2)} — the 17.5 m snap is back`);
+  }
+  /* The failing input: a height that really is the ground. */
+  engine.input.clear();
+  hardReset(engine, c, new THREE.Vector3(0, 0, 30), Math.PI);
+  engine.input.beginFrame(DT);
+  engine.input.move.x = 0; engine.input.move.y = 0;
+  c.update(DT, 0);
+  assert.equal(c.grounded, true, 'a start on the paving must be grounded, or the arm proves nothing');
+  console.log(`[telegraph] airborne starts hold at 30 / 19.5 / 8.95; spawn is grounded`);
+});
+
+test('telegraph: DRIVEN — the auto-grab path also leads the commitment', async () => {
+  /* The path that could not be measured until the harness could place him in the air.
+   *
+   * My recorded prediction was that this would be structurally SHORTER than the E-grab's 30
+   * frames, because the auto-grab is bounded by `hookAuto` rather than `hookGrab`. **That was
+   * wrong, and the reason is worth keeping**: `_telegraph` reads `afford('hook')`, whose reach is
+   * `AFFORD.hook.range` = `hookGrab` 9.0 on BOTH paths. `hookAuto` governs when the grab fires,
+   * not when the affordance becomes visible, so the telegraph opens at the same 9 m sphere either
+   * way — and the fall spends longer inside it than the standing E-grab does.
+   *
+   * DOMAIN (§418.3 + the third line)
+   *   passes on : a fall from y 25 onto ring 3 — telegraph@26, hookGrab@63, 37 frames.
+   *   fails  on : a fall from y 25 at x -20, far from any ring — no hook telegraph at all.
+   *   cannot discriminate : whether 0.62 s is enough warning. Same as the E-grab arm: it pins
+   *               the lead positive and correctly aimed, never that the number is adequate.
+   */
+  const { realWorld, hardReset, DT } = await import('./_moveset.mjs');
+  const { engine, c } = await realWorld();
+
+  const fall = (x, z) => {
+    engine.input.clear();
+    hardReset(engine, c, new THREE.Vector3(x, 25, z), Math.PI);
+    let tele = -1, grab = -1, point = null;
+    for (let i = 0; i < 300; i++) {
+      engine.events.length = 0;
+      engine.input.beginFrame(DT);
+      engine.input.move.x = 0; engine.input.move.y = 0;
+      engine.time = i * DT;
+      c.update(DT, i * DT);
+      for (const e of engine.events) {
+        if (e.evt === 'telegraph' && e.payload?.kind === 'hook' && tele < 0) { tele = i; point = e.payload.point.clone(); }
+        if (e.evt === 'hookGrab' && grab < 0) grab = i;
+      }
+    }
+    return { tele, grab, point };
+  };
+
+  const onRing = fall(4.2, 4.5);
+  const away = fall(-20, 4.5);
+
+  assert.ok(onRing.tele >= 0 && onRing.grab >= 0, 'the fall must telegraph and then grab');
+  assert.ok(onRing.tele < onRing.grab,
+    `the mark must precede the grab: telegraph@${onRing.tele} vs hookGrab@${onRing.grab}`);
+  assert.ok(onRing.point.distanceTo(new THREE.Vector3(4.2, 14.8, 4.5)) < 0.5, 'must name ring 3');
+  assert.equal(away.tele, -1, 'the failing input: falling far from any ring emits no hook telegraph');
+  console.log(`[telegraph] DRIVEN auto-grab: telegraph@${onRing.tele} -> hookGrab@${onRing.grab} = `
+    + `${onRing.grab - onRing.tele} frames (${((onRing.grab - onRing.tele) / 60).toFixed(2)} s)`);
 });
