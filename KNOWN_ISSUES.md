@@ -34762,7 +34762,20 @@ caught in four separate instruments.
 
 ---
 
-## §430 — Correctly wired, correctly resolved, and structurally unable to finish
+## §432 — Correctly wired, correctly resolved, and structurally unable to finish
+
+> **Renumbered from §430, by the rule I set when I renumbered §411 to §414.** The payload-triage
+> §430 pushed first (`e6d83d5`); mine landed second (`1a45d52`). **The section number is claimed
+> by the first PUSH, not the first draft, and the later author renumbers** — renumbering the
+> earlier one would invalidate citations that were correct when they were written. My commit
+> message `1a45d52` cites this as §430 and cannot be corrected (§314); it means §432.
+>
+> Third collision this session (§394/§395, §411/§414, this). Three in one session on an
+> append-only file is not bad luck, it is the cost of four writers appending to one document with
+> no reservation step — and the rule is cheap enough that the cost stays a renumber rather than a
+> lost section. Worth noting the near-miss: the lane that hit it **declined to renumber mine**,
+> on the grounds that it was my content and might carry cross-references, and routed it instead.
+> That is the right call — a lane silently renumbering another's section is how a citation dies.
 
 A third defect class, distinct from the two this session has spent itself on, and it was found by
 asking how long a state *lasts* rather than what it *does*.
