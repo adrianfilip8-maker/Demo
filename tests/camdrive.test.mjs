@@ -940,3 +940,78 @@ test('D7: every framing row, attributed to the states that produced it', async (
     `'air' now has ${air?.size ?? 0} contributing state(s). It pooled fall and jump, whose lead delivery `
     + 'differs 92% vs 26%; if it has collapsed to one the spread this arm reports is no longer visible');
 });
+
+/* ====================================================================== */
+/* D8 — the lead column, in closed form                                    */
+/* ====================================================================== */
+
+test('D8: FRAMES.lead is inert on most of the table, and it is derivable rather than sampled', () => {
+  /* The chase started from D7's `air` row: `lead` delivering 92 % on fall-started spans and 26 %
+     on jump-started ones. Measured per frame, the GOAL lead is 1.25 m throughout and the pivot
+     sits 1.35–1.78 m behind it — **on the ground as well**. So it is not a jump problem, and the
+     92/26 spread is a ratio of two small numbers, not a 66-point difference in what a player sees.
+   *
+   * The real quantity is closed form and needs no driving at all. `_pivotGoal` floors the lead at
+   * the follow spring's own trail, so the delivered lead is
+   *
+   *     max(leadTime × f.lead − followTimeH × f.stiff, 0) × speed − deadzoneH
+   *
+   * and the sign of that margin decides whether `f.lead` does anything whatsoever. **On 11 of 19
+   * framings the margin is negative: the floor is permanently active, the delivered lead is
+   * exactly −deadzoneH at every speed, and the authored `lead` value has no effect at all.**
+   *
+   *     FLOOR ALWAYS ACTIVE   idle walk sneak crawl balance spire dive ledge_hang climb land combat
+   *     escapes, barely       air 0.159 m · hook_swing 0.130 m · glide 0.238 m   (at runSpeed)
+   *     escapes properly      run 0.554 · wall_run 0.454 · roll 0.447 · run_fast 1.185 · rail_slide 1.304
+   *
+   * `air` authors 1.20 ("lead hard") and delivers **16 cm**. `hook_swing` authors 1.60 with the
+   * comment *"Lead frames the landing"* and delivers **13 cm**. `land` sits 0.001 s below
+   * break-even — a knife edge, on the wrong side.
+   *
+   * This is §442's class again with the subject changed: a column whose published numbers were
+   * about the ratio, not about the metres. The metres were always derivable.
+   *
+   * DOMAIN (§418.3)
+   *   passes on : the shipped table — `run_fast` and `rail_slide` carry real lead (1.19 m, 1.30 m
+   *               at runSpeed), so the mechanism is not uniformly dead and the census discriminates.
+   *   fails on  : the 11 rows at or below break-even, asserted by name. If that set shrinks
+   *               somebody has re-authored `lead` or `stiff` and the delivered lead has changed
+   *               for real, which is a feel change and must not land silently.
+   *   does NOT discriminate : whether any of this is visible. A 16 cm lead at 5.4 m of boom is a
+   *               small screen offset; this arm says what is delivered, not whether it reads. */
+  const T = TUNE;
+  const margin = (f) => T.leadTime * f.lead - T.followTimeH * f.stiff;
+  const delivered = (f, v) => Math.max(margin(f), 0) * v - T.deadzoneH;
+  const RUN = CTUNE.runSpeed;
+
+  const dead = [], live = [];
+  console.log('\n[D8] framing        f.lead f.stiff  margin(s)  delivered at runSpeed');
+  for (const [k, f] of Object.entries(FRAMES)) {
+    const m = margin(f);
+    (m <= 0 ? dead : live).push(k);
+    console.log(`[D8] ${k.padEnd(14)} ${f.lead.toFixed(2).padStart(6)} ${f.stiff.toFixed(2).padStart(7)} `
+      + `${m.toFixed(4).padStart(10)}  ${delivered(f, RUN).toFixed(3).padStart(7)} m${m <= 0 ? '   FLOOR ALWAYS ACTIVE' : ''}`);
+  }
+  console.log(`[D8] ${dead.length}/${Object.keys(FRAMES).length} framings can never deliver lead: ${dead.join(' ')}`);
+
+  assert.ok(dead.length >= 8,
+    `only ${dead.length} framings sit at or below the lead break-even (was 11): ${dead.join(', ')}. `
+    + 'Somebody has re-authored `lead` or `stiff` and the delivered lead has changed for real — that '
+    + 'is a feel change and this arm exists so it cannot land silently.');
+  for (const k of ['idle', 'sneak', 'balance', 'spire', 'ledge_hang', 'land']) {
+    assert.ok(margin(FRAMES[k]) <= 0,
+      `'${k}' now escapes the lead floor (margin ${margin(FRAMES[k]).toFixed(4)} s) — its authored lead `
+      + 'has started doing something, which is a change in what a player sees');
+  }
+  /* The discriminator: the mechanism is not uniformly dead. */
+  assert.ok(delivered(FRAMES.rail_slide, RUN) > 1.0 && delivered(FRAMES.run_fast, RUN) > 1.0,
+    'no framing delivers more than a metre of lead at runSpeed, so "11 of 19 are inert" is a '
+    + 'statement about the formula rather than about the table');
+  /* And the two whose authored intent most contradicts their delivery, pinned by name. */
+  assert.ok(delivered(FRAMES.air, RUN) < 0.30,
+    `'air' now delivers ${delivered(FRAMES.air, RUN).toFixed(3)} m of lead; it was 0.159 m against an `
+    + 'authored 1.20 "lead hard"');
+  assert.ok(delivered(FRAMES.hook_swing, RUN) < 0.30,
+    `'hook_swing' now delivers ${delivered(FRAMES.hook_swing, RUN).toFixed(3)} m; it was 0.130 m against `
+    + 'an authored 1.60 and the comment "Lead frames the landing"');
+});

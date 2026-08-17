@@ -217,6 +217,20 @@ export const TUNE = {
   followLeashV: 2.6,
 
   /* ---- velocity lead ------------------------------------------------------ */
+  /* **`FRAMES.lead` is inert on 11 of 19 rows, and that is derivable rather than sampled.**
+     `_pivotGoal` floors the lead at the follow spring's own trail, so what reaches the screen is
+        max(leadTime × f.lead − followTimeH × f.stiff, 0) × speed − deadzoneH
+     and the sign of that margin decides whether `f.lead` does anything at all. Negative on
+     `idle walk sneak crawl balance spire dive ledge_hang climb land combat` — for those the
+     delivered lead is exactly −`deadzoneH` at every speed and the authored number has no effect.
+     `air` authors 1.20 ("lead hard") and delivers 0.159 m; `hook_swing` authors 1.60 under the
+     comment "Lead frames the landing" and delivers 0.130 m; `land` sits 0.001 s the wrong side of
+     break-even. Only `run_fast` and `rail_slide` carry more than a metre.
+     Found chasing a 92 %-vs-26 % spread in the delivery table that turned out to be a ratio of two
+     small numbers — the goal lead is 1.25 m throughout a jump and the pivot sits 1.35–1.78 m
+     behind it, on the ground as well, so it was never a jump problem. `tests/camdrive.test.mjs`
+     D8 holds the census. NOT retuned: raising `lead` or lowering `stiff` changes what a player
+     sees on eleven rows at once. */
   leadTime: 0.17,               // seconds of travel to lead by, ×frame.lead
   leadMax: 1.75,
   /* Which of the two answers to the lead/trail defect is in force. See `_pivotGoal`.
@@ -1678,7 +1692,18 @@ export class CameraRig {
    * 111.9 mm, because the occlusion pull-ins were deliberately left alone — so this adds small
    * continuous movement, not snaps. Stated as motion and reversals rather than as a percentage
    * of delivery, because that is the quantity a person watching this on hardware is judging.
-   * FLAGGED FOR HARDWARE REVIEW on exactly that number.
+   * FLAGGED FOR HARDWARE REVIEW, and there are TWO separate things to look at:
+   *
+   *   1. **MOTION.** The +35 % and the 38 → 52 reversals above. Continuous, not snaps.
+   *   2. **AN IDENTITY MERGE, which nobody predicted.** The Cane Slam's boom delivery across
+   *      drop heights was 5 / 50 / 86 / 96 / 100 % at 2.52 / 4.56 / 8 / 15 / 26 m and is now
+   *      **71 / 92 / 98 / 97 / 100**. A jump-apex dive used to look nothing like a full-height
+   *      one and now looks substantially the same. That is not a side effect of the cost above,
+   *      it is a different consequence: **two authored visual identities have largely merged.**
+   *      The crossover arithmetic explains it exactly (`diveSpeed × 3τ` = 4.86 m of fall against
+   *      2.52 m from a jump), which is why it was predictable in hindsight and was not predicted.
+   *      A reviewer has to be told to look for it; it is not the kind of thing anyone notices by
+   *      accident, because the thing that changed is a difference that stopped existing.
    * ────────────────────────────────────────────────────────────────────────────────────────── */
 
   /**

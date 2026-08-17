@@ -42,6 +42,21 @@ In metres and degrees, which is what the percentages are of:
   sneak       boom  2.19 of 2.19 m       fov  4.41 of 4.43 deg   <- closes cleanly
 ```
 
+> ## The `lead` column delivers almost nothing, on most rows by construction
+>
+> `_pivotGoal` floors the lead at the follow spring's own trail, so the delivered lead is
+> `max(leadTime × f.lead − followTimeH × f.stiff, 0) × speed − deadzoneH`. **On 11 of 19 framings
+> that margin is negative** — `idle walk sneak crawl balance spire dive ledge_hang climb land
+> combat` — so the delivered lead is exactly −`deadzoneH` at every speed and the authored `lead`
+> number has no effect at all. `air` authors 1.20 and delivers **0.159 m**; `hook_swing` authors
+> 1.60 under *"Lead frames the landing"* and delivers **0.130 m**. Only `run_fast` (1.19 m) and
+> `rail_slide` (1.30 m) carry real lead.
+>
+> So the `lead` percentages in the table below are ratios of small numbers and should not be read
+> as feel. The metres are in `camdrive` D8, in closed form. (The 92 %-vs-26 % `air` spread that
+> sent me looking was exactly this: the goal lead is 1.25 m throughout a jump and the pivot sits
+> 1.35–1.78 m behind it — on the ground as well, so it was never a jump problem.)
+
 > ## Read the row names before quoting this table
 >
 > **A framing key is not a move**, and two rows are not about what they are called (audited by
