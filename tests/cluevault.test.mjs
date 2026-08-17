@@ -589,52 +589,12 @@ test('V12 TRIPWIRE — the Eye has a geometry, and it is not the coin mesh', asy
    and a stub floor would answer a different question. ~4 s, once, shared by all four arms.
 ============================================================================================ */
 
-/**
- * The whole world in MANIFEST order, exactly as `tests/traversal.test.mjs:realWorld()` does it
- * and for the reason its header gives: **a harness that omits a module does not fail.** It runs,
- * it returns, and its numbers are plausible. Architecture alone is not the level — TERRAIN
- * registers the desert and PROPS registers its own colliders, and eleven of the twelve bottles
- * are checked against surfaces those two modules own.
- */
-let WORLD = null;
-async function realWorld() {
-  if (WORLD) return WORLD;
-  const { Terrain } = await import('../src/world/Terrain.js');
-  const { Architecture } = await import('../src/world/Architecture.js');
-  const { Props } = await import('../src/world/Props.js');
-  const { Collision } = await import('../src/world/Collision.js');
-
-  const listeners = new Map();
-  const engine = {
-    scene: new THREE.Scene(), renderer: null, camera: null,
-    time: 0, dt: 0, timeScale: 1, width: 1920, height: 1080, quality: 'high',
-    warnings: [], events: [], debug: { freeCam: false, showColliders: false, wireframe: false },
-    has() { return false; },
-    warn(m) { this.warnings.push(String(m)); },
-    on(e, f) { if (!listeners.has(e)) listeners.set(e, new Set()); listeners.get(e).add(f); return () => listeners.get(e).delete(f); },
-    emit(e, p) { this.events.push({ evt: e, payload: p }); for (const f of listeners.get(e) || []) f(p); },
-    get() { return null; },
-    registerCollider() {},
-  };
-  const queued = []; const mods = {}; let collision = null;
-  engine.get = (m) => (m === 'collision' ? collision : mods[m] || null);
-  engine.registerCollider = (mesh, opts = {}) => {
-    const rec = {
-      mesh, tag: opts.tag || 'ground', climbable: !!opts.climbable,
-      material: opts.material || 'stone', oneWay: !!opts.oneWay, ...opts,
-    };
-    if (collision?.add) collision.add(rec); else queued.push(rec);
-    return rec;
-  };
-  mods.terrain = new Terrain(engine); await mods.terrain.init();
-  mods.architecture = new Architecture(engine); await mods.architecture.init();
-  mods.props = new Props(engine); await mods.props.init();
-  collision = new Collision(engine);
-  for (const r of queued) collision.add(r);
-  await collision.init();
-  WORLD = { engine, collision, mods };
-  return WORLD;
-}
+/* The state-driving harness (§424). This file grew its own copy of `realWorld()` for the
+   placement proofs below, which made two in the project — the exact defect §424 was written
+   about. Both are gone into `tests/_moveset.mjs`; this imports it, and the world is cached
+   there so the twelve bottles are measured against a BVH built once. */
+import { realWorld, hardReset, DT } from './_moveset.mjs';
+import { TUNE as CTUNE } from '../src/player/Controller.js';
 
 const DOWN = new THREE.Vector3(0, -1, 0);
 const UP = new THREE.Vector3(0, 1, 0);
@@ -738,16 +698,52 @@ test('R1 a downward ray finds a real surface under every bottle', async () => {
   }
 });
 
-/** `WallClimb.enter`'s capsule placement, replicated — and pinned to the original below. */
-function clingBaseAt(hold, ctune) {
-  const n = new THREE.Vector3(hold.normal?.x ?? 0, 0, hold.normal?.z ?? 0);
-  if (n.lengthSq() < 1e-6) return null;
+/**
+ * Put Sly on a real rung by DRIVING him onto it, and report where his capsule ends up.
+ *
+ * This replaces a replication of three lines of `WallClimb.enter` (§424). The replication was
+ * correct — the driven base comes out at exactly the coordinate it computed — but a copy pinned
+ * to its original by a regex is still a copy, and the original could change in a way the regex
+ * accepts. Here the state is entered by `Controller.update()` polling `WallClimb.canEnter` and
+ * running the real `enter()`, so there is nothing to keep in sync.
+ *
+ * **Never falls back.** If the drive does not reach `wallClimb`, or reaches it on a different
+ * rung, this returns `entered: false` and the caller fails. A harness that quietly substitutes a
+ * computed pose for a driven one returns something that looks driven, which is the whole failure
+ * class §424 refused to acquire.
+ */
+async function driveOntoRung(id) {
+  const { engine, c, collision } = await realWorld();
+  const holds = collision.recs.find((r) => r.handholds?.length)?.handholds ?? [];
+  const rung = holds.find((h) => h.id === id);
+  if (!rung) return { entered: false, why: `no rung ${id} in the level` };
+
+  const n = new THREE.Vector3(rung.normal?.x ?? 0, 0, rung.normal?.z ?? 0);
+  if (n.lengthSq() < 1e-6) return { entered: false, why: 'the rung publishes no plan normal' };
   n.normalize();
-  return new THREE.Vector3(
-    hold.point.x + n.x * (ctune.radius + 0.05),
-    hold.point.y - ctune.hangReach,
-    hold.point.z + n.z * (ctune.radius + 0.05),
+
+  /* Start below the rung and a little off the face, airborne, pushing into the wall — a player
+     arriving at a ladder. The offsets are a start pose, not an answer: everything measured comes
+     out of `c.position` after the real transition. */
+  const from = new THREE.Vector3(
+    rung.point.x + n.x * (CTUNE.radius + 0.20),
+    rung.point.y - CTUNE.hangReach - 0.40,
+    rung.point.z + n.z * (CTUNE.radius + 0.20),
   );
+  hardReset(engine, c, from, Math.atan2(-n.x, -n.z));
+  c.grounded = false;
+  for (let i = 0; i < 60; i++) {
+    engine.input.beginFrame(DT);
+    engine.input.move.x = 0; engine.input.move.y = 1;
+    engine.time = i * DT;
+    c.update(DT, i * DT);
+    if (c.stateName === 'wallClimb') {
+      const held = c.sm.get('wallClimb')._hold;
+      if (held?.id !== id) return { entered: false, why: `caught ${held?.id} instead of ${id}` };
+      return { entered: true, frame: i, base: c.position.clone(), holdId: held.id };
+    }
+  }
+  return { entered: false, why: 'never entered wallClimb in 60 frames' };
 }
 
 test('R2 every bottle is inside the magnet from the nearest place a player can actually be', async () => {
@@ -757,8 +753,12 @@ test('R2 every bottle is inside the magnet from the nearest place a player can a
    * centre at `surface + grabHeight`. For the ladder bottle it is **not**: its only floor is the
    * pylon face 5.46 m below, and it is taken from a CLING.
    *
-   * `clingBaseAt` replicates three lines of `WallClimb.enter`, which is a drift risk, so the
-   * original is scraped and pinned below — the §239 method: never copy a contract, extract it.
+   * The cling pose is now **driven** (`driveOntoRung` above): `Controller.update()` polls
+   * `WallClimb.canEnter` on the real pylon and runs the real `enter()`, and the arm reads
+   * `c.position`. It used to replicate three lines of `WallClimb.enter` with the original
+   * scraped and pinned against drift — §424 Round 1 removed the need. The replication was
+   * right, which is how I know the swap is sound: the driven capsule base comes out at
+   * (11.418, 11.040, 36.067), the coordinate the copy computed, to the millimetre.
    *
    * DOMAIN (§418.3 / §418.9)
    * PASSES ON: the twelve — 0.080 m (east pylon deck) to 0.700 m (the ladder bottle, from rung
@@ -774,43 +774,33 @@ test('R2 every bottle is inside the magnet from the nearest place a player can a
    *                into an executing assertion instead of a sentence.
    */
   const { collision } = await realWorld();
-  const { TUNE: CTUNE } = await import('../src/player/Controller.js');
 
-  /* Pin the replication to the original. */
-  const enterSrc = /enter\(c\) \{[\s\S]*?c\.position\.set\(([\s\S]*?)\);/.exec(
-    SRC('src/player/Moveset.js').slice(SRC('src/player/Moveset.js').indexOf('class WallClimb')));
-  assert.ok(enterSrc, 'WallClimb.enter no longer places the capsule with a position.set()');
-  assert.ok(/TUNE\.radius \+ 0\.05/.test(enterSrc[1]) && /TUNE\.hangReach/.test(enterSrc[1]),
-    'WallClimb.enter\'s capsule placement has changed; `clingBaseAt` above is now a copy of ' +
-    'something that no longer exists and the ladder bottle\'s reach number is fiction');
-
-  const holds = collision.recs.find((r) => r.handholds?.length)?.handholds ?? [];
-  assert.ok(holds.length >= 20, `§211.1: only ${holds.length} handholds found`);
+  /* The cling, DRIVEN — no replication left to pin. */
+  const LADDER_RUNG = 'notch-pylon-e-w-5';
+  const cling = await driveOntoRung(LADDER_RUNG);
+  assert.ok(cling.entered,
+    `could not drive Sly onto ${LADDER_RUNG}: ${cling.why}. The ladder bottle's reach is ` +
+    'unmeasurable, so this arm reports that rather than substituting a computed pose.');
+  const clingCentre = cling.base.clone(); clingCentre.y += TUNE.grabHeight;
 
   const floorReach = (spot) => {
     const r = collision.raycast(new THREE.Vector3(spot[0], spot[1], spot[2]), DOWN, PROBE);
     if (!r.hit) return Infinity;
     return Math.hypot(0, spot[1] - (r.point.y + TUNE.grabHeight), 0);
   };
-  const clingReach = (spot) => {
-    const b = new THREE.Vector3(spot[0], spot[1], spot[2]);
-    let best = Infinity, id = null;
-    for (const h of holds) {
-      const base = clingBaseAt(h, CTUNE);
-      if (!base) continue;
-      const d = Math.hypot(base.x - b.x, (base.y + TUNE.grabHeight) - b.y, base.z - b.z);
-      if (d < best) { best = d; id = h.id; }
-    }
-    return { d: best, id };
-  };
+  /* The cling is measured from ONE driven pose — the rung the header names — rather than from a
+     sweep over all 26 holds. A sweep would have to compute where each one puts him, which is the
+     replication this arm just stopped doing. */
+  const clingReach = (spot) =>
+    Math.hypot(clingCentre.x - spot[0], clingCentre.y - spot[1], clingCentre.z - spot[2]);
 
   const rows = [];
   for (let i = 0; i < CLUE_SPOTS.length; i++) {
     const s = CLUE_SPOTS[i];
     const floor = floorReach(s);
-    const cling = clingReach(s);
-    const best = Math.min(floor, cling.d);
-    rows.push({ i, floor, cling, best, how: floor <= cling.d ? 'floor' : `cling ${cling.id}` });
+    const cd = clingReach(s);
+    const best = Math.min(floor, cd);
+    rows.push({ i, floor, cling: cd, best, how: floor <= cd ? 'floor' : `cling ${LADDER_RUNG}` });
     assert.ok(best <= TUNE.magnet,
       `bottle ${i} at (${s}) is ${best.toFixed(3)} m from the nearest place a player can be, ` +
       `past the ${TUNE.magnet} m magnet — it cannot be collected, and the vault cannot be opened`);
@@ -830,13 +820,13 @@ test('R2 every bottle is inside the magnet from the nearest place a player can a
   assert.ok(/^cling notch-pylon-e-w-5$/.test(worst.how),
     `the header names rung notch-pylon-e-w-5 as the worst case; measured ${worst.how}`);
 
-  /* Failing half (a): the stale coordinate. */
+  /* Failing half (a): the stale coordinate, by floor and by cling. */
   const staleD = floorReach([-9.5, 13.6, -15.2]);
   assert.ok(staleD > TUNE.magnet,
     `the stale §8.1 cornice coordinate now measures ${staleD.toFixed(3)} m and PASSES this bar — ` +
     'the counterexample is stale and R2 has stopped discriminating');
-  assert.ok(clingReach([-9.5, 13.6, -15.2]).d > TUNE.magnet,
-    'the stale coordinate is now within cling reach of a rung, so it is no longer a counterexample');
+  assert.ok(clingReach([-9.5, 13.6, -15.2]) > TUNE.magnet,
+    'the stale coordinate is now within cling reach of the ladder, so it is no longer a counterexample');
 
   /* Failing half (b): the ladder bottle read as a floor bottle. */
   const ladder = rows.find((r) => r.how.startsWith('cling'));
