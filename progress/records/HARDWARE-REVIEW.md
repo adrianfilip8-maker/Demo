@@ -80,16 +80,46 @@ speaks.
 >   every authored descent still hard. `landHard` stays at **15.0** pending a second term in the rule,
 >   because every alternative is wrong differently rather than less.
 
-**What to watch, revised.** Two questions, and only the second is still a free judgement.
+> ### ⚠ THIRD CORRECTION (§501) — the second term does not exist either
+>
+> §500 said the rule needed a second term and named three. **All three were tested and all three
+> fail**, so the decision below is no longer "pick a term":
+>
+> - **"Was it a walk-off?"** — the favourite, and dead on the authored descent itself. Route leg 5→6,
+>   `hall-front-cornice → hall-floor`, is population B's 25.368 member, and the cornice is a standable
+>   ledge at y **17.004** with the hall floor at y **0.004** beneath it. It *is* a walk-off. The term
+>   makes population B's own largest descent soft.
+> - **"Was it on the authored route?"** — no radius partitions. At 20 m it calls 78 ordinary walk-offs
+>   hard; at 3 m it has stopped covering the route. The level's highest walk-off (29.600 m/s, 18.14 m)
+>   is **0.1 m from a waypoint**, so tightening cannot exclude the worst case.
+> - **"Was an affordance live and declined?"** — of the 102 hard walk-offs, **51 had one. Exactly
+>   half.** And the six highest arrivals all had none, so the term is inverted where it matters.
+>
+> **And population B contains no falls.** Forced to look at L1's three "authored route descents"
+> individually: 7.753 is a 1.2 m hook release, 25.368 is the walk-off above, and 23.749 is a
+> **staircase** — §447.1 measured the authored stair into the vault and found it built, correct and
+> walkable. Nobody falls into the vault; they walk down. The band `landHard` was placed inside was
+> bounded below by a walk-off and above by a stair.
 
-1. **Is a walk-off of an ordinary terrace supposed to hurt?** On this level it does, at 15.0, more than
-   half the time. Walk south off the stage-2 deck — a required route waypoint — and it lands **15.600,
-   hard**. (That specific arrival is a collider defect, §500.5: a 15 cm notch in the ground proxies turns
-   a 3.20 m step into a 5.25 m fall. It is filed for the world lane. It is *not* why the band is gone.)
-2. **If the answer is no, what tells a terrace from a roof?** Not arrival speed — §500.4 shows it cannot,
-   because they are the same act at different heights. The rule needs a second term and the candidates
-   are named in §500.4. **That is a design decision, not a tuning one**, and it is the thing actually
-   owed here now.
+**The decision you are actually being asked to make.** Not a number, and not a rule over the descent.
+
+1. **Do you want some drops on this level to hurt and others not to?** If yes, it has to be **authored
+   per surface** — a flag on the collider, a volume, or a property of the landing surface. Every term
+   that is a property of the *fall* has now been measured and none carries the information, because
+   walking off a terrace and walking off a cornice are the same act on the same kind of surface,
+   differing only in height — and height is what arrival speed already measures.
+2. **If you do not want to author it**, then pick which way to be wrong from §500.4's table, knowing
+   that 15.0 makes 103 of 189 edges hard and the median walk-off on this level is 17.200 m/s — above
+   the threshold itself.
+
+**Cost of option 1**, so it is priced rather than gestured at: 101 standable elevated surfaces, of
+which 189 driven edges have a drop.
+
+**What is still safe to say.** `landBeat` 3.2 is not in question — every landing speaking is right, and
+§443.1's coin-flip silence is genuinely fixed. Arrivals are quantized at 0.400 m/s, so any future
+choice moves in whole steps. And one number on this page that *is* a plain defect rather than a
+judgement: walking south off stage 2 lands 15.600 because of a ~0.15 m notch in the ground proxies
+(§500.5), filed for the world lane and not a threshold input.
 
 **What is still safe to say.** `landBeat` 3.2 is not in question — every landing speaking is right, and
 §443.1's coin-flip silence is genuinely fixed. The arrival quantum is 0.400 m/s and every threshold sits

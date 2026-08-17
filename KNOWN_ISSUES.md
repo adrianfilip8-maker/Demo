@@ -37254,3 +37254,137 @@ Not built this round; the threshold was live and these are not.
   private field in the shipped codebase: `Controller.bounce()` writes it, `Bounce.enter()`
   (`Moveset.js:362`) reads and clears it. The correct idiom is already one screen away — `takeJump()`
   consumes the jump buffer exactly this way.
+
+---
+
+## §501 — All three second terms fail, and population B turns out to contain no falls: the hard landing cannot be derived from the descent
+
+§500.4 named three candidate second terms and chose none. This tests all three. **All three fail**,
+and the measurement that kills the favourite also dismantles the population the whole derivation was
+built against.
+
+### §501.1 The rule, stated first, because it is the reusable part
+
+> **INSTRUMENT PROVENANCE.** Quote another lane's number only after trying to reproduce it, and say
+> which parts reproduced and which did not. A number that has not been reproduced is a number on
+> loan from the lane that made it.
+
+§500.2 did this by accident of care; it is now the practice. It has already paid twice — §500 quotes
+§447.2's jump ladder rather than its own because the jump half did not reproduce, and §501.2 below
+exists only because reproducing a waypoint turned out to be possible at all.
+
+### §501.2 Candidate 1 — "was it a walk-off?" — dies on the authored descent itself
+
+The term: a descent begun from a grounded, controlled state is soft; one arrived at by leaving or
+failing a traversal beat is hard. It matches the moveset's own rule far better than speed does, and
+it was the favourite.
+
+**It requires that the authored descents are NOT walk-offs. They are.** Route leg 5→6,
+`hall-front-cornice (−9.5, 13.6, −15.2) → hall-floor (0, 0, −20)`, is population B's 25.368 member.
+A capsule swept down the z axis at x −9.5 profiles it:
+
+```
+  z −18.00 … −16.75   rests y 17.004      the cornice, standable
+  z −16.50            rests y 16.916
+  z −16.25 … −16.00   rests y 15.364 · 15.300     stepped lip
+  z −15.75            rests y 12.896
+  z −15.50 … −14.00   rests y  0.004      the hall floor, 17 m down
+```
+
+The cornice is a standable ledge and the hall floor is 17 m beneath it. **Walking south off it is a
+grounded, controlled departure** — the same act as stepping off any of the 189 edges in §500.3.
+Candidate 1 classifies population B's own largest genuine descent as SOFT, which is the defect it
+was introduced to prevent. Dead outright, no residual worth quoting.
+
+*Note the authored waypoint itself is not standable:* a capsule dropped at
+`hall-front-cornice`'s literal coordinates rests at **y 0.004**, not 13.6 — the route's y is 13.6,
+the ledge is at 17.0, and the point named in the route is out over the drop. Recorded for whoever
+owns the route table; it is not this section's finding.
+
+### §501.3 And population B contains no falls at all
+
+Chasing candidate 1 forced each of L1's three "authored route descents" to be looked at individually
+rather than as a set of three heights, and none of them is what the name says:
+
+```
+  7.753   leg 4→5  hook-chain → hall-front-cornice   dy  1.20   a HOOK RELEASE, 1.2 m
+ 25.368   leg 5→6  hall-front-cornice → hall-floor   dy 13.60   a WALK-OFF (§501.2)
+ 23.749   leg 8→9  descent-landing → vault-floor     dy 12.00   a STAIRCASE
+```
+
+The last one matters most. §447.1 measured the authored stair between those two waypoints and found
+it **built, correct and walkable** — flight A lower −3.650, flight A foot −5.347, mid landing −5.600,
+flight B mid −9.071, crypt −12.000, both proxy ramps inside `slopeWalkableDeg` 50 at 29.5° and 32.4°.
+**Nobody falls 12 m into the vault; they walk down.** L1 derived that descent as a raw height
+difference between consecutive waypoints (`route[i−1][2] − route[i][2]`), which cannot tell a drop
+from a stair.
+
+So **population B, as the threshold was derived against it, contains not one event of the kind it was
+supposed to represent.** The genuine "fell, did not mean to" arrivals in this level are §447.3's
+three — hook release 24.458–26.151, rail jump 30.186, magnet yank 32.400 — and every one of those is
+a traversal-beat exit, not a route descent. The band `landHard` was placed inside was bounded below
+by a walk-off and above by a staircase.
+
+### §501.4 Candidate 2 — "was it on the authored route?" — does not partition at any radius
+
+```
+  within  3 m of a waypoint    13 edges,   4 arrive >= 15.0
+  within  6 m                  43 edges,  16
+  within 10 m                  65 edges,  25
+  within 20 m                 150 edges,  78
+```
+
+The route threads the whole level, so the radius trades one error for the other with no setting that
+separates: at 20 m it calls 78 ordinary walk-offs hard, and at 3 m it has stopped covering the route.
+**Tightening does not help, because the worst case is the closest one** — the highest driven walk-off
+in the level, 29.600 m/s off an 18.14 m fall, sits **0.1 m from a route waypoint**. Residual at every
+radius is in the dozens. Dead.
+
+### §501.5 Candidate 3 — "was an affordance live and declined?" — is a coin flip, and inverted at the top
+
+Measured per frame during each of the 188 driven falls, asking `afford()` for hook, rail, pole and
+spire:
+
+```
+  walk-offs with an affordance live at some point in the fall     85 of 188   45 %
+  of the 102 that are HARD at landHard 15.0, how many had one     51 of 102   50.0 %
+```
+
+**Exactly half.** That is the least informative result the measurement could have produced: knowing an
+affordance was live tells you nothing about whether the landing is hard. And it is worse than
+uninformative at the end that matters — **the six highest arrivals in the level all had NO affordance
+live**, so the term is anti-correlated where it counts and would classify the biggest falls as soft.
+Dead.
+
+### §501.6 The verdict: it cannot be derived, and must be authored
+
+All three fail, and they fail for one shared reason: **every term tried is a property of the DESCENT,
+and on this level the descent does not carry the information.** Walking off a terrace and walking off
+a cornice are the same act, on the same kind of surface, both on the route, both often with a hook in
+reach. They differ only in height, and height is what arrival speed already measures — the quantity
+§500.4 established cannot separate them.
+
+> **The hard landing cannot be derived from the descent. If this level wants some drops to hurt and
+> others not to, it has to be authored per surface** — a flag on the collider, a volume, or a
+> property of the landing surface rather than of the fall.
+
+That is a level-authoring job, not a tuning one, and it is a real cost: 101 standable surfaces, of
+which the 189 driven edges are the ones with a drop. The cheap alternatives are all wrong in a stated
+way, and §500.4's table prices them.
+
+`landHard` stays at **15.0** for the third round running, now for a stronger reason than before:
+there is no number, and there is no rule over the descent either.
+
+### §501.7 Handoff to the world lane, and what is deliberately not fixed
+
+- **The stage-2 notch** (§500.5): the ground proxies are continuous to z 19.30 at y 5.254, there is a
+  ~0.15 m notch at z 19.35 resting y 3.839, back to y 5.190 at 19.50, and the paving at y 0.013 from
+  z 20.00. A radius-0.34 capsule at walk speed sails over it and takes the full 5.25 m fall on a
+  required route waypoint. **This is adjacent to the `Terrain.js` tomb repair already in flight** and
+  is flagged for that lane. It is *not* why the band is gone — excluding it changes nothing (§500.5).
+- **`hall-front-cornice`'s route y is 13.6 and the ledge is at 17.004**, with the named point out over
+  the drop (§501.2). For whoever owns the route table.
+- **L1's population B is derived from waypoint height differences** and therefore counts a staircase
+  as a 12 m descent. Not changed here: L1 pins §443.3's derivation against drift and that is still
+  what it is for, but its `bandHi` should not be quoted as an authored fall. Its domain block already
+  disclaims the level (§500); this adds *what the population itself is*.
