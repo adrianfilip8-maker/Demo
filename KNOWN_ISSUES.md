@@ -40174,3 +40174,58 @@ arm's own rule. And the arm's first flood used a per-pop frontier sort that wedg
 suite at 775/856 for ten minutes: O(n² log n) hiding inside a helper that was instant standalone.
 Linearized. A test that is cheap alone and quadratic in company is a suite hazard of its own kind.
 
+
+---
+
+## §493 — §500.5's notch, filled: the careful retreat lands soft, and the full-stick retreat was never the notch's
+
+The last plain defect on the hardware sheet, closed by A/B rather than by the filed mechanism —
+which turned out to be half right, and the half matters.
+
+### §493.1 The A/B, driven at x 0, retreat held south off stage 2
+
+```
+                    notch open        notch filled
+  sneak             15.60 **HARD**    14.80 — soft
+  run               15.60 **HARD**    15.60 — unchanged
+```
+
+The fill is a thin sliver at lid level (z 19.28…19.42, top 5.25, thick 0.3) bridging this proxy's
+end to the stage-1 deck edge. **It buys exactly the careful retreat and nothing else**, and the
+reason the full-stick retreat stays hard is a mechanism §500.5's model missed: `airControl`
+accelerates any held-south faller toward run speed mid-air, so sneak, walk and run all converge on
+the same paving landing at z ≈ 24.5 — clearing the flight-1 ramp's entire surface on the way. My
+own ballistic model (which predicted walk-speed lands the ramp at 14.9) was wrong for the same
+reason; the drive corrected it.
+
+### §493.2 Two design boundaries the fill deliberately respects
+
+- **A separate sliver, not a longer lid.** Extending the lid proxy's run 2.70 → 2.82 m drops the
+  stair's pinned 50.28° below `slopeWalkableDeg` 50 and quietly makes the refused beat walkable —
+  the §141.1 move `terracestair` exists to block.
+- **Thin, not deep.** The first fill reused the lid's 3.6 m thickness and hung a wall over the
+  walkway below — it blocked the ramp-top → deck step and put mass inside the `terrace-1`
+  waypoint's capsule, going red on `terracestair` leg 1 and `tombdoor` R1 in one run. The notch is
+  a defect of the top surface; the fill is 0.3 thick with its underside at 4.95, above every head
+  on the deck and ramp. The tripwires caught the bad version before it shipped, which is what they
+  are for.
+
+### §493.3 The residual, named and priced
+
+**A full-stick retreat off stage 2's south face is a 5.25 m cliff at 15.60, by construction.** The
+catch zone a run-speed faller crosses (z 19.4…22.5) is the flight-1 up-ramp — the level's first
+beat — so any catcher there obstructs the ascent. The soft retreats that exist: sneak off the south
+face (now, 14.80), or the §486 block ladder on the east line (two 1.6 m drops). Whether the centre
+line deserves furniture of its own (a sand-drift apron at the landing zone was priced: ~14.7,
+another coin-edge) is a design call, recorded rather than taken.
+
+Also recorded: two probe artefacts from this round — a rest-scan whose "second floor at 5.19" was
+the capsule's own radius still touching the lid corner, and sweep rests on the ramp that answered
+"where did the slide stop" rather than "what height is the surface" — and the acceptance arm's
+descent, re-rolled by this collider change, took hard lines again on this tree (28.4, 15.6; ascent
+still clean, completion still green). The descent's softness is chaos-thin by measurement, which is
+why the arm logs it and pins only the ascent.
+
+P-A1 272 → 273 with the histogram (`ground` 55 → 56, all else byte-identical). Suites:
+`basketvary`, `terracestair`, `tombdoor`, `patrol` 41/41; `spawn2eye` green.
+

@@ -1001,6 +1001,30 @@ function courtyard(A) {
   const st2 = K.stairFlight({ steps: 7, rise: 0.46, run: 0.7, width: 5.2, rng: R });
   A.add('court', 'sandstone_worn', K.place(st2, { x: 0, y: t1.y, z: t2.z1 + 2.6, ry: -Math.PI / 2 }));
   groundProxy(A, -2.6, 2.6, 5.25, t2.z1, t2.z1 + 2.7, { thick: 3.6 });
+  /**
+   * ── §500.5's notch, filled — and what the fill does and does not buy (§493) ────────────────
+   * A ~15 cm slot in the ground colliders at the lid's south edge (z 19.28…19.42, between this
+   * proxy's end and the stage-1 deck edge). A/B, driven at x 0 with the retreat held south:
+   *
+   *     sneak, notch open    15.60 m/s **HARD**        sneak, filled    14.80 — soft
+   *     run,   notch open    15.60 m/s **HARD**        run,   filled    15.60 — unchanged
+   *
+   * So the fill turns the CAREFUL retreat soft, and that is all it can do: the full-stick
+   * retreat is hard for a different reason §500.5's model missed — `airControl` accelerates any
+   * held-south faller toward run speed mid-air, so every speed converges on the same paving
+   * landing at z ≈ 24.5, clearing the flight-1 ramp's entire surface. That residual is a design
+   * question (any catcher in z 19.4…22.5 would obstruct the up-ramp, which is the level's first
+   * beat) and is recorded in §493 rather than repaired here. The soft retreats that exist:
+   * sneak off the south face (now), or the §486 block ladder on the east line.
+   * A separate sliver, NOT an extension of the lid proxy above: stretching that proxy's run
+   * 2.70 → 2.82 m would drop the stair's pinned 50.28° below `slopeWalkableDeg` 50 and quietly
+   * make the refused beat walkable — the exact §141.1 move `terracestair` exists to block.
+   * And THIN — thick 0.3, underside y 4.95 — because the first version used the lid's own 3.6 m
+   * depth and hung a wall over the walkway below: it blocked the ramp-top -> deck step and put
+   * mass inside the `terrace-1` waypoint's capsule, going red on `terracestair` leg 1 and
+   * `tombdoor` R1 in the same run. The notch is a defect of the TOP surface; the fill is too.
+   */
+  groundProxy(A, -2.6, 2.6, 5.25, t2.z1 + 2.68, t2.z1 + 2.82, { thick: 0.3 });
 
   /**
    * ── The signpost at the first beat the level refuses (§486) ────────────────────────────────

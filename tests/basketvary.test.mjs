@@ -382,8 +382,17 @@ test('P-A1: a rope coil is set dress and carries no gameplay volume', () => {
      §491 added the half-course step at the kiosk south face: §8.1 step 2's 8 cm margin drops a
      near-miss into a boxed soffit pocket at y 7.75 with no exit (headroom 1.75 < CAPSULE_H), so
      the step splits the rise into two 1.9 m singles that never arc into it: ground +1.
-     Histogram: wall 75 → 77, ground 54 → 55, every other tag byte-identical. */
-  assert.equal(REG.length, 272, 'collider registrations unchanged by this seal');
+     Histogram: wall 75 → 77, ground 54 → 55, every other tag byte-identical.
+
+     ── 272 → 273: §500.5's notch filled (§493, ground +1) ────────────────────────────────────
+     A ~15 cm slot in the ground colliders at the stage-2 lid's south edge. A/B-driven: filling
+     it turns the SNEAK retreat off the south face from 15.60 HARD to 14.80 soft, and leaves the
+     full-stick retreat unchanged (air control converges every held-south fall to the same paving
+     landing — that residual is §493's design note, not this proxy's job). A separate sliver
+     rather than a longer lid on purpose: stretching the lid's run 2.70 → 2.82 m would drop the
+     stair's pinned 50.28° below the 50° walkable limit. Histogram: ground 55 → 56, all else
+     byte-identical. */
+  assert.equal(REG.length, 273, 'collider registrations unchanged by this seal');
   assert.equal(P.stats.decals, 46, 'contact decals unchanged by this seal');
   assert.equal(P._fx.length, 24, 'fx emitters unchanged');
   assert.equal(P._lights.length, 24, 'lights unchanged');
