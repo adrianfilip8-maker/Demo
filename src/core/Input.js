@@ -467,13 +467,38 @@ export class Input {
   /* hold bookkeeping                                                     */
   /* ==================================================================== */
 
+  /**
+   * ── THE EDGE STAMP, AND WHY IT IS `_frame + 1` FOR EVERY DOM SOURCE (§468) ─────────────────
+   *
+   * `pressed(a)` is an exact-frame compare against `_frame`, and `beginFrame()` increments
+   * `_frame` BEFORE the module loop runs (main.js pumps `beginFrame → modules → endFrame`). A
+   * DOM event can only ever dispatch BETWEEN frames — nothing yields inside the wrapper — so a
+   * stamp of `this._frame` names a frame whose reads have already happened. Measured in the
+   * live browser with the real rAF loop and pointer lock forced on (`tools/pressprobe.mjs`):
+   * a real click's `_press('attack','mouse')` fired, and `pressed('attack')` was observed true
+   * **0 of 117 module-loop reads**; a real KeyE, 0 of 27; the same press synthesised INSIDE the
+   * frame after `beginFrame`, 1 of 23 and the combo started. **Every exact-frame edge from a
+   * real keyboard or mouse was invisible to gameplay** — cane combo, dive attack, pole swing,
+   * the interact/attack hook bail, F1, recentre — for the whole life of this file.
+   *
+   * No instrument could see it: `StubInput.hold()` marks pressed inside its own frame and the
+   * pad path below stamps post-increment, so every driver this project has ever run stamps the
+   * way the working device does, not the way the DOM does (§439). The browser probe exists
+   * because of that, and `tests/input.test.mjs` arm 0b now dispatches with the DOM's real
+   * timing.
+   *
+   * So: an edge that arrives between frames belongs to the NEXT frame — the first one whose
+   * reads can possibly observe it. `pad` keeps `this._frame`: `_padButtons` is called inside
+   * `beginFrame` after the increment, i.e. at the frame boundary itself, and stamping +1 there
+   * would push a pad press one real frame late. `inject` and the DOM sources get +1.
+   */
   _press(a, src = 'key') {
     const s = this._src[src];
     if (!s || s.has(a)) return;
     s.add(a);
     if (this._down.has(a)) return;          // another device already holds it — not a new press
     this._down.add(a);
-    this._pressedFrame.set(a, this._frame);
+    this._pressedFrame.set(a, src === 'pad' ? this._frame : this._frame + 1);
     this._pressedAt.set(a, this.clock);
   }
 
@@ -482,7 +507,9 @@ export class Input {
     if (!s || !s.delete(a)) return;
     for (const k of SOURCES) if (this._src[k].has(a)) return;   // still held elsewhere
     if (!this._down.delete(a)) return;
-    this._releasedFrame.set(a, this._frame);
+    // Same stamp rule as `_press`, same measurement: a between-frames release edge stamped with
+    // the frame that already ran can never be seen by `released()`.
+    this._releasedFrame.set(a, src === 'pad' ? this._frame : this._frame + 1);
   }
 
   _releaseSource(src) {

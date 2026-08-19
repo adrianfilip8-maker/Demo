@@ -40242,3 +40242,91 @@ against the 95%+ healthy rows, and the §444 thread is unaffected in substance. 
 after the re-base; with suite9's single red being exactly this arm on this tree, the suite is
 green at 857/857 by composition.
 
+
+## §468 — No exact-frame edge from a real keyboard or mouse has ever reached gameplay, and every instrument stamped time the way the working device does
+
+**Fixed this round, in `src/core/Input.js`, and verified in the live browser before and after.**
+Found from §467's apparatus work: slamtrace proved both committed "Cane Slam" captures were plain
+falls, which meant the harness's mouse press never became `attack` — and the second of the two
+reasons why is not a harness defect at all.
+
+### §468.1 The measurement, first
+
+`tools/pressprobe.mjs` boots the real game in the real browser, forces pointer lock on so the
+lock swallow (§468.4) is out of the way, instruments `_press` (did the event arrive?) and
+`pressed()` (did any module-loop read ever see it?), and drives real input. On the shipped stamp:
+
+```
+  A  live rAF loop  · real mouse click     _press('attack','mouse') fired   pressed() true 0 of 117 reads   state at probe: idle
+  B  live rAF loop  · real KeyE tap        _press('interact','key') fired   pressed() true 0 of 27 reads
+  C  camlook sim    · real mouse click     _press fired                     pressed() true 0 of 40 reads
+  D  control: same press synthesised INSIDE the frame, after beginFrame()   pressed() true 1 of 23 reads    state: combo
+```
+
+D is the arm that proves the probe can see a press when one is visible. **A real click's press
+event arrives and is never once observable by gameplay. A real key edge, the same.**
+
+### §468.2 The mechanism
+
+`pressed(a)` is an exact-frame compare: `_pressedFrame.get(a) === this._frame`. `main.js` pumps
+`input.beginFrame() → modules → input.endFrame()`, and `beginFrame` increments `_frame` at its
+top. A DOM event can only ever dispatch BETWEEN frames — nothing yields inside the wrapper — so
+its stamp names a frame whose reads have already happened, and the next `beginFrame` increments
+past it. The edge exists for exactly the interval during which nobody can look at it.
+
+Two devices were immune, and they are why the game seemed to work:
+
+- **the pad**: `_padButtons` runs INSIDE `beginFrame`, after the increment — pad edges stamp the
+  frame about to run. The one physical device whose edges worked.
+- **`buffered()`**: runs on the game clock, no frame compare — which saves `jump` (every jump
+  site also checks `jumpBuffered()`), and saves nothing else.
+
+Movement is `down()` — level, not edge — so WASD walked, jump jumped, and the game read as
+playable while **every purely edge-gated verb was unreachable from a keyboard or mouse**: the
+cane combo (`Combo.canEnter`), the dive attack, the pole swing, the interact/attack halves of the
+hook bail, the interact-gated ledge climb and rail/pole mounts, F1 freecam, R recentre, and the
+Debug toggles. `released()` had the same stamp, so a release edge was equally invisible
+(`jumpCut` reads `released('jump')` — variable jump height was pad-only).
+
+### §468.3 Why no instrument ever saw it, which is the §439 entry fee paid again
+
+Every driver this project has ever run stamps the way the pad does, not the way the DOM does:
+`StubInput.hold()` marks the press inside the frame being simulated; `driveRoute` and every
+census script use it; `tests/input.test.mjs` — written expressly to exercise "the whole path a
+key actually takes" — dispatched its synthetic events AFTER `beginFrame()` and asserted
+`pressed()` in the same frame, a timing no browser can deliver. Three independent instruments,
+one shared assumption, and the assumption was the defect (§439). §422.1's and §512's control
+verifications are unaffected in what they claim — the states do fire when the press is seen —
+but "the press is seen" was itself never on any instrument until pressprobe.
+
+One prior observation is now suspect rather than explained: run 2's S4 frame was read as "a red
+disc after a cane combo". Under this section no sim-pump click could start a combo, so either
+that disc has another source or something unknown pressed attack; S4 should be re-photographed
+now that presses land. Recorded rather than resolved.
+
+### §468.4 The fix, and the second (separate) defect
+
+An edge that arrives between frames belongs to the NEXT frame — the first whose reads can
+observe it. `_press`/`_release` now stamp `this._frame + 1` for DOM and `inject` sources; `pad`
+keeps `this._frame` because its sample point IS the frame boundary. `buffered`, `down()`, holds,
+and the release sweeps are untouched. Probe after: A 1 of 125 reads, B 1 of 27, C 1 of 26 **with the
+combo firing from a real click in the camlook pump**; D unchanged.
+
+Separately, harnesses only: the first unlocked left click is consumed as the pointer-lock
+acquisition click (deliberate, and right — returning from the pause menu must not swing the
+cane). Headless Chromium never grants the lock, so `locked` stays false and the swallow repeats
+for EVERY click. `camlook.mjs` now forces `input.locked = true` at setup and verifies after each
+staged attack that `dive` actually began — the check runs 2 and 3 did not have.
+
+`tests/input.test.mjs`: the four arms that encoded same-frame dispatch are re-based to the DOM's
+real timing (dispatch between frames, read the frame after), and a new arm 0b pins the contract
+with the probe's numbers in its DOMAIN block — the failing input (the same-frame read) actually
+run. Suite 858/858 on the fixed tree.
+
+### §468.5 What this qualifies
+
+Every feel judgement this project has published about edge-gated verbs was measured through
+working presses and is unaffected as a statement about the moveset. What none of it measured is
+that a person at a keyboard could not perform them. The playtest lane's drives, the acceptance
+runs, the §492 completion — all StubInput, all valid. The first human to click the cane on real
+hardware would have been the first discovery of this defect, at the demo.

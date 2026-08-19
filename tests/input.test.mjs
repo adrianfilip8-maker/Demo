@@ -122,6 +122,49 @@ test('wiring: the constructor registers the listeners the tests below fire throu
 });
 
 /* ====================================================================== */
+/* 0b — the edge stamp, at the DOM's real timing (§468)                    */
+/* ====================================================================== */
+
+/**
+ * `beginFrame()` runs before the module loop and increments `_frame`; a DOM event can only ever
+ * dispatch BETWEEN frames. Under the original stamp (`this._frame`) an edge therefore named a
+ * frame whose reads had already happened, and no exact-frame `pressed()`/`released()` in the
+ * game could ever observe a real keyboard or mouse edge — measured live in the browser
+ * (`tools/pressprobe.mjs`): a real click's press observed true 0 of 117 module-loop reads, a
+ * real KeyE 0 of 27, the same press synthesised inside the frame 1 of 23 with the combo firing.
+ *
+ * DOMAIN (§418.3). Failing input, RUN here: the same-frame read a browser can never serve — the
+ * dispatch-then-read-without-beginFrame pattern this file itself used to treat as the passing
+ * case. Passing input: the read on the first frame that begins after the event.
+ * Passes on: `_frame + 1` stamps for DOM/inject sources. Fails on: the shipped `_frame` stamp
+ * (third assert below reddens — the edge never becomes visible). Does not discriminate: pad
+ * edges (`_padButtons` stamps at the frame boundary inside `beginFrame`) and `buffered()`,
+ * which runs on the game clock and never depended on the stamp.
+ */
+test('timing: a between-frames edge is pressed on the NEXT frame, exactly once', () => {
+  const { input } = makeInput();
+  const jump = firstKey(input, 'jump');
+
+  input.beginFrame(1 / 60);                 // frame k, whose reads are happening now
+  assert.equal(input.pressed('jump'), false);
+  keyDown(jump);                            // arrives after frame k's reads, before k+1
+  assert.equal(input.pressed('jump'), false,
+    'a between-frames event was visible to the frame that had already run — no browser delivers that');
+  assert.ok(input.down('jump'), 'the hold must be live immediately — holds are level, not edge');
+
+  input.beginFrame(1 / 60);                 // frame k+1: the first reads that can see it
+  assert.ok(input.pressed('jump'), 'the edge missed the first frame that could observe it');
+
+  input.beginFrame(1 / 60);                 // frame k+2
+  assert.equal(input.pressed('jump'), false, 'the edge lasted more than one frame');
+
+  keyUp(jump);
+  assert.equal(input.released('jump'), false, 'a release edge visible before any frame began');
+  input.beginFrame(1 / 60);
+  assert.ok(input.released('jump'), 'the release edge missed the first frame that could observe it');
+});
+
+/* ====================================================================== */
 /* 1 — the buffer runs on the game clock                                   */
 /* ====================================================================== */
 
@@ -231,12 +274,17 @@ test('sources: a second device pressing an already-held action is not a new pres
   const { input } = makeInput();
   const jump = firstKey(input, 'jump');
 
-  input.beginFrame(1 / 60);
+  /* Dispatch BETWEEN frames — the only timing a browser can deliver (§468) — and read on the
+     frame that follows. This arm used to dispatch after `beginFrame` and assert `pressed` in the
+     same frame, which is the StubInput/pad timing no DOM event has: the old first assert passed
+     against a stamp under which a real click was never seen at all (0 of 117 live reads,
+     `tools/pressprobe.mjs`). */
   keyDown(jump);
-  assert.ok(input.pressed('jump'), 'the first press did not register as a press');
-
   input.beginFrame(1 / 60);
-  input.inject('jump', true);          // a second source, same action, same frame
+  assert.ok(input.pressed('jump'), 'the first press did not register on the frame after arrival');
+
+  input.inject('jump', true);          // a second source, same action, still held by the key
+  input.beginFrame(1 / 60);
   assert.equal(input.pressed('jump'), false,
     'a second device holding an already-held action fired a fresh press — a double-jump bug');
 });
@@ -257,12 +305,13 @@ test('focus: losing focus RELEASES held actions rather than forgetting them', ()
   const { input } = makeInput();
   const jump = firstKey(input, 'jump');
 
-  input.beginFrame(1 / 60);
   keyDown(jump);
+  input.beginFrame(1 / 60);
   assert.ok(input.down('jump'));
 
-  window.fire('blur');
+  window.fire('blur');                  // between frames, like a real alt-tab (§468)
   assert.equal(input.down('jump'), false, 'blur left the action held');
+  input.beginFrame(1 / 60);
   assert.ok(input.released('jump'),
     'blur cleared the hold without releasing it — anything waiting on released() waits forever');
 });
@@ -275,13 +324,14 @@ test('focus: leaving pointer lock releases too, and announces the change once', 
   document.fire('pointerlockchange');
   assert.equal(input.locked, true, 'acquiring lock did not set `locked`');
 
-  input.beginFrame(1 / 60);
   keyDown(sneakKey);
+  input.beginFrame(1 / 60);
   assert.ok(input.down('sneak'));
 
   document.pointerLockElement = null;
-  document.fire('pointerlockchange');
+  document.fire('pointerlockchange');   // between frames — lock changes are DOM events too (§468)
   assert.equal(input.locked, false);
+  input.beginFrame(1 / 60);
   assert.ok(input.released('sneak'), 'leaving pointer lock forgot the hold instead of releasing it');
   assert.deepEqual(events.map((e) => e.evt), ['pointerlock', 'pointerlock']);
 });
@@ -468,12 +518,12 @@ test('repeat: an OS key-repeat storm produces exactly one press', () => {
   const { input } = makeInput();
   const jump = firstKey(input, 'jump');
 
+  keyDown(jump);                        // between frames — the DOM's real timing (§468)
   input.beginFrame(1 / 60);
-  keyDown(jump);
   assert.ok(input.pressed('jump'));
 
-  input.beginFrame(1 / 60);
   for (let i = 0; i < 30; i++) keyDown(jump, { repeat: true });
+  input.beginFrame(1 / 60);
   assert.equal(input.pressed('jump'), false,
     '30 OS repeat events fired a fresh press — held jump would re-trigger every frame');
   assert.ok(input.down('jump'), 'the repeats dropped the hold');
