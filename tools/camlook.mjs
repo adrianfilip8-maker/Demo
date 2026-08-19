@@ -22,11 +22,15 @@
  * run-up is minutes. Takes the same FIFO capture lock as `shot.mjs`; keep runs short.
  *
  * The sequences exist to answer specific questions and should be edited freely:
- *   S1  run, jump, land        — the `land` framing, which went 6% -> 52% delivered
+ *   S0  stand -> move -> stop  — the boom-chain collapse (sheet item 2): life or noise
+ *   S1  run, jump, land, TWICE — the `land` framing, 6% -> 52%; two takes because §466.5
  *   S2  slam from a hop        — a jump-apex Cane Slam
- *   S3  slam from height       — the same move from a real drop; S2 and S3 side by side are
- *                                sheet item 3, the two visual identities that may have merged
- *   S4  cane combo             — the `combat` framing, 35% -> 73%
+ *   S3  slam from 16 m         — the same move from height; S2 vs S3 is sheet item 3
+ *   S4  cane combo, two swings — the `combat` framing, 35% -> 73%
+ *   S5  same pose, two times of day — is the cold masonry a grade or a cast (§4 precedent)
+ *
+ * Sim frames are FREE here (module updates without the render — see the fast-step block), so
+ * sequences pay only per captured frame: ~20 captures is ~10 minutes at 1080p on SwiftShader.
  */
 import { chromium } from 'playwright';
 import { acquire } from './lock.mjs';
@@ -38,7 +42,7 @@ import net from 'node:net';
 import path from 'node:path';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const OUT = process.env.OUT || `${ROOT}/shots/camlane`;
-const W = Number(process.env.W || 960), H = Number(process.env.H || 540);
+const W = Number(process.env.W || 1920), H = Number(process.env.H || 1080);
 const Q = process.env.Q || 'high';
 
 async function freePort(start = 5400) {
@@ -133,86 +137,142 @@ try {
     m.position.set(a, b, c); m.velocity.set(0, 0, 0); if ('yaw' in m) m.yaw = d;
   }, [x, y, z, yaw]));
 
+  /* ── FAST SIM STEP ─────────────────────────────────────────────────────────────────────────
+     `renderFrame` runs the module update loop AND the postfx render, and on this container's
+     software rasteriser the render is ~all of the cost. The sim and the render are separable —
+     `renderFrame` is literally "for (mod of _ordered) mod.update(dt)" followed by "postfx.render"
+     — so this harness advances the sim without rendering and pays for pixels only on captured
+     frames (`capture()` itself calls `renderFrame(0)`, which renders exactly once). A 300-frame
+     sequence goes from minutes to milliseconds, which is what makes 1920×1080 affordable. */
+  await page.evaluate(() => {
+    const e = window.__ENGINE;
+    window.__simStep = (n, dt) => {
+      for (let i = 0; i < n; i++) {
+        e.dt = Math.min(dt, 1 / 20) * e.timeScale;
+        if (e.debug.paused || e.paused) e.dt = 0;
+        e.time += e.dt; e.frame++;
+        for (const { key, mod } of e._ordered) {
+          if (typeof mod.update === 'function') { try { mod.update(e.dt, e.time); } catch {} }
+        }
+      }
+    };
+  });
+  const sim = (n = 1) => page.evaluate((k) => window.__simStep(k, 1 / 60), n);
+
   const t0 = Date.now();
-  await step(10);
-  console.log(`[look] 10 frames in ${((Date.now() - t0) / 1000).toFixed(1)}s  (${((Date.now() - t0) / 10000).toFixed(2)}s/frame)`);
+  await sim(30);
   const home = await probe();
-  console.log(`[look] spawn ${JSON.stringify(home)}`);
+  console.log(`[look] spawn ${JSON.stringify(home)} (30 sim frames in ${((Date.now() - t0) / 1000).toFixed(1)}s)`);
   log.push({ tag: 'spawn', ...home });
-  await shot('01-spawn-idle');
 
-  /* ---- S1: run, jump, land ------------------------------------------------ */
-  console.log('[S1] run + jump + land');
+  /** Capture with telemetry attached, so every frame is tied to the framing that produced it. */
+  const snap = async (name, tag) => {
+    const s = await probe();
+    log.push({ tag: tag || name, frame: name, ...s });
+    const uri = await page.evaluate(() => window.__GAME.capture('image/png'));
+    await writeFile(`${OUT}/${name}.png`, Buffer.from(uri.split(',')[1], 'base64'));
+    console.log(`      -> ${name}.png  ${JSON.stringify(s)}`);
+  };
+
+  /* ---- S0: the boom collapse, seen — stand, move, stop -------------------- */
+  console.log('[S0] stand -> move -> stop (the boom-chain collapse, item 2)');
+  await snap('s0-stand', 'S0');
   await page.keyboard.down('KeyW');
-  await step(50);
-  const running = await probe(); log.push({ tag: 'S1-running', ...running });
-  console.log(`     running ${JSON.stringify(running)}`);
-  await shot('02-run');
-  await page.keyboard.down('Space'); await step(3); await page.keyboard.up('Space');
-  let landed = null;
-  for (let i = 0; i < 90; i++) {
-    await step(1);
-    const s = await probe();
-    if (s.st === 'land') { landed = { i, ...s }; break; }
-    if (i === 8) await shot('03-air-apex');
-  }
-  console.log(`     land at +${landed?.i} ${JSON.stringify(landed)}`);
-  log.push({ tag: 'S1-land', ...landed });
-  await shot('04-land');
-  await step(6); await shot('05-land+6');
+  await sim(12); await snap('s0-move12', 'S0');
+  await sim(38); await snap('s0-move50', 'S0');
   await page.keyboard.up('KeyW');
-  await step(20);
+  await sim(5); await snap('s0-stop5', 'S0');
+  await sim(15); await snap('s0-stop20', 'S0');
+  await sim(30);
 
-  /* ---- S2: Cane Slam from a hop ------------------------------------------ */
+  /* ---- S1: run, jump, land — twice (§466.5: one sample is not evidence) --- */
+  for (const take of [1, 2]) {
+    console.log(`[S1.${take}] run + jump + land`);
+    await page.evaluate(([x, y, z]) => {
+      const m = window.__ENGINE.get('movement');
+      m.position.set(x, y, z); m.velocity.set(0, 0, 0);
+    }, home.p);
+    await sim(20);
+    await page.keyboard.down('KeyW');
+    await sim(30 + take * 10);
+    await page.keyboard.down('Space'); await sim(3); await page.keyboard.up('Space');
+    let iLand = -1;
+    for (let i = 0; i < 90; i++) {
+      await sim(1);
+      const s = await probe();
+      if (s.st === 'land') { iLand = i; break; }
+    }
+    if (iLand >= 0) {
+      await snap(`s1t${take}-land0`, `S1.${take}`);
+      await sim(3); await snap(`s1t${take}-land3`, `S1.${take}`);
+      await sim(5); await snap(`s1t${take}-land8`, `S1.${take}`);
+    } else {
+      console.log('      NEVER LANDED — recorded, not silently skipped');
+      log.push({ tag: `S1.${take}-NOLAND` });
+    }
+    await page.keyboard.up('KeyW');
+    await sim(30);
+  }
+
+  /* ---- S2/S3: the Cane Slam pair (sheet item 3) --------------------------- */
   console.log('[S2] cane slam from a jump apex');
-  await tp(home.p[0], home.p[1], home.p[2], 0);
-  await step(20);
-  await page.keyboard.down('KeyW'); await step(40);
-  await page.keyboard.down('Space'); await step(3); await page.keyboard.up('Space');
-  await step(11);                                  // near apex
-  const apex = await probe(); log.push({ tag: 'S2-apex', ...apex });
-  console.log(`     apex ${JSON.stringify(apex)}`);
-  await page.mouse.down({ button: 'left' }); await step(2); await page.mouse.up({ button: 'left' });
-  let hit = null;
+  await page.evaluate(([x, y, z]) => {
+    const m = window.__ENGINE.get('movement');
+    m.position.set(x, y, z); m.velocity.set(0, 0, 0);
+  }, home.p);
+  await sim(20);
+  await page.keyboard.down('KeyW'); await sim(40);
+  await page.keyboard.down('Space'); await sim(3); await page.keyboard.up('Space');
+  await sim(11);
+  await page.mouse.down({ button: 'left' }); await sim(2); await page.mouse.up({ button: 'left' });
+  let hit = -1;
   for (let i = 0; i < 60; i++) {
-    await step(1);
+    await sim(1);
     const s = await probe();
-    if (s.st !== 'dive' && s.gr) { hit = { i, ...s }; break; }
+    if (s.gr && s.st !== 'dive') { hit = i; break; }
   }
-  console.log(`     impact +${hit?.i} ${JSON.stringify(hit)}`);
-  log.push({ tag: 'S2-impact', ...hit });
-  await shot('06-slam-hop-impact');
   await page.keyboard.up('KeyW');
-  await step(20);
+  if (hit >= 0) { await snap('s2-hop-impact0', 'S2'); await sim(4); await snap('s2-hop-impact4', 'S2'); }
+  else { console.log('      slam-from-hop never impacted'); log.push({ tag: 'S2-NOIMPACT' }); }
+  await sim(30);
 
-  /* ---- S3: Cane Slam from height ----------------------------------------- */
-  console.log('[S3] cane slam from height');
-  await tp(home.p[0], home.p[1] + 16, home.p[2], 0);
-  await step(2);
-  const dropStart = await probe(); log.push({ tag: 'S3-drop', ...dropStart });
-  console.log(`     dropping from ${JSON.stringify(dropStart.p)}`);
-  await step(14);
-  await page.mouse.down({ button: 'left' }); await step(2); await page.mouse.up({ button: 'left' });
-  let hit2 = null;
+  console.log('[S3] cane slam from 16 m');
+  await page.evaluate(([x, y, z]) => {
+    const m = window.__ENGINE.get('movement');
+    m.position.set(x, y + 16, z); m.velocity.set(0, 0, 0);
+  }, home.p);
+  await sim(14);
+  await page.mouse.down({ button: 'left' }); await sim(2); await page.mouse.up({ button: 'left' });
+  hit = -1;
   for (let i = 0; i < 90; i++) {
-    await step(1);
+    await sim(1);
     const s = await probe();
-    if (s.st !== 'dive' && s.gr) { hit2 = { i, ...s }; break; }
+    if (s.gr && s.st !== 'dive') { hit = i; break; }
   }
-  console.log(`     impact +${hit2?.i} ${JSON.stringify(hit2)}`);
-  log.push({ tag: 'S3-impact', ...hit2 });
-  await shot('07-slam-high-impact');
-  await step(20);
+  if (hit >= 0) { await snap('s3-high-impact0', 'S3'); await sim(4); await snap('s3-high-impact4', 'S3'); }
+  else { console.log('      slam-from-height never impacted'); log.push({ tag: 'S3-NOIMPACT' }); }
+  await sim(30);
 
-  /* ---- S4: combat swing --------------------------------------------------- */
-  console.log('[S4] cane combo on the ground');
-  await tp(home.p[0], home.p[1], home.p[2], 0);
-  await step(20);
-  await page.mouse.down({ button: 'left' }); await step(2); await page.mouse.up({ button: 'left' });
-  await step(6);
-  const combo = await probe(); log.push({ tag: 'S4-combo', ...combo });
-  console.log(`     combo ${JSON.stringify(combo)}`);
-  await shot('08-combo');
+  /* ---- S4: cane combo (the combat framing, 35% -> 73%) -------------------- */
+  console.log('[S4] cane combo, two swings');
+  await page.evaluate(([x, y, z]) => {
+    const m = window.__ENGINE.get('movement');
+    m.position.set(x, y, z); m.velocity.set(0, 0, 0);
+  }, home.p);
+  await sim(20);
+  await page.mouse.down({ button: 'left' }); await sim(2); await page.mouse.up({ button: 'left' });
+  await sim(5); await snap('s4-combo-swing1', 'S4');
+  await page.mouse.down({ button: 'left' }); await sim(2); await page.mouse.up({ button: 'left' });
+  await sim(5); await snap('s4-combo-swing2', 'S4');
+  await sim(40);
+
+  /* ---- S5: the cold-stone question — same shot, two times of day ---------- */
+  console.log('[S5] tod pair: golden hour vs midday, same pose');
+  await snap('s5-tod-default', 'S5');
+  await page.evaluate(() => window.__GAME.setTimeOfDay(0.50));
+  await sim(4); await snap('s5-tod-noon', 'S5');
+  await page.evaluate(() => window.__GAME.setTimeOfDay(0.78));
+  await sim(4);
 } finally {
   await writeFile(`${OUT}/telemetry.json`, JSON.stringify({ sha, dirty, W, H, Q, errs, log }, null, 2));
   await browser.close();
