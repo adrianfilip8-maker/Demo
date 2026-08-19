@@ -224,9 +224,12 @@ try {
   /* ---- S1: run, jump, land — twice (§466.5: one sample is not evidence) --- */
   for (const take of [1, 2]) {
     console.log(`[S1.${take}] run + jump + land`);
+    /* +10 z: the spawn courtyard's staircase begins ~6 m ahead of home along the run direction,
+       and the first run's S2 slammed into it with the camera ending inside drawn stone. Open
+       desert is behind spawn; starting 10 m back keeps the whole jump arc over flat ground. */
     await page.evaluate(([x, y, z]) => {
       const m = window.__ENGINE.get('movement');
-      m.position.set(x, y, z); m.velocity.set(0, 0, 0);
+      m.position.set(x, y, z + 10); m.velocity.set(0, 0, 0);
     }, home.p);
     await sim(20);
     await page.keyboard.down('KeyW');
@@ -261,7 +264,7 @@ try {
   console.log('[S2] cane slam from a jump apex');
   await page.evaluate(([x, y, z]) => {
     const m = window.__ENGINE.get('movement');
-    m.position.set(x, y, z); m.velocity.set(0, 0, 0);
+    m.position.set(x, y, z + 10); m.velocity.set(0, 0, 0);   // open ground — see S1
   }, home.p);
   await sim(20);
   await page.keyboard.down('KeyW'); await sim(40);
