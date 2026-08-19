@@ -39725,3 +39725,63 @@ An incidental find while tracing that: from the block top, simply *walking* nort
 onto stage 2 — so the beat is one jump plus a walk for a player who finds the block, which is a
 gentler teach than the two-jump design intended. Kept.
 
+
+---
+
+## §487 — The obelisk routing half, measured: walking at the kiosk never mounts the pole, and §485.2 was my driver again
+
+§485.6 item 3's routing half (§486's queue item 2a), closed by measurement with **no change**. The
+classification half — whether a chosen pyramidion drop should arrive as a 31 m/s hard landing — is
+the controller lane's and is not touched here.
+
+### §487.1 Three walk policies, zero mounts — the plinth is the gate nobody credited
+
+From stage 2 (0, 5.25, 14.5) toward the kiosk lintel, driven:
+
+```
+  A  aim at the kiosk THROUGH the shaft      no mount   stopped (2.16, 5.20, 13.84)
+  B  skirt the shaft, tangent veer at 2.8 m  no mount   stopped (2.16, 5.20, 13.84)
+  C  hold straight north INTO the shaft      no mount   stopped (0.00, 5.20, 13.84)
+```
+
+All three stop at z 13.84 — the obelisk **plinth** (ledge, top y 6.3, faces at ±2.5 around the
+shaft), a 1.1 m kerb above `stepHeight` 0.42. `PoleClimb`'s walk-in branch (`wishMag ≥ 0.4`,
+`dot(wishDir, toPole) > 0.4`, within `poleMount` 1.9) never fires on foot because **you cannot get
+within 1.9 m of the axis on foot** — the plinth holds you at 2.84.
+
+### §487.2 Where the mount actually fires, and it is two escalations deep
+
+```
+  D  jump over the plinth toward the shaft         poleClimb at f24 — grabbed MID-AIR
+  E  onto the plinth, then any northward jump      poleClimb at f25
+```
+
+`canEnter` has no grounded check, so the grab fires airborne, and from the plinth's south side both
+the kiosk corner and the pole are north — inside the ±66° cone. But reaching that state takes a
+deliberate jump onto the plinth and a second jump toward the shaft. That is a player *choosing* the
+obelisk, which is what §8.1's alternative offers them.
+
+### §487.3 The authored beat is never stolen
+
+The route's actual step 2 — double jump from stage 2 onto the kiosk lintel's south face (z1 14.6,
+3.6 m south of the axis) — swept over 20 hold×gap timings:
+
+```
+  arrive on the lintel  14      POLE-STOLEN  0      fall short and retry  6
+```
+
+The closest airborne approach to the axis stays ≥ 2.3 m, outside `poleMount`.
+
+### §487.4 So §485.2's composition was the driver's, and the correction cascades
+
+My acceptance run's `jumpLeg` held jump on approach and re-aimed at the far-corner waypoint
+(2.2, 9, 8.4) *through* the shaft — the D policy, performed accidentally. A stick-plausible player
+walking or performing the authored jump never meets the pole. §485.2's *"the composition hands the
+player a hard landing on the tutorial's second beat"* therefore overstates: the hard landing is
+behind two deliberate escalations, not on the default path. What remains real, and remains routed to
+the controller lane, is narrower: **a player who chooses the authored alternative — pole to
+pyramidion, "then drop to the kiosk" — is charged 31 m/s for following the route's own text.**
+
+The acceptance driver's leg 3 is corrected to aim at the south lintel; the run should stop taking
+the alternative by accident.
+
