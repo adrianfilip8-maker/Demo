@@ -40431,3 +40431,79 @@ the boom *channel* — and this section is the proof that a channel delivering 9
 empty air. Delivery percentages cannot see a subject three screen-heights below frame; only the
 subject probe (74698a8) could, which is why three rounds of channel instrumentation never
 flagged the one thing a player would notice first.
+
+## §469 — The cold stone is the palette, not a cast: the S5 verdict lands, and the 0.83 s swing was composition
+
+§466's tail left one thing unresolved from the first frames anyone looked at: the whole-frame
+cast swings warm sand → cool blue-grey between frame 01 and frame 02, 0.83 s of world time
+apart at the same tod, and 0.83 s of tod explains none of it. The S5 discriminator pair was
+armed for exactly this in run 2 — `camlane2-s5-tod-default.png` (tod 0.78, the boot golden
+hour) beside `camlane2-s5-tod-noon.png` (tod 0.50), same shot, no input between, only
+`setTimeOfDay` and 4 sim frames — and a one-line read of it went out in 2c7291a's commit
+message, but no verdict ever reached this ledger. This is the verdict, measured rather than
+eyeballed, on the committed frames, with the apparatus committed too (`tools/s5verdict.mjs`,
+palwarm's frozen classifier verbatim: chroma gate 0.06, warm [330°,90°), cool [150°,270°),
+W = mean c·cos(h−30°) over all pixels).
+
+### §469.1 The measurement — both hypotheses' predictions run, not just the favourite's
+
+Regions declared by eye on the default frame before any number was computed, and not moved
+after (§141.1). Each hypothesis says what a region must do, so each row discriminates:
+
+```
+                                        tod 0.78        tod 0.50 (noon)
+  whole frame              W            +0.0462          +0.0419      ← tod moves it 0.004
+  shaded slabs (both tods) W / cool%    −0.115 / 98.0    −0.071 / 97.5
+  sunlit stair  (both tods) W / warm%   +0.180 / 100     +0.397 / 100
+  mid floor (penumbra→sun)  W / chroma  +0.037 / 0.077   +0.359 / 0.370
+
+  the pair that raised the question (same tod, 0.83 s apart)
+  frame 01 (idle, courtyard) W +0.1211   warm 89.5%  cool  9.6%
+  frame 02 (run, staircase)  W −0.0851   warm  7.7%  cool 92.0%
+  frame 02's own top-right sun surface   W +0.2059   warm 72.2%   ← inside the "cool" frame
+```
+
+- **Dusk-keyed grade predicts** the shade warms at noon. It does not: 97.5 % cool, W still
+  negative. Whatever cools the stone is not keyed to dusk.
+- **Direction/exposure cast predicts** frame 02's sunlit corner is tinted with the rest of
+  the frame. It is not: +0.206, 72 % warm, sitting inside a frame that is 92 % cool overall.
+- **Authored shade treatment predicts** cool tracks shade and warm tracks sun wherever the
+  sun goes. It does, in every row: the mid-floor region goes penumbra → full sun when the
+  sun climbs (chroma ×4.8, W +0.04 → +0.36) while the still-shaded slabs stay teal, and the
+  whole-frame W barely moves because the two populations trade area, not hue.
+
+### §469.2 The mechanism, named, and the exposure hypothesis dead structurally
+
+§466 wondered whether "exposure adaptation is moving faster than it should". **No exposure
+adaptation exists to move at any speed**: `PostFX.tune.exposure` is a literal 0.95
+(PostFX.js:600) and Atmosphere's per-preset `exposure` is a tod-keyed preset lerp
+(1.0 everywhere, 0.97 at one anchor) — nothing in the pipeline reads scene luminance back.
+The cool shade is authored and tod-invariant by construction: `PALETTE.shadowHue 0x2a3f66`
+is wired as `shadowTint` once (Atmosphere.js:412) and never lerped; `hemiSky` is blue in
+every preset from night 0x2c4f8e to noon 0x7fb4e0; ambient is `shadowTint→hemiSky` at 0.30.
+"Golden-hour Egypt with cold stone in it" — the palette section said so in as many words,
+sections ago. Shade is cool at noon because it is cool always, on purpose.
+
+### §469.3 So the swing was composition, and the verdict is CLEAN
+
+Frame 01's field of view is sun-patched courtyard: 89.5 % warm. 0.83 s later the camera has
+followed the run to the staircase base and the field is almost entirely shaded stone: 92 %
+cool — with the only sunlit surfaces in frame, the top-right corner, still reading warm. No
+grade changed between those frames; **what changed is what filled them.** The day grade is
+doing its job. Nothing here is a defect, nothing is filed, and the render lane owes nothing.
+This closes the last open item of the visual pass.
+
+One figure does not reproduce: the resumption brief quoted "~0.6 whole-frame warmth swing".
+On the frozen instrument the swing is ΔW 0.206 with warm% −81.8 points — whichever metric
+produced 0.6 did not survive the rollback, and per §442.3 it is reported as unreproduced
+rather than explained.
+
+### §469.4 One instrument rejected on the way, kept on the record
+
+The alignment check first written for the pair — count pixels whose ink-dark state
+(luma < 0.10) flips between tods, on the theory that outlines are lighting-invariant — is
+§439's species in miniature: outlines are lighting-invariant, `luma < 0.10` is not, and the
+check's 47.5 % flip rate measures the relighting it was built to ignore. Rejected; the
+pair's alignment rests on the harness construction instead (same shot, no input, 4 sim
+frames). The code stays in `s5verdict.mjs` with the rejection in its comment, because a
+deleted bad instrument is how §440 happens twice.
