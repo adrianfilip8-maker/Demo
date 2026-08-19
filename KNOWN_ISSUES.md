@@ -39675,3 +39675,25 @@ a long way between the two frames — warm sand to cool blue-grey in 0.83 s of w
 his moving into the staircase's shade, and the background right side is still warm in both. Whether the
 rest is exposure adaptation moving faster than it should is a rendering question, not a camera one, and
 it is stated here as unresolved rather than as a defect.
+
+## §520 — Rollback #9, recovered by the §445.1 runbook in four commands
+
+The container reverted 531 commits to `de3080d` — the same restore point as rollback #8 — minutes
+after all three lanes had been resumed with new queues. Durable loss: none. The §445.1 runbook ran
+as written: 33 blockers listed, zero under `src/`/`tests/`/`tools/`, all backed up to the
+scratchpad, cleared, fast-forwarded to `aee7cec`.
+
+Two additions to the runbook from this instance:
+
+- **The remote-tracking ref can roll back inconsistently.** `git fetch` failed with `cannot lock
+  ref … is at aee7cec but expected de3080d` — the ref file survived at the new value while the
+  fetch machinery expected the old one. The objects were already local (`rev-list` across the gap
+  worked), so the fix was simply to ff-merge to the sha directly and re-set the upstream after.
+  Do not `--force` anything; nothing is actually missing.
+- **Verify the recovery with case-insensitive greps or exact coordinates.** The first spot-check
+  (`grep -c "chamfer" src/ai/Patrol.js` → 0) read as a failed recovery; the file says
+  "Chamfering". A recovery check that can false-negative invites exactly the panic edit the
+  runbook exists to prevent. Coordinates matched; nothing was wrong.
+
+This is the coordinator's block from here on: **§520–§539**. The lane blocks (§460–§479 camera,
+§480–§499 world, §500–§519 controller) are unchanged.
