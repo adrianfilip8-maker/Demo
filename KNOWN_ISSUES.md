@@ -40507,3 +40507,12 @@ check's 47.5 % flip rate measures the relighting it was built to ignore. Rejecte
 pair's alignment rests on the harness construction instead (same shot, no input, 4 sim
 frames). The code stays in `s5verdict.mjs` with the rejection in its comment, because a
 deleted bad instrument is how §440 happens twice.
+
+## §521 — Rollback #10: the restore point is pinned, and the runbook is now routine
+
+Third consecutive container rollback to the **identical sha** (`de3080d`, §327-era) — #8, #9 and #10
+all restored the same snapshot, so the container image is evidently frozen there and every future
+rollback in this session will need exactly the same recovery. Ran the §445.1/§520 runbook verbatim:
+33 blockers (the same 33 every time), zero under `src`/`tests`/`tools`, backed up, cleared,
+fast-forwarded 563 commits, spot-checked with exact identifiers per §520. Durable loss: zero, for
+the third time, for the same reason — everything is pushed the moment it exists.
