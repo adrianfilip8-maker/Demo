@@ -201,13 +201,20 @@ try {
     await sim(20);
     await page.keyboard.down('KeyW');
     await sim(30 + take * 10);
-    await page.keyboard.down('Space'); await sim(3); await page.keyboard.up('Space');
-    let iLand = -1;
+    /* HOLD the jump through the ascent. A 3-frame tap is a jump-cut hop that arrives under
+       `landBeat` 3.2 m/s, and `Jump.update` then returns `move` directly — NO `land` state exists
+       for a soft landing with the stick held. Both takes of the first 1080p run failed exactly
+       that way ("NEVER LANDED"), which was this driver shaping the quantity it was pointed at
+       (§464, third instance). A held jump arrives ~10.8 m/s and lands for real. */
+    await page.keyboard.down('Space'); await sim(16); await page.keyboard.up('Space');
+    let iLand = -1, last = null;
     for (let i = 0; i < 90; i++) {
       await sim(1);
       const s = await probe();
+      last = s;
       if (s.st === 'land') { iLand = i; break; }
     }
+    if (iLand < 0) console.log(`      last probe: ${JSON.stringify(last)}`);
     if (iLand >= 0) {
       await snap(`s1t${take}-land0`, `S1.${take}`);
       await sim(3); await snap(`s1t${take}-land3`, `S1.${take}`);
