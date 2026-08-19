@@ -39785,3 +39785,34 @@ pyramidion, "then drop to the kiosk" — is charged 31 m/s for following the rou
 The acceptance driver's leg 3 is corrected to aim at the south lintel; the run should stop taking
 the alternative by accident.
 
+
+---
+
+## §488 — Acceptance drive, pass 2: legs 1–4 in 18.9 s with zero hard landings; the stop is leg 5 alone
+
+Queue item 4, re-run after §486 (the signpost) and §487 (the corrected leg-3 beat). One Controller,
+one reset at spawn, no teleport.
+
+```
+  f91    leg 1   spawn -> stage-1 deck          walk                       OK
+  f176   leg 2   deck -> stage-2                jump onto the SIGNPOST     OK
+  f740   leg 3   stage-2 -> kiosk lintel        authored double jump       OK   (retries inside)
+  f1113  leg 3b  lintel ring -> NE corner       tiptoe walk                OK
+  f1132  leg 4   lintel -> ring 3               E-grab                     OK   hookGrab
+  ----   leg 5   ring 3 -> ring 4               STOPS — falls, 24.8 HARD
+```
+
+Against §485's pass 1: the pole detour is gone (leg 3 lands at 5.8 m/s instead of 31.0 HARD), the
+signpost replaces the hidden ledge-climb hunt, and the whole run to the chain is **1132 frames /
+18.9 s with two soft landings (4.0, 5.8)**. The stop point's identity is unchanged — leg 5 — which
+is expected rather than a regression: its lever (`hookLine` re-aim) is deliberately held until the
+controller lane confirms the heading mechanism (§485.4). Pass 2's addition to that file: the *cost*
+of the leg-5 miss on this tree is a fall from y ~13 to the courtyard arriving **24.8 m/s HARD**, so
+every failed chain attempt currently ends in the hard-landing beat — the miss punishment §481
+described, now measured on the acceptance path itself.
+
+The run to ring 3 is now stick-plausible end to end: no input the driver used exceeds what a thumb
+does (hold forward, one timed jump onto a visible block, one double jump at a face, a beam walk, an
+E-grab). That was not true of pass 1, which needed a pole climb nobody chose and survived a 31 m/s
+arrival.
+
