@@ -44,6 +44,10 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const OUT = process.env.OUT || `${ROOT}/shots/camlane`;
 const W = Number(process.env.W || 1920), H = Number(process.env.H || 1080);
 const Q = process.env.Q || 'high';
+/* SEQ=s1,s3 runs only those sequences. The lock is FIFO and shared; a rerun that repeats nine
+   already-captured frames holds it ~10 minutes for nothing. */
+const SEQ = (process.env.SEQ || 's0,s1,s2,s3,s4,s5').split(',');
+const seq = (k) => SEQ.includes(k);
 
 async function freePort(start = 5400) {
   for (let p = start; p < start + 200; p++) {
@@ -211,6 +215,7 @@ try {
   };
 
   /* ---- S0: the boom collapse, seen — stand, move, stop -------------------- */
+  if (seq('s0')) {
   console.log('[S0] stand -> move -> stop (the boom-chain collapse, item 2)');
   await snap('s0-stand', 'S0');
   await page.keyboard.down('KeyW');
@@ -220,9 +225,10 @@ try {
   await sim(5); await snap('s0-stop5', 'S0');
   await sim(15); await snap('s0-stop20', 'S0');
   await sim(30);
+  }
 
   /* ---- S1: run, jump, land — twice (§466.5: one sample is not evidence) --- */
-  for (const take of [1, 2]) {
+  for (const take of (seq('s1') ? [1, 2] : [])) {
     console.log(`[S1.${take}] run + jump + land`);
     /* +10 z: the spawn courtyard's staircase begins ~6 m ahead of home along the run direction,
        and the first run's S2 slammed into it with the camera ending inside drawn stone. Open
@@ -261,6 +267,7 @@ try {
   }
 
   /* ---- S2/S3: the Cane Slam pair (sheet item 3) --------------------------- */
+  if (seq('s2')) {
   console.log('[S2] cane slam from a jump apex');
   await page.evaluate(([x, y, z]) => {
     const m = window.__ENGINE.get('movement');
@@ -281,7 +288,9 @@ try {
   if (hit >= 0) { await snap('s2-hop-impact0', 'S2'); await sim(4); await snap('s2-hop-impact4', 'S2'); }
   else { console.log('      slam-from-hop never impacted'); log.push({ tag: 'S2-NOIMPACT' }); }
   await sim(30);
+  }
 
+  if (seq('s3')) {
   console.log('[S3] cane slam from 16 m');
   await page.evaluate(([x, y, z]) => {
     const m = window.__ENGINE.get('movement');
@@ -298,8 +307,10 @@ try {
   if (hit >= 0) { await snap('s3-high-impact0', 'S3'); await sim(4); await snap('s3-high-impact4', 'S3'); }
   else { console.log('      slam-from-height never impacted'); log.push({ tag: 'S3-NOIMPACT' }); }
   await sim(30);
+  }
 
   /* ---- S4: cane combo (the combat framing, 35% -> 73%) -------------------- */
+  if (seq('s4')) {
   console.log('[S4] cane combo, two swings');
   await page.evaluate(([x, y, z]) => {
     const m = window.__ENGINE.get('movement');
@@ -311,14 +322,17 @@ try {
   await page.mouse.down({ button: 'left' }); await sim(2); await page.mouse.up({ button: 'left' });
   await sim(5); await snap('s4-combo-swing2', 'S4');
   await sim(40);
+  }
 
   /* ---- S5: the cold-stone question — same shot, two times of day ---------- */
+  if (seq('s5')) {
   console.log('[S5] tod pair: golden hour vs midday, same pose');
   await snap('s5-tod-default', 'S5');
   await page.evaluate(() => window.__GAME.setTimeOfDay(0.50));
   await sim(4); await snap('s5-tod-noon', 'S5');
   await page.evaluate(() => window.__GAME.setTimeOfDay(0.78));
   await sim(4);
+  }
 } finally {
   await writeFile(`${OUT}/telemetry.json`, JSON.stringify({ sha, dirty, W, H, Q, errs, log }, null, 2));
   await browser.close();
