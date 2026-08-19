@@ -298,7 +298,10 @@ try {
   }, home.p);
   await sim(14);
   await page.mouse.down({ button: 'left' }); await sim(2); await page.mouse.up({ button: 'left' });
-  hit = -1;
+  /* `let`, not a reuse: S2's `hit` lives inside S2's `if (seq(...))` block since the SEQ filter
+     wrapped each sequence. Assigning to it from here is a strict-mode ReferenceError the moment
+     S3 runs — which no run before run 3 did, because reruns filtered to earlier sequences. */
+  let hit = -1;
   for (let i = 0; i < 90; i++) {
     await sim(1);
     const s = await probe();
