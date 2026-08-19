@@ -373,8 +373,17 @@ test('P-A1: a rope coil is set dress and carries no gameplay volume', () => {
      It splits the 3.25 m stage-1 → stage-2 rise into two 1.6 m single jumps, 25/25 driven
      timing pairs, with the centre-line ledgeClimb recovery unchanged at 24/30. Histogram:
      `ground` 53 → 54, every other tag byte-identical. Unlike the §484 bridge this one is not
-     spanning a gap something else should close — it IS the level design, so it stays. */
-  assert.equal(REG.length, 269, 'collider registrations unchanged by this seal');
+     spanning a gap something else should close — it IS the level design, so it stays.
+
+     ── 269 → 272: the vault-gate doorway (§490, wall +2) and the kiosk step (§491, ground +1) ──
+     §490 split the tomb stairwell's north wall around the vault gate's own doorway — it was one
+     solid slab ACROSS the opening, and no instrument had ever crossed it (R2's waypoint stops
+     south of it, V3 teleports north of it). One wallProxy became three: +2.
+     §491 added the half-course step at the kiosk south face: §8.1 step 2's 8 cm margin drops a
+     near-miss into a boxed soffit pocket at y 7.75 with no exit (headroom 1.75 < CAPSULE_H), so
+     the step splits the rise into two 1.9 m singles that never arc into it: ground +1.
+     Histogram: wall 75 → 77, ground 54 → 55, every other tag byte-identical. */
+  assert.equal(REG.length, 272, 'collider registrations unchanged by this seal');
   assert.equal(P.stats.decals, 46, 'contact decals unchanged by this seal');
   assert.equal(P._fx.length, 24, 'fx emitters unchanged');
   assert.equal(P._lights.length, 24, 'lights unchanged');

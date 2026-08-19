@@ -1054,6 +1054,27 @@ function courtyard(A) {
 
   /* ---- Barque kiosk around the obelisk. Its lintel ring at y 9.0 is the `hero` perch. ---- */
   const ki = L.kiosk;
+
+  /**
+   * ── The step at the route's 8 cm beat (§491) ───────────────────────────────────────────────
+   * §8.1 step 2's double jump from stage 2 (5.2) to the lintel (9.0) clears the measured 3.88 m
+   * maximum by 8 cm — §481 priced that as a skill check and left it. What §481 did not know:
+   * a near-miss does not fall back to the deck. There is a BOXED SOFFIT POCKET at y 7.75 against
+   * the kiosk's south face — 1.75 m of headroom (under `CAPSULE_H` 1.80, so no jump), a riser
+   * south a walker cannot leave by, escalation upward capped by the lintel slab. Driven: every
+   * reset policy tried — walk south 300 frames, jump south ×4, hop escalation — left the capsule
+   * exactly where it started, at (0, 7.75, 15.01). A miss on an 8 cm margin lands in a trap with
+   * no exit, which is §436's wedge shape on the authored route's second beat.
+   *
+   * The repair is §486's grammar: a half-course step on the measured-open strip south of the
+   * kiosk (deck 5.2, x −2.0…0 clear, unlimited headroom). Its top at 7.1 splits the 3.8 m rise
+   * into two 1.9 m single jumps — under the 2.38 m single-jump max by half a metre each — and a
+   * hop from it lands on the lintel top (9.00 at z 14.2, measured) without the high arc that
+   * drifts into the pocket. The pocket itself is left as found: it is kiosk masonry shared with
+   * the hero shot, and with the step in place the beat no longer produces the arc that enters it.
+   */
+  box(A, 'court', 'limestone_polished', 1.5, 1.9, 1.4, -1.6, 6.15, 15.65, { jitter: 0.03, chip: 0.26, ry: D(3) });
+  groundProxy(A, -2.35, -0.85, 7.1, 14.95, 16.35, { thick: 1.9 });
   for (const sx of [-1, 1]) for (const pz of [ki.z0, ki.z1]) {
     const px = sx * ki.x;
     const kh = ki.top - 1.25 - t2.y;
@@ -2541,7 +2562,22 @@ function tomb(A) {
      anchored to the approach its foot lands at x -9.66, inside the mid landing, so there is no
      gap left to bridge and the proxy would only be redundant floor two metres under a stair. */
   vol(A, 'tomb', 'sandstone_block', -13.8, -9.4, -6.5, -5.6, -59.6, -54.0, { jitter: 0.03 });
-  for (const sx of [-1, 1]) wallProxy(A, -14.2, 4.4, -12.4, 0.4, sx > 0 ? -54.4 : -60.0, sx > 0 ? -53.8 : -59.4);
+  /**
+   * ── The stairwell's north wall gets the doorway it was always drawn with (§490) ────────────
+   * This was one solid slab, z −60.0…−59.4, full x span — INCLUDING across the vault gate's own
+   * opening (x ±2.6, y −12…−8.2). The gate wall behind it (GATE_Z −58.75) has its opening cut;
+   * this proxy did not, so §8.1 step 8's "through the vault gate doorway" walked into 60 cm of
+   * invisible wall. Measured: a capsule south through the gate blocks at z −59.06 on exactly this
+   * rec, floor −11.41 on the stair side and −12.00 on the vault side. Nothing ever caught it
+   * because no instrument had ever CROSSED it: `tombdoor` R2's goal waypoint (0.4, −12, −57.6)
+   * is south of it inside the stairwell, and `collectroute` V3 teleports north of it into the
+   * vault — §447.1's "the room's interior is tested, the door never is", one wall deeper.
+   * The south wall keeps its full span; only the north wall splits around the doorway.
+   */
+  wallProxy(A, -14.2, 4.4, -12.4, 0.4, -54.4, -53.8);                 // south wall, unchanged
+  wallProxy(A, -14.2, -2.6, -12.4, 0.4, -60.0, -59.4);                // north wall, west of the door
+  wallProxy(A, 2.6, 4.4, -12.4, 0.4, -60.0, -59.4);                   // north wall, east of the door
+  wallProxy(A, -2.6, 2.6, -8.2, 0.4, -60.0, -59.4);                   // north wall, above the door
   vol(A, 'tomb', 'mudbrick', -14.2, 4.4, -12.4, 0.4, -54.4, -53.6, { jitter: 0.04 });
   vol(A, 'tomb', 'mudbrick', -14.6, -13.8, -12.4, 0.4, -60.0, -53.6, { jitter: 0.04 });
 

@@ -40069,3 +40069,83 @@ arc.
   `hookDamp`/`hookPump` explicitly not among them.
 
 Suite **856/856** (T11 added).
+
+---
+
+## §490 — The vault gate led into a wall: §447.1's "room without a door", one wall deeper
+
+Found by the acceptance drive one doorway short of the Eye, stopped at (0, −11.41, −59.06).
+
+The tomb stairwell's north `wallProxy` — z −60.0…−59.4, the §480 opening's own boundary — was one
+solid slab across its **full x span, including across the vault gate's doorway** (x ±2.6,
+y −12…−8.2). The gate wall behind it has its opening cut; this proxy did not. Measured on both
+faces: floor −11.41 on the stair side, −12.00 on the vault side, capsule blocked at z −59.06 on
+exactly this rec.
+
+**No instrument had ever crossed it.** `tombdoor` R2's goal waypoint (0.4, −12, −57.6) is *south* of
+it, inside the stairwell; `collectroute` V3 teleports *north* of it, inside the vault. The stairwell
+had a door to the surface (§480/§484) and the vault had a tested interior, and the wall between them
+was load-bearing for nothing but the seal between two green test domains. Repaired: the north wall
+splits into three segments around the doorway (west, east, above); the south wall keeps its span.
+Histogram: `wall` 75 → 77.
+
+## §491 — The 8 cm beat has a trap under it: the boxed soffit pocket, and the step that retires both
+
+§481 priced step 2's 8 cm margin as a skill check and left it. What §481 did not know: **a near-miss
+does not fall back to the deck.** Against the kiosk's south face at y 7.75 there is a boxed pocket —
+headroom 1.75 m (under `CAPSULE_H` 1.80, so no jump), a riser a walker cannot leave by, escalation
+capped by the lintel slab. Driven: every reset policy — walk south 300 frames, jump south ×4, hop
+escalation — left the capsule at exactly (0, 7.75, 15.01). A miss on an 8 cm margin lands in a
+no-exit trap on the route's second beat, which is §436's wedge shape with an authored cause.
+
+The repair is §486's grammar again: a half-course step on the measured-open strip south of the kiosk
+(top 7.1), splitting the 3.8 m rise into **two 1.9 m single jumps** — each half a metre under the
+single-jump max — whose flat arcs never enter the pocket. The pocket itself is left as found: it is
+kiosk masonry shared with the hero shot, and with the step in place the beat no longer produces the
+arc that reaches it. Driven, the leg completes in 249 frames where the double-jump sweep took 614 on
+a good run and wedged permanently on a bad one. Histogram: `ground` 54 → 55.
+
+## §492 — THE DEMO COMPLETES: spawn to the Eye of Ra, one drive, no teleport, 87.5 s
+
+```
+  f91    leg 1   spawn -> stage-1 deck                     walk
+  f176   leg 2   deck -> stage-2                           one jump onto the §486 signpost
+  f425   leg 3   stage-2 -> kiosk lintel                   two 1.9 m jumps via the §491 step
+  f914   leg 4   E-grab ring 3                             T10's enter
+  f1116  leg 5a  ring 3 -> ring 4                          pump-along-velocity, face bail, steered
+  f1311  leg 5b  ring 4 -> ring 5                          flight + E-grab mash
+  f1496  leg 5c  ring 5 -> ring 6                          same
+  f2023  leg 5d  ring 6 -> HALL-FRONT CORNICE              bail + double jump + climb-up
+  f2935  leg 6   retrace the chain down to the kiosk       §489's soft continuation
+  f3668  leg 7a  massif -> courtyard paving                terrace descents + parapet hop
+  f4003  leg 7b  courtyard -> south doorway -> hall floor  at grade
+  f4309  leg 8a  hall -> inner gate -> descent landing     walk
+  f4895  leg 8b  the §484 stair -> vault floor             walk, y -10.98
+  f5251  leg 9   vault -> THE EYE OF RA                    (-0.99, -11.38, -74.22)
+```
+
+**Zero hard landings on the ascent** (spawn through the cornice). Two on the retrace descent — 18.2
+(a sloppy bail onto the plinth where the measured soft line is 14.6 onto the lintel) and 28.4 (a
+sloppy east-edge drop where §447.2's parapet two-step is 8.4 + 12.4) — both are the driver taking a
+measured-soft line badly, not the level charging for a required beat, and the acceptance arm says so
+in its domain lines. **One hook steal** onto an unauthored ring across ten chain hops, self-recovered
+by re-pumping from the stolen ring.
+
+**The `bias` decision (§506.3): leave `afford` unranked.** The evidence is the drive: with T10's
+recipe plus the flight E-grab mash gated on "nearer the target than the source", the steal rate in
+practice is 1 in 10 hops and the recovery is the same move the player was already making. A ranked
+afford would spend a capability on a problem the input pattern already absorbs.
+
+`tests/spawn2eye.test.mjs` pins the completion — the whole table above, one Controller, one reset,
+ascent-hard-landings asserted zero — with domain lines for what it deliberately does not test:
+guards (out of scope), the vent (no floor), difficulty (the sheet's), and the descent's grace (the
+driver's). It is chaos-sensitive by nature and says so: collider changes shift BVH tie-breaks and
+which retry lands; the retries absorb that, and a genuine regression reads as a STOP at a named leg.
+
+Three driver-side findings from the closing loop, recorded because the next driver will hit them:
+a leaked `sneak` hold from a helper that never released it (halved every walk speed downstream and
+read as "the hall is blocked"); a landing check that sampled mid-micro-fall (read as "never reached
+the paving" while standing on it); and T10's fixed-frame window not surviving a 20 cm start
+difference (the natural-entry sweep missed at all 26 phases with best 3.74 m — the flight E-grab
+mash, reach 9.0, is what closed it, and it is a player's most ordinary input).
+
