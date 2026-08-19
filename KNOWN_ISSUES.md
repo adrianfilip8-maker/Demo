@@ -39995,3 +39995,77 @@ every candidate I priced (interior tiptoe cornice 5.3 m below the wall head, per
 below, capital jump ~5.7 from apex) lands on the hard side of the §447.2 crossovers, so a soft
 descent would be *new* geometry, not a tweak.
 
+
+---
+
+## §513 — The chain leads, re-derived on a committed apparatus: the last provisional number on the sheet retires
+
+The two closing items of the queue. §449's 34 / 3 / 7 / 7 / 5 / 1 — the one published figure nobody
+could re-derive — is replaced by a measurement any lane can re-run.
+
+### §513.1 The full four-ring chain closes, in one run, on both gate settings
+
+T10's recipe extended through the chain: long pump on ring 1 (the authored entry supplies no speed,
+§508.2), then **short bails** — 12 and 24 frames — because the flight's arrival speed carries into
+the next swing, which is T8's finding surfacing as gameplay: *the chain flows once you are moving*.
+Bail offsets [156, 12, 24], found by greedy per-leg search, step 4.
+
+`telegraph.test.mjs` **T11** commits it: 4/4 rings in authored order on both gate settings, every
+mid-chain grab named by a telegraph before it happens, and the counterexample RUN — bailing 60
+frames early on leg 2 does not reach ring 2, so the window is load-bearing and the arm cannot pass
+on arbitrary input.
+
+### §513.2 The leads, measured, and what they replace
+
+Paired via the §505.2-cloned `hookGrab.pos`, lead = grab frame minus the FIRST telegraph naming that
+ring in the approach:
+
+```
+                         ring 2          ring 3          ring 4
+  gate as shipped        43 f  0.72 s    21 f  0.35 s    24 f  0.40 s
+  telegraphNextHold ON  196 f  3.27 s    31 f  0.52 s    45 f  0.75 s
+```
+
+Ring 1 is deliberately omitted: the driver holds interact from the start, so its 4-frame figure is
+an apparatus artifact — §441's E-grab arm owns that number (30 f). Two things the table says:
+
+- **The shipped gate's mid-chain warning is 0.35–0.72 s on this apparatus, not §449's 0.05–0.12 s.**
+  The lead is the flight time, and this drive bails fast and flies long where §449's drive (whatever
+  it was) barely flew. Neither number is "the" lead — it scales with how the player flies — but ours
+  comes from an apparatus in the tree.
+- **The switch's value is concentrated on the first mid-chain ring**: 3.27 s of warning while still
+  hanging on ring 1, against 0.72 shipped. On the later rings it adds 0.15–0.35 s. Whether that is
+  worth marks appearing while attached is exactly sheet item 10's question, now priced with leads on
+  both sides.
+
+§449's table is retired rather than corrected: its harness was never committed, and its repeated
+final ring matches the §505.2 aliasing signature. Nothing further can be said about it, and nothing
+needs to be.
+
+### §513.3 The arm went red before it went green, and the bug was a jump cut
+
+T11's first version "cleaned up" the scratch driver's bail block — a `let_go('jump')` gated on
+`swinging` became a plain else-if — and the chain stopped at ring 1. Traced frame by frame:
+releasing jump one frame after the bail fires **`applyJumpCut`**, edge-triggered on
+`released('jump')`, which cut the flight from 11.23 to 7.85 m/s in one frame and killed the arc. The
+scratch's gate was load-bearing twice: hold through the flight (no cut), release on the next rope
+(re-arms the rising edge without one). Recorded in the arm's own comment, because the next person to
+"simplify" it will do exactly what I did. That is this session's fourth one-branch-of-two error and
+the third caught by an arm rather than a reader — and it is also a *gameplay* fact the chain recipe
+now includes: **holding jump through the flight is part of the technique**, or the release cuts your
+arc.
+
+### §513.4 Sheet updates
+
+- **Item 10**: the provisional-leads paragraph is superseded in place by the measured table; the
+  "Also partial" paragraph is marked stale (§507 plumbed the exclusion into `afford`, and T11's
+  gate-ON run names the actual next ring). Open remainder: `bias` preference, 10–19/61 phases still
+  stolen by an unauthored hook.
+- **Item 1**: fifth correction — §511.2's classification fix lands the pyramidion drop soft; §8.1
+  step 2's documented alternative no longer hard-lands. The stage-2 15.600 collider notch remains
+  the world lane's.
+- **Item 11 (new)**: the chain's difficulty, framed for a person — a 0.25 s recurring window plus
+  two untaught inputs (along-velocity pump, steered flight), with the levers ordered and
+  `hookDamp`/`hookPump` explicitly not among them.
+
+Suite **856/856** (T11 added).

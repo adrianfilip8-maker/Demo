@@ -631,3 +631,107 @@ test('telegraph: leg 5 completes from the authored entry, and in-flight steering
   console.log(`[T10] steered: 3/3 grab ring B · unsteered: 0/3, closest ${misses.map((m) => m.toFixed(2)).join(' / ')} m `
     + '(§485.3 reported 6.48 m — the same miss)');
 });
+
+/* ====================================================================== */
+/* T11 — the WHOLE chain, committed: four rings, one run, leads paired    */
+/* ====================================================================== */
+
+test('telegraph: the four-ring chain closes in one run, and every mid-chain grab is named before it happens', async () => {
+  /* ── WHAT THIS REPLACES ───────────────────────────────────────────────────────────────────
+   * §449's chain leads (34/3/7/7/5/1) were produced by an uncommitted apparatus nobody could
+   * re-run, with a payload aliasing (§505.2) that made its repeated final ring unverifiable.
+   * This arm is the committed replacement: T10's recipe extended through the chain — long pump
+   * on ring 1 (the entry supplies no speed), short bails after (the flight's arrival speed IS
+   * the next swing's speed, which is T8's finding carried through), flight steered at the next
+   * ring. Bail offsets [156, 12, 24] frames after each grab.
+   *
+   * ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : both gate settings — all four rings grabbed in authored order, and every
+   *               mid-chain grab preceded by a telegraph naming its ring in the same episode.
+   *   fails  on : RUN in-arm — the same drive with the leg-2 bail 60 frames early (inside the
+   *               decayed part of the swing), which must NOT reach ring 2; if it does, the
+   *               offsets are not load-bearing and this arm is asserting a chain any input
+   *               completes.
+   *   does NOT  : pin the LEAD VALUES (apparatus-dependent: a different pump length moves
+   *   discrim.    them; the measured table lives in §513/the sheet). Nor does it cover the
+   *               ring-1 approach lead — the driver holds interact from the start, so its
+   *               ring-1 lead is an artifact; §441's E-grab arm owns that number.
+   */
+  const { realWorld: rw, hardReset: hr, DT: dt } = await import('./_moveset.mjs');
+  const { TUNE: T } = await import('../src/player/Controller.js');
+  const { engine, c } = await rw();
+  const LINTEL = new THREE.Vector3(2.2, 9.0, 8.4);
+  const RINGS = [new THREE.Vector3(4.2, 14.8, 4.5), new THREE.Vector3(1.0, 14.5, -3.0),
+                 new THREE.Vector3(-4.0, 13.9, -8.5), new THREE.Vector3(-9.5, 13.2, -13.0)];
+  const ringOf = (p) => { let b = -1, bd = 1.2; RINGS.forEach((r, i) => { const d = r.distanceTo(p); if (d < bd) { bd = d; b = i; } }); return b; };
+  function aim(dx, dz) {
+    const l = Math.hypot(dx, dz) || 1;
+    engine.camera.rotation.set(0, Math.atan2(-dx / l, -dz / l), 0, 'YXZ');
+    engine.camera.updateMatrixWorld(true);
+  }
+  function drive(Ws) {
+    hr(engine, c, LINTEL.clone(), Math.PI);
+    engine.events.length = 0;
+    const ev = []; let grabs = 0, grabFrame = -1, bailing = false;
+    for (let f = 0; f < 2600; f++) {
+      const target = RINGS[Math.min(grabs, RINGS.length - 1)];
+      const swinging = c.sm.name === 'hookSwing';
+      if (swinging) aim(c.velocity.x, c.velocity.z);
+      else aim(target.x - c.position.x, target.z - c.position.z);
+      engine.input.beginFrame(dt);
+      engine.input.move.x = 0; engine.input.move.y = 1;
+      if (f === 1 || f === 2) engine.input.hold('jump');
+      else if (f === 3) engine.input.let_go('jump');
+      else if (!swinging && grabs === 0 && f > 3) engine.input.hold('interact');
+      /* The let_go is gated on `swinging`, and that gate is load-bearing TWICE — this arm's
+         first version "cleaned it up" into a plain else-if and went red. Releasing jump one
+         frame after the bail fires `applyJumpCut` (edge-triggered on `released('jump')`), which
+         cut the flight from 11.23 to 7.85 m/s in one frame and killed the arc; and releasing
+         while swinging on the NEXT ring is what re-arms the rising edge for the next bail
+         without a mid-flight cut. Hold through the flight; release on the rope. */
+      if (swinging) {
+        if (grabFrame >= 0 && grabs <= Ws.length && f - grabFrame === Ws[grabs - 1]) {
+          engine.input.hold('jump'); bailing = true;
+        } else if (bailing) { engine.input.let_go('jump'); bailing = false; }
+      }
+      engine.time = f * dt; c.update(dt, f * dt);
+      for (const e of engine.events) {
+        if (e.evt === 'telegraph' && e.payload && e.payload.kind === 'hook') ev.push({ f, kind: 'tel', ring: ringOf(e.payload.point) });
+        if (e.evt === 'hookGrab') { ev.push({ f, kind: 'grab', ring: ringOf(e.payload.pos) }); grabs++; grabFrame = f; }
+      }
+      engine.events.length = 0;
+      if (grabs >= 4) break;
+      if (c.grounded && grabs > 0 && f > grabFrame + 30) break;
+    }
+    return ev;
+  }
+  const WS = [156, 12, 24];
+
+  for (const gate of [false, true]) {
+    T.telegraphNextHold = gate;
+    const ev = drive(WS);
+    const grabs = ev.filter((e) => e.kind === 'grab');
+    assert.deepEqual(grabs.map((g) => g.ring), [0, 1, 2, 3],
+      `gate=${gate}: the chain grabbed rings [${grabs.map((g) => g.ring + 1).join(',')}] — the `
+      + 'authored order is 1,2,3,4 and this recipe closed it when the arm was written. An '
+      + 'unauthored hook in the sequence is §506.3\'s steal; a short list is a leg that stopped.');
+    let lastGrab = -1;
+    for (const g of grabs.slice(1)) {
+      const named = ev.some((e) => e.kind === 'tel' && e.ring === g.ring && e.f <= g.f && e.f > lastGrab);
+      assert.ok(named,
+        `gate=${gate}: ring ${g.ring + 1} was grabbed with NO telegraph naming it first — the `
+        + 'chain\'s mid-flight signposting is dark, which is the §449 defect this measures');
+      lastGrab = g.f;
+    }
+  }
+  T.telegraphNextHold = false;
+
+  /* ── the counterexample, RUN: an early leg-2 bail must not reach ring 2 ── */
+  const bad = drive([96, 12, 24]);
+  const badGrabs = bad.filter((e) => e.kind === 'grab').map((g) => g.ring);
+  assert.ok(!(badGrabs.length >= 2 && badGrabs[1] === 1),
+    `bailing 60 frames early on leg 2 still reached ring 2 (grabs [${badGrabs.map((r) => r + 1).join(',')}]) `
+    + '— the release window is not load-bearing and this arm would pass on any input');
+
+  console.log('[T11] chain closes 4/4 on both gate settings with bails [156,12,24]; early bail fails as required');
+});

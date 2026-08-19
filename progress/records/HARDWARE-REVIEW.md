@@ -165,6 +165,19 @@ on that ladder, so any future choice moves in whole steps.
 
 ---
 
+> ### ✅ FIFTH CORRECTION (§511) — the route's own alternative no longer lands hard
+>
+> §485.2 found §8.1 step 2's documented alternative — pole-climb the obelisk, spire-land the
+> pyramidion, drop 13 m to the kiosk — landing at **31.0 m/s HARD**. Traced at the transition level,
+> that was two bugs in the §502 term, not a feel question: a jump PRESSED at the pole top was filed
+> as a lost grip (`poleClimb` is in `BEAT_LOST`, and the `jump` state is only enterable through
+> input), and `spireLand`'s exits fired neither classification branch, so the flag kept its history.
+> Both fixed (§511.2, R7-pinned): the pyramidion drop now lands soft, and a wallCling loss from 17 m
+> still lands 28.4 HARD. **The walk-south-off-stage-2 15.600 remains**: that is the ~0.15 m collider
+> notch (§500.5), filed for the world lane, not a threshold or classification input.
+
+---
+
 ## 2. Camera boom chain collapsed
 
 **Commit** `be55d6f` · **File** `src/player/CameraRig.js` (`_boomLength`)
@@ -699,12 +712,39 @@ feature:
 **93 % less clutter than lifting the gate**, and seven marks across seven seconds of continuous
 attachment.
 
-**What is NOT measured, and why it is off by default.** What the switch delivers *on the chain* —
+> ### ✅ MEASURED (§513) — the provisional table is replaced, and the chain now closes on a committed apparatus
+>
+> The two paragraphs below this box are superseded and kept because they were quoted. `telegraph.test.mjs`
+> **T11** drives the full four-ring chain in one run (T10's recipe: pump along the velocity, bail on the
+> correct face, steer the flight), on both gate settings, and pairs every `telegraph` with its `hookGrab`
+> via the now-cloned payload. The leads, in frames from the FIRST naming of the ring in that approach:
+>
+> |  | ring 1 | ring 2 | ring 3 | ring 4 |
+> |---|---|---|---|---|
+> | gate as shipped (switch OFF) | — | **43** (0.72 s) | **21** (0.35 s) | **24** (0.40 s) |
+> | **switch ON** | — | **196** (3.27 s) | **31** (0.52 s) | **45** (0.75 s) |
+>
+> Ring 1's lead is omitted: the driver holds interact from the start, so its 4-frame figure is an
+> apparatus artifact — §441's E-grab arm owns that number (30 f). §449's provisional 34/3/7/7/5/1 is
+> retired: its harness was never committed, and its repeated final ring matches the §505.2 payload
+> aliasing. **The shipped gate's mid-chain warning is 0.35–0.72 s on this apparatus, not 0.05–0.12 s** —
+> larger than §449 reported, because the leads scale with flight length and this drive bails fast.
+> The switch ON turns ring 2's warning into *the remaining hang plus the flight* (3.27 s), and adds
+> ~0.15–0.35 s to the later rings.
+>
+> **And the "Also partial" paragraph below is stale since §507**: the exclusion is plumbed into
+> `afford` itself, so the switch DOES name the next ring of the same kind — T11's gate-ON run emits
+> hook marks naming the actual next chain ring. What remains open is *preference*: a nearer
+> unauthored hook can still outrank the authored ring (§506.3), which is the world lane's `bias`
+> decision, and 10–19 of 61 release phases still grab one mid-flight.
+
+**~~What is NOT measured~~** (superseded above). What the switch delivers *on the chain* —
 the 3-to-7-frame leads it exists to widen. §449's harness was never committed and four drivers here
 reached one grab against their six, so nobody can currently re-derive those leads (§505.1). The
 number on this page is provisional until a committed driver produces it.
 
-**Also partial.** `afford(kind)` returns one hold per kind, so excluding the held ring skips hooks
+**~~Also partial~~** (superseded above — §507 plumbed the exclusion into `afford`). `afford(kind)`
+returns one hold per kind, so excluding the held ring skips hooks
 entirely rather than offering the *next ring*; what you would see announced is the best rail, pole or
 ledge in reach. Announcing the next ring needs a ranked `afford`, which is a `Targets.js` change.
 
@@ -712,3 +752,24 @@ ledge in reach. Announcing the next ring needs a ranked `afford`, which is a `Ta
 you are still on a ring read as help or as noise? If it reads as help, the `Targets.js` ranked-list
 work is worth doing so it can name the next *ring*. If it reads as noise, the gate was right and this
 switch should be deleted rather than tuned.
+
+---
+
+## 11. The hook chain's difficulty — a 0.25 s window and two untaught inputs
+
+**No commit — nothing is broken.** §511.1 established leg 5 (and T11 the whole chain) completes from
+the authored entry, and what remains is a difficulty judgement the numbers now frame precisely:
+
+- **The release window is 15 frames (0.25 s), recurring every ~2.3 s swing period.** Bail inside it
+  at 6.8–11.3 m/s with the swing's own ~60° bearing error, and air steering closes the rest.
+- **Two inputs the game never teaches**: pumping is only effective ALONG the swing (holding toward
+  the target nets zero — 2.03 vs 13.43 m/s, §509.4), and the flight must be steered toward the next
+  ring (without it, 0 of 61 release phases connect, §511.1).
+- Mid-chain, the flight's arrival speed carries into the next swing, so only ring 1 needs the long
+  wind-up — T11's bails after it are 12 and 24 frames.
+
+**What to watch.** Swing the chain cold, without reading anything. If you find the along-velocity
+pump and the air steer within a few attempts, the window is a skill beat and the level stands. If
+you bounce off it, the cheap levers in order: a wider `hookAuto` on rings only (a level-side bias,
+§506.3), ring spacing (world lane's), or a HUD teach for the pump. `hookDamp`/`hookPump` are joint
+under every swing in the game and are not the lever (§509.4).
