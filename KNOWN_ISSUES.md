@@ -39950,3 +39950,48 @@ as `SpireLand`'s ×1.25 launch with two air jumps — the comment says "that is 
 every mechanic is adapted, since-adapted, refused for reasons that survived re-checking, priced for
 a person, or excluded by the user. Nothing ported, nothing from Assets/Music or Assets/Effects,
 ever. The integration question §422 opened is closed with a list rather than a memory.
+
+---
+
+## §489 — The hall is enclosed: the route's own step 4 priced a 27.5 m/s drop as the way in, and my first correction was wrong too
+
+Pre-measurement of the next stop after leg 5, so the answer is ready when the chain opens. Doc-only
+fix; no geometry moved.
+
+### §489.1 The interior has exactly nine entries, and none of them is soft from above
+
+Swept-capsule census from y 18.5 over the whole hall footprint (1645 columns, 1 m grid), plus
+horizontal sweeps from the aisle roof toward the nave at five heights:
+
+```
+  columns reaching below y 12.5 (true interior):   7 of 1645
+    all on the nave centre line: (0, -47), (0, -40/-39), (0, -33/-32), (0, -26/-25)
+    each drops to the FLOOR — ~16 m from the deck, harder than the doorway
+  lateral sweeps aisle roof -> nave, y 13.6..16.2: 0 of 16 stations clear at every height
+```
+
+So the hall is entered at grade (south doorway, north inner gate) or through seven clerestory slots
+that cost more than the doorway. **The aisle architrave circuit, the capitals and the tiptoe
+cornice are interior furniture, reachable from the floor up — not from the roof down.**
+
+### §489.2 My first doc fix claimed a ladder that does not exist, and driving it caught it
+
+I wrote *"aisle roof → papyrus capital (y 12) → pole-descend"* into the route header and drove it
+before committing: the hop at the capital wall-ran up the clerestory and ledge-climbed onto the
+**nave roof at y 17** — the wall between aisle roof and nave is solid at every tested height, which
+the lateral census then confirmed 0/80. The edit never shipped. The §418.3 lesson in miniature: a
+route document is a claim, and the drive is its domain line. (A second instrument error inside the
+same hour: my first interior census used `rest < 14` and "found" 565 openings — the aisle roof
+itself, at 13.5. The bar must come from the thing measured, not from the output.)
+
+### §489.3 What the header now says, and the open design call
+
+Step 4 now states, measured: the doorway drop is 15.29 m at **27.5 m/s** (a bail-out, not a route);
+the soft continuation from the cornice is to **retrace** — E-grab ring 4 at 3.3 m (inside
+`hookGrab` 9), chain back east, release over the kiosk lintel (4.2 m, **14.6 m/s — under the
+threshold by one rung**) — and enter the hall at grade. Whether the route should instead gain
+descent furniture at the hall front is a design call, flagged in the header and not taken here:
+every candidate I priced (interior tiptoe cornice 5.3 m below the wall head, peristyle ledge 6.3
+below, capital jump ~5.7 from apex) lands on the hard side of the §447.2 crossovers, so a soft
+descent would be *new* geometry, not a tweak.
+

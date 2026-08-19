@@ -37,8 +37,16 @@ import * as K from './Kit.js';
  *     y 16.15, leaving 0.79 m over a cornice topping at 15.36 — less than `CAPSULE_H` 1.80, so
  *     the band z -18.2..-16.73 is a soffit, not a ledge. The nearest cell that takes a capsule
  *     with full headroom is (-9.5, 15.29, -16.0), 3.00 m from the last ring (§482).
- *  4. WALK the hall front cornice west to the west aisle roof (y 13.5), or drop through the
- *     hall's great south doorway (x ±4, y 0..9) to the hypostyle floor.
+ *  4. WALK the hall front cornice west to the west aisle roof (y 13.5). NOTE, measured
+ *     (§489): the hall interior is ENCLOSED — its only entries are the two grade-level
+ *     doorways and seven clerestory slots on the nave centre line (x 0, z −47…−25), which
+ *     drop ~16 m to the floor. The "drop through the great south doorway" this line used to
+ *     offer is 15.29 m and arrives at 27.5 m/s, nearly twice `landHard`; the slots arrive
+ *     harder still. So the soft continuation from the cornice is to RETRACE — E-grab ring 4
+ *     (3.3 m, inside `hookGrab`), chain back east, release over the kiosk lintel (4.2 m drop,
+ *     14.6 m/s, just under the threshold) — and enter the hall at grade through the doorway.
+ *     Whether the route should instead gain descent furniture here is an open design call;
+ *     nothing below prices the doorway drop as the default any more.
  *  5. INSIDE THE HALL: pole climb any of the 12 papyrus columns; the aisle architrave
  *     circuit (y 13.5) and the interior tiptoe cornice (y 10.0) ring the whole room. The
  *     taut cable at y 12.6 crosses the nave diagonally as a `rail`.
