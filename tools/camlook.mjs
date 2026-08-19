@@ -115,12 +115,42 @@ try {
 
   const probe = () => page.evaluate(() => {
     const e = window.__ENGINE, m = e.get('movement'), c = e.get('camera');
+    /* The subject block exists because three impact captures in a row contained no character and
+       every derivation of "where is he" from boom+state alone was a guess. cam/ndc/vis/span make
+       the frame self-describing: where the lens is, where the projection puts him, whether his
+       root is visible, and how large his skinned mesh's world box actually is — a bone-collapse
+       renders as a degenerate span, which no amount of camera telemetry would show. */
+    const ch = e.get('character');
+    let ndc = null, span = null;
+    if (ch?.root) {
+      const pos = ch.root.position.clone(); pos.y += 0.9;
+      const v = pos.project(e.camera);
+      ndc = [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)];
+      /* Bone world-position spread, not Box3: window.THREE is not exposed to the page, and the
+         skeleton is the thing a collapse actually happens to. A healthy pose spans ~0.5-1.8 m;
+         a bone-collapse reads as ~0. */
+      try {
+        const bones = ch.bones ? Object.values(ch.bones) : [];
+        if (bones.length) {
+          let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+          const w = pos.constructor ? new pos.constructor() : null;
+          for (const b of bones) {
+            b.getWorldPosition(w);
+            mn = [Math.min(mn[0], w.x), Math.min(mn[1], w.y), Math.min(mn[2], w.z)];
+            mx = [Math.max(mx[0], w.x), Math.max(mx[1], w.y), Math.max(mx[2], w.z)];
+          }
+          span = [+(mx[0] - mn[0]).toFixed(2), +(mx[1] - mn[1]).toFixed(2), +(mx[2] - mn[2]).toFixed(2)];
+        }
+      } catch { span = 'bones-failed'; }
+    }
     return {
       st: m?.stateName, gr: !!m?.grounded,
       p: [+m.position.x.toFixed(2), +m.position.y.toFixed(2), +m.position.z.toFixed(2)],
       v: [+m.velocity.x.toFixed(2), +m.velocity.y.toFixed(2), +m.velocity.z.toFixed(2)],
       key: c?._frameKey, boom: +(c?.boom ?? 0).toFixed(3), fov: +(e.camera.fov).toFixed(2),
       roll: +(c?._roll ?? 0).toFixed(4),
+      cam: [+e.camera.position.x.toFixed(2), +e.camera.position.y.toFixed(2), +e.camera.position.z.toFixed(2)],
+      ndc, vis: ch?.root ? ch.root.visible !== false : null, span,
     };
   });
   const step = (n = 1) => page.evaluate((k) => window.__GAME.step(k, 1 / 60), n);
