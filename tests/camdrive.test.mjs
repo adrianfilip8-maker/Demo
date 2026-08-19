@@ -798,7 +798,13 @@ test('D6: how much of each authored framing reaches the screen, over the residen
     `'land' delivers ${(100 * abs(g('land').ch.boom)).toFixed(0)}% of its boom `
     + `(${g('land').ch.boom.got.toFixed(2)} of ${g('land').ch.boom.asked.toFixed(2)} m). It was 52 % with the `
     + 'boom chain collapsed and 6 % before; under 35 % means the collapse has been reverted.');
-  assert.ok(abs(g('wall_run').ch.boom) < 0.15,
+  /* Re-based 0.15 -> 0.25 by the world lane (§493.4), with the A/B that attributes it: the §493
+     terrace notch sliver (one thin `ground` collider) shifts this file's drive residencies, and
+     absolute-weighted wall_run boom moved 10% -> 18% with the sliver ON, back to 10% with it OFF.
+     No camera code changed. The claim this arm holds — the framing still does not ARRIVE — is
+     intact at either number; 0.25 keeps it falsifiable without pinning a neighbour's level
+     geometry into a camera table. */
+  assert.ok(abs(g('wall_run').ch.boom) < 0.25,
     `'wall_run' delivers ${(100 * abs(g('wall_run').ch.boom)).toFixed(0)}% of its boom — the routing fix `
     + 'in STATE_FRAME made this framing reachable and this arm reports it still does not arrive');
   /* The methodological point, asserted rather than described: the mean of fractions flatters. */

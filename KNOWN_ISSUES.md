@@ -40229,3 +40229,16 @@ why the arm logs it and pins only the ascent.
 P-A1 272 → 273 with the histogram (`ground` 55 → 56, all else byte-identical). Suites:
 `basketvary`, `terracestair`, `tombdoor`, `patrol` 41/41; `spawn2eye` green.
 
+
+### §493.4 The fill moved a camera pin, and the A/B says how
+
+Full suite on the filled tree: 856/857, the one red being `camdrive` D6's `wall_run` boom pin
+(`< 0.15`, asserting §444's "the framing still does not arrive"). A/B with the sliver as the only
+variable: **OFF → 10%, green; ON → 18%, red.** No camera code changed — the sliver shifts the
+file's drive residencies, and the delivery number rides the residency. Re-based `0.15 → 0.25` by
+the mover with the A/B in the comment, per the committed-file rule P-A1 and the state census
+already follow. The camera lane's claim survives intact at either number: 18% is still nowhere
+against the 95%+ healthy rows, and the §444 thread is unaffected in substance. `camdrive` 9/9
+after the re-base; with suite9's single red being exactly this arm on this tree, the suite is
+green at 857/857 by composition.
+
