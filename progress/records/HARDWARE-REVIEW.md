@@ -226,6 +226,20 @@ Whether it is *wanted* is the open question.
 **What to watch.** Cane Slam from a small hop, then from the top of something. If those should be two
 distinct reads, this needs the dive framing separated by drop height rather than the collapse reverted.
 
+> ### ✅ PHOTOGRAPHED (§467, run 4) — and the pair's answer is that one identity is not on screen
+>
+> The side-by-side this item asked for exists: `shots/camlane4-s2-hop-impact0/4.png` beside
+> `camlane4-s3-high-impact0/4.png` — the first frames of a REAL Cane Slam ever taken. (Runs 2 and 3's
+> "slams" were plain falls: the apparatus could not press attack, §468.) The hop slam is a composed
+> impact shot — Sly centred, cane raised, the slam FX ringing him, `ndcY` −0.29 at boom 5.13. The
+> 16 m slam's impact frame **contains no subject at all** — `ndcY` −2.75 at boom 1.51, Sly nearly
+> three screen-heights below the bottom edge, with the slam's own red wash proving the move fired.
+>
+> So "have the two identities merged" cannot be judged by eye at height: item 12 now carries the
+> mechanism (§467 — leash + occlusion recovery + fallPitch unwind, no single term sufficient) and
+> the priced levers. The delivery percentages above stand as statements about the boom *channel* —
+> §467 is the proof that a channel delivering 98 % can frame empty air.
+
 ---
 
 ## 4. Traversal telegraph — half a second of warning
@@ -785,3 +799,60 @@ pump and the air steer within a few attempts, the window is a skill beat and the
 you bounce off it, the cheap levers in order: a wider `hookAuto` on rings only (a level-side bias,
 §506.3), ring spacing (world lane's), or a HUD teach for the pump. `hookDamp`/`hookPump` are joint
 under every swing in the game and are not the lever (§509.4).
+
+---
+
+## 12. The slam-from-height impact frame has no subject in it — *measured, not shipped*
+
+**No commit — nothing has changed in source.** §467 is the mechanism; `tools/slamtrace.mjs` and
+`shots/slamtrace*.json` are the apparatus; `camlane4-s2/s3` are the frames to hold beside this.
+Three bounds, each authored and each defensible alone, compose at the impact of any fast descent:
+
+1. **The occlusion recovery is a clock and a descent outruns it.** A boom cut during the fall
+   recovers at `recoverDelay` 0.22 + τ 0.62 (capped 6 m/s) — tuned against colonnade flicker at
+   run speed. On the 16 m staging the world re-permits the FULL boom for the last ~0.27 s of the
+   fall and the camera arrives at 1.57 m of a permitted 5.95.
+2. **The leash bounds the pivot in metres and the frame is angular.** `followLeashV` 2.6 is one
+   half-frame-height at the DEFAULT boom (5.4 × tan(fov/2) = 2.63) and is enforced at every boom.
+   Every descent past ~0.5 s rides the leash, so the pivot arrives a constant 2.6 m above the
+   goal — three half-frames at a cut boom, and out of frame even at the dive's authored 3.2 m.
+3. **`fallPitch` unwinds in one frame.** The +10° down-tip that kept the landing on screen reads
+   the instantaneous `vy` and vanishes on the touchdown frame (20.2° → 10.2° measured) — a cut,
+   timed at the impact.
+
+Where it bites, at each row's own numbers (`ndcY`, frame bottom −1.0):
+
+```
+  hop slam (run 4, S2)      -0.29  composed        8 m fall    -0.85  in frame, barely
+  8 m slam                  -1.47  subject gone    16 m fall   -3.33  three screen-heights gone
+  16 m slam (run 4, S3)     -2.75  subject gone    16 m fall, open sky (no occluder)  -0.90  gone
+```
+
+The slam is WORSE than a plain fall at the same height — its own authored `dist` −2.2 halves the
+frame its landing must fit into — and the open-sky column says the finding does not need the
+staging's ledge. §500's walk-off population (median 17.2 m/s, max 29.6) says these heights are
+ordinary play on this level. The shipped rig re-frames the subject ~0.25–0.35 s after touchdown.
+
+### The levers, priced
+
+| lever | what it buys, measured | what it costs |
+|---|---|---|
+| **leash in frame units** — `min(2.6, 0.48 × boom)` | −3.33→−1.11 · −2.75→−1.09 · −1.47→−1.04, whole-sequence (it also un-cuts the boom earlier: 1.57→2.20 at impact). Provably nothing at boom ≥ 5.42 — ordinary falls, glides, jumps at full boom are untouched to the digit | in frame **nowhere** on its own; and while the boom is occlusion-cut below 3.46 m a jump's 1.66 m apex error can newly clip — colonnade jumps pay, unmeasured |
+| **recovery clock** during vertical flight | the last ~0.27 s of permitted boom (1.57 vs 5.95) | reopens the anti-flicker design `recoverSpeed`'s block measured; not priced as a change here |
+| **fallPitch smoothing** at touchdown | removes a one-frame −10° view cut at every fast landing | smallest single effect (−3.34→−2.55 alone); adds a smoothing state to the one term that is deliberately instantaneous |
+| **accept and watch** | nothing; the empty frame lasts ~1/3 s | the loudest move in the game spends its impact frame on empty stone |
+
+**Ablation says the composition is the defect**: with any ONE term removed the subject is still
+out of frame (best single: −0.90); with all three removed it is composed (−0.28). That is why
+nothing shipped — there is no attributable one-constant fix, and a three-design retune is not a
+measurement, it is a taste. The same call as item 7's, made on the same grounds.
+
+**What to watch, and it is one question.** Hold `camlane4-s2-hop-impact0` beside
+`camlane4-s3-high-impact0`, then slam from the staircase top on hardware and watch the third of
+a second after impact. If the subject-free beat reads as *impact* — a hit so hard the camera is
+still catching up — leave all of it alone and record that. If it reads as a *lost camera*, the
+first lever is the leash re-derived in frame units: it is the one constant whose shipped value
+already encodes the frame-height claim (2.6 = one half-frame at 5.4 m), it buys the largest
+measured improvement everywhere, and its cost is bounded and nameable — measure the
+occluded-jump clip before shipping it, and expect to want the fallPitch smoothing with it, since
+−1.09 alone still leaves the subject just off the bottom edge.

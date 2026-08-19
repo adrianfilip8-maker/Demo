@@ -1,5 +1,17 @@
 # Controls: where they stand, ranked by what a player feels in the first two minutes
 
+> ### ⚠ CORRECTED BY §468 — the verbs below existed; a keyboard and mouse could not perform half of them
+>
+> Everything below was measured through `StubInput`, which stamps a press the way the gamepad
+> does — and the pad was the only device whose edges the game could see. On a real keyboard or
+> mouse, no exact-frame `pressed()`/`released()` edge was EVER visible to gameplay (`_press`
+> stamped the frame that had already run): the cane combo, the dive slam, the pole swing, the
+> interact/attack hook bail, the interact-gated ledge climb and rail/pole mounts, jump-cut
+> variable height, F1 and R were all unreachable from the devices this demo will actually be
+> played with. Measured live in the browser (0 true in 117 module-loop reads of a real click's
+> press — `tools/pressprobe.mjs`), **fixed in `Input.js`, and verified live after** (§468).
+> The list below is otherwise unaffected as a statement about the moveset's wiring.
+
 Charter is "player camera **and controls** against the Godot reference". Every round so far has
 been camera. This is the plain statement of the other half, for a **playtest demo** — no menus, no
 upgrades, no Master Thief moves, no binocucom, no objective system.

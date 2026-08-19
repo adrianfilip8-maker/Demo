@@ -40330,3 +40330,104 @@ working presses and is unaffected as a statement about the moveset. What none of
 that a person at a keyboard could not perform them. The playtest lane's drives, the acceptance
 runs, the §492 completion — all StubInput, all valid. The first human to click the cane on real
 hardware would have been the first discovery of this defect, at the demo.
+
+## §467 — The slam-from-height impact frame has no subject in it: three bounds compose, each defensible alone, and no single one is the cause
+
+Runs 2 and 3 put numbers on an empty frame — `ndcY` −3.33, `vis: true`, boom 1.57 m at the
+impact of a 16 m descent — and run 4 (after §468 made the apparatus able to press attack at all)
+photographed the REAL Cane Slam doing the same thing: `camlane4-s3-high-impact0.png`, boom
+1.513, `ndcY` −2.75, the slam's red wash on the stone and Sly nearly three screen-heights below
+the bottom edge. `tools/slamtrace.mjs` (committed, sha-stamped) replays the staging headlessly
+against the same BVH and logs every contributing term per frame. Its fall arm reproduces the
+run-3 telemetry **to the digit** — boom 1.569 / ndcY −3.33 at impact0, 1.919 / −2.32 at
+impact4 — and its slam arm predicted run 4's browser frame to the third decimal before it was
+taken. The spawn steady state matches to a centimetre. The instrument is pointed at the same
+mechanism as the screen.
+
+### §467.1 Why the boom is 1.57 m — an occlusion-recovery residue, not a framing
+
+Nothing authors 1.57. The dive framing authors 3.2 (`dist` −2.2) and `land` 5.5. The trace:
+
+- **Frame 0** (the staging teleport): the sightline cast from the re-seeded pivot dies at
+  `distHardMin` 0.55 against an 18.1 m `ledge` proxy whose face stands ~0.8 m south of the spawn
+  axis — the 16 m column was staged 2 m under its lip, so the whole boom direction points into
+  stone. Pull-in is instant by design (rule 3), and correct.
+- **Frames 0–51**: the cast origin rides the descending pivot down the face; the binding hit
+  descends with it (y 17.6 → 11.2). The boom stays at 0.55 for ~52 of 68 frames.
+- **Frames ~52–68**: the sightline clears. `allowed` returns to the full `want` (5.95) for the
+  last ~16 frames — **the world permits the entire boom and the camera declines it**, because
+  recovery is a clock (`recoverDelay` 0.22 + τ 0.62, capped 6 m/s) tuned for colonnade corners
+  at run speed, and a 24 m/s descent leaves any occluder behind faster than any recovery clock
+  tuned against flicker can follow. Delivered at impact: 1.569 of 5.952.
+
+The occluder is real geometry and the pull-in is right; what composes badly is *cut depth ×
+recovery time × a descent that outruns both*.
+
+### §467.2 Why the camera is not pointed at Sly — the leash is doing exactly what it says, in the wrong units
+
+§450.4's question — what is vertical follow *bounded by* — has a closed answer: during a
+sustained fall the pivot's lag is `min(timeV × |vy|, followLeashV)`, and the leash binds at any
+fall past `followLeashV / timeV` ≈ 7–14 m/s (framing-dependent). Every dive (18 m/s pinned) and
+every fall beyond half a second rides the leash. So the pivot arrives at touchdown a *constant*
+2.6 m above the goal regardless of how fast the last metres went — measured: slack pinned at
+−2.600 from mid-descent to the ground, pivot 3.605 at an impact whose chest is 0.90.
+
+The leash's own docblock claims *"2.6 m keeps him inside the frame with margin at the longest
+boom"* — and 2.6 is within 1.3 % of `distDefault 5.4 × tan(fovBase/2)`, one half-frame-height
+at the default boom. The claim was derived at a long boom and enforced at every boom. At the
+delivered 1.57 m the half-frame is ~0.8 m, and a 2.6 m bound is three of them. The same shape
+as §450's `leadMax`: a bound calibrated in one regime, applied in all of them.
+
+The third term: `_effectivePitch` reads `fallPitch` off the instantaneous `_pVel.y`, so the
++10° down-tip that kept the landing on screen all the way down vanishes in ONE frame at vy → 0
+(measured 20.2° → 10.2°) — a cut, in a file whose framing table's own rule is "never a cut",
+timed exactly at the impact everyone is looking at.
+
+### §467.3 The ablation — no single term is the cause, and fix-when-measured was evaluated and declined
+
+Re-projecting the impact frame with each mechanism removed one at a time (frame bottom = −1.0):
+
+```
+                                16 m fall     16 m slam     8 m slam
+  as measured                     -3.34         -2.77         -1.47
+  boom at its authored want       -0.90         -1.37         -1.43
+  pivot at its goal (no leash)    -1.15         -1.19         -0.57
+  fallPitch held one more frame   -2.55         -2.11         -1.23
+  all three at once               -0.28         -0.50         -0.50
+```
+
+And the one candidate single repair — the leash re-derived in frame units,
+`min(2.6, 0.48 × boom)` — measured through the whole dynamic sequence (it also lowers the cast
+origin, which un-cuts the boom earlier: boom at impact 1.569 → 2.195): **−3.33 → −1.11,
+−2.75 → −1.09, −1.47 → −1.04. Better everywhere, in frame nowhere.** There is no measured,
+contained, single-term fix that closes this finding; the sum of authored designs is the defect,
+which is a feel decision, and it is priced as item 12 of the hardware sheet rather than retuned
+here (the same call §444 made, for the same attributability reason).
+
+### §467.4 Where it starts, and that it does not need the ledge
+
+- A plain **8 m fall** keeps the subject (−0.85, barely). A **16 m fall** loses him even with
+  the boom at its full want (−0.90 in open sky): the leash + pitch terms alone eject the
+  subject once the descent is long enough to pin the leash and fast enough to arm the full
+  fall-tip. The ledge turned −0.9 into −3.3; it did not create the finding.
+- An **8 m slam** already loses him (−1.47) where the 8 m fall does not — `dive`'s authored
+  −2.2 `dist` halves the frame the leash's constant lag must fit into. **The slam's own
+  framing makes its high-drop landing frame worse than a plain fall's at the same height.**
+- Hop slams are fine: run 4's S2 is a composed impact shot (−0.29, boom 5.13).
+- This is reachable play, not staging exotica: §500's rebuilt walk-off population runs to
+  29.6 m/s (an 18.1 m drop) with the median at 17.2 m/s, so descents in this band are ordinary
+  on the shipped level.
+- Recovery after: the shipped rig has the subject back inside the frame ~0.25–0.35 s after
+  touchdown (−1.35 at impact+10, composed by ~+20). The feel question item 12 asks a person on
+  hardware is precisely whether a third of a second of subject-free frame at the loudest moment
+  of the move reads as impact or as a lost camera.
+
+### §467.5 What sheet item 3 now says
+
+The Slam identity pair is photographed for the first time (run 4). The item asked whether the
+two identities have merged; at height the question cannot be judged by eye, because one of the
+identities is not on screen. The delivery table's 71/92/98/97/100 % stands as a statement about
+the boom *channel* — and this section is the proof that a channel delivering 98 % can frame
+empty air. Delivery percentages cannot see a subject three screen-heights below frame; only the
+subject probe (74698a8) could, which is why three rounds of channel instrumentation never
+flagged the one thing a player would notice first.
