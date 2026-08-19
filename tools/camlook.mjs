@@ -148,6 +148,12 @@ try {
     const e = window.__ENGINE;
     window.__simStep = (n, dt) => {
       for (let i = 0; i < n; i++) {
+        /* main.js wraps engine.renderFrame to pump input.beginFrame() before the module loop —
+           the wrapper is where held keys become move vectors and edge events. A sim step that
+           skips it advances the world and leaves the player deaf: the first run of this harness
+           produced a pixel-identical Sly across 12 frames of held W while the pickups animated,
+           which is exactly that failure. Replicate the pump, not just the module loop. */
+        e.input?.beginFrame?.();
         e.dt = Math.min(dt, 1 / 20) * e.timeScale;
         if (e.debug.paused || e.paused) e.dt = 0;
         e.time += e.dt; e.frame++;
