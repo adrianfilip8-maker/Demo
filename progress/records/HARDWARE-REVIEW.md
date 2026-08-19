@@ -525,6 +525,12 @@ choosing a value mid-band is that per-row trims stay available on either side of
 
 ---
 
+> **The section below is the item's original tail, measured at `leadTime` 0.24 on the rig *before*
+> item 6's repair.** Kept because it carries the four-route motion table, which the re-priced tail
+> above does not repeat — p99 flat and reversals flat-or-down held on all four routes, not just the
+> busiest. Its `'full'` contrasts (+48 % to +116 %) are the pre-repair rig. The recommendation and
+> every number to act on are above.
+
 So this costs `glide` **28 % of what full compensation would cost it**. That is the trade in one number:
 `land`, `air` and `glide` all gain roughly a third of a metre of lead, and `glide` pays for it by sitting
 a little lower in frame during the longest shot in the game.
@@ -560,8 +566,14 @@ different constant and is filed as its own question.
 **Nothing has shipped and nothing is proposed.** This is a question that has never been posed, because
 its two answers live in different mechanisms and no instrument looked at both.
 
-`FRAMES` carries a three-rung speed ladder — `walk`/`run`/`run_fast`, `dist` 0.20/0.90/1.60, `fov`
-0.6/2.4/4.6 — and **no state routes to any of it.** The camera instead opens up continuously, through
+> **Since §463 the ladder rows are deleted, not merely unrouted.** Their numbers survive verbatim in
+> a comment at the deletion site, and the resolver map was proved identical before/after — so the
+> question below is unchanged: it was never routing, it is **size**. The closing line's "marked as
+> superseded" has happened; if sprint framing is ever wanted, the way back is one row routed from
+> `move`, re-derived — not the ladder (§463.1).
+
+`FRAMES` carried a three-rung speed ladder — `walk`/`run`/`run_fast`, `dist` 0.20/0.90/1.60, `fov`
+0.6/2.4/4.6 — and **no state routed to any of it.** The camera instead opens up continuously, through
 `distSpeedGain` 0.30 m and `fovSpeedGain` 6.0°. Both are authored answers to one question, and they
 disagree by a factor of six:
 
