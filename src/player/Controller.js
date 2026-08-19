@@ -2030,6 +2030,22 @@ export class Controller {
      */
     if (next.group === 'air' && _prev) {
       if (_prev.group === 'ground') this._airControlled = true;
+      /* `jump` before the BEAT_LOST test, and the ordering is the fix (§511). Every one of the
+         six `return 'jump'` sites in Moveset.js is input-gated — a press or buffered press at
+         five (Roll, RailSlide, RailWalk, PoleClimb, SpireLand), a deliberate stick-up vault at
+         the pole top, and PoleSwing's designed launch at the end of an arc the player started.
+         There is no involuntary route into the state (verified, all six guards read). So a
+         BEAT_LOST state exiting INTO `jump` is the player leaving on purpose — the §485.2
+         obelisk sequence hit exactly this: poleClimb -> jump on a real press was classified as
+         a lost beat, and the flag then rode unchanged through spireLand into a 13 m drop that
+         landed 31.0 HARD on the route's own documented alternative. */
+      else if (next.name === 'jump') this._airControlled = true;
+      /* `spireLand` has no failure mode: velocity is zeroed every frame, there is no timer and
+         no grip, and its three exits are a jump press, a crouch drop, and a walk-off debounced
+         at 0.16 s precisely so "a stray tap doesn't drop you off the tip". Every departure is
+         chosen, so it classifies as controlled rather than being left to inherit whatever the
+         flag held before the perch — which is the staleness §511 measured. */
+      else if (_prev.name === 'spireLand') this._airControlled = true;
       else if (BEAT_LOST.has(_prev.name)) this._airControlled = false;
     }
     this.engine.emit('playerState', next.name);

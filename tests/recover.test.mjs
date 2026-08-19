@@ -834,3 +834,95 @@ test('R6: a capsule that is airborne, unattached and going nowhere is recovered;
   console.log(`[R6] recovered at frame ${rescued} = ${TUNE.stuckTime}s exactly; still-on-ground and `
     + `free-fall both survive ${FRAMES * 10} frames untouched`);
 });
+
+/* ====================================================================== */
+/* R7 — a jump off a pole is a move you meant, and a spire perch is not   */
+/*      a place history leaks through                                     */
+/* ====================================================================== */
+
+test('R7: deliberate attach-family exits classify controlled; a genuine loss still lands hard', async () => {
+  /* ── THE DEFECT (§511, measured on §485.2's own sequence) ─────────────────────────────────
+   * The acceptance drive climbed the obelisk, jumped off the top, spire-landed on the
+   * pyramidion, walked off, and fell 13 m — landing 31.0 m/s HARD. Under §502's rule that
+   * should be soft: every step was chosen. Traced at the transition level, TWO defects:
+   *
+   *   1. `poleClimb -> jump` set `_airControlled = false`. `poleClimb` is in BEAT_LOST, and the
+   *      list treated every exit as a lost grip — but the `jump` STATE is only enterable through
+   *      input (all six `return 'jump'` sites read: five press/buffer gates, one deliberate
+   *      stick-up vault, plus PoleSwing's designed launch). A press classified as a lost beat.
+   *   2. `spireLand -> fall` fired NEITHER branch (not ground, not in BEAT_LOST), so the flag
+   *      kept whatever history it had — the classification of a spire drop depended on how you
+   *      arrived at the spire. SpireLand has no failure mode: velocity zeroed every frame, no
+   *      timer, exits are a jump press, a crouch drop, and a 0.16 s debounced walk-off.
+   *
+   * ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : a real jump press at the pole top (flag true), and a spire walk-off with the
+   *               flag POISONED false first (comes out true — the §485.2 inheritance, cured).
+   *   fails  on : RUN in-arm — a wallCling loss from 17 m, which must still land HARD; and
+   *               `hookSwing -> fall`, which must still classify uncontrolled. If either flips,
+   *               the fix widened the term instead of correcting the two named sites.
+   *   does NOT  : decide whether a double jump mid-fall should re-establish control (air->air
+   *   discrim.    transitions are untouched, deliberately), nor whether §502.5's hookSwing bail
+   *               residual is acceptable — the bail returns 'fall', not 'jump', and remains
+   *               conservatively uncontrolled.
+   */
+  const { engine, c } = await realWorld();
+
+  /* 1 — a REAL press at the pole top classifies controlled. */
+  hardReset(engine, c, new THREE.Vector3(1.22, 19.5, 12.29), Math.PI);
+  c.grounded = false;
+  c.sm.set('poleClimb');
+  assert.equal(c.sm.name, 'poleClimb', 'the probe needs the pole mount to take');
+  engine.input.beginFrame(DT);
+  engine.input.move.x = 0; engine.input.move.y = 0;
+  engine.input.hold('jump');
+  c.update(DT, 0);
+  assert.ok(['jump', 'fall', 'doubleJump'].includes(c.sm.name),
+    `a jump press on the pole left Sly in "${c.sm.name}" — the exit this arm pins never ran`);
+  assert.equal(c._airControlled, true,
+    'a jump PRESSED at the pole top classified as a lost beat — poleClimb is in BEAT_LOST and '
+    + 'the jump-state override is not running before the list check');
+
+  /* 2 — the spire walk-off launders a poisoned history. */
+  hardReset(engine, c, new THREE.Vector3(0, 23.6, 11), Math.PI);
+  c.grounded = false; c.sm.set('fall'); c.velocity.set(0, -2, 0);
+  c._airControlled = false;                        // the inherited lost-beat history, simulated
+  let perched = false, off = false;
+  for (let i = 0; i < 300; i++) {
+    engine.input.beginFrame(DT);
+    engine.input.move.x = 0; engine.input.move.y = c.sm.name === 'spireLand' ? 1 : 0;
+    engine.camera.rotation.set(0, Math.PI, 0, 'YXZ'); engine.camera.updateMatrixWorld(true);
+    engine.time = i * DT; c.update(DT, i * DT);
+    if (c.sm.name === 'spireLand') perched = true;
+    if (perched && c.sm.name === 'fall') { off = true; break; }
+  }
+  assert.ok(perched && off, 'the probe must reach the spire and walk off it');
+  assert.equal(c._airControlled, true,
+    'walking off the spire kept a stale uncontrolled flag — the classification of a deliberate '
+    + 'drop is depending on how Sly ARRIVED at the perch');
+
+  /* 3 — the counterexamples, RUN: the fix must not have widened the term. */
+  hardReset(engine, c, new THREE.Vector3(0, 17, 30), Math.PI);
+  c.grounded = false; c.sm.set('wallCling'); c.sm.set('fall');
+  assert.equal(c._airControlled, false,
+    'a wallCling loss now classifies controlled — the jump/spire fix widened BEAT_LOST away');
+  engine.events.length = 0;
+  let landedEv = null;
+  for (let i = 0; i < 600 && !landedEv; i++) {
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
+    landedEv = engine.events.find((e) => e.evt === 'landed') || null;
+    engine.events.length = 0;
+  }
+  assert.ok(landedEv && landedEv.payload.force >= TUNE.landHard,
+    `the 17 m wallCling loss arrived at ${landedEv?.payload.force?.toFixed(1)} m/s — the control `
+    + 'needs a genuinely hard arrival to say anything');
+  hardReset(engine, c, new THREE.Vector3(0, 12, 30), Math.PI);
+  c.grounded = false; c.sm.set('hookSwing'); c.sm.set('fall');
+  assert.equal(c._airControlled, false,
+    'hookSwing -> fall now classifies controlled — but the bail returns fall, not jump, so the '
+    + 'name cannot distinguish a chosen release from a lost hook and must stay conservative');
+
+  console.log('[R7] pole-top jump press: controlled · spire walk-off launders poison · '
+    + 'wallCling and hookSwing losses still uncontrolled');
+});

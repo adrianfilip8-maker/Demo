@@ -39816,3 +39816,84 @@ does (hold forward, one timed jump onto a visible block, one double jump at a fa
 E-grab). That was not true of pass 1, which needed a pole climb nobody chose and survived a 31 m/s
 arrival.
 
+
+---
+
+## §511 — Leg 5's heading is closed in the AIR, not in the swing; and the spire drop was hard because a press was filed as a lost grip
+
+Two root causes from the queue, both measured, both closed. The first needed no code; the second was
+a real bug in §502's shipped rule.
+
+### §511.1 The heading does not bind: in-flight steering is the load-bearing half, ablated
+
+§485.4's plane claim verifies exactly: pumped to 11.2 m/s, the swing peaks alternate at
+**−50°/+130°** off the ring A→B leg bearing, and apex-steering (the sp ≤ 0.35 tangential branch,
+reachable at every arc apex) precesses the plane only **~1.3°/peak** — real, far too slow. The
+conclusion drawn from it does not: the leg **completes from the authored entry**.
+
+```
+  release sweep, W 140..200 step 1, flight held toward ring B:
+      grabs ring B at W 156-170  — a contiguous 15-frame window, recurring next period
+      at bail: 6.8-11.3 m/s, bearing error -59..-64°
+  same sweep, flight input ZEROED:
+      0/61 grab · best closest 6.27 m   <- §485.3's acceptance drive reported 6.48 m
+```
+
+**The ablation identifies the acceptance drive's missing ingredient exactly**: a ~60° bearing error
+at bail is bent into a grab by ordinary air control during the ~1 s flight, and without it the miss
+distance reproduces §485.3's to within 22 cm. The recipe is a player's inputs — pump along the
+velocity, bail on the ring-B face, hold toward the ring — and `telegraph.test.mjs` **T10** commits
+it, with the unsteered counterexample run in-arm (0/3, closest 6.27/6.29/6.49 m).
+
+**Outcome (b) of the three offered: the heading binds only a driver that does not steer.** No level
+change is required for completability; `hookLine` can stay. What remains for the sheet is
+difficulty, now precisely priced: the window is **15 frames (0.25 s), recurring each ~2.3 s period**,
+and it requires the along-velocity pump §509.4 already flagged as untaught. Also measured on the
+way: **10–19 of 61 release phases grab some other unauthored hook first** — §506.3's ranked-afford
+gap in the wild, unchanged, still the world lane's `bias` decision.
+
+### §511.2 The spire drop: two classification defects, one transition apart
+
+§485.2's obelisk sequence traced at the transition level (the instrument logs every
+`onStateChanged` with the flag after it):
+
+```
+  f0  poleClimb -> jump   (attach->air)   _airControlled=false     <- defect 1, on a REAL press
+  ...                                      flag rides unchanged through spireLand (defect 2)
+  ...  spireLand -> fall  walk-off        flag still false -> 31.0 HARD
+```
+
+1. **A press filed as a lost grip.** `poleClimb` is in `BEAT_LOST`, and the list treated every exit
+   as a loss — but the `jump` **state** is only enterable through input. Verified against all six
+   `return 'jump'` sites in `Moveset.js`: five are press/buffer-gated (Roll, RailSlide, RailWalk,
+   PoleClimb, SpireLand), one is a deliberate stick-up vault at the pole top, and PoleSwing's is the
+   designed launch of an arc the player started. So `next.name === 'jump'` ⟹ chosen, from anywhere.
+2. **A perch that history leaks through.** `spireLand` is `attach` and not in `BEAT_LOST`, so
+   `spireLand → fall` fired *neither* branch and the flag kept its history — the classification of a
+   deliberate spire drop depended on how Sly arrived at the spire. SpireLand has no failure mode:
+   velocity zeroed every frame, no timer, and its three exits are a jump press, a crouch drop, and a
+   walk-off debounced 0.16 s so "a stray tap doesn't drop you off".
+
+**The fix is two ordered clauses in `onStateChanged`**: entering `jump` classifies controlled before
+the `BEAT_LOST` test runs, and leaving `spireLand` classifies controlled explicitly. Driven end to
+end with a **poisoned** flag (false going in): the walk-off now stamps controlled and the landing is
+soft; the controls hold — a wallCling loss from 17 m still lands **28.4 HARD**, `hookSwing → fall`
+still classifies uncontrolled (the bail returns `fall`, not `jump`, so §502.5's residual stands,
+conservative as designed). The term was corrected at two named sites, not widened: air→air
+transitions (double jump mid-fall) are deliberately untouched.
+
+`recover.test.mjs` **R7** pins all four: the press, the laundered poison, and both controls run
+in-arm. **This removes the hard landing from §8.1 step 2's documented alternative** — the 31.0 m/s
+arrival off the pyramidion now lands soft, which was one of the two blockers §485.6 flagged for a
+person.
+
+### §511.3 Instrument notes, for the file
+
+The first release sweep reported `sp 0.00` at every W — flag-identical across a swept input, the
+§509 detector — and the cause was §485.5 item 2 *again*: my `enter()` held `jump` on frames 1–2 and
+never released, so the bail's `hold('jump')` was never a rising edge. The same session that wrote
+the rule tripped it. And the first spire probe walked at the kiosk and never mounted the obelisk;
+route reachability was not the question, so the mount is forced at §485.2's own coordinates and
+every transition after it is a real input through the real state code.
+
+Suite **855/855** (T10 and R7 added).

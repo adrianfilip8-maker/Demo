@@ -519,3 +519,115 @@ test('telegraph: afford takes an exclusion, and the memo for it is separate from
 
   console.log('[T9] exclusion reaches Collision.nearest; plain and excluded memos coexist on one frame');
 });
+
+/* ====================================================================== */
+/* T10 — leg 5 from the AUTHORED entry: air steering closes the heading   */
+/* ====================================================================== */
+
+test('telegraph: leg 5 completes from the authored entry, and in-flight steering is the load-bearing half', async () => {
+  /* ── WHAT THIS CLOSES ─────────────────────────────────────────────────────────────────────
+   * §485 stopped the acceptance drive at leg 5 (chain ring A -> ring B) and §485.4 hypothesised
+   * the cause: the authored entry drops you into a swing plane 50.3° off the leg bearing, and
+   * the plane cannot be steered above 0.35 m/s. Measured here, the plane claim is TRUE — peaks
+   * alternate at −50°/+130° off the leg, and apex-steering precesses ~1.3°/peak, far too slow —
+   * and the conclusion drawn from it is FALSE: the leg completes anyway, because the heading is
+   * closed in the AIR, not in the swing. Bail inside the window and hold toward the ring, and
+   * air control bends a ~60° bearing error into a grab. Six drivers failed for lack of that one
+   * ingredient; the ablation below reproduces §485.3's own miss distance without it.
+   *
+   * ── THE RECIPE THIS ARM PINS (a player's inputs, not a harness trick) ────────────────────
+   *   1. jump off the lintel, E-grab ring A            (the authored entry)
+   *   2. pump ALONG THE VELOCITY  (§509.1's policy B)   ~2.6 s, reaches ~11 m/s
+   *   3. bail (jump) on the ring-B face of the swing    a 15-frame window, recurring each period
+   *   4. hold TOWARD ring B through the flight          air control closes the last ~60°
+   *
+   * ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : bail frames 158 / 162 / 166 after the grab, flight steered — all grab ring B.
+   *   fails  on : RUN in-arm — the same bails with the flight input ZEROED. None grabs, and the
+   *               closest approach lands near §485.3's reported 6.48 m, which identifies the
+   *               acceptance drive's missing ingredient as exactly this input.
+   *   does NOT  : say the window is generous (15 frames at 60 fps is a fifth of a second: a
+   *   discrim.    difficulty question for the sheet, not this arm). Nor does it cover legs 6-7,
+   *               nor decide whether an unauthored hook intercepting 10-19 of 61 phases
+   *               (§506.3's ranked-afford gap) is acceptable — it asserts leg 5 only.
+   */
+  const { realWorld: rw, hardReset: hr, DT: dt } = await import('./_moveset.mjs');
+  const { engine, c } = await rw();
+  const LINTEL = new THREE.Vector3(2.2, 9.0, 8.4);
+  const A = new THREE.Vector3(4.2, 14.8, 4.5);
+  const B = new THREE.Vector3(1.0, 14.5, -3.0);
+
+  function aim(dx, dz) {
+    const l = Math.hypot(dx, dz) || 1;
+    engine.camera.rotation.set(0, Math.atan2(-dx / l, -dz / l), 0, 'YXZ');
+    engine.camera.updateMatrixWorld(true);
+  }
+  function enter() {
+    hr(engine, c, LINTEL.clone(), Math.PI);
+    for (let i = 0; i < 40; i++) {
+      aim(A.x - c.position.x, A.z - c.position.z);
+      engine.input.beginFrame(dt);
+      engine.input.move.x = 0; engine.input.move.y = 1;
+      if (i === 1 || i === 2) engine.input.hold('jump');
+      if (i === 3) engine.input.let_go('jump');      // a held key is not a press (§485.5)
+      if (i > 2) engine.input.hold('interact');
+      engine.time = i * dt; c.update(dt, i * dt);
+      if (c.sm.name === 'hookSwing' && c.anchor.distanceTo(A) < 0.5) return true;
+    }
+    return false;
+  }
+  /** Pump along velocity W frames, bail, fly with (or without) steering. */
+  function leg5(W, steer) {
+    if (!enter()) return { entered: false };
+    engine.input.let_go('interact'); engine.input.let_go('jump');
+    let bailed = false, closest = Infinity;
+    for (let i = 0; i < W + 240; i++) {
+      const d = bailed ? { x: B.x - c.position.x, z: B.z - c.position.z }
+                       : { x: c.velocity.x, z: c.velocity.z };
+      aim(d.x, d.z);
+      engine.input.beginFrame(dt);
+      engine.input.move.x = 0;
+      engine.input.move.y = bailed && !steer ? 0 : 1;
+      if (!bailed && i === W) engine.input.hold('jump');
+      engine.time = i * dt; c.update(dt, i * dt);
+      if (!bailed && c.sm.name !== 'hookSwing') bailed = true;
+      if (bailed) {
+        closest = Math.min(closest, c.position.distanceTo(B));
+        if (c.sm.name === 'hookSwing' || c.sm.group === 'attach') {
+          return { entered: true, grabbedB: c.anchor.distanceTo(B) < 0.6, closest };
+        }
+        if (c.grounded || c.position.y < 1) break;
+      }
+    }
+    return { entered: true, grabbedB: false, closest };
+  }
+
+  /* ── WHAT: three phases inside the window, steered — all must grab ring B ── */
+  for (const W of [158, 162, 166]) {
+    const o = leg5(W, true);
+    assert.ok(o.entered, 'the authored E-grab of ring A must succeed before anything else counts');
+    assert.ok(o.grabbedB,
+      `bail at frame ${W} with the flight steered came ${o.closest.toFixed(2)} m from ring B and `
+      + 'did not grab it. Leg 5 was completable at this phase when this arm was written; if the '
+      + 'window moved, measure where it went before touching the assertion.');
+  }
+
+  /* ── WHICH: the counterexample, RUN — same phases, flight input zeroed ── */
+  const misses = [];
+  for (const W of [158, 162, 166]) {
+    const o = leg5(W, false);
+    assert.ok(!o.grabbedB,
+      `bail at frame ${W} with NO flight input still grabbed ring B — then air steering is not `
+      + 'load-bearing and the §485 acceptance drive failed for some other reason this arm no '
+      + 'longer identifies.');
+    misses.push(o.closest);
+  }
+  const worst = Math.min(...misses);
+  assert.ok(worst > 4.0,
+    `unsteered flight came within ${worst.toFixed(2)} m of ring B — close enough that steering is `
+    + 'marginal rather than load-bearing, which weakens the identification of §485\'s missing '
+    + 'ingredient');
+
+  console.log(`[T10] steered: 3/3 grab ring B · unsteered: 0/3, closest ${misses.map((m) => m.toFixed(2)).join(' / ')} m `
+    + '(§485.3 reported 6.48 m — the same miss)');
+});
