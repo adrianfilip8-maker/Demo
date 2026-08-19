@@ -994,6 +994,37 @@ function courtyard(A) {
   A.add('court', 'sandstone_worn', K.place(st2, { x: 0, y: t1.y, z: t2.z1 + 2.6, ry: -Math.PI / 2 }));
   groundProxy(A, -2.6, 2.6, 5.25, t2.z1, t2.z1 + 2.7, { thick: 3.6 });
 
+  /**
+   * ── The signpost at the first beat the level refuses (§486) ────────────────────────────────
+   * Hold-forward from spawn stops at z 19.64 on the stage-1 deck, facing flight 2 — 50.28° by
+   * design, pinned by `terracestair.test.mjs`, so the beat IS a jump. What was missing was
+   * anything saying so: the working recovery (jump → ledgeClimb off the flight's own lip,
+   * 24 of 30 timings) is invisible until stumbled into, and §485.6 ranks this the first thing
+   * every player meets.
+   *
+   * The signpost is a fallen half-course block in the pocket east of the flight's cheek —
+   * measured open deck at y 2.0 (x 2.6…6.6, z 16.6…19.4), unlimited headroom. Its top at y 3.6
+   * splits the 3.25 m rise into two single jumps a head shorter than the max:
+   *
+   *     deck 2.0 -> block 3.6      rise 1.60   vs single-jump max 2.38
+   *     block 3.6 -> stage-2 5.2   rise 1.60   (or the flight-2 lid at 5.25, both in range)
+   *
+   * It teaches by escalation — the grammar the brief asks for — and it sits OFF the flight's
+   * centre line, so the existing ledgeClimb recovery is untouched (re-measured after this
+   * landed: same 24/30). The patrol's nearest leg passes (5.5, 18): the block's east face at
+   * x 4.7 leaves 0.80 m at the leg's closest point, above the 0.62 m guard bar, and C1 stays
+   * green. Art is axis-jittered 4° for the fallen read; the proxy stays axis-aligned — the
+   * corner mismatch is ~6 cm, under the capsule radius.
+   */
+  box(A, 'court', 'sandstone_worn', 1.6, 1.6, 1.7, 3.7, 2.8, 18.25, { jitter: 0.03, chip: 0.3, ry: D(4) });
+  /* East face at x 4.5, not 4.7: `terracestair.test.mjs`'s "cannot walk into the terrace" arm
+     derives its start by ground-probing at x 5, and a 0.34-radius probe reaches x 4.66 — at 4.7
+     it clipped this block's corner, spawned the walker ON it, and the north edge ledge-climbed
+     him onto stage 2 and off the far side. The arm's claim held (the deck-level walk is still
+     blocked at z 16.94, driven); its fixture had landed on the new furniture. 4.5 gives the x 5
+     lane 16 cm of clearance and widens the patrol leg's margin to 1.0 m into the bargain. */
+  groundProxy(A, 2.9, 4.5, 3.6, 17.4, 19.1, { thick: 1.7 });
+
   /* ---- Obelisk: 22 m, `pole` for its full height per §8.1. ---- */
   const ob = L.obelisk;
   vol(A, 'court', 'granite_pink', -2.5, 2.5, t2.y - 0.1, t2.y + 1.1, ob.z - 2.5, ob.z + 2.5, { jitter: 0.02, chip: 0.12, c: 0.10 });

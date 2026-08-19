@@ -365,8 +365,16 @@ test('P-A1: a rope coil is set dress and carries no gameplay volume', () => {
      and the bridge was pinning the symptom rather than the cause.
 
      Checked against the histogram both times rather than inferred from the total: `ground`
-     53 → 54 → 53, every other tag byte-identical, as the 272 → 268 entry above requires. */
-  assert.equal(REG.length, 268, 'collider registrations unchanged by this seal');
+     53 → 54 → 53, every other tag byte-identical, as the 272 → 268 entry above requires.
+
+     ── 268 → 269 again: the stair signpost block (§486) ──────────────────────────────────────
+     One `groundProxy`, the fallen half-course block east of terrace flight 2 at x 2.9…4.5,
+     top y 3.6 — the level-side signpost for the first beat the level refuses (§485.6 item 1).
+     It splits the 3.25 m stage-1 → stage-2 rise into two 1.6 m single jumps, 25/25 driven
+     timing pairs, with the centre-line ledgeClimb recovery unchanged at 24/30. Histogram:
+     `ground` 53 → 54, every other tag byte-identical. Unlike the §484 bridge this one is not
+     spanning a gap something else should close — it IS the level design, so it stays. */
+  assert.equal(REG.length, 269, 'collider registrations unchanged by this seal');
   assert.equal(P.stats.decals, 46, 'contact decals unchanged by this seal');
   assert.equal(P._fx.length, 24, 'fx emitters unchanged');
   assert.equal(P._lights.length, 24, 'lights unchanged');

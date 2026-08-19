@@ -39697,3 +39697,31 @@ Two additions to the runbook from this instance:
 
 This is the coordinator's block from here on: **§520–§539**. The lane blocks (§460–§479 camera,
 §480–§499 world, §500–§519 controller) are unchanged.
+
+---
+
+## §486 — The signpost at the stair: one fallen block turns the refused beat into two readable jumps
+
+§485.6 item 1, repaired level-side. Hold-forward from spawn stops at z 19.64 facing flight 2 —
+50.28° by design, pinned — and nothing said the answer was a jump. The fix is the level's own
+grammar: a fallen half-course block in the measured-open pocket east of the flight's cheek
+(x 2.9…4.5, z 17.4…19.1, top y 3.6, on deck y 2.0), which splits the 3.25 m rise into two single
+jumps of 1.60 m each against a 2.38 m max — teaching by escalation, no HUD, no text.
+
+Driven: **25/25 hold-timing pairs** arrive on stage 2 via the block, against the hidden recovery's
+24/30. The centre-line recovery itself re-measures at exactly **24/30** — untouched, as required.
+`terracestair`, `patrol` (C1 clearance vs the (5.5, 18) leg: 1.0 m against the 0.62 bar) and
+`tombdoor` all green; P-A1 moved 268 → 269 with the histogram (`ground` +1, all else identical).
+
+**The first placement failed a tripwire honestly, and the failure is worth the note.** At x 2.9…4.7
+the block's east face sat 4 cm inside the reach of `terracestair`'s start-derivation probe at x 5;
+the arm spawned its walker ON the block, and the block's north edge ledge-climbed him onto stage 2
+and off the far side — reported as "walked into the terrace, ended at z −3.8". The claim the arm
+holds was never false (the deck-level walk is blocked at z 16.94, driven standalone); its *fixture*
+had landed on the new furniture. Pulled west to x 4.5, the x 5 lane clears by 16 cm. A fixture that
+derives its start from the live level is exactly what catches new furniture, and this is it working.
+
+An incidental find while tracing that: from the block top, simply *walking* north auto-ledgeClimbs
+onto stage 2 — so the beat is one jump plus a walk for a player who finds the block, which is a
+gentler teach than the two-jump design intended. Kept.
+
