@@ -180,9 +180,13 @@ function floodWalk(tx, ty, tz, frames = 6000) {
   const y0 = stand(ax, az, ay); if (y0 == null) return false;
   const prev = new Map(), seen = new Set([key(ax, az, y0)]); const q = [[ax, az, y0]];
   let goal = null;
-  while (q.length && !goal && seen.size < 60000) {
-    q.sort((p1, p2) => (Math.hypot(p1[0] - tx, p1[1] - tz) - Math.hypot(p2[0] - tx, p2[1] - tz)));
-    const cur = q.shift();
+  /* best-first via a linear min-scan, NOT a per-pop sort: sorting the frontier every pop is
+     O(n^2 log n) over the search and wedged the whole suite for minutes under --test's parallel
+     contention (measured: the run sat at 775/856 for ten minutes). */
+  while (q.length && !goal && seen.size < 30000) {
+    let bi = 0, bd = Infinity;
+    for (let j = 0; j < q.length; j++) { const d = Math.hypot(q[j][0] - tx, q[j][1] - tz); if (d < bd) { bd = d; bi = j; } }
+    const cur = q.splice(bi, 1)[0];
     if (Math.hypot(cur[0] - tx, cur[1] - tz) < 1.2 && Math.abs(cur[2] - ty) < 1.5) { goal = cur; break; }
     for (const [dx, dz] of [[G2, 0], [-G2, 0], [0, G2], [0, -G2]]) {
       const nx = cur[0] + dx, nz = cur[1] + dz;
