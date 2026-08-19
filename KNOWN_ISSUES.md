@@ -40149,3 +40149,28 @@ the paving" while standing on it); and T10's fixed-frame window not surviving a 
 difference (the natural-entry sweep missed at all 26 phases with best 3.74 m — the flight E-grab
 mash, reach 9.0, is what closed it, and it is a player's most ordinary input).
 
+
+### §492.1 Correction: the descent is now soft too — zero hard landings end to end
+
+§492's table carried two hard landings on the retrace (18.2, 28.4) as driver sloppiness against
+measured soft lines. Both are gone, by taking the level's own lines instead of describing them:
+
+- **Ring 3 down is the lower chain.** Bail south, E-grab the lower ring at (−1.5, 11.9, 9.5) —
+  the *"gives the swing a return"* furniture — then a 4.0 m crouch-drop. Landed at **4.3 m/s** on
+  the lintel ring. Bailing straight onto the massif costs 18.2 from the hang because every surface
+  except the lintel and this line is past the 4.75 m walk-off crossover.
+- **The massif down is the south ladder, sneaked.** Stage-2 south edge → stage-1 deck → the
+  walkable flight-1 ramp. At run speed the walk-off launches clear over the deck AND the ramp,
+  turning a 3.2 m soft ladder into one 15.2 m/s arrival (measured); at sneak speed the drops land
+  as authored.
+
+The full drive: **spawn → Eye, 5,940 frames, 99.0 s, no teleport, zero hard landings, worst
+arrival 14.8 against `landHard` 15.0.** That worst is only one rung under the threshold, so the
+arm asserts zero-hard on the ascent and logs the descent rather than pinning a coin-edge.
+
+The suite's one red after the arm landed was the state census's good-news tripwire — spawn2eye
+drove 24 states outside `traversal.test.mjs` against a bound of 23 — re-based by the mover per the
+arm's own rule. And the arm's first flood used a per-pop frontier sort that wedged the parallel
+suite at 775/856 for ten minutes: O(n² log n) hiding inside a helper that was instant standalone.
+Linearized. A test that is cheap alone and quadratic in company is a suite hazard of its own kind.
+
