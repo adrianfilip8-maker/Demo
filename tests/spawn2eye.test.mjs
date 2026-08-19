@@ -25,9 +25,10 @@ import { TUNE } from '../src/player/Controller.js';
  *             walks the promise instead of the geometry.
  * does NOT  : discriminate guards (out of scope for the demo), the stealth vent (no floor —
  * discrim.    §480.4), route DIFFICULTY (windows and margins are the sheet's, not this arm's),
- *             or the retrace's descent grace: the driver may take a measured-soft line
- *             imperfectly and land hard on the way DOWN, so hard landings are asserted only on
- *             the ascent. It is also CHAOS-SENSITIVE by nature: collider changes shift BVH
+ *             or the retrace's descent grace: hard landings are asserted only on the ascent,
+ *             though the shipped drive currently lands soft END TO END (worst arrival 14.8
+ *             against `landHard` 15.0, via the lower-chain return and the sneaked ramp line) —
+ *             the descent's 0.2 m/s margin is real but chaos-thin, so it is logged, not pinned. It is also CHAOS-SENSITIVE by nature: collider changes shift BVH
  *             tie-breaks and shift which retry succeeds; the retries absorb that, but a genuine
  *             new failure will look like a stop at one named leg — read the leg table it prints.
  */
@@ -349,28 +350,36 @@ if (!say('leg6b ring6 -> ring5', chainHop(R5) === 'grabbed')) return { legRows, 
 if (!say('leg6c ring5 -> ring4', chainHop(R4) === 'grabbed')) return { legRows, events, cornice: CORNICE_FRAME };
 if (!say('leg6d ring4 -> ring3', chainHop(R3) === 'grabbed')) return { legRows, events, cornice: CORNICE_FRAME };
 {
-  const r = chainHop([2.2, 9.0, 9.5], { wantLand: [2.2, 9.0, 9.5] });
-  /* ANY soft controlled landing on the kiosk/stage-2 massif serves the retrace — the lintel, the
-     obelisk plinth (6.3) or the deck (5.2) all continue south on foot. Chaotic sensitivity makes
-     the exact surface vary run to run; the requirement is "down, soft, on the massif". */
+  /* Down via the LOWER chain — the level's own return path ("gives the swing a return"): from
+     ring 3, bail south and E-grab the lower ring at (-1.5, 11.9, 9.5), then crouch-drop 4.0 m
+     onto the obelisk plinth (6.3) at 14.2 m/s — under the threshold. Bailing straight down onto
+     the massif instead costs 18.2 HARD from the hang (measured), because every surface except
+     the lintel and this plinth-via-lower-ring line is past the 4.75 m walk-off crossover. */
+  const LOWER = [-1.5, 11.9, 9.5];
+  let down = chainHop(LOWER) === 'grabbed';
+  if (down) {
+    for (let i = 0; i < 90 && c.stateName === 'hookSwing'; i++) step((inp) => { inp.hold('crouch'); });
+    engine.input.let_go('crouch');
+    for (let i = 0; i < 120 && !c.grounded; i++) step(() => {});
+  }
   for (let i = 0; i < 60 && !c.grounded; i++) step(() => {});
   const onMassif = c.grounded && c.position.y > 4.6 && c.position.y < 9.6 && Math.abs(c.position.x) < 7.5 && c.position.z > 6 && c.position.z < 18;
-  if (!say('leg6e ring3 -> down onto the kiosk massif', r === 'landed' || onMassif)) return { legRows, events, cornice: CORNICE_FRAME };
+  if (!say('leg6e ring3 -> lower ring -> plinth (soft)', onMassif)) return { legRows, events, cornice: CORNICE_FRAME };
 }
 
-/* leg 7: lintel -> stage 2 -> stage 1 -> courtyard -> through the doorway -> hall floor */
-walkTo(0.5, 13.9, 1.0, 400);                    // south lintel segment
-for (let i = 0; i < 200 && c.position.y > 5.4; i++) step((inp) => { inp.move.y = 1; aim(engine, c, 0.5, 15.9); });  // walk off south face -> stage 2
-walkTo(5.6, 15.6, 1.2, 400);                    // stage-2 east edge
-for (let i = 0; i < 260 && c.position.y > 2.3; i++) step((inp) => { inp.move.y = 1; aim(engine, c, 8.4, 15.6); }); // off east edge (parapet route)
-for (let i = 0; i < 420 && c.position.y > 0.4; i++) step((inp) => {
-  inp.move.y = 1; aim(engine, c, 12.5, 11.0);
-  /* the stage-1 deck's east rim carries the §435 parapet (x 8.8..10, y 3.0..3.5): hop it */
-  if (c.grounded && c.position.x > 7.9 && c.position.x < 10.3 && i % 24 < 14) inp.hold('jump'); else inp.let_go('jump');
-}); // down to paving, over the parapet
-for (let i = 0; i < 60 && !c.grounded; i++) step(() => {});      // settle the last micro-drop
+
+/* leg 7: down the terrace's own south line — stage-2 south edge (3.2 m, soft), the stage-1 deck,
+   then the WALKABLE flight-1 ramp to paving. Every drop on this line is under the 4.75 m
+   crossover; the previous east-edge script took an unidentified 16 m drop at 28.4 HARD. */
+for (let i = 0; i < 300 && c.position.y > 5.6; i++) step((inp) => { inp.move.y = 1; aim(engine, c, 0.5, 16.2); inp.let_go('crouch'); });
+/* sneak the last two stages: at run speed the walk-off launches clear over the stage-1 deck and
+   the ramp both, turning a 3.2 m soft ladder into a single 15.2 m/s arrival (measured) */
+for (let i = 0; i < 500 && c.position.y > 2.3; i++) step((inp) => { inp.move.y = 1; aim(engine, c, 0.5, 18.0); inp.hold('sneak'); });
+for (let i = 0; i < 900 && c.position.y > 0.3; i++) step((inp) => { inp.move.y = 1; aim(engine, c, 0, 23.5); inp.hold('sneak'); });
+engine.input.let_go('sneak');
+for (let i = 0; i < 60 && !c.grounded; i++) step(() => {});
 ok = c.grounded && c.position.y < 0.4;
-say('leg7a lintel -> courtyard paving (retrace descents)', ok);
+say('leg7a massif -> courtyard via the south ramp (all soft)', ok);
 ok = ok && floodWalk(0, 0, -18) && walkTo(0, -20, 1.5, 500);
 if (!say('leg7b courtyard -> south doorway -> hall floor', ok && c.position.y < 0.5)) return { legRows, events, cornice: CORNICE_FRAME };
 
