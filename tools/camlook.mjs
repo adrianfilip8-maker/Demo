@@ -115,6 +115,14 @@ try {
     window.__ENGINE.stopLoop();            // frames come from step(), not rAF
     window.__GAME.hideHud(true);
     window.__ENGINE.debug.freeCam = false; // the rig keeps the camera
+    /* Without this, EVERY mouse press in this harness is consumed as the pointer-lock
+       acquisition click: `Input._onMouseDown` swallows an unlocked left click whenever
+       `requestPointerLock` exists, and headless Chromium never grants the lock, so `locked`
+       stays false and the swallow repeats forever. Both Cane Slam sequences of runs 2 and 3
+       captured plain falls because of it — proven by slamtrace's fall arm matching the run-3
+       telemetry to the digit (§467). Forcing `locked` makes a click reach `_press('attack')`,
+       and the §468 stamp fix makes the edge visible to the next sim frame. */
+    window.__ENGINE.input.locked = true;
   });
 
   const probe = () => page.evaluate(() => {
@@ -278,6 +286,15 @@ try {
   await page.keyboard.down('Space'); await sim(3); await page.keyboard.up('Space');
   await sim(11);
   await page.mouse.down({ button: 'left' }); await sim(2); await page.mouse.up({ button: 'left' });
+  /* The press check the first three runs did not have, and paid for: runs 2 and 3 captured
+     "slams" that were plain falls (the lock swallow ate the click; §467/§468). An instrument
+     that stages a move must verify the move began, not just that something later hit the
+     ground — DiveAttack cuts vx/z to 70 % and pins vy, so a missed press is invisible from
+     the impact numbers alone. */
+  {
+    const s = await probe();
+    if (s.st !== 'dive') { console.log(`      ATTACK DID NOT REGISTER (st ${s.st})`); log.push({ tag: 'S2-NODIVE', st: s.st }); }
+  }
   let hit = -1;
   for (let i = 0; i < 60; i++) {
     await sim(1);
@@ -298,6 +315,10 @@ try {
   }, home.p);
   await sim(14);
   await page.mouse.down({ button: 'left' }); await sim(2); await page.mouse.up({ button: 'left' });
+  { // same press check as S2 — see the comment there
+    const s = await probe();
+    if (s.st !== 'dive') { console.log(`      ATTACK DID NOT REGISTER (st ${s.st})`); log.push({ tag: 'S3-NODIVE', st: s.st }); }
+  }
   /* `let`, not a reuse: S2's `hit` lives inside S2's `if (seq(...))` block since the SEQ filter
      wrapped each sequence. Assigning to it from here is a strict-mode ReferenceError the moment
      S3 runs — which no run before run 3 did, because reruns filtered to earlier sequences. */
