@@ -57,6 +57,32 @@ In metres and degrees, which is what the percentages are of:
 > sent me looking was exactly this: the goal lead is 1.25 m throughout a jump and the pivot sits
 > 1.35–1.78 m behind it — on the ground as well, so it was never a jump problem.)
 
+> ## SUPERSEDED by the per-speed census — `KNOWN_ISSUES.md` §450, §460; sheet items 6–7
+>
+> The box above was read at `runSpeed` for every row, and the sample was the instrument (§440):
+> the delivered lead is a metre quantity under a metre cap, so no row's number is readable at
+> another row's speed. Re-driven at each row's own speed, and corrected on four counts:
+>
+> - **13 of 19 were floored, not 11.** `hook_swing` (−0.037 m at its own 8.0 m/s) and `rail_slide`
+>   (+0.022 m at `railMax` 15) were floored too, by a different constant: `leadMax` was applied to
+>   the *authored* lead where it was calibrated against the *delivered* one, so above 7.29 m/s
+>   (swing) / 13.67 m/s (rail) the cap landed under the spring's own trail and **no value of
+>   `leadTime` or `f.lead` moved either row at all** (§460). The 0.130 m quoted above was the
+>   single-speed read of a row the cap holds at its real speed.
+> - **That stage error is repaired** (sheet item 6, the constant unmoved): `hook_swing` now
+>   delivers **+0.219 m** and `rail_slide` **+1.772 m**. "Only `run_fast` and `rail_slide` carry
+>   real lead" is doubly stale — and `walk`/`run`/`run_fast` were deleted in §463; no state ever
+>   routed to them.
+> - `air` delivers **0.217 m** driven — the 0.159 was the continuous-time closed form, which
+>   understates by half a frame of travel (§450.1). Thin against an authored 1.20, not inert. And
+>   *"lead hard"* was never `air`'s comment; it belonged to `run`/`run_fast` two rows up — the
+>   same misattribution class as §442.
+> - The decision this box priced is now **sheet item 7**, priced not shipped: `leadTime`
+>   0.17 → 0.22 recommended; every value in 0.180…0.315 wakes `land` (margin −0.001 s, the one
+>   authored intention that never arrives) and leaves the deliberately-still rows floored; `glide`
+>   pays, `ndcY` −0.514 → −0.552. The constants stand. `camdrive` D9 holds the per-speed census by
+>   mechanism; D8 remains as the closed form whose single-speed read this box quoted.
+
 > ## Read the row names before quoting this table
 >
 > **A framing key is not a move**, and two rows are not about what they are called (audited by
