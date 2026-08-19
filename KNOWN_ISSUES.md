@@ -39897,3 +39897,56 @@ route reachability was not the question, so the mount is forced at §485.2's own
 every transition after it is a real input through the real state code.
 
 Suite **855/855** (T10 and R7 added).
+
+---
+
+## §512 — §422.1's remainder, re-verified against the current build: the in-scope list is EMPTY, and one refusal became load-bearing
+
+Task 3 of the queue. One pass over the reference's mechanic list — §422.1's two tables, which are
+the committed record of `player__sly.gd` + `camera_parent.gd`; the reference checkout itself is not
+in this tree, so the tables are the instrument and that is stated rather than papered over. The
+question: is anything now BOTH in scope and absent?
+
+**Nothing is.** Every row lands in one of five bins, and the bins are exhaustive over both tables:
+
+```
+  ALREADY ADAPTED at §422 time (12)   magnetism · coyote · jump buffer · step-up · stun-zeroes-
+                                      air-jumps · ledge re-grab cooldown · obstruction · FOV-on-
+                                      target · ambient settle · probe whiskers · move debounce ·
+                                      pitch/yaw ratio (taken that round as lookPitchScale)
+  ADAPTED SINCE (2)                   last-supported-stance respawn -> `_recordSafeStance` /
+                                      `_safetyNet` (§443-era; §504 extends it past the reference
+                                      with the stuck watchdog, which their return_to_safe lacks)
+                                      failed-magnet consolation -> `magFailBoost` 5.5 on
+                                      `'timeout'` = THEIRS.failBoost 4.0 through kV (R3 pins it)
+  REFUSED, reasons re-checked (8)     rotation spring · distance-scaled follow gain (singular at
+                                      dist 4) · vertical deadband · inverse vertical gain · pivot-
+                                      on-facing · pitch limits · two-stage gravity (§443.3's band,
+                                      the 0.400 quantum and the Targets kH/kV/kT table are all
+                                      joint on gravity −24; MORE joint now than at §422, since
+                                      landHard's whole derivation sits on the tick) · dynamic
+                                      walkable slope (§503 met the case it claims to serve — a
+                                      57.64° face — and the right fix was recovery, not making
+                                      slopes less walkable near edges)
+  PRICED ON THE SHEET (1)             speed -> boom/FOV reactivity, sheet item 8 (their value is
+                                      zero; ours ships 0.30/6.0 — a person chooses)
+  OUT OF SCOPE by user instruction    smoke bomb · mega jump · L1-R2 charge · first-person /
+                                      binocucom (§422 already refused them as new verbs; the
+                                      user's scope list now excludes them independently)
+```
+
+**The finding with content: the flat-air-control refusal is no longer just defensible — it is
+load-bearing.** §422.1 refused the reference's decaying air control (1.0 → 0.125 over ~0.44 s)
+because it fights every assist this project ships. §511.1 has since measured that **leg 5 of the
+authored route completes only because of in-flight steering** — a ~60° bearing bend during a ~1 s
+flight, ablated at 0/61 without it. Under the reference's decay curve, authority at bail+0.44 s
+would be 0.125 of ours and the bend fails; adopting that row today would break §8.1 step 3's
+completability outright. A refusal made on feel grounds in §422 now has a route-completability
+dependency standing on it, and anyone revisiting it must re-run T10 first. The triple jump also
+deserves a line: refused as a THIRD jump, but its curve lives in `Targets.js` and its spirit ships
+as `SpireLand`'s ×1.25 launch with two air jumps — the comment says "that is the triple jump".
+
+**Closure**: the Godot reference's adapted-mechanics integration is complete as of this build —
+every mechanic is adapted, since-adapted, refused for reasons that survived re-checking, priced for
+a person, or excluded by the user. Nothing ported, nothing from Assets/Music or Assets/Effects,
+ever. The integration question §422 opened is closed with a list rather than a memory.
