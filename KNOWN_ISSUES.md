@@ -41284,3 +41284,16 @@ Verification, clean worktree at `abacfe3` + exactly these three files: ablated f
 EXIT=0** — thiefspots prints "B arrivals WE x 6.44 / EW x −6.44 / fling x 6.44 / emash x 6.60";
 `spawn to the Eye of Ra` completes. Re-photography of the slot is the camera lane's to schedule
 if they want the fill's north face on film; nothing else changed in frame.
+
+## §524 — Rollback #12: a new variant, and the one-command cure for it
+
+Two rollbacks inside this phase (the previous one also wiped the scratchpad, eating the artifact
+source — now committed as `progress/records/feel-review-artifact.html` so it cannot be eaten
+again). This one added a variant the runbook had not seen: after the standard recovery (fetch →
+back up the 33 blockers → clear → ff-merge), the working tree showed **86 `D` entries — tracked
+`progress/records/` files missing from disk while `.git` sat correctly at the tip.** The container
+had deleted tracked files without touching the ref state.
+
+Cure: `git checkout -- .` — restore from HEAD, nothing to merge. The diagnostic that separates the
+variants: `git log -1` correct + `D` entries = restore from HEAD; `git log -1` ancient = the full
+runbook. Both end with the same exact-identifier spot checks.
