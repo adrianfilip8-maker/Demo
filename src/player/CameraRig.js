@@ -260,7 +260,8 @@ export const TUNE = {
      behind it, on the ground as well, so it was never a jump problem. `tests/camdrive.test.mjs`
      D8 holds the runSpeed census and D9 the own-speed one with the mechanism attribution.
      NOT retuned here. The levers are priced per row and per metre, with a recommendation and the
-     row that pays for it, as item 6 of `progress/records/HARDWARE-REVIEW.md`. */
+     row that pays for it, as item 7 of `progress/records/HARDWARE-REVIEW.md` — it moved from 6
+     to 7 when the `leadMax` repair (§460) took the item-6 slot on the same sheet. */
   leadTime: 0.17,               // seconds of travel to lead by, ×frame.lead
   /* Applied to the AUTHORED lead in `_pivotGoal`'s floor arm, and calibrated against the
      DELIVERED one — see the block above. That mismatch is what holds `hook_swing` and
