@@ -1027,3 +1027,34 @@ ever authored against a column, that is the frame to re-read this item on.
 > declines", photographed on a mount. **What to watch on hardware**: jump-grab the rope and
 > count the beat before the camera opens. If that beat reads wrong, the levers are item 12's
 > recovery-clock family or the level (the ring beside the shaft), not this gate.
+
+---
+
+## 16. The double jump now twirls — re-test P1
+
+**Commit** this round · **File** `src/player/Clips.js` (`double_jump`) · **§474**
+
+Your P1 — "the double jump seems to use the same animation as the single jump" — was measured
+true twice over: the 360° cane twirl was authored into a channel the shipped model discards
+(net cane rotation across a double jump: **−13.6°**, less than a single jump's own −28.3° of
+arm swing), and the clip was timed so a quick second tap saw only its first 27 % — a wind-up
+tuck indistinguishable from a jump squat. The turn is now carried by the hand (both cane rigs
+hang off that bone) and completes inside the tapped window: **+346.4°** on the same drive, with
+the single jump untouched to the decimal.
+
+**What to re-test.** Run, jump, tap jump again mid-rise — the cane should whip a full turn
+overhead on the second press, tapped or held, and the single jump must stay turn-free. Two
+judgements only hardware can make:
+
+1. **Speed.** The whip is three 120° steps ~0.09 s apart (~22°/frame) ending in 0.11 s of held
+   pose — authored brisk because "whips" is the verb. If it reads as a flicker rather than a
+   whip, the lever is the key times inside `double_jump` (spread 0.26 → 0.34 s), not the clip
+   duration — past ~0.42 s the held rise runs out and the fall re-base eats the tail again
+   (§474.3).
+2. **Read from behind.** The follow camera sits ~5.4 m back, so the turn is a motion read (the
+   cane crossing sides over ~10 frames), not a pose read. If it does not register at all from
+   the default camera, the cheap amplifier is FX — Particles already fires a `cane_arc` burst
+   on `doubleJump` (Particles.js:2620), so the lever is that burst's size and lifetime, not a
+   bigger arm.
+
+`shots/twirl1-before-double-f16.png` beside `twirl1-after-double-f16.png` is the pair to hold up.

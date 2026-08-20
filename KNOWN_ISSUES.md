@@ -41297,3 +41297,87 @@ had deleted tracked files without touching the ref state.
 Cure: `git checkout -- .` — restore from HEAD, nothing to merge. The diagnostic that separates the
 variants: `git log -1` correct + `D` entries = restore from HEAD; `git log -1` ancient = the full
 runbook. Both end with the same exact-identifier spot checks.
+
+## §474 — The double jump's turn was authored into the channel the shipped model discards, and its timing into the window the press cuts off
+
+The user's playtest P1: *"the double jump seems to use the same animation as the single jump."*
+It does not — `double_jump` is a 0.62 s cane twirl ("the cane channel does the 360"),
+`Moveset.DoubleJump.enter` fires it, and the track table proves it promoted to full weight on
+every driven take. What the report describes is the screen, and the screen was right. Driven on
+the shipped model (`tools/twirltrace.mjs` — the browser, the real spawn, 1080p Q=high,
+per-frame track table + cane/hand world orientation), the net signed yaw of the cane across the
+double jump's airtime was **−13.6°, against −28.3° across a single jump's**. The move authored
+to out-rotate everything in the game turned LESS than the jump it had to differ from. Two
+authored halves, each delivered into a hole:
+
+### §474.1 The 360 lived in the `cane` track, and the shipped model discards that channel
+
+`Animation._applyCane` is the only consumer of any clip's `cane` track, and it early-outs unless
+the character registered `_attachPoints.cane`. The shipped model does not, ON THE RECORD —
+`SlyModelDLRig._buildCane`: "WHY A RIGID SOCKET AND NOT `_attachPoints.cane` … wiring the aim
+system up is a separate, capture-backed job" — its cane is welded to `handR`. So the one
+readable channel of the move was authored into the one channel the shipped character throws
+away: `pivot: false` on every frame of every take, and the cane moved only as much as the
+tucking fist happened to move it. 44 of 50 clips author `cane` keys (129 keys) and every one is
+display-dead the same way — but display-dead as *accent* is not display-dead as *identity*, and
+`double_jump` was the identity case: the clip's own comment says the body "only needs to sell
+that the twirl is what lifted him." The channel census is recorded here for the next clip whose
+identity gets authored there; nothing else is repaired on this pass (§440 — whether any combo's
+read suffers the same way is a different question, unmeasured).
+
+### §474.2 The instrument's first metric said 416° and was measuring wiggle (§439, §440)
+
+Cumulative unsigned sweep read 416.3° across the double jump against 273.2° across the single —
+which LOOKS like a finding and is saturation on the failing side: a plain single jump
+accumulates 271° of `handR` world sweep in arm motion alone, so a full rotation and a wiggly
+tuck sat 100° apart on a 400° scale, both up where "lots of motion" lives. The discriminator is
+NET signed yaw about world Y — wiggle cancels, rotation does not — and the bars were re-derived
+from the claim, not from either arm (§141.1): the clip authors 360; ≥ 270 delivered passes (the
+authored turn minus at most one crossfade's absorption); < 120 is no readable turn. On that
+metric the defect stopped being subtle: **−13.6° net**, under the single jump's own −28.3°.
+
+### §474.3 And the delivered window is the tapped press, not the authored clip
+
+Both arms, same numbers: the second press releases mid-rise, the variable-height cut throttles
+vy 9.90 → 3.33, and the state flips to `fall` at **f25, t = 0.167 s** after entry, where
+`jump_apex` re-bases and the oneShot demotes over a 0.12 s fade. The old 0.62 s clip delivered
+its first 27 % into that window — and its first 27 % is the wind-up tuck, i.e. **a jump squat**.
+The visible fraction of the twirl was indistinguishable from the first frames of any jump: "the
+same animation," precisely, from a player who was never shown the rest of it.
+
+### §474.4 The repair: hand-carried, and timed to the cut
+
+The rotation is re-authored onto `handR` — both canes, legacy `caneGrip` and DLRig `caneSocket`,
+are children of that bone — as Y −30 → 90 → 210 → 330, three 120° steps each inside the
+per-segment slerp's 180° horizon, and the clip is retimed to `dur` 0.30 / `hold` 0.11 so the
+whip completes at t 0.26: a tapped jump carries the whole turn at weight through the demotion
+fade, a held one plays it clean with 0.11 s of held pose before apex. The residual `cane` track
+is a mild in-fist aim for the legacy pivot. Wrap re-measured: the cane seam fell 112° → 52°,
+`handR` wraps clean by construction (330 ≡ −30 in SO(3)), the worst body-bone wrap stays
+lowerLegR 42° (first/last poses are the original's).
+
+Measured after, same drive, same sha, same metric: **net cane yaw +346.4°** across the double
+jump's airtime; the single take is IDENTICAL to the before run to the decimal
+(273.2 / 271.1 / −28.3), because the track exists only in `doubleJump` — the fix cannot touch a
+single jump by construction. Frames: `shots/twirl1-*` before/after at f10/16/20/26/34 plus a
+single-jump control each; f16 is the readable pair — the cane fixed at its tuck angle vs swept
+out horizontal mid-whip — and the per-frame read is the cane crossing sides f10 → f26, which no
+before-frame does.
+
+### §474.5 Held as tests, and protocol
+
+`tests/twirl.test.mjs`, three arms on the shipped model's SHAPE (no `_attachPoints.cane` — a
+RIG3 stub built exactly so) through the real Controller + Moveset + Animation, both defs RUN per
+§418.3: **T1** delivery — shipped def ≥ 270° net through a tapped double jump, the pre-§474 def
+(verbatim from d372085, injected into `ACTIVE`) < 120°; **T2** the contrast take, which is the
+one that does not discriminate — a single jump nets < 120° under BOTH defs, and that identical
+pair is exactly the comparison the user made twice; **T3** channel attribution in SO(3) path
+length (the net-yaw metric under-reads the old cane track's tilting axis by construction —
+measured 197° — so the track claim gets the track metric): old cane track ≥ 360°, shipped cane
+track < 90°, shipped `handR` track 330–400° clip-space. Suite **865/865** (862 + these 3),
+EXIT=0, from the worktree that shot the after-frames.
+
+Provenance: telemetry-before at d372085 clean; telemetry-after at d372085 + exactly this
+`Clips.js`; identical drive both runs (8-frame first hold, 6-frame gap, 4-frame second tap —
+twirltrace's cadence, the tap the window analysis is about). Sheet item 16 carries the eyes-on
+re-test.

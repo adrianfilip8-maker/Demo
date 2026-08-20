@@ -1310,43 +1310,76 @@ def('jump_fall', {
 
 /**
  * Double jump — the cane twirl. He tucks, whips the cane through a full rotation overhead
- * and the spin drags his body round with it. The cane channel does the 360; the body only
- * needs to sell that the twirl is what lifted him.
- */
-/* `loop: false` — see jump_rise. Not reachable at the current tuning (doubleJumpV0/g = 9.90/24 =
-   0.4125 s against a 0.62 s clip, 0.21 s of headroom) but discontinuous by 42° at the seam, so it
-   is one tuning nudge from the same snap. */
+ * and the spin drags his body round with it.
+ *
+ * ── THE 360 LIVES IN `handR`, NOT IN THE `cane` TRACK (§474) ─────────────────────────────────
+ * The original authored the whole rotation into the `cane` channel ([40,−60,0] → [96,400,−8])
+ * and the body only sold the lift. But the `cane` channel is delivered through
+ * `Animation._applyCane`, which drives `character._attachPoints.cane` — and the SHIPPED model
+ * (`SlyModelDLRig`) sockets its cane RIGIDLY to `handR` and registers no attach point, on the
+ * record (`_buildCane`: "Wiring the aim system up is a separate, capture-backed job"). So the
+ * twirl's one readable channel was authored into the one channel the shipped character
+ * discards: driven on the shipped model (`tools/twirltrace.mjs`), the cane's cumulative world
+ * sweep was 416° across the double jump's airtime against 273° across a single jump's — the
+ * whole difference inside arm-wiggle territory, no readable rotation anywhere, cane rigid to
+ * the hand throughout — the user's "double jump seems to use the same animation as the single
+ * jump", measured. Both canes hang off `handR` (legacy `caneGrip` and
+ * DLRig `caneSocket` alike), so the rotation is keyed on the HAND: Y −30 → 90 → 210 → 330,
+ * three 120° steps, each inside the per-segment slerp's 180° horizon. The `cane` track that
+ * remains is a mild in-fist aim for the legacy pivot, not the turn.
+ *
+ * ── TIMED TO THE DELIVERED WINDOW, NOT TO THE AUTHORED ONE ───────────────────────────────────
+ * The held rise is doubleJumpV0/g = 9.90/24 = 0.4125 s — but the delivered window is the TAPPED
+ * one: a quick second tap releases `jump` mid-rise, the variable-height cut throttles vy 9.9 →
+ * 3.3, and the state flips to `fall` 0.167 s after entry (twirltrace, f15→f25), where
+ * jump_apex re-bases and this track is demoted over one 0.12 s fade. The old 0.62 s clip
+ * delivered its first 27 % on that press — the wind-up tuck, i.e. a jump squat — and nothing
+ * else. So the rotation now completes at t 0.26 (three 120° steps ~0.09 s apart, 22°/frame at
+ * 60 Hz — brisk, which is what "whips" means) and the clip is DONE at 0.30: a tapped jump
+ * carries it at weight through the demotion fade, a held one plays it clean with 0.11 s of
+ * held final pose before apex.
+ *
+ * `loop: false` — see jump_rise. The wrap seam is unreachable (the track clamps and is re-based
+ * at apex); re-measured after the re-author: the worst bone wrap is still lowerLegR 42° (the
+ * first and last body poses are the original's), the cane seam fell 112° → 52°, and `handR`
+ * wraps CLEAN by construction — 330° ≡ −30° in SO(3). */
 def('double_jump', {
-  dur: 0.62, loop: false, hold: 0.2,
+  dur: 0.30, loop: false, hold: 0.11,
   keys: [
     { t: 0, e: 'in', P: P({
       hips: [30, -14, 4], spine: [-6, 6, 2], chest: [-12, 16, -3], neck: [-18, -8, 2], head: [-16, -12, 4],
       shoulderL: [-10, 12, -18], upperArmL: [-14, 14, -40], lowerArmL: [-62, -20, -16],
-      shoulderR: [-14, -14, 22], upperArmR: [-30, -18, 54], lowerArmR: [-58, 24, 20], handR: [10, 18, 14],
+      shoulderR: [-14, -14, 22], upperArmR: [-30, -18, 54], lowerArmR: [-58, 24, 20], handR: [0, -30, 0],
       upperLegL: [-70, 10, 5], lowerLegL: [84, 0, 0], footL: [10, -6, 0], toeL: [14, 0, 0],
       upperLegR: [-62, -10, -5], lowerLegR: [78, 0, 0], footR: [14, 6, 0], toeR: [14, 0, 0],
       tailA: [4, -16, 0], tailB: [-8, -22, 0], tailC: [-6, -14, 0], tailD: [16, 10, 0],
-    }), pos: [0, -0.16, 0.03], sc: { hips: [1.06, 0.9, 1.05] }, cane: [40, -60, 0] },
-    { t: 0.16, e: 'out', P: {
+    }), pos: [0, -0.16, 0.03], sc: { hips: [1.06, 0.9, 1.05] }, cane: [40, -30, 0] },
+    { t: 0.07, e: 'out', P: {
       hips: [-2, 22, -6], spine: [2, -8, -2], chest: [-6, -22, 4], neck: [-14, 10, -3], head: [-18, 16, -6],
       upperArmL: [-40, 14, -84], lowerArmL: [-28, -20, -20],
-      upperArmR: [-64, -18, 96], lowerArmR: [-24, 24, 24],
+      upperArmR: [-64, -18, 96], lowerArmR: [-24, 24, 24], handR: [0, 90, 0],
       upperLegL: [-26, 10, 5], lowerLegL: [30, 0, 0], footL: [28, -6, 0],
       upperLegR: [-6, -10, -5], lowerLegR: [16, 0, 0], footR: [32, 6, 0],
       tailA: [-14, 24, 0], tailB: [-26, 32, 0], tailC: [-12, 22, 0], tailD: [12, -14, 0],
-    }, pos: [0, 0.06, -0.02], sc: { hips: [0.93, 1.12, 0.94] }, cane: [-60, 100, 0] },
-    { t: 0.34, e: 'smooth', P: {
+    }, pos: [0, 0.06, -0.02], sc: { hips: [0.93, 1.12, 0.94] }, cane: [50, -20, 0] },
+    { t: 0.16, e: 'smooth', P: {
       hips: [6, -18, 5], chest: [-4, 18, -3], head: [-16, -12, 4],
-      upperArmL: [-30, 14, -70], upperArmR: [-46, -18, 78],
+      upperArmL: [-30, 14, -70], upperArmR: [-52, -18, 84], lowerArmR: [-26, 20, 22], handR: [0, 210, 0],
       upperLegL: [-38, 10, 5], lowerLegL: [46, 0, 0], upperLegR: [-18, -10, -5], lowerLegR: [30, 0, 0],
       tailA: [-6, -20, 0], tailB: [-18, -26, 0], tailC: [-8, -18, 0], tailD: [14, 12, 0],
-    }, pos: [0, 0.01, 0], sc: { hips: [1, 1, 1] }, cane: [-160, 260, 0] },
-    { t: 0.62, e: 'smooth', P: {
+    }, pos: [0, 0.01, 0], sc: { hips: [1, 1, 1] }, cane: [60, -10, 0] },
+    { t: 0.26, e: 'smooth', P: {
+      hips: [8, 2, 1], chest: [-6, 10, -2], head: [-14, -4, 2],
+      upperArmL: [-28, 15, -68], upperArmR: [-38, -17, 74], lowerArmR: [-30, 18, 20], handR: [0, 330, 0],
+      upperLegL: [-42, 9, 5], lowerLegL: [50, 0, 0], upperLegR: [-20, -9, -5], lowerLegR: [34, 0, 0],
+      tailA: [-8, -14, 0], tailB: [-20, -19, 0], tailC: [-7, -13, 0], tailD: [15, 9, 0],
+    }, pos: [0, 0, 0], cane: [70, -4, -4] },
+    { t: 0.30, e: 'smooth', P: {
       hips: [12, -6, 3], chest: [-6, 8, -2],
-      upperArmL: [-26, 16, -66], upperArmR: [-24, -16, 66],
+      upperArmL: [-26, 16, -66], upperArmR: [-24, -16, 66], handR: [0, 330, 0],
       upperLegL: [-44, 8, 5], lowerLegL: [54, 0, 0], upperLegR: [-22, -8, -5], lowerLegR: [36, 0, 0],
       tailA: [-10, -8, 0], tailB: [-22, -12, 0], tailC: [-6, -8, 0], tailD: [16, 6, 0],
-    }, pos: [0, -0.01, 0], cane: [96, 400, -8] },
+    }, pos: [0, -0.01, 0], cane: [80, 0, -8] },
   ],
 });
 
