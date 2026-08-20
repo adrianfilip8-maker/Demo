@@ -40886,3 +40886,123 @@ fields, so the zero is evidence rather than blindness. Guard damage is out of th
 user's own scope ruling.
 
 Suite **861/861** (input +2, R8, the spire pin; two arms retired into it).
+
+## §471 — The obelisk climb photographed the inside of Sly's hat, and the occluder was the rope he was climbing
+
+The thief1 run (b4d4fca) put the frames on the record: from mount to top of the obelisk rope,
+both takes, the boom sits at `distHardMin` 0.55 with the tracked point ABOVE the frame's top edge
+(`thief1-t1t*`, ndcY +1.0..+1.5) — a multi-second authored beat spent looking at the inside of the
+character's own hat — while the SAME `poleClimb` state on the SE drainpipe composes at 5.8–6.0.
+Same state, same rig, different geometry: the diagnosis had to be in what the boom's casts were
+hitting, and every number in the telemetry describes the outcome, not the mechanism (§439).
+`tools/climbtrace.mjs` is the instrument: the thiefspots drive headless against the same BVH, a
+live rig, and each of the five boom casts logged per frame with the IDENTITY of its hit — tag,
+material, mesh centre, cylinder radius, raw distance, sweep-vs-depenetration.
+
+### §471.1 The instrument had to be driven to the photographed pose, and the variable was the hang azimuth
+
+Two runs of the instrument said "composes fine" before one reproduced the crush, and the
+difference was not the drive, the stance, or the camera — it was WHERE ON THE ROPE the grab
+landed. `PoleClimb.enter` sets `p.angle` from the capsule's bearing at the grab frame, so the
+hang azimuth is a free parameter of the mount arc; the browser takes hung at
+atan2(−0.17, −0.42) ≈ −2.76 — the crevice between the rope and the shaft face — and my first two
+headless arcs grabbed the open east side (+1.57) and composed at 5.9 the whole way. §440 in one
+line: the case in hand was not the case photographed, and nothing in "199 climb frames, boom
+5.9" said so. The azimuth is player-steerable (`wishRaw.x` orbits the pole at `poleSpin`), so the
+instrument spins to the photographed azimuth by input after mounting — the pose is driven, not
+staged.
+
+### §471.2 The blocker, named: the rope's own proxy, then the shaft's
+
+At the photographed azimuth, over 211 climb frames, the binding cast's hit is:
+
+```
+  pole/cloth r0.15 @(0,13)   182 frames   ← the §495.A rope. The thing being climbed.
+  pole/stone r1.50 @(0,11)     7 frames   ← the obelisk shaft, near the top
+  (cast clear)                22 frames   ← and the boom still 0.55: the recovery clock
+```
+
+The centre cast dies at raw distance ~0 (sweep contact, not depenetration): from that azimuth
+the sightline back to the camera passes within `camRadius` + rope radius of the rope's axis, so
+the cast is cut at birth, every frame, and the boom pins at the hard floor. The obelisk frames
+are the same shape one layer out — near the top the pivot+whisker sphere overlaps the shaft's
+r 1.5 proxy, which up there stands ~1.5 m of stone the tapering pyramidion art does not.
+
+**Why the drainpipe control composes**: the pipe (r 0.18) sits BEHIND the look direction at its
+mount azimuth, so the boom cast leaves it rather than crossing it. Not because thin poles were
+handled — nothing handled them. The control was itself one azimuth of the same mechanism.
+
+### §471.3 The seam: §514.3 made climbable poles thin, and the camera's ignore list predates them
+
+`CAM_SWEEP_OPTS.ignoreTags` — `rail`, `hook`, `spire` — exists, in its own words, because those
+tags are "visually see-through, and being shoved by one is worse than sighting through it."
+`pole` is absent from that list on an argument that was true when it was written: every pole was
+a fat column (colonnade r 1.62, obelisk r 1.50), a real occluder. Then §514.3 (from §494's
+audit) ruled climbing onto THIN poles only — the rope r 0.15, pipes r 0.15–0.20 — i.e. the
+authored climbables became exactly the see-through lines the list exists for, and the list was
+never revisited. The two halves of that ruling each did their job and their composition put the
+camera inside the character: a §446-shape seam, two correct changes meeting nowhere.
+
+### §471.4 The repair: while the held collider is a pole, the pole class stops occluding
+
+`_readPlayer` now reads `movement.attached` — the moveset's published "rec of whatever Sly is
+holding onto", set by every attach state and cleared on exit — and `_sweep` swaps to a
+pole-ignoring sweep set exactly while that rec's tag is `pole` (`CAM_SWEEP_OPTS_POLE`).
+
+- **Gated on the attachment, not the framing key**, because the attachment IS the mechanism —
+  "the pole class is the climbed line while a pole is the thing being climbed" — and because it
+  cannot fire on any jump, fall, run or wall move by construction: `attached` is null there
+  (climbcam C3 asserts |Δboom| = 0 over a run-and-jumps route, both arms run).
+- **The class is ignored, not the single attached rec**, because the crush is a stack — rope
+  first, obelisk shaft behind it — and a per-rec skip leaves the second layer binding: 7 frames
+  plus a ~1 s recovery tail each, measured in the noPole column before the shape was chosen.
+- The overlap belt-and-braces keeps `pole` in SOLID_TAGS, so the camera BODY still never comes
+  to rest inside the shaft; what the gate concedes is the sightline.
+
+Measured at the photographed pose (climbtrace, before → after): boom 0.550 → **5.83–5.96** over
+the whole climb, ndcY +1.0..+1.5 (off the top, lens in the hat) → **−0.32..−0.50** (composed,
+Sly under centre); the pre-fix arm re-run in the same pass pins 0.55 on 189/211 frames.
+`tests/climbcam.test.mjs` holds it as three arms with both inputs run per §418.3: C1 the rope at
+the photographed azimuth (fixed composes; masked reproduces the crush; the mid-climb centre cast
+asserted hitting tag `pole` under the solid set and nothing under the gated set), C2 the
+drainpipe control (fixed arm inside the browser's own 5.8–6.0 band on the browser's y-window;
+the gate never SHORTENS the boom anywhere; divergence, if any, must begin on a pole-attached
+frame), C3 ordinary jumps.
+
+### §471.5 What the control taught back, and what is deliberately not fixed
+
+- **The "clean" control had the defect too, off camera.** climbcam's masked (pre-fix) replay of
+  the PIPE climb crushes to ~3.5 near y 7.2: pivot + `whiskerUp` puts the up-whisker's sphere
+  over the pipe's own top cap (9.6) and the embedded start reports contact at 0. The browser
+  takes missed it by centimetres of pivot height — their trace holds 5.9 through that exact y.
+  A control is a sample (§440); the equality bar I first wrote for C2 was wrong and the
+  browser-band bar replaced it. The gate quietly retires this instance as well.
+- **The ring arrivals are NOT this finding and did not move**: `t3t*-ring` (ndcY −35.7/−41.6,
+  subject behind the camera plane, boom 0.55; settled a full screen low at −1.9/−2.1). The
+  instrument binds those frames on `ledge/stone @(16.75,−1.2)` — the ring platform itself — at
+  want 6.2, plus the leash: item 12's mechanism (§467), now with four climb-arrival frames of
+  evidence beside the slam ones. climbcam asserts the arrival crush is STILL PRESENT in both
+  arms, so a future leash change must consciously re-base that pin. Priced on the sheet, not
+  retuned here — the same call as §467.3, on the same grounds.
+- **One sibling, observed once and left recorded**: during a failed-mount attempt the drive hung
+  on a kiosk hook ring beside the shaft, and `hook_swing` spent its whole residency at 0.55
+  against `pole/stone r1.5 @(0,11)` at want 7.3+. A hook attachment (tag `hook`) does not open
+  this gate, so a swing anchored close to fat geometry can still be crushed by it. Unphotographed,
+  no authored route does it today (the §8.1 chain swings in open court), and widening a measured
+  fix to an unmeasured case is how attribution dies — recorded for whoever hangs a ring near a
+  column.
+- **The exposure, priced rather than hidden**: while ON a pole, a fat pole crossing the
+  sightline is sighted through instead of crushing the boom. On this level that is the obelisk
+  itself, while orbiting the rope — granite filling the lens where the alternative was the lens
+  inside the character. Item 15 of the hardware sheet is the eyes-on question; the lever, if the
+  see-through reads wrong, is authoring (hang ropes ≥ camRadius + rope-r clear of fat colliders,
+  this rope is 0.30 m off the shaft face) — NOT re-solidifying the class, which reinstates the
+  hat-cam.
+
+### §471.6 Protocol
+
+The §497 rope re-hang was landing in this same tree while these numbers were taken; T1/T3
+geometry is untouched by it (verified in the diff — colossi span only) and the T1/T3 arms of
+climbtrace were re-run to confirm before this entry was written. The re-photograph of T1/T3 runs
+from a clean worktree at this commit; T2's first look (and `rail_slide`'s, item 6's open flag)
+is scheduled against §497 once it lands, per its own closing note.

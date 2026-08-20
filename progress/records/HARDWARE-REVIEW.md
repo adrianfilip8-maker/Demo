@@ -348,6 +348,14 @@ lead, and nobody has seen it: `railSlide` produces zero frames on any drivable r
 authored but unrouted. **If a route is ever given a rail, look at that row first** — it is the one
 place this repair made a big change that no measurement here could evaluate.
 
+> **First data (thief1, T2).** The colossi tightrope's E-press entry rides as `railSlide` at
+> 9.7 m/s, and the telemetry logged the delivered lead per frame: **1.730 m settled** over 84
+> frames — the closed form at that speed plus the documented discrete-spring correction predicts
+> 1.728, agreement to 2 mm — with the settled frames composed (`t2t1-late`: ndcY −0.37 at boom
+> 4.8). So the repair's number is confirmed live; what nobody has seen is the shot at
+> `railMax` 15, and the walk-on balance beat is a different row (`railWalk` → `balance`). Both
+> get their look on the §497 re-shoot.
+
 ---
 
 ## 7. The velocity lead — *priced, not shipped*
@@ -877,6 +885,22 @@ measured improvement everywhere, and its cost is bounded and nameable — measur
 occluded-jump clip before shipping it, and expect to want the fallPitch smoothing with it, since
 −1.09 alone still leaves the subject just off the bottom edge.
 
+> ### ✅ PHOTOGRAPHED AGAIN (thief1, §471) — on climbs and arrivals this time, and the two mechanisms split
+>
+> The T1/T3 thief-line run put this item's mechanisms on committed frames twice more. **The
+> climb half turned out not to be this item at all**: the obelisk-rope climb at the 0.55
+> hard-min (`thief1-t1t*`, subject above frame top for the whole beat) was the occlusion cast
+> dying against the CLIMBED POLE'S OWN PROXY — a §471 defect with a one-gate fix, shipped; see
+> item 15. **The arrival half is exactly this item**: `t3t1/t3t2-ring` land on the y 9.0 ring
+> with the subject BEHIND THE CAMERA PLANE (ndcY −35.7/−41.6 at boom 0.55, the frame all sky
+> and dunes), and the settled shot 40 frames later still holds Sly a full screen below the
+> bottom edge (−1.90/−2.11 at boom 1.4–1.5). Mechanism confirmed at the casts
+> (`tools/climbtrace.mjs`): the ring platform's own `ledge` proxy cuts the boom at want 6.2
+> while the leash holds the pivot overhead — the same three-bound composition as the slams,
+> now evidenced on ordinary traversal arrivals. The §471 gate provably does not move these
+> frames (`tests/climbcam.test.mjs` asserts the arrival crush present in both arms), so the
+> levers priced above are still the whole decision, with four more frames to judge them by.
+
 ---
 
 ## 13. The telegraph trades against the boom wherever tagged content hangs near a route — *structural, will recur*
@@ -940,3 +964,45 @@ camera-look needs the lock and returns when it engages), and **F is attack** on 
 and immediately after alt-tabbing back. Then E-grab a ring and get off it four ways — Space, E, F,
 and Ctrl (drop). If any of those leaves you hanging, say which and whether the mouse was moving the
 camera at the time (that tells us the lock state directly).
+
+---
+
+## 15. Pole climbs no longer occlude on the climbed pole — the trade is sight-through, and it wants eyes
+
+**Commit** this round · **File** `src/player/CameraRig.js` (`CAM_SWEEP_OPTS_POLE`, `_readPlayer`,
+`_sweep`) · **Ledger** §471 · **Frames** `thief1-t1t*` (before) vs `thief2-t1t*` (after)
+
+The obelisk-rope climb — content the user asked for by name — photographed as the inside of
+Sly's own hat: boom pinned at the 0.55 hard-min from mount to top, subject above the frame's top
+edge, both takes. The occluder was **the rope being climbed** (its own r 0.15 `pole` proxy, 182
+of 211 frames), then the obelisk shaft behind it. The camera's ignore list (`rail`, `hook`,
+`spire` — "visually see-through") predates §514.3's ruling that made every climbable pole thin;
+nobody revisited it, and the climbed line became the thing cutting the shot.
+
+**Shipped**: while the collider Sly is holding is a pole (`movement.attached`, the moveset's
+published contract), the boom casts ignore the `pole` class. Gated on the attachment, so it
+cannot fire on any jump, run or wall move by construction; the class rather than the single rec,
+because the crush is a stack (rope, then shaft) and a per-rec skip leaves the second layer
+binding. The camera-inside-stone overlap check keeps `pole` solid.
+
+**Measured** (`tools/climbtrace.mjs`, `tests/climbcam.test.mjs`): the rope climb goes 0.55 →
+5.83–5.96 of boom with ndcY composed at −0.32..−0.50; the drainpipe control stays in its
+photographed 5.8–6.0 band; ordinary jumps identical to the digit; the item-12 arrivals
+untouched.
+
+**The cost, and it is the one thing to watch.** While on the rope, orbit the camera with the
+mouse so the obelisk crosses the sightline: the lens now **sights through the granite** (the
+camera body still cannot enter it) instead of crushing to the hat. Two questions, in order:
+
+1. Does anyone actually produce that orbit while climbing — or does the default behind-the-back
+   framing (which never crosses the shaft) mean the sight-through is a shot you have to hunt
+   for?
+2. If it is found and it reads wrong, **the lever is authoring, not the gate**: this rope hangs
+   0.30 m off the shaft face — inside `camRadius` — which is why the class ignore was needed at
+   all. A rope hung ≥ 0.5 m clear of fat colliders never needs the obelisk ignored on its
+   account. Re-solidifying the class reinstates the hat-cam, which is strictly worse than
+   either answer above.
+
+One sibling on the record (§471.5): a hook ring hung beside a column would still crush the same
+way — `hook` attachments do not open this gate. No authored route does it today; if a ring is
+ever authored against a column, that is the frame to re-read this item on.

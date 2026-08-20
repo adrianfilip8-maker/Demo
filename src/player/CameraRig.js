@@ -616,6 +616,35 @@ const STATE_RULES = [
 /* Tags the camera must not be pushed around by: a hook ring or a rail line is visually
    see-through, and being shoved by one is worse than sighting through it. */
 const CAM_SWEEP_OPTS = { ignoreTags: ['hazard', 'water', 'vent', 'rail', 'hook', 'spire'] };
+/**
+ * And the same list with `pole`, used by the boom casts ONLY while the collider Sly is holding
+ * (`movement.attached`, the moveset's published contract) is itself a pole.
+ *
+ * `pole` is missing from the list above on an argument that stopped being true: when the list
+ * was written every pole was a fat column (colonnade r 1.62, obelisk r 1.50) — a real occluder.
+ * §514.3's ruling made the CLIMBABLE poles thin ones (the §495.A rope r 0.15, pipes r 0.15–0.20),
+ * i.e. exactly the "visually see-through line" the tags above are ignored for — and nobody
+ * revisited this list. Measured on the obelisk rope at the photographed hang azimuth
+ * (`tools/climbtrace.mjs`, `thief1-t1t*` frames): the centre cast dies at raw distance ~0 against
+ * the rope's OWN proxy on 182 of 211 climb frames (plus 7 on the obelisk's r 1.5 shaft near the
+ * top, where its untapered proxy stands ~1.5 m of stone the tapering art does not), so the boom
+ * sat at `distHardMin` 0.55 from mount to top — the lens inside Sly's hat for the whole beat —
+ * while the SAME state on the open-wall drainpipe composed at 5.8–6.0.
+ *
+ * Gated on the ATTACHMENT rather than on the framing key, because the attachment is the
+ * mechanism: the pole class stops occluding exactly while a pole is the thing being climbed, and
+ * cannot fire on any jump, fall, run or wall move by construction (`attached` is null there).
+ * The class is ignored rather than the single attached rec because the crush is a stack — rope
+ * first, obelisk shaft behind it — and a per-rec skip leaves the second layer binding (measured:
+ * 7 frames plus a ~1 s recovery tail each). What this buys and costs, priced in
+ * `tests/climbcam.test.mjs` and §471: the rope climb composes at its authored want (min 5.83 m
+ * over the climb, was 0.55); the drainpipe control is UNCHANGED to the digit; the exposure is
+ * that a fat pole crossing the sightline during a pole climb is sighted through instead of
+ * crushing the boom — on this level that is the obelisk itself while orbiting the rope, and
+ * granite filling the lens beats the camera sitting inside the character. The overlap
+ * belt-and-braces below keeps `pole` SOLID, so the camera BODY still never comes to rest inside
+ * the shaft. */
+const CAM_SWEEP_OPTS_POLE = { ignoreTags: [...CAM_SWEEP_OPTS.ignoreTags, 'pole'] };
 const SOLID_TAGS = ['ground', 'wall', 'ledge', 'pole'];
 
 /* ---- route telegraph tables ------------------------------------------------ */
@@ -773,6 +802,7 @@ export class CameraRig {
     this._frame = { dist: 0, height: 0, lead: 1, fov: 0, pitch: 0, side: 0, stiff: 1 };
     this._frameKey = 'idle';
     this._stateName = '';
+    this._attachedPole = false;
     this._sideSign = 0;
     this._roll = 0;
     this._fovCur = TUNE.fovBase;
@@ -1013,6 +1043,11 @@ export class CameraRig {
       this._grounded = mv.grounded !== false;
       this._stateName = typeof mv.stateName === 'string' ? mv.stateName : '';
       this._playerYaw = typeof mv.yaw === 'number' ? mv.yaw : null;
+      /* Is the held collider a pole? Drives the boom casts' ignore set — see
+         CAM_SWEEP_OPTS_POLE. `attached` is the moveset's "rec of whatever Sly is holding onto";
+         a movement facade without the field (older tests, stubs) reads as not-attached and the
+         rig behaves exactly as before this gate existed. */
+      this._attachedPole = !!(mv.attached && mv.attached.tag === 'pole');
     } else {
       // MOVEMENT may not exist yet. Orbit the origin so the rig is still testable.
       _pPos.set(0, 0, 0);
@@ -1020,6 +1055,7 @@ export class CameraRig {
       this._grounded = true;
       this._stateName = '';
       this._playerYaw = null;
+      this._attachedPole = false;
     }
   }
 
@@ -1875,17 +1911,19 @@ export class CameraRig {
   /** One sphere/ray cast; returns the boom length it permits. */
   _sweep(from, to, want) {
     const col = this._collision;
+    // While the held collider is a pole, the pole class is the climbed line, not an occluder.
+    const opts = this._attachedPole ? CAM_SWEEP_OPTS_POLE : CAM_SWEEP_OPTS;
     try {
       if (typeof col.capsuleSweep === 'function') {
         // Height 0 makes the capsule a sphere, which is what a camera boom wants.
-        const r = col.capsuleSweep(from, to, TUNE.camRadius, 0, CAM_SWEEP_OPTS);
+        const r = col.capsuleSweep(from, to, TUNE.camRadius, 0, opts);
         if (r && r.hit) return Math.max(TUNE.distHardMin, (r.distance ?? want) - TUNE.camPad);
       } else if (typeof col.raycast === 'function') {
         _off.copy(to).sub(from);
         const len = _off.length();
         if (len < 1e-5) return want;
         _off.multiplyScalar(1 / len);
-        const r = col.raycast(from, _off, len, CAM_SWEEP_OPTS);
+        const r = col.raycast(from, _off, len, opts);
         if (r && r.hit) {
           return Math.max(TUNE.distHardMin, (r.distance ?? want) - TUNE.camRadius - TUNE.camPad);
         }
