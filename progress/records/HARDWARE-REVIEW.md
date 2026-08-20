@@ -924,7 +924,7 @@ will show it.
 
 ---
 
-## 12. Attacks and ring release — fixed two ways, please re-test on the same machine
+## 14. Attacks and ring release — fixed two ways, please re-test on the same machine
 
 **Commit** this round · **Files** `src/core/Input.js`, `KEY_BINDINGS`
 
