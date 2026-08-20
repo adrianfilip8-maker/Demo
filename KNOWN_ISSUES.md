@@ -40551,3 +40551,50 @@ lesson: this time the **remote-tracking ref rolled back with the container**, so
 --ff-only origin/<branch>` reported "Already up to date" while 563 commits behind — a stale
 tracking ref answers with confidence. The runbook's first step is now **always `git fetch` first**,
 and treat "Already up to date" at a suspicious HEAD as a symptom, not a success.
+
+---
+
+## §494 — The pole audit: two pipes, fifteen columns, and the band the thinness gate can sit in
+
+The user's rule: *"do not climb up columns, only poles that are thin like pipes or ropes."* The
+controller lane builds the gate; this is the data half, measured from the registered colliders —
+radius as `PoleClimb.enter` itself reads it (`geometry.parameters.radiusTop ?? radius`), AABB/2
+agreeing at every row.
+
+```
+  r 0.40   east mast (20.6, 27.5) y 9.0..15.9        ring-0's authored entry — a pipe
+  r 0.40   cable anchor newel (-13.4, -15) h 0.4     not a climb (0.4 m tall)
+  ──────── the gap the gate lives in ────────────────────────────────────────────
+  r 0.85   aisle pinnacle shafts ×2 (±16, -50)       13.5..19.5
+  r 1.38   peristyle columns ×4 (±16.5, -26/-38)     0.4..12.3
+  r 1.50   the obelisk (0, 11)                       6.3..20.4
+  r 1.62   hall papyrus columns ×8 (±8, -22..-46)    0.4..11.9
+```
+
+**The band is (0.40, 0.85), 0.45 m wide, and every value in it separates the same populations**
+(§443.3's rule: the measurement fixes the band, not the choice). Recommended constant:
+**`poleGirthMax = 0.5`** — clears the mast by 25%, refuses the pinnacles by 41%, and reads as a
+number a human chose. The contract: the gate reads the same radius `PoleClimb.enter` already
+reads, so thin poles need no new tag — a genuinely thin cylinder passes by being thin. New ropes
+and pipes this lane authors are r 0.12–0.18.
+
+**What the gate refuses, and what depended on it:**
+
+- **The obelisk (1.5)** is the only refused pole with an authored beat on it: §8.1 step 2's
+  alternative and `level.test.mjs` §5's Ninja Spire Landing derivation both start from its pole
+  top (20.4). §5 is ballistic — it constructs the hop from constants and never enters `PoleClimb`
+  — so the gate will not redden it; it would quietly turn its beat into fiction instead (§437.1's
+  shape). **Preserved level-side in §495: a climbing rope on the obelisk's north face, r 0.15,
+  bottom 6.4 (walk-on from the plinth), top 20.4 — the same top, so the hop arithmetic carries.**
+  §5's premise should be re-pointed at the rope in the same commit as the gate.
+- **The 12 hall/peristyle columns** carried §8.1 step 5's *"pole climb any of the 12 papyrus
+  columns"* — overruled by the user's instruction; the interior keeps the architrave circuit, the
+  tiptoe cornice and the nave cable. No driven or pinned beat enters them (`spawn2eye` enters the
+  hall at grade; D7/§444.4 already records `poleClimb` unused by drivable routes).
+- **The aisle pinnacle shafts (0.85)** are climb-assists for the aspirational rooftop run, which
+  no arm drives; their spire TIPS stay magnetism targets. If the rooftop run is ever driven and
+  wants the shafts, the answer is a rope beside them, not a wider gate.
+- **The east mast (0.40) passes**, keeping ring 0's authored entry alive through the gate.
+
+`spawn2eye` uses no pole on any leg, so the acceptance drive is gate-neutral by construction.
+
