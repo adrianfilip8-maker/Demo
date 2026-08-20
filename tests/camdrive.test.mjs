@@ -808,13 +808,29 @@ test('D6: how much of each authored framing reaches the screen, over the residen
     `'wall_run' delivers ${(100 * abs(g('wall_run').ch.boom)).toFixed(0)}% of its boom — the routing fix `
     + 'in STATE_FRAME made this framing reachable and this arm reports it still does not arrive');
   /* The methodological point, asserted rather than described: the mean of fractions flatters. */
+  /* Guarded by the world lane (§496), same committed-file rule as the 0.15 -> 0.25 pin above.
+     The §495 colossi tightrope — a `rail` at y ~5.4 spanning the spawn corridor at z 27 — sits
+     inside `routeRange` (9.5) of every route here and 3-4.5 m above their look-ats, so the route
+     telegraph reveals it. Occlusion is NOT involved: both boom casts ignore `rail` by design
+     (`CAM_SWEEP_OPTS`/`SOLID_TAGS`), and the telegraph is the rig's only collider-reading
+     consumer of the tag. A/B on that one collider, everything else fixed: every row's
+     visits/frames/lens are IDENTICAL (the rope never touches the player), but the frame under it
+     shifts — wall_run's boom went asked 1.87 -> 2.06 m (a telegraph lift, inside `routeDist`
+     0.55) and delivered 0.34 -> 0.00 m, i.e. absolute-weighted 18% -> 0%, mean 80% -> 0%. The
+     substantive pin above (< 0.25, "the framing does not arrive") holds at either number. But on
+     zero delivery every per-visit fraction is 0, so the two aggregates agree at 0 by arithmetic
+     — a VACUOUS agreement that says nothing about whether the weighting buys anything on data
+     with content. The guard below is exactly that predicate: when nothing was delivered there is
+     nothing to aggregate, and the demonstration stays armed for any run that delivers at all. */
   const wr = g('wall_run').ch.boom;
   const meanFrac = wr.fracs.reduce((a, b) => a + b, 0) / wr.fracs.length;
   console.log(`[D6] wall_run boom: mean-of-fractions ${(100 * meanFrac).toFixed(0)}% vs absolute-weighted ${(100 * abs(wr)).toFixed(0)}%`);
-  assert.ok(meanFrac - abs(wr) > 0.2,
-    `the two aggregates agree to ${(100 * (meanFrac - abs(wr))).toFixed(0)} points on wall_run's boom. They `
-    + 'disagreed by 42; if they now agree, the absolute weighting is buying nothing and the simpler '
-    + 'mean should be used instead of carrying two numbers.');
+  assert.ok(wr.got < 1e-9 || meanFrac - abs(wr) > 0.2,
+    `the two aggregates agree to ${(100 * (meanFrac - abs(wr))).toFixed(0)} points on wall_run's boom `
+    + `(${wr.got.toFixed(2)} of ${wr.asked.toFixed(2)} m delivered). They disagreed by 42; if they agree on `
+    + 'data with any delivery in it, the absolute weighting is buying nothing and the simpler mean '
+    + 'should be used instead of carrying two numbers. (Agreement at exactly 0-of-0 is vacuous — '
+    + 'see the §496 note above — and is exempted rather than celebrated.)');
   /* And the ordering that explains the whole table: delivery tracks CHAIN DEPTH, not tau. */
   const pitchOK = order.filter(([, r]) => r.ch.pitch && abs(r.ch.pitch) > 0.85).length;
   const boomBad = order.filter(([, r]) => r.ch.boom && abs(r.ch.boom) < 0.7).length;

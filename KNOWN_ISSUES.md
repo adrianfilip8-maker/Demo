@@ -40654,3 +40654,61 @@ tell resistance from entrapment.
 the arm logs and deliberately does not pin; the ascent is clean and asserted). Guard battery
 58/58: `basketvary`, `terracestair`, `tombdoor`, `patrol`, `level`, `thiefspots`.
 
+
+## §496 — The two bounds §495 moved, re-based by the mover — and what the tightrope taught the camera's telegraph
+
+The §495 commit's first full suite came back 857/859: two reds, both descriptive ratchets in other
+arms that my committed change had moved, neither a defect in the lines themselves. Both re-based by
+the mover under the committed-file rule, with the attribution below. A hygiene note first: the
+shared tree carried another lane's in-flight `src/core/Input.js` edit (the §514 pointer-lock
+click-swallow fix) during that run, so every attribution here was re-measured in a clean worktree
+pinned at `6a85058` — the numbers were identical, which also measures that diff as inert for the
+headless harness (it lives entirely in the browser mouse/pointer-lock path).
+
+### §496.1 — The state census: `railSlide` is the first rail state driven outside the instrument
+
+`traversal.test.mjs`'s census reported 25 states driven outside itself (bound 24) and 7
+traversal-only (bound 8). One state moved between the sets: **`railSlide`, 451 driven entries from
+`thiefspots.test.mjs`** — the colossi tightrope crossing rides the sagging span's down-slopes as a
+slide. `railWalk` stays traversal-only with poleSwing, bounce, crawl, pickpocket, combatStrafe and
+crouch. `oneArm` (1: bounce) and `placedOnly` (0) never moved. Bounds re-based 24 → 25 and 8 → 7,
+histories extended, reason recorded at the assertion. The census cannot be verified under
+`--test-name-pattern` — skipping its own file's other arms empties the in-process record and
+under-attributes traversal itself (measured: onlyMine reads 4 and `never` goes non-empty); the
+valid environment is the whole file in one process, i.e. the suite.
+
+### §496.2 — camdrive D6: the telegraph reveals the rope, and the flattery demonstration loses its instance
+
+D6's meta-assertion — mean-of-fractions must exceed absolute-weighted by > 20 points on wall_run's
+boom, the recorded proof that the mean flatters — failed at 0-vs-0. A/B on one collider, everything
+else fixed: the **§495 colossi tightrope** (`rail`, y ≈ 5.2–5.55, spanning x −6.3..6.3 at z 27,
+directly over the corridor all eight D6 routes drive).
+
+- **Player-inert, measured**: every D6 row's visits/frames/lens are identical rail-ON vs rail-OFF.
+  The rope never touches the drives; nothing re-rolled.
+- **Not occlusion, by code**: both boom casts ignore `rail` (`CAM_SWEEP_OPTS.ignoreTags`), and the
+  overlap check's `SOLID_TAGS` excludes it. The rig's only collider-reading consumer of the tag is
+  the **route telegraph** (`ROUTE_TAGS`), sensing radius `routeRange` 9.5, boom lift ≤ `routeDist`
+  0.55 — and the rope hangs 3–4.5 m above the corridor's look-ats, past `routeRiseMin` 1.3.
+- **The interaction, measured**: with the rope ON, every row's frame shifts a few points (idle boom
+  60→62 %, air 61→68 % and a `side` channel appears, sneak fov 61→41 %), and wall_run's boom goes
+  asked 1.87 → 2.06 m, delivered 0.34 → **0.00 m** — absolute 18 % → 0 %, mean 80 % → 0 %. On
+  zero delivery every per-visit fraction is 0, so the two aggregates agree *by arithmetic*: the
+  assertion was unsatisfiable on that data no matter what the camera did.
+- **What holds**: the row's substantive pin (`wall_run` boom < 0.25 — "the framing does not
+  arrive") passes at both 18 % and 0 %. Only the methodology demonstration went vacuous. Re-based
+  with an exact guard — `got < 1e-9` exempts the nothing-delivered case — so it stays armed for
+  any run that delivers anything at all.
+
+**For the camera lane** (measured evidence, no action taken level-side): a legitimate telegraph
+target inside `routeRange` of a framing's residency consumes what remained of the boom channel's
+delivery on 46-frame visits — the chain-depth fault D5/D6 already document, made marginally worse
+by a competing dist term. And the design fact now on record for authoring: anything tagged for the
+telegraph placed near a camera-framing beat trades against that framing — the rope was placed for
+the crossing beat, and the trade here lands on a channel that never arrived anyway (18 % → 0 %),
+which is why the placement stands.
+
+Verification, all in the clean worktree at `6a85058` plus exactly these two test edits:
+`camdrive.test.mjs` 9/9; the census's child suite inside it 161 pass / 0 fail; census lands on the
+pinned numbers (elsewhere 25, traversal-only 7); `spawn to the Eye of Ra` completes; **full suite
+859 / 859, EXIT=0** — the tree is green again with §495's content unchanged.

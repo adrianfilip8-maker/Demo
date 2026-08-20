@@ -2921,11 +2921,18 @@ test('census: which of the 32 states any test in this project has ever entered',
      are kept as COVERAGE-LOSS detectors, which is the direction that still matters, and the
      `never` set above is the assertion doing the real work now. Re-based by the mover, same
      committed-file rule as the previous two times. */
-  assert.ok(elsewhere.length <= 24,
-    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, 11, 15, 17, 22, 23, 24) ` +
+  /* 24 -> 25 and 8 -> 7, one state moving between the two sets, re-based by the mover (world
+     lane, §495/§496): `thiefspots.test.mjs` drives the colossi tightrope knee to knee, and the
+     crossing is the first thing outside this file to enter a rail state — `railSlide`, 451
+     driven entries over the sagging span (the crossing rides the down-slopes as a slide;
+     `railWalk` stays traversal-only alongside poleSwing, bounce, crawl, pickpocket,
+     combatStrafe and crouch). Same committed-file case as every re-base above; measured off the
+     census's own table, not inferred from the test's intent. */
+  assert.ok(elsewhere.length <= 25,
+    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, 11, 15, 17, 22, 23, 24, 25) ` +
     `— coverage has spread, which is good: update this bound. ${elsewhere.join(', ')}`);
-  assert.ok(onlyMine.length >= 8,
-    `only ${onlyMine.length} states are traversal-only (was 21, 17, 15, 10, 9, 8) — if that dropped, other ` +
+  assert.ok(onlyMine.length >= 7,
+    `only ${onlyMine.length} states are traversal-only (was 21, 17, 15, 10, 9, 8, 7) — if that dropped, other ` +
     'lanes have started driving the moveset and this arm should say so rather than assert the old ' +
     'concentration');
   /* The thinness pins. Both are stated as "no worse than", so widening coverage never reddens
