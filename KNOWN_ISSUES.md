@@ -41166,3 +41166,63 @@ hazard reaching the pipe; guards are out of this lane's scope and it is left una
 tumbled, re-mounted under the drive's held input, and finished on the y 12.5 upper ledge — its
 "ring" captures are that arrival, composed at boom 4.87/4.11. Take 2 is the control pair above.
 The §504 watchdog never fired; the E-mash T1 cadence and every T1 number were unaffected.
+
+## §473 — The tightrope's first composed frames: the balance framing arrives, the rail lead confirms the census to a centimetre, and the E-press take never reached the rope
+
+thief3 (sha 9f3379d clean, 0 page errors, 2341 telemetry entries) photographs §497's re-hung
+tightrope — the shoot §497's own closing note scheduled for this lane. Three of four takes
+complete on camera; the fourth is a level finding, not a camera one.
+
+### §473.1 `balance` on screen for the first time, both directions
+
+The sneak walk-on mounts `railWalk` from either knee (entries at (∓5.53, 4.91), 1.68 m/s — the
+buttonless §497 mount, photographed), and STATE_FRAME's `railWalk → balance` routing puts the
+balance framing on screen for the first time anywhere: `t2t2-balance` is its dedicated frame,
+and the mid-span captures show the authored shot delivering — boom 7.03 at the sag centre and
+7.56 late (authored `dist` +2.10 over the 5.4 base plus the dolly, arriving through the item-2
+collapsed chain), lens tightened to 50.7–50.9 (authored fov −3.0), the character centred and
+still. The two directions agree to the centimetre (mid 7.028/7.035 at x ±0.38). The framing's
+`lead` 0.20 delivers ~−0.08 m — floored, exactly as §450's census priced it, and exactly right
+for a balance beat: the camera does not run ahead of a man on a wire.
+
+Both walk-ons ARRIVE standing on the anchor stones ((6.55, 4.90) west→east; the mirror leg
+east→west), where thief1's four-for-four take had every crossing end wedged at (8.33, 4.77) for
+the watchdog. The knee approach shot also breathes again: `t2c-knee` boom 2.661 against
+thief1's 1.549 — the §497 re-hang moved the rope out of the knee stance's sightline.
+
+### §473.2 The rail lead at own speed: measured 1.42, predicted 1.41
+
+The fling take rides `railSlide` at the walker's own 7.2–7.9 m/s (`mountSpeed: 0` in effect —
+thief1's every entry was pinned at 9.5). The settled frame: **delivered lead 1.420 m at
+7.42 m/s** against the §450 closed form's 1.347 + the documented half-frame discrete-spring
+correction 0.059 = **1.406** — agreement to 1.4 cm, on a route, at a speed nobody pinned. With
+thief1's E-ride figure (1.730 measured / 1.728 predicted at 9.7) the census model now has two
+live confirmations at two speeds on the one rail in the game. Item 6's flag is answered as far
+as this level can answer it: `railMax` 15 remains unvisited because no route reaches it — that
+is a fact about the level, not a gap in the instrument. The ride is composed throughout (boom
+5.1 → 6.2, ndcY mid-band), and the off-end fling sheds down the §497 deflector onto the shelf
+— arrival grounded at (6.93, 4.85), settle at (7.51, 4.54); no wedge, no watchdog, no air-hold.
+
+### §473.3 The E-press take: a crouch pocket ate it before the rope could
+
+T2.4 (run in from the west stance pressing E every 9 frames — thief1's deliberate-mount
+protocol) never produced a rail frame: at full speed the approach drops off the 4.72 shelf at
+x ≈ −7.1, and the capsule lands in a crouch-height pocket beside the west anchor stone —
+**pinned at (−7.01, 4.77, 26.52), `tiptoe`, grounded, 1347 of 1400 frames**, held-W grinding
+against masonry with the boom legitimately crushed to 0.55 inside the cavity. No watchdog
+(grounded), no STUCK trip (it wiggles centimetres). It looks walk-out-escapable to the west —
+unlike §491's boxed soffit — but it is the same authoring shape: a miss beside an authored beat
+lands somewhere a jump cannot leave (headroom < CAPSULE_H). **World lane: the gap between the
+west mounting stone (±6.4, top 4.90) and the knee masonry south of it swallows a fast
+approach.** Whether the E-mount itself still works on the re-hung rope from a STANDING start is
+therefore unphotographed — the sneak walk-on and the fling cover the two entries §497 asserts,
+and the pocket, not the mount, is what this take found. The camera lane's protocol note: with
+`mountSpeed: 0`, a moving E-mash is the wrong drive anyway — the same press that grabs is the
+step-off edge one state later; a deliberate mount wants a still approach, which is a fact worth
+a line in any future teach.
+
+Frames: `thief3-t2*` (19 + telemetry). The camera notes worth one line each: the walk-on entry
+transient (boom 2.01 at the catch, recovering from the knee approach's short boom — the
+§467.1/§472.2 recovery-clock shape again, ~1 s to the sag's 7.0); and every arrival/settle on
+the stones composes (3.19/2.14 tiptoe close-ups — sneak framing at a stone the player is
+standing on, correct and tight).

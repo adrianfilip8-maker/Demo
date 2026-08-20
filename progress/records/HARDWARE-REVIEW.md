@@ -355,6 +355,13 @@ place this repair made a big change that no measurement here could evaluate.
 > 4.8). So the repair's number is confirmed live; what nobody has seen is the shot at
 > `railMax` 15, and the walk-on balance beat is a different row (`railWalk` → `balance`). Both
 > get their look on the §497 re-shoot.
+>
+> **✅ ANSWERED (thief3, §473).** On §497's re-hung rope the fling rides at own speed and the
+> settled lead is **1.420 m measured vs 1.406 predicted at 7.42 m/s** — the model's second live
+> confirmation at a second speed — with the ride composed throughout (`thief3-t2t3-late`, boom
+> 6.18). `railMax` 15 is unvisited because no route reaches it: a fact about the level, not the
+> instrument. And the balance beat exists on camera at last: `railWalk` both directions, boom
+> 7.0–7.6 mid-span, `thief3-t2t2-balance`. This flag is watched; nothing about it is open.
 
 ---
 
