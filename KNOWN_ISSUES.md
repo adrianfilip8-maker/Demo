@@ -40786,3 +40786,103 @@ Legs, torso, tail, cane, and SNEAK_BASE itself untouched.
 - The pre-existing `traversal.test.mjs` hookSwing-reach failure is NOT this change's: it fails
   with these edits reverted, on a tree carrying other lanes' in-flight `Input.js`/`Collision.js`
   work. Attributed by A/B before anything here shipped.
+
+---
+
+## §514 — P0: the attacks died in the click swallow, not the frame stamp; the ring trap follows from it; and the pole gate lands on §494's number
+
+The user's hardware verdicts, three items, two of them one bug.
+
+### §514.1 The refresh-rate hypothesis, closed both ways before anything was driven
+
+Read first (§450.4): `main.js` pumps `beginFrame → modules → endFrame` inside one rAF callback, and
+`Engine._tick` is variable-timestep — **one rAF is one input frame is one logic pass, so the
+rAF:logic ratio is structurally pinned at 1:1** and a render-only frame that could consume an edge
+does not exist in this loop. Then measured anyway (`tools/lockprobe.mjs` L2, stamp-level per §439 —
+the consumption-level probe lied first, because every `pressed('interact')` reader in the moveset
+sits behind an `afford()` guard and at spawn nothing reads it): **3 taps, 3 frames where
+`stamp === _frame`**, under `--disable-frame-rate-limit`, the same uncapped-rAF regime §468's own
+post-fix numbers were taken in. Keyboard edges survive any refresh rate. §468 holds.
+
+### §514.2 The bug: `requestLock()` returning true never meant the grant landed
+
+`attack` rides the left button (`MOUSE_BINDINGS = { attack: 0 }` — no keyboard route), and
+`_onMouseDown` swallowed any unlocked left click for which a lock request was *issued*. Measured
+live (lockprobe L1, pre-fix): **five real clicks, four swallowed** while the grant was pending in a
+browser that eventually grants. On a machine where it never lands — permission denied, iframe
+policy, or Chrome's ~1.25 s re-lock cooldown after every Esc — the swallow repeats for **every
+click, forever**. That is "attacks are not working", and the on-ring attack bail dies with it:
+a player whose instinct is clicking is trapped on the ring, which is the second report verbatim.
+
+The fix, three channels because browsers disagree: the request promise's rejection,
+`pointerlockerror`, and a 1.5 s no-grant deadline — any of them latches `_lockFailed`, which stops
+the swallow (clicks press normally while unlocked) until a real grant clears it. **The deadline is
+armed once per unlock episode, and the first version was not**: it re-armed per click, and the probe
+showed a player clicking every ~250 ms postpones the deadline forever — the gate never opens while
+they are actively trying to attack, which is the exact situation it exists for.
+
+And `attack` gains `KeyF`: a lock-independent route to the verb. A player on a ring now has four
+exits — Space, E, F, and the crouch drop — three of them keyboard, one of them level-based
+(`down('crouch')`, immune to every edge-visibility class). The hook bail's buffered jump was already
+shipped (`Moveset.js:1008`, §502-era); verified, not added.
+
+`input.test.mjs` gains two arms: the latch (acquisition click swallowed once; failed grant opens the
+gate; the pre-fix contract reconstructed and RUN — latch forced off, the swallow returns; a real
+grant clears the latch; and the 1.6 s deadline channel, spent in real wall clock because it is the
+only test of the only channel that fires on a browser whose request pends without erroring) and the
+KeyF route on the §468 stamp contract.
+
+**What the live probe can and cannot verify (stated, §418.3):** post-fix lockprobe L1 is unchanged —
+4 of 5 clicks swallowed, then locked — because THIS headless build *grants* at ~1 s: no rejection, no
+error, and the grant beats the 1.5 s deadline. The environment can reproduce slow-grant, not denial.
+The denial channels are pinned in jsdom (rejection/error) and by the deadline arm; the slow-grant
+behaviour the probe does show is the design intent (each acquisition click of a pending attempt is a
+focus click and must not swing the cane).
+
+### §514.3 The thin-pole gate, on §494's audited number
+
+The ruling: *"Do not climb up columns, only poles that are thin like pipes or ropes."* The gate sits
+at **Collision's affordance build** — a `pole` rec whose girth exceeds `POLE.girthMax` never becomes
+an affordance, so climb, swing, telegraph and magnetism all inherit it from one site and a column
+stays solid while ceasing to be an offer. Girth is §494's contract verbatim: the radius
+`PoleClimb.enter` itself reads (`geometry.parameters.radiusTop ?? radius`), AABB half-extent as the
+fallback, and the value is §494's recommended **0.5** — the measured band is (0.40, 0.85), the east
+mast pipe passes by 25 %, the aisle pinnacles are refused by 41 %. My own independent box census
+(minDim ≤ 1.0, i.e. r ≤ 0.5) classified every rec identically; theirs is the audited contract and is
+adopted, units and name included. **15 thick poles gated** on the shipped level; the §495.A obelisk
+rope (r 0.15) is the gate's first intended positive and answers the pole query where the obelisk
+used to.
+
+Consequences, stated rather than buried:
+
+- **§8.1 step 2's climb is the rope now.** The obelisk column (r 1.50) affords nothing; the rope
+  keeps the same top (20.4) so the hop arithmetic carries (§494's own note).
+- **The two spire arms retired to a pending pin.** Their drives climbed the pinnacle shaft (r 0.85)
+  and the obelisk — both design-removed. A synthetic hop was tried and rejected: its kinematics are
+  not the climb-vault's, and forcing the old assertions onto it would pin numbers about a beat
+  nobody can play (§418.3). The replacement arm asserts the ruling's consequence with real level
+  inputs — every affording pole is thin, the rope answers beside the obelisk, the obelisk's own rec
+  answers nowhere — and keeps the one drive-free pin (`spireGrab > magCatch`, so the beat cannot be
+  authored strict silently). The retired mechanisms (the toTarget dead window, the
+  spireGrab-vs-magnet ordering) are documented in the arm for restoration when a climbable with
+  footing reaches each spire.
+- **The reach arm's script B silently depended on registration order.** It walked to the FIRST pole
+  rec and broke — the east mast, whose top is ring 0's entry, so `hookSwing` was reached as a side
+  effect of which pole happened to be first. It now drives every affording pole (four short runs),
+  which keeps the mast's hook entry and adds the rope's `poleClimb`.
+
+### §514.4 What was tried and thrown away
+
+The synthetic top-hop helper (commit history of this branch, this round) — landed 4 of 7 timings on
+the pinnacle but missed the bare hop, because a vault fired from a climb is not a jump from rest.
+Kept out; the pending pin above is honest where the synthetic hop would have been §439's stub shape.
+
+### §514.5 The fall-damage ruling, pinned
+
+*"There should be no fall damage"* is now `recover.test.mjs` R8: a 28.4 m/s uncontrolled arrival
+(the level's hardest landing class) emits zero `damage` and leaves `hurtCooldown` untouched, and the
+counterexample is RUN — standing inside a hazard volume costs within a second through the same
+fields, so the zero is evidence rather than blindness. Guard damage is out of the arm's scope by the
+user's own scope ruling.
+
+Suite **861/861** (input +2, R8, the spire pin; two arms retired into it).

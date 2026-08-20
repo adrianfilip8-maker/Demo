@@ -489,7 +489,16 @@ test('level: every chain ring is reachable by a swing release from a neighbour',
 
 test('level: every spire tip is reachable off the pole that carries it', () => {
   /* Each of the three stands on a `pole`, so the approach is `PoleClimb`'s top hop. The obelisk
-     figures are the justification for the whole spire set: the hop peaks BELOW the tip. */
+     figures are the justification for the whole spire set: the hop peaks BELOW the tip.
+
+     §514.3 RE-POINTS THE PREMISE, NOT THE NUMBERS: the obelisk column (r 1.50) and the pinnacle
+     shafts (r 0.85) are no longer climbable — the thinness gate refuses them by the user's
+     ruling. The obelisk's climb is now the §495.A rope (r 0.15, same top 20.4, so this arm's
+     hop arithmetic carries per §494); the pinnacles have no replacement climb yet and their
+     rows describe an approach that is currently unreachable in play. The BALLISTIC derivation
+     below is untouched — it constructs the hop from constants and never enters PoleClimb — and
+     re-deriving it from the rope's own offset belongs to the rope's author (§496's rule: bounds
+     are re-based by the mover). */
   const APPROACH = [
     { id: 'spire-obelisk', axis: V(LEVEL.obelisk.x, 0, LEVEL.obelisk.z), poleTop: LEVEL.obelisk.h - 1.6, r: 1.5 },
     { id: 'spire-pinnacle-e', axis: V(16, 0, -50), poleTop: LEVEL.hall.aisleRoof + 6.0, r: 0.85 },

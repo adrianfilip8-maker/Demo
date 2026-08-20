@@ -71,6 +71,11 @@ export const KEY_BINDINGS = {
   sneak:    ['ShiftLeft', 'ShiftRight'],
   crouch:   ['ControlLeft', 'ControlRight'],
   interact: ['KeyE'],
+  /* `attack` was mouse-and-pad only, and §514 measured what that costs: the unlocked-click
+     swallow eats left clicks whenever pointer lock is pending, denied, or in Chrome's ~1.25 s
+     post-Esc cooldown — on the user's machine that read as "attacks are not working", with the
+     on-ring attack bail dead the same way. A keyboard route to the verb is lock-independent. */
+  attack:   ['KeyF'],
   glide:    ['KeyQ'],
   binocu:   ['Tab'],
   recentre: ['KeyR'],
@@ -245,6 +250,8 @@ export class Input {
     this.sensitivity = 0.0022;
     this.invertY = false;
     this.locked = false;
+    this._lockFailed = false;   // §514: a failed grant opens the click gate until a real grant
+    this._lockTimer = 0;
     this.enabled = true;
     this.padEnabled = true;
     /** Live copy of INPUT_TUNE so a settings screen can nudge one number without a rebuild. */
@@ -407,8 +414,22 @@ export class Input {
       /* The click that acquires pointer lock is a *focus* click. It used to also swing the cane,
          so every return from the pause menu started with an attack. Only swallowed when a lock
          was actually requested — in an environment with no Pointer Lock API `locked` never
-         becomes true, and swallowing unconditionally would mean the cane never swings at all. */
-      if (!this.locked && e.button === 0 && this.requestLock()) { this._lockClick = true; return; }
+         becomes true, and swallowing unconditionally would mean the cane never swings at all.
+
+         §514: "was actually requested" is not "was granted", and the gap between them is the
+         user's machine. `requestLock()` returns true for ISSUING the request; when the grant
+         fails — permission denied, iframe policy, or the ~1.25 s re-lock cooldown Chrome
+         enforces after every Esc — `locked` never turns true and this branch swallowed EVERY
+         subsequent click, forever. Measured in the live browser (tools/lockprobe.mjs L1): five
+         real clicks, four swallowed while the grant was pending, one press. On hardware where
+         the grant never lands, that is "attacks are not working", and the on-ring attack bail
+         with it. So the swallow now spends itself: one click per acquisition ATTEMPT, and a
+         failed attempt (`pointerlockerror`, promise rejection, or 1.5 s without a grant) opens
+         the gate — clicks press normally while unlocked until a grant actually arrives. */
+      if (!this.locked && e.button === 0 && !this._lockFailed && this.requestLock()) {
+        this._lockClick = true;
+        return;
+      }
       for (const [action, btn] of Object.entries(this._mouse)) {
         if (e.button === btn) this._press(action, 'mouse');
       }
@@ -442,8 +463,10 @@ export class Input {
 
     this._onContext = (e) => e.preventDefault();
 
+    this._onLockError = () => this._lockFail();
     this._onLockChange = () => {
       this.locked = document.pointerLockElement === this.canvas;
+      if (this.locked) { this._lockFailed = false; clearTimeout(this._lockTimer); this._lockTimer = 0; }
       this.engine.emit('pointerlock', this.locked);
       // Drop held state so Sly doesn't keep sprinting into a wall while the menu is up — but as
       // a *release*, not an amnesia. See guarantee (3) in the header.
@@ -460,6 +483,7 @@ export class Input {
     this.canvas.addEventListener('wheel', this._onWheel, { passive: false });
     this.canvas.addEventListener('contextmenu', this._onContext);
     document.addEventListener('pointerlockchange', this._onLockChange);
+    document.addEventListener('pointerlockerror', this._onLockError);
     window.addEventListener('blur', this._onBlur);
   }
 
@@ -538,8 +562,28 @@ export class Input {
   requestLock() {
     if (this.locked) return false;
     if (typeof this.canvas?.requestPointerLock !== 'function') return false;
-    this.canvas.requestPointerLock();
+    /* Detect the grant FAILING, not just succeeding (§514). Three channels, because browsers
+       disagree: modern Chrome returns a rejecting promise, the spec fires `pointerlockerror`
+       (listener installed in _bind), and a build that does neither hits the timer. Any of them
+       sets `_lockFailed`, which stops the click swallow until a real grant clears it. */
+    let p = null;
+    try { p = this.canvas.requestPointerLock(); } catch { this._lockFail(); return true; }
+    if (p && typeof p.catch === 'function') p.catch(() => this._lockFail());
+    /* Armed ONCE per unlock episode, not per click. The first version re-armed on every click,
+       and lockprobe L1 measured what that costs: a player clicking every ~250 ms postpones the
+       1.5 s deadline forever, so the gate never opens while they are actively trying to attack —
+       which is the exact situation the timer exists for. */
+    if (!this._lockTimer) {
+      this._lockTimer = setTimeout(() => { this._lockTimer = 0; if (!this.locked) this._lockFail(); }, 1500);
+    }
     return true;
+  }
+
+  _lockFail() {
+    this._lockFailed = true;
+    this._lockClick = false;
+    clearTimeout(this._lockTimer);
+    this._lockTimer = 0;
   }
 
   releaseLock() { document.exitPointerLock?.(); }
@@ -753,6 +797,7 @@ export class Input {
     this.canvas.removeEventListener('wheel', this._onWheel);
     this.canvas.removeEventListener('contextmenu', this._onContext);
     document.removeEventListener('pointerlockchange', this._onLockChange);
+    document.removeEventListener('pointerlockerror', this._onLockError);
     window.removeEventListener('blur', this._onBlur);
   }
 }

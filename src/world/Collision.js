@@ -80,6 +80,17 @@ const AFF_POINT = 0, AFF_SPLINE = 1, AFF_BOX = 2;
  */
 const AFF_KIND = ['point', 'spline', 'box'];
 
+/**
+ * §514.3 — what still counts as a pole for TRAVERSAL. See the gate at the affordance build.
+ * The value and the contract are §494's (the world lane's audit of every registered pole):
+ * girth is the RADIUS as `PoleClimb.enter` itself reads it — `geometry.parameters.radiusTop ??
+ * radius`, AABB half-extent as the fallback — and the measured band is (0.40, 0.85): the east
+ * mast pipe is r 0.40 and the thinnest column (the aisle pinnacles) is r 0.85, so every value
+ * between separates the same populations. 0.5 clears the mast by 25% and refuses the pinnacles
+ * by 41%. New authored climbables (the §495.A obelisk rope) are r 0.12-0.18.
+ */
+export const POLE = { girthMax: 0.5 };
+
 /* ---- module-scope scratch. Nothing in a query path allocates. ---- */
 const _v1 = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
@@ -941,6 +952,35 @@ export class Collision {
 
       const isLine = rec.tag === 'rail' || rec.tag === 'pole';
       const isPoint = rec.tag === 'hook' || rec.tag === 'spire';
+
+      /**
+       * The thin-pole gate (§514.3) — the user's ruling, verbatim: "Do not climb up columns,
+       * only poles that are thin like pipes or ropes." The `pole` tag covers both: the hall
+       * colonnade and the obelisk register as `pole`, so `PoleClimb`/`afford('pole')` would
+       * mount a 3 m column. Gated HERE, at affordance build, so every consumer — climb, swing,
+       * telegraph, magnetism — inherits it from one site, and a thick pole stays a solid
+       * collider while ceasing to be a traversal offer.
+       *
+       * The measure is the world box's SMALLEST dimension, which is the diameter of a pipe at
+       * any orientation (a vertical pipe is thin in x and z; a horizontal one is thin in y and
+       * one of x/z). Data-driven: new thin climbables pass with no list to maintain. Measured
+       * on the shipped level the distribution is bimodal with an empty band —
+       *
+       *     thin   r 0.15 (the §495.A rope) · 0.15-0.20 pipes · 0.40 (east mast)
+       *     thick  r 0.85 ×2 (pinnacles) · 1.38 ×4 · 1.50 (obelisk) · 1.62 ×8 (colonnade)
+       *
+       * — the band is (0.40, 0.85) and every value in it classifies identically (§494, the
+       * world lane's audit; this gate adopts its contract and its recommended 0.5 verbatim).
+       */
+      if (rec.tag === 'pole') {
+        const gp = mesh.geometry?.parameters;
+        const r = gp?.radiusTop ?? gp?.radius
+          ?? (world ? Math.min(world.max.x - world.min.x, world.max.y - world.min.y, world.max.z - world.min.z) / 2 : 0);
+        if (r > POLE.girthMax) {
+          this.stats.thickPoles = (this.stats.thickPoles || 0) + 1;
+          continue;                       // solid, but not climbable — no affordance entry
+        }
+      }
 
       let curve = ud.spline && typeof ud.spline.getPoint === 'function' ? ud.spline : null;
       if (isLine && !curve) {

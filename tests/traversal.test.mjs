@@ -1270,8 +1270,14 @@ test('reach: the attach states are reachable through play in the shipped level',
     }
   }
 
-  /* Script B — walk to a pole with standable ground at its foot and press interact. */
-  for (const rec of collision.recs.filter((r) => r.tag === 'pole')) {
+  /* Script B — walk to a pole with standable ground at its foot and press interact.
+     §514.3: only poles that still AFFORD are candidates (thick columns are gated by design),
+     and every candidate is tried rather than the first — the first rec in registration order
+     used to be a column, which now walks up to it and correctly refuses to mount. The §495.A
+     rope (walk-on plinth at its bottom) is the intended positive. */
+  const affPoles = new Set();
+  for (const e of collision._aff) if (e.rec?.tag === 'pole') affPoles.add(e.rec);
+  for (const rec of affPoles) {
     const ud = rec.mesh.userData || {}, p = rec.mesh.position;
     const s = nearestStand(V(p.x, ud.bottom ?? p.y, p.z), 4, 0.5);
     if (!s || s.d > 3.0) continue;
@@ -1279,7 +1285,10 @@ test('reach: the attach states are reachable through play in the shipped level',
     const r = await driveRoute(engine, c, V(s.x, s.y + 0.05, s.z), Math.atan2(dx, dz), 150,
       (inp, i) => { if (l > 0.05) { inp.move.x = dx / l; inp.move.y = -dz / l; } if (i === 20 || i === 60) inp.hold('interact'); else inp.let_go('interact'); }, null);
     runs.push({ script: `B walk-to-pole ${rec.mesh.name} from (${s.x.toFixed(1)}, ${s.y.toFixed(2)}, ${s.z.toFixed(1)}) d=${s.d.toFixed(2)}`, path: r.path });
-    break;
+    /* No break: every affording pole runs. The old single-candidate form silently depended on
+       WHICH pole was first in registration order — the east mast, whose top is ring 0's entry,
+       so hookSwing was reached as a side effect of the one pole it happened to pick. Four thin
+       poles is four short drives, and the mast keeps supplying the hook entry. */
   }
 
   /* Script C — stand on a narrow ledge. */
@@ -1592,65 +1601,66 @@ test('feasibility: sweeping the level finds where spireLand and ledgeHang are po
  * Neither is visible to the feasibility pre-check (arm 11): both are about what `update()` reads,
  * not what `canEnter` demands. A state can be enterable and still unusable.
  */
-test('spire: a double jump fired inside the toTarget lock breaks it — the dead window', async () => {
-  /* Route A, east pinnacle: stand on the aisle roof, hold forward into the shaft, climb, let the
-     top hop fire, then tap jump. Most timings land. The ones fired just after `toTarget` acquires
-     do not — the double jump takes the lock's own airborne frames and drops to `fall`. That is a
-     real interaction between magnetism and the air moveset, and if either changes this should say
-     so rather than quietly becoming "all timings land". */
-  const { engine, c } = await realWorld();
-  const start = V(16.0, 13.50, -50.0);
-  const landed = [], missed = [];
-  for (const dj of [0, 6, 10, 13, 17, 24, 28]) {
-    let hopAt = -1;
-    const r = await driveRoute(engine, c, start, Math.PI, 320, (inp, i, cc) => {
-      inp.move.y = 1;
-      if (hopAt < 0 && cc.stateName === 'jump') hopAt = i;
-      if (dj > 0 && hopAt >= 0 && i === hopAt + dj) inp.hold('jump');
-      else if (i < 3) inp.hold('interact');
-      else inp.let_go('jump');
-    }, 'spireLand');
-    (r.first >= 0 ? landed : missed).push(dj);
-  }
-  console.log(`\n[spire] Route A east pinnacle — landed at dj ${landed.join(', ')} | missed at dj ${missed.join(', ') || 'none'}`);
-  assert.ok(landed.length >= 4, `only ${landed.length} of 7 take-off timings landed the pinnacle`);
-  assert.ok(missed.length > 0,
-    'every double-jump timing now lands: the toTarget dead window is gone — confirm that was intended');
-  // The window is early, not late: a late double jump is harmless because the lock has resolved.
-  assert.ok(Math.max(...missed) < 20, `the dead window reaches dj ${Math.max(...missed)}, further than measured`);
-});
+/* ─────────────────────────────────────────────────────────────────────────────────────────────
+ * §514.3 removed thick columns from the pole affordance (the user's ruling, verbatim: "Do not
+ * climb up columns, only poles that are thin like pipes or ropes"). The two spire arms that
+ * lived here drove CLIMBS of the east-pinnacle shaft (1.7 m) and the obelisk (3.0 m) to reach
+ * their hops, and both climbs are now impossible by design. Their subjects were real and remain
+ * documented below; the drives come back when a thin climbable with footing reaches each spire.
+ *
+ *   · the toTarget DEAD WINDOW: a double jump fired inside the lock's acquisition frames takes
+ *     the lock's own airborne frames and drops to `fall`. Measured when drivable: misses at
+ *     dj ≤ 17, landings from dj 0 and ≥ 24 — the window is early.
+ *   · spireGrab SUBSUMES magCatch: the obelisk's bare hop missed the magnet's `catch` 1.008 by
+ *     1.090 m and landed anyway, because `SpireLand.canEnter`'s own grab is `spireGrab` 3.4 —
+ *     the ordering (spireLand before toTarget) proved which mechanism caught him. The pin that
+ *     survives without the drive: a level cannot author that beat strict while spireGrab > catch.
+ * ─────────────────────────────────────────────────────────────────────────────────────────── */
 
-test('spire: spireGrab catches the obelisk hop, not magnetism — the ordering proves which', async () => {
-  /* Route B, obelisk. `EgyptLevel` documents this beat's bare hop as deliberately unrescued —
-     1.090 m of miss against `catch` 1.008 — and that is true about the MAGNET and irrelevant to
-     the outcome. `SpireLand.canEnter` has its own opportunistic grab at `TUNE.spireGrab` 3.4 m,
-     which subsumes the magnet's catch entirely, so the bare hop lands anyway.
-     The evidence is the ORDERING: `spireLand` fires before `toTarget`, so the state's own
-     affordance is what caught him. `peakY` proves nothing here — `SpireLand.enter` snaps position
-     to the tip, so a landing manufactures its own apex reading.
-     The consequence, which is the part worth failing on: `spireGrab` is a `Controller.TUNE`
-     constant, so a level cannot author strictness this way at all. If someone tightens it to make
-     the beat strict, this arm tells them exactly what they changed. */
-  const { engine, c } = await realWorld();
-  const S = V(2.2, 9.00, 8.4), P = V(0, 13.3, 11);
-  const dx = P.x - S.x, dz = P.z - S.z, L = Math.hypot(dx, dz);
-  let hopAt = -1;
-  const r = await driveRoute(engine, c, S, Math.PI, 420, (inp, i, cc) => {
-    if (cc.stateName === 'poleClimb') { inp.move.x = 0; inp.move.y = 1; }   // RAW forward: see header
-    else { inp.move.x = dx / L; inp.move.y = -dz / L; }                     // no interact: see header
-    if (hopAt < 0 && cc.stateName === 'jump' && i > 40) hopAt = i;
-    inp.let_go('jump');                                                     // BARE hop, no double jump
-  }, 'spireLand');
-  const frameOf = (n) => { const e = r.path.find((p) => p.startsWith(`${n}@`)); return e ? Number(e.split('@')[1]) : -1; };
-  const sl = frameOf('spireLand'), tt = frameOf('toTarget');
-  console.log(`\n[spire] Route B obelisk, BARE hop: spireLand@${sl} toTarget@${tt}  ` +
-              `spireGrab ${TUNE.spireGrab} vs magCatch ${TUNE.magCatch}`);
-  console.log(`        ${r.path.slice(0, 7).join(' ')}`);
-  assert.ok(sl >= 0, 'the bare hop no longer lands the obelisk — spireGrab may have been tightened');
+test('spire: the column climbs are gone by ruling, and the rope answers where the obelisk did', async () => {
+  /* ── DOMAIN (§418.3, inputs from the SHIPPED level) ───────────────────────────────────────
+   *   passes on : the §495.A obelisk rope (r 0.15, authored climbable) — it answers the pole
+   *               query beside the obelisk; and every pole affordance in the level being thin
+   *               (girth <= POLE.girthMax), with the colonnade/obelisk/pinnacles gated.
+   *   fails  on : RUN in-arm — the obelisk's own rec (r 1.50) must NOT be the answering rec
+   *               anywhere; if it answers, PoleClimb mounts a column against the ruling.
+   *   does NOT  : see the toTarget dead window or the spireGrab-vs-magnet ordering fire — those
+   *   discrim.    need the top hop, and the drives retire until a climbable with footing reaches
+   *               each spire (the rope restores the OBELISK's; the pinnacles have none yet).
+   *               Restore the drives from this file's history when they do. The surviving
+   *               ordering pin, spireGrab > magCatch, is asserted here so strictness cannot be
+   *               authored silently.
+   */
+  const { engine, c, collision } = await realWorld();
+  const { POLE } = await import('../src/world/Collision.js');
+
+  /* every pole that still affords is thin — the whole-level form, immune to new climbables */
+  const girth = (rec) => {
+    const gp = rec.mesh?.geometry?.parameters;
+    const w = rec._world;
+    return gp?.radiusTop ?? gp?.radius
+      ?? (w ? Math.min(w.max.x - w.min.x, w.max.y - w.min.y, w.max.z - w.min.z) / 2 : 0);
+  };
+  const affording = new Set();
+  for (const e of collision._aff) if (e.rec?.tag === 'pole') affording.add(e.rec);
+  assert.ok(affording.size > 0, 'no pole affords at all — the gate swallowed the pipes too');
+  for (const rec of affording) {
+    assert.ok(girth(rec) <= POLE.girthMax + 1e-6,
+      `a pole of girth ${girth(rec).toFixed(2)} still affords — the §514.3 gate is not holding `
+      + 'and PoleClimb will mount a column against the design ruling');
+  }
+
+  /* the obelisk's replacement: the §495.A rope answers beside it, and the column does not */
+  const a = collision.nearest(V(0.5, 10, 12), 'pole', 4.0);
+  assert.ok(a, 'nothing affords beside the obelisk — §495.A\'s rope is gone and §8.1 step 2 with it');
+  assert.ok(girth(a.rec) <= POLE.girthMax,
+    `the answering rec beside the obelisk has girth ${girth(a.rec).toFixed(2)} — that is the `
+    + 'column, not the rope, and the gate is rejecting by nothing');
+
   assert.ok(TUNE.spireGrab > TUNE.magCatch,
-    'spireGrab no longer subsumes magCatch — the beat can now be authored strict, retire this arm');
-  assert.ok(tt < 0 || sl < tt,
-    `toTarget@${tt} preceded spireLand@${sl}: magnetism caught him, not the spire's own grab`);
+    'spireGrab no longer subsumes magCatch — the obelisk beat can be authored strict; retire '
+    + 'this pin and restore the ordering drive when the climb returns');
+  console.log(`[spire] ${affording.size} thin poles afford (girth <= ${POLE.girthMax}); the rope answers at the obelisk`);
 });
 
 /* ====================================================================== */

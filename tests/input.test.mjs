@@ -528,3 +528,93 @@ test('repeat: an OS key-repeat storm produces exactly one press', () => {
     '30 OS repeat events fired a fresh press — held jump would re-trigger every frame');
   assert.ok(input.down('jump'), 'the repeats dropped the hold');
 });
+
+/* ====================================================================== */
+/* 5 — the lock swallow spends itself: a failed grant must not eat clicks  */
+/* ====================================================================== */
+
+test('lock swallow: one click per acquisition attempt, and a failed grant opens the gate', async () => {
+  /* ── WHY (§514) ───────────────────────────────────────────────────────────────────────────
+   * `attack` rides the left button, and `_onMouseDown` swallows any unlocked left click for
+   * which a lock request was ISSUED. `requestLock()` returning true never meant the grant
+   * landed: with the grant pending, denied, or inside Chrome's ~1.25 s post-Esc cooldown, every
+   * click was swallowed — measured live (tools/lockprobe.mjs L1: five real clicks, four
+   * swallowed). On the user's machine that read as "attacks are not working", and the on-ring
+   * attack bail was dead the same way.
+   *
+   * ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : a rejecting lock request — click 1 swallowed (the acquisition click), click 2
+   *               PRESSES while still unlocked. And a granting one — acquisition click
+   *               swallowed, post-grant clicks press, and the latch is cleared by the grant.
+   *   fails  on : RUN in-arm — the pre-fix contract, reconstructed by asserting what the old
+   *               code did with the same inputs: with the latch removed (forced false), click 2
+   *               is swallowed again.
+   *   does NOT  : see Chrome's real cooldown timing, promise scheduling, or the 1.5 s pending
+   *   discrim.    timer (jsdom has no timers wound here) — the error-event channel stands in
+   *               for all three; lockprobe covers the real browser.
+   */
+  const { input } = makeInput();
+  let presses = 0;
+  const orig = input._press.bind(input);
+  input._press = (a, src) => { if (a === 'attack') presses++; return orig(a, src); };
+
+  /* the lock API exists and the request is issued, but the grant never lands */
+  canvas.requestPointerLock = () => {};       // no promise, no lockchange — the pending case
+  const click = () => { canvas.fire('mousedown', { button: 0 }); window.fire('mouseup', { button: 0 }); };
+
+  click();                                    // acquisition click: swallowed by design
+  assert.equal(presses, 0, 'the acquisition click must not swing the cane');
+  document.fire('pointerlockerror', {});      // the grant fails
+  click();
+  assert.equal(presses, 1,
+    'after a failed grant, an unlocked click was still swallowed — the latch is not opening the '
+    + 'gate, and on hardware where the grant never lands this is "attacks are not working"');
+
+  /* the counterexample, RUN: the pre-fix behaviour with the same inputs */
+  input._lockFailed = false;                  // remove the latch: exactly the old gate condition
+  click();
+  assert.equal(presses, 1,
+    'with the latch cleared the swallow must return — otherwise the fix rewrote the gate rather '
+    + 'than adding the failure path, and the acquisition click is swinging the cane again');
+
+  /* the third channel: a request that neither grants nor errors must open the gate by deadline.
+     Real 1.6 s of wall clock, spent once, because this is the only test of the only channel that
+     fires on a browser whose request just... pends (§514.2's lockprobe cannot reproduce it:
+     headless grants at ~1 s). The deadline is armed ONCE per unlock episode — the first version
+     re-armed per click and a player clicking every 250 ms postponed it forever. */
+  input._lockFailed = false;
+  canvas.fire('mousedown', { button: 0 }); window.fire('mouseup', { button: 0 });   // swallowed, arms the timer
+  assert.equal(presses, 1, 'the re-acquisition click is the swallowed one');
+  canvas.fire('mousedown', { button: 0 }); window.fire('mouseup', { button: 0 });   // still inside deadline: swallowed
+  assert.equal(presses, 1, 'a click inside the deadline is still the acquisition attempt');
+  await new Promise((r) => setTimeout(r, 1600));
+  assert.equal(input._lockFailed, true,
+    '1.6 s without a grant did not open the gate — the deadline channel is dead, and a browser '
+    + 'whose request pends without erroring swallows clicks forever again');
+  click();
+  assert.equal(presses, 2, 'after the deadline, clicks must press');
+
+  /* the grant path: lock lands, latch clears, presses flow while locked */
+  document.pointerLockElement = canvas;
+  document.fire('pointerlockchange', {});
+  assert.equal(input.locked, true, 'the shim grant must be visible to _onLockChange');
+  assert.equal(input._lockFailed, false, 'a real grant must clear the failure latch');
+  click();
+  assert.equal(presses, 3, 'locked clicks are ordinary presses');
+  document.pointerLockElement = null;
+  document.fire('pointerlockchange', {});
+  delete canvas.requestPointerLock;
+});
+
+test('attack has a lock-independent keyboard route', () => {
+  /* KeyF exists so the verb survives every pointer-lock state (§514) — and so a player trapped
+     on a ring with a dead mouse still has three keyboard exits: Space, E, F. */
+  const { input } = makeInput();
+  const code = input.keysFor('attack')[0];
+  assert.ok(code, 'attack has no keyboard binding — the lock swallow is single-point-of-failure again');
+  keyDown(code);
+  input.beginFrame(1 / 60);
+  assert.equal(input.pressed('attack'), true,
+    `a ${code} tap did not press attack on the frame after dispatch — the §468 stamp contract broke`);
+  keyUp(code);
+});

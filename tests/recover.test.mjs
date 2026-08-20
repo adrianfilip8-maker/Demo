@@ -926,3 +926,71 @@ test('R7: deliberate attach-family exits classify controlled; a genuine loss sti
   console.log('[R7] pole-top jump press: controlled · spire walk-off launders poison · '
     + 'wallCling and hookSwing losses still uncontrolled');
 });
+
+/* ====================================================================== */
+/* R8 — the user's ruling: there is no fall damage, pinned                 */
+/* ====================================================================== */
+
+test('R8: a 30 m/s landing costs no health, and the instrument can see a cost when one exists', async () => {
+  /* ── THE RULING (§514.5) ──────────────────────────────────────────────────────────────────
+   * From hardware review of sheet item 1: "there should be no fall damage." The build complies —
+   * the only emitters of `damage`/`hurt` are the hazard overlap (`Controller._hazards`) and
+   * guard swings — and this pins it so a future landing-feel change cannot quietly add a health
+   * cost to arrivals. `landHard`'s control tax and shake are feel, not damage, and are out of
+   * this arm's scope.
+   *
+   * ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : a ~30 m/s uncontrolled arrival (wallCling loss from 17 m — the hardest landing
+   *               class the game produces) with zero `damage` emits and `hurtCooldown` at 0.
+   *   fails  on : RUN in-arm — standing inside a hazard-tagged volume, which must cost within a
+   *               second: the same fields move, so a green cannot mean "the instrument reads
+   *               nothing".
+   *   does NOT  : see guard damage (out of scope by user instruction), or assert anything about
+   *   discrim.    landHard's control tax, shake, or animation — the ruling is about HEALTH.
+   */
+  const { engine, c, collision } = await realWorld();
+
+  /* the landing: §502's B arm geometry, the fastest uncontrolled arrival on the level */
+  hardReset(engine, c, new THREE.Vector3(0, 17, 30), Math.PI);
+  c.grounded = false; c.sm.set('wallCling'); c.sm.set('fall');
+  engine.events.length = 0;
+  let landedForce = null, damages = 0;
+  for (let i = 0; i < 600; i++) {
+    engine.input.beginFrame(DT);
+    engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
+    for (const e of engine.events) {
+      if (e.evt === 'landed' && landedForce === null) landedForce = e.payload.force;
+      if (e.evt === 'damage') damages++;
+    }
+    engine.events.length = 0;
+    if (landedForce !== null && i > 20) break;
+  }
+  assert.ok(landedForce !== null && landedForce >= 25,
+    `the probe needs a genuinely hard arrival to say anything; got ${landedForce}`);
+  assert.equal(damages, 0,
+    `a ${landedForce.toFixed(1)} m/s landing emitted 'damage' — fall damage exists, against the `
+    + 'user\'s explicit ruling');
+  assert.equal(c.hurtCooldown <= 0, true,
+    'the landing set hurtCooldown — the direct hurt() path ran on an arrival');
+
+  /* the counterexample, RUN: a hazard must cost through the same fields */
+  const hz = collision.recs.find((r) => r.tag === 'hazard' && r._world);
+  assert.ok(hz, 'no hazard volume in the level — the failing input cannot run and this arm is blind');
+  const w = hz._world;
+  hardReset(engine, c, new THREE.Vector3((w.min.x + w.max.x) / 2, (w.min.y + w.max.y) / 2, (w.min.z + w.max.z) / 2), Math.PI);
+  engine.events.length = 0;
+  let cost = false;
+  for (let i = 0; i < 60 && !cost; i++) {
+    engine.input.beginFrame(DT);
+    engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
+    if (engine.events.some((e) => e.evt === 'damage') || c.hurtCooldown > 0) cost = true;
+    engine.events.length = 0;
+  }
+  assert.ok(cost,
+    'standing inside a hazard volume cost nothing in a second — the instrument cannot see a '
+    + 'health cost, so the zero above is not evidence');
+
+  console.log(`[R8] ${landedForce.toFixed(1)} m/s landing: 0 damage, no hurt · hazard overlap: costs`);
+});

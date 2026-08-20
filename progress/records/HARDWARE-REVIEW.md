@@ -923,3 +923,20 @@ deliver — that is the frame to re-read this item on, and D6's per-row table is
 will show it.
 
 ---
+
+## 12. Attacks and ring release — fixed two ways, please re-test on the same machine
+
+**Commit** this round · **Files** `src/core/Input.js`, `KEY_BINDINGS`
+
+Your two reports were one bug: every left click was being consumed as a pointer-lock acquisition
+click whenever the lock was pending, denied, or inside the browser's ~1.25 s post-Esc cooldown —
+and `attack` had no keyboard binding, so there was no way around it. On a ring, the attack-click
+release died the same way.
+
+**Fixed**: a failed lock grant now opens the click gate (clicks attack normally while unlocked;
+camera-look needs the lock and returns when it engages), and **F is attack** on the keyboard.
+
+**What to re-test, on the machine that failed**: click-attack on the ground, after pressing Esc,
+and immediately after alt-tabbing back. Then E-grab a ring and get off it four ways — Space, E, F,
+and Ctrl (drop). If any of those leaves you hanging, say which and whether the mouse was moving the
+camera at the time (that tells us the lock state directly).
