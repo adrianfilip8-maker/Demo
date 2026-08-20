@@ -876,3 +876,50 @@ already encodes the frame-height claim (2.6 = one half-frame at 5.4 m), it buys 
 measured improvement everywhere, and its cost is bounded and nameable — measure the
 occluded-jump clip before shipping it, and expect to want the fallPitch smoothing with it, since
 −1.09 alone still leaves the subject just off the bottom edge.
+
+---
+
+## 13. The telegraph trades against the boom wherever tagged content hangs near a route — *structural, will recur*
+
+**No commit — nothing has changed in source.** §496.2 is the measurement; `camdrive` D6's A/B (one
+collider toggled, everything else fixed) is the apparatus. This item exists because the interaction
+it measures is not a one-off: the user asked for **more interactable spots**, the world lane is
+adding them, and every one that is telegraph-visible near a drivable corridor re-runs this trade.
+
+**The mechanism, measured on the colossi tightrope.** The rope (`rail`, y 5.2–5.55, directly over
+the corridor all eight D6 routes drive) is invisible to both boom casts by code
+(`CAM_SWEEP_OPTS.ignoreTags`, `SOLID_TAGS`) and player-inert — every D6 row's visits and frames are
+identical with it on or off. The one rig consumer that DOES read it is the route telegraph
+(`ROUTE_TAGS`, sensing radius `routeRange` 9.5, boom lift ≤ `routeDist` 0.55). With the rope on,
+`wall_run`'s boom went **asked 1.87 → 2.06 m, delivered 0.34 → 0.00 m** — the ask grew and the
+delivery vanished — on the framing with the shortest residency in the drive set (~46-frame visits).
+Other rows shifted a few points each (idle boom 60→62 %, air 61→68 %, sneak fov 61→41 %).
+
+**Why this will get worse, not better.** The boom chain delivers last among the channels and pays
+the chain-depth cost D5/D6 document; the telegraph's lift is one more term competing above it. A
+framing with 100+ frames of residency absorbs the competition; a 46-frame visit never gets the
+channel back before it exits. So the erosion lands precisely on the short-residency framings —
+`wall_run`, `land` — the two this sheet has spent three items buying delivery for. Content authored
+for a *crossing* beat (the rope) silently spends the camera budget of the *approach* beat under it.
+
+**The decision a person should make on hardware.** Wall-run under the colossi rope and watch
+whether the camera still pulls back as the wall-run starts. Three positions, in order of cost:
+
+1. **Accept and record** — the rope's trade landed on a channel that delivered 18 % before and 0 %
+   after, i.e. a framing that never visibly arrived (its substantive pin, boom < 0.25, passes both
+   sides). If 18 % of 0.34 m was never readable, nothing a player sees changed, and the rule is
+   simply: *authors of telegraph-tagged content near corridors are spending camera, and D6 is the
+   meter that bills them.* Zero code. This is the shipped state.
+2. **Scope the telegraph's boom lift** — let the mark and look-at stand but stop the lift from
+   competing during short-residency framings (gate on `_frameKey` residency or on the framing's own
+   `boom` still being undelivered). One mechanism, but it couples the telegraph to framing
+   residency, a linkage nothing else has and §441's family of telegraph regressions argues against.
+3. **Author around it** — hang telegraph content ≥ `routeRange` off corridor look-ats where a
+   short-residency framing lives. Free in code, a real constraint on the level, and invisible to
+   enforcement — it will be violated the first time nobody runs D6.
+
+The evidence so far prices 1 as correct and free until a rope lands over a framing that DOES
+deliver — that is the frame to re-read this item on, and D6's per-row table is the instrument that
+will show it.
+
+---
