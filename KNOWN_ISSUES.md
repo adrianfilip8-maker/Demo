@@ -41102,3 +41102,67 @@ is scheduled against §497 once it lands, per its own closing note.
 Verification: `thiefspots` green with the three B legs ("B arrivals WE x 6.44 / EW x −6.44 /
 fling x 6.44" — all standing on the anchor stones); `spawn to the Eye of Ra` completes on the new
 geometry; camdrive 9/9 (D6's guard holds at 0-of-0); **full suite 862/862, EXIT=0**.
+
+## §472 — The after-frames: the climb composes, the mount rides a residue from a different mechanism, and §471.5's "no authored route" was wrong by one telemetry read
+
+thief2 re-photographs T1/T3 from a clean worktree at cb074e7 (this checkout carried §497's
+in-flight colossi edits at shoot time; T1/T3 geometry verified untouched in their diff, and
+§497.4 independently confirms the isolation the other way — their first-draft mounting stones
+consumed shared-stream RNG draws and moved MY T3 control by |Δboom| 5.37 from three zones away,
+which their committed RNG-neutral stones retire).
+
+### §472.1 T1 before → after, same takes, same azimuth
+
+```
+                    thief1 (before)              thief2 (after)
+  mount             boom 0.550 · ndcY +1.26      boom 0.550 · ndcY +1.26     ← unchanged, §472.2
+  climb (y 14.5)    boom 0.550 · ndcY +1.01      boom 3.362/3.452 · ndcY +0.21
+  top   (y 19.6)    boom 0.550 · ndcY +1.50      boom 5.845/5.842 · ndcY +0.20
+```
+
+The sustained beat is delivered: from roughly a third of the way up, the climb is a composed
+shot instead of the inside of a hat, and the top-out frames the character. T3 is unmoved where
+it was already right (mount 5.844/5.879, climb 6.019/6.025, ndcY −0.22..−0.43 — thief1’s own numbers to the third decimal), and the ring arrival is exactly as subjectless as before
+(t3t2-ring boom 0.55, ndcY −41.59 with ndcZ −0.99 — behind the camera plane, matching thief1's
+take to the second decimal; settled 1.401 / −2.11 — item 12's frames, by design of the §471
+gate's control bars).
+
+### §472.2 The mount frame did not move, and its mechanism was never the climb's
+
+The browser mount telemetry (both thief1 takes, reproduced in thief2) shows the chain: the
+E-mash mount cadence catches a KIOSK HOOK RING mid-flight one to two presses before the rope —
+`hookSwing` at (−0.34, 11.77, 11.36), inside the kiosk ring beside the shaft — and the swing's
+boom is crushed 3.16 → 0.55 against the obelisk's r 1.5 proxy. A hook attachment does not open
+the §471 gate (tag `hook`, and the occluder is not the held object), so the crush stands, and
+`recoverDelay` 0.22 + `recoverTime` 0.62 capped at `recoverSpeed` 6 then carries it ~1.5 s into
+the climb after the gate opens and every cast is already clear — §467.1's exact shape, "the
+world re-permits the full boom and the camera declines it", now photographed on a mount instead
+of a slam.
+
+**So §471.5's sibling note was wrong in one clause**: it said a ring hung beside a column has
+"no authored route" doing it today. The T1 mount cadence IS an authored route doing it — every
+E-mash approach to the rope passes through that ring for a second, takes the crush, and hands
+the recovery debt to the climb. Corrected here rather than edited there (the ledger is
+append-only); the sheet's item 15 carries the watch note.
+
+Not widened tonight, on §444/§467's grounds: ignoring the pole class during HOOK attachments
+would sight through the obelisk on ordinary courtyard chain swings — a cost on the marquee move
+that nobody has measured — and cutting the recovery clock on attach transitions reopens the
+anti-flicker design `recoverSpeed`'s block documents. Both are priced levers for the item-12
+family (the recovery clock is already lever 2 there), not one-line repairs. The climb half —
+the sustained, seconds-long beat the user asked about — is delivered by the shipped gate.
+
+### §472.3 Protocol
+
+Shot from the clean worktree (sha cb074e7, dirty ""), 1080p Q=high, the same take scripts as
+thief1 (stances, cadences, capture conditions unchanged for T1/T3). `shots/climbtrace.json` is
+regenerated from the same worktree so its provenance matches the committed §471 numbers —
+identical to the digit. T2's §497 re-shoot is next (the tool's T2 arm is rewritten to the
+re-hung contract in this commit: two sneak walk-ons with the `balance` framing's first capture,
+the deflector fling, the E-press at own-speed), from this tree at §497's own geometry.
+One protocol note for the record: thief2's T3 take 1 was struck mid-climb at y 7.85 by a
+one-frame hurt impulse (sp 12.83 appearing on a pole where sp is pinned 0 — a guard cone or
+hazard reaching the pipe; guards are out of this lane's scope and it is left unattributed),
+tumbled, re-mounted under the drive's held input, and finished on the y 12.5 upper ledge — its
+"ring" captures are that arrival, composed at boom 4.87/4.11. Take 2 is the control pair above.
+The §504 watchdog never fired; the E-mash T1 cadence and every T1 number were unaffected.

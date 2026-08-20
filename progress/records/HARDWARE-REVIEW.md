@@ -1006,3 +1006,17 @@ camera body still cannot enter it) instead of crushing to the hat. Two questions
 One sibling on the record (§471.5): a hook ring hung beside a column would still crush the same
 way — `hook` attachments do not open this gate. No authored route does it today; if a ring is
 ever authored against a column, that is the frame to re-read this item on.
+
+> ### ⚠ RE-PHOTOGRAPHED (thief2, §472) — the climb composes; the MOUNT still shows the hat for a second, and that second is not this item's mechanism
+>
+> After-frames, both takes to the centimetre: climb boom 0.55 → **3.36–3.45** (ndcY +1.01 →
+> **+0.21**, in frame), top 0.55 → **5.84** (composed at the authored want). The mount frame is
+> **unchanged at 0.55** — and the telemetry names why: the sibling above is not hypothetical,
+> it is ON the authored mount cadence. The E-mash approach catches a kiosk hook ring for a
+> second (`hookSwing` beside the shaft), the swing is crushed 3.16 → 0.55 against the obelisk
+> — `hook` does not open the gate, and the occluder is not the held object — and the recovery
+> clock (0.22 s hold + 0.62 s τ at 6 m/s) then spends the climb's first ~1.5 s paying that
+> debt off after every cast is already clear: §467.1's "the world re-permits and the camera
+> declines", photographed on a mount. **What to watch on hardware**: jump-grab the rope and
+> count the beat before the camera opens. If that beat reads wrong, the levers are item 12's
+> recovery-clock family or the level (the ring beside the shaft), not this gate.

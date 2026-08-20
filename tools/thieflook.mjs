@@ -228,98 +228,74 @@ try {
     await page.keyboard.up('KeyW');
     if (!under) { console.log('      never reached the rope corridor'); log.push({ tag: 'T2-NOUNDER' }); }
 
-    /* The rope has TWO entries and they are different beats, which the smoke run surfaced:
-       an E-press within railMount×1.6 enters `RailSlide`, whose `enter()` mounts at
-       `TUNE.railSpeed` 9.5 m/s regardless of approach speed — the tightrope plays as the rooftop
-       rail circuit. A walk-on over the crest (0.11 above the stance, under stepHeight — §495.B's
-       own authored mount) lands grounded on the `rail` tag, which is `RailWalk`'s entry: the
-       own-power balance crossing, and `railWalk` routes to the `balance` framing via
-       STATE_FRAME — the tightrope shot, which no drive anywhere has ever produced. Two takes of
-       each entry; the E-takes track the overshoot at the east end all the way to whatever it
-       ends in (the smoke run ended WEDGED airborne in the colossus at (8.33, 4.77), frozen in
-       `fall`, until the watchdog respawned to spawn). */
-    /* Take plan — the smoke runs redrew it, twice:
-         1  E-press ride, full consequence chain: entry, mid, late (the delivered-lead frame at
-            x ≈ +3, where the ride has settled to its ~1.73 m), off-end launch, the wedge, the
-            watchdog respawn.
-         3  E-press ride again with the press cadence phase-shifted — the ride is deterministic
-            from the mount, so a genuine second sample needs a different mount frame.
-         2  the walk-on §495.B authored ("rope crest 0.11 above the stance, under stepHeight") —
-            the smoke run measured the knee top ENDING ~0.7 m west of the rope's west end: the
-            walk steps off at x ≈ −7.2, drops to a lip at y 4.5, and never reaches the crest.
-            Frames of the step-off and the lip are the evidence that the walk-on does not exist.
-         4  the jump-on a player would try next — and RailSlide's airborne auto-engage
-            (vy ≤ 0.6, within railMount) should steal the landing into the 9.5 m/s slide before
-            the feet ever touch the crest, which would make railWalk structurally unreachable on
-            this rope, not merely unvisited. */
-    for (const take of [1, 3, 2, 4]) {
-      const kind = take === 2 ? 'walk-on' : take === 4 ? 'jump-on' : 'E-press';
-      console.log(`[T2.${take}] knee -> crossing (${kind})`);
+    /* ── §497 re-shot the plan. The rope was re-hung (ends 4.95, sag 4.62, `mountSpeed: 0`,
+       anchor stones top 4.90, shin deflectors) after this tool's thief1 run photographed the
+       old geometry failing all three claims — the walk-on that never mounted, the 9.5 m/s
+       fling, the wedge at (8.33, 4.77). The §497-driven contract (thiefspots §B): a buttonless
+       SNEAK walk-on mounts from either knee and ARRIVES STANDING past x ±6.2 at the shelf band
+       y 4.4–5.6; the full-speed run flings off the far end into the deflector and lands, never
+       holds. Takes:
+         1  sneak walk-on W→E — the buttonless mount, entry/mid/late/arrival/settle
+         2  sneak walk-on E→W — the leg §497 measures `railWalk` on: the BALANCE framing's
+            first frames anywhere (STATE_FRAME railWalk → balance)
+         3  the fling: full-speed run W→E, ride the slide off the end into the deflector —
+            `rail_slide` at speed (item 6's flag) and the shed-not-hold beat
+         4  E-press entry from a stand — the deliberate mount a player is taught; with
+            `mountSpeed: 0` it rides at own speed now, not 9.5
+       The wedge/respawn choreography is gone with the wedge; the STUCK detector stays armed —
+       if it fires now, that is a regression photograph, not a protocol step. */
+    for (const take of [1, 2, 3, 4]) {
+      const kind = take === 4 ? 'E-press' : take === 3 ? 'fling' : 'walk-on';
+      const west = take !== 2;
+      const sx = west ? -1 : 1;
+      console.log(`[T2.${take}] ${west ? 'west' : 'east'} knee -> crossing (${kind}${take === 2 ? ', railWalk leg' : ''})`);
       const st = await stance(`T2.${take}`,
-        take === 3 ? [[-8.6, 5.5, 27.0], [-9.0, 5.5, 27.0]] : [[-9.0, 5.5, 27.0], [-8.6, 5.5, 27.0]],
-        [9.0, 27.0], 25 + take * 7);
+        [[sx * 7.9, 4.72, 27.0], [sx * 8.3, 4.6, 27.0]],
+        [west ? 9.0 : -9.0, 27.0], 25 + take * 7);
       if (!st) { log.push({ tag: `T2.${take}-NOSTANCE` }); continue; }
       if (take === 1) await snap('t2c-knee', 'T2.1');
       await page.keyboard.down('KeyW');
-      await page.keyboard.down('ShiftLeft');
-      let onRail = false, mid = false, dip = false, late = false, exited = false, offEnd = false, eDown = false;
-      let walkedOff = false, lipShot = false, jumped = false, spaceHeld = 0;
+      if (kind === 'walk-on') await page.keyboard.down('ShiftLeft');   // sneak: the §497 mount
+      let onRail = false, sawWalk = false, mid = false, late = false, arrived = false, eDown = false;
       let stuckN = 0, stuckShot = false, lastP = null;
-      for (let i = 0; i < 900; i++) {
+      const past = (x) => (west ? x > 6.2 : x < -6.2);
+      const lateAt = (x) => (west ? x > 2.5 : x < -2.5);
+      for (let i = 0; i < 1400 && !arrived; i++) {
         if (kind === 'E-press' && !onRail) {
-          const phase = take === 3 ? 4 : 0;
-          if (i % 9 === phase) { await page.keyboard.down('KeyE'); eDown = true; }
-          else if (eDown && i % 9 === (phase + 2) % 9) { await page.keyboard.up('KeyE'); eDown = false; }
+          if (i % 9 === 0) { await page.keyboard.down('KeyE'); eDown = true; }
+          else if (eDown && i % 9 === 2) { await page.keyboard.up('KeyE'); eDown = false; }
         }
         await sim(1);
         const s = await probe();
         trace(`T2.${take}-cross`, s);
-        if (kind === 'jump-on' && !jumped && s.p[0] > -7.7 && s.gr) {
-          jumped = true; spaceHeld = 4; await page.keyboard.down('Space');
-        }
-        if (spaceHeld > 0 && --spaceHeld === 0) await page.keyboard.up('Space');
-        if (!onRail && (s.st === 'railWalk' || s.st === 'railSlide')) {
+        const onR = s.st === 'railWalk' || s.st === 'railSlide';
+        if (!onRail && onR) {
           onRail = true;
           log.push({ tag: `T2.${take}-ENTERED`, st: s.st, at: s.p, sp: s.sp, rsp: s.rsp });
           if (eDown) { await page.keyboard.up('KeyE'); eDown = false; }
           await sim(2); await snap(`t2t${take}-entry`, `T2.${take}`);
         }
-        if (kind === 'walk-on' && !onRail) {
-          if (!walkedOff && !s.gr && s.p[0] > -7.7) {
-            walkedOff = true;
-            log.push({ tag: 'T2.2-WALKOFF', at: s.p });
-            await snap('t2t2-walkoff', 'T2.2');
-          }
-          if (walkedOff && !lipShot && s.gr && s.p[1] < 5.0) {
-            lipShot = true; await snap('t2t2-lip', 'T2.2');
-          }
+        if (onR && !sawWalk && s.st === 'railWalk') {
+          sawWalk = true;
+          log.push({ tag: `T2.${take}-RAILWALK`, at: s.p, sp: s.sp });
+          if (take === 2) await snap('t2t2-balance', 'T2.2');   // the balance framing, first frames
         }
-        if (onRail && !mid && s.p[0] > -4.5 && (s.st === 'railSlide' || s.st === 'railWalk')) {
+        if (onRail && !mid && Math.abs(s.p[0]) < 0.4 && onR) {
           mid = true; await snap(`t2t${take}-mid`, `T2.${take}`);
         }
-        /* The ndcY minimum: the smoke trace bottoms at −0.76 around x −1.9 (lead grown to ~+1.3
-           while the boom is still short from the west-knee crush). The worst-framed instant of
-           the ride is the frame item 6's "look at that row first" clause is answered on. */
-        if (onRail && !dip && s.p[0] > -2.0 && (s.st === 'railSlide' || s.st === 'railWalk')
-            && take === 1) {
-          dip = true; await snap('t2t1-dip', 'T2.1');
+        /* The settled-lead frame item 6's flag is answered on (x past ±2.5, ride settled). */
+        if (onRail && !late && lateAt(s.p[0]) && onR) {
+          late = true; await snap(`t2t${take}-late`, `T2.${take}`);
         }
-        if (onRail && !late && s.p[0] > 2.5 && (s.st === 'railSlide' || s.st === 'railWalk')
-            && take === 1) {
-          late = true; await snap('t2t1-late', 'T2.1');
+        /* ARRIVED: grounded on the far shelf/stones past ±6.2 — §497's own bar. */
+        if (onRail && s.gr && past(s.p[0]) && s.p[1] > 4.3) {
+          await sim(3); await snap(`t2t${take}-arrive`, `T2.${take}`);
+          await keysUp();
+          await sim(40); await snap(`t2t${take}-settle`, `T2.${take}`);
+          arrived = true; break;
         }
-        if (onRail && !offEnd && s.p[0] > 6.4 && s.st !== 'railSlide' && s.st !== 'railWalk' && !s.gr) {
-          offEnd = true;
-          if (take === 1) await snap('t2t1-offend', 'T2.1');
-        }
-        /* A real dismount is a grounded frame AT KNEE HEIGHT — the smoke run's wedge produced
-           one grounded flicker at y 4.77 and was miscounted as an exit. */
-        if (onRail && s.gr && s.p[0] > 4.5 && s.p[1] > 5.2
-            && ((s.st !== 'railSlide' && s.st !== 'railWalk') || s.p[0] > 5.8)) {
-          await sim(3); await snap(`t2t${take}-exit`, `T2.${take}`); exited = true; break;
-        }
-        /* The wedge: airborne, position frozen. 45 identical frames is 0.75 s of a `fall` that
-           does not fall — photograph it, then let it run to the watchdog respawn. */
+        /* The retired wedge's detector, kept armed: airborne and frozen for 45 frames is a
+           regression photograph now that §497 deflects instead of holding. */
         if (!s.gr && lastP && Math.abs(s.p[0] - lastP[0]) < 0.01 && Math.abs(s.p[1] - lastP[1]) < 0.01
             && Math.abs(s.p[2] - lastP[2]) < 0.01) {
           if (++stuckN === 45 && !stuckShot) {
@@ -329,16 +305,21 @@ try {
           }
         } else stuckN = 0;
         lastP = s.p;
+        if (s.p[2] > 29.5 && Math.abs(s.p[0]) < 1.5) {
+          log.push({ tag: `T2.${take}-RESPAWNED`, at: s.p });
+          await snap(`t2t${take}-respawn`, `T2.${take}`);
+          break;
+        }
         if (s.p[1] < 3.0) {
           log.push({ tag: `T2.${take}-FELLBELOW`, at: s.p });
-          if (take === 1) { await sim(5); await snap('t2t1-respawn', 'T2.1'); }
+          if (kind === 'fling') { await sim(3); await snap(`t2t${take}-shed`, `T2.${take}`); }
           break;
         }
       }
       if (eDown) await page.keyboard.up('KeyE');
       await keysUp();
       if (!onRail) log.push({ tag: `T2.${take}-NORAIL` });
-      if (!exited) log.push({ tag: `T2.${take}-NOEXIT` });
+      if (!arrived) log.push({ tag: `T2.${take}-NOARRIVE` });
       await sim(30);
     }
   }
