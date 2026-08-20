@@ -41226,3 +41226,61 @@ transient (boom 2.01 at the catch, recovering from the knee approach's short boo
 §467.1/§472.2 recovery-clock shape again, ~1 s to the sag's 7.0); and every arrival/settle on
 the stones composes (3.19/2.14 tiptoe close-ups — sneak framing at a stone the player is
 standing on, correct and tight).
+
+## §498 — The crouch pocket beside the anchor stones: formed by §497's own repair, closed by measurement
+
+§473.3 (camera lane) delivered the finding with the artefact: the fourth T2 take pinned at
+(−7.01, 4.77, 26.52) — `tiptoe`, GROUNDED, 1347 of 1400 frames, wiggling centimetres, the boom
+legitimately crushed to 0.55 inside the cavity. The coordinates are 0.3 m from the west anchor
+stone §497 placed, and the pocket did not exist before it. Same authoring class as §491's boxed
+soffit: a miss beside an authored beat lands somewhere a jump cannot leave.
+
+### §498.1 The shape, probed both faces
+
+The statue's kneecap sculpt LEANS NORTH AS IT RISES (from the pin point: its face is 1.07 m south
+at h 1.0 and 0.45 m at h 1.6), and the shelf under it keeps 0.4–0.6 m ceilings out to x ∓8 — a
+crouch-height slot between the sculpt and each §497 anchor stone. A capsule that drifts south of
+the stone at walking speed wedges under the overhang against the stone's corner: headroom refuses
+the jump, the stone refuses east, the overhang refuses standing, and held-toward-the-rope grinds
+in place. **Both watchdogs exempt it BY DESIGN and correctly**: §504 exempts grounded (a standing
+player is ordinary), the STUCK trip exempts motion (it wiggles). No net gap — geometry is the
+only net there is for this class. Walk-out west existed (§473.3's read, confirmed), but never
+under the input a player actually gives.
+
+Dynamics matter, and the instrument had to learn it: a capsule PLACED at the pin coordinates
+settles clear and walks out, and a straight-line headless drive never drifts into the slot (the
+browser take's entry was stance jitter). The pin only reproduces by driving INTO the slot and
+then holding toward the rope — measured pre-fill on both sides: wedged at (±6.83, 4.84, 26.36),
+then 0.01 m of movement over 240 held frames. That drive is now the arm.
+
+### §498.2 The repair (P-A1 280 → 282, ground +2) and what the fill measured
+
+One fill per side, ledge-to-above-crouch (x ±6.75..8.45, y 4.5..5.8, z 25.9..26.6), stone to
+deflector: the slot admits nothing at any height, and the exposed north face is a plain 1.3 m
+wall on the open shelf — one face plus floor, nothing to pinch. RNG-neutral (the §497.4 rule).
+§436-driven from the wall's inside corner with the stone: north leaves in 56 frames, west leaves
+in 39 (onto the rope, in `railWalk`), jump in 13 (a `ledgeClimb` UP the fill face onto the
+colossus — the fill reads as a climbable course of the statue's base, a verb, not a trap).
+Residual crouch-height cells survive UNDER the sculpt behind 0.1–0.4 m entries no capsule can
+pass; recorded as sub-capsule voids, not affordances.
+
+With the fills in, the same wedge-in drive stands at the anchor stone and the held-toward-the-
+rope input moves 9.3 m — onto the rope, `railWalk`, to mid-span. The input that was pinned for
+22 seconds now completes the beat it was trying for.
+
+### §498.3 The arm, and what its first version could not see
+
+`thiefspots` B gains the camera lane's fourth take verbatim (sneak + E-mash — completes; its
+protocol note stands: with `mountSpeed` 0 a moving E-mash is the wrong deliberate-mount drive
+anyway), a grounded-hold tripwire in every leg (`maxGndHold < 150` — the §497 airborne ceiling's
+grounded twin), and the two dynamic slot probes above. The straight take alone was measured
+INSUFFICIENT — it stays green with the fills ablated because the headless driver lacks the
+browser's drift — which is why the probes drive the wedge deliberately. Ablation on the final
+geometry: fills removed, `B-pocketW` reds with 0.01 m; fills in, 862-suite green from a clean
+worktree (verdict below).
+
+Verification, clean worktree at `abacfe3` + exactly these three files: ablated fills red
+`B-pocketW` at 0.01 m (the §473.3 signature, headless); fills in, **full suite 862/862,
+EXIT=0** — thiefspots prints "B arrivals WE x 6.44 / EW x −6.44 / fling x 6.44 / emash x 6.60";
+`spawn to the Eye of Ra` completes. Re-photography of the slot is the camera lane's to schedule
+if they want the fill's north face on film; nothing else changed in frame.

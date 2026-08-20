@@ -1879,6 +1879,19 @@ function courtyardTraversal(A) {
     A.proxy(new THREE.BoxGeometry(0.70, 0.50, 0.90), { tag: 'ground', material: 'stone' },
       { x: sx * 6.40, y: 4.65, z: 27.0 });
   }
+  /* §498 slot fills — the space between each anchor stone and the statue mass south of it was a
+     CROUCH POCKET: the kneecap sculpt leans north as it rises (probed: its face is 1.07 m south
+     of the §473.3 pin at h 1.0 and 0.45 m at h 1.6, with 0.4–0.6 m ceilings over the shelf out
+     to x ∓8), so a sneak-speed approach that drifts south of the stone wedges under the overhang
+     against the stone's corner — grounded, wiggling centimetres, invisible to both watchdogs BY
+     DESIGN (§504 exempts grounded; STUCK exempts motion), pinned for as long as the player holds
+     toward the rope (1347 frames on camera). Filled ledge-to-above-crouch across the whole slot,
+     stone to deflector, so the space admits no capsule at any height; the fill's north face is a
+     plain wall on the open shelf — one face plus floor, nothing to pinch. RNG-neutral. */
+  for (const sx of [1, -1]) {
+    A.proxy(new THREE.BoxGeometry(1.70, 1.30, 0.70), { tag: 'ground', material: 'stone' },
+      { x: sx * 7.60, y: 5.15, z: 26.25 });
+  }
   const pipeG = new THREE.CylinderGeometry(0.14, 0.16, 9.6, 8, 1);
   K.normaliseAttrs(pipeG);
   A.add('court', 'bronze_dark', K.boxProjectUVs(K.place(pipeG, { x: 21.35, y: 4.8, z: -2.0 })));

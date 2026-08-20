@@ -411,8 +411,17 @@ test('P-A1: a rope coil is set dress and carries no gameplay volume', () => {
      MOUNTING STONES at the anchors (top 4.90 — the knee shelf's collidable ART otherwise walks
      a capsule grounded below the from-above catch before releasing it). With `mountSpeed: 0`
      and the ends re-hung at 4.95 the crossing settles into `railWalk` — driven both directions,
-     plus the fling, in `thiefspots`. Histogram: ground 56 → 60, all else byte-identical. */
-  assert.equal(REG.length, 280, 'collider registrations unchanged by this seal');
+     plus the fling, in `thiefspots`. Histogram: ground 56 → 60, all else byte-identical.
+
+     ── 280 → 282: §498 fills the crouch pocket the §497 stones formed (ground +2) ─────────────
+     The camera lane's fourth take pinned GROUNDED at (−7.01, 4.77, 26.52) for 1347 frames
+     (§473.3): the statue's kneecap sculpt leans north as it rises, and the slot between it and
+     each anchor stone admitted a capsule at crouch height against the stone's corner — exempt
+     from both watchdogs by design (grounded, wiggling). One fill per side, ledge-to-above-crouch
+     (x ±6.75..8.45, y 4.5..5.8, z 25.9..26.6), so the slot admits nothing; the exposed north
+     face is a plain wall on the open shelf (§436-driven: every escape leaves, including a
+     ledgeClimb UP it onto the colossus). Histogram: ground 60 → 62, all else byte-identical. */
+  assert.equal(REG.length, 282, 'collider registrations unchanged by this seal');
   assert.equal(P.stats.decals, 46, 'contact decals unchanged by this seal');
   assert.equal(P._fx.length, 24, 'fx emitters unchanged');
   assert.equal(P._lights.length, 24, 'lights unchanged');

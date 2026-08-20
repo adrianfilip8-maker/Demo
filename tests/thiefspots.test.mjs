@@ -108,25 +108,39 @@ test('thiefspots: the three §495 lines complete from standable starts, and the 
      Three legs, no interact anywhere: the entry under test is the one a player WALKS (§497).
      Each leg tracks the longest airborne stand-still, because the defect this replaces was a
      capsule held in the air (fall, |v| ~ 0, gr false) for the §504 watchdog to throw away. */
-  const bLeg = (name, start, tx, { sneak, wantWalk }) => {
+  const bLeg = (name, start, tx, { sneak, wantWalk, emash }) => {
     hardReset(engine, c, start, Math.PI);
     for (let i = 0; i < 25; i++) step(() => {});          // settle: the start is a stance, not a mount
     assert.ok(c.grounded, `${name}: the start stance did not settle grounded (y ${c.position.y.toFixed(2)})`);
     let onRail = false, sawWalk = false, arrived = -1, airHold = 0, maxAirHold = 0;
+    let gndHold = 0, maxGndHold = 0, gndAt = '';
     for (let i = 0; i < 1400; i++) {
-      step((inp) => { aim(tx, 27.0); inp.move.y = 1; if (sneak) inp.hold('sneak'); });
+      step((inp) => {
+        aim(tx, 27.0); inp.move.y = 1; if (sneak) inp.hold('sneak');
+        if (emash && !onRail && i % 9 === 0) inp.hold('interact'); else inp.let_go('interact');
+      });
       const onR = c.stateName === 'railWalk' || c.stateName === 'railSlide';
       onRail = onRail || onR;
       sawWalk = sawWalk || c.stateName === 'railWalk';
       const spXZ = Math.hypot(c.velocity.x, c.velocity.z);
       if (!onR && !c.grounded && spXZ < 0.05 && Math.abs(c.velocity.y) < 0.5) airHold++; else airHold = 0;
       maxAirHold = Math.max(maxAirHold, airHold);
+      /* §498's pocket was the GROUNDED twin of the §497 wedge: tiptoe, wiggling centimetres,
+         invisible to both watchdogs by design. Held forward must never stand still this long. */
+      if (!onR && c.grounded && spXZ < 0.35) {
+        gndHold++;
+        if (gndHold > maxGndHold) { maxGndHold = gndHold; gndAt = `(${c.position.x.toFixed(2)}, ${c.position.y.toFixed(2)}, ${c.position.z.toFixed(2)})`; }
+      } else gndHold = 0;
       const past = tx > 0 ? c.position.x > 6.2 : c.position.x < -6.2;
       if (onRail && past && c.grounded && arrived < 0) { arrived = i; break; }
       assert.ok(!(c.position.z > 29.5 && Math.abs(c.position.x) < 1.5),
         `${name}: respawned to spawn mid-leg — the §504 watchdog fired, so something held the capsule`);
       if (c.position.y < 3.0) break;                       // off the rope into the courtyard: a miss, not a trap
     }
+    assert.ok(maxGndHold < 150,
+      `${name}: held-forward stood still GROUNDED for ${maxGndHold} frames at ${gndAt} — the §498 crouch `
+      + 'pocket class (§473.3: pinned 1347 frames beside the west anchor stone, exempt from both '
+      + 'watchdogs because grounded and wiggling) is holding a walker again');
     const p = c.position;
     assert.ok(onRail, `${name}: the buttonless walk-on never mounted — the from-above catch does not `
       + 'cover where the knee walk-off arrives (§497 re-hung the rope precisely so it does)');
@@ -149,6 +163,36 @@ test('thiefspots: the three §495 lines complete from standable starts, and the 
   /* The fling: RUN in, ride the slide off the far end at speed, into the deflector face.
      The leg's whole point is the maxAirHold and watchdog assertions inside bLeg. */
   const bFling = bLeg('B-fling', V(-7.9, 4.72, 27.0), 9.0, { sneak: false, wantWalk: false });
+  /* §498: the camera lane's fourth take, verbatim — sneak + E every 9 frames from the west
+     stance. Pre-fill this drive drifted south of the stone in the live browser and pinned in the
+     crouch pocket at (−7.01, 4.77, 26.52) for 1347 frames (§473.3). The headless driver does not
+     reproduce that drift (measured: it completes even with the fills ablated), so the take alone
+     is NOT the pocket's certification — the placed-and-held legs below are. */
+  const bMash = bLeg('B-emash', V(-9.0, 5.5, 27.0), 9.0, { sneak: true, wantWalk: false, emash: true });
+  /* The pocket itself, entered the way it actually holds: DYNAMICALLY. A capsule placed at
+     §473.3's coordinates settles clear and walks out, and a straight-line drive never drifts
+     into it — the pin needs the wedge-in-motion (pressed under the kneecap overhang against the
+     stone's corner). So this probe drives INTO each slot deliberately, then switches to the
+     exact input that pinned the fourth take — held toward the rope — and asserts it MOVES.
+     Ablation-measured, both sides: fills removed, the wedge lands at (±6.83, 4.84, 26.36) and
+     the held input moves 0.01 m (§473.3's 1347-frame pin, reproduced); fills in, the same drive
+     stands at the anchor stone and the held input moves ~9.3 m — onto the rope, in `railWalk`,
+     to mid-span. The pinned input now completes the beat it was trying for. */
+  for (const [nm, sx] of [['pocketW', -1], ['pocketE', 1]]) {
+    hardReset(engine, c, V(sx * 6.9, 4.95, 27.2), Math.PI);
+    for (let i = 0; i < 20; i++) step(() => {});
+    for (let i = 0; i < 150; i++) step((inp) => { aim(sx * 7.9, 25.4); inp.move.y = 1; inp.hold('sneak'); });
+    const w = c.position.clone();
+    let moved = 0;
+    for (let i = 0; i < 240; i++) {
+      step((inp) => { aim(sx * -9.0, 27.0); inp.move.y = 1; });
+      moved = Math.max(moved, Math.hypot(c.position.x - w.x, c.position.z - w.z));
+    }
+    assert.ok(moved > 1.0,
+      `B-${nm}: after wedging into the slot at (${w.x.toFixed(2)}, ${w.y.toFixed(2)}, ${w.z.toFixed(2)}), `
+      + `held-toward-the-rope moved only ${moved.toFixed(2)} m — the §498 crouch pocket is holding a `
+      + 'grounded walker again (both watchdogs exempt it by design, so geometry is the only net)');
+  }
 
   /* ── C: the drainpipe, paving to the y 9.0 ring ────────────────────────────────────────── */
   hardReset(engine, c, V(19.8, 0.02, -2.0), Math.PI);
@@ -170,6 +214,6 @@ test('thiefspots: the three §495 lines complete from standable starts, and the 
     `${c.position.z.toFixed(2)}) ${c.stateName} — the top-hop onto the y 9.0 architrave ring did not land`);
 
   console.log('[thiefspots] A rope top', topY.toFixed(2),
-    `· B arrivals WE x ${bWE.toFixed(2)} / EW x ${bEW.toFixed(2)} / fling x ${bFling.toFixed(2)}`,
+    `· B arrivals WE x ${bWE.toFixed(2)} / EW x ${bEW.toFixed(2)} / fling x ${bFling.toFixed(2)} / emash x ${bMash.toFixed(2)}`,
     '· C ring at', c.position.y.toFixed(2));
 });
