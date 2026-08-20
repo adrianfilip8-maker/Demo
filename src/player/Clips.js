@@ -218,8 +218,13 @@ const IDLE_A = P({
   hips: [2, 21, -19],
   spine: [-3, -11, 15],
   chest: [7, -23, 24],        // shoulders roll opposite the hips: the S
-  neck: [-9, 12, -10],
-  head: [-9, 21, -16],
+  /* neck/head X were -9/-9. The author's own X-sum through the chain (2-3+7-9-9) says the
+     intended chin is ~12 deg proud; MEASURED on the composed skeleton the yaw/roll terms
+     amplified it to +22 (+26.5 with the additive layers), which on hardware read as
+     "permanently looking upward" (§522 defect 3). -4/-4 lands the measured hold at the
+     authored intent, +12 — the smug chin stays, the sky-gaze goes. */
+  neck: [-4, 12, -10],
+  head: [-4, 21, -16],
   jaw: [4, 0, 0],
   capBrim: [3, 0, -3],
   earL: [-13, 6, -18],
@@ -366,10 +371,10 @@ def('idle_confident', {
        so both keys now hold `CANE.plant` and only the body drifts. `hold: 0` hides all of this
        from stills, which is exactly why it survived: the held frame being right has never been
        evidence that the clip is. */
-    { t: 0.9, e: 'soft', P: { hips: [1, 21, -19], chest: [4, -22, 23], head: [-9, 22, -17], tailA: [-11, -24, 6], tailB: [-3, -36, 0], tailD: [34, 30, 0] }, pos: [-0.044, -0.008, 0.004], cane: CANE.plant },
-    { t: 1.9, e: 'soft', P: { hips: [3, 16, -15], chest: [7, -17, 19], head: [-4, 15, -12], tailA: [-18, -15, 6], tailB: [-10, -27, 0], tailD: [26, 21, 0] }, pos: [-0.058, -0.020, -0.004], cane: CANE.plant },
+    { t: 0.9, e: 'soft', P: { hips: [1, 21, -19], chest: [4, -22, 23], head: [-4, 22, -17], tailA: [-11, -24, 6], tailB: [-3, -36, 0], tailD: [34, 30, 0] }, pos: [-0.044, -0.008, 0.004], cane: CANE.plant },
+    { t: 1.9, e: 'soft', P: { hips: [3, 16, -15], chest: [7, -17, 19], head: [1, 15, -12], tailA: [-18, -15, 6], tailB: [-10, -27, 0], tailD: [26, 21, 0] }, pos: [-0.058, -0.020, -0.004], cane: CANE.plant },
     // a slow blink-and-smirk beat: head cocks a little further over, ears flick
-    { t: 2.6, e: 'smooth', P: { head: [-8, 22, -19], earL: [-19, 8, -24], earR: [-2, -9, 29], jaw: [6, 0, 0] } },
+    { t: 2.6, e: 'smooth', P: { head: [-3, 22, -19], earL: [-19, 8, -24], earR: [-2, -9, 29], jaw: [6, 0, 0] } },
     { t: 3.6, e: 'soft', P: IDLE_A, pos: [-0.078, -0.018, 0], cane: CANE.plant },
   ],
 });
@@ -906,8 +911,13 @@ const SNEAK_BASE = P({
   hips: [30, 15, -8],
   spine: [-6, -6, 5],
   chest: [-8, -15, 12],
-  neck: [-26, 9, -6],
-  head: [-24, 15, -10],
+  /* neck/head X were -26/-24: a -50 counter against a body pitched +16, leaving the muzzle a
+     MEASURED 31-42 deg above horizontal through the whole sneak family — a creep staring at
+     the sky, and with the DL carry on top it is what the user reported as the head pinned up.
+     -11/-9 lands the measured hold at +5: he scans where he is creeping. The yaw ("turning
+     back over the leading shoulder") is untouched — that was the authored line of action. */
+  neck: [-11, 9, -6],
+  head: [-9, 15, -10],
   jaw: [2, 0, 0],
   capBrim: [4, 0, 0],
   earL: [-16, 6, -18], earR: [-14, -6, 20],
@@ -931,18 +941,30 @@ def('sneak_idle', {
   dur: 3.0, loop: true, hold: 0,
   keys: [
     { t: 0, e: 'soft', P: SNEAK_BASE, pos: [0, -0.30, 0.05], cane: CANE.out },
-    { t: 0.8, e: 'soft', P: { chest: [-11, -5, 2], head: [-27, 12, -6], neck: [-28, 6, -2],
+    { t: 0.8, e: 'soft', P: { chest: [-11, -5, 2], head: [-12, 12, -6], neck: [-13, 6, -2],
       tailA: [-40, -26, 0], tailB: [-22, -32, 0], tailC: [38, 34, 0], tailD: [46, 40, 0] }, pos: [0.006, -0.315, 0.055], cane: [56, -40, 0] },
-    { t: 1.7, e: 'soft', P: { chest: [-5, 5, -2], head: [-21, -10, 5], neck: [-24, -5, 2],
+    { t: 1.7, e: 'soft', P: { chest: [-5, 5, -2], head: [-6, -10, 5], neck: [-9, -5, 2],
       tailA: [-34, -14, 0], tailB: [-26, -20, 0], tailC: [42, 26, 0], tailD: [50, 30, 0] }, pos: [-0.006, -0.285, 0.045], cane: [60, -26, 0] },
     { t: 3.0, e: 'soft', P: SNEAK_BASE, pos: [0, -0.30, 0.05], cane: CANE.out },
   ],
 });
 
-/* Tiptoe: an exaggerated high knee lift, a long slow reach and a light toe-first plant. */
+/* Tiptoe: an exaggerated high knee lift, a long slow reach and a light toe-first plant.
+   ARMS: the contact key carries the RIGHT arm chain forward, mirrored from SNEAK_BASE's
+   left-lead chain, because this key is the LEFT foot's plant. The base pose leads with the
+   left on both floors — fine for a still, and inherited here it put the arm swing a quarter
+   cycle out of phase with the legs: measured through the real sampler the arm lead landed on
+   the SAME side as the planting foot for 52% of the cycle (every other stride, both models —
+   the user's "arms feel switched at times", §522 defect 3). The upper arms are re-keyed as a
+   pendulum anchored to the contacts — extremes here, passage values at P and U, and the mir()
+   half swaps the lead back — so each arm peaks forward exactly when its own leg is furthest
+   back. Measured ipsilateral fraction after: 0%, walk's own figure. The elbows and hands swap
+   with the lead (the reaching arm carries the deep bend). Legs, torso and tail untouched. */
 const SNEAK_C = Object.assign({}, SNEAK_BASE, {
   hips: [30, -9, 2], spine: [-6, 4, 0], chest: [-8, 11, -1],
-  upperArmL: [-28, 12, -26], upperArmR: [16, -14, 34],
+  upperArmL: [34, 14, -34], upperArmR: [-48, -12, 26],
+  lowerArmL: [-30, -22, -16], lowerArmR: [-56, 18, 14],
+  handL: [8, -16, -10], handR: [16, 14, 10],
   upperLegL: [-76, 8, 4], lowerLegL: [46, 0, 0], footL: [12, -5, 0], toeL: [-6, 0, 0],
   upperLegR: [-18, -8, -4], lowerLegR: [48, 0, 0], footR: [-4, 5, 0], toeR: [10, 0, 0],
   tailA: [-36, -10, 0], tailB: [-26, -16, 0], tailC: [42, 34, 0], tailD: [48, 26, 0],
@@ -954,14 +976,14 @@ const SNEAK_D = {
 };
 const SNEAK_P = {
   hips: [30, 0, 0], spine: [-6, 0, 0], chest: [-8, 0, 0],
-  upperArmL: [-40, 12, -26], upperArmR: [26, -14, 34],
+  upperArmL: [-9, 12, -26], upperArmR: [-5, -13, 30],
   upperLegL: [-40, 6, 4], lowerLegL: [70, 0, 0], footL: [-16, -5, 0], toeL: [8, 0, 0],
   upperLegR: [-58, -6, -4], lowerLegR: [78, 0, 0], footR: [-22, 5, 0], toeR: [2, 0, 0],
   tailA: [-32, 0, 0], tailB: [-22, 0, 0], tailC: [42, 0, 0], tailD: [46, 0, 0],
 };
 const SNEAK_U = {
   hips: [30, 6, -1], spine: [-6, -3, 0], chest: [-8, -8, 1],
-  upperArmL: [-48, 12, -26], upperArmR: [34, -14, 34],
+  upperArmL: [-29, 12, -26], upperArmR: [15, -14, 34],
   upperLegL: [-26, 6, 4], lowerLegL: [58, 0, 0], footL: [4, -5, 0], toeL: [12, 0, 0],
   upperLegR: [-78, -6, -4], lowerLegR: [56, 0, 0], footR: [6, 5, 0], toeR: [-4, 0, 0],
   tailA: [-2, -8, 0], tailB: [2, -11, 0], tailC: [4, -7, 0], tailD: [10, 6, 0],
@@ -989,7 +1011,10 @@ def('sneak_walk', {
 /* -------------------------------- crouch --------------------------------- */
 
 const CROUCH_BASE = P({
-  hips: [44, 0, 0], spine: [-10, 0, 0], chest: [-14, 0, 0], neck: [-30, 0, 0], head: [-26, 0, 0],
+  /* neck/head X were -30/-26 — the same over-counter as the sneak family (a -56 answer to a
+     +20 body pitch), measured at +30..42 deg of muzzle elevation while crouched. -12/-9 lands
+     the hold at +5. */
+  hips: [44, 0, 0], spine: [-10, 0, 0], chest: [-14, 0, 0], neck: [-12, 0, 0], head: [-9, 0, 0],
   shoulderL: [-6, 6, -14], upperArmL: [-46, 14, -18], lowerArmL: [-64, -20, -16], handL: [20, -16, -10],
   shoulderR: [-6, -6, 14], upperArmR: [-30, -14, 22], lowerArmR: [-58, 20, 16], handR: [16, 16, 10],
   upperLegL: [-92, 8, 6], lowerLegL: [102, 0, 0], footL: [-14, -6, 0], toeL: [10, 0, 0],
@@ -1001,8 +1026,8 @@ def('crouch_idle', {
   dur: 2.8, loop: true, hold: 0.6,
   keys: [
     { t: 0, e: 'soft', P: CROUCH_BASE, pos: [0, -0.52, 0.08], cane: CANE.tuck },
-    { t: 0.9, e: 'soft', P: { chest: [-17, -4, 2], head: [-29, 9, -5], tailA: [6, -9, 0], tailB: [-4, -13, 0], tailD: [14, 8, 0] }, pos: [0, -0.535, 0.084] },
-    { t: 1.9, e: 'soft', P: { chest: [-11, 4, -2], head: [-23, -7, 4], tailA: [2, 8, 0], tailB: [-8, 12, 0], tailD: [18, -6, 0] }, pos: [0, -0.505, 0.076] },
+    { t: 0.9, e: 'soft', P: { chest: [-17, -4, 2], head: [-12, 9, -5], tailA: [6, -9, 0], tailB: [-4, -13, 0], tailD: [14, 8, 0] }, pos: [0, -0.535, 0.084] },
+    { t: 1.9, e: 'soft', P: { chest: [-11, 4, -2], head: [-6, -7, 4], tailA: [2, 8, 0], tailB: [-8, 12, 0], tailD: [18, -6, 0] }, pos: [0, -0.505, 0.076] },
     { t: 2.8, e: 'soft', P: CROUCH_BASE, pos: [0, -0.52, 0.08], cane: CANE.tuck },
   ],
 });
@@ -1041,7 +1066,9 @@ def('crouch_walk', {
 
 /* Belly-down in a vent. Cross-pattern: left arm reaches with the right knee. */
 const CRAWL_A = P({
-  hips: [80, -6, 0], spine: [-14, 4, 0], chest: [-30, 8, 0], neck: [-46, -4, 0], head: [-40, -5, 0],
+  /* neck/head X were -46/-40: prone under a vent with the muzzle a measured 50 deg skyward.
+     -24/-17 lands it at +5 — eyes down the crawl, not at the ceiling. */
+  hips: [80, -6, 0], spine: [-14, 4, 0], chest: [-30, 8, 0], neck: [-24, -4, 0], head: [-17, -5, 0],
   shoulderL: [-16, 10, -34], upperArmL: [-96, 18, -40], lowerArmL: [-46, -20, -18], handL: [30, -12, -8],
   shoulderR: [-4, -8, 12], upperArmR: [-20, -18, 30], lowerArmR: [-84, 24, 18], handR: [18, 18, 10],
   upperLegL: [-42, 22, 8], lowerLegL: [86, 0, 0], footL: [-4, -8, 0], toeL: [8, 0, 0],
@@ -1057,11 +1084,11 @@ def('crawl', {
   ],
   keys: [
     { t: 0.00, e: 'out', P: CRAWL_A, pos: [0.01, -0.86, 0.10], cane: CANE.tuck },
-    { t: 0.25, e: 'smooth', P: { hips: [80, 0, 0], chest: [-30, 0, 0], head: [-40, 0, 0],
+    { t: 0.25, e: 'smooth', P: { hips: [80, 0, 0], chest: [-30, 0, 0], head: [-17, 0, 0],
       upperArmL: [-64, 18, -34], upperArmR: [-56, -18, 30],
       upperLegL: [-64, 24, 8], upperLegR: [-64, -24, -8], lowerLegL: [96, 0, 0], lowerLegR: [96, 0, 0] }, pos: [0, -0.845, 0.10] },
     { t: 0.50, e: 'out', P: mir(CRAWL_A), pos: [-0.01, -0.86, 0.10], cane: [96, -26, 0] },
-    { t: 0.75, e: 'smooth', P: { hips: [80, 0, 0], chest: [-30, 0, 0], head: [-40, 0, 0],
+    { t: 0.75, e: 'smooth', P: { hips: [80, 0, 0], chest: [-30, 0, 0], head: [-17, 0, 0],
       upperArmL: [-64, 18, -34], upperArmR: [-56, -18, 30],
       upperLegL: [-64, 24, 8], upperLegR: [-64, -24, -8], lowerLegL: [96, 0, 0], lowerLegR: [96, 0, 0] }, pos: [0, -0.845, 0.10] },
     { t: 1.00, e: 'out', P: CRAWL_A, pos: [0.01, -0.86, 0.10], cane: CANE.tuck },

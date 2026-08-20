@@ -40712,3 +40712,77 @@ Verification, all in the clean worktree at `6a85058` plus exactly these two test
 `camdrive.test.mjs` 9/9; the census's child suite inside it 161 pass / 0 fail; census lands on the
 pinned numbers (elsewhere 25, traversal-only 7); `spawn to the Eye of Ra` completes; **full suite
 859 / 859, EXIT=0** — the tree is green again with §495's content unchanged.
+
+## §470 — The two rig faults from hardware: the skull was turned by a fallback, and the sneak arms swing with the wrong leg
+
+§522 defect 3, verbatim: *"It almost feels like the arms are switched at times, and the head is
+permanently looking upward."* Both measured before touching anything, both fixed, both photographed
+before and after on the shipped character with `?char=model3` as the control arm
+(`progress/records/AB-rigfault-run1.png`; raw frames + per-frame telemetry in `shots/rigfault*/`,
+regenerable by `tools/rigfault.mjs`). Guards are structurally exempt: `buildHumanoid` imports
+nothing from `Clips.js`/`Rig.js`/`SlyModelDLRig.js`, so the search was player-only from the first
+grep — the coordinator's halving, confirmed in one command.
+
+### §470.1 "Permanently looking upward" is TWO terms, and the instrument that finds one cannot see the other
+
+The look-at driver was innocent: it only engages in `combatStrafe`/`pickpocket`, aimed at a guard's
+head, and its pitch math is sign-correct. The composition that reached the screen:
+
+1. **A −12.0° chin-up baked into the skull GEOMETRY, every state, shipped model only.**
+   `SlyModelDLRig`'s carry rotates each bone's geometry to align its bone axis from the FBX bind
+   to ours. `head` has no structural child, so the fallback handed it its PARENT's rotation —
+   rot[neck], which exists to lay the throat along our neck→head axis. The asset's neck leans
+   13.2° forward; ours 1.2° (`tools/dlaxes.mjs`, straight off the inverse bind matrices, offline
+   in seconds). The whole skull — face, mask, cap, both eye domes — wore the difference. **No bone
+   telemetry can see this term** (§439): the walk photographed muzzle-up on dlrig at a head-bone
+   elevation of −9.2° and level on model3 at the same reading; that split IS the term, isolated.
+   Fix: `rot.head` = identity — the head is PLACED, never turned. The neck keeps its rotation
+   (its geometry spans two joints; the skull spans nothing).
+
+2. **The resident stealth poses author the head 30–50° up, on BOTH models.** Full-clip census on
+   the composed skeleton through the real sampler (offline; validated to ~1° against the
+   in-browser probe): sneak_idle 25.8..42.1, crouch_idle 29.9..41.6, crouch_walk 36, crawl 49..50,
+   idle_confident 13.4..25.3 — while every locomotion row is sane (walk −0.6..12.1, run −3.6..8.7,
+   run_fast −7.5..7.9). The pattern: each crouched pose counters its own hips pitch with neck+head
+   X roughly TWICE over (crouch −56 against +20 of body, sneak −50 against +16, crawl −86 against
+   +36), and idle's modest −18 is amplified to +22 by its 21° yaw / 24° roll cross-coupling. The
+   authors' own X-sums say the intent was a proud chin, not the sky. Re-derived, not fitted:
+   idle lands on its author's own X-sum (+13.3 measured hold — the smug chin the file's header
+   demands), sneak/crouch/crawl land at +5-ish (scanning where he creeps). Live after: idle 17.9
+   (with additive layers), sneak 3.7–3.9, sneak_idle 10.0. Measured and LEFT, with reasons:
+   hook/pole/paraglide/wall_cling/jump look up because up is where they are going; perch_idle
+   (25..37) is a vantage scan; ledge_hang (44) looks at its own grip; ledge_climb's transient 44
+   is the ledge lip mid-climb.
+
+### §470.2 "Arms switched at times" is the sneak cycle, and the boundary was the diagnosis
+
+Census through the real sampler (which arm leads vs which leg leads, 48 samples/cycle, 6° split
+gate): walk 0% ipsilateral, crawl 0%, crouch_walk 6%, run/run_fast 17% (passing-pose crossover) —
+and **sneak_walk 52%**: the arm lead landed on the SAME side as the planting foot every other
+half-stride, identically on dlrig and model3 (telemetry: armR forward with legR forward at the
+same contact on both) — clip data, not the model. The chirality suspects were measured dead
+first: the FBX's LF/RT naming IS the character's left/right (eyes at +Z, LF_wrist at x +68.6 with
+character-left = +X), and the staff sits by the RT wrist `BONE_MAP` sends it to.
+
+Mechanism: SNEAK_BASE is a held left-lead creep — correct as a still (it freezes `temple`,
+`interior` and `guard`) — and the cycle inherited that lead at the contact key while P/U pushed it
+further, leaving the arm channel ~90° out of phase with the legs. Fix: the upper arms are re-keyed
+as a pendulum anchored to the contacts (the LEFT plant carries the RIGHT chain forward — upper
+arms, elbows, hands — with passage values at P/U; the mir() half swaps back). After: **0%
+ipsilateral, walk's own figure**; live sneak-a reads armL −33.8 forward against legR −109 forward.
+Legs, torso, tail, cane, and SNEAK_BASE itself untouched.
+
+### §470.3 What moved that other lanes should know about
+
+- **Three canonical stills changed pose** (`temple`, `interior`, `guard` freeze the sneak family)
+  and every idle/crouch/crawl still carries the new head pitch. A lighting/ink diff against an old
+  reference frame will show the head and nothing else should have moved.
+- **Two recorded pins re-read per their own doctrine** ("the value is the measurement"):
+  `dlrig.test.mjs` mesh height 1.892 → 1.884 (the cap peak was the bbox max; upright it sits 8 mm
+  lower; S untouched, the staff claim intact) and `eyes.test.mjs` WORST_SHOT d 0.3741 → 0.3225
+  (the eye domes pitched upright with the skull; the split IMPROVED, worst shot unchanged).
+- **Apparatus committed**: `tools/dlaxes.mjs` (FBX bind axes vs RIG3, offline), `tools/rigfault.mjs`
+  (staged-camera state captures with head/arm bone telemetry; `CHAR=` control arm, `SEQ=` filter).
+- The pre-existing `traversal.test.mjs` hookSwing-reach failure is NOT this change's: it fails
+  with these edits reverted, on a tree carrying other lanes' in-flight `Input.js`/`Collision.js`
+  work. Attributed by A/B before anything here shipped.

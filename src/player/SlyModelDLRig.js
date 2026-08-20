@@ -530,6 +530,21 @@ export class SlyModel {
           : { q: new THREE.Quaternion(), sc: 1 };
       } else rot[nm] = rot[par] || { q: new THREE.Quaternion(), sc: 1 };
     }
+    /* THE HEAD IS PLACED, NEVER TURNED (§522 defect 3, "permanently looking upward").
+     *
+     * `head` has no structural child, so the fallback above handed it its PARENT's carry
+     * rotation — rot[neck], which exists to lay the throat geometry along our neck→head axis.
+     * The asset's neck axis leans 13.2° forward of vertical and ours leans 1.2°
+     * (tools/dlaxes.mjs, from the inverse bind matrices), so that fallback rotated the entire
+     * skull −12.0° about X: chin up, baked into the geometry, in every state the game has.
+     * rigfault.mjs photographed the composition: a walk whose head BONE points 9° below
+     * horizontal still rendered muzzle-up on this model and level on `?char=model3`.
+     *
+     * The neck rotation is load-bearing for the NECK — its geometry must span two joints.
+     * The skull spans nothing: it is a terminal mass whose orientation the artist authored
+     * against gravity, so the identity carry keeps that authoring verbatim and the 12° meets
+     * the throat as an ordinary skinning crease, the same one any head-turn key produces. */
+    rot.head = { q: new THREE.Quaternion(), sc: 1 };
     const M = RIG3.BONE_ORDER.map((nm) => {
       const r = rot[nm] || { q: new THREE.Quaternion(), sc: 1 };
       const from = srcPos[nm] || new THREE.Vector3(...abs[nm]);

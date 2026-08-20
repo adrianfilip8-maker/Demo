@@ -490,7 +490,10 @@ const shotList = SHOT_NAMES.filter((n) => SHOTS[n].player);
  * two terminators, `termSoft`, each shot's tod and each shot's player yaw. If any of those move,
  * this must be re-read, not re-fitted. The value is the measurement, not a target.
  */
-const WORST_SHOT = { name: 'sly-profile', d: 0.3741 };
+/* Re-read 0.3741 → 0.3225 when the skull carry stopped tilting the head −12° (§522 defect 3):
+   the eye domes' normals pitched upright with the rest of the head geometry, and the pair sits
+   more evenly against the terminator. The worst shot is unchanged. */
+const WORST_SHOT = { name: 'sly-profile', d: 0.3225 };
 
 test('ramp: §2198 pair — the constants and staging these numbers are a function of', () => {
   assert.equal(RAMP.bands, 3);

@@ -345,8 +345,11 @@ test('dropping the staff does not rescale the character', async () => {
      change the character's scale. Measured on the asset before any of this, the staff's y extent
      (128.7..134.2) sits inside the body's (0..185.3), so it sets neither extreme and S is
      unchanged — 1.892 m is the value BOTH the pre-change and post-change builds produce. The
-     scale is normalised to the 1.80 m spec before the bind transfer, which then adds the rest. */
-  assert.ok(Math.abs(h - 1.892) < 0.005, `mesh height ${h.toFixed(3)} m`);
+     scale is normalised to the 1.80 m spec before the bind transfer, which then adds the rest.
+     RE-READ at 1.884 when the skull carry stopped tilting the head −12° (§522 defect 3): the cap
+     peak was the bbox max and the upright skull sits it 8 mm lower. S itself is untouched — the
+     staff claim this test exists for is about the normalise step, which runs before the carry. */
+  assert.ok(Math.abs(h - 1.884) < 0.005, `mesh height ${h.toFixed(3)} m`);
   assert.equal(model.root.userData.height, 1.8);
 });
 
