@@ -391,8 +391,16 @@ test('P-A1: a rope coil is set dress and carries no gameplay volume', () => {
      landing — that residual is §493's design note, not this proxy's job). A separate sliver
      rather than a longer lid on purpose: stretching the lid's run 2.70 → 2.82 m would drop the
      stair's pinned 50.28° below the 50° walkable limit. Histogram: ground 55 → 56, all else
-     byte-identical. */
-  assert.equal(REG.length, 273, 'collider registrations unchanged by this seal');
+     byte-identical.
+
+     ── 273 → 276: §495's three thief lines (pole +2, rail +1) ────────────────────────────────
+     The obelisk climbing rope (r 0.15 — preserves the §8.1 step-2 alternative through the §494
+     thinness gate), the colossi tightrope (a rail over the spawn approach), and the SE drainpipe
+     (r 0.18, paving to the y 9.0 ring). All three driven end to end by
+     `tests/thiefspots.test.mjs` before shipping; both new poles asserted r <= 0.5 in-arm so they
+     cannot thicken past the gate they were authored for. Histogram: pole 17 → 19, rail 6 → 7,
+     all else byte-identical. */
+  assert.equal(REG.length, 276, 'collider registrations unchanged by this seal');
   assert.equal(P.stats.decals, 46, 'contact decals unchanged by this seal');
   assert.equal(P._fx.length, 24, 'fx emitters unchanged');
   assert.equal(P._lights.length, 24, 'lights unchanged');

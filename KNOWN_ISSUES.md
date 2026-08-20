@@ -40598,3 +40598,59 @@ and pipes this lane authors are r 0.12–0.18.
 
 `spawn2eye` uses no pole on any leg, so the acceptance drive is gate-neutral by construction.
 
+
+---
+
+## §495 — Three thief lines, each driven before it shipped — and the rope that taught the retreat two lessons
+
+The user's second instruction: more interactable traversal around the map. Three additions, all on
+space the route passes but never uses, all authored to the measured moveset (§494's contract for
+anything pole-like, every new margin over the 0.5 m floor), all driven end to end by
+`tests/thiefspots.test.mjs` in one batch arm before shipping.
+
+### §495.1 What shipped
+
+- **A — the obelisk climbing rope.** r 0.15, axis (0, ·, 13.0), top 20.4 — the same top as the
+  shaft's old pole, so §8.1 step 2's alternative and `level.test` §5's Ninja Spire Landing
+  derivation carry through the §494 gate unchanged. Mounted by a deliberate jump-grab from the
+  kiosk lintel. Driven: mounted, climbed to 19.62.
+- **B — the colossi tightrope.** A sagging rope-rail between the knee ledges (5.55 → 5.22 → 5.55),
+  straight over the spawn approach — readable from the first camera, 5.2 m of headroom beneath.
+  Driven: entered from the knee stance, crossed to x 8.31.
+- **C — the south-east drainpipe.** r 0.18, paving (measured clear at 21.5, −2) to top 9.6; the
+  top-hop drops 0.87 m onto the y 9.0 architrave ring 0.58 m east — a grounded thief line onto the
+  rooftop circuit that previously needed the rail entry or the pylon. Driven: mounted from the
+  walk, climbed, hopped, landed the ring at 9.00.
+
+Histogram: `pole` 17 → 19, `rail` 6 → 7, all else identical; P-A1 273 → 276. Both new poles are
+asserted `r <= 0.5` in-arm, so they cannot quietly thicken past the gate they were authored for.
+
+### §495.2 The rope's bottom is 9.6, and the acceptance drive is why — twice
+
+The first rope hung to 6.4 for a plinth walk-on. `spawn2eye` immediately walked the §489 retreat
+into it: held-stick southward movement crosses the axis inside `poleMount` 1.9 with the mount cone
+open, so the retreat **mounted the rope, climbed it, and spire-landed on the pyramidion** instead of
+reaching the courtyard. Raised to 9.6 (nearest axis point > 2.7 m from any massif walk stance), the
+mount became the deliberate lintel jump — **and the drive then found the second version of the same
+trap**: the ring's south segment lies inside the rope's own mount radius, and a corner-cutting
+walker grabbed it from the walkway. The resolution is split honestly: the retreat now exits the
+ring eastward (driver-side — a route choice), and the driver gained the reflex a player has for
+free — **snag a pole, press down; perch on a spire, hop off** — which §436 named as the only way to
+tell resistance from entrapment.
+
+### §495.3 Two pre-existing behaviours the drive surfaced, for their owners
+
+- **The kiosk pit catches fallers, pre-gate.** Stepping off the lintel's inner edge drops within
+  `poleMount` of the obelisk shaft, whose airborne walk-in mount carries the faller to the top —
+  measured: `fall@(2.2, 8.8, 9.9) → poleClimb@(1.7, 8.3, 10.6) → spireLand (0, 22, 11)`. The §494
+  gate retires this with the shaft's climbability; nothing to do level-side.
+- **The pyramidion is a held-forward trap.** On the tip, `spireLand → fall → toTarget → spireLand`
+  loops indefinitely under a held stick — the perch expires into `fall`, and the `spire-obelisk`
+  magnetism target re-catches every time. A player exits with jump or crouch; a held-forward input
+  never leaves. Controller-lane behaviour (`spireLand` expiry + magnetism re-acquire), recorded
+  with the reproduction, not repaired here.
+
+`spawn2eye` completes on the final geometry (one descent landing at 15.2 — the chaos-thin coin-edge
+the arm logs and deliberately does not pin; the ascent is clean and asserted). Guard battery
+58/58: `basketvary`, `terracestair`, `tombdoor`, `patrol`, `level`, `thiefspots`.
+

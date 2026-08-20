@@ -375,7 +375,29 @@ if (!say('leg6d ring4 -> ring3', chainHop(R3) === 'grabbed')) return { legRows, 
 /* leg 7: down the terrace's own south line — stage-2 south edge (3.2 m, soft), the stage-1 deck,
    then the WALKABLE flight-1 ramp to paving. Every drop on this line is under the 4.75 m
    crossover; the previous east-edge script took an unidentified 16 m drop at 28.4 HARD. */
-for (let i = 0; i < 300 && c.position.y > 5.6; i++) step((inp) => { inp.move.y = 1; aim(engine, c, 0.5, 16.2); inp.let_go('crouch'); });
+/* Off the ring EASTWARD, away from the §495 rope: stepping off the lintel's inner edge drops
+   into the kiosk pit where (pre-§494-gate) the obelisk shaft catches the faller, and the ring's
+   south segment lies inside the rope's own mount radius — both measured, both carrying the
+   walker to the pyramidion, where spireLand -> fall -> toTarget -> spireLand loops forever under
+   held forward (§495.3; the loop is the controller lane's). A player who snags a rope presses
+   down and drops off — the dismount reflex below models exactly that. */
+if (c.position.y > 8.6) {
+  for (let i = 0; i < 300 && !(Math.hypot(c.position.x - 3.3, c.position.z - 10.5) < 0.5); i++)
+    step((inp) => { inp.move.y = 1; aim(engine, c, 3.3, 10.5); inp.hold('sneak'); });
+  engine.input.let_go('sneak');
+  for (let i = 0; i < 200 && c.position.y > 5.6; i++) step((inp) => { inp.move.y = 1; aim(engine, c, 5.4, 10.5); });   // off the OUTER east face
+}
+/* east of the SE pier (its faces span x 2.55..4.25, z 13.75..15.45 at deck height — a straight
+   line to the south edge walks into it, measured stop at z 13.41), then south over the lid */
+for (const [wx, wz] of [[5.0, 14.3], [1.0, 17.6]]) {
+  for (let i = 0; i < 350 && !(Math.hypot(c.position.x - wx, c.position.z - wz) < 0.7); i++) {
+    step((inp) => {
+      inp.move.y = 1; aim(engine, c, wx, wz); inp.let_go('crouch');
+      if (c.stateName === 'poleClimb') inp.hold('crouch');          // snagged a pole: drop off
+      if (c.stateName === 'spireLand') inp.hold('jump');            // perched: hop off
+    });
+  }
+}
 /* sneak the last two stages: at run speed the walk-off launches clear over the stage-1 deck and
    the ramp both, turning a 3.2 m soft ladder into a single 15.2 m/s arrival (measured) */
 for (let i = 0; i < 500 && c.position.y > 2.3; i++) step((inp) => { inp.move.y = 1; aim(engine, c, 0.5, 18.0); inp.hold('sneak'); });

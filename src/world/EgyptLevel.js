@@ -1076,6 +1076,28 @@ function courtyard(A) {
      rescued. The assist forgives the timing of the move; it does not replace the move. */
   spireTarget(A, 'spire-obelisk', ob.x, ob.h, ob.z);
 
+  /**
+   * ── The obelisk climbing rope (§495.A) ─────────────────────────────────────────────────────
+   * The user's rule retires column-climbing, and the obelisk (r 1.5) is the one refused pole
+   * with an authored beat on it — §8.1 step 2's alternative and level.test §5's Ninja Spire
+   * Landing both start from its pole top. This rope preserves that beat through the §494 gate:
+   * r 0.15 (thin by being thin — the contract needs no tag), TOP 20.4 — the same top as the
+   * shaft's old pole, so the top-hop arithmetic §5 derives carries unchanged. Axis (0, ·, 13.0),
+   * measured: the south orbit stance (0, ·, 13.42) takes a capsule at depen 0.000, clear of the
+   * shaft face (12.5) and the kiosk south lintel band (13.85).
+   *
+   * ── The bottom is 9.6, NOT plinth height, and the acceptance drive is why ─────────────────
+   * The first version hung to 6.4 for a walk-on mount from the plinth — and `spawn2eye` walked
+   * the §489 retrace straight into it: held-stick southward movement crosses within `poleMount`
+   * 1.9 of the axis with the mount cone open, so the retreat MOUNTED the rope, climbed it, and
+   * spire-landed on the pyramidion at y 22 instead of reaching the courtyard. A player holding
+   * south would do exactly the same. At bottom 9.6 the nearest axis point from any massif walk
+   * stance is > 2.7 m away (gate 1.9): grabbing the rope now takes a deliberate jump from the
+   * kiosk lintel's inner edge, which is the §8.1 alternative's own flow — kiosk first, then up.
+   */
+  A.add('court', 'rope_fibre', K.place(K.boxProjectUVs(new THREE.CylinderGeometry(0.06, 0.075, 10.8, 6, 1)), { x: ob.x, y: 15.0, z: 13.0, rz: D(1.2) }));
+  poleProxy(A, ob.x, 13.0, 9.6, 20.4, 0.15, { material: 'cloth' });
+
   /* ---- Barque kiosk around the obelisk. Its lintel ring at y 9.0 is the `hero` perch. ---- */
   const ki = L.kiosk;
 
@@ -1785,6 +1807,31 @@ function entryPylons(A) {
 
 function courtyardTraversal(A) {
   const R = A.rng;
+
+  /**
+   * ── §495.B/C: two optional thief lines beside the main path ────────────────────────────────
+   * Authored to the MEASURED moveset (§494's contract for anything pole-like; every margin over
+   * 0.5 m per §481's coin-toss rule), each on space the route passes but never uses, each driven
+   * by `tests/thiefspots.test.mjs` before it shipped.
+   *
+   * B — THE COLOSSI TIGHTROPE. A sagging rope between the two colossi's knee ledges, straight
+   * over the spawn approach — classic thief grammar, readable from the first camera. Both knee
+   * stances measured standable at y 5.44 (capsule fits), the mid-span corridor at (0, 4.8, 27)
+   * takes a capsule at depen 0.000, and walkers beneath keep 5.2 m of headroom. Walk-on mount
+   * from either knee (rope crest 0.11 above the stance, under `stepHeight`).
+   *
+   * C — THE SOUTH-EAST DRAINPIPE. A thin pipe (r 0.18 — passes the §494 gate by being thin) from
+   * the courtyard paving up to the y 9.0 architrave ring, giving a grounded thief line onto the
+   * rooftop circuit that today needs the rail entry or the pylon. Paving at its foot measured
+   * clear at (21.5, −2); the ring solid at (22.35, −2, y 9.00, capsule fits). Top 9.6: the
+   * top-hop (apex +0.67 from 9.6) drops 0.87 m onto the ledge 0.58 m east — both margins over
+   * the 0.5 m floor.
+   */
+  rail(A, 'colossi-rope', [[-6.3, 5.55, 27.0], [0, 5.22, 27.0], [6.3, 5.55, 27.0]], 'rope_fibre', 0.10, 'court');
+  const pipeG = new THREE.CylinderGeometry(0.14, 0.16, 9.6, 8, 1);
+  K.normaliseAttrs(pipeG);
+  A.add('court', 'bronze_dark', K.boxProjectUVs(K.place(pipeG, { x: 21.35, y: 4.8, z: -2.0 })));
+  poleProxy(A, 21.35, -2.0, 0, 9.6, 0.18, { material: 'metal' });
 
   /* Masts to hang the hook cable from — a cable needs an anchor to be believable. */
   for (const [mx, my, mz] of [[20.6, 15.9, 27.5], [-13.4, 13.9, -15.0]]) {
