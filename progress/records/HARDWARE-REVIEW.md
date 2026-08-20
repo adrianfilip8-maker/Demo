@@ -11,6 +11,20 @@ moves it** — because in three of the five the obvious lever is the wrong one.
 None of these is a bug report. If something feels right, the answer is "leave it", and that answer is
 worth recording too.
 
+> ## ✅ FIRST HARDWARE VERDICTS (the user, on hardware)
+> Four items are answered by the person this sheet was written for:
+> **item 1** — landings are right as shipped, and there is to be **no fall damage, ever** (the build
+> already complies: the only `damage` emitters are hazards and guard swings; a hard landing costs a
+> control beat and a shake, never health — to be pinned as an invariant);
+> **item 2** — the boom chain reads as responsive: **leave it**;
+> **item 3** — a short slam and a tall slam **should look the same**: the merge is wanted, the
+> split-by-drop-height contingency retired;
+> **item 8** — the camera should **not** open up much at a sprint: the shipped continuous gains
+> stand, the ladder's 1.6 m pull-back rejected, §463's deletion ratified.
+>
+> The same session reported three defects, now in work: attacks not firing on real hardware, no way
+> to release a hook ring, and rig faults (arms appearing switched, head pinned upward).
+
 **Items 7, 8 and 9 are a different kind of entry and are marked as such.** Items 1–6 shipped and ask
 *is this right?* Items 7 and 8 have **not** shipped; item 8 is not even a proposal, only a question
 with both of its answers measured. Item 7: it is a change priced so that it can be decided, because the
@@ -209,6 +223,8 @@ adds small continuous movement rather than snaps — and the reason the occlusio
 low-amplitude motion; the question is whether it registers as life or as noise. Stand still, then move,
 then stop — the reversal count is where busyness would show.
 
+> ### ✅ USER VERDICT — responsive. Leave it. Item closed.
+
 ---
 
 ## 3. The Cane Slam's two visual identities have largely merged
@@ -225,6 +241,8 @@ Whether it is *wanted* is the open question.
 
 **What to watch.** Cane Slam from a small hop, then from the top of something. If those should be two
 distinct reads, this needs the dive framing separated by drop height rather than the collapse reverted.
+
+> ### ✅ USER VERDICT — they SHOULD look the same. The merge is wanted; the split contingency is retired. Item closed.
 
 > ### ✅ PHOTOGRAPHED (§467, run 4) — and the pair's answer is that one identity is not on screen
 >
@@ -623,6 +641,8 @@ as the **upper endpoint** of a range, not as framings to route to.
 **Decide this beside item 7.** They move the same row. Item 7's largest beneficiary is ordinary running
 — `move`, framed as `idle`, delivering −0.043 m of lead — and the ladder would hand that same row
 `run`'s +0.612 m or `run_fast`'s +1.244 m outright. Whichever is taken first makes the other smaller.
+
+> ### ✅ USER VERDICT — do NOT open up much at a sprint. Shipped gains stand; the ladder's answer is rejected; item 7 decouples and stands alone. Item closed.
 
 ---
 

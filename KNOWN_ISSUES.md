@@ -40516,3 +40516,38 @@ rollback in this session will need exactly the same recovery. Ran the §445.1/§
 33 blockers (the same 33 every time), zero under `src`/`tests`/`tools`, backed up, cleared,
 fast-forwarded 563 commits, spot-checked with exact identifiers per §520. Durable loss: zero, for
 the third time, for the same reason — everything is pushed the moment it exists.
+
+## §522 — The first hardware verdicts: four sheet items answered, three defects reported
+
+The user played the build and ruled, verbatim: *"1. Landings seem fine, there should be no fall
+damage. 2. Boom chain seems responsive. 3. Short slam and tall should look the same. 8. Camera
+should not open up too much which sprinting."* Dispositions: **item 1** ratified (`landHard` 15.0 +
+the controlled-departure term), and "no fall damage" is a design invariant the build already
+satisfies — the only `damage` emitters in `src/` are the hazard overlap (`Controller.js:567`) and
+guard swings (`Guard.js:866`); to be pinned so no future author adds a health cost to a landing.
+**Item 2** closed: leave it. **Item 3** closed: the identity merge is wanted; the split contingency
+retired (item 12's composition question stays open, its un-merge resolution now off the table).
+**Item 8** closed: continuous `distSpeedGain` 0.30 / `fovSpeedGain` 6.0 stand; the ladder rejected;
+§463 ratified; item 7 decouples.
+
+The same playthrough reported three defects, all live on real hardware and now in work:
+1. **Attacks do not fire** — despite §468's live-verified fix. Prime suspect: refresh-rate
+   dependence (edges cleared per RAF at 120/144 Hz against a 60 Hz logic step — a class §468's
+   frame-stepped probe could not see).
+2. **No way to release a hook ring once hanging** — bail is jump/interact/attack press edges, the
+   crouch drop-off may also be edge-gated; same input class as (1).
+3. **Rig faults: arms appear switched at times; the head is pinned looking upward.** Suspects
+   respectively: a mirrored-clip sign error on specific states, and a head look-at driven by
+   overhead affordances (the courtyard is full of hook rings above eye height).
+
+Plus two design instructions: **poles only if thin** — climbing is for pipes/ropes, never columns
+(the pole tag currently covers architectural columns) — and **more interactable spots** around the
+map (climbable/thief-movement beats), which is level content within the demo scope.
+
+## §523 — Rollback #11, and the stale-ref trap the runbook now names
+
+Mid-command rollback; the ledger append landed on the ancient tree (discarded and re-applied). New
+lesson: this time the **remote-tracking ref rolled back with the container**, so `git merge
+--ff-only origin/<branch>` reported "Already up to date" while 563 commits behind — a stale
+tracking ref answers with confidence. The runbook's first step is now **always `git fetch` first**,
+and treat "Already up to date" at a suspicious HEAD as a symptom, not a success.
