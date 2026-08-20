@@ -1162,7 +1162,15 @@ test('rope: the authored hall-cable is crossed under the player\'s own power', a
      `hall-cable`, a real catenary — and this is that one line, measured on it.
      One lever: `rec.mountSpeed`. */
   const { engine, c, collision } = await realWorld();
-  const rope = collision.recs.find((r) => r.tag === 'rail' && Number.isFinite(r.mountSpeed));
+  /* Two rails now author `mountSpeed` — §497 gave the colossi tightrope `mountSpeed: 0` too —
+     and this arm's subject was "the first rail with a mountSpeed", which silently re-pointed it
+     at the tightrope: 12.6 m and x-aligned, where this driver's fixed-yaw `move.y = 1` projects
+     ~0 onto the tangent, so its "22% crossed" measured the DRIVER, not the mechanic. Re-pointed
+     at the arm's named subject by the lane that added the second rope (committed-file rule); the
+     tightrope's own-power crossing is driven with real camera-relative steering in
+     `tests/thiefspots.test.mjs`, so nothing loses coverage here. */
+  const rope = collision.recs.find((r) => r.mesh?.name === 'rail:hall-cable' && Number.isFinite(r.mountSpeed))
+    || collision.recs.find((r) => r.tag === 'rail' && Number.isFinite(r.mountSpeed));
   if (!rope) { console.log('\n[rope] no rail authors mountSpeed yet; nothing to measure'); return; }
   const spline = rope.mesh.userData?.spline;
   assert.ok(spline?.getLength, `${rope.mesh.name} carries mountSpeed but no spline`);
@@ -2938,11 +2946,16 @@ test('census: which of the 32 states any test in this project has ever entered',
      `railWalk` stays traversal-only alongside poleSwing, bounce, crawl, pickpocket,
      combatStrafe and crouch). Same committed-file case as every re-base above; measured off the
      census's own table, not inferred from the test's intent. */
-  assert.ok(elsewhere.length <= 25,
-    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, 11, 15, 17, 22, 23, 24, 25) ` +
+  /* 25 -> 26 and 7 -> 6: `railWalk` follows its sibling out (world lane, §497). The tightrope's
+     re-hang gave it `mountSpeed: 0`, the crossing now settles into the balance state, and
+     `thiefspots` asserts `railWalk` on the westbound walk-on — so the state the §495 rope made
+     STRUCTURALLY unreachable is now driven outside this file, which is the fix being visible
+     from here. Same mover, same committed-file rule. */
+  assert.ok(elsewhere.length <= 26,
+    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, 11, 15, 17, 22, 23, 24, 25, 26) ` +
     `— coverage has spread, which is good: update this bound. ${elsewhere.join(', ')}`);
-  assert.ok(onlyMine.length >= 7,
-    `only ${onlyMine.length} states are traversal-only (was 21, 17, 15, 10, 9, 8, 7) — if that dropped, other ` +
+  assert.ok(onlyMine.length >= 6,
+    `only ${onlyMine.length} states are traversal-only (was 21, 17, 15, 10, 9, 8, 7, 6) — if that dropped, other ` +
     'lanes have started driving the moveset and this arm should say so rather than assert the old ' +
     'concentration');
   /* The thinness pins. Both are stated as "no worse than", so widening coverage never reddens

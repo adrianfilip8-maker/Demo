@@ -1815,10 +1815,32 @@ function courtyardTraversal(A) {
    * by `tests/thiefspots.test.mjs` before it shipped.
    *
    * B — THE COLOSSI TIGHTROPE. A sagging rope between the two colossi's knee ledges, straight
-   * over the spawn approach — classic thief grammar, readable from the first camera. Both knee
-   * stances measured standable at y 5.44 (capsule fits), the mid-span corridor at (0, 4.8, 27)
-   * takes a capsule at depen 0.000, and walkers beneath keep 5.2 m of headroom. Walk-on mount
-   * from either knee (rope crest 0.11 above the stance, under `stepHeight`).
+   * over the spawn approach — classic thief grammar, readable from the first camera. Re-hung and
+   * re-specified by §497 after the camera lane photographed the shipped version failing all
+   * three of its claims (their T2 frames, `shots/thief1-*`):
+   *
+   *   · The "knee stance at y 5.44" was the STATUE'S SHIN TOP — a rest-scan misread. The real
+   *     stances are the knee ledges at y 4.50 (architecture) / 4.60 (the props knee box), a full
+   *     metre under the old crest, so the authored walk-on did not exist: a walker stepped off
+   *     the ledge at x ±6.1 and `RailSlide`'s from-above catch refused the line 1.03 m overhead
+   *     (`point.y ≤ feet + 0.65`). ENDS NOW 4.95 (sag to 4.62): the step-off sees the line at
+   *     4.945 against a ceiling of 5.15 — the buttonless walk-on mounts from either knee.
+   *   · The default mount floor (`railSpeed` 9.5) made every entry a fling off the far end —
+   *     "exactly enough energy to crest a sag every time" (Moveset's own words) — and the far
+   *     end delivers the flyer into the colossus's INBOARD SHIN (`props_stone` face x ±8.61–8.75
+   *     leaning out 12°, top 5.45, plus `props_lapis` inlay), where T2 measured the capsule HELD
+   *     airborne at (8.33, 4.77) until the §504 watchdog threw it to spawn. `mountSpeed: 0` (the
+   *     hall-cable precedent) mounts at the walker's own speed instead: the crossing settles in
+   *     the sag and hands off to `railWalk` — the balance beat this line was authored to be, and
+   *     the framing (`balance`) becomes reachable on it at all.
+   *   · The shins themselves keep their sculpt but get an 80.5° deflector plane over each
+   *     inboard face (below): anything arriving fast now sheds down onto the knee floor instead
+   *     of pocketing against the overhang. Admit or deflect — never hold.
+   *
+   * Walkers beneath keep 4.6+ m of headroom at the new sag; a double jump from the flat
+   * approach still misses the catch window by 9 cm (4.53 asked vs 4.62 line), so the rope does
+   * not steal courtyard jumps — but any future ≥0.1 m rise authored under the span WILL put
+   * apex catches in range; measure before placing one.
    *
    * C — THE SOUTH-EAST DRAINPIPE. A thin pipe (r 0.18 — passes the §494 gate by being thin) from
    * the courtyard paving up to the y 9.0 architrave ring, giving a grounded thief line onto the
@@ -1827,7 +1849,36 @@ function courtyardTraversal(A) {
    * top-hop (apex +0.67 from 9.6) drops 0.87 m onto the ledge 0.58 m east — both margins over
    * the 0.5 m floor.
    */
-  rail(A, 'colossi-rope', [[-6.3, 5.55, 27.0], [0, 5.22, 27.0], [6.3, 5.55, 27.0]], 'rope_fibre', 0.10, 'court');
+  rail(A, 'colossi-rope', [[-6.3, 4.95, 27.0], [0, 4.62, 27.0], [6.3, 4.95, 27.0]], 'rope_fibre', 0.10, 'court',
+    { mountSpeed: 0 });
+  /* §497 shin deflectors — one smooth 80.5° plane over each colossus's inboard shin face
+     (x ±8.42 at y 4.55 up to ±8.62 at y 5.75), z 26.35..27.75. Steep enough that the shin's own
+     12° overhang never pokes through (a 61° plane crossed the face at y 5.13 and left the top
+     0.17 m exposed — computed, then the steep plane verified by the driven fling in
+     `thiefspots`). Non-walkable by 30° of margin, so a capsule thrown off the rope's end slides
+     down it onto the knee floor grounded; nothing about it can pinch. */
+  for (const sx of [1, -1]) {
+    A.proxy(new THREE.BoxGeometry(1.25, 0.30, 1.40), { tag: 'ground', material: 'stone' },
+      { x: sx * 8.67, y: 5.12, z: 27.05, rz: sx * 1.406 });
+  }
+  /* §497 mounting stones — one block under each anchor, top 4.90, inboard face at the anchor
+     (x ±6.05..6.75, z 26.55..27.45). The knee shelf's own ART slopes away under the proxy edge
+     and carries a walker GROUNDED down to y ~4.0 — under the from-above catch's floor (feet ≥
+     line − 0.65) — before it lets go, so the step-off must happen at the line, not at the art's
+     mercy: 0.40 / 0.30 steps up from the two shelf heights (inside `stepHeight` 0.42), then the
+     walk-off at x ±6.05 leaves feet 4.90 with the line at 4.947 — caught on the first airborne
+     frame. Also what a rope anchor looks like: a block, and the rope leaves its top edge. */
+  /* RNG-NEUTRAL on purpose: everything after this block in the build order draws from the same
+     stream, so a jittered anchor stone would re-roll every downstream placement in the level —
+     measured as two unrelated arms flipping before this was made draw-free. Fixed chamfer, fixed
+     4° set, no stream consumed. */
+  for (const sx of [1, -1]) {
+    const g = K.chamferBox(0.70, 0.50, 0.90, { c: 0.05 });
+    K.place(g, { x: sx * 6.40, y: 4.65, z: 27.0, ry: D(sx * 4) });
+    A.add('court', 'sandstone_block', K.boxProjectUVs(g));
+    A.proxy(new THREE.BoxGeometry(0.70, 0.50, 0.90), { tag: 'ground', material: 'stone' },
+      { x: sx * 6.40, y: 4.65, z: 27.0 });
+  }
   const pipeG = new THREE.CylinderGeometry(0.14, 0.16, 9.6, 8, 1);
   K.normaliseAttrs(pipeG);
   A.add('court', 'bronze_dark', K.boxProjectUVs(K.place(pipeG, { x: 21.35, y: 4.8, z: -2.0 })));

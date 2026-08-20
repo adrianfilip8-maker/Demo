@@ -40887,6 +40887,98 @@ user's own scope ruling.
 
 Suite **861/861** (input +2, R8, the spire pin; two arms retired into it).
 
+## §497 — The tightrope, photographed failing: no walk-on, a 9.5 m/s fling, and a shin that held the capsule for the watchdog
+
+The camera lane photographed the §495 thief lines (`shots/thief1-*`, `thief1-telemetry.json`,
+their commits `eda48fd`..`b4d4fca`) and delivered one real traversal defect with the exact
+artefact: four entry approaches to the colossi tightrope, the walk-on never mounting, and every
+fast arrival wedging at the same centimetre — (8.33, 4.77, 26.64), state `fall`, speed 0.01,
+`grounded` false, vy +0.06, held until §504's watchdog threw it to spawn. Probed to root cause and
+repaired level-side; nothing controller-side needed to move.
+
+### §497.1 Three defects, each measured
+
+- **The walk-on did not exist, and my §495.B claim for it was an instrument error.** The authored
+  note said "knee stances standable at y 5.44, rope crest 0.11 above the stance". 5.44 is the
+  STATUE'S SHIN TOP (`props_stone`, measured by raycast: tops 5.44–5.45) — a rest-scan that had
+  settled on the sculpture, read as the knee shelf. The real stances are the knee ledges at 4.50
+  (architecture) and 4.60 (the props knee box), a full metre under the line at 5.53: a walker
+  stepped off and `RailSlide`'s from-above catch (`point.y ≤ feet + 0.65`) refused by 0.38 m —
+  T2.2's frames show the drop. The grounded mount is interact-only (`railMount × 1.6`), which is
+  why my old arm (E-taps every 9 frames — load-bearing, not decoration) went green over this.
+- **Every mount was a fling.** `RailSlide.enter` mounts at the `railSpeed` 9.5 floor absent a
+  level override — Moveset's own comment: "exactly enough energy to crest a sag every time". The
+  ride left the far end at ~8.4–8.8 m/s. `railWalk` — the balance state this line was authored
+  for, and the `balance` camera framing with it — was STRUCTURALLY unreachable (the camera lane's
+  T2.4 note: the airborne auto-engage steals the landing before feet ever touch).
+- **The far end delivered the flyer into the colossus's inboard shin.** The prop material buckets
+  are real tri-colliders (`ground stone`): the shin face at x ±8.61..8.75 leans out 12°
+  (n.y −0.12), top 5.45, with `props_lapis` inlay at the pinch. A fast capsule pockets against
+  the overhang + knee-box corner and HANGS (both faces probed: west face raycast x 8.69–8.73
+  westward-normal, east face x 10.03–10.08). My slow reproduction walls at x 8.31 grounded — the
+  very number the old arm quoted as "crossed to x 8.31".
+
+### §497.2 The repair (all in `EgyptLevel.js`; P-A1 276 → 280, ground +4)
+
+- **`mountSpeed: 0`** on `colossi-rope` (the hall-cable precedent): mounts at the walker's own
+  speed; the crossing settles in the sag and hands off to `railWalk` westbound (driven); the
+  balance framing exists on this rope for the first time.
+- **Ends re-hung 5.55 → 4.95** (sag 5.22 → 4.62): the step-off at the anchors now sees the line
+  at 4.945 against a 5.15 ceiling — the buttonless walk-on is inside the catch's acceptance.
+- **Two mounting stones** (top 4.90, x ±6.05..6.75, z 26.55..27.45, art + proxy): needed because
+  the knee shelf's collidable ART slopes away under the proxy edge and walks a capsule GROUNDED
+  down to y ~4.0 — below the catch floor — before releasing it (instrumented frame log: tiptoe,
+  grounded, 4.44 → 3.93 with the line already 1.0 overhead). The stones make the step-off happen
+  AT the line, 0.40/0.30 steps up from the shelves (inside `stepHeight` 0.42). They also caught a
+  second defect for free: the off-end exit point (±6.3, 4.95) is 5 cm above the far stone, so
+  even a fast ride now LANDS ON THE ANCHOR BLOCK instead of flying at the statue.
+- **Two 80.5° shin deflectors** (x ±8.42@4.55 → ±8.62@5.75, z 26.35..27.75): a 61° plane was
+  computed first and rejected — the shin's 12° overhang crosses it at y 5.13 and pokes 0.17 m
+  through. At 80.5° the sculpt is covered everywhere; anything ballistic sheds down to the knee
+  floor grounded (driven: the pre-stone fling ended grounded, max airborne stand-still 0 frames
+  against T2's infinite). The face reads as a wall to the moveset, so it affords wallRun — a
+  crosser can deliberately run UP onto the statue's lap, which is a thief verb, not a trap.
+
+### §497.3 What is now asserted, what was blind, and the §504 answer
+
+`thiefspots`' B leg re-written: buttonless walk-ons BOTH directions plus the run-speed fling, each
+asserting the mount, the arrival STANDING on the far side (x ±6.44 — the anchor stones), and a
+`maxAirHold < 45` frames ceiling with a watchdog-respawn tripwire — the two things the old green
+could not see (its own `maxX > 4.5` quoted the wedge as success; recorded in the file's docblock
+as the §418.3 third line). `railWalk` is asserted on the westbound leg.
+
+**§504's net has no DOMAIN gap here**: T2.1's telemetry shows the respawn firing ~3 s after the
+hold, exactly per its predicate (airborne, non-attach, < 0.25 m drift). T2.3/4 ended their
+captures before the window. The net worked; the level should never have handed it work.
+
+Residual design note: a double jump from the flat approach misses the lowered line's catch by
+9 cm (4.53 vs 4.62) — the rope does not steal courtyard jumps today, but any ≥ 0.1 m rise
+authored under the span changes that; measure before placing one.
+
+Re-photography: T2's protocol should be re-shot against this geometry (walk-on now mounts;
+crossing settles to `railWalk`; arrivals on the anchor stones) — the camera lane holds the
+capture lock, so this is their shoot to schedule; T1/T3 are untouched.
+
+### §497.4 What the first suite pass after the repair taught — two arms flipped for two different wrong reasons
+
+- **A level author's RNG draws are level-wide state.** The first version of the mounting stones
+  drew jitter from the shared stream (`rng: R` + `R.jitter(6)`), which re-rolls every jittered
+  placement built after them — measured: `climbcam`'s T3 CONTROL climb moved by |Δboom| 5.37/frame
+  three zones away, on geometry I never touched. The stones are now RNG-NEUTRAL (fixed chamfer,
+  fixed ±4°), and that arm is green with zero changes of its own. Rule recorded: additions to a
+  shared-stream level must not consume draws unless re-rolling the world downstream is intended.
+- **`mountSpeed` stopped being unique, and an arm keyed on uniqueness silently changed subject.**
+  `traversal`'s "the authored hall-cable is crossed under the player's own power" selected its
+  rope as "the first rail with a `mountSpeed`" — §497's tightrope now answers first, and the
+  arm's fixed-yaw driver projects ~0 onto an x-aligned tangent, printing "22% crossed" about the
+  wrong rope with the wrong inputs. Re-pointed at `rail:hall-cable` by name (mover's re-base;
+  fallback preserved): its own claims hold on its own subject — 34.93 m, 93% crossed, 620 vs 223
+  frames aboard against the hard floor. The tightrope's own-power crossing is asserted with real
+  steering in `thiefspots`.
+- Census: `railWalk` follows `railSlide` out of the traversal-only set (26 driven elsewhere / 6
+  only-mine) — the state the §495 rope made structurally unreachable, now driven from another
+  file, is the fix visible in coverage. Bounds re-based by the mover, histories extended.
+
 ## §471 — The obelisk climb photographed the inside of Sly's hat, and the occluder was the rope he was climbing
 
 The thief1 run (b4d4fca) put the frames on the record: from mount to top of the obelisk rope,
@@ -41006,3 +41098,7 @@ geometry is untouched by it (verified in the diff — colossi span only) and the
 climbtrace were re-run to confirm before this entry was written. The re-photograph of T1/T3 runs
 from a clean worktree at this commit; T2's first look (and `rail_slide`'s, item 6's open flag)
 is scheduled against §497 once it lands, per its own closing note.
+
+Verification: `thiefspots` green with the three B legs ("B arrivals WE x 6.44 / EW x −6.44 /
+fling x 6.44" — all standing on the anchor stones); `spawn to the Eye of Ra` completes on the new
+geometry; camdrive 9/9 (D6's guard holds at 0-of-0); **full suite 862/862, EXIT=0**.

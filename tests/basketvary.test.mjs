@@ -399,8 +399,20 @@ test('P-A1: a rope coil is set dress and carries no gameplay volume', () => {
      (r 0.18, paving to the y 9.0 ring). All three driven end to end by
      `tests/thiefspots.test.mjs` before shipping; both new poles asserted r <= 0.5 in-arm so they
      cannot thicken past the gate they were authored for. Histogram: pole 17 → 19, rail 6 → 7,
-     all else byte-identical. */
-  assert.equal(REG.length, 276, 'collider registrations unchanged by this seal');
+     all else byte-identical.
+
+     ── 276 → 280: §497 re-hangs the tightrope after the camera lane photographed it (ground +4)
+     The T2 frames (`shots/thief1-*`) measured the §495 rope failing all three of its claims:
+     no walk-on existed (the "y 5.44 stance" was the STATUE'S SHIN — a rest-scan misread), every
+     mount was a 9.5 m/s fling (the default `railSpeed` floor), and the far end delivered the
+     rider into the colossus's inboard shin, where the capsule HUNG at (8.33, 4.77) until §504's
+     watchdog threw it to spawn. Four ground proxies close it: two 80.5° shin DEFLECTOR planes
+     (nothing can pocket against the overhang; fast arrivals shed to the knee floor) and two
+     MOUNTING STONES at the anchors (top 4.90 — the knee shelf's collidable ART otherwise walks
+     a capsule grounded below the from-above catch before releasing it). With `mountSpeed: 0`
+     and the ends re-hung at 4.95 the crossing settles into `railWalk` — driven both directions,
+     plus the fling, in `thiefspots`. Histogram: ground 56 → 60, all else byte-identical. */
+  assert.equal(REG.length, 280, 'collider registrations unchanged by this seal');
   assert.equal(P.stats.decals, 46, 'contact decals unchanged by this seal');
   assert.equal(P._fx.length, 24, 'fx emitters unchanged');
   assert.equal(P._lights.length, 24, 'lights unchanged');
