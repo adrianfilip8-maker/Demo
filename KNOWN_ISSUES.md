@@ -41381,3 +41381,82 @@ Provenance: telemetry-before at d372085 clean; telemetry-after at d372085 + exac
 `Clips.js`; identical drive both runs (8-frame first hold, 6-frame gap, 4-frame second tap —
 twirltrace's cadence, the tap the window analysis is about). Sheet item 16 carries the eyes-on
 re-test.
+
+---
+
+## §515 — P1: three stacked mechanisms under "can't walk up slopes", and the constant that named the second one
+
+The user: *"It is difficult to walk or run up slopes other than by jumping."* The suggested
+refresh... slope-projection hypotheses were checked and are not it — the graded synthetic ramp
+delivers **full run speed at every angle 10–48°** (and refuses 52°), so the grounded solve was never
+the defect. The defect was three mechanisms stacked on the REAL terrain, found by driving it:
+
+### §515.1 The level's sand is steeper than the stone limit
+
+Dune walk lines, measured: q90 50.7–56.1°, **max 57.2°** — while the walkable limit was a single
+50° for everything. Result: the 50° gate refused grounding on **154 of 240 frames** of a straight
+uphill walk (a footprint-averaged normal does NOT discriminate — 155 vs 154 — the faces are
+genuinely steep, not triangulation artefacts), and the climb was a ground/air stutter at 2–3 m/s
+against 7.2 on clean geometry. Jumping bypasses ground contact entirely, which is why the user's
+workaround worked.
+
+Fix: **`TUNE.slopeSandDeg = 58`**, material-scoped. The band, §443.3-style: walked sand tops out at
+57.2°; the first non-sand face that must stay refused is 61.9°; the §503 wedge class is stone. 58 is
+one degree above the measured sand maximum, and stone keeps every number it had.
+
+**The limit had THREE consumer sites, and the first fix scoped one** — the drive then climbed fully
+grounded at a CONSTANT 1.50 m/s, which is the §509 tell. Sites: the ground probe's gate, the
+sweep-record fallback, and `_moveVertical`'s seat-vs-shed branch (still shedding downhill through
+the stone limit every frame gravity re-contacted). All three now go through one helper,
+`_walkableLimit(material)`, so the limit cannot fork again. Fifth one-branch-of-N in this file;
+third caught by the constant-across-a-sweep detector.
+
+### §515.2 `narrowGround` read every steep slope as a ledge
+
+The 1.50 was not the shed — it was **Tiptoe** (116 of 120 frames): `narrowGround`'s side casts
+compared against FLAT (`|g.y − groundY| > 0.35`), and on a 52° face any heading off the fall line
+drops the downhill cast past 0.35. The whole dune classified as a narrow ledge and the gait
+hijacked to balance speed.
+
+Fix: the comparison is now against the **ground plane** — expected side height from the contact
+normal, cast origin lifted to the expected surface (the first version extended reach downward only,
+and the uphill cast missed from below: residual −0.01 downhill, `hit=false` uphill, measured).
+Planar slopes are narrow-blind at any angle by construction; flat ground reduces to the old test
+verbatim; true ledges still read narrow (the ledge arms and W-suite stay green).
+
+### §515.3 Delivered, and the two boundaries held
+
+```
+  synthetic ramps      10–48° stone  7.20 m/s (100 % of flat)   52° stone sheds (0.03 m/s)
+                       55° sand      7.20 m/s                   62° sand sheds (−0.04 m/s)
+  far-west dune 51–57° was 1.50 crawling → 7.20 grounded 100 %, quarter of the time
+  west dune ≤48.9°     was 2.2 stutter → 4.1–4.7 bounding (residual dips are ballistic crest
+                       lofts with vy>0 decaying — physics at speed, not defect)
+  the tomb switchback  walks OUT, vault floor → y 0 (waypointed drive; stone, untouched)
+  spawn stage stair    now walks (re-authored since §486 — reads 33.5°, not this round's doing)
+```
+
+No slope-speed curve was added: the measurement says the shipped game has NO speed degradation on
+any walkable angle, and inventing one inside a bugfix would be §506.4's overreach. Whether bounding
+up a 48° dune at 60 % of flat *feels* right is sheet material.
+
+### §515.4 Two cross-arm re-bases, by the mover, and one of them was my own watchdog
+
+- **W2/W3 (wedge)**: the sand fix made the plinth's steep sand skirt climbable, so the walk-in pin
+  moved ~0.7 m up into the skirt/stone corner where a jump re-lands (0.23–0.36 m). Backing off
+  still frees it and the §504 watchdog guards the class, so the invariant — no pin is inescapable —
+  holds; the per-site jump signature is now asserted explicitly (plinth `true,true,false`, kiosk
+  `true,true,true`) so the split cannot drift silently.
+- **D2 (camdrive)**: the desert run changed from stutter to sustained dune climb at 6.75 m/s whose
+  speed re-excites the follow spring each face, so "settled ≥ 3τ contiguous" no longer implies a
+  decayed transient; idle@desert delivers −0.101 m deterministic, 1 mm past the dust tolerance,
+  floor verifiably engaged. Tolerance moved to the measured value (2e-3) and no further, with the
+  classifier named as the real fix if it trips again.
+- And the first version of the slopes arm measured **+11.94 m/s** on the refused 52° ramp — my own
+  §504 stuck watchdog rescuing the pinned capsule at exactly 3.0 s *to a previous climb's safe
+  stance*. The watchdog firing there is correct; the arm now samples under `stuckTime` and scrubs
+  `safeOk` per climb.
+
+The pinning arm (`slopes: sand walks to 58…`) sweeps angle × material with both faces run in-arm:
+55° sand and 45° stone walk at ≥ 0.9 × runSpeed with zero tiptoe frames; 52° stone and 62° sand
+shed into fall. Suite **866/866**.

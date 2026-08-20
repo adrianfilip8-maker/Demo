@@ -3782,6 +3782,87 @@ function rampCollision(deg) {
   };
 }
 
+test('slopes: sand walks to 58 and stone still refuses at 52 — the material-scoped limit, both faces', async () => {
+  /* ── §515: the user's P1, pinned at the boundary it sharpened ─────────────────────────────
+   * "Difficult to walk or run up slopes other than by jumping" measured as three stacked
+   * mechanisms on the real dunes: the 50° gate refusing sand faces the level walks (walk lines
+   * reach 57.2°), `_moveVertical`'s seat-vs-shed branch shedding downhill through the same
+   * stone limit (a CONSTANT 1.50 m/s — the §509 tell), and `narrowGround` reading any steep
+   * slope as a ledge (tiptoe 116/120 frames). Fixes: `_walkableLimit(material)` at all THREE
+   * consumer sites (the fourth one-branch-of-N error this file has caught), and a plane-true
+   * narrowness probe. The numbers: sand limit 58 = one degree above the measured walked
+   * maximum; the first non-sand face that must stay refused is 61.9°.
+   *
+   * ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : a synthetic 55° SAND ramp — walked uphill at full run speed, grounded, no
+   *               tiptoe; and a 45° stone ramp, same.
+   *   fails  on : RUN in-arm — 52° STONE (refused: airborne shed, no uphill progress) and 62°
+   *               SAND (past even the sand limit: still sheds). Both faces of both materials.
+   *   does NOT  : see the real dunes' convex crests (ballistic lofting at speed is physics and
+   *   discrim.    is not asserted here), nor pick the 58 — any value in (57.2, 61.9) separates
+   *               identically on today's level (§443.3's rule), and the feel of bounding vs
+   *               grinding belongs to the sheet.
+   */
+  const { TUNE: T } = await import('../src/player/Controller.js');
+  const { engine, c } = await makeSim();
+  const ramp = (deg, material) => {
+    const col = rampCollision(deg);
+    const gc = col.groundCheck.bind(col), sw = col.capsuleSweep.bind(col);
+    col.groundCheck = (p, r, m) => { const g = gc(p, r, m); if (g) g.material = material; return g; };
+    col.capsuleSweep = (a, b) => { const r = sw(a, b); r.material = material; return r; };
+    return col;
+  };
+  /* Refusal climbs sample UNDER `stuckTime` 180 frames: a capsule pinned on a refused face is
+     exactly §504's stuck class, and the watchdog teleporting him to a PREVIOUS climb's safe
+     stance at f180 put +11.94 m/s of rescue into the first version of this arm's window. The
+     watchdog firing there is correct; measuring through it was not. `safeOk` is scrubbed per
+     climb for the same reason — a safe point recorded on one ramp is cross-arm state on the
+     next. */
+  const climb = (deg, material, frames = 168) => {
+    c.col = ramp(deg, material); c._colReal = c.col; c._calibrated = true;
+    c.teleport(V(2, 2 * Math.tan(deg * Math.PI / 180) + 0.05, 0), Math.PI / 2);
+    c._needSpawnSnap = false;
+    c.safeOk = false;
+    engine.camera.rotation.set(0, -Math.PI / 2, 0, 'YXZ'); engine.camera.updateMatrixWorld(true);
+    const states = new Map(); const xs = [];
+    for (let i = 0; i < frames; i++) {
+      engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 1;
+      engine.time = i * DT; c.update(DT, i * DT);
+      states.set(c.stateName, (states.get(c.stateName) || 0) + 1);
+      if (i >= frames / 2) xs.push(c.position.x);
+    }
+    const vx = (xs[xs.length - 1] - xs[0]) / ((xs.length - 1) * DT);
+    return { vx, states };
+  };
+
+  /* WHAT: sand walks past the stone limit, at full speed, without tiptoe */
+  const sand55 = climb(55, 'sand');
+  assert.ok(sand55.vx > T.runSpeed * 0.9,
+    `55° sand delivered ${sand55.vx.toFixed(2)} m/s uphill against runSpeed ${T.runSpeed} — the `
+    + 'material-scoped limit is not reaching one of its three consumer sites (§515 lists them)');
+  assert.ok(!sand55.states.has('tiptoe'),
+    '55° sand spent frames in tiptoe — narrowGround is reading the slope as a ledge again, '
+    + 'which was the 1.50 m/s balance-crawl half of the defect');
+  const stone45 = climb(45, 'stone');
+  assert.ok(stone45.vx > T.runSpeed * 0.9,
+    `45° stone delivered ${stone45.vx.toFixed(2)} m/s — the walkable side of the stone limit broke`);
+
+  /* WHICH, RUN: both refusals stand */
+  const stone52 = climb(52, 'stone');
+  assert.ok(stone52.vx < T.runSpeed * 0.5,
+    `52° stone delivered ${stone52.vx.toFixed(2)} m/s uphill — the stone limit widened; the §503 `
+    + 'wedge class and every shedding face in the game just became walkable');
+  assert.ok((stone52.states.get('fall') || 0) > 100,
+    '52° stone did not shed into fall — refusal must mean shedding, not a slow walk');
+  const sand62 = climb(62, 'sand');
+  assert.ok(sand62.vx < T.runSpeed * 0.5 && (sand62.states.get('fall') || 0) > 100,
+    `62° sand delivered ${sand62.vx.toFixed(2)} m/s — the sand limit is unbounded and dune cliffs `
+    + 'stopped shedding');
+
+  console.log(`[slopes] sand55 ${sand55.vx.toFixed(2)} · stone45 ${stone45.vx.toFixed(2)} · `
+    + `stone52 ${stone52.vx.toFixed(2)} (sheds) · sand62 ${sand62.vx.toFixed(2)} (sheds)`);
+});
+
 test('slopes: standing still does not travel, and a face too steep to stand on still sheds', async () => {
   /* DOMAIN (§418.3). This arm has TWO bars pulling opposite ways, so it needs two pairs, and the
    * reason the synthetic ramp exists is that half the domain is absent from the level:

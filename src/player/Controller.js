@@ -412,6 +412,17 @@ export const TUNE = {
      observed drift and still a quarter of a body width. */
   stuckTime:      3.0,
   stuckDist:      0.25,
+  /* Sand walks past the stone limit (§515). The user's P1 — "difficult to walk or run up slopes
+     other than by jumping" — measured as a grounding flicker: the shipped dunes' walk lines read
+     up to 57.2° (q90 50.7-56.1 on the two western dunes), the 50° gate refused grounding on
+     154 of 240 frames of a straight uphill walk, and the climb became a ground/air stutter at
+     2-3 m/s against 7.2 on clean geometry. A footprint-averaged normal was tried and does NOT
+     discriminate (155 vs 154 refusals — the faces are genuinely steep, not faceting artefacts).
+     The band, measured: walked sand tops out at 57.2°; the first non-sand face that must stay
+     refused is 61.9° (the stage risers); the §503 wedge class is stone. 58 is one degree above
+     the measured sand maximum, and the limit is MATERIAL-SCOPED so every stone number in the
+     game — shedding, the wedge, the stairs — is untouched. */
+  slopeSandDeg:   58,
   /* Announce the next hold while attached, excluding the one being held (§505). OFF and
      UNMEASURED — see `_telegraph` for what it does, what it cannot yet do, and why the number
      that would justify it does not exist. A person can flip this on hardware; nothing has. */
@@ -1085,12 +1096,25 @@ export class Controller {
     if (g?.hit && Number.isFinite(g.y)) this.position.y = g.y;
   }
 
+  /**
+   * The walkable limit, per material (§515). THREE sites consume walkability — the ground
+   * probe's gate, the sweep-record fallback, and `_moveVertical`'s seat-vs-shed branch — and
+   * the first fix scoped only the probe: the drive then climbed fully grounded at a CONSTANT
+   * 1.50 m/s, the §509 tell, because `_moveVertical` still shed downhill through the stone
+   * limit every frame gravity re-contacted. One helper, all three sites, so the limit cannot
+   * fork again.
+   */
+  _walkableLimit(material) {
+    if (material === 'sand') return TUNE.slopeSandDeg * DEG;
+    return this.col.SLOPE?.walkable ?? (50 * DEG);
+  }
+
   /** Authoritative grounding. Sets grounded / groundY / groundNormal / groundTag. */
   _probeGround(snapDown) {
     _v1.copy(this.position); _v1.y += TUNE.probeUp;
     const maxDist = TUNE.probeUp + Math.max(0.04, snapDown);
     const g = this.col.groundCheck?.(_v1, this.radius, maxDist);
-    const walkable = this.col.SLOPE?.walkable ?? (50 * DEG);
+    const walkable = this._walkableLimit(g?.material);
 
     if (g?.hit && Number.isFinite(g.y) &&
         g.y <= this.position.y + TUNE.probeUp + 1e-3 &&
@@ -1133,7 +1157,7 @@ export class Controller {
          floor-ish contact; only a walkable one may ground him. */
       const n = this._sweepLandNormal;
       const slope = Math.acos(Math.min(1, Math.max(-1, n.y)));
-      if (slope <= walkable + 0.02) {
+      if (slope <= this._walkableLimit(_swRes.material) + 0.02) {
         _gndRes.hit = true;
         _gndRes.y = this._sweepLandY;
         _gndRes.normal.copy(n);
@@ -1555,15 +1579,40 @@ export class Controller {
   }
 
   /** True when the surface underfoot is too narrow to walk normally — tiptoe territory. */
+  /**
+   * Is the ground under Sly a narrow ledge? Two side casts at ±(radius + 0.30).
+   *
+   * §515.2: the comparison is against the GROUND PLANE, not against flat. The old test was
+   * `|g.y − groundY| > 0.35`, and on a steep slope the downhill cast sits lower by
+   * offset × tan(slope) × sin(heading-off-fall-line) — at 52° any heading 25° off the gradient
+   * crosses 0.35, so the whole west dune classified as a narrow ledge and the climb spent
+   * 116 of 120 frames in `tiptoe` at balance speed. That was the user's "difficult to walk up
+   * slopes": not the walkability gate (that was §515.1's half), but Tiptoe hijacking the gait
+   * at exactly 1.50 m/s — a constant that was the tell (§509).
+   *
+   * `expectedY` is where the side sample WOULD sit if the ground were the plane through the
+   * ground contact: on any planar slope the residual is 0 at every angle and heading, so the
+   * probe is slope-blind by construction; at a true ledge the cast misses or lands far off the
+   * plane, which is exactly what "narrow" means. Flat ground reduces to the old test verbatim.
+   */
   narrowGround() {
     const col = this.col;
     if (typeof col.groundCheck !== 'function' || col.fallback) return false;
     _rgt.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+    const n = this.groundNormal;
+    const ny = Math.max(0.2, n.y);
     for (let s = -1; s <= 1; s += 2) {
-      _v1.copy(this.position).addScaledVector(_rgt, s * (this.radius + 0.30));
-      _v1.y += TUNE.probeUp;
+      const dx = _rgt.x * s * (this.radius + 0.30);
+      const dz = _rgt.z * s * (this.radius + 0.30);
+      const expectedY = this.groundY - (n.x * dx + n.z * dz) / ny;
+      /* Cast from probeUp above the EXPECTED surface, not above the current feet: on the uphill
+         side the plane sits above the feet, and a cast whose origin is below the ground it is
+         looking for reports a miss — which read as "void", which read as "narrow", which was
+         the first version of this fix changing nothing (residual −0.01 on the downhill side,
+         hit=false on the uphill, measured). */
+      _v1.set(this.position.x + dx, expectedY + TUNE.probeUp, this.position.z + dz);
       const g = col.groundCheck(_v1, this.radius * 0.5, TUNE.probeUp + 0.45);
-      if (!g?.hit || Math.abs(g.y - this.groundY) > 0.35) return true;
+      if (!g?.hit || Math.abs(g.y - expectedY) > 0.35) return true;
     }
     return false;
   }
@@ -1772,9 +1821,14 @@ export class Controller {
      * The bound is the same idiom as the snap: descend by time-of-impact, never further than the
      * resolve actually achieved vertically, because `hit` is also set when DEPENETRATION pushed
      * the capsule clear without the sweep contacting anything (and sets `toi = 1`). */
-    const wcos = Number.isFinite(this.col.WALKABLE_COS)
-      ? this.col.WALKABLE_COS
-      : Math.cos(this.col.SLOPE?.walkable ?? (50 * Math.PI / 180));
+    /* §515: per-material, through the same helper as the probe gate and the fallback. A stone
+       face keeps `WALKABLE_COS`; sand seats up to `slopeSandDeg`. Without this branch the fix
+       half-worked: grounded, accelerating, and shedding downhill to a constant 1.50 m/s. */
+    const wcos = r.material === 'sand'
+      ? Math.cos(TUNE.slopeSandDeg * Math.PI / 180)
+      : (Number.isFinite(this.col.WALKABLE_COS)
+        ? this.col.WALKABLE_COS
+        : Math.cos(this.col.SLOPE?.walkable ?? (50 * Math.PI / 180)));
     if (v.y < 0 && r.normal.y >= wcos) {
       const fall = Math.abs(_disp.y);
       const byToi = fall * r.toi;

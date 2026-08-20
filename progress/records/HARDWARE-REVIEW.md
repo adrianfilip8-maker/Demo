@@ -1058,3 +1058,25 @@ judgements only hardware can make:
    bigger arm.
 
 `shots/twirl1-before-double-f16.png` beside `twirl1-after-double-f16.png` is the pair to hold up.
+
+---
+
+## 13. Slopes — sand now walks to 58°, and the feel question that remains
+
+**Commit** this round · **Files** `src/player/Controller.js` (`TUNE.slopeSandDeg`, `_walkableLimit`, `narrowGround`)
+
+Your report — *"difficult to walk or run up slopes other than by jumping"* — was three stacked
+mechanisms, all fixed: the dunes are steeper (up to 57.2°) than the single 50° walkable limit; a
+half-scoped fix left gravity shedding you downhill to a constant 1.50 m/s; and the narrow-ledge
+probe read any steep slope as a tightrope and forced balance-tiptoe. Sand now walks to **58°**
+(stone keeps 50° — the spawn-stair jump beat and every shedding face are untouched), and the ledge
+probe is slope-blind on planar ground.
+
+**What to re-test**: run straight up the big western dunes without jumping. Expect full run speed on
+moderate grades and a bounding rhythm (brief ballistic hops) on the steepest faces — that lofting is
+physics at speed, not the old stutter.
+
+**The open feel question**: there is deliberately NO speed penalty with angle — a 48° climb delivers
+100 % of flat speed on clean ground. If steep climbs should feel like work (slower, heavier), that
+is a slope-speed curve nobody has authored, and the measurements to derive one from are in §515.3.
+Say whether the climb feels weightless before anyone builds it.

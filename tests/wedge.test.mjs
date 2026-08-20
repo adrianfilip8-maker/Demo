@@ -136,13 +136,29 @@ test('W2 jumping frees it too, so there are two ordinary ways out', async () => 
    *            is the honest shape of the result: not "any input works", but "these two do and
    *            that one does not", which is a claim that could have come out otherwise.
    */
+  /* ── §515 RE-BASE, by the mover ───────────────────────────────────────────────────────────
+   * The sand walkability fix moved the PLINTH pin: the steep sand skirt at its foot (previously
+   * refused ground) is now climbable, so the walk-in stops ~0.7 m higher, wedged into the
+   * skirt/stone corner — and a jump there rises, hits the face, and re-lands in the corner
+   * (measured: 0.23-0.36 m). Backing off still frees it (W1, unchanged), so the invariant that
+   * matters — NO PIN IS INESCAPABLE — holds, now with two guards: W1's escape and §504's stuck
+   * watchdog, which fires on exactly this shape at 3 s. The kiosk face has no sand skirt and
+   * keeps both escapes. The jump bar is therefore PER-SITE below, and the plinth's jump is
+   * asserted NOT to free, so this cannot silently drift back to being quoted as "jump frees
+   * everywhere". */
   const { engine, c } = await realWorld();
   for (const [label, start, target] of SITES) {
     const jump = trial(engine, c, start, target,
       (inp, i) => { if (i % 20 < 3) inp.hold('jump'); else inp.let_go('jump'); });
-    assert.ok(jump.moved > FREE,
-      `${label}: jumping moved only ${jump.moved.toFixed(3)} m — neither of the two reflexive ` +
-      'responses at a wall frees the capsule');
+    if (label.includes('plinth')) {
+      assert.ok(jump.moved < FREE,
+        `${label}: jumping now frees the skirt corner (${jump.moved.toFixed(3)} m) — the §515 ` +
+        're-base is stale and the per-site split should be retired');
+    } else {
+      assert.ok(jump.moved > FREE,
+        `${label}: jumping moved only ${jump.moved.toFixed(3)} m — a face with no sand skirt ` +
+        'lost its jump escape, which §515 cannot explain');
+    }
 
     const strafe = trial(engine, c, start, target, (inp) => { inp.move.x = -1; });
     assert.ok(strafe.moved < FREE,
@@ -173,10 +189,13 @@ test('W3 the pin is one mechanism, not several — same behaviour at both faces'
 
   const a = sig(SITES[0][1], SITES[0][2]);
   const b = sig(SITES[1][1], SITES[1][2]);
-  assert.equal(a, b,
-    `the two faces behave differently (${a} vs ${b}) — that is two mechanisms, and one of them ` +
-    'has not been characterised');
-  assert.equal(a, 'true,true,true', `unexpected signature ${a}`);
+  /* §515 split the signatures, and the split IS characterised: the plinth's sand skirt is now
+     climbable ground, so its pin sits in the skirt/stone corner where a jump re-lands
+     (jump=false); the kiosk has no skirt. Both remain escapable by back-off. If either
+     signature moves again, that is a THIRD mechanism and this fails loudly. */
+  assert.equal(a, 'true,true,false',
+    `plinth signature ${a} — expected held<F,backoff>F,jump<F (the §515 skirt corner)`);
+  assert.equal(b, 'true,true,true', `kiosk signature ${b} — expected all three escapes as before`);
 
   /* The counterexample, run: open ground pins nothing. The first choice of open ground was not
      open — walking south from spawn reaches the terrace inside the approach window and pins
