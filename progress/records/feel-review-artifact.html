@@ -1,0 +1,379 @@
+<title>Measured, Unsettled</title>
+<style>
+:root {
+  --ground:      #FBFAF8;
+  --surface:     #F3F1ED;
+  --surface-2:   #EAE7E1;
+  --ink:         #17171C;
+  --ink-soft:    #4A4A55;
+  --ink-faint:   #7C7C88;
+  --rule:        #DCD8D1;
+  --rule-soft:   #E8E5DF;
+  --measured:    #1F5F58;
+  --measured-bg: #E4EEEB;
+  --felt:        #9A6A0E;
+  --felt-bg:     #F5EDDC;
+  --amend:       #6E4A86;
+  --amend-bg:    #EEE8F3;
+  --shadow:      0 1px 2px rgba(23,23,28,.05), 0 8px 24px -12px rgba(23,23,28,.16);
+  --f-body: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --f-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #121216; --surface: #1A1A20; --surface-2: #23232B;
+    --ink: #E9E7E2; --ink-soft: #B0AEB8; --ink-faint: #83818D;
+    --rule: #33333D; --rule-soft: #26262E;
+    --measured: #57B8A7; --measured-bg: #14312E;
+    --felt: #E0A93B; --felt-bg: #33280F;
+    --amend: #BE9BD6; --amend-bg: #2A2033;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #121216; --surface: #1A1A20; --surface-2: #23232B;
+  --ink: #E9E7E2; --ink-soft: #B0AEB8; --ink-faint: #83818D;
+  --rule: #33333D; --rule-soft: #26262E;
+  --measured: #57B8A7; --measured-bg: #14312E;
+  --felt: #E0A93B; --felt-bg: #33280F;
+  --amend: #BE9BD6; --amend-bg: #2A2033;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--f-body); font-size: 17px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 60rem; margin: 0 auto; padding: 3.5rem 1.5rem 6rem; }
+header.top { border-bottom: 2px solid var(--ink); padding-bottom: 1.75rem; margin-bottom: 2.5rem; }
+.eyebrow { font-family: var(--f-ui); font-size: .688rem; font-weight: 650; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 1rem; }
+h1 { font-family: var(--f-body); font-size: clamp(2.4rem, 6vw, 3.75rem); font-weight: 700; letter-spacing: -.022em; line-height: 1.02; text-wrap: balance; margin: 0 0 1.1rem; }
+h1 em { font-style: italic; color: var(--felt); }
+.thesis { font-size: 1.125rem; color: var(--ink-soft); max-width: 48ch; text-wrap: pretty; margin: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin-top: 1.75rem; font-family: var(--f-mono); font-size: .75rem; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.meta b { color: var(--ink-soft); font-weight: 500; }
+.glance { margin-bottom: 3.5rem; }
+h2.section { font-family: var(--f-ui); font-size: .75rem; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 1rem; padding-bottom: .5rem; border-bottom: 1px solid var(--rule); }
+.scroller { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .938rem; }
+.glance th, .glance td { text-align: left; padding: .7rem .9rem .7rem 0; vertical-align: top; }
+.glance th { font-family: var(--f-ui); font-size: .688rem; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); border-bottom: 1px solid var(--rule); padding-bottom: .5rem; }
+.glance td { border-bottom: 1px solid var(--rule-soft); color: var(--ink-soft); }
+.glance td:first-child { white-space: nowrap; }
+.glance a { color: var(--ink); text-decoration-color: var(--rule); text-underline-offset: 3px; font-weight: 600; }
+.glance a:hover { text-decoration-color: var(--felt); }
+.chip { display: inline-block; font-family: var(--f-ui); font-size: .625rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; padding: .28em .6em; border-radius: 2px; white-space: nowrap; }
+.chip.m { background: var(--measured-bg); color: var(--measured); }
+.chip.f { background: var(--felt-bg); color: var(--felt); }
+.chip.q { background: var(--amend-bg); color: var(--amend); }
+.items { display: flex; flex-direction: column; gap: 2rem; }
+.item { background: var(--surface); border: 1px solid var(--rule); border-radius: 3px; padding: 1.75rem 1.75rem 1.5rem; box-shadow: var(--shadow); }
+.item > .head { margin: 0 0 1.25rem; display: flex; flex-direction: column; gap: .65rem; }
+.item h3 { font-family: var(--f-body); font-size: 1.5rem; font-weight: 700; letter-spacing: -.014em; line-height: 1.22; text-wrap: balance; margin: 0; }
+.ref { font-family: var(--f-mono); font-size: .719rem; color: var(--ink-faint); display: flex; flex-wrap: wrap; gap: .35rem 1.1rem; }
+.ref b { color: var(--measured); font-weight: 500; }
+.item p { margin: 0 0 1rem; max-width: 66ch; }
+.item p:last-child { margin-bottom: 0; }
+blockquote { margin: 1.25rem 0; padding: .1rem 0 .1rem 1.1rem; border-left: 2px solid var(--measured); font-style: italic; color: var(--ink-soft); max-width: 60ch; }
+.data { margin: 1.25rem 0; }
+.data table { font-family: var(--f-ui); font-size: .875rem; font-variant-numeric: tabular-nums; }
+.data th, .data td { padding: .5rem 1.25rem .5rem 0; text-align: left; vertical-align: top; }
+.data th { font-size: .656rem; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); border-bottom: 1px solid var(--rule); padding-bottom: .4rem; white-space: nowrap; }
+.data td { border-bottom: 1px solid var(--rule-soft); color: var(--ink-soft); }
+.data td:first-child { color: var(--ink); font-weight: 550; }
+.data .num { white-space: nowrap; }
+.data .after { color: var(--measured); font-weight: 700; white-space: nowrap; }
+.data .flat { color: var(--ink-faint); white-space: nowrap; }
+pre { font-family: var(--f-mono); font-size: .781rem; line-height: 1.7; background: var(--surface-2); border: 1px solid var(--rule-soft); border-radius: 3px; padding: .9rem 1rem; overflow-x: auto; margin: 1.25rem 0; color: var(--ink-soft); }
+code { font-family: var(--f-mono); font-size: .875em; color: var(--ink); }
+p code, li code, td code, blockquote code, .amend code, .watch code, .resolved code { background: var(--surface-2); padding: .1em .35em; border-radius: 2px; }
+.watch { margin-top: 1.5rem; padding: 1.1rem 1.25rem; background: var(--felt-bg); border-radius: 3px; border-left: 3px solid var(--felt); }
+.watch .lab { font-family: var(--f-ui); font-size: .656rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--felt); display: block; margin-bottom: .45rem; }
+.watch p { margin: 0; max-width: 62ch; }
+.lever { margin-top: 1rem; padding-top: .9rem; border-top: 1px solid color-mix(in srgb, var(--felt) 25%, transparent); }
+.amend { margin: 1.25rem 0; padding: 1rem 1.15rem; background: var(--amend-bg); border-left: 3px solid var(--amend); border-radius: 3px; font-size: .938rem; }
+.amend .lab { font-family: var(--f-ui); font-size: .656rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--amend); display: block; margin-bottom: .45rem; }
+.amend p { margin: 0 0 .7rem; color: var(--ink-soft); max-width: 64ch; }
+.amend p:last-child { margin-bottom: 0; }
+.resolved { margin: 1.25rem 0; padding: 1rem 1.15rem; background: var(--measured-bg); border-left: 3px solid var(--measured); border-radius: 3px; font-size: .938rem; }
+.resolved .lab { font-family: var(--f-ui); font-size: .656rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--measured); display: block; margin-bottom: .45rem; }
+.resolved p { margin: 0 0 .7rem; color: var(--ink-soft); max-width: 64ch; }
+.resolved p:last-child { margin-bottom: 0; }
+.close { margin-top: 4rem; display: grid; gap: 2rem; grid-template-columns: 1fr; }
+@media (min-width: 46rem) { .close { grid-template-columns: 1fr 1fr; gap: 2.5rem; } }
+.close p { font-size: .938rem; color: var(--ink-soft); margin: 0; max-width: 52ch; }
+.close ul { margin: .75rem 0 0; padding-left: 1.1rem; font-size: .938rem; color: var(--ink-soft); }
+.close li { margin-bottom: .5rem; }
+.close li:last-child { margin-bottom: 0; }
+footer { margin-top: 4rem; padding-top: 1.25rem; border-top: 1px solid var(--rule); font-family: var(--f-mono); font-size: .719rem; color: var(--ink-faint); }
+a:focus-visible { outline: 2px solid var(--felt); outline-offset: 3px; }
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">Sly Cooper · Ancient Egypt · playtest build</p>
+  <h1>Correct by measurement.<br><em>Unsettled by feel.</em></h1>
+  <p class="thesis">Fifteen entries. Four are answered by your own verdicts, one asks for a re-test, and the rest are priced questions — every number here has a committed instrument behind it.</p>
+  <div class="meta">
+    <span><b>source</b> progress/records/HARDWARE-REVIEW.md</span>
+    <span><b>suite</b> 862 arms, green</span>
+    <span><b>build</b> git pull picks up everything</span>
+  </div>
+</header>
+
+<section class="glance">
+  <h2 class="section">Where each entry stands</h2>
+  <div class="scroller">
+    <table>
+      <thead><tr><th>Status</th><th>Entry</th><th>The question — or the answer</th></tr></thead>
+      <tbody>
+        <tr><td><span class="chip m">Answered ✓</span></td><td><a href="#landing">1 · Landing rule</a></td><td><strong>Your verdict:</strong> landings right; no fall damage ever — now pinned by test</td></tr>
+        <tr><td><span class="chip m">Answered ✓</span></td><td><a href="#boom">2 · Boom chain</a></td><td><strong>Your verdict:</strong> responsive — leave it</td></tr>
+        <tr><td><span class="chip m">Answered ✓</span></td><td><a href="#slam">3 · Cane Slam merge</a></td><td><strong>Your verdict:</strong> short and tall should look the same — merge stands</td></tr>
+        <tr><td><span class="chip m">Shipped</span></td><td><a href="#telegraph">4 · First-grab telegraph</a></td><td>Is half a second enough?</td></tr>
+        <tr><td><span class="chip q">Switch</span></td><td><a href="#lead">5 · Lead compensation</a></td><td>Which of two framings gives way?</td></tr>
+        <tr><td><span class="chip m">Shipped</span></td><td><a href="#leadmax">6 · leadMax restaged</a></td><td>Does the hook swing now frame the landing?</td></tr>
+        <tr><td><span class="chip f">Priced</span></td><td><a href="#leadtime">7 · Velocity lead 0.22</a></td><td>Worth glide sitting lower in its longest shot?</td></tr>
+        <tr><td><span class="chip m">Answered ✓</span></td><td><a href="#sprint">8 · Sprint opening</a></td><td><strong>Your verdict:</strong> do not open up much — shipped gains stand</td></tr>
+        <tr><td><span class="chip f">Priced</span></td><td><a href="#wallrun">9 · Wall-run snap</a></td><td>76–91% over 0.4 s, for a 0.3 s move — snappier?</td></tr>
+        <tr><td><span class="chip q">Switch</span></td><td><a href="#chain">10 · Chain telegraph</a></td><td>A mark while you hang — help or noise?</td></tr>
+        <tr><td><span class="chip q">Question</span></td><td><a href="#difficulty">11 · Chain difficulty</a></td><td>Is a 0.25 s window with two untaught inputs the intended skill beat?</td></tr>
+        <tr><td><span class="chip f">Priced</span></td><td><a href="#slamframe">12 · High-slam framing</a></td><td>Impact frames lose the subject — accept, or pay the trade?</td></tr>
+        <tr><td><span class="chip f">Structural</span></td><td><a href="#tgboom">13 · Telegraph × boom</a></td><td>Tagged content near routes eats short-visit boom delivery — recurs as spots are added</td></tr>
+        <tr><td><span class="chip m">Re-test</span></td><td><a href="#retest">14 · Attacks &amp; ring release</a></td><td>Fixed two ways — please re-test on the machine that failed</td></tr>
+        <tr><td><span class="chip m">Shipped</span></td><td><a href="#climbcam">15 · Climb camera</a></td><td>The climbed rope no longer crushes the boom — the trade is sight-through</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="items">
+
+  <article class="item" id="landing">
+    <div class="head">
+      <span class="chip m" style="align-self:flex-start">Answered ✓ · user on hardware</span>
+      <h3>The landing rule: fast <em>and</em> not a move you meant</h3>
+      <div class="ref"><span><b>57c2c9e → 803a20a</b></span><span>src/player/Controller.js</span></div>
+    </div>
+    <div class="resolved">
+      <span class="lab">Your verdict</span>
+      <p>“Landings seem fine, there should be no fall damage.” <code>landHard</code> 15.0 and the controlled-departure rule are ratified by play. No-fall-damage was already true of the build — the only damage sources are hazards and guard swings — and is now pinned by test <strong>R8</strong>: a 28.4 m/s crash costs zero health, with a hazard as the counterexample proving the test can see damage at all.</p>
+    </div>
+    <p>The short history: landings began as a coin flip (a race zeroed arrival speed before the probe read it), the first threshold derivation collapsed on the real level (the median walk-off arrives above any liveable threshold), every property of the <em>fall</em> failed to separate "meant" from "happened" — and the answer was a second term: a landing is hard only when it was fast <strong>and the descent began from a lost traversal beat</strong>, never from walking or jumping off. Of 188 driven walk-offs, 158 land soft at any speed; wall-cling losses from height still hit hard. Two late classification bugs (a jump pressed at a pole top filed as a lost grip; a stale flag riding through spire landings) are fixed and pinned.</p>
+    <div class="watch">
+      <span class="lab">The one residual</span>
+      <p>A <em>deliberate</em> hook release from high up still reads as hard — the swing cannot yet tell a chosen release from a lost grip. It did not register in your play; deprioritized, with the ~40-site tagging job recorded as the only honest fix if it ever bothers anyone.</p>
+    </div>
+  </article>
+
+  <article class="item" id="boom">
+    <div class="head">
+      <span class="chip m" style="align-self:flex-start">Answered ✓</span>
+      <h3>Camera boom chain collapsed</h3>
+      <div class="ref"><span><b>be55d6f</b></span><span>src/player/CameraRig.js · _boomLength</span></div>
+    </div>
+    <div class="resolved"><span class="lab">Your verdict</span><p>“Boom chain seems responsive.” Closed — leave it.</p></div>
+    <p>Delivery tracked chain depth, not <code>tau</code>; collapsing two of nineteen blend sites took <code>land</code> 6→52%, <code>combat</code> 35→73%, <code>dive</code> 61→88%, <code>roll</code> 65→89%, with <code>glide</code>/<code>sneak</code> untouched at 100% and the p99 single-frame step unchanged — small continuous movement, not snaps.</p>
+  </article>
+
+  <article class="item" id="slam">
+    <div class="head">
+      <span class="chip m" style="align-self:flex-start">Answered ✓</span>
+      <h3>The Cane Slam's two visual identities have merged</h3>
+      <div class="ref"><span><b>be55d6f</b></span><span>consequence of item 2</span></div>
+    </div>
+    <div class="resolved"><span class="lab">Your verdict</span><p>“Short slam and tall should look the same.” The merge is wanted; the split-by-drop-height contingency is retired. (Item 15 has since fixed the climb half of the empty-frame problem; item 12's arrival half stays priced.)</p></div>
+    <p>Dive-framing delivery by drop height went 5/50/86/96/100% → 71/92/98/97/100%, so a jump-apex slam and a full-height slam read substantially alike — understood exactly, and now confirmed as intended.</p>
+  </article>
+
+  <article class="item" id="telegraph">
+    <div class="head">
+      <span class="chip m" style="align-self:flex-start">Shipped</span>
+      <h3>First-grab telegraph: half a second of warning</h3>
+      <div class="ref"><span><b>8a3af14</b></span><span>src/player/Controller.js · src/ui/HUD.js</span></div>
+    </div>
+    <p>The game never told you what it would let you grab — the choose-signal had one listener (particles) and contact events fired on contact. Now a mark names the exact hold that gets taken, <strong>30 frames (0.50 s)</strong> before commitment on the E-grab.</p>
+    <div class="watch">
+      <span class="lab">What to watch</span>
+      <p>Is half a second enough to see, decide, act? The lever if short is <code>AFFORD.hook.range</code> — the telegraph fires the moment the game knows and cannot warn earlier.</p>
+    </div>
+  </article>
+
+  <article class="item" id="lead">
+    <div class="head">
+      <span class="chip q" style="align-self:flex-start">Switch</span>
+      <h3>Camera lead compensation: <code>TUNE.leadMode</code></h3>
+      <div class="ref"><span><b>ships as</b> 'floor'</span><span>full compensation retained as a switch</span></div>
+    </div>
+    <p><code>FRAMES.lead</code>'s sign was inverted and floored rather than fully compensated, pending this review. Full compensation buys <code>air</code> apparent size at the cost of <code>glide</code> sitting further down-frame — glide the courtyard, then jump off something; one of the two gives way.</p>
+    <div class="watch">
+      <span class="lab">Watchable for the first time</span>
+      <p><code>land</code>'s felt channel is <code>stiff</code> — the landing snap — a rate with no screen quantity, judgeable only by eye, and finally visible now that every landing registers and the boom delivers.</p>
+    </div>
+  </article>
+
+  <article class="item" id="leadmax">
+    <div class="head">
+      <span class="chip m" style="align-self:flex-start">Shipped</span>
+      <h3><code>leadMax</code> was capping the authored lead, not the delivered one</h3>
+      <div class="ref"><span><b>46c584e</b></span><span>src/player/CameraRig.js · the constant did not move</span></div>
+    </div>
+    <p>The cap applied before the floor meant that above ordinary operating speeds the hook swing and rail delivered nothing regardless of authoring — a claimed invariant violated in the sibling branch of the same <code>if</code>. Repaired: floor first, cap the net. Three rows move, sixteen identical to the digit: <code>hook_swing</code> −0.037 → <strong>+0.219 m</strong>, <code>rail_slide</code> → +1.772 m.</p>
+    <div class="watch">
+      <span class="lab">What to watch</span>
+      <p>Swing a chain: is the landing framed before you get there? The rail's big lead now has a live subject too — the tightrope crossing (item 13's frames confirmed 1.420 m measured vs 1.406 predicted).</p>
+    </div>
+  </article>
+
+  <article class="item" id="leadtime">
+    <div class="head">
+      <span class="chip f" style="align-self:flex-start">Priced, not shipped</span>
+      <h3>The velocity lead: <code>leadTime</code> 0.17 → 0.22</h3>
+      <div class="ref"><span><b>proposal only</b></span><span>re-priced after item 6 made the lever stronger</span></div>
+    </div>
+    <p>Nine framings deliver no lead <strong>on purpose</strong> (provable: <code>lead</code> and <code>stiff</code> are anti-correlated across all rows — intent expressed twice), and exactly one broken authored intention remains: <strong><code>land</code>, at −0.001 s margin</strong> — a knife edge nobody chose. The band is derived: every value in 0.180–0.315 wakes <code>land</code> and leaves all nine still rows floored; 0.22 sits mid-band. <strong><code>glide</code> pays</strong>: −0.514 → −0.552 ndcY in the game's longest shot — 28% of what full compensation would cost it. Reversals go down, not up.</p>
+    <div class="watch">
+      <span class="lab">What to watch</span>
+      <p>Run and jump over uneven ground: does landing show where you're going instead of where you were? Then glide: does Sly sit too low? If glide reads wrong, trim <code>glide.lead</code> down — not <code>leadTime</code> back.</p>
+    </div>
+  </article>
+
+  <article class="item" id="sprint">
+    <div class="head">
+      <span class="chip m" style="align-self:flex-start">Answered ✓</span>
+      <h3>How much should the camera open up at a sprint?</h3>
+      <div class="ref"><span><b>two authored answers, 5.9× apart</b></span><span>continuous gains vs the deleted ladder</span></div>
+    </div>
+    <div class="resolved"><span class="lab">Your verdict</span><p>“Camera should not open up too much when sprinting.” The shipped continuous gains (+0.27 m boom, +5.4° lens at full run) stand; the ladder's 1.6 m pull-back is rejected and its deletion ratified. Item 7 decouples and stands alone.</p></div>
+  </article>
+
+  <article class="item" id="wallrun">
+    <div class="head">
+      <span class="chip f" style="align-self:flex-start">Priced, not shipped</span>
+      <h3>The wall-run framing arrives at 76–91% — how snappy should it be?</h3>
+      <div class="ref"><span><b>tau 0.22 ships</b></span><span>the 84%-cap figure was the test driver's, not the camera's</span></div>
+    </div>
+    <p>Median residency 18 frames; delivery 76–91%, 100% on long takes. <code>tau</code> 0.12 reaches 93–97% at +13% pivot motion, per-framing so it costs nothing elsewhere. The bank — the horizon roll that is the move's identity — is on its own literal clock (78% delivered; 0.14 gives 90%).</p>
+    <div class="watch">
+      <span class="lab">If you want one thing to try</span>
+      <p><code>tau</code> 0.12 <strong>and</strong> the bank clock 0.14 together — moving only the first makes the shot arrive while the horizon stays behind. Two limits no clock fixes: head-on runs have no side to bank into, and some takes are mostly wall-cling wearing the framing.</p>
+    </div>
+  </article>
+
+  <article class="item" id="chain">
+    <div class="head">
+      <span class="chip q" style="align-self:flex-start">Switch · default OFF</span>
+      <h3>Telegraph on a hook chain: <code>telegraphNextHold</code></h3>
+      <div class="ref"><span><b>measured on committed apparatus (T11)</b></span><span>the provisional table is retired</span></div>
+    </div>
+    <p>While attached the telegraph is silent by design. The switch announces the <em>next</em> hold, excluding the held one — 0 emits shipped, 7 with the switch, 104 on a naive lift, over 420 fully-attached frames.</p>
+    <div class="resolved">
+      <span class="lab">The measured leads</span>
+      <div class="data scroller" style="margin:.6rem 0 0">
+        <table>
+          <thead><tr><th></th><th>ring 2</th><th>ring 3</th><th>ring 4</th></tr></thead>
+          <tbody>
+            <tr><td>gate as shipped</td><td class="num">43 f (0.72 s)</td><td class="num">21 f (0.35 s)</td><td class="num">24 f (0.40 s)</td></tr>
+            <tr><td>switch ON</td><td class="after">196 f (3.27 s)</td><td class="after">31 f (0.52 s)</td><td class="after">45 f (0.75 s)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:.7rem">The shipped mid-chain warning is 0.35–0.72 s — the lead <em>is</em> the flight time. The switch's value concentrates on the first mid-chain ring: 3.27 s while still hanging.</p>
+    </div>
+    <div class="watch">
+      <span class="lab">What to watch</span>
+      <p>Flip it on and swing the chain: does a mark while you're still on a ring read as help or noise? If noise, the gate was right — delete the switch rather than tune it.</p>
+    </div>
+  </article>
+
+  <article class="item" id="difficulty">
+    <div class="head">
+      <span class="chip q" style="align-self:flex-start">Question — nothing broken</span>
+      <h3>The hook chain's difficulty: a 0.25 s window and two untaught inputs</h3>
+      <div class="ref"><span><b>the chain completes from the authored entry</b></span><span>six drivers failed it before the mechanism was found</span></div>
+    </div>
+    <p>The chain rests on three things the game never teaches: <strong>pump along your velocity</strong> (holding toward the target nets 2.03 m/s; along-velocity reaches 13.43), <strong>steer the flight</strong> (unsteered, 0 of 61 release phases grab), and <strong>hold jump through the flight</strong> (releasing early fires the jump-cut and takes a third of your speed). The bail window is ~0.25 s, recurring every ~2.3 s.</p>
+    <div class="watch">
+      <span class="lab">What to watch</span>
+      <p>Swing the chain cold. If you find the pump and the steer within a few attempts, it is a skill beat and the level stands. If you bounce off it, the levers in order: ring-only widening of <code>hookAuto</code>, ring spacing, a taught moment — never the swing constants, which sit under every hook in the game.</p>
+    </div>
+  </article>
+
+  <article class="item" id="slamframe">
+    <div class="head">
+      <span class="chip f" style="align-self:flex-start">Priced, not shipped</span>
+      <h3>The high slam's impact frame has no subject in it</h3>
+      <div class="ref"><span><b>fix evaluated and declined on the record</b></span><span>three composing bounds</span></div>
+    </div>
+    <p>At a 16 m slam's impact, Sly is ~3 screen-heights below frame — three bounds compose (occlusion recovery clock, the vertical leash capping pivot lag at exactly one half-frame-height, a one-frame pitch unwind), no single ablation rescues the frame, and the best candidate fix measured better everywhere and in frame nowhere. Declined with the measurements attached. Hook-ring arrivals share the leash mechanism and stay priced here.</p>
+    <div class="watch">
+      <span class="lab">What to watch</span>
+      <p>Slam from real height: does losing the subject for the fall's last moments read as speed, or as a broken shot? <strong>The paying row if fixed is colonnade jumps.</strong></p>
+    </div>
+  </article>
+
+  <article class="item" id="tgboom">
+    <div class="head">
+      <span class="chip f" style="align-self:flex-start">Structural — will recur</span>
+      <h3>The telegraph trades against the boom near tagged content</h3>
+      <div class="ref"><span><b>nothing shipped</b></span><span>measured by one-collider A/B on the colossi tightrope</span></div>
+    </div>
+    <p>Content the route telegraph can see hanging near a drivable corridor consumes the boom channel's remaining delivery on short-residency framings — the tightrope alone took <code>wall_run</code>'s boom from 0.34 m delivered to <strong>0.00</strong>, while being invisible to the boom's own occlusion casts and player-inert. As more thief spots go in near routes, this recurs by construction.</p>
+    <div class="watch">
+      <span class="lab">What to watch</span>
+      <p>Whether short camera moves near the new content feel suppressed. Recommendation on file: keep the shipped state until a telegraph-visible object hangs over a framing that actually delivers — then decide with that case in hand.</p>
+    </div>
+  </article>
+
+  <article class="item" id="retest">
+    <div class="head">
+      <span class="chip m" style="align-self:flex-start">Fixed — needs your re-test</span>
+      <h3>Attacks and ring release, fixed two ways</h3>
+      <div class="ref"><span><b>17d1a0c</b></span><span>src/core/Input.js · the pointer-lock click swallow</span></div>
+    </div>
+    <p>The game swallowed left clicks while a pointer-lock request was pending — and a request that "succeeds" never guarantees the browser grants it. On a denied or cooling-down machine that is every click, forever: attacks dead, and the click route off a ring dead with them. Now three separate failure signals stop the swallow, and <strong>F is attack</strong> — a route that never touches the mouse. A ring has four exits: <strong>Space, E, F, or crouch</strong>, each on a distinct code path.</p>
+    <div class="watch">
+      <span class="lab">The one observation to report either way</span>
+      <p>After clicking into the game, <strong>does moving the mouse turn the camera?</strong> That reads the pointer-lock state directly. Camera follows + attacks work: closed. Camera follows + attacks still dead: a different bug, and that fingerprint is what round two needs. Still trapped on a ring: which of Space/E/F/crouch you tried localizes the mechanism by itself.</p>
+    </div>
+  </article>
+
+  <article class="item" id="climbcam">
+    <div class="head">
+      <span class="chip m" style="align-self:flex-start">Shipped</span>
+      <h3>The climbed rope no longer crushes the camera</h3>
+      <div class="ref"><span><b>this round</b></span><span>src/player/CameraRig.js · attachment-gated pole sight-through</span></div>
+    </div>
+    <p>The obelisk-rope climb photographed as the inside of Sly's hat: the boom's occlusion cast was dying against <em>the rope being climbed</em> on 182 of 211 frames. While Sly holds a pole, boom casts now treat poles as see-through — gated on attachment, so jumps and runs are untouched by construction, with the open-wall climb pinned as the control. Climb boom 0.55 → <strong>3.4–5.8, subject composed</strong>, verified by re-photograph both takes.</p>
+    <div class="watch">
+      <span class="lab">What to watch</span>
+      <p>The trade is sight-through: during a climb the camera can see past other poles. Climb the rope and look for anything reading wrong through a column. The mount moment still dips briefly — a caught hook ring's recovery debt, priced with item 12 rather than forced, because fixing it would sight through the obelisk on the game's marquee swing.</p>
+    </div>
+  </article>
+
+</div>
+
+<div class="close">
+  <section>
+    <h2 class="section">Settled — no review needed</h2>
+    <ul>
+      <li><strong>The acceptance run:</strong> spawn → the Eye of Ra completes — one Controller, no teleport, zero hard landings — pinned by <code>spawn2eye.test.mjs</code></li>
+      <li><strong>Your five playtest reports, all closed:</strong> attacks + ring release (item 14, awaiting your re-test); the rig faults — the −12° head bake and the 52%-ipsilateral sneak gait, verified in before/after frames; poles gated to thin pipes/ropes with a designed rope at the obelisk; and the new thief lines — tightrope re-hung with a real walk-on mount, crouch pocket beside the anchor stone filled with every escape driven</li>
+      <li>The tomb, the terrace, the patrol rewrite, the landing coin flip, the Godot reference (remainder verified empty), real-device input</li>
+    </ul>
+  </section>
+  <section>
+    <h2 class="section">Open — recorded design calls</h2>
+    <ul>
+      <li>The stealth vent: no floor beneath it — opening it would trade a sealed passage for a fall into nothing</li>
+      <li>A deliberate hook release from height reads hard (~40-site tagging job if ever wanted)</li>
+      <li>A double jump from the flat approach misses the lowered tightrope by 9 cm — noted for any future rise authored under the span</li>
+    </ul>
+  </section>
+</div>
+
+<footer>
+  If something feels right, the answer is “leave it” — and that answer is worth recording too.
+  &nbsp;·&nbsp; progress/records/HARDWARE-REVIEW.md
+</footer>
+
+</div>
