@@ -41460,3 +41460,136 @@ up a 48° dune at 60 % of flat *feels* right is sheet material.
 The pinning arm (`slopes: sand walks to 58…`) sweeps angle × material with both faces run in-arm:
 55° sand and 45° stone walk at ≥ 0.9 × runSpeed with zero tiptoe frames; 52° stone and 62° sand
 shed into fall. Suite **866/866**.
+
+## §475 — The ruling "Sly should always remain in frame" ships as a final-stage invariant, and building its arms found a dead subsystem and two losses nobody had photographed
+
+The user's verdict on the hardware sheet, verbatim: **"Sly should always remain in frame."** It
+settles item 12 and overrides the §467 decline — which was a cost-based call, and whose
+measurements remain the right map: retuning the leash, the recovery clock or the fallPitch unwind
+individually landed "better everywhere, in frame nowhere" (best single −0.90, all three −0.28,
+each costing the colonnade jumps). An "always" is an invariant, and an invariant is enforced at
+the end of the chain, not approached from the middle of it. Shipped as `CameraRig.js` rule 6: a
+subject-containment clamp as the LAST stage of `_write`, after every spring, leash, boom,
+occlusion and focus stage, before the shake.
+
+### §475.1 The clamp
+
+Angle space, not projection space, because the committed failures include subjects BEHIND the
+near plane where a projected number is meaningless and its sign lies (§419; the ring arrival's
+ndcY −41.59 with ndcZ −0.99 is on the record): the subject's view-space elevation
+φ = atan2(v.y, −v.z) is exact at any depth, the margin is the angle αm = atan(`clampMargin` ×
+tan(fovV/2)), and the correction is the minimum rotation that puts φ at the margin. Three
+stages, strictly ordered:
+
+1. **Pitch** — local-X view rotation, capped at `clampPitchMax` 80°. Every committed capture
+   needs ≤ ~66° (the ring arrival, subject ~3.1 m under a boom-crushed camera).
+2. **Vertical translate** — past the pitch authority only: the closed-form vertical camera move
+   that brings the required rotation back inside it.
+3. **Lateral translate** — the horizontal margin, held by sliding along the view's local right
+   axis. NEVER yaw: yaw is the player's control frame ("W" is camera-forward) and must not chase
+   a swinging subject. A slide along the view's own right basis vector changes v.x alone, so it
+   cannot disturb the vertical containment and needs no iteration.
+
+The margin **0.88** sits mid-band in (0.65, 0.95): every composed frame on the record is
+|ndcY| ≤ 0.65, §467's "in frame, barely" is 0.85, gone is ≥ 1.0, and the ceiling leaves room for
+the post-clamp stages (shake ≤ ~0.05 ndc at slam amplitude, roll mixing, shake-FOV wobble) so a
+held subject cannot be wobbled past the edge. The anchor is `clampAnchorY` +0.9 — the chest
+point every committed telemetry instrument projects (thieflook, slamtrace, camdrive, climbcam),
+so these constants and the before/after tables speak one language. The clamp is **stateless**:
+`need` is computed fresh from the frame's raw pose, so on any frame with the subject inside the
+margin the contribution is exactly zero and the pose is BIT-IDENTICAL to the pre-ruling rig —
+the |Δ| = 0 control the decline's beneficiaries get, per frame rather than per route.
+`clampMargin: 0` disables the whole stage (the §388 switch pattern), which is how every arm runs
+the pre-ruling regime for real rather than recalling it.
+
+### §475.2 Measured, on the three photographed failure classes and the controls
+
+`tests/camclamp.test.mjs`, record/replay on the real Controller and BVH (climbcam's pattern),
+both regimes run per §418.3, shakes recorded off the bus and re-delivered:
+
+```
+                              pre-ruling (margin 0)      shipped (0.88)
+  16 m slam impact            ndcY −2.56                 −0.86, N=0 through impact+30
+  8 m slam impact             ndcY −1.43                 −0.86
+  T3 ring arrival             41/41 frames uncontained   0 uncontained · max need 64.2°
+                              (10 behind the plane)      of the 80° authority
+  hook-ring debt sequence     117 frames uncontained     0 · translate fires 35 f
+  (T1, deliberately driven)   (|ndcY| to 27, |ndcX| 3.05)  (max slide 1.98 m)
+  desert run                  5 f out past frame ~230    contained · max catch 35.5°
+  run + jumps                 never leaves 0.342         0 engaged frames — bit-identical
+  into masonry                139 f out during the fall  contained · max 54.0°
+```
+
+And across the acceptance drive — `spawn2eye`'s full 5,870-frame route, chain swings, cornice,
+retrace, tomb descent, driven with a passive live rig observing (its own camera; provably
+unable to steer the drive): **out 0, max consecutive 0, clamp engaged 1,210 frames, max 66.1°.**
+N = 0 measured, not derived.
+
+### §475.3 The release at touchdown, and why there is no rate limit
+
+The §467 worry was the clamp releasing at landing recreating a snap. Measured instead: the
+fallPitch unwind at touchdown (+10° in one frame, §467.3's "cut") lands in the ENGAGE direction
+— the raw pose rotates up, the raw subject drops further out, `need` grows by the same ~10°, and
+the written view barely moves: **the clamp absorbs the cut it was predicted to recreate.** The
+release then tracks the pivot/boom recovery, which is already smooth: worst one-frame view
+rotation in the 30 frames after the 16 m impact is **2.47°** (8 m: 0.98°) against the
+pre-registered 10°/frame bar — the shipped rig's own worst step, set before the run (§141.1). No
+rate limit shipped; a rate limit would also break the statelessness the zero-cost guarantee
+rests on, and N derives to 0 because engagement is exact every frame.
+
+### §475.4 The impact shake was never wired, and the instrument that refused to lie found it
+
+camclamp's first shake recorder stubbed `engine.get('camera')` and recorded ZERO through a real
+16 m slam. Chased (§442.3): the moveset emits `'shake'` on the bus — six sites, dive slam
+`diveShake` 0.35, hard landings min(0.3, f×0.018), hurt 0.22, combo finisher 0.16, bounce 0.10,
+spire land 0.08 — and the only listeners were the HUD's DOM wobble and Audio's music duck.
+`CameraRig.shake()` had **zero callers** since the file was written, its own docblock naming the
+dive pair, AGENTS.md §6 speccing "camera shake 0.35". The committed `slamtrace.json` confirms:
+zero nonzero-shake frames through a real slam. Every impact anyone has watched wobbled the HUD
+over a tripod-still lens — a §471.3-shape seam, the emit and the method each doing their job,
+meeting nowhere. Wired in `CameraRig.init` (one subscription, amplitude → the documented 0.25 s
+default), so the clamp's invariant is measured with the wobble LIVE: the slam impact holds at
+−0.86 with the shake riding it, and camclamp asserts the subscription end-to-end by replaying
+recorded bus events into the rig. The feel consequence — impacts wobble the lens for the first
+time, at amplitudes authored blind — is item 17 of the hardware sheet.
+
+### §475.5 What the arms forced into existence, and what the falsification found
+
+- **The horizontal case exists (§440 asked; the instrument answered).** The deliberately-driven
+  debt take — jump-grab the kiosk ring, ride the swing crushed to 0.55 against the obelisk, bail
+  to the rope — held every frame vertically while |ndcX| reached **3.05** on 27 frames: at a
+  0.55 m boom the subject orbits the camera laterally faster than any sane aim could track. That
+  measurement is why stage 3 exists and why it is a translation.
+- **The dune ascent is a loss nobody photographed.** Past frame ~230 of the plain desert run,
+  W held, the runner bounds up a dune face the §515 slope fix made walkable, the boom
+  occlusion-crushes into the sand BEHIND him to the 0.55 hard-min, and the subject walks off the
+  top of frame — ndcY +2.7..+3.3 in ordinary `move`. The clamp catches it at ~35°. New instance
+  of item 12's boom family, on terrain instead of masonry; recorded on the sheet's item 12 box.
+- **Ordinary jumps live 2.6× inside the margin.** The falsification control (margin 0.30, under
+  the jumps route's measured 0.342 excursion) had to be derived because 0.5 NEVER ENGAGED over
+  300 frames of jumps — the protected class does not graze the shipped margin at all: 0 engaged
+  frames, bit-identical poses, asserted per frame.
+
+### §475.6 Costs, boundaries, and one instrument re-based by the mover
+
+- **Containment is not composition.** The debt second still photographs at boom 0.55 — an
+  extreme close-up, now OF THE CHARACTER instead of the inside of his hat. The boom crush and
+  recovery debt remain item 12's priced levers; the ruling bought the frame, not the shot.
+- **The translates are uncast.** 35 frames on the harshest take, max 1.98 m, zero on every
+  committed capture class (asserted). A slide can theoretically enter geometry; it fires only at
+  poses where the boom is already at hard-min inside geometry's shadow.
+- **Two ulp-class instrument corrections inside the arms' own build** (both §439's shape, both
+  recorded in the file): `Quaternion.angleTo` reads ~3e-8 rad on bit-identical quaternions (acos
+  of a dot one ulp under 1), so pose identity is component equality; and the cached world shares
+  one StubInput and one aim camera across traces, so a drive that phase-changes with a key held
+  poisons the next trace — the jumps route once read 47.8° of clamp from a stuck jump and a
+  stale lintel aim.
+- **camdrive D1 re-based by the mover** (§496's precedent): its failing input asserts the
+  masonry route's real-vs-open-sky ndcY disagreement exceeds 1.0, and the clamp bounds that very
+  quantity in both arms (measured compression to 0.665). D1's claim is about the raw rig feeling
+  the BVH, so its comparison now runs at margin 0 with the note pointing here.
+- Verification: camclamp 4/4 arms, spawn2eye leg table OK end-to-end with the observer's N = 0
+  line, full suite green from a clean worktree (count in the commit).
+
+The sheet: item 12 carries the verdict box and the flip to shipped-with-ruling; item 15's mount
+dip inherits the clamp (the debt arm is its measurement); item 17 is the newly-live shake.

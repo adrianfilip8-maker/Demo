@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { realWorld, hardReset, DT } from './_moveset.mjs';
 import { TUNE } from '../src/player/Controller.js';
+import { CameraRig } from '../src/player/CameraRig.js';
 
 /**
  * THE ACCEPTANCE ARM: §8.1 from spawn to the Eye of Ra, one Controller, one reset, no teleport.
@@ -43,10 +44,41 @@ const f3 = (v) => `(${v.x.toFixed(2)}, ${v.y.toFixed(2)}, ${v.z.toFixed(2)})`;
 test('spawn to the Eye of Ra: the authored route completes in one continuous drive', async () => {
   const world = await realWorld();
   const { engine, c, collision } = world;
+
+  /* ── CAMERA-LANE OBSERVER (§475, `tests/camclamp.test.mjs`'s acceptance-grade arm) ─────────
+   *
+   * A passive CameraRig rides the whole drive — its OWN camera and facade engine, so it can
+   * touch nothing the drive reads (the Controller steers by `engine.camera`, which stays the
+   * aim camera; the rig draws no RNG; its collision reads are pure queries). It exists to hold
+   * the user's ruling, "Sly should always remain in frame", across the one drive that walks
+   * every beat of the authored route: chest anchor in front of the near plane and inside the
+   * frame on BOTH axes, EVERY frame, zero consecutive violations (N = 0 — the clamp is
+   * stateless and exact, so the invariant carries no grace window). A trip here is a
+   * CameraRig.js §475 regression, not a level fault — read the [s2e-cam] line it prints.
+   * DOMAIN: passes on the shipped rig (clamp at `clampMargin` 0.88); fails on the pre-ruling
+   * rig (margin 0 reproduces §467/§472's lost frames on the chain and the descents); does not
+   * discriminate framing QUALITY (composition is the sheet's) or the drive itself (the leg
+   * assertions above this one own that).
+   */
+  const camObs = (() => {
+    const cam = new THREE.PerspectiveCamera(52, 16 / 9, 0.1, 2000);
+    const L = new Map();
+    const rigEngine = {
+      input: { look: { x: 0, y: 0 }, move: { x: 0, y: 0 }, zoom: 0, pressed: () => false, down: () => false },
+      camera: cam, scene: new THREE.Scene(), movement: c, collision,
+      time: 0, dt: 0, timeScale: 1, debug: { freeCam: false }, warn() {}, has() { return false; },
+      on(e, f) { if (!L.has(e)) L.set(e, new Set()); L.get(e).add(f); return () => {}; },
+      emit(e, p) { for (const f of L.get(e) || []) f(p); },
+      get(n) { return n === 'movement' ? c : n === 'collision' ? collision : null; },
+    };
+    return { cam, rigEngine, rig: null, stats: { frames: 0, out: 0, maxRun: 0, run: 0, engaged: 0, maxNeed: 0, worst: null } };
+  })();
+
   const { legRows, events, cornice } = await (async () => {
 let FRAME = 0, last = '';
 let CORNICE_FRAME = -1;
 const events = [], legRows = [];
+const _csub = new THREE.Vector3(), _cfw = new THREE.Vector3(), _crl = new THREE.Vector3();
 function step(script) {
   engine.input.beginFrame(DT);
   engine.input.move.x = 0; engine.input.move.y = 0;
@@ -57,6 +89,34 @@ function step(script) {
   }
   engine.events.length = 0;
   if (c.stateName !== last) last = c.stateName;
+  /* camera-lane observer (§475): advance the passive rig over the frame just simulated, in
+     the game's own order (movement first, camera after), and score the ruling. */
+  if (!camObs.rig) {
+    camObs.rig = new CameraRig(camObs.rigEngine);
+    camObs.rig.init();
+    engine.on('shake', (amt) => camObs.rig.shake(Number(amt) || 0));   // the §475.4 wiring, live
+    camObs.rig.snap(true);
+  }
+  camObs.rigEngine.dt = DT; camObs.rigEngine.time = FRAME * DT;
+  camObs.rig.update(DT, FRAME * DT);
+  {
+    const s = camObs.stats, cam2 = camObs.cam;
+    _csub.set(c.position.x, c.position.y + 0.9, c.position.z);
+    cam2.getWorldDirection(_cfw); _crl.copy(_csub).sub(cam2.position);
+    const inFront = _crl.dot(_cfw) > cam2.near;
+    const ndc = _csub.clone().project(cam2);
+    s.frames++;
+    if (!inFront || Math.abs(ndc.y) >= 1 || Math.abs(ndc.x) >= 1) {
+      s.out++; s.run++; if (s.run > s.maxRun) s.maxRun = s.run;
+      if (!s.worst || Math.abs(ndc.y) > Math.abs(s.worst.y)) {
+        s.worst = { f: FRAME, st: c.stateName, x: +ndc.x.toFixed(2), y: +ndc.y.toFixed(2), inFront };
+      }
+    } else s.run = 0;
+    if (camObs.rig._clampPitch !== 0 || camObs.rig._clampSlide !== 0 || camObs.rig._clampMoved !== 0) {
+      s.engaged++;
+      s.maxNeed = Math.max(s.maxNeed, Math.abs(camObs.rig._clampPitch));
+    }
+  }
   FRAME++;
 }
 const near = (x, z, tol) => Math.hypot(c.position.x - x, c.position.z - z) < tol;
@@ -445,4 +505,14 @@ console.log(`\ntotal ${FRAME} frames = ${(FRAME / 60).toFixed(1)} s of game time
   const finalD = Math.hypot(c.position.x - 0, c.position.z + 74.3);
   assert.ok(finalD < 2.0 && Math.abs(c.position.y + 11.2) < 1.8,
     'the drive "completed" but did not end at the Eye: ' + f3(c.position));
+
+  /* The §475 invariant, across the whole acceptance drive: N = 0 — see the observer's block
+     comment at the top of this test for its domain. */
+  const cs = camObs.stats;
+  console.log(`[s2e-cam] §475 containment: ${cs.frames} frames · out ${cs.out} (max run ${cs.maxRun})`
+    + ` · clamp engaged ${cs.engaged}f (max ${(cs.maxNeed * 180 / Math.PI).toFixed(1)}°)`
+    + (cs.worst ? ` · worst ${JSON.stringify(cs.worst)}` : ''));
+  assert.equal(cs.maxRun, 0,
+    `the subject left the frame for ${cs.maxRun} consecutive frame(s) during the acceptance drive`
+    + ` (worst: ${JSON.stringify(cs.worst)}) — a CameraRig rule-6/§475 regression, not a level fault`);
 });

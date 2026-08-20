@@ -839,7 +839,36 @@ under every swing in the game and are not the lever (§509.4).
 
 ## 12. The slam-from-height impact frame has no subject in it — *measured, not shipped*
 
-**No commit — nothing has changed in source.** §467 is the mechanism; `tools/slamtrace.mjs` and
+> ### ✅ USER VERDICT — "Sly should always remain in frame." Shipped as an invariant. Item settled.
+>
+> The ruling overrides the decline below — which was a cost-based call, and whose measurements
+> stay the right map: the three bounds still compose exactly as priced, none of them was
+> retuned, and the levers below remain the levers if the SHOT (rather than the frame) is ever
+> re-opened. What shipped instead is **rule 6 of `CameraRig.js` (§475)**: a subject-containment
+> clamp as the final stage of `_write` — engage at `clampMargin` 0.88, pitch first, translate
+> only where rotation may not go, exactly zero (bit-identical pose) while the subject is inside
+> the margin. Measured on this item's own frames: the 16 m slam impact **−2.56 → −0.86**; the
+> ring arrivals **41/41 uncontained (10 behind the camera plane) → 0**; the touchdown release
+> **2.47°/frame worst** against the 10°/frame fallPitch cut it was predicted to recreate — the
+> clamp absorbs that cut instead. The colonnade jumps — the cost every declined lever carried —
+> engage **zero frames** and replay bit-identical (ordinary jumps peak 2.6× inside the margin);
+> the full spawn2eye drive runs **5,870 frames, 0 out, clamp engaged 1,210 f**. Building the
+> arms also caught two new instances of this item's boom family: the **dune ascent** (W held up
+> a §515-walkable dune face crushes the boom into the sand and walked Sly off the top of frame
+> — now caught at ~35°) and the **crushed-swing lateral orbit** (|ndcX| to 3.05 at boom 0.55 —
+> why the clamp's stage 3 exists).
+>
+> **What to watch on hardware now, one question.** The failure frames are gone; what remains is
+> whether the CATCH reads right: slam from the staircase top and watch the third of a second at
+> impact — Sly now rides the bottom margin of frame while the camera holds him (with the §475.4
+> shake finally live over it, see item 17). If that edge-hold reads as *impact*, done. If it
+> reads as *the camera straining*, the levers for the SHOT are unchanged below (the leash in
+> frame units first), and the clamp simply makes them a composition question instead of a
+> lost-subject question.
+
+**~~No commit — nothing has changed in source~~** (true until the verdict box above; everything
+below describes the pre-ruling rig, which `clampMargin: 0` still runs — kept because three lanes
+quote it). §467 is the mechanism; `tools/slamtrace.mjs` and
 `shots/slamtrace*.json` are the apparatus; `camlane4-s2/s3` are the frames to hold beside this.
 Three bounds, each authored and each defensible alone, compose at the impact of any fast descent:
 
@@ -1028,6 +1057,19 @@ ever authored against a column, that is the frame to re-read this item on.
 > count the beat before the camera opens. If that beat reads wrong, the levers are item 12's
 > recovery-clock family or the level (the ring beside the shaft), not this gate.
 
+> ### ✅ THE MOUNT DIP INHERITS THE §475 CLAMP — measured, and the debt second now holds frame
+>
+> Item 12's ruling box covers this item's residual: camclamp's debt arm drives the ring-catch
+> deliberately (jump-grab the kiosk ring, ride the swing crushed to 0.55 against the obelisk,
+> bail to the rope) and the pre-ruling rig loses the subject on **117 frames** of that
+> sequence — |ndcY| to 27 behind the camera plane on the swing, the +1.26-class mount frames,
+> |ndcX| to 3.05 as the subject orbits the crushed boom. Shipped: **0 uncontained frames end
+> to end**, with the composed climb after recovery bit-identical (153/153 frames) to the
+> pre-ruling rig. What the clamp does NOT buy: the boom is still 0.55 through the debt second,
+> so that beat is now an extreme close-up OF Sly rather than the inside of his hat — the
+> recovery clock and the ring-beside-the-shaft remain the levers if the close-up itself reads
+> wrong.
+
 ---
 
 ## 16. The double jump now twirls — re-test P1
@@ -1080,3 +1122,32 @@ physics at speed, not the old stutter.
 100 % of flat speed on clean ground. If steep climbs should feel like work (slower, heavier), that
 is a slope-speed curve nobody has authored, and the measurements to derive one from are in §515.3.
 Say whether the climb feels weightless before anyone builds it.
+
+---
+
+## 17. The impact shake reaches the lens for the first time — every amplitude is authored blind
+
+**Commit** this round · **File** `src/player/CameraRig.js` (`init`, one subscription) · **Ledger** §475.4
+
+The camera's impact shake — rotation-dominant, three-octave noise, five TUNE constants, its own
+docblock citing the dive slam's exact pair — has existed since the rig was written and **had zero
+callers**: the moveset emits `'shake'` on the bus, and the only listeners were the HUD's DOM
+wobble and Audio's music duck. The committed `slamtrace.json` drove a real 16 m slam with zero
+nonzero-shake frames. Every impact anyone has ever watched on this project wobbled the HUD over a
+tripod-still lens. Found when the §475 clamp arms' shake recorder refused to record anything;
+wired as one subscription in `CameraRig.init` so the containment invariant could be measured
+against the wobble live rather than a dead stage (it holds: slam impact −0.86 with the shake
+riding it).
+
+**What fires now, and at what size**: dive slam 0.35 (the AGENTS.md §6 spec number), hard
+landings min(0.3, f×0.018) — soft landings stay still — hurt 0.22, the combo-3 finisher 0.16,
+the bounce 0.10, the spire land 0.08; all 0.25 s, rotation ~0.055 rad/unit with a positional
+whisper.
+
+**What to watch.** Slam from height, take a hit, land hard off a lost wall — the lens should now
+kick with each. Two judgements only eyes can make: (1) **size** — these amplitudes were authored
+without ever being seen; if the slam's kick reads as flinch rather than impact the lever is
+`TUNE.shakeRot`/`shakePos` (global character) or the per-emit amounts in the moveset (per-moment
+size, that lane's). (2) **doubling** — the HUD's DOM wobble still fires on the same events; if
+lens + HUD together read as a broken monitor, the HUD's `shakeGain` is the one to turn down, not
+this wiring.

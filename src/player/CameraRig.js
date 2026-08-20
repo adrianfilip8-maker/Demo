@@ -25,6 +25,16 @@ import * as THREE from 'three';
  *     affordances COLLISION already indexes and eases the framing toward them **on approach**,
  *     before the state machine has anything to react to. A camera that only responds once you are
  *     already on the pole has told you nothing you did not know.
+ *  6. **Sly always remains in frame.** The user's ruling, verbatim, and it is enforced rather
+ *     than approached: a final-stage containment clamp in `_write` moves the view the minimum
+ *     needed to hold the subject inside `clampMargin` — pitch first, translation only where a
+ *     rotation may not go (past the pitch authority, and the horizontal margin, where yaw would
+ *     remap the player's controls) — and contributes EXACTLY ZERO — bit-identical pose — on any
+ *     frame where the subject is already inside it. It sits after every spring, leash, boom and occlusion stage on purpose: §467
+ *     measured that retuning those three bounds individually landed "better everywhere, in frame
+ *     nowhere" (−1.04..−1.11 ndcY), so an invariant could not be built out of them. One caveat to
+ *     rule 1 lives here: while the clamp is engaged, mouse pitch that would push Sly further out
+ *     of frame is absorbed by the correction — the hand still moves the frame everywhere else.
  *
  * Coordinate convention (matches MOVEMENT's yaw, per AGENTS.md §8.1 "facing north = yaw π"):
  *   forward = (sin(yaw), 0, cos(yaw)).  `yaw` is the heading the camera *looks along*, so a camera
@@ -215,6 +225,40 @@ export const TUNE = {
      2.6 - 1.0 + 0.15 = 1.75 m above the character exactly. Both numbers are the same constant
      seen from two ends. */
   followLeashV: 2.6,
+
+  /* ---- subject containment (rule 6) ---------------------------------------- */
+  /* The leash above bounds the PIVOT in metres and the frame is angular, which is §467's second
+     bound: at a cut boom 2.6 m of slack is three half-frame-heights and the subject is gone.
+     These constants bound the SUBJECT in frame units instead, at the last stage before the
+     screen, where every upstream term has already had its say.
+
+     `clampMargin` is the |ndcY| at which the hold engages — a soft edge-hold, not a snap at the
+     frame edge. The band it must sit in is derived from the committed captures rather than
+     chosen: every composed frame on record sits at |ndcY| ≤ 0.65 (thief2 climbs −0.32..−0.50,
+     camlane4 hop slam −0.29, t3 approaches −0.2..−0.65), the one "in frame, barely" reading is
+     0.85 (§467's 8 m fall), and gone is ≥ 1.0 — so the margin lives in (0.65, 1.0) open on both
+     sides, tightened above to ~0.95 so the post-clamp stages (shake ≤ ~0.05 ndc at slam
+     amplitude, wall-bank roll mixing, the shake-FOV wobble) cannot carry a held subject past the
+     edge. 0.88 is mid-band. Frames the design already accepts at 0.85 are untouched by
+     construction — the clamp engages BEYOND the margin, never inside it.
+
+     `clampAnchorY` is the point that must stay in frame, metres above the player origin — the
+     same `+0.9` chest anchor every committed telemetry instrument projects (thieflook, slamtrace,
+     camdrive, climbcam), so the before/after tables and these constants speak one language.
+
+     `clampPitchMax` is the pitch authority: past it, pitching alone cannot compose (the subject
+     is nearly straight above/below or behind-and-past-vertical) and the translate branch in
+     `_write` moves the camera vertically instead — see the docblock there for exactly when that
+     branch fires. The steepest committed capture (the ring arrival, subject ~3.1 m under a
+     boom-crushed camera, behind the near plane) needs ~66°, so 80° clears everything on record
+     with headroom; `tests/camclamp.test.mjs` asserts the branch fires on none of them.
+
+     0 disables the clamp — the pre-ruling rig, kept runnable for the same reason `leadMode` is a
+     switch (§388): the arms price the ruling by running BOTH regimes against one recorded
+     trajectory, and a scratch copy of the rig would drift. */
+  clampMargin: 0.88,
+  clampAnchorY: 0.9,
+  clampPitchMax: 80 * DEG,
 
   /* ---- velocity lead ------------------------------------------------------ */
   /* **`FRAMES.lead` is inert on 13 of 19 rows, and TWO different constants do it.**
@@ -719,6 +763,9 @@ const _sc = new THREE.Vector3();
 const _m4 = new THREE.Matrix4();
 const _q1 = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
+const _q3 = new THREE.Quaternion();   // inverse view, for the containment clamp only
+const _sv = new THREE.Vector3();      // subject in view space (rule 6)
+const _wv = new THREE.Vector3();      // world up in view space, translate branch only
 const _eul = new THREE.Euler();
 const _UP = new THREE.Vector3(0, 1, 0);
 
@@ -835,6 +882,11 @@ export class CameraRig {
        amplitude*, which `_shakeAmp * _shakeEnv()` already gives exactly; a timestamp answers a
        question nothing asks. */
 
+    /* ---- subject containment (rule 6) ---- */
+    this._clampPitch = 0;      // radians of view rotation applied last frame; 0 = untouched pose
+    this._clampMoved = 0;      // metres of vertical translate-branch lift last frame
+    this._clampSlide = 0;      // metres of lateral containment slide last frame
+
     /* ---- wall side probe ---- */
     this._wallSide = 0;
     this._wallProbeT = 0;
@@ -882,6 +934,20 @@ export class CameraRig {
     // A canonical shot teleports Sly and poses the camera. When the harness hands control back
     // we must re-seed rather than sweep across the level from wherever the shot left us.
     this._offs.push(engine.on('shot', () => { this._shotHeld = true; }));
+
+    /* THE IMPACT SHAKE, FINALLY WIRED (§475.4). `shake()` below has existed since this file was
+       written, its docblock names the dive slam's exact pair, AGENTS.md §6 specs "camera shake
+       0.35" — and it had ZERO callers: the moveset emits `'shake'` on the bus (six sites — the
+       dive slam at `diveShake` 0.35, hard landings at min(0.3, f×0.018), hurt 0.22, the combo
+       finisher 0.16, the bounce 0.1, the spire land 0.08) and the only listeners were the HUD's
+       DOM wobble and Audio's music duck. The committed slamtrace.json drove a real 16 m slam
+       with zero nonzero-shake frames, so every impact anyone has watched wobbled the HUD over a
+       tripod-still lens. A §471.3-shape seam — the emit and the method each doing their job,
+       meeting nowhere — found when camclamp's shake recorder refused to record anything.
+       Payloads are bare amplitudes; the 0.25 s default duration is the docblock's own slam pair.
+       Wired HERE rather than in the moveset so the subscription lives beside the method it
+       feeds, in the file that owns the feel consequence. */
+    this._offs.push(engine.on('shake', (amt) => { this.shake(Number(amt) || 0); }));
 
     this._collision = engine.get('collision');
     this.snap(true);
@@ -976,6 +1042,11 @@ export class CameraRig {
     this._sideSign = 0;
     this._wallSide = 0;
     this._focusDur = 0;
+    /* Stateless per frame, but the telemetry fields must not survive a teleport: a stale
+       `_clampPitch` read by a tool after a snap would report an engagement that is not there. */
+    this._clampPitch = 0;
+    this._clampMoved = 0;
+    this._clampSlide = 0;
     this._hadPlayer = true;
     this._prevPlayer.copy(_pPos);
     if (!this.engine.debug.freeCam) this._write(0);
@@ -2018,8 +2089,137 @@ export class CameraRig {
     }
     const amp = this._shakeAmp * env;
 
+    /* FOV eased BEFORE the pose so the containment clamp below measures its margin against the
+       lens this frame actually renders with. Same inputs, same order relative to every consumer
+       (`_frame.fov`, `_speedSm`, `_routeUpW` are all pre-`_write` state), so hoisting it is
+       bit-identical for the FOV itself; only the shake wobble is added later, at application. */
+    const fovTarget = TUNE.fovBase + this._frame.fov
+      + this._speedNorm() * TUNE.fovSpeedGain
+      + this._routeUpW * TUNE.routeFov;
+    this._fovCur = ease(this._fovCur, fovTarget, TUNE.fovTime, dt);
+
     _m4.lookAt(_camPos, _lookAt, _UP);
     _q1.setFromRotationMatrix(_m4);
+
+    /* ── SUBJECT CONTAINMENT (rule 6) — the final stage, and deliberately so ────────────────
+     *
+     * The user's ruling is "Sly should always remain in frame", and §467 measured why no
+     * upstream retune can deliver it: the leash, the occlusion recovery and the fallPitch
+     * unwind COMPOSE — with any one removed the subject is still out of frame (best single
+     * −0.90 ndcY), with all three removed it is composed, and every individual candidate
+     * costs the colonnade jumps. An "always" wants an invariant, and an invariant is enforced
+     * at the end of the chain, not approached from the middle of it.
+     *
+     * Mechanism, in angle space rather than projection space, because the committed failures
+     * include the ring arrivals — subject BEHIND the near plane, where a projected number is
+     * meaningless and even its sign lies (§419; ndcY −41.6 with ndcZ −0.99 on the record):
+     *
+     *   φ  = atan2(v.y, −v.z) in view space — the subject's elevation off the view axis,
+     *        exact at any depth, behind-plane included (|φ| > 90° there);
+     *   αm = atan(clampMargin × tan(fovV/2)) — the margin as an angle;
+     *   need = φ − sign(φ)·αm when |φ| > αm, else 0 — the MINIMUM rotation that holds the
+     *        chest anchor at the margin, applied about the camera's local right axis.
+     *
+     * Pitch-first, position untouched: a rotation costs no occlusion re-cast and cannot fight
+     * the pull-in, which is the whole reason the declined levers were declined. Three stages,
+     * strictly ordered:
+     *   1. PITCH — the minimum local-X rotation to the vertical margin; handles every
+     *      committed capture including behind-plane (the steepest, the ring arrival, needs
+     *      ~66° of the 80° authority).
+     *   2. VERTICAL TRANSLATE — only when |need| exceeds `clampPitchMax` (subject nearly
+     *      straight overhead/underfoot, or behind and past vertical): the closed-form vertical
+     *      camera move that brings the required rotation back inside the authority.
+     *   3. LATERAL TRANSLATE — the horizontal margin, held by sliding along the view's local
+     *      right axis, never by yaw: yaw is the player's control frame ("W" is
+     *      camera-forward) and must not chase a swinging subject. See the inline note for the
+     *      measurement that forced this stage into existence.
+     * The translates are UNCAST — accepted because they fire only at poses where the boom is
+     * already at hard-min with the camera inside geometry's shadow, and they move toward the
+     * open space the subject occupies; both are reported per frame and the arms count them.
+     *
+     * Ordering, all three deliberate:
+     *   · after the focus lerp — a scripted look-away may pull the frame, never Sly out of it;
+     *   · before the shake — the impact wobble stays a wobble instead of being half-wave
+     *     rectified against the hold exactly at the slams it exists for. The margin's distance
+     *     to the frame edge (0.12 ndc) covers the worst committed shake (slam amp 0.35 →
+     *     ≤ ~0.05 ndc) — measured in `tests/camclamp.test.mjs`, which asserts the FINAL pose,
+     *     shake and roll included, never lets the anchor leave the frame;
+     *   · stateless — `need` is computed fresh from this frame's raw pose, so the moment the
+     *     subject is back inside the margin the contribution is EXACTLY zero and the pose is
+     *     bit-identical to the pre-ruling rig. That is the |Δ| = 0 control the arms hold on
+     *     the colonnade-jump and settled-climb routes, per frame rather than per route. No
+     *     release rate limit: at a slam touchdown the raw pose's own one-frame fallPitch
+     *     unwind lands in the ENGAGE direction (the clamp absorbs the −10° cut, measured
+     *     §475.3), and the release then tracks the pivot/boom recovery, which is already
+     *     smooth — the arms pin the release's worst one-frame view step under the 10°/frame
+     *     the shipped rig itself calls a cut. A rate limit would also break the statelessness
+     *     the zero-cost guarantee above rests on.
+     */
+    this._clampPitch = 0;
+    this._clampMoved = 0;
+    this._clampSlide = 0;
+    if (TUNE.clampMargin > 0) {
+      _sv.set(_pPos.x, _pPos.y + TUNE.clampAnchorY, _pPos.z).sub(_camPos);
+      if (_sv.lengthSq() > 1e-6) {
+        _q3.copy(_q1).invert();
+        _sv.applyQuaternion(_q3);
+        const half = Math.tan(this._fovCur * 0.5 * DEG);
+        const am = Math.atan(TUNE.clampMargin * half);
+        let phi = Math.atan2(_sv.y, -_sv.z);
+        let need = phi > am ? phi - am : phi < -am ? phi + am : 0;
+        if (Math.abs(need) > TUNE.clampPitchMax) {
+          /* Stage 2, vertical translate. Solve the vertical camera move that puts the
+             subject's elevation at exactly ±(clampPitchMax + αm): with ŵ = world up in view
+             space and T that target, v.y − Δy·ŵ.y = tan(T)·(−v.z + Δy·ŵ.z) is linear in Δy. */
+          const T = Math.sign(phi) * (TUNE.clampPitchMax + am);
+          _wv.set(0, 1, 0).applyQuaternion(_q3);
+          const tT = Math.tan(T);
+          const den = _wv.y + tT * _wv.z;
+          if (Math.abs(den) > 1e-4) {
+            const dy = (_sv.y + tT * _sv.z) / den;
+            _camPos.y += dy;
+            this._clampMoved = dy;
+            _sv.set(_pPos.x, _pPos.y + TUNE.clampAnchorY, _pPos.z).sub(_camPos).applyQuaternion(_q3);
+            phi = Math.atan2(_sv.y, -_sv.z);
+            need = phi > am ? phi - am : phi < -am ? phi + am : 0;
+          }
+        }
+        if (need !== 0) {
+          /* Stage 1 applied: post-multiply about local +X pitches the view up by `need`,
+             moving the subject's apparent elevation down by the same angle — to the margin
+             exactly, never past it. */
+          _eul.set(need, 0, 0, 'YXZ');
+          _q2.setFromEuler(_eul);
+          _q1.multiply(_q2);
+          this._clampPitch = need;
+        }
+        /* Stage 3, lateral containment — TRANSLATION, never yaw, because yaw is the player's
+           control frame: `W` means camera-forward, and a camera that yaws itself to chase a
+           swinging subject remaps the stick mid-move. Measured need (camclamp's T1 debt take,
+           the harshest pose on record — the crushed hook swing at boom 0.55 with the subject
+           orbiting the camera): the vertical stages held every frame while |ndcX| reached 3.05
+           on 27 frames — the horizontal case exists (§440), at exactly the degenerate poses the
+           vertical failures live in. Sliding along the view's local right axis changes v.x
+           ALONE (orthonormal basis), so it cannot disturb the vertical containment above, needs
+           no iteration, and is exact. Runs only with the subject in front (a behind subject is
+           stage 1/2's, which always deliver v.z < 0 when they act); uncast like stage 2, for
+           the same reason and with the same reporting. */
+        _sv.set(_pPos.x, _pPos.y + TUNE.clampAnchorY, _pPos.z).sub(_camPos);
+        _q3.copy(_q1).invert();
+        _sv.applyQuaternion(_q3);
+        if (_sv.z < -1e-4) {
+          const aspect = (cam.aspect > 0 ? cam.aspect : 16 / 9);
+          const bm = Math.atan(TUNE.clampMargin * half * aspect);
+          const lam = Math.atan2(_sv.x, -_sv.z);
+          if (Math.abs(lam) > bm) {
+            const dx = _sv.x - Math.sign(lam) * Math.tan(bm) * (-_sv.z);
+            _wv.set(1, 0, 0).applyQuaternion(_q1);
+            _camPos.addScaledVector(_wv, dx);
+            this._clampSlide = dx;
+          }
+        }
+      }
+    }
 
     let rollTotal = this._roll;
     if (amp > 0) {
@@ -2054,11 +2254,8 @@ export class CameraRig {
 
     /* FOV: a modest speed stretch. Enough to feel velocity, not enough to notice as a zoom.
        `_speedSm` is eased once per frame in `_speedTrack`, so this reads the same number the
-       boom dolly did. */
-    const fovTarget = TUNE.fovBase + this._frame.fov
-      + this._speedNorm() * TUNE.fovSpeedGain
-      + this._routeUpW * TUNE.routeFov;
-    this._fovCur = ease(this._fovCur, fovTarget, TUNE.fovTime, dt);
+       boom dolly did. The ease itself now runs above the pose (see the hoist note there); this
+       is only the application, with the shake wobble added at the last moment. */
     const fov = this._fovCur + amp * TUNE.shakeFov;
     if (Math.abs(fov - this._fovApplied) > 0.01) {
       cam.fov = fov;

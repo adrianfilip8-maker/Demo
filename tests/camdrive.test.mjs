@@ -180,22 +180,32 @@ test('D1: the stub table was wrong about the trajectory, not about the occlusion
    *   fails on  : the masonry route, where the boom is cut hard and the two disagree by more than
    *               a whole frame height. Run below and asserted to DISAGREE, so the agreement
    *               above is a measurement about those routes rather than a property of the
-   *               instrument being unable to tell the two collisions apart. */
+   *               instrument being unable to tell the two collisions apart.
+   *   NOTE (§475, re-based by the mover): these replays run with the containment clamp OFF.
+   *               The rule-6 clamp bounds |ndcY| at the margin in BOTH arms — real and open —
+   *               which compresses the very disagreement this arm discriminates on (measured:
+   *               the masonry worst |Δ| fell 1.0+ → 0.665 the day the clamp landed). D1's claim
+   *               is about the RAW rig feeling the BVH; the ruling's own arms live in
+   *               `camclamp.test.mjs` and the spawn2eye observer. */
   const desert = await trace(...DESERT_RUN);
   const glide = await trace(...GLIDE);
   const wall = await trace(...INTO_MASONRY);
 
   const cmp = (t) => {
-    const real = agg(replay(t.samples, t.collision, 'floor'));
-    const open = agg(replay(t.samples, OPEN_SKY, 'floor'));
-    let worst = 0, worstKey = '';
-    for (const [k, a] of real) {
-      const o = open.get(k);
-      if (!o || !a.ndc.length || !o.ndc.length) continue;
-      const d = Math.abs(mean(a.ndc) - mean(o.ndc));
-      if (d > worst) { worst = d; worstKey = k; }
-    }
-    return { real, open, worst, worstKey };
+    const keepClamp = TUNE.clampMargin;
+    TUNE.clampMargin = 0;
+    try {
+      const real = agg(replay(t.samples, t.collision, 'floor'));
+      const open = agg(replay(t.samples, OPEN_SKY, 'floor'));
+      let worst = 0, worstKey = '';
+      for (const [k, a] of real) {
+        const o = open.get(k);
+        if (!o || !a.ndc.length || !o.ndc.length) continue;
+        const d = Math.abs(mean(a.ndc) - mean(o.ndc));
+        if (d > worst) { worst = d; worstKey = k; }
+      }
+      return { real, open, worst, worstKey };
+    } finally { TUNE.clampMargin = keepClamp; }
   };
 
   const D = cmp(desert), G = cmp(glide), W = cmp(wall);
