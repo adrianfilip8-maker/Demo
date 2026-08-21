@@ -42157,3 +42157,55 @@ after this one if it differs. HONEST LIMITS: seam1 frames are posed through the 
 `animation.play()` crossfade with the state machine parked (the §479 pose-take precedent) — an
 in-situ ledge drive remains hardware-sheet material; and the before-arm was captured with
 Clips.js stashed to HEAD on an otherwise-edited tree, telemetry records both shas.
+
+### §479.6 "Elbows too tucked in" — measured to the source's own style, so the answer is a lever, not a rewrite
+
+The user, verbatim: *"Otherwise, the elbows seem too tucked in."* The §442.3 question — is the
+tuck in the source or introduced by the retarget? — answered three ways by `tools/armcross.mjs`
+(source GLB vs delivered vs the proc baseline the user knew, same beats, interior elbow angle at
+the joint):
+
+    Walk   source 69–129°   delivered 88–142°   proc 142–153°
+    Run    source 51–122°   delivered 75–138°   proc 118–127°
+
+The retarget does not tuck — it OPENS every delivered elbow ~15–19° past the source (mechanism:
+the rigs' rest arm directions differ ~14.5° — source A-pose [.54,−.84,.04] vs RIG3 [.72,−.69,0] —
+and the world-delta method composes their motion onto OUR wider bind). The fold the user reads
+is the repo's own authored bent-arm creep, delivered faithfully and then some. So per the
+mandate the style is not silently re-authored: the shipped set stays the repo's look, and the
+lever ships beside it — `GODOT_ELBOW_OPEN` in Animation.js (per-clip 0..1, lowerArm rotations
+scaled toward bind; `globalThis.__ELBOW_OPEN` is the boot override for A/Bs, the `__ANIM_AB`
+seam). k = 0.35 on the gaits lands the walk mid-swing at 121° — between the source's fold and
+the old procedural swing. On camera, phase-matched at stride 0.235, same 3.24 m/s beat:
+`shots/elb1-k0-*` vs `shots/elb1-k35-*` (walk profile + run profile — the k0 near arm folds to
+the chest, the k35 arm reaches long). Held by anim.test's lever arm: k=0 is BIT-EXACT with the
+shipped build (not merely similar), k=0.5 opens the measured joint ≥ 20° through the real FK,
+and the inverted identity runs as the fails-on case. The tuning row is the hardware sheet's
+(item 19); first capture of this round burned a §479.3 lesson twice — the walk take drove into
+a covered duct and photographed a crawl-lean as if it were the gait (deleted; the committed pair
+is from the open plaza with the settle shortened).
+
+### §479.7 "Slow down the jump animation" — the launch now plays at the reference's own delivered pace
+
+The §478 alias accounting rerun for the jump family, every number from the checkout: their tree
+plays the ground jump through `parameters/TimeScale/scale = 0.75`
+(`sly_cooper_anims_4.tscn:48498`; path jump_state/jump_floor → TimeScale → jump →
+`Library_Sly_19/Jump`), so their 0.5 s bake reads at 0.667 s — and our 1.0× was delivering the
+same launch 1.33× faster than their game ever showed it. That is the whole defect. The fix is
+their number verbatim: `GODOT_ALIAS.jump_rise = { src: 'Jump', rate: JUMP_NATURAL_RATE }` with
+`JUMP_NATURAL_RATE = 0.75` — the alias grew a `rate` spelling precisely so the constant in the
+table IS the measurement (dur = authored/rate, derived at build, not baked by hand). The §478.3
+completion rule deliberately does NOT bind here: the flip must close its 360° inside the
+airtime; a launch pose just launches and is re-based by apex/fall — so at 0.75× our held rise
+(jumpV0 11 / g 24 = 0.458 s) shows 69% of the clip by apex against their own 74% (their rise:
+8.06 / 16.25 = 0.496 s, their script's derivation at `player__sly.gd:129-134`). `Falling` was
+checked and left at 1.0× ON PURPOSE: both of their tree's fall bindings
+(`Hat Fall Sub → Library_Sly_14/Falling`, `nodes/fall → Library_Sly_19/Falling`) are bare
+animation nodes with no TimeScale in the path, and the clip is a held pose (max 60 Hz world
+step 1°) that has no pace to read. On camera: `shots/jump1-before-*` / `jump1-after-*` — same
+sim frames after the press, identical vy per frame (the physics is untouched), the track
+playhead in the telemetry beside every frame: by f18 the before arm has consumed 57% of the
+launch, the after arm 42%; at f14 the before pose is already spent while the after is still
+gathering. Held by anim.test's pace arm (delivered dur = authored/0.75 asserted against
+GODOT_CLIPS' own duration, the fall-back-to-authored claim inverted as the fails-on case, and
+Falling pinned to natural). Retune on hardware is one constant with its derivation attached.

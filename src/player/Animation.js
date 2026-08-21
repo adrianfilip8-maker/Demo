@@ -139,6 +139,26 @@ export const ANIM_TUNE = {
  * an 18° overshoot-and-settle. Both are measured in godot2clips' report (src→emit sweep
  * 0°→−360°), not assumed here.
  */
+/**
+ * §479.7 — the launch's delivered pace, and why it is THEIR number this time. The user: "Slow
+ * down the jump animation." The §478 accounting rerun for the jump family, all read from the
+ * checkout, none assumed: their tree plays the ground jump through
+ * `parameters/TimeScale/scale = 0.75` (`sly_cooper_anims_4.tscn:48498`; the path is
+ * jump_state/jump_floor → TimeScale → jump → `Library_Sly_19/Jump`), so their 0.5 s bake READS
+ * at 0.667 s — and at 1.0× we were delivering the same launch 1.33× faster than their own game
+ * ever showed it. Unlike the flip (§478.3), the launch has NO closure constraint — a somersault
+ * must complete its 360° inside the airtime, a launch pose just launches and hands off to
+ * apex/fall — so the right timescale is their delivered rate verbatim, not a compression into
+ * our window: at 0.75× our held rise (jumpV0 11 / g 24 = 0.458 s) shows 69% of the clip by
+ * apex; their own arc (8.06 / 16.25 = 0.496 s rise, their script's own derivation at
+ * `player__sly.gd:129`) shows 74%. Same read, same fraction, no cut. `Falling` was checked the
+ * same way and is NOT retimed: both its tree bindings (`Hat Fall Sub`→`Library_Sly_14/Falling`,
+ * `nodes/fall`→`Library_Sly_19/Falling`) are bare AnimationNodeAnimation nodes — no TimeScale
+ * in the path — so 1.0× IS its natural delivered rate, and the clip is a near-static held pose
+ * besides (max 60 Hz world step 1°, godot2clips' report).
+ */
+const JUMP_NATURAL_RATE = 0.75;   // their TimeScale/scale for jump_floor, verbatim
+
 const GODOT_ALIAS = {
   /* game name       source + delivered timing (see the window derivation above).
      THE AUDITED SET (§479): each row is a verb where the repo authored a clip for the same
@@ -150,7 +170,7 @@ const GODOT_ALIAS = {
   walk:          'Walk',
   run:           'Run',
   run_fast:      'Run',            // no second run in the source; the tree needs the node filled
-  jump_rise:     'Jump',
+  jump_rise:     { src: 'Jump', rate: JUMP_NATURAL_RATE },
   jump_fall:     'Falling',
   land_soft:     'Landing',
   ledge_hang:    'LedgeGrab Idle',
@@ -159,6 +179,48 @@ const GODOT_ALIAS = {
   spire_balance: 'SpireJumpIdle',
   spire_land:    'SpireJumplanding',
 };
+
+/**
+ * §479.6 — the elbow-open lever. The user reads the swapped set's elbows as "too tucked in".
+ * Measured (tools/armcross.mjs, three-way per clip): the tuck is the SOURCE's own style — the
+ * repo authors a bent-arm creep (Walk elbows 69–129°, Run 51–122° interior) where our procedural
+ * gaits swung near-straight (142–153°) — and the retarget already OPENS it ~15–19° everywhere
+ * (the two rigs' rest arm directions differ ~14.5°: source A-pose [.54,−.84] vs RIG3 [.72,−.69],
+ * and the world-delta method composes their motion onto OUR wider rest). So this is a taste
+ * knob, not a defect repair, and it ships at 0 — faithful to the repo's look, per the audit's
+ * own default. Each entry scales the named clip's lowerArm rotations toward bind by the given
+ * fraction: 0 = the source's fold, 1 = forearms at rest (fully open). 0.3–0.4 lands the Walk
+ * mid-swing elbow within ~10° of the old procedural look (predicted from the angle scaling,
+ * verified by the anim.test arm through the real FK; on-camera pair in shots/elb1-*).
+ * A capture/hardware A-B can override per boot via `globalThis.__ELBOW_OPEN = {walk: 0.35}` —
+ * the same pre-module seam as `__ANIM_AB`. The hardware-review sheet carries the tuning row.
+ */
+export const GODOT_ELBOW_OPEN = {};
+
+function elbowOpenFor(game) {
+  let over = null;
+  try { over = globalThis.__ELBOW_OPEN || null; } catch { /* plain hosts */ }
+  const k = { ...GODOT_ELBOW_OPEN, ...(over || {}) }[game] || 0;
+  return k > 0 ? Math.min(k, 1) : 0;
+}
+
+/** lowerArm tracks scaled toward bind by k — the one transform behind the lever above. */
+function openElbows(clip, k) {
+  if (!k) return clip;
+  const I = new THREE.Quaternion();
+  const q = new THREE.Quaternion();
+  const bones = clip.bones.map((tr) => {
+    if (tr.name !== 'lowerArmL' && tr.name !== 'lowerArmR') return tr;
+    const out = new Float32Array(tr.q.length);
+    for (let i = 0; i < tr.q.length; i += 4) {
+      q.set(tr.q[i], tr.q[i + 1], tr.q[i + 2], tr.q[i + 3]);
+      q.slerp(I, k);                       // shrink the fold toward bind by k, same axis
+      out[i] = q.x; out[i + 1] = q.y; out[i + 2] = q.z; out[i + 3] = q.w;
+    }
+    return { ...tr, q: out };
+  });
+  return { ...clip, bones };
+}
 
 /** A raw authoring-format clip replayed over a different duration (events rescale with it). */
 function retimeRaw(raw, dur) {
@@ -279,8 +341,15 @@ export function buildClipSet(raw) {
     const src = typeof spec === 'string' ? spec : spec.src;
     const srcRaw = SRC[src];
     if (!srcRaw || !CLIPS[game]) continue;        // a regenerated module that dropped a clip degrades
-    const timed = typeof spec === 'object' && spec.dur ? retimeRaw(srcRaw, spec.dur) : srcRaw;
-    table[game] = spliceClip(game, timed, CLIPS[game], fill);
+    /* `dur` pins a delivered duration (the flip's window); `rate` pins a delivered PLAYBACK
+       RATE (the launch's pace) — dur = authored / rate, so the constant in the table is the
+       measured number itself, not its reciprocal baked by hand. */
+    const timed = typeof spec === 'object' && spec.dur ? retimeRaw(srcRaw, spec.dur)
+      : typeof spec === 'object' && spec.rate ? retimeRaw(srcRaw, +(srcRaw.dur / spec.rate).toFixed(4))
+      : srcRaw;
+    let built = spliceClip(game, timed, CLIPS[game], fill);
+    if (godot) built = openElbows(built, elbowOpenFor(game));   // §479.6 — ships at 0, see above
+    table[game] = built;
     origin[game] = `${tag}:${src}`;
     used.add(src);
   }

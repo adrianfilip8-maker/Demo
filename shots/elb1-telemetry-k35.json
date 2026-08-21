@@ -1,0 +1,29 @@
+{
+  "sha": "5946300",
+  "K": 0.35,
+  "W": 1600,
+  "H": 900,
+  "errs": [],
+  "log": [
+    {
+      "frame": "k35-walk-a-profile",
+      "phase": 0.235,
+      "sp": 3.24
+    },
+    {
+      "frame": "k35-walk-a-front34",
+      "phase": 0.235,
+      "sp": 3.24
+    },
+    {
+      "frame": "k35-walk-b-profile",
+      "phase": 0.738,
+      "sp": 3.24
+    },
+    {
+      "frame": "k35-run-a-profile",
+      "phase": 0.23,
+      "sp": 4.68
+    }
+  ]
+}

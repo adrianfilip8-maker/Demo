@@ -1,0 +1,88 @@
+{
+  "sha": "5946300",
+  "dirty": "",
+  "W": 1600,
+  "H": 900,
+  "TAG": "before",
+  "errs": [],
+  "log": [
+    {
+      "frame": "before-rise-f2",
+      "vy": 10.2,
+      "st": "jump",
+      "tr": [
+        {
+          "n": "jump_rise",
+          "w": 0.21,
+          "t": 0.017,
+          "dur": 0.5
+        }
+      ]
+    },
+    {
+      "frame": "before-rise-f6",
+      "vy": 8.6,
+      "st": "jump",
+      "tr": [
+        {
+          "n": "jump_rise",
+          "w": 1,
+          "t": 0.083,
+          "dur": 0.5
+        }
+      ]
+    },
+    {
+      "frame": "before-rise-f10",
+      "vy": 7,
+      "st": "jump",
+      "tr": [
+        {
+          "n": "jump_rise",
+          "w": 1,
+          "t": 0.15,
+          "dur": 0.5
+        }
+      ]
+    },
+    {
+      "frame": "before-rise-f14",
+      "vy": 5.4,
+      "st": "jump",
+      "tr": [
+        {
+          "n": "jump_rise",
+          "w": 1,
+          "t": 0.217,
+          "dur": 0.5
+        }
+      ]
+    },
+    {
+      "frame": "before-rise-f18",
+      "vy": 3.8,
+      "st": "jump",
+      "tr": [
+        {
+          "n": "jump_rise",
+          "w": 1,
+          "t": 0.283,
+          "dur": 0.5
+        }
+      ]
+    },
+    {
+      "frame": "before-fall",
+      "vy": -4.81,
+      "st": "fall",
+      "tr": [
+        {
+          "n": "jump_fall",
+          "w": 0.71,
+          "t": 0.1,
+          "dur": 1
+        }
+      ]
+    }
+  ]
+}

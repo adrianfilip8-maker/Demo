@@ -455,3 +455,85 @@ test('seam chirality: proc partners of godot states hold uncrossed wrists, and t
   assert.ok(ko < 0, `contrast arm: ko @0.5 reads sep ${ko.toFixed(3)} m — expected the old crossed idiom; ` +
     'if the §479.5 census backlog was just uncrossed, re-derive this line from the census');
 });
+
+test('elbow lever (§479.6): ships at 0 bit-exact, and a boot override opens the fold through the real FK', () => {
+  /* The user reads the swapped set's elbows as "too tucked in". Measured three ways
+     (tools/armcross.mjs): the fold is the SOURCE's authored creep (Walk elbows 69–129° vs our
+     proc 142–153°), and the retarget already opens it ~15–19° (rest-direction delta between the
+     rigs) — so the knob is taste, not repair, and it SHIPS AT ZERO: the delivered set stays
+     faithful to the repo until the user turns it. `GODOT_ELBOW_OPEN` (or the `__ELBOW_OPEN`
+     boot override, the same pre-module seam as `__ANIM_AB`) scales lowerArm rotations toward
+     bind by the given fraction.
+     DOMAIN (§418.3) — passes on: __ELBOW_OPEN {walk:0.5} opening the mid-swing elbow by ≥ 20°
+     (RUN below: 87.5° → ~134°); fails on: the same override leaving the tracks identical — the
+     identity claim inverted, RUN below as the k=0 arm (a broken lever that ignored k would fail
+     the ≥20° bar; a lever that fired at k=0 would fail the bit-exact bar). Cannot discriminate:
+     whether 0.35 is the right taste — that is the hardware sheet's row (item 19) and the
+     shots/elb1 pair, not a unit bar. */
+  const abs = Object.create(null);
+  for (const [n, , p] of RIG3.SKELETON) abs[n] = p;
+  const rig = (() => {
+    const rt = new THREE.Group(), bones = Object.create(null);
+    for (const [name, parent, p] of RIG3.SKELETON) {
+      const b = new THREE.Object3D();
+      const pa = parent === 'root' ? [0, 0, 0] : abs[parent];
+      b.position.set(p[0] - pa[0], p[1] - pa[1], p[2] - pa[2]);
+      (parent === 'root' ? rt : bones[parent]).add(b);
+      bones[name] = b;
+    }
+    return { rt, bones };
+  })();
+  const pb = new PoseBuffer(RIG3.BONE_ORDER);
+  const wp = (n) => new THREE.Vector3().setFromMatrixPosition(rig.bones[n].matrixWorld);
+  const elbow = (clip, t) => {
+    pb.clear();
+    sampleInto(clip, t, pb, 1);
+    for (const n of RIG3.BONE_ORDER) {
+      const b = rig.bones[n]; if (!b) continue;
+      if (pb.w[n] > 0) b.quaternion.copy(pb.q[n]); else b.quaternion.identity();
+    }
+    rig.rt.updateMatrixWorld(true);
+    const a = wp('upperArmL'), e = wp('lowerArmL'), h = wp('handL');
+    const u = a.sub(e.clone()).normalize(), w = h.sub(e).normalize();
+    return Math.acos(THREE.MathUtils.clamp(u.dot(w), -1, 1)) * 180 / Math.PI;
+  };
+  const shipped = buildClipSet('godot').table;
+  globalThis.__ELBOW_OPEN = { walk: 0.5 };
+  const opened = buildClipSet('godot').table;
+  globalThis.__ELBOW_OPEN = { walk: 0 };
+  const zeroed = buildClipSet('godot').table;
+  delete globalThis.__ELBOW_OPEN;
+  const t = 0.45 * shipped.walk.dur;
+  const base = elbow(shipped.walk, t), open = elbow(opened.walk, t);
+  assert.ok(open - base >= 20, `k=0.5 opens the walk mid-swing elbow by ${(open - base).toFixed(1)}° — expected ≥ 20`);
+  /* k=0 must be BIT-EXACT with the shipped build, not merely similar */
+  const trOf = (tbl) => tbl.walk.bones.find((x) => x.name === 'lowerArmL').q;
+  assert.deepEqual(Array.from(trOf(zeroed)), Array.from(trOf(shipped)), 'k=0 override must not touch a single float');
+  /* and the opened build must differ — the inverted identity, so this arm can say no both ways */
+  assert.notDeepEqual(Array.from(trOf(opened)), Array.from(trOf(shipped)), 'k=0.5 left the lowerArm track untouched — the lever is dead');
+});
+
+test('launch pace (§479.7): jump_rise delivers the reference tree\'s own 0.75x, and Falling stays natural', () => {
+  /* "Slow down the jump animation." Their tree plays the ground jump through
+     `parameters/TimeScale/scale = 0.75` (sly_cooper_anims_4.tscn:48498) — at our old 1.0x the
+     launch ran 1.33x faster than their own game ever showed it. Unlike the flip (§478.3) the
+     launch needs NO closure inside the airtime (apex/fall re-base it), so the delivered rate is
+     their number verbatim, expressed in the alias as `rate` so the constant in the table IS the
+     measurement. Falling is NOT retimed: both its tree bindings are bare animation nodes (no
+     TimeScale in the path), so 1.0x is its natural delivered rate.
+     DOMAIN (§418.3) — passes on: the shipped table (0.5 s bake → 0.6667 s delivered, asserted);
+     fails on: the pre-§479.7 wiring, RUN below as the raw GODOT_CLIPS duration (0.5 — the same
+     claim inverted: if the alias stopped retiming, jump_rise.dur collapses back to it); cannot
+     discriminate: whether 0.75x READS right at game framing — shots/jump1 (before/after, the
+     track playhead beside every frame) carries that. */
+  const g = buildClipSet('godot').table;
+  const authored = GODOT_CLIPS.Jump.dur;
+  assert.equal(authored, 0.5, `the Anims27 Jump bake moved (${authored}) — re-derive the rate row`);
+  assert.ok(Math.abs(g.jump_rise.dur - authored / 0.75) < 1e-3,
+    `jump_rise delivers ${g.jump_rise.dur}s — expected ${(authored / 0.75).toFixed(4)} (authored / their 0.75 TimeScale)`);
+  assert.notEqual(g.jump_rise.dur, authored, 'jump_rise fell back to the authored duration — the rate row is dead');
+  assert.equal(g.jump_fall.dur, GODOT_CLIPS.Falling.dur, 'Falling must play at its natural rate — their tree has no TimeScale on the fall');
+  /* the retime must rescale the key grid with the duration, not stretch the last segment */
+  const last = g.jump_rise.bones[0].times[g.jump_rise.bones[0].times.length - 1];
+  assert.ok(Math.abs(last - g.jump_rise.dur) < 0.02, `last key at ${last}s sits off the delivered duration ${g.jump_rise.dur}`);
+});
