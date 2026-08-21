@@ -178,6 +178,56 @@ const GODOT_ALIAS = {
   rail_walk:     'railrun',
   spire_balance: 'SpireJumpIdle',
   spire_land:    'SpireJumplanding',
+
+  /* §479.8 — the combat + pickpocket port ("check to see if the attack and pickpocket
+     animations were properly ported"). Their ground attack is ONE clip — `Canehit`, fired on
+     every square press (`Hit Transition/hit_floor`, player__sly.gd:640, no TimeScale) — so all
+     three combo slots play it, whole and at natural rate, exactly as their tree fires it.
+
+     WHERE THE CONTACT IS, measured, not derived (§442.3). An earlier pass of this same port
+     read `Canehit`'s peak hand SPEED (14.8 m/s, authored t 0.42) as the strike and trimmed
+     0.25–0.30 s off the head to bring it forward. That was backwards, and the reach curve says
+     so: handR travels from 0.09 m BEHIND the hips at t 0 to 0.92 m in FRONT of them by t 0.10
+     — that whip is the strike — then hovers 0.69–0.88 through the follow-through and snaps back
+     to guard between t 0.40 and 0.45. The 14.8 m/s peak is the RECOVERY, the hand leaving the
+     target. Trimming to 0.25 deleted the entire attack and shipped only the yank back.
+     Contact is at **t 0.10 of the clip's own timeline**, so the clip is played from its own
+     frame 0 and no trim exists any more.
+
+     The measure is max forward reach of the swinging hand relative to the hips, and it is
+     calibrated on our own procedural set in the same pass: proc `cane_combo_1` peaks at
+     t 0.150 and the house declares its `cane_hit` at exactly 0.150 (combos 2 and 3 within
+     35–70 ms). A measure that reproduces the house's own authored contact is measuring contact.
+
+     0.10 s after the press is inside the window our own combos already use (0.13–0.21 s) and
+     slightly snappier; nothing gates on it, because damage resolves ON the press
+     (Guard.js:1770) — `cane_hit` is the visual/audio contact marker, so it belongs on the
+     visual contact. Hand-carried rather than inherited: the splice's donor rule time-SCALES
+     proc's events by dur ratio (0.15 → 0.163 here), which would sit 63 ms past the real
+     contact. combo_3 keeps its paired `land` stomp on the same beat. Lunge, damage and shake
+     stay the moveset's. LIMIT, stated not hidden: their tree has one ground attack, so our
+     three chain slots are the same swing three times — faithful to the reference, and less
+     varied than the proc set it replaces.
+
+     `PickPocket` keeps its natural reach (max extension at t 0.25, settled by ~0.6) and cuts
+     the export's 4 s idle-bake tail at 1.1 s — the proc clip's own window (pickTime 0.55 exits
+     the state; the one-shot's remainder holds the reach over the fade). */
+  cane_combo_1:  { src: 'Canehit', events: [{ t: 0.10, n: 'cane_hit', d: { index: 1 } }] },
+  cane_combo_2:  { src: 'Canehit', events: [{ t: 0.10, n: 'cane_hit', d: { index: 2 } }] },
+  cane_combo_3:  { src: 'Canehit', events: [{ t: 0.10, n: 'cane_hit', d: { index: 3 } },
+                                            { t: 0.10, n: 'land', d: { force: 0.5 } }] },
+  pickpocket:    { src: 'PickPocket', until: 1.1 },
+
+  /* The `CaneSwing` family turned out NOT to be attacks — measured at their own play sites:
+     `CaneSwing`/`CaneSwing Idle` drive their swing_state Swing BlendSpace (the hook swing;
+     the pendulum motion is the NODE's, the clip is the overhead two-paw hang, near-static —
+     max 60 Hz step 5°) and `CaneSwing Grab` is the catch (hands snap to the overhead grip in
+     0.1 s, held from 0.4). That is our hook family's exact shape — the state carries the arc,
+     the clip carries the hang — and §479's "the repo has no hook clips" is corrected by this
+     measurement, so the audit default (the repo clip wins) reaches the two verbs with play
+     sites. `hook_release` (our dismount flourish) has no counterpart and stays procedural. */
+  hook_grab:     'CaneSwing Grab',
+  hook_swing:    'CaneSwing',
 };
 
 /**
@@ -220,6 +270,30 @@ function openElbows(clip, k) {
     return { ...tr, q: out };
   });
   return { ...clip, bones };
+}
+
+/**
+ * §479.8 — a raw clip cut to [from, until] of its own timeline, keys rebased to t=0. Cuts land
+ * on the emitter's 0.05 s key grid, so no key is interpolated, only dropped.
+ *
+ * Its live use is `until` alone, cutting dead tails: `PickPocket` is exported as a 4 s
+ * idle-bake whose motion is over by ~0.6 s, and it ships cut to the 1.1 s the pickpocket state
+ * actually spends on it. `from` exists and is tested, but NOTHING ships with a head trim, and
+ * that is the deliberate outcome of §479.8's correction rather than an accident: the first pass
+ * of the combat port trimmed 0.25–0.30 s off `Canehit`'s head to "skip the windup" and thereby
+ * deleted the strike itself (see the alias table — the clip contacts at t 0.10, the fast moment
+ * late in it is the recovery). A head trim on an authored clip removes an action, not a pause;
+ * it needs a measurement of what is inside the cut before it is used again.
+ */
+function trimRaw(raw, from = 0, until = raw.dur) {
+  if (!from && until >= raw.dur) return raw;
+  const keys = raw.keys.filter((k) => k.t >= from - 1e-6 && k.t <= until + 1e-6)
+    .map((k) => ({ ...k, t: +(k.t - from).toFixed(4) }));
+  return {
+    ...raw, dur: +(until - from).toFixed(4), keys,
+    events: raw.events ? raw.events.filter((e) => e.t >= from && e.t <= until)
+      .map((e) => ({ ...e, t: e.t - from })) : raw.events,
+  };
 }
 
 /** A raw authoring-format clip replayed over a different duration (events rescale with it). */
@@ -341,12 +415,16 @@ export function buildClipSet(raw) {
     const src = typeof spec === 'string' ? spec : spec.src;
     const srcRaw = SRC[src];
     if (!srcRaw || !CLIPS[game]) continue;        // a regenerated module that dropped a clip degrades
-    /* `dur` pins a delivered duration (the flip's window); `rate` pins a delivered PLAYBACK
-       RATE (the launch's pace) — dur = authored / rate, so the constant in the table is the
-       measured number itself, not its reciprocal baked by hand. */
-    const timed = typeof spec === 'object' && spec.dur ? retimeRaw(srcRaw, spec.dur)
-      : typeof spec === 'object' && spec.rate ? retimeRaw(srcRaw, +(srcRaw.dur / spec.rate).toFixed(4))
-      : srcRaw;
+    /* `trim`/`until` cut the source to the window that carries the read (§479.8); `dur` pins a
+       delivered duration (the flip's window); `rate` pins a delivered PLAYBACK RATE (the
+       launch's pace) — dur = authored / rate, so the constant in the table is the measured
+       number itself, not its reciprocal baked by hand. `events` hand-carries event times the
+       donor-inherit rule would mis-scale (a trimmed strike is not a scaled donor thud). */
+    const o = typeof spec === 'object' ? spec : null;
+    let timed = o && (o.trim || o.until) ? trimRaw(srcRaw, o.trim || 0, o.until ?? srcRaw.dur) : srcRaw;
+    if (o && o.dur) timed = retimeRaw(timed, o.dur);
+    else if (o && o.rate) timed = retimeRaw(timed, +(timed.dur / o.rate).toFixed(4));
+    if (o && o.events) timed = { ...timed, events: o.events };
     let built = spliceClip(game, timed, CLIPS[game], fill);
     if (godot) built = openElbows(built, elbowOpenFor(game));   // §479.6 — ships at 0, see above
     table[game] = built;

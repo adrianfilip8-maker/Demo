@@ -537,3 +537,141 @@ test('launch pace (§479.7): jump_rise delivers the reference tree\'s own 0.75x,
   const last = g.jump_rise.bones[0].times[g.jump_rise.bones[0].times.length - 1];
   assert.ok(Math.abs(last - g.jump_rise.dur) < 0.02, `last key at ${last}s sits off the delivered duration ${g.jump_rise.dur}`);
 });
+
+/* ---- §479.8 — the combat, pickpocket and hook port ---------------------------------------- */
+
+/** RIG3 FK for a compiled clip: world position of `bone` at `t`, in hips-relative metres.
+ *  Hips TRANSLATION is deliberately not applied — every measure below is (hand − hips), which
+ *  a whole-rig translation leaves invariant, so the rig only needs its rotations. */
+function reachRig() {
+  const abs = Object.create(null);
+  for (const [n, , p] of RIG3.SKELETON) abs[n] = p;
+  const rt = new THREE.Group(), bones = Object.create(null);
+  for (const [name, parent, p] of RIG3.SKELETON) {
+    const b = new THREE.Object3D();
+    const pa = parent === 'root' ? [0, 0, 0] : abs[parent];
+    b.position.set(p[0] - pa[0], p[1] - pa[1], p[2] - pa[2]);
+    (parent === 'root' ? rt : bones[parent]).add(b);
+    bones[name] = b;
+  }
+  return { rt, bones };
+}
+
+test('cane contact (§479.8): the swing\'s contact moment is where `cane_hit` fires, on a measure calibrated against our own set', () => {
+  /* "Check to see if the attack animations were properly ported." They were not, and the reason
+     is worth the words: an earlier pass of this port read `Canehit`'s peak hand SPEED (14.8 m/s,
+     late in the clip) as the strike, and trimmed 0.25 s off the head to bring it forward. The
+     fast late moment is the RECOVERY — the hand leaving the target — and the trim deleted the
+     actual attack, shipping only the yank back to guard. §442.3: measure the composition.
+
+     The measure is max forward reach of the swinging hand relative to the hips. It is not
+     asserted on faith — the CONTROL below runs it on our own procedural combo, where the house
+     independently declares the contact by placing `cane_hit`, and the two coincide.
+
+     DOMAIN (§418.3) — passes on: the shipped godot table, whose delivered contact sits within
+     one frame of its `cane_hit`, and on the proc control (measure 0.150 vs declared 0.150, RUN
+     below as the calibration). Fails on: the pre-fix wiring, RUN below as the raw-timeline
+     claim — the strike at t 0.10 lies BEFORE the old 0.25 s cut, so that build's delivered clip
+     could not contain it; and on the speed-peak reading, RUN below as the reach at the late
+     fast moment being far short of the reach at the real one. Cannot discriminate: whether the
+     swing READS as a hit at game framing, or whether contact wants to be earlier or later for
+     feel — shots/cane1 (before/after, the track playhead beside every frame) carries that. */
+  const rig = reachRig();
+  const pb = new PoseBuffer(RIG3.BONE_ORDER);
+  const wp = (n) => new THREE.Vector3().setFromMatrixPosition(rig.bones[n].matrixWorld);
+  /** forward reach (hand − hips on +Z, RIG3's facing) of a compiled clip at time t */
+  const reach = (clip, t) => {
+    pb.clear();
+    sampleInto(clip, t, pb, 1);
+    for (const n of RIG3.BONE_ORDER) {
+      const b = rig.bones[n]; if (!b) continue;
+      if (pb.w[n] > 0) b.quaternion.copy(pb.q[n]); else b.quaternion.identity();
+    }
+    rig.rt.updateMatrixWorld(true);
+    return wp('handR').z - wp('hips').z;
+  };
+  const contactOf = (clip) => {
+    let best = -Infinity, bestT = 0;
+    for (let t = 0; t <= clip.dur + 1e-9; t += 1 / 240) {
+      const r = reach(clip, Math.min(t, clip.dur));
+      if (r > best) { best = r; bestT = Math.min(t, clip.dur); }
+    }
+    return { reach: best, t: bestT };
+  };
+
+  const proc = buildClipSet('proc').table;
+  const g = buildClipSet('godot').table;
+
+  /* ---- CONTROL: the metric reproduces the house's own authored contact ------------------- */
+  const declared = proc.cane_combo_1.events.find((e) => e.n === 'cane_hit').t;
+  const measured = contactOf(proc.cane_combo_1).t;
+  assert.ok(Math.abs(measured - declared) <= 1 / 60,
+    `calibration: max-reach on the PROCEDURAL combo_1 reads ${measured.toFixed(3)}s but the house `
+    + `declares cane_hit at ${declared.toFixed(3)}s — the metric is not measuring contact, so nothing below it means anything`);
+
+  /* ---- the shipped godot combos: contact within a frame of the event -------------------- */
+  for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3']) {
+    const c = g[n];
+    assert.equal(CLIP_ORIGIN[n], 'godot:Canehit', `${n} is not sourced from Canehit (origin ${CLIP_ORIGIN[n]})`);
+    const ev = c.events.find((e) => e.n === 'cane_hit');
+    assert.ok(ev, `${n} lost its cane_hit event — a swap must never mute the contact beat`);
+    const k = contactOf(c);
+    assert.ok(Math.abs(k.t - ev.t) <= 1 / 60,
+      `${n}: contact measured at ${k.t.toFixed(3)}s, cane_hit fires at ${ev.t.toFixed(3)}s — ${((k.t - ev.t) * 1000).toFixed(0)} ms apart`);
+    assert.ok(k.reach > 0.6, `${n}: peak forward reach ${k.reach.toFixed(3)} m — the delivered clip is not extending into a strike`);
+  }
+  /* combo_3's stomp rides the same beat as its strike, as the proc set had it */
+  const c3 = g.cane_combo_3.events;
+  assert.equal(c3.find((e) => e.n === 'land').t, c3.find((e) => e.n === 'cane_hit').t,
+    'combo_3: the land stomp drifted off the strike beat');
+
+  /* ---- INVERTED, on the raw source: where the strike really is on Canehit's own timeline -- */
+  const rawContact = contactOf(g.cane_combo_1);          /* untrimmed, so this IS Canehit's timeline */
+  assert.ok(rawContact.t < 0.25,
+    `the strike sits at ${rawContact.t.toFixed(3)}s of Canehit; the pre-fix build cut the first 0.25s, `
+    + 'so if this ever exceeds the cut the §479.8 story is wrong and the trim was harmless');
+  /* the late fast moment is the recovery, not the contact: far less reach there */
+  const lateReach = reach(g.cane_combo_1, 0.42);
+  assert.ok(lateReach < rawContact.reach - 0.15,
+    `reach at the late speed peak (0.42s) is ${lateReach.toFixed(3)} m vs ${rawContact.reach.toFixed(3)} m at contact — `
+    + 'if these were comparable, "peak speed = strike" would have been a defensible reading');
+});
+
+test('combat/pickpocket/hook wiring (§479.8): sourced from the reference, whole where their tree plays it whole, and ?anim=proc restores every one', () => {
+  /* The four verbs the follow-up names, plus the two the CaneSwing family turned out to serve.
+     `Canehit` ships WHOLE and at natural rate because their tree fires it that way (no
+     TimeScale on `Hit Transition/hit_floor`); `PickPocket` is the one cut, and only at the
+     tail — a 4 s idle-bake whose motion is over by ~0.6 s, delivered at the 1.1 s the
+     pickpocket state spends on it.
+     DOMAIN (§418.3) — passes on: the shipped godot table (six verbs, origins asserted); fails
+     on: a regenerated GodotClips.js that dropped any of the five source clips, RUN below as the
+     GODOT_CLIPS presence arm, and on a proc build that still carried a godot origin, RUN below
+     as the AB arm. Cannot discriminate: whether the poses read correctly on the shipped model —
+     shots/cane1 carries that; nor whether hook_swing's near-static hang is RIGHT for our hook
+     arc, which is a design read, not a wiring one. */
+  for (const src of ['Canehit', 'PickPocket', 'CaneSwing', 'CaneSwing Grab', 'CaneSwing Idle']) {
+    assert.ok(GODOT_CLIPS[src], `GodotClips.js no longer carries "${src}" — re-run tools/godot2clips.mjs`);
+  }
+  const g = buildClipSet('godot').table;
+  assert.equal(CLIP_ORIGIN.pickpocket, 'godot:PickPocket');
+  assert.equal(CLIP_ORIGIN.hook_grab, 'godot:CaneSwing Grab');
+  assert.equal(CLIP_ORIGIN.hook_swing, 'godot:CaneSwing');
+  /* Canehit whole: delivered duration IS the authored bake, no trim and no retime */
+  assert.equal(g.cane_combo_1.dur, GODOT_CLIPS.Canehit.dur,
+    'cane_combo_1 no longer delivers Canehit whole — a trim or retime crept back in');
+  /* PickPocket cut at the tail only, to the state's own window */
+  assert.equal(GODOT_CLIPS.PickPocket.dur, 4, 'the PickPocket bake moved — re-derive the until row');
+  assert.equal(g.pickpocket.dur, 1.1, `pickpocket delivers ${g.pickpocket.dur}s — expected the 1.1 s state window`);
+  assert.ok(g.pickpocket.dur < GODOT_CLIPS.PickPocket.dur, 'the until row is dead — the 4 s idle-bake tail is shipping');
+  /* the hang loops (the state carries the arc, the clip carries the hold); the catch does not */
+  assert.equal(g.hook_swing.loop, true, 'hook_swing must loop — a one-shot hang ends mid-swing');
+  assert.equal(g.hook_grab.loop, false, 'hook_grab is a catch, not a cycle');
+  /* the dismount flourish has no counterpart in their tree and must stay ours */
+  assert.equal(CLIP_ORIGIN.hook_release, 'proc', 'hook_release was swapped — their tree has no dismount clip');
+  /* AB: ?anim=proc restores all six */
+  const p = buildClipSet('proc');
+  for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3', 'pickpocket', 'hook_grab', 'hook_swing']) {
+    assert.equal(p.origin[n], 'proc', `?anim=proc left "${n}" on a godot source — the AB seam does not restore it`);
+    assert.ok(p.table[n], `?anim=proc has no "${n}" at all`);
+  }
+});

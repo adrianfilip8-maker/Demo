@@ -76,10 +76,14 @@ const ASSET = path.join(ROOT, 'public/assets/sly-godot/sly-godot-moves.glb');
 const SRC_GLTF = 'Assets/Models/Characters/SlyCooper_Anims27.gltf';
 
 /**
- * The movement set. Combat (Canehit, CaneSwing×3), PickPocket and the 1-channel KeyAction.001
- * are deliberately NOT extracted: the instruction is the MOVEMENT set, and every clip here is
- * either on the audit list (Walk, Run, Jump, Falling, Landing, the attach set) or is this
- * round's deliverable (FrontFlip). Re-extraction is one --extract away if that changes.
+ * The movement set, plus — since the user's follow-up ("check to see if the attack and
+ * pickpocket animations were properly ported") — the combat and pickpocket clips. Their play
+ * sites, read from the reference rather than assumed (§479.8): `Canehit` is the ONLY ground
+ * attack (`Hit Transition/input_0 "hit_floor" → Library_Sly_19/Canehit`, fired on square at
+ * `player__sly.gd:640`, no TimeScale in the path); `PickPocket` fires on circle-on-floor
+ * (`:607`, movement locked 0.34 s); the `CaneSwing` family is NOT an attack — `CaneSwing` /
+ * `CaneSwing Idle` drive their `swing_state` Swing BlendSpace (the hook swing) and
+ * `CaneSwing Grab` their thief-grab jump. Only KeyAction.001 (1 channel) stays behind.
  */
 export const KEEP_CLIPS = [
   'FrontFlip',
@@ -89,6 +93,7 @@ export const KEEP_CLIPS = [
   'railrun', 'RailrunStand',
   'SpireJump', 'SpireJumpIdle', 'SpireJumplanding',
   'Crouching stand   ', 'Standupright',
+  'Canehit', 'CaneSwing', 'CaneSwing Grab', 'CaneSwing Idle', 'PickPocket',
 ];
 
 /**
@@ -141,7 +146,7 @@ const DEG = 180 / Math.PI;
    cycle because its JOB is `jump_fall`'s — a held pose the fall state replays for as long as the
    fall lasts; as a one-shot it would end and fade to nothing mid-drop. Its motion is near-static
    (max 60 Hz world step 1°, pos range 2 mm) so the seam is closed by construction. */
-const LOOPS = /^(Walk|Run|railrun|Falling|PoleClimbing|PoleClimbIdle|LedgeGrab Idle|SpireJumpIdle|RailrunStand|Crouching stand\s*|Standupright)$/;
+const LOOPS = /^(Walk|Run|railrun|Falling|PoleClimbing|PoleClimbIdle|LedgeGrab Idle|SpireJumpIdle|RailrunStand|Crouching stand\s*|Standupright|CaneSwing|CaneSwing Idle)$/;
 
 /* ---- RIG3 forward kinematics for grounding + stride, mixamo2clips' block adapted -----------
  * Same constants, same fit, same gate, same reasons (see that file): stride is the distance the

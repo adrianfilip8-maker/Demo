@@ -42209,3 +42209,65 @@ launch, the after arm 42%; at f14 the before pose is already spent while the aft
 gathering. Held by anim.test's pace arm (delivered dur = authored/0.75 asserted against
 GODOT_CLIPS' own duration, the fall-back-to-authored claim inverted as the fails-on case, and
 Falling pinned to natural). Retune on hardware is one constant with its derivation attached.
+
+## §479.8 — The attack was ported backwards: `Canehit`'s contact is at t 0.10 and the first pass trimmed it away, keeping only the recovery
+
+Follow-up instruction: "check to see if the attack and pickpocket animations were properly
+ported." They were not, and the failure is a clean instance of §442.3 — a number derived from a
+story instead of measured.
+
+**What their tree actually plays.** The ground attack is ONE clip. `Hit Transition/input_0
+"hit_floor" → Library_Sly_19/Canehit`, fired on every square press at `player__sly.gd:640`, with
+no TimeScale anywhere in the path. `PickPocket` fires on circle-on-floor (`:607`). The
+`CaneSwing` family is NOT an attack, which is why it was nearly mis-ported too: `CaneSwing` and
+`CaneSwing Idle` drive their `swing_state` Swing BlendSpace — the hook swing — and `CaneSwing
+Grab` is the catch. So the port reaches six of our verbs, not four, and §479's line that "the
+repo has no hook clips" is corrected by measurement at their play sites.
+
+**The defect.** The first pass identified the strike as `Canehit`'s peak hand SPEED — 14.8 m/s,
+late in the 0.5 s clip — and trimmed 0.25–0.30 s off the head "past the windup" to bring that
+moment forward into our 0.28 s combo cadence. Forward reach of the swinging hand relative to the
+hips says what really happens:
+
+    t     0.00   0.05   0.10   0.15   0.20   0.25   0.30   0.35   0.40   0.45   0.50
+    handR -0.09   0.60   0.92   0.88   0.81   0.69   0.75   0.87   0.69  -0.04  -0.11   (m, +Z fwd)
+
+The hand travels from 0.09 m BEHIND the hips to 0.92 m in FRONT of them in the first 0.10 s —
+that whip is the strike — holds through a follow-through, and snaps back to guard between 0.40
+and 0.45. **The 14.8 m/s peak is the recovery, the hand leaving the target.** Cutting the first
+0.25 s deleted the entire attack and shipped only the yank back; the delivered `cane_hit` sat
+83 ms past even the residual contact that survived the cut. A head trim on an authored clip
+removes an action, not a pause.
+
+**The measure, and why it is trustworthy.** Max forward reach of the swinging hand relative to
+the hips, RIG3 FK through the shipped `sampleInto`. It is calibrated in the same pass against our
+OWN procedural set, where the house independently declares the contact by placing `cane_hit`:
+proc `cane_combo_1` measures 0.150 s and the house declares 0.150 s — exact; combos 2 and 3 land
+within 35–70 ms. A metric that reproduces our own authored contact is measuring contact. That
+calibration runs inside the test arm, not beside it, so the claim cannot rot away from its check.
+
+**Shipped.** `Canehit` whole, at natural rate, from its own frame 0 — the way their tree fires
+it — with `cane_hit` hand-carried to 0.10 (the splice's donor rule would time-SCALE our proc
+event to 0.163, 63 ms past contact). Delivered contact now measures 0.108 s against an event at
+0.100 — under one frame. `combo_3` keeps its paired `land` stomp on the same beat. Lunge, damage
+and shake stay MOVESET's; damage still resolves ON the press (`Guard.js:1770`), so `cane_hit` is
+purely the visual/audio contact marker and belongs on the visual contact. `PickPocket` is the
+only clip cut, and only at the tail: a 4 s idle-bake whose motion is over by ~0.6 s, delivered at
+the 1.1 s the pickpocket state spends on it (`pickTime` 0.55 exits; the remainder holds the reach
+over the fade). Its reach peaks at 0.25 s, well inside that window. `hook_swing`/`hook_grab` take
+`CaneSwing`/`CaneSwing Grab` — the state carries the arc, the clip carries the hang, which is our
+hook family's exact shape. `hook_release` has no counterpart in their tree and stays procedural.
+
+**Limits, stated rather than hidden.** Their tree has one ground attack, so our three chain slots
+are now the same swing three times — faithful to the reference and less varied than the
+procedural set it replaces; if that reads as repetition on camera the fix is a per-slot phase
+offset, not a re-trim. The godot swing's reach is 0.92 m against our proc combo_1's 0.30 m: a
+much bigger, more committed swing, which is the repo's authoring and not a retarget artifact.
+`trimRaw`'s `from` parameter survives and is tested but nothing ships with a head trim, on
+purpose. `?anim=proc` restores all six verbs, asserted.
+
+DOMAIN for the two new arms is written into them: the proc-control calibration is the
+passes-on RUN, the pre-fix wiring is the fails-on RUN (mutation-checked — reintroducing
+`trim: 0.25` fails with "contact measured at 0.100s, cane_hit fires at 0.183s — -83 ms apart"),
+and neither can discriminate whether the swing READS as a hit at game framing. `shots/cane1`
+carries that.
