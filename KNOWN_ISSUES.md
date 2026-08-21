@@ -43375,3 +43375,46 @@ always clean and its frames are unchanged between arms, which is itself the cont
 that altered the first swing would mean the rule had reached further than intended, and it did
 not. What no frame here can settle is whether three of the SAME swing reads as a combo; that is
 feel, it needs hands, and it is item 20 on the hardware sheet.
+
+## §525.2 — §462 recurred and took my ledger section into another lane's commit; the `&&` that hid it, and the `rm` that nearly cost more
+
+Three process faults in one sequence, all mine, none of which touched the result but any of which
+could have. Recorded because §462's lesson ("the commit is shared too") was already written down
+and I still walked into it.
+
+**1. `git add … && git commit` silently did nothing.** `shots/` is gitignored below the top level
+(`.gitignore:15`, `shots/*/`), so `git add shots/chain1-before shots/chain1-after` exited
+non-zero, the `&&` short-circuited, and **the commit never ran**. The output ended in git's
+"paths are ignored" hint, which reads like a warning attached to a commit that happened. Nothing
+in the transcript said "no commit was made". The tell was that the very next `git log -1` showed a
+commit from a different lane.
+
+Use `;` rather than `&&` between add and commit, or check `git log -1` after — the repo's
+convention of naming explicit paths on `git commit` means the add is often unnecessary anyway,
+and here the add was the only step that could fail.
+
+**2. Because of (1), a sibling lane's commit swept my uncommitted ledger section.** In the window
+where §525 sat written-but-uncommitted in the shared working tree, the pad lane committed
+`33b98e0` naming `KNOWN_ISSUES.md` as an explicit path — which stages that file's *current
+content*, including 186 lines of mine. So §525 is in the history under a commit whose message is
+about the right stick's `dtReal` clamp.
+
+The content is intact and pushed; only the attribution is wrong. **I am not rewriting it.**
+Rewriting pushed history on a branch three other lanes are committing to would risk far more than
+a wrong author line costs, and the §510 check — run the diff for `^+## §` after every commit —
+is what caught it, one commit late but before anything was lost. The real fix is upstream: an
+append to the shared ledger should be committed in the same breath as it is written, not staged
+up while a capture runs.
+
+**3. A cleanup `rm` deleted two tracked files belonging to my own earlier work.** Renaming my
+captures from the `seam1-` prefix (already carrying §479.5's crossed-arms pair — reusing it would
+have given two unrelated before/after sets one name) I ran `rm -f shots/seam1-telemetry-*.json`,
+which matched the §479.5 telemetry as well as my copies. `git status` showed ` D` on two tracked
+files; `git checkout HEAD --` restored them, and the commit was verified file-by-file before it
+went out. A glob written to clean up my own scratch matched somebody's evidence, and the only
+reason it did not ship as a deletion is that the staged list was read rather than assumed.
+
+**The common thread.** All three are the same failure at different scales: acting on what a
+command was *meant* to do rather than on what it *reported*. The suite, the frames and the fix
+were all verified by measurement in this round; the version control around them was not, until it
+had already gone wrong once.
