@@ -43823,3 +43823,134 @@ placement, so it would have been a flaky bar dressed as a measurement. Replaced 
 under-paving space, which reads 0.21 / 0.69 m however it is entered. The rejected candidate is
 recorded here because "this number was not reproducible under a placement I chose" is the same
 family as §562 and is the reason to check twice, not once.
+
+## §543 — Timing parity: what a sampled device cannot see, what it was quietly given extra, and a cel that told the truth at last
+
+§540, §541 and §542 all asked *can this verb be reached*. The answer was yes every time, and it
+had to be — a question phrased as reachability is answered by holding the control down long
+enough, which every one of those arms did. This round asks *when*.
+
+### §543.1 The ceiling, derived before a single input was driven (§450.4)
+
+`main.js` pumps `beginFrame → debug.update → modules → endFrame` from one rAF callback, so the pad
+is sampled **exactly once per frame** and the poll interval T *is* the frame interval. From that
+alone, before touching the code:
+
+- a pad tap of duration `d` is seen iff a poll instant falls inside it. Polls are a grid of period
+  T at arbitrary phase, so `d ≥ T` is always seen and `d < T` is missed with probability `1 − d/T`;
+- a keyboard tap dispatches keydown **and** keyup between frames, and both stamp the next frame, so
+  the keyboard's floor is **zero**;
+- therefore the largest timing discrepancy this architecture permits is exactly **T, one frame**.
+
+T is ~16.7 ms on the hardware the user will hold and 100–300 ms in this container. That gap is the
+whole disposition of §543.2.
+
+### §543.2 The sub-frame tap: a real asymmetry, bounded, unfixable, and unreachable at 60 fps
+
+Measured across 100 phases of one poll gap at eight durations, against the derived model:
+
+```
+  tap      measured P(miss)   ceiling 1 - d/T
+   2 ms         88%                88%
+   4 ms         76%                76%
+   8 ms         52%                52%
+  12 ms         28%                28%
+  16 ms          4%                 4%
+  16.7 ms        0%                 0%
+  30 ms          0%                 0%
+```
+
+Agreement at every point, so the poll model and the code are the same mechanism. The keyboard, in
+the same gap: seen at every phase and every duration, `pressed` and `released` both true, buffered
+true. **And the moveset cares** — the identical sub-frame tap is a 0.420 m hop on the keyboard and
+0.000 m on the pad, nothing at all; held across one poll the pad reaches 2.376 m, which is what
+makes the arm a measure of duration rather than of a broken binding.
+
+**Not fixable at this layer.** The Gamepad API reports STATE, not edges: a press that began and
+ended between two polls leaves no record, and `gp.timestamp` says only that something changed,
+never what. The floor belongs to the API.
+
+**And not reachable by a player at a playable frame rate.** A human game tap runs 30–80 ms — two to
+five times T at 60 fps — so every one is seen. It opens up only as the frame rate collapses. That
+is worth stating precisely, because it converts a future report of "the pad dropped my input" into
+a report about *frame time*, to be chased there and not here. Recorded as a bound at `_padButtons`
+and pinned by T1 so the number cannot drift unnoticed.
+
+### §543.3 The buffer: the pad was getting a free frame, and it was the opposite of the guess
+
+The hypothesis on the table was that the pad *loses* a frame to polling. The ceiling said the
+reverse, and the measurement agreed:
+
+```
+  keyboard: age at first read 16.67 ms · survived 8 frames of the 140 ms buffer
+  pad     : age at first read  0.00 ms · survived 9 frames
+```
+
+`beginFrame` advances `clock` and then polls, so a DOM press — which runs *between* frames — is
+stamped at the frame boundary before it, while a polled press was stamped at the poll instant.
+Both are approximations bounded by one step, in opposite directions; what mattered is that the two
+devices used different ones. The pad was being credited **11.9% more jump buffer than the keyboard
+at 60 fps, and 71% more at 10** — on the timing that decides whether a jump made just before a
+ledge still fires.
+
+Fixed by giving the pad the keyboard's convention: a polled press is stamped at the boundary before
+it. Both now read 16.67 ms old on the frame they first become visible and both survive 8 frames.
+`inject` keeps `clock`, because a harness calls it between frames exactly as the DOM does.
+
+### §543.4 Intra-frame order: checked, and already correct
+
+`_padButtons` runs before the module update, a pad press posed before `beginFrame` reaches the
+state machine in that same cycle, and a d-pad direction lands in `input.move` on the frame it is
+polled — 0 read before the poll, 1 after — because the digital fold reads `down()` *after* the pad
+is folded in. Stable, single call site, and the stale read is run in-arm so "the same frame" means
+something.
+
+### §543.5 The cel that lied about Options
+
+Left open in §540 and now closed. The controls cel advertises `Esc / Options` as "Pause / release
+the pointer". `pause` (P and Options) was read only by `src/core/Debug.js`, which flips
+`engine.debug.paused`; `Engine.renderFrame` answers that with `dt = 0`. So the game stopped dead
+with **no cel, no pointer release and no HUD change** — visually a hang, on the one button every
+console player presses first, while the cel on screen said it would pause.
+
+Fixed in `src/ui/HUD.js` by **mirroring** the debug flag: `main.js` resolves `debug.update()`
+before the module loop, so by the time the HUD runs `engine.debug.paused` already carries this
+frame's value, and following it keeps the two in lockstep by construction. No menu is built and
+none is in scope — this connects a button to the cel that already ships, and `setPaused` is also
+what releases the pointer, so both halves of the row become true.
+
+**Toggling independently was tried on paper and rejected**, which is why the mirror is worth the
+words: pause with Esc (which only the HUD knows about), then press Options, and the two flags end
+up opposed — `renderFrame` ORs them, so the sim stays frozen with the cel shut, which is the exact
+failure being repaired. Reading the flag cannot produce that state, and T4 drives the Esc-then-
+Options sequence to prove it.
+
+### §543.6 DOMAIN, and the standing limit
+
+- **T1 sub-frame tap** — *passes on* a tap swept across 100 phases at eight durations matching the
+  derived bound to within 3 points; *fails on* the same tap on the keyboard, run, which is seen at
+  every phase. *Passes on a sampled device, fails on an evented one* — it discriminates the
+  sampling, not the binding, which is why every §540 arm passed with this present.
+- **T1b the moveset cares** — *passes on* keyboard 0.420 m and pad 0.000 m; *fails on* the pad
+  input HELD across one poll (2.376 m), run, so the arm measures duration rather than a dead
+  binding.
+- **T2 order** — *passes on* `_padButtons` before the module update and a d-pad landing the same
+  frame; *fails on* the stale read taken before the poll. Does not discriminate `main.js`'s pump
+  order itself: one call site, asserted by reading.
+- **T3 buffer** — *passes on* both devices reporting the same age and surviving the same count;
+  *fails on* the pre-fix stamp reconstructed where it is actually applied. (Ablating by zeroing
+  `_step` from outside did nothing — `beginFrame` assigns it at the top, before the poll that
+  presses — so the first version of this arm reproduced nothing and said so.) Does **not**
+  discriminate which convention is closer to the true instant: neither is, and the arm asserts
+  only that the two devices share one.
+- **T4 pause** — *passes on* Options and P opening the cel, releasing the pointer, and closing it
+  again; *fails on* a frame with no press, and on the Esc-then-Options desync the rejected design
+  would have produced.
+
+Mutation-checked and restored: reverting the buffer stamp reddens T3 alone; removing the pause
+mirror reddens T4 alone.
+
+**The standing limit.** No physical DualShock 4 exists in this container and no real rAF loop runs
+in these arms — the timeline is *scripted*. So the architecture's own bound is now measured, but a
+real driver's cadence (coalescing, its internal sampling rate, whether Chromium's snapshot lags the
+hardware) remains the user's re-test. `src/player/CameraRig.js` was not touched.

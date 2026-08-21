@@ -1192,6 +1192,25 @@ export class HUD {
 
     if (this.engine.input?.pressed?.('binocu')) this.binocucom(!this.binocOn);
 
+    /**
+     * §543: the controls cel advertises `Esc / Options` as "Pause / release the pointer", and
+     * Options did neither. `pause` (P and Options) is read only by `src/core/Debug.js`, which
+     * flips `engine.debug.paused`; `Engine.renderFrame` answers that with `dt = 0`, so the game
+     * stopped dead with no cel, no pointer release and no HUD change — visually a hang, on the one
+     * button every console player presses first, while this cel told them it would pause.
+     *
+     * MIRROR, not toggle. `main.js` pumps `debug.update()` before the module loop, so by the time
+     * this runs `engine.debug.paused` already carries this frame's value and following it keeps the
+     * two in lockstep by construction. Toggling independently was tried on paper and desyncs: pause
+     * with Esc (which only this side knows about), then press Options, and the two flags end up
+     * opposed — `renderFrame` ORs them, so the game stays frozen with the cel shut, which is the
+     * exact failure being repaired. Reading the flag cannot produce that state.
+     *
+     * No menu is built and none is in scope: this connects a button to the cel that already ships.
+     * `setPaused` is also what releases the pointer, so the cel's row becomes true in both halves.
+     */
+    if (this.engine.input?.pressed?.('pause')) this.setPaused(!!this.engine.debug?.paused);
+
     this._tickCoins(d);
     this._tickToasts(d);
     this._tickObjective(d);

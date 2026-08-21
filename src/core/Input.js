@@ -327,6 +327,8 @@ export class Input {
      * Advanced by `beginFrame(dt)`; see guarantee (1) in the header.
      */
     this.clock = 0;
+    /** The step applied by the most recent `beginFrame`; see the stamp note in `_press`. */
+    this._step = 0;
     /** Real (unscaled) seconds elapsed over the last frame. Stick look uses this, not `clock`. */
     this.dtReal = 1 / 60;
     this._lastReal = -1;
@@ -649,7 +651,27 @@ export class Input {
     if (this._down.has(a)) return;          // another device already holds it — not a new press
     this._down.add(a);
     this._pressedFrame.set(a, src === 'pad' ? this._frame : this._frame + 1);
-    this._pressedAt.set(a, this.clock);
+    /**
+     * ── The buffer stamp, and why the pad subtracts a frame (§543) ────────────────────────────
+     *
+     * A DOM press runs BETWEEN frames, so `clock` still holds the last completed frame's value:
+     * the stamp is the frame boundary before the press. A polled press runs INSIDE `beginFrame`,
+     * after `clock += step`, so stamping `clock` would claim the press happened at the poll — and
+     * the button may have gone down at any point in the preceding frame.
+     *
+     * Left alone that is not a rounding detail, it is a parity gap the whole width of a frame.
+     * Measured (`tests/padtiming.test.mjs` T3): a keyboard press read 16.67 ms old on the frame it
+     * first became visible and survived 8 frames of the 140 ms buffer; the identical pad press read
+     * 0.00 ms old and survived 9. The pad was getting 11.9% more jump buffer than the keyboard at
+     * 60 fps, and 71% more at 10 — an advantage nobody designed, on the timing that decides whether
+     * a jump made just before a ledge still fires.
+     *
+     * Neither convention recovers the true instant; both are bounded by one step, in opposite
+     * directions. What matters here is that the two devices use the SAME one, so the pad adopts
+     * the keyboard's: the boundary before the press. `inject` keeps `clock`, because a harness
+     * calls it between frames exactly as the DOM does.
+     */
+    this._pressedAt.set(a, src === 'pad' ? this.clock - (this._step || 0) : this.clock);
   }
 
   /**
@@ -819,6 +841,29 @@ export class Input {
     return 0;
   }
 
+  /**
+   * ── The sampling floor, which is a BOUND and not a bug (§543) ───────────────────────────────
+   *
+   * This runs once per rAF frame, so the pad is a sampled device and the keyboard is an evented
+   * one, and that difference has a floor nothing here can lift. A tap is seen iff a poll instant
+   * falls inside it; polls are a grid of period T at arbitrary phase, so a tap of duration d is
+   * missed with probability `1 - d/T` and a tap shorter than one frame can be entirely invisible.
+   * Measured across 100 phases at eight durations, matching that model to within 3 points
+   * (`tests/padtiming.test.mjs` T1): at 60 fps a 2 ms tap is missed 88% of the time and anything
+   * from 16.7 ms up is never missed. The keyboard's floor is ZERO — keydown and keyup both
+   * dispatch between frames and both stamp the next one, so `pressed()` and `released()` fire
+   * together and a sub-frame tap is a real, short hop.
+   *
+   * **Not fixable here.** The Gamepad API reports STATE, not edges: there is no record of a press
+   * that began and ended between two polls, and `gp.timestamp` says only that something changed,
+   * never what. The floor is the API's, and the largest discrepancy the architecture permits is
+   * exactly one frame.
+   *
+   * **And not reachable by a player at a playable frame rate.** A human game tap runs 30-80 ms,
+   * two to five times T at 60 fps, so every one is seen. It opens up only as the frame rate
+   * collapses — which is worth knowing precisely because a report of "the pad dropped my input"
+   * is then a report about frame time, and should be chased there rather than here.
+   */
   _padButtons(gp) {
     const on = this.settings.triggerOn, off = this.settings.triggerOff;
     /* The first poll after `_padHeld` was force-cleared re-DISCOVERS holds rather than receiving
@@ -1025,6 +1070,8 @@ export class Input {
     const step = Number.isFinite(dt) ? Math.max(0, dt)
       : (Number.isFinite(this.engine?.dt) ? Math.max(0, this.engine.dt) : 1 / 60);
     this.clock += step;
+    /** This frame's step, so a polled press can be stamped at the boundary BEFORE it. `_press`. */
+    this._step = step;
 
     /* Pad buttons FIRST, so a d-pad press taken this frame is already in `_down` when the
        digital vector is folded below — otherwise the d-pad would lag the keyboard by a frame and
