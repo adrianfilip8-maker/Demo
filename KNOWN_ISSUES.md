@@ -42450,3 +42450,53 @@ at all — and its arms are unchanged.
 the d-pad is a bound movement route with no glyph in `Icons.PAD_GLYPH_FILES`, which is harmless
 today because nothing asks `padBtn` for one — the controls cel shows `P('stick')` for Move — and
 would render as `padBtn`'s text fallback if anything did.
+
+## §479.9 — The ported swing on camera: the repo's attack is a committed swing where ours was a flick, and two things the frames corrected
+
+`tools/canelook.mjs`, both arms, shipped model, same three presses at the combo's own chain
+cadence, same sample offsets, one regime token apart. Sixteen frames per arm; the curated set is
+`shots/cane1-{godot,proc}-*` with the full run in `shots/cane1/` and the playhead and track weight
+of every active clip beside every frame in the telemetry.
+
+**The A/B, at the identical phase (t 0.083 of the delivered clip, one frame before the measured
+contact).** Procedural: Sly stands close to upright, cane low and tucked near the hip, the arm
+barely out — a flick. Godot: bent forward over the front foot, cane raised and leading, the whole
+body committed into the swing. That is the 0.30 m against 0.92 m of measured forward reach made
+visible, and it is the clearest single answer to "check the attack animations": the reference's
+attack is a much bigger motion than the one it replaced. By t 0.183 the godot cane has swept down
+and forward through the contact — a strike delivered outward, not the recovery-only motion the
+first pass of this port shipped.
+
+**Correction 1, the hang is one-armed.** The alias comment described `CaneSwing` as an "overhead
+two-paw hang". The frames show one hand — right on the cane overhead, left free at the hip — at
+both sampled phases. That line had been written from a channel summary rather than from a picture,
+which is the same error as reading peak hand speed for a strike, one scale down. Corrected in
+place with the frames named beside it. It is not pedantry: the free off-hand is what makes
+`hook_release` legible when it takes the body back.
+
+**Correction 2, the chain was fine and the LOG was wrong.** The per-frame console line reported
+the first track whose name began `cane_combo`, not the dominant one, so a fading previous swing
+masked each new one and the run appeared not to chain at all. The telemetry's full track array
+says otherwise: `combo` index steps 1 → 2 → 3 and each new clip enters at t 0.033 w 0.42 exactly
+as the one before it. Worth recording because the wrong reading was available for several minutes
+and only the array — not the summary line — could refute it. A summary that picks by name order
+rather than by weight is a summary that can lie about which clip you are looking at.
+
+**What the frames raise that the numbers did not.** At the chain seam (`combo3-f3`) three tracks
+of the SAME source clip are live at three different phases, two at full weight, and the blended
+pose puts the cane trailing behind Sly rather than anywhere in a strike. With the procedural set
+the three slots were three different clips, so an overlap blended distinct motions; with one clip
+in all three slots an overlap blends a motion with itself out of phase, which averages toward the
+middle of its own arc. This is the concrete mechanism behind the "one ground attack in three
+slots" limit already stated in the alias, and it now has a frame. It is left as measured rather
+than patched: the fix is a per-slot phase or mirror on the source, which is a design choice about
+how a combo should read, and the hardware sheet asks the question rather than answering it here.
+
+**Limits.** Captured at `Q=low`, 1280×720, recorded in the telemetry: the shared box ran at load
+10-14 with three sibling lanes on four cores, and at `q=high` the per-update cost of volumetrics
+and particles turned a six-second settle into a ten-minute one. Quality changes post-processing
+only — model, skeleton, clip table, splice and skinning are identical — so these frames carry a
+pose read and not a look read; nothing above depends on grade, bloom or edge treatment. Pickpocket
+and the hook are posed takes through the real `animation.play()` seam with movement parked, the
+§479 precedent and its same limit: in-situ steals and swings are hardware-sheet material. The
+combat frames are NOT posed — those are the real state machine driven by real key presses.
