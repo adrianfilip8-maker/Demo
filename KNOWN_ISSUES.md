@@ -42500,3 +42500,229 @@ pose read and not a look read; nothing above depends on grade, bloom or edge tre
 and the hook are posed takes through the real `animation.play()` seam with movement parked, the
 §479 precedent and its same limit: in-situ steals and swings are hardware-sheet material. The
 combat frames are NOT posed — those are the real state machine driven by real key presses.
+
+## §580 — The containment ruling on the other twenty-five states: the clamp held a point above Sly's head, and both of its translates could put the lens inside him
+
+The ruling "Sly should always remain in frame" shipped in §475 as a final-stage clamp and was
+verified on six routes — two dive slams, the T3 ring arrival, the T1 hook-ring debt, a desert
+run, a run with jumps, a fall into masonry. Those six visit **seven** of the moveset's **thirty-
+two** states. Asked to establish whether the ruling actually holds, not on the sample it shipped
+with but on the state space it claims.
+
+It does not, in three places, and all three were invisible to the shipped arms for the same
+reason: the arms and the clamp share a picture of what the subject is and when it can be lost.
+
+**Provenance first.** Every camclamp row quoted below was re-run before being used, and all five
+console lines reproduce to the digit: slam 16 m off ndcY −2.56 → on −0.86 (66 f engaged, release
+2.47 °/f, max |clamp| 52.1°); slam 8 m −1.43 → −0.86 (23 f, 0.98 °/f, 12.7°); T3 41/41 frames
+uncontained, 10 behind-plane → 0, max clamp 64.2° of the 80° authority; debt 117 uncontained → 0,
+35 translate fires, max slide 1.98 m, max need 80.0°, composed climb 153/153 bit-identical;
+controls desert run 5 f engaged at 35.52°, run + jumps 0 f, into masonry 139 f at 54.04°,
+margin-0.30 falsification 27 f diverged. One pointer in the brief does not survive contact:
+`tests/subjhold.test.mjs` and `tools/subjhold.mjs` are the toon shader's **subject shadow hold**
+(`uSubjShadowHold`, PREREG-subjhold), not camera containment. A name collision, recorded so the
+next reader does not spend the round I nearly spent.
+
+### §580.0 What "in frame" means here, and why the shipped predicate could not answer
+
+The clamp holds `_pPos.y + clampAnchorY`, a fixed **+0.9**, and every arm on the record asks
+whether that point is inside the frame. Two questions have to be separated before any of this is
+measurable.
+
+**The subject.** Sly is a capsule, and `Controller` reassigns its height on every state change:
+`this.height = next.capsule > 0 ? next.capsule : TUNE.height` — 1.80 standing, `crouchHeight`
+1.06 in crouch and roll, `crawlHeight` 0.64 in a vent. The definition applied uniformly by every
+arm below is: **the live capsule's CENTRE (`position.y + height/2`) is in front of the near plane
+and inside |ndcX| ≤ 1 and |ndcY| ≤ 1 on the final written pose** — after the focus lerp, all three
+clamp stages, the bank, the shake and the FOV.
+
+**Why the centre and not the silhouette.** Whole-body containment is unreachable at this rig's own
+boom floor, so it cannot be the ruling's test. At `distHardMin` 0.55 m through a 52° lens the
+frame spans 2 × 0.55 × tan 26° = 0.536 m of world height at the subject's depth against a 1.80 m
+body: **at most 33 % of Sly can be on screen at that boom no matter where the camera points**, and
+the driven worst is 11 % (a `poleClimb` frame at boom 0.55). A predicate no pose can satisfy would
+convict the boom crush — item 12's priced lever, declined on cost — under the clamp's name, which
+is §442 pointed the other way. The centre is the one point that is on the body in every state, is
+achievable at every boom, and **equals the shipped constant exactly at full height**: 1.80 × 0.5
+=== 0.9, bit-exact in IEEE754. It is not a new standard; it is the shipped one, evaluated
+correctly. The body fraction is reported by the census arm and gates nothing.
+
+**Two claims, two instruments, and they are not interchangeable.** Containment is measured with
+the rig LIVE IN THE LOOP — the rig writes `engine.camera`, the Controller reads that camera back
+for its camera-relative input. That coupling is the shipped game and a recorded trajectory with a
+scripted `aim()` does not have it (§435.4). Cost cannot be measured that way at all: the two
+regimes have different cameras, so a coupled drive at margin 0.88 and one at margin 0 diverge in
+*trajectory* within a few frames and any pose comparison between them measures two different
+games (§442). So containment gets the coupled rig and cost gets record-and-replay; the routes are
+shared between them, the harness is not. Stating it because the first version of this work used
+one instrument for both and the cost numbers it produced were meaningless.
+
+### §580.1 Both containment translates could drive the lens inside the character, and one of them did
+
+`tests/camstate.test.mjs`, arm 2. Driven: the T3 drainpipe climb interrupted by `attack` with the
+stick held — an ordinary pole swing, at the boom's 0.55 m floor, the pose where both translate
+stages fire together.
+
+```
+                                  min lens→anchor range   inside capsule r   inside near plane   no subject drawn
+  pre-§580 translates                     0.0069 m              8 f                4 f                4 f
+  bounded (shipped)                       0.4551 m              0                  0                  0
+```
+
+The lens ends up **seven millimetres from Sly's chest**, inside the near plane, and the frame
+after that it is thrown out the other side: a 60 Hz limit cycle with the camera oscillating
+*through* the character, `_clampPitch` alternating +50.8° / −80.0° and `_clampMoved` swinging
+−0.65 / −1.48 m. Two independent causes compose, which is why bounding one was not enough:
+
+- **Stage 2 solves a tangent equation.** `tan` is π-periodic, so "put the subject at elevation T"
+  and "put it at T − 180°" are the same equation, and the root it returns can be the camera
+  arriving *on* the subject rather than below it. Nothing checked the result: the code takes the
+  root, moves, recomputes `need`, and stage 1 rotates to whatever is left.
+- **Stage 3's straight slide cancels `v.x`, which shortens the range.** A subject 1.3 m off the
+  view axis and 0.1 m in front ends up 0.04 m from the lens. Measured on the same take: slide
+  −1.259 m arriving at 0.048 m.
+
+Nothing downstream could catch either, and that is the instructive part: **a subject behind the
+near plane still has an `ndcY`, and it reads 0.88.** §419's rule — never trust a behind-plane ndc
+— was written about the ring arrival's −41.59; here the same defect reads as a *pass*.
+
+The repairs. Stage 2 is bounded by a closed-form stand-off: moving the camera `d` along a unit
+axis moves the subject in view space by `−d·û`, so the squared range is `d² − 2(v·û)d + |v|²`;
+requiring it to stay at or above `s²` excludes exactly one interval, and `d` is projected to its
+nearer edge — the smallest change that keeps the lens out. `s` is `min(distHardMin, current
+range)`, so the clamp and the boom agree on how close the camera may ever come and a pose already
+inside the floor can only be improved. Stage 3 is no longer a straight slide: the camera moves on
+the **circle of constant range about the subject** in the view's own XZ plane. That is strictly
+better than bounding it — same |v| by construction so the stand-off cannot bind, `v.y` untouched
+and `−v.z` can only grow so the vertical hold is preserved or tightened, and the view's
+**orientation is still untouched**, which was the entire reason yaw was rejected. Bounding stage 3
+instead of re-shaping it was tried and measured: bounded, it can no longer *reach* the lateral
+margin and the same take leaves the subject at |ndcX| 16.9 for four frames.
+
+`TUNE.clampStandoff: false` runs the pre-§580 pair for real (the §388 switch pattern), which is
+how the failing row above is a run and not a recollection.
+
+### §580.2 The clamp held a point a quarter of a metre above Sly's head, perfectly, for 71 frames
+
+arm 3, driven through all four shipped vent colliders in both directions.
+
+```
+  crawl, 0.64 m capsule, boom crushed in the tunnel        held point      capsule centre
+  constant anchor +0.9 (the shipped regime)                −0.880 ✓        −1.49 .. −2.11  ✗ 71 f
+  live anchor +0.32 (= height × 0.5)                       −0.677 ✓        ≤ 0.880         ✓  0 f
+```
+
+In `crawl` the whole character lives between +0.00 and +0.64 and the clamp is holding +0.90 —
+**above his head, in empty air.** It holds it exactly on the margin, reports containment, and Sly
+is entirely off screen for 71 consecutive frames of ordinary vent traversal. §442 in its purest
+form: a measurement correctly performed, on the wrong subject, under a label that says otherwise.
+`roll` is the same defect one third the size (1.06 m capsule, 34 of 207 frames with the centre
+out); `crouch` never engages hard enough to show it.
+
+The repair is one line and it is a *derivation*, not a new constant: `_anchorY()` returns
+`height × 0.5` where MOVEMENT publishes a height and `clampAnchorY` where it does not. Because
+1.80 × 0.5 === 0.9 bit-exactly, **every full-height state is untouched** — asserted in the arm, so
+a change to `Controller.TUNE.height` reddens here rather than silently re-basing every composed
+frame on the record. The pre-repair regime needs no switch: a movement facade with no `height`
+field already falls back to the constant, and that fallback *is* the old behaviour.
+
+### §580.3 The wall bank ran after the hold, and roll mixes the two margins into each other
+
+Derived before it was chased (§450.4). The clamp guarantees |ndcY| ≤ margin and |ndcX| ≤ margin at
+the moment it acts. A roll of θ applied afterwards maps a held subject to
+
+```
+  |ndcY|' = margin·cos θ + |ndcX|·aspect·sin θ
+```
+
+so at the shipped `wallRoll` 5.5° with the lateral stage also holding, the ceiling is **1.026 at
+16:9** — outside the frame, from a stage that runs after the invariant. Driven (arm 4, 72 lateral
+wall-run entries derived §440.1-style, bank live on 2,044 frames, max roll the full 5.50°):
+
+```
+                        shipped bank 5.5°        wallRoll 22° (falsification)
+  bank after the hold   worst |ndcY| 0.9417      34 frames OUT of frame, worst 0.9991
+  bank before the hold  worst |ndcY| 0.8895      0 frames out
+```
+
+At the shipped bank the margin is exceeded by 0.06 and the frame is **not** lost; the 22° sweep is
+what makes the claim discriminating, and sweeping the constant rather than hunting an outcome is
+deliberate (§439 — the claim is about a mechanism, and the mechanism is a product of the bank and
+the lateral offset, either of which a level or a retune can supply). Aspect does *not* aggravate
+it where the lateral stage is idle: the mixing term is `ndcX·aspect` and `ndcX` scales as
+`1/aspect` for a fixed world offset — measured identical at 16:9 and 21:9, which is a quantity
+unchanged across a swept input that turns out to be a fact rather than an instrument fault.
+
+The repair: the bank is hoisted **above** the clamp, so φ and λ are measured in the frame that is
+actually rendered. Roll is a framing decision, the same kind of thing as the pitch the clamp
+itself applies; the shake's roll stays below, because an impact wobble must remain a wobble.
+Priced on one recorded lateral run with the bank live on 139 of 160 frames: with the clamp idle
+and no shake the pose is **bit-identical either way** (0/160); with a slam shake riding it 14
+frames differ by at most **0.0483°** of view rotation, which is the roll/shake pair no longer
+commuting and is the whole cost. `TUNE.clampBankFirst: false` runs the old order.
+
+### §580.4 The census: every state the moveset registers, twice, live
+
+arm 1. 70 driven routes through the shipped level with the rig closing the input loop; the attach
+half reached the traversal lane's way (its derived approaches, its scripts), `ledgeHang` through
+the real `probeLedge` against real `ledge` recs exactly as its hang sweep does.
+
+```
+  70 routes · 16,166 frames · 32/32 registered states, none on fewer than two routes
+  subject out of frame        0
+  max |ndcY| of the subject   0.885
+  min lens→subject range      0.301 m   (a hurt shake at a crushed boom; near plane is 0.10)
+  least of the capsule on screen  11 %  (poleClimb at boom 0.55; the best any pose can do there is 33 %)
+```
+
+The coverage assertion reads `buildMoveset()` rather than a written-down list, so a state added to
+the moveset fails this arm **by name** instead of going unsampled — which is the specific defect
+this section exists for. Two routes per state is §466.5 applied to driving: a state checked once
+is not checked, and the two that broke (`crawl`, `roll`) broke on routes the first pass did not
+have.
+
+Before the repairs the same battery read: 141 stage-2 fires, **12** frames with the lens inside
+the capsule radius, **5** inside the near plane, 124 of 366 `crawl` frames and 34 of 207 `roll`
+frames with the subject off screen.
+
+### §580.5 The cost claim re-checked against the whole state set, and one register that was lying
+
+The zero-cost guarantee is a claim about the written pose, and it was only ever measured on flat
+ground and a settled climb. Re-run as record-and-replay over this file's routes, each trajectory
+through two passive rigs differing only in `clampMargin`:
+
+```
+  14,966 replayed frames · 62 routes · 31 states
+  inside-margin frames  12,138 — poses that moved under the clamp:  0
+  outside-margin frames  2,828 — frames not contained after it:     0
+  margin-0.30 falsification                                    11,559 f diverged
+```
+
+It holds. Component equality, never `angleTo === 0` (§475.6's ulp trap). The falsification is what
+keeps the equalities from being two dead arms agreeing.
+
+The clamp's own arithmetic still runs every frame in both regimes — "zero cost" is and always was
+a claim about the pose, not about CPU, and the arm says so.
+
+**One instrument fault found on the way, of the family the brief names.** `_clampPitch !== 0` was
+being read as "the clamp moved the pose", and it is not: the lateral stage can fire with the pitch
+branch idle — 3 frames of the T3 mount in this battery — so a tool asking `_clampPitch` alone
+reports an untouched pose that was in fact moved. Reading one branch of a three-branch mechanism,
+the sixth instance in this project. The rig now publishes `_clampOn` (any stage) and `_clampAnchor`
+(the height actually held), so nothing downstream has to re-derive either.
+
+### §580.6 What did not move, and what this bought
+
+- **camclamp is unchanged and still green, 4/4.** Two of its numbers moved and both improved: the
+  debt take's max slide 1.98 → **1.55 m** (the arc is a shorter displacement than the slide it
+  replaced) and the controls' max |ndcX| 0.22 → **0.16**. Every other row is identical to the
+  digit, including `composed climb 153/153 bit-identical`.
+- **`Controller.js` was not touched.** Every repair is in the rig; the capsule height it now reads
+  is a field the Controller already maintained and already exposed as the `movement` module.
+- **Containment is still not composition** (§475.6 stands). The vent crawl and the T3 mount are
+  0.55 m close-ups, and 11 % of the body on screen is a boom finding, not a clamp finding. Item
+  12's crush and recovery levers are untouched and still priced-not-shipped.
+- **The translates are still uncast.** They can enter geometry; what they can no longer do is
+  enter Sly.
+- Three regime switches now exist so each pre-repair behaviour is *runnable*: `clampStandoff`,
+  `clampBankFirst`, and the no-`height` facade. All three are exercised by the arms that own them.

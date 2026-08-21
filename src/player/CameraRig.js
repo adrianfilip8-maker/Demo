@@ -35,6 +35,11 @@ import * as THREE from 'three';
  *     nowhere" (−1.04..−1.11 ndcY), so an invariant could not be built out of them. One caveat to
  *     rule 1 lives here: while the clamp is engaged, mouse pitch that would push Sly further out
  *     of frame is absorbed by the correction — the hand still moves the frame everywhere else.
+ *     The SUBJECT is the live collision capsule's centre, not a fixed height, and the invariant
+ *     is verified on every one of the moveset's 32 states rather than on the seven the shipping
+ *     routes happened to visit — `tests/camstate.test.mjs` (§580), which is also where the three
+ *     regime switches (`clampBankFirst`, `clampStandoff`, and a facade with no `height`) exist
+ *     to make each pre-repair regime genuinely runnable rather than recalled.
  *
  * Coordinate convention (matches MOVEMENT's yaw, per AGENTS.md §8.1 "facing north = yaw π"):
  *   forward = (sin(yaw), 0, cos(yaw)).  `yaw` is the heading the camera *looks along*, so a camera
@@ -242,9 +247,22 @@ export const TUNE = {
      edge. 0.88 is mid-band. Frames the design already accepts at 0.85 are untouched by
      construction — the clamp engages BEYOND the margin, never inside it.
 
-     `clampAnchorY` is the point that must stay in frame, metres above the player origin — the
-     same `+0.9` chest anchor every committed telemetry instrument projects (thieflook, slamtrace,
-     camdrive, climbcam), so the before/after tables and these constants speak one language.
+     `clampAnchorY` is the FALLBACK for the point that must stay in frame, metres above the
+     player origin — the `+0.9` chest anchor every committed telemetry instrument projects
+     (thieflook, slamtrace, camdrive, climbcam), so the before/after tables and these constants
+     speak one language.
+
+     It is a fallback and not the anchor because **the subject is not one height** (§580.2).
+     `Controller` reassigns `this.height` on every state change — 1.80 standing, `crouchHeight`
+     1.06 in crouch and roll, `crawlHeight` 0.64 in a vent — and 0.9 is exactly half of 1.80, so
+     this constant was always "the capsule's centre", written as the number it evaluates to for
+     the states that are full height. `_anchorY()` reads the live height where MOVEMENT publishes
+     one and returns `height × 0.5`; at 1.80 that is bit-exactly 0.9, so every full-height state
+     is untouched. What it fixes: driven through a shipped vent, the clamp held this constant at
+     the margin for 71 consecutive `crawl` frames while Sly — whose head is at +0.64, a quarter
+     of a metre BELOW the held point — sat at ndcY −1.49..−2.11, entirely off screen. A point
+     0.26 m above the subject's head, held perfectly, under a label that says the subject is in
+     frame (§442). A facade with no `height` field falls back here and behaves exactly as before.
 
      `clampPitchMax` is the pitch authority: past it, pitching alone cannot compose (the subject
      is nearly straight above/below or behind-and-past-vertical) and the translate branch in
@@ -259,6 +277,19 @@ export const TUNE = {
   clampMargin: 0.88,
   clampAnchorY: 0.9,
   clampPitchMax: 80 * DEG,
+  /* Where the wall bank sits relative to the containment clamp. `true` (shipped) applies it
+     BEFORE, so the clamp measures both margins in the frame that is actually rendered; `false`
+     is the pre-§580 order, kept runnable for the same reason `clampMargin: 0` is (§388) — the
+     arm that prices the hoist runs the old regime rather than recalling it. See the hoist note
+     in `_write`. */
+  clampBankFirst: true,
+  /* The translate stages' range discipline. `true` (shipped) bounds the vertical translate by
+     the stand-off and moves the lateral stage on a constant-range arc; `false` is the pre-§580
+     pair — an unbounded vertical solve and a straight right-axis slide — kept runnable for the
+     §388 reason, because "the camera ends up inside Sly" is a claim that has to be RUN.
+     The anchor's third regime needs no switch: a movement facade that publishes no `height`
+     already falls back to `clampAnchorY`, which IS the pre-§580 behaviour. */
+  clampStandoff: true,
 
   /* ---- velocity lead ------------------------------------------------------ */
   /* **`FRAMES.lead` is inert on 13 of 19 rows, and TWO different constants do it.**
@@ -799,6 +830,30 @@ function ease(cur, tgt, tau, dt) {
 }
 
 function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+/**
+ * The containment translates' stand-off (§580.1). Both of them move the camera along a unit
+ * axis, which moves the subject in view space by `−d·û`; the squared camera→subject range is
+ * therefore `d² − 2·A·d + L2` with `A = v·û` and `L2 = |v|²`, a parabola in `d`. Requiring it to
+ * stay at or above `s²` excludes one interval around `A`, and `d` is projected to whichever edge
+ * of that interval is nearer — the smallest change that keeps the lens out of the subject.
+ *
+ * `s` is `min(distHardMin, current range)`: the boom's own floor, so the clamp and the boom
+ * agree on how close the camera may ever come, and a pose that is ALREADY inside it can only be
+ * improved, never worsened — which is what makes this safe to add under an existing invariant.
+ * Whatever rotation a bounded translate leaves undone falls through to stage 1, which is
+ * uncapped and puts the anchor on the margin regardless, so the bound costs composition and
+ * never containment.
+ */
+function standoff(d, A, L2) {
+  const s = Math.min(TUNE.distHardMin, Math.sqrt(L2));
+  const D = A * A - (L2 - s * s);
+  if (!(D > 0)) return d;
+  const r = Math.sqrt(D), lo = A - r, hi = A + r;
+  if (d <= lo || d >= hi) return d;
+  return (d - lo <= hi - d) ? lo : hi;
+}
+
 function smoothstep(a, b, x) { const t = clamp((x - a) / (b - a || 1e-6), 0, 1); return t * t * (3 - 2 * t); }
 function wrapPi(a) {
   a = (a + Math.PI) % (Math.PI * 2);
@@ -886,6 +941,16 @@ export class CameraRig {
     this._clampPitch = 0;      // radians of view rotation applied last frame; 0 = untouched pose
     this._clampMoved = 0;      // metres of vertical translate-branch lift last frame
     this._clampSlide = 0;      // metres of lateral containment slide last frame
+    /* The anchor height actually used last frame — a REGISTER, not a constant, because the
+       subject's capsule is not one height (§580.2). Instruments must read this rather than
+       re-deriving `TUNE.clampAnchorY`, which is only the full-height value. */
+    this._clampAnchor = TUNE.clampAnchorY;
+    this._pHeight = 0;         // subject capsule height as MOVEMENT publishes it; 0 = unknown
+    /* "Did the clamp move the pose this frame?" ONE register for a THREE-branch mechanism.
+       `_clampPitch !== 0` was being read as that question and it is not: the lateral slide can
+       fire with the pitch branch idle (measured: 3 frames of the T3 mount in §580's battery),
+       so a tool asking `_clampPitch` alone reports an untouched pose that was in fact moved. */
+    this._clampOn = false;
 
     /* ---- wall side probe ---- */
     this._wallSide = 0;
@@ -1047,6 +1112,7 @@ export class CameraRig {
     this._clampPitch = 0;
     this._clampMoved = 0;
     this._clampSlide = 0;
+    this._clampOn = false;
     this._hadPlayer = true;
     this._prevPlayer.copy(_pPos);
     if (!this.engine.debug.freeCam) this._write(0);
@@ -1119,6 +1185,15 @@ export class CameraRig {
          a movement facade without the field (older tests, stubs) reads as not-attached and the
          rig behaves exactly as before this gate existed. */
       this._attachedPole = !!(mv.attached && mv.attached.tag === 'pole');
+      /* The SUBJECT'S OWN HEIGHT, because it is not a constant: `Controller` reassigns
+         `this.height` on every state change (`next.capsule > 0 ? next.capsule : TUNE.height`)
+         — 1.80 standing, `crouchHeight` 1.06 in crouch/roll, `crawlHeight` 0.64 in a vent. The
+         containment anchor is the capsule's CENTRE, and at full height that is exactly the
+         shipped `clampAnchorY` (1.80 × 0.5 === 0.9, bit-exact in IEEE754), so publishing this
+         changes nothing for any full-height state and fixes the two that shrink. A facade
+         without the field (older tests, stubs) reads 0 and the constant is used, exactly as
+         before this existed. */
+      this._pHeight = (typeof mv.height === 'number' && mv.height > 0.2) ? mv.height : 0;
     } else {
       // MOVEMENT may not exist yet. Orbit the origin so the rig is still testable.
       _pPos.set(0, 0, 0);
@@ -1127,8 +1202,13 @@ export class CameraRig {
       this._stateName = '';
       this._playerYaw = null;
       this._attachedPole = false;
+      this._pHeight = 0;
     }
   }
+
+  /** The point that must stay in frame, metres above the player origin — the live capsule's
+   *  centre where MOVEMENT publishes a height, `TUNE.clampAnchorY` where it does not. */
+  _anchorY() { return this._pHeight > 0 ? this._pHeight * 0.5 : TUNE.clampAnchorY; }
 
   /**
    * One smoothed ground speed per frame, for every consumer.
@@ -2101,6 +2181,29 @@ export class CameraRig {
     _m4.lookAt(_camPos, _lookAt, _UP);
     _q1.setFromRotationMatrix(_m4);
 
+    /* THE WALL BANK, HOISTED ABOVE THE CLAMP (§580.3), and the shake roll deliberately left
+       below it. Roll is not a wobble: it is a framing decision, the same kind of thing as the
+       pitch the clamp itself applies, and rolling AFTER the hold mixed the horizontal margin
+       into the vertical one — a roll of θ carries a held subject from |ndcY| = `clampMargin` to
+       `clampMargin`·cos θ + |ndcX|·aspect·sin θ, which at the shipped 5.5° bank with the lateral
+       stage also holding reaches 1.026 at 16:9 and more on a wider window. Measured before the
+       hoist on a driven lateral wall run: |ndcY| 0.9417 at 4.64° of bank with |ndcX| 0.408 — the
+       margin exceeded by a stage that runs after the invariant. Above the clamp, φ and λ are
+       measured in the frame that is actually rendered, so both margins are exact again. The
+       SHAKE roll stays below, for the reason the ordering note gives: the impact wobble must
+       stay a wobble rather than be half-wave rectified against the hold. Priced, on one recorded
+       lateral run with the bank live on 139 of 160 frames: with the clamp idle and no shake the
+       written pose is BIT-IDENTICAL either way (0/160 frames differ — the same two rotations in
+       the same order); with a slam shake riding it, 14 frames differ by at most 0.0483° of view
+       rotation, which is the roll/shake pair no longer commuting and is the whole cost. With the
+       clamp engaged 128 frames differ by up to 4.86°, and that is the repair, not the cost. */
+    const bankFirst = TUNE.clampBankFirst !== false;
+    if (bankFirst && this._roll !== 0) {
+      _eul.set(0, 0, this._roll, 'YXZ');
+      _q2.setFromEuler(_eul);
+      _q1.multiply(_q2);
+    }
+
     /* ── SUBJECT CONTAINMENT (rule 6) — the final stage, and deliberately so ────────────────
      *
      * The user's ruling is "Sly should always remain in frame", and §467 measured why no
@@ -2118,7 +2221,12 @@ export class CameraRig {
      *        exact at any depth, behind-plane included (|φ| > 90° there);
      *   αm = atan(clampMargin × tan(fovV/2)) — the margin as an angle;
      *   need = φ − sign(φ)·αm when |φ| > αm, else 0 — the MINIMUM rotation that holds the
-     *        chest anchor at the margin, applied about the camera's local right axis.
+     *        anchor at the margin, applied about the camera's local right axis.
+     *
+     * The anchor is the LIVE CAPSULE'S CENTRE, `_anchorY()`, not a constant (§580.2). It equals
+     * the shipped `clampAnchorY` 0.9 bit-exactly at full height and tracks `crouchHeight` and
+     * `crawlHeight` when MOVEMENT shrinks the capsule — which is the difference between holding
+     * Sly and holding a point a quarter of a metre above his head through a vent.
      *
      * Pitch-first, position untouched: a rotation costs no occlusion re-cast and cannot fight
      * the pull-in, which is the whole reason the declined levers were declined. Three stages,
@@ -2128,17 +2236,24 @@ export class CameraRig {
      *      ~66° of the 80° authority).
      *   2. VERTICAL TRANSLATE — only when |need| exceeds `clampPitchMax` (subject nearly
      *      straight overhead/underfoot, or behind and past vertical): the closed-form vertical
-     *      camera move that brings the required rotation back inside the authority.
-     *   3. LATERAL TRANSLATE — the horizontal margin, held by sliding along the view's local
-     *      right axis, never by yaw: yaw is the player's control frame ("W" is
-     *      camera-forward) and must not chase a swinging subject. See the inline note for the
-     *      measurement that forced this stage into existence.
+     *      camera move that brings the required rotation back inside the authority, bounded by
+     *      the stand-off so it cannot arrive ON the subject (§580.1).
+     *   3. LATERAL TRANSLATE — the horizontal margin, held by moving the camera on the circle
+     *      of constant range about the subject, never by yaw: yaw is the player's control frame
+     *      ("W" is camera-forward) and must not chase a swinging subject. See the inline note
+     *      for the measurement that forced this stage into existence and the one that made it
+     *      an arc.
      * The translates are UNCAST — accepted because they fire only at poses where the boom is
      * already at hard-min with the camera inside geometry's shadow, and they move toward the
      * open space the subject occupies; both are reported per frame and the arms count them.
+     * They are NOT unbounded: `standoff()` and the arc keep the lens outside `distHardMin` of
+     * the subject, which is the promise the boom already makes and the one they used to break.
      *
-     * Ordering, all three deliberate:
+     * Ordering, all four deliberate:
      *   · after the focus lerp — a scripted look-away may pull the frame, never Sly out of it;
+     *   · after the WALL BANK, which is hoisted above this block (§580.3): roll is a framing
+     *     decision, not a wobble, and applied afterwards it mixed |ndcX| into |ndcY| and carried
+     *     a held subject past the margin — measured 0.9417 on a driven lateral wall run;
      *   · before the shake — the impact wobble stays a wobble instead of being half-wave
      *     rectified against the hold exactly at the slams it exists for. The margin's distance
      *     to the frame edge (0.12 ndc) covers the worst committed shake (slam amp 0.35 →
@@ -2158,8 +2273,10 @@ export class CameraRig {
     this._clampPitch = 0;
     this._clampMoved = 0;
     this._clampSlide = 0;
+    const anchorY = this._anchorY();
+    this._clampAnchor = anchorY;
     if (TUNE.clampMargin > 0) {
-      _sv.set(_pPos.x, _pPos.y + TUNE.clampAnchorY, _pPos.z).sub(_camPos);
+      _sv.set(_pPos.x, _pPos.y + anchorY, _pPos.z).sub(_camPos);
       if (_sv.lengthSq() > 1e-6) {
         _q3.copy(_q1).invert();
         _sv.applyQuaternion(_q3);
@@ -2176,10 +2293,29 @@ export class CameraRig {
           const tT = Math.tan(T);
           const den = _wv.y + tT * _wv.z;
           if (Math.abs(den) > 1e-4) {
-            const dy = (_sv.y + tT * _sv.z) / den;
+            let dy = (_sv.y + tT * _sv.z) / den;
+            /* THE STAND-OFF (§580.1). The solve above is a tangent equation, and tan is
+               π-periodic: it does not distinguish "put the subject at elevation T" from "put it
+               at T − 180°", so its root can be the camera arriving ON the subject rather than
+               below it. Driven, it does exactly that — the T3 pole-swing take put the lens
+               0.0069 m from the chest anchor, inside the near plane, subject not rendered at
+               all, and the next frame threw it out the other side: a 60 Hz limit cycle with the
+               camera oscillating THROUGH Sly. Nothing downstream could catch it, because a
+               subject behind the near plane still has an `ndcY`, and it reads 0.88.
+               The bound is exact and closed-form. Moving the camera dy along world up moves the
+               subject in view space by −dy·ŵ (ŵ unit), so the squared camera→anchor distance is
+               dy² − 2(v·ŵ)dy + |v|²; requiring it to stay at or above s² gives a single
+               forbidden interval around A = v·ŵ, and dy is projected to its nearer edge — the
+               smallest change that keeps the lens out of the subject. `s` is
+               min(distHardMin, current distance): the boom's own floor, so the two agree on how
+               close the camera may come, and a pose already inside it can only be improved. Any
+               rotation the bounded translate leaves undone falls through to stage 1, which is
+               uncapped and lands the anchor on the margin regardless — so bounding this costs
+               containment nothing and only ever costs composition. */
+            if (TUNE.clampStandoff !== false) dy = standoff(dy, _sv.dot(_wv), _sv.lengthSq());
             _camPos.y += dy;
             this._clampMoved = dy;
-            _sv.set(_pPos.x, _pPos.y + TUNE.clampAnchorY, _pPos.z).sub(_camPos).applyQuaternion(_q3);
+            _sv.set(_pPos.x, _pPos.y + anchorY, _pPos.z).sub(_camPos).applyQuaternion(_q3);
             phi = Math.atan2(_sv.y, -_sv.z);
             need = phi > am ? phi - am : phi < -am ? phi + am : 0;
           }
@@ -2199,29 +2335,53 @@ export class CameraRig {
            the harshest pose on record — the crushed hook swing at boom 0.55 with the subject
            orbiting the camera): the vertical stages held every frame while |ndcX| reached 3.05
            on 27 frames — the horizontal case exists (§440), at exactly the degenerate poses the
-           vertical failures live in. Sliding along the view's local right axis changes v.x
-           ALONE (orthonormal basis), so it cannot disturb the vertical containment above, needs
-           no iteration, and is exact. Runs only with the subject in front (a behind subject is
-           stage 1/2's, which always deliver v.z < 0 when they act); uncast like stage 2, for
-           the same reason and with the same reporting. */
-        _sv.set(_pPos.x, _pPos.y + TUNE.clampAnchorY, _pPos.z).sub(_camPos);
+           vertical failures live in. It is exact and needs no iteration. Runs only with the
+           subject in front (a behind subject is stage 1/2's, which always deliver v.z < 0 when
+           they act); uncast like stage 2, for the same reason and with the same reporting.
+
+           IT IS AN ARC, NOT A STRAIGHT SLIDE (§580.1). A slide along the right axis is exact in
+           the angle and still reduces the RANGE, because all it does is cancel v.x — a subject
+           1.3 m off the axis and 0.1 m in front ends up 0.04 m from the lens, which is the other
+           half of the limit cycle stage 2's stand-off closes (driven, T3 pole-swing take: slide
+           −1.259 m arriving 0.048 m from the anchor). Bounding it with the same stand-off is not
+           enough: bounded, it can no longer REACH the margin, and the same take then leaves the
+           subject at |ndcX| 16.9 for four frames instead. So the camera moves on the circle of
+           constant range about the subject in the view's own XZ plane — same |v|, by
+           construction, so the stand-off is automatic and cannot bind; v.y untouched, and
+           −v.z can only grow, so the vertical hold above is preserved or tightened, never
+           broken; and the view's ORIENTATION is still untouched, which is the whole reason yaw
+           was rejected — `W` still means exactly where it meant last frame. */
+        _sv.set(_pPos.x, _pPos.y + anchorY, _pPos.z).sub(_camPos);
         _q3.copy(_q1).invert();
         _sv.applyQuaternion(_q3);
         if (_sv.z < -1e-4) {
           const aspect = (cam.aspect > 0 ? cam.aspect : 16 / 9);
           const bm = Math.atan(TUNE.clampMargin * half * aspect);
           const lam = Math.atan2(_sv.x, -_sv.z);
-          if (Math.abs(lam) > bm) {
-            const dx = _sv.x - Math.sign(lam) * Math.tan(bm) * (-_sv.z);
+          const arc = TUNE.clampStandoff !== false;
+          const rho = Math.hypot(_sv.x, _sv.z);
+          if (Math.abs(lam) > bm && (rho > 1e-6 || !arc)) {
+            const tgt = Math.sign(lam) * bm;
+            const dx = arc ? _sv.x - rho * Math.sin(tgt)
+              : _sv.x - Math.sign(lam) * Math.tan(bm) * (-_sv.z);
+            const dz = arc ? _sv.z + rho * Math.cos(tgt) : 0;
             _wv.set(1, 0, 0).applyQuaternion(_q1);
             _camPos.addScaledVector(_wv, dx);
-            this._clampSlide = dx;
+            if (dz !== 0) {
+              _wv.set(0, 0, 1).applyQuaternion(_q1);
+              _camPos.addScaledVector(_wv, dz);
+            }
+            this._clampSlide = dz !== 0 ? Math.sign(dx) * Math.hypot(dx, dz) : dx;
           }
         }
       }
     }
 
-    let rollTotal = this._roll;
+    this._clampOn = (this._clampPitch !== 0 || this._clampMoved !== 0 || this._clampSlide !== 0);
+
+    /* The wall bank is already in `_q1` when `clampBankFirst`; only the shake's roll channel is
+       left to add here. With the switch off this is the pre-§580 order, verbatim. */
+    let rollTotal = bankFirst ? 0 : this._roll;
     if (amp > 0) {
       const s = this._shakeSeed;
       const tr = this.engine.time * TUNE.shakeFreqRot;

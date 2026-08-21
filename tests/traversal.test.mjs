@@ -2959,13 +2959,28 @@ test('census: which of the 32 states any test in this project has ever entered',
      traversal-only, and they are the three the bound below is now protecting. Measured off the
      census's own table in a clean worktree at the committed sha, not inferred from intent; same
      committed-file rule as the four re-bases above. */
-  assert.ok(elsewhere.length <= 29,
-    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, 11, 15, 17, 22, 23, 24, 25, 26, 29) ` +
-    `— coverage has spread, which is good: update this bound. ${elsewhere.join(', ')}`);
-  assert.ok(onlyMine.length >= 3,
-    `only ${onlyMine.length} states are traversal-only (was 21, 17, 15, 10, 9, 8, 7, 6, 3) — if that dropped, other ` +
-    'lanes have started driving the moveset and this arm should say so rather than assert the old ' +
-    'concentration');
+  /* 29 -> 32 and 3 -> 0, and this is the end of the ratchet rather than another notch on it.
+     Re-based by the mover (camera lane, §580): `camstate.test.mjs` drives the containment ruling
+     across the WHOLE state space instead of the seven states the shipped clamp routes happened
+     to visit, so it enters all 32 — `poleSwing`, `bounce` and `crawl`, the three this bound was
+     protecting, included. Committed file of the mover's own, same rule as the five re-bases
+     above, measured off this census's own table.
+
+     **`onlyMine` is now empty, so the pair collapses to one line and the line changes direction.**
+     `elsewhere.length <= N` reddened on coverage GAIN, which is the opposite of what the note
+     above says these are kept for ("COVERAGE-LOSS detectors, which is the direction that still
+     matters"); at 32 of 32 a `<=` bound cannot discriminate at all, because 32 is every state
+     there is. Stated as a floor it detects exactly the regression worth detecting: a state that
+     stops being driven outside this file. And `onlyMine.length === 0` is strictly ENTAILED by it
+     — `never` is empty (asserted above), so every state has a non-traversal file, so no state
+     has `files === {traversal}` — which is the §418/armaudit disposal this arm has already
+     performed once, on the line above it. The founding finding ("delete this one file and 6 of
+     32 states go dark") has now fully aged out, which is the outcome its own message asked for. */
+  assert.ok(elsewhere.length >= 32,
+    `only ${elsewhere.length} of ${ordered.length} states are driven outside traversal.test.mjs ` +
+    `(was 6, 11, 15, 17, 22, 23, 24, 25, 26, 29, 32) — coverage was LOST somewhere else in the ` +
+    `project, which is the direction this ratchet is kept for. Missing: ` +
+    `${ordered.filter((n) => !elsewhere.includes(n)).join(', ')}`);
   /* The thinness pins. Both are stated as "no worse than", so widening coverage never reddens
      them — only losing coverage does, which is the direction that matters for a regression.
      Measured: exactly ONE state (`bounce`) hangs on a single arm, and ZERO are placement-only. */
