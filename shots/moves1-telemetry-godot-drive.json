@@ -1,0 +1,92 @@
+{
+  "sha": "f51dd8b",
+  "dirty": "M src/player/Animation.js",
+  "W": 1920,
+  "H": 1080,
+  "Q": "high",
+  "ARM": "godot",
+  "errs": [],
+  "tele": {
+    "gaits": {
+      "walk": {
+        "node": "walk",
+        "stride": 3.038,
+        "speed": 3.24,
+        "phaseRate": 0.853,
+        "skate": 0.649,
+        "state": "move"
+      },
+      "run": {
+        "node": "run",
+        "stride": 6.195,
+        "speed": 5.206,
+        "phaseRate": 0.943,
+        "skate": 0.634,
+        "state": "move"
+      },
+      "sprint": {
+        "node": "run_fast",
+        "stride": 6.195,
+        "speed": 0.915,
+        "phaseRate": 0.181,
+        "skate": 0.205,
+        "state": "move"
+      }
+    },
+    "jump": {
+      "rise": [
+        {
+          "n": "jump_rise",
+          "w": 1,
+          "t": 0.083,
+          "lp": 1,
+          "end": 0
+        }
+      ],
+      "fall": [
+        {
+          "n": "jump_fall",
+          "w": 0.714,
+          "t": 0.1,
+          "lp": 1,
+          "end": 0
+        }
+      ],
+      "land": [
+        {
+          "n": "land_soft",
+          "w": 0.625,
+          "t": 0.05,
+          "lp": 0,
+          "end": 0
+        },
+        {
+          "n": "jump_fall",
+          "w": 1,
+          "t": 0.267,
+          "lp": 1,
+          "end": 0
+        }
+      ],
+      "landState": "land"
+    },
+    "poses": {},
+    "regime": {
+      "regime": "godot",
+      "origin": {
+        "walk": "godot:Walk",
+        "run": "godot:Run",
+        "run_fast": "godot:Run",
+        "jump_rise": "godot:Jump",
+        "jump_fall": "godot:Falling",
+        "double_jump": "godot:FrontFlip",
+        "land_soft": "godot:Landing",
+        "ledge_hang": "godot:LedgeGrab Idle",
+        "rail_walk": "godot:railrun",
+        "pole_climb": "godot:PoleClimbing",
+        "spire_land": "godot:SpireJumplanding",
+        "spire_balance": "godot:SpireJumpIdle"
+      }
+    }
+  }
+}

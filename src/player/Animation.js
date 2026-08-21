@@ -150,6 +150,9 @@ const GODOT_ALIAS = {
   walk:          'Walk',
   run:           'Run',
   run_fast:      'Run',            // no second run in the source; the tree needs the node filled
+  jump_rise:     'Jump',
+  jump_fall:     'Falling',
+  land_soft:     'Landing',
 };
 
 /** A raw authoring-format clip replayed over a different duration (events rescale with it). */
@@ -214,6 +217,11 @@ function spliceClip(name, mixRaw, donor, fill) {
     cane: donor.cane ? timeScale(donor.cane, k) : null,
     hold: Math.min(m.dur, donor.hold * k),
     mask: donor.mask || null,
+    /* Events are filled by the same rule as bones: the source's own when it has any (the
+       emitters derive footsteps for real gaits), else the donor's — time-scaled — so a swap
+       cannot silently mute a landing thud or a climb's hand-beat. Donor events live in
+       [0, donor.dur], so scaled they live in [0, m.dur] by construction. */
+    events: m.events.length ? m.events : donor.events.map((e) => ({ ...e, t: e.t * k })),
   };
 }
 

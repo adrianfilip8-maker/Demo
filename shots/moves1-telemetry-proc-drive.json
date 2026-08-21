@@ -1,0 +1,77 @@
+{
+  "sha": "f51dd8b",
+  "dirty": "M src/player/Animation.js",
+  "W": 1920,
+  "H": 1080,
+  "Q": "high",
+  "ARM": "proc",
+  "errs": [],
+  "tele": {
+    "gaits": {
+      "walk": {
+        "node": "walk",
+        "stride": 2.55,
+        "speed": 3.24,
+        "phaseRate": 1.1,
+        "skate": 0.436,
+        "state": "move"
+      },
+      "run": {
+        "node": "run",
+        "stride": 4.05,
+        "speed": 5.056,
+        "phaseRate": 1.37,
+        "skate": 0.493,
+        "state": "move"
+      },
+      "sprint": {
+        "node": "run_fast",
+        "stride": 4.85,
+        "speed": 6.263,
+        "phaseRate": 1.358,
+        "skate": 0.325,
+        "state": "move"
+      }
+    },
+    "jump": {
+      "rise": [
+        {
+          "n": "jump_rise",
+          "w": 1,
+          "t": 0.083,
+          "lp": 1,
+          "end": 0
+        }
+      ],
+      "land": [
+        {
+          "n": "land_soft",
+          "w": 0.833,
+          "t": 0.067,
+          "lp": 0,
+          "end": 0
+        },
+        {
+          "n": "jump_apex",
+          "w": 0.119,
+          "t": 0.25,
+          "lp": 1,
+          "end": 1
+        },
+        {
+          "n": "jump_fall",
+          "w": 0.833,
+          "t": 0.117,
+          "lp": 1,
+          "end": 0
+        }
+      ],
+      "landState": "land"
+    },
+    "poses": {},
+    "regime": {
+      "regime": "proc",
+      "origin": {}
+    }
+  }
+}
