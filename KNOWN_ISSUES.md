@@ -43954,3 +43954,54 @@ mirror reddens T4 alone.
 in these arms — the timeline is *scripted*. So the architecture's own bound is now measured, but a
 real driver's cadence (coalescing, its internal sampling rate, whether Chromium's snapshot lags the
 hardware) remains the user's re-test. `src/player/CameraRig.js` was not touched.
+
+## §526.1 — The procedural chain on camera: he was standing at rest on the finisher's contact frame
+
+`tools/canelook.mjs`, `AB=proc`, shipped model, same three `KeyF` presses at the chain's own
+cadence, same sample offsets, one commit apart — `253a89f` (before) against `0a84d2a` (after),
+each captured from its own clean worktree so no sibling lane's uncommitted `src/` sits between the
+press and the clip. `shots/chain2-*`, 16 frames and a telemetry file per arm, `errs 0` both,
+`dirty` empty in both.
+
+**The track composition, from the real browser.** The offline probe predicted this exactly and the
+shipped renderer confirms it with the real state machine and real key presses:
+
+```
+                BEFORE (253a89f)                             AFTER (0a84d2a)
+combo2-f6   c1@0.317/w1  c2@0.083/w1        wsum 2.00    c2@0.083/w1                  wsum 1.00
+combo3-f3   c1@0.5/w0.72 c2@0.267/w1 c3@0.033/w0.42 2.14 c3@0.033/w0.42 c2@0.267/w0.58 1.00
+combo3-f6   c1@0.55/w0.31 c2@0.317/w1 c3@0.083/w1  2.31  c3@0.083/w1                  1.00
+```
+
+Before, every contact frame from the second press onward carried at least two full-weight strikes
+and the third carried three. After, **every frame sums to exactly 1.00**: the contact frames are a
+single track at full weight and the only multi-track frames are the `f3` cross-fades, 0.58 falling
+against 0.42 rising — an ordinary transition rather than an average.
+
+**The picture.** At the third strike's contact frame (`combo3-f6`) the before arm has Sly
+**standing upright at rest**, weight even, arms down, the cane held vertically in front of him like
+a walking stick. It is not a weak strike; it is not a strike at all. That is what averaging c1's
+follow-through, c2's follow-through and c3's overhead wind-up produces — three poses that cancel to
+a neutral stand. After, the same frame has both hands overhead on the cane, body coiled and
+stretched tall, tail up: `cane_combo_3`'s authored wind-up into the slam, legible as a finisher
+about to land.
+
+`combo3-f3` one beat earlier says the same thing: before, hunched forward with the head down and
+both hands clasped low, the cane angled down across the body; after, tall and open with the head up
+and the hook clearly presented. **Two samples per claim** (§466.5), both arms.
+
+**Why `cane_combo_2` is the clearest case of the mechanism and the weakest frame.** Its own comment
+calls it "the backhand return, **mirrored** across the body" — so averaging c1's follow-through with
+c2's wind-up averages a pose with something close to its own mirror, and mirrored poses cancel to
+the rest pose almost exactly. That is precisely why the before arm reads as standing still. But the
+`combo2-f6` frame is captured from behind Sly at this camera, where the cane is occluded by his leg
+and tail, so the change is real in the telemetry (wsum 2.00 → 1.00) and barely legible in the
+picture. It is committed as the third frame of each arm for completeness and it is **not** one of
+the two samples the claim rests on; `combo3-f3` and `combo3-f6` are.
+
+**Limits.** Captured at `Q=low`, 1600×900, recorded in the telemetry — the box ran at load 7.6 on
+four cores. Quality changes post-processing only (model, skeleton, clip table, splice, skinning
+identical), so these carry a POSE read and not a look read. The first strike's frames are unchanged
+between arms, which is the control: the rule reached the chain seam and nothing else. What no frame
+here settles is whether the restored escalation READS as three hits — that is feel, it needs hands,
+and it is hardware item 20.
