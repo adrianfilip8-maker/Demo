@@ -41688,3 +41688,154 @@ The user, verbatim: *"17. the Impact shake is good."* The shake's five TUNE cons
 blind years-of-sections ago and reached a lens for the first time in §475.4, when the containment
 work found the subscription had never existed; the first human to see them ratifies them untouched.
 Item 17 closes. Recorded per the sheet's own rule: an answer of "leave it" is worth recording too.
+
+---
+
+## §516 — PS4 controller support: the Sly 2 layout, the analog gait it was all for, and the import that came in through the side door
+
+The user: *"While keeping the current controls, can support be added to allow control with a PS4
+controller? Keep the default Sly Cooper button mapping. Import any online resource that may be
+relevant to this task."*
+
+### §516.1 The source, and the honest shape of "fetched"
+
+The canonical layout is Sly 2/3's, retrieved 2026-08-21 by web search from the Sly 2: Band of
+Thieves control listings in the GameFAQs guides
+(`gamefaqs.gamespot.com/ps2/919949-sly-2-band-of-thieves/faqs/32526`, `/32945`, `/32545`), with
+`cheatcodes.com/guide/sly-3-honor-among-theives-complete-controls-…-74727` corroborating that
+Sly 3 keeps the scheme:
+
+```
+  left stick / d-pad  move                 right stick   rotate camera
+  X    jump; X,X double jump               Square        cane swing (hold: power-up whack)
+  O    open / pick up / activate; HOLD O near sparkles = ledge/wall sneak
+  Triangle  juggle;  X then Square = overhead smash;  X then Triangle = dive spin
+  X + R1    paraglide                      hold R1       run
+  L1 / L2 / R2   use equipped gadget       R3  Binocucom      L3  job markers
+```
+
+**Every direct page fetch is blocked by this container's egress proxy** (gamefaqs and sly.fandom
+both answer EGRESS_BLOCKED — re-verified this round, not inherited from the earlier attempt) — so
+the layout above is the search index's extraction of those guides, recorded as exactly that. Where
+the demo diverges the gap is documented, not invented: Triangle joins the ATTACK family (the
+juggle and the X-then-Triangle dive spin are cane strikes, and our air-attack IS the dive —
+Triangle-as-Binocucom is Sly 1's layout, not Sly 2's, and the Binocucom is cut by the user's own
+scope ruling); R1 carries the paraglide verbatim while its ground half (`hold R1 = run`) is
+delivered by stick magnitude instead; L1/L2/R2 are Sly 2's gadget slots and we have no gadgets, so
+they carry sneak/crouch/vision; R3 is Sly 2's Binocucom and carries our camera recentre; the
+`binocu` action is deliberately UNBOUND on the pad — a button that opens nothing teaches distrust.
+Camera zoom has no pad binding for the same reason: Sly 2 has no free-camera zoom control to
+inherit (zoom exists only inside the Binocucom, on the right stick / d-pad), so the wheel column
+stays keyboard-only and the README's pad column says so with a dash.
+
+### §516.2 What was already built, and what this round added
+
+Most of the pad path predates this round and is §422-era work adapted from the reference: buttons
+with analog hysteresis, §468-correct same-frame stamps (`_padButtons` runs inside `beginFrame`
+after the increment — the ONE device whose edges always worked), the radial-deadzone left stick
+with the `moveFloor` remap, and the right-stick look with its own deadzone/expo/sensitivity. **The
+analog gait the task calls the prize already flows end to end**: `_padStick` writes magnitude into
+`move`, `Controller._readInput` consumes it into `wishMag`, and `Move` multiplies `runSpeed` by it
+— the walk→run gradient the keyboard cannot express, deadzone 0.18 radial as a named constant with
+its derivation already documented on `INPUT_TUNE`. The hook-ring bail's four exits needed nothing:
+they read actions (`pressed('jump'/'interact'/'attack')`, crouch), so Cross/Circle/Square-Triangle/
+L2 feed them by construction.
+
+Added this round: the **§516.1 re-derivation of `PAD_BINDINGS`** (glide Triangle→R1, Triangle into
+attack, binocu unbound, each row annotated with its source line); **`lastDevice`** ('kbm' | 'pad',
+flipped by press source and by stick deflection past the deadzone, emitted as `inputDevice` on
+change only); the **prompt swap on both surfaces** — every controls-cel row gains a `p:` pad column
+and `_keysHtml` renders shapes or keys by the flag, and the LIVE contextual prompt translates its
+key through a `PAD_KEY` map (`E`→Circle, RMB→R2, …) so a pad player near a hook reads Circle, not
+"E"; and the **imported glyphs** (§516.3). One defect caught on the way: the first draft re-rendered
+the cel by replacing the element (`outerHTML =`), which would also have dropped its OPEN state — a
+pad button pressed while paused, the likeliest first pad touch, would have blanked the open cel.
+It now re-renders only `.sly-cols`, in place, and the §516 HUD arm holds the cel open across the
+flip to prove it.
+
+### §516.3 The import: refused at the front door, completed through the mirror — and the retraction that entails
+
+The concrete import is Kenney's Input Prompts (CC0, kenney.nl) — same licence basis as the kaykit
+props. **kenney.nl is egress-blocked (CONNECT 403, re-verified this round)** — and the earlier
+draft of this section stopped there, shipped self-authored stroke glyphs, and concluded "the proxy
+refused the import". That conclusion did not survive one more question: *a blocked domain is not a
+blocked resource.* The pack has a public GitHub mirror (`github.com/Maaack/Kenney-Input-Prompts`),
+`raw.githubusercontent.com` is open here, and a sparse clone of its `PlayStation Series/Vector/`
+delivered the real thing: **Input Prompts 1.3 (03-04-2025), licence file verbatim, CC0.** Twelve
+glyphs — the four colour face buttons, L1/L2/R1/R2, R3, the PS4 Options button, both sticks; 10.4
+KB total — are committed under `public/assets/prompts/` with `LICENSE.txt` (the pack's own, byte-
+identical) and a `PROVENANCE.md` mirroring kaykit's pattern: source, licence, the mirror route
+with its commit pinned (`dd37497`), byte-identity verified by `cmp` against the checkout, and one
+fact that makes the pin matter — the search index reports the CURRENT kenney.nl pack revision has
+dropped the PlayStation series entirely, so "re-download from the source" may not reproduce these
+files. CC0 is irrevocable for copies already distributed; the 1.3 mirror is licence-sound.
+
+Consumption: `Icons.padBtn` keeps the keycap idiom — ink round body, sticker offset — but gives
+pad caps a DARK face (`inkSoft`; a DualShock is black hardware) and rides the verbatim Kenney file
+on top via SVG `<image href="assets/prompts/…">`. Dark matters: eight of the twelve glyphs are
+white-on-transparent and would vanish on the keycaps' parchment, so contrast is solved at
+composition time and the committed assets stay untouched. Relative URL per the house `assets/…`
+convention (`base: './'`); nothing is fetched from off-origin at runtime; the earlier procedural
+strokes survive only as the text-label fallback for a glyph name with no file — which the HUD arm
+proves renders as text, never as a dead `<image>`. Basenames are written out literally in
+`PAD_GLYPH_FILES` because `bundle.test.mjs` decides dead-vs-live by quoted basename — and that
+suite now holds the directory and the table equal in both directions: no file without a consumer,
+no name without a file.
+
+### §516.4 Verification, and its stated limit
+
+Three instruments, in order of what they can see:
+
+**`input.test.mjs` arm 6** drives a `standard`-mapping stub through the real `_findPad`/
+`beginFrame` path: the five Sly rows edge on their polled frame (the §468 pad leg — no +1 needed,
+asserted); hysteresis refuses a second edge on a hold; half deflection lands strictly inside
+(moveFloor, 1) — the gait exists; the radial deadzone centres; the full diagonal cannot exceed 1
+(the 1.41 square-gate bug, RUN in-arm); and `lastDevice` flips both ways emitting once per change.
+The arm's own first failure was behaviourally correct — a stick still deflected re-claims the pad
+inside the same frame a key pressed, so a held stick beats a key press, and the arm releases the
+stick rather than the code special-casing it.
+
+**`hud.test.mjs` §516 arm** boots the real HUD on the shim: an 'E' prompt renders a keycap, the
+pad's claim re-renders it as Circle's imported glyph, the OPEN cel re-renders its columns in place
+(open state asserted held — the `outerHTML` defect above), all 12 glyph files resolve on disk from
+the rendered HTML, licence and provenance ride beside them, and the unknown-name fallback renders
+text (RUN counterexample in-arm). Mutation-checked: misspelling one filename in `PAD_GLYPH_FILES`
+fails the arm.
+
+**`tools/padprobe.mjs`** answers the one question no stub can: does the SHIPPED loop poll pads at
+all? Page-level mock (`navigator.getGamepads` replaced pre-boot with a DS4-shaped `standard` pad,
+calls counted), live rAF loop, real consumers. Its FIRST run failed two of its own bars while the
+composition visibly passed, and both failures were the instrument: a 1.5 s wall-clock window
+caught 5 frames (this container renders in software at ~3 fps — the frame count was bounded by
+render speed, not by the loop, §450.4; the ratio was a perfect 1.00 poll/frame the whole time),
+and the jump arm instrumented only `pressed('jump')` and read 0 while Sly VISIBLY JUMPED —
+`Jump.canEnter` consumes through `jumpBuffered()`, so the buffer is a first-class consumption
+route and a pressed-only counter is deaf to it (§442.3: the composition was right and the story
+about it was wrong). Both bars re-derived — the window is now ≥30 FRAMES regardless of wall
+clock, and the jump bar is the consumer itself (state enters `jump`) with pressed/buffered as
+telemetry. **The first run's mechanism numbers, which stand:** `getGamepads` 1.00 calls/frame the
+whole window (the loop polls the pad every frame it runs); Cross → state `idle → jump` with
+`lastDevice` claimed by the pad; the sweep 0.30/0.50/0.80/1.00 → `wishMag` 0.360/0.543/0.817/1.000
+(strictly monotone, 0.543 at half is the analytic value of the deadzone+floor remap to the third
+decimal) with settled speed 1.05 → 7.20 m/s — the full walk-to-run span, ending exactly at
+`runSpeed`; a real KeyW then reclaimed the flag, `inputDevice` emitting exactly `["pad","kbm"]`.
+The re-derived probe could not be re-run to completion this round: two attempts starved on a
+contended container (the precheck it now carries measured **0.02 fps** — the sibling lane's
+capture tools were queued on the same lock and the box has 4 cores at load 5+), recorded rather
+than retried into the sibling's working hours; the probe ships with the corrected bars for the
+next quiet window. The stick arm is a SWEEP per §450.4 — a gradient that reads the same number at
+four inputs is an instrument fault, not a pass — and the first run's four distinct readings are
+that discipline already satisfied.
+
+**does NOT discriminate: a physical DualShock 4.** No controller exists in this container, so the
+browser's HID→`standard` translation for real hardware — button order, axis sign, drift — is
+asserted by nothing here. Sheet item 14 hands the user the three checks that localize failure
+(stick moves Sly / Cross jumps and Square swings / prompts switch to shapes). The click-swallow
+latch (§514) is untouched and the pad path never meets it — pointer lock is a mouse concept, which
+is precisely why a pad player cannot be trapped by it.
+
+Suite **872/872** from a clean worktree at this commit's content on the base HEAD (870 there
+before this round; input arm 6 and the hud §516 arm added — the live shared tree is not the
+instrument, per the §510-era rule, and the sibling lane's in-flight Godot work never touches these
+numbers). `HUD.js` was unheld and is taken for the prompt swap, stated here; `Controller.js`
+needed no change and got none — `wishMag` was already the analog consumer end to end.

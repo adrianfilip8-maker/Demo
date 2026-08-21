@@ -183,6 +183,60 @@ export function keycap(label, cls = '') {
   `, `sly-key ${cls}`, `width="${w}" height="${h}"`);
 }
 
+/**
+ * The one directory of image files the HUD uses (§516) — Kenney's "Input Prompts" pack (1.3),
+ * CC0, 12 of ~1,500 glyphs, fetched from the pack's GitHub mirror because kenney.nl itself is
+ * egress-blocked where this was built. Provenance, licence and the pinned mirror commit:
+ * `public/assets/prompts/PROVENANCE.md`. The house rule this bends — "every glyph the HUD draws,
+ * as inline SVG" — is bent knowingly: the user's instruction for the pad work was *"import any
+ * online resource that may be relevant"*, and these ARE that import. They are still vectors,
+ * still served from our own origin, still crisp at 4K.
+ *
+ * Basenames are written out literally, one per line, because `tests/bundle.test.mjs` decides
+ * whether a `public/` asset ships-but-is-dead by searching src for its quoted basename — a
+ * constructed `\`playstation_${x}.svg\`` would mark all twelve as unreferenced payload.
+ */
+export const PAD_GLYPH_DIR = 'assets/prompts/';
+export const PAD_GLYPH_FILES = {
+  cross:    'playstation_button_color_cross.svg',
+  circle:   'playstation_button_color_circle.svg',
+  square:   'playstation_button_color_square.svg',
+  triangle: 'playstation_button_color_triangle.svg',
+  L1:       'playstation_trigger_l1.svg',
+  L2:       'playstation_trigger_l2.svg',
+  R1:       'playstation_trigger_r1.svg',
+  R2:       'playstation_trigger_r2.svg',
+  R3:       'playstation_button_r3.svg',
+  OPT:      'playstation4_button_options.svg',
+  LS:       'playstation_stick_l.svg',
+  RS:       'playstation_stick_r.svg',
+};
+
+/**
+ * A PS4 pad button in the keycap idiom (§516): the keycap's own round ink body and sticker
+ * offset, but a DARK face — a DualShock is black hardware, and it is also what makes the pack's
+ * glyphs legible: eight of the twelve are white-on-transparent, invisible on the parchment the
+ * keycaps use. The Kenney file rides on top via `<image>`, verbatim (the colour face buttons
+ * keep Kenney's Sony hues; the knockout shapes read as the dark face showing through, which is
+ * what the real controller looks like). Contrast is solved here, at composition time, so the
+ * committed assets stay untouched.
+ * `shape`: a `PAD_GLYPH_FILES` key. Anything else renders as a paint-ink text label, so a new
+ * binding shows *something* legible while its glyph is still unchosen.
+ */
+export function padBtn(shape, cls = '') {
+  const h = 52, w = 52;
+  const file = PAD_GLYPH_FILES[shape];
+  const mark = file
+    ? `<image href="${PAD_GLYPH_DIR}${file}" x="5" y="2" width="42" height="42"/>`
+    : `<text x="26" y="23.5" text-anchor="middle" dominant-baseline="central" font-family="${FONT}" font-size="17" font-weight="700" fill="${C.paint}">${String(shape)}</text>`;
+  return wrap(`0 0 ${w} ${h}`, `
+    <circle cx="26" cy="31" r="22" fill="${C.ink}"/>
+    <circle cx="26" cy="23" r="22" fill="${C.inkSoft}" stroke="${C.ink}" stroke-width="3.4"/>
+    <circle cx="26" cy="17" r="13.5" fill="#fffdf6" opacity=".14"/>
+    ${mark}
+  `, `sly-key ${cls}`, `width="${w}" height="${h}"`);
+}
+
 /** Mouse with one button lit gold — for the cane and Thief-o-Vision bindings. */
 export function mouse(button = 'left', cls = '') {
   const id = uid('mc');

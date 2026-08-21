@@ -85,47 +85,51 @@ const _mInv = new THREE.Matrix4();
 /* Straight out of AGENTS.md §6.1, with the move tech each binding unlocks (§6) attached —
    the game ships 25 moves and no tutorial, so the pause screen *is* the tutorial. */
 const M = (b) => ({ mouse: b });
+const P = (shape) => ({ pad: shape });
+/* §516: every row carries a `p:` pad column — the PS4 shapes/labels for the same verb, derived
+   from the Sly 2 layout (see Input.js PAD_BINDINGS for the source and the row-by-row
+   derivation). `_keysHtml` renders whichever column matches the last-used device. */
 const CONTROLS = [
   {
     title: 'GET AROUND',
     rows: [
-      { k: ['W', 'A', 'S', 'D'], d: 'Move', s: 'Camera-relative' },
-      { k: [M('wheel')], d: 'Look', s: 'Scroll to zoom' },
-      { k: ['Shift'], note: 'hold', d: 'Sneak', s: 'On a narrow ledge — tiptoe' },
-      { k: ['Ctrl'], d: 'Crouch', s: 'Tap while running — roll · in a vent — crawl' },
-      { k: ['Space'], d: 'Jump', s: 'Again in the air — double jump (cane twirl)' },
-      { k: ['Q'], note: 'hold', d: 'Paraglide' },
-      { k: ['R'], d: 'Recentre camera' },
+      { k: ['W', 'A', 'S', 'D'], p: [P('stick')], d: 'Move', s: 'Camera-relative · stick pressure walks → runs' },
+      { k: [M('wheel')], p: [P('stickR')], d: 'Look', s: 'Scroll to zoom' },
+      { k: ['Shift'], p: [P('L1')], note: 'hold', d: 'Sneak', s: 'On a narrow ledge — tiptoe' },
+      { k: ['Ctrl'], p: [P('L2')], d: 'Crouch', s: 'Tap while running — roll · in a vent — crawl' },
+      { k: ['Space'], p: [P('cross')], d: 'Jump', s: 'Again in the air — double jump (cane twirl)' },
+      { k: ['Q'], p: [P('R1')], note: 'hold', d: 'Paraglide', s: 'Sly 2\u2019s own X + R1' },
+      { k: ['R'], p: [P('R3')], d: 'Recentre camera' },
     ],
   },
   {
     title: 'CLIMB & SWING',
     rows: [
-      { k: ['Space'], note: 'at a wall', d: 'Wall run', s: 'Space again — wall jump · hold into it — cling' },
-      { k: ['Space'], note: 'under a ledge', d: 'Ledge hang', s: 'A / D — shimmy · W — climb up' },
-      { k: ['E'], note: 'at a hook ring', d: 'Cane hook + swing', s: 'Space releases with the swing · Ctrl drops off' },
-      { k: ['E'], note: 'on a rail', d: 'Rail slide', s: 'Slow to a walk and you balance it · Space hops off' },
-      { k: ['E'], note: 'on a pole', d: 'Pole climb', s: 'W / S — up and down · A / D — round the shaft · Ctrl — slide · Space — jump off' },
-      { k: [M('left')], note: 'on a pole', d: 'Pole swing', s: 'Whip round the shaft and let go' },
-      { k: ['Space'], note: 'onto a spire tip', d: 'Ninja Spire Landing', s: 'Jumping off a spire goes 25% higher' },
+      { k: ['Space'], p: [P('cross')], note: 'at a wall', d: 'Wall run', s: 'Space again — wall jump · hold into it — cling' },
+      { k: ['Space'], p: [P('cross')], note: 'under a ledge', d: 'Ledge hang', s: 'A / D — shimmy · W — climb up' },
+      { k: ['E'], p: [P('circle')], note: 'at a hook ring', d: 'Cane hook + swing', s: 'Space releases with the swing · Ctrl drops off' },
+      { k: ['E'], p: [P('circle')], note: 'on a rail', d: 'Rail slide', s: 'Slow to a walk and you balance it · Space hops off' },
+      { k: ['E'], p: [P('circle')], note: 'on a pole', d: 'Pole climb', s: 'W / S — up and down · A / D — round the shaft · Ctrl — slide · Space — jump off' },
+      { k: [M('left')], p: [P('square')], note: 'on a pole', d: 'Pole swing', s: 'Whip round the shaft and let go' },
+      { k: ['Space'], p: [P('cross')], note: 'onto a spire tip', d: 'Ninja Spire Landing', s: 'Jumping off a spire goes 25% higher' },
     ],
   },
   {
     title: 'CANE & THIEVERY',
     rows: [
-      { k: [M('left')], d: 'Cane combo', s: 'Three hits — the third one staggers' },
-      { k: [M('left')], note: 'in the air', d: 'Dive attack', s: 'The Cane Slam — 1.2 m shockwave' },
-      { k: ['Space'], note: 'onto a guard', d: 'Enemy bounce' },
-      { k: ['E'], note: 'near a guard', d: 'Pickpocket', s: 'From a few paces back he creeps in on his own — follow the sparkle' },
-      { k: [M('right')], note: 'hold', d: 'Thief-o-Vision', s: 'Highlights every affordance · hook lock-on · slow-mo' },
-      { k: [M('right'), 'A', 'D'], note: 'near a guard', d: 'Circle-strafe', s: 'Hold the lock and orbit him · W / S tighten or open it' },
+      { k: [M('left'), 'F'], p: [P('square')], d: 'Cane combo', s: 'Three hits — the third one staggers' },
+      { k: [M('left'), 'F'], p: [P('triangle')], note: 'in the air', d: 'Dive attack', s: 'The Cane Slam — 1.2 m shockwave' },
+      { k: ['Space'], p: [P('cross')], note: 'onto a guard', d: 'Enemy bounce' },
+      { k: ['E'], p: [P('circle')], note: 'near a guard', d: 'Pickpocket', s: 'From a few paces back he creeps in on his own — follow the sparkle' },
+      { k: [M('right')], p: [P('R2')], note: 'hold', d: 'Thief-o-Vision', s: 'Highlights every affordance · hook lock-on · slow-mo' },
+      { k: [M('right'), 'A', 'D'], p: [P('R2'), P('stick')], note: 'near a guard', d: 'Circle-strafe', s: 'Hold the lock and orbit him · W / S tighten or open it' },
     ],
   },
   {
     title: 'SYSTEM',
     rows: [
       { k: ['Tab'], d: 'Binocucom', s: 'Scout ahead · call the gang' },
-      { k: ['Esc'], d: 'Pause / release the pointer' },
+      { k: ['Esc'], p: [P('OPT')], d: 'Pause / release the pointer' },
       { k: ['P'], d: 'Freeze the simulation' },
       { k: ['F1'], d: 'Free camera', s: 'Debug' },
     ],
@@ -254,6 +258,21 @@ const PROMPT_KIND = { pickpocket: 'steal' };
 const KEY_ALIAS = {
   space: 'Space', shift: 'Shift', ctrl: 'Ctrl', control: 'Ctrl', alt: 'Alt',
   tab: 'Tab', esc: 'Esc', escape: 'Esc', enter: 'Enter', return: 'Enter',
+};
+
+/**
+ * §516: `normKey()` output → the PS4 glyph for the same verb, so the CONTEXTUAL prompt follows
+ * the player's hands like the pause cel does. Keyed on normalised keys rather than actions
+ * because that is what every `prompt()` caller passes ('E', 'Space', `{mouse:'left'}`); the
+ * mapping mirrors `Input.js` `PAD_BINDINGS` row for row and the §516 arm asserts both this and
+ * the cel's `p:` columns resolve to shipped glyph files. Deliberately absent: `Tab` (Binocucom —
+ * unbound on the pad, see PAD_BINDINGS) and `{mouse:'wheel'}` (zoom — Sly 2 has no free-camera
+ * zoom control to inherit), so both fall back to their keyboard caps, which is the documented
+ * gap rather than an invented button.
+ */
+const PAD_KEY = {
+  E: 'circle', Space: 'cross', F: 'square', Q: 'R1', R: 'R3',
+  Shift: 'L1', Ctrl: 'L2', 'mouse:left': 'square', 'mouse:right': 'R2',
 };
 
 export class HUD {
@@ -525,16 +544,24 @@ export class HUD {
   /* -------------------------------------------------------------- pause */
 
   _keysHtml(row) {
+    /* §516: the column follows the last-used device — a pad player reads shapes, a keyboard
+       player reads keys. `stick`/`stickR` resolve to the imported L/R stick glyphs; rows
+       without a pad column fall back to keys (debug rows are keyboard-only on purpose, and so
+       are the two verbs with no pad binding to show — Binocucom and wheel zoom). */
+    const pad = this.engine.input?.lastDevice === 'pad' && Array.isArray(row.p);
+    const list = pad ? row.p : row.k;
     let out = '';
-    for (const k of row.k) {
-      out += (k && k.mouse) ? Ico.mouse(k.mouse) : Ico.keycap(k);
+    for (const k of list) {
+      out += (k && k.pad) ? Ico.padBtn(k.pad === 'stick' ? 'LS' : k.pad === 'stickR' ? 'RS' : k.pad)
+        : (k && k.mouse) ? Ico.mouse(k.mouse) : Ico.keycap(k);
     }
     if (row.note) out += `<span class="plus">${row.note}</span>`;
     return out;
   }
 
-  _pauseHtml() {
-    const groups = CONTROLS.map((g) => `
+  /** The controls columns alone — split out so the §516 device swap can re-render them in place. */
+  _controlsHtml() {
+    return CONTROLS.map((g) => `
       <div class="sly-grp">
         <h4>${g.title}</h4>
         ${g.rows.map((r) => `
@@ -543,7 +570,10 @@ export class HUD {
             <span class="dsc">${r.d}${r.s ? `<small>${r.s}</small>` : ''}</span>
           </div>`).join('')}
       </div>`).join('');
+  }
 
+  _pauseHtml() {
+    const groups = this._controlsHtml();
     return `
       <div class="sly-pause">
         <div class="sly-pause-panel">
@@ -567,6 +597,21 @@ export class HUD {
   _wire() {
     const e = this.engine;
     const on = (evt, fn) => { const off = e.on(evt, fn); if (off) this._offs.push(off); };
+    /* §516: swap the prompts when the device changes. The controls cel's key columns re-render
+       in place — the cel is static HTML built once, and a pad player who opens it must read
+       shapes. In place matters: the first draft replaced the whole element via `outerHTML`,
+       which would also have dropped its open state, so a pad button pressed WHILE PAUSED (the
+       likeliest moment of the first pad touch) would blank the open cel. The LIVE contextual
+       prompt swaps too: it can be on screen at the change (walk to a hook with the stick,
+       having last touched a key), and a Circle player staring at an "E" is the exact confusion
+       this flag exists to prevent. */
+    on('inputDevice', () => {
+      const cols = this.el?.pause?.querySelector?.('.sly-cols');
+      if (cols) cols.innerHTML = this._controlsHtml();
+      if (this._built && this._promptText) {
+        this.el.promptKey.innerHTML = this._promptKeyHtml(this._promptKey);
+      }
+    });
 
     /* The screenshot contract. Belt: the event. Braces: the per-frame re-check in update(). */
     on('hideHud', () => this._applyVisibility());
@@ -776,6 +821,20 @@ export class HUD {
   }
 
   /**
+   * The one place a prompt key becomes pixels. Pad players get the PS4 glyph for the same verb
+   * when one exists (§516); everything else — and every key while the keyboard was touched
+   * last — renders exactly as before.
+   */
+  _promptKeyHtml(k) {
+    if (this.engine.input?.lastDevice === 'pad') {
+      // `k || 'E'` mirrors the keycap default below: a keyless prompt is the interact family.
+      const g = PAD_KEY[k?.mouse ? `mouse:${k.mouse}` : (k || 'E')];
+      if (g) return Ico.padBtn(g);
+    }
+    return k ? (k.mouse ? Ico.mouse(k.mouse) : Ico.keycap(k)) : Ico.keycap('E');
+  }
+
+  /**
    * Contextual verb. `prompt(null)` clears. Fast in, slow out — the ease asymmetry is what
    * makes an affordance feel eager rather than laggy.
    *
@@ -799,11 +858,7 @@ export class HUD {
       return;
     }
     const swap = this.el.prompt.classList.contains('on');
-    if (k !== this._promptKey) {
-      this.el.promptKey.innerHTML = k
-        ? (k.mouse ? Ico.mouse(k.mouse) : Ico.keycap(k))
-        : Ico.keycap('E');
-    }
+    if (k !== this._promptKey) this.el.promptKey.innerHTML = this._promptKeyHtml(k);
     if (kind !== this._promptKind) {
       this._promptKind = kind;
       this.el.prompt.dataset.kind = kind;

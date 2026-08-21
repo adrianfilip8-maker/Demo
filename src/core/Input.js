@@ -100,40 +100,64 @@ export const MOUSE_BINDINGS = {
 };
 
 /**
- * action -> W3C "Standard Gamepad" button index[].
+ * action -> W3C "Standard Gamepad" button index[]. A DualShock 4 maps `standard` in Chromium:
+ * 0 Cross · 1 Circle · 2 Square · 3 Triangle · 4 L1 · 5 R1 · 6 L2 · 7 R2 · 8 Share · 9 Options ·
+ * 10 L3 · 11 R3 · 12-15 d-pad.
  *
- * Adapted from the reference's `project.godot` `[input]` block, translated out of Godot's
- * `JoyButton` enum into the W3C layout the browser reports (they differ: Godot 9/10 are the
- * shoulders, W3C 4/5 are; Godot 6 is Start, W3C 9 is). Theirs, and what it maps to here:
+ * ── §516: re-derived from the CANONICAL Sly 2 layout, per the user's instruction ─────────────
+ * Source: the Sly 2: Band of Thieves control listings in the GameFAQs guides
+ * (gamefaqs.gamespot.com/ps2/919949-sly-2-band-of-thieves/faqs/32526, /32945; the midair move
+ * rows from /32545), obtained via web search on 2026-08-21 — direct page fetches are blocked by
+ * this container's egress proxy, which is recorded rather than papered over. The layout, as
+ * retrieved:
  *
- *   ui_accept  Godot 0  (A/Cross)      → `jump`      — same button, same job
- *   square     Godot 2  (X/Square)     → `attack`    — same
- *   circle     Godot 1  (B/Circle)     → `interact`  — theirs fires the pickpocket swipe on it
- *   triangle   Godot 3  (Y/Triangle)   → `glide`     — theirs emits a signal; the verb is ours
- *   esc        Godot 6  (Start)        → `pause`     — W3C index 9
- *   shift      Godot 10 (R1)           → *not taken* — theirs is a **sprint**; ours is a sneak,
- *                                        which is the opposite modifier, so copying the button
- *                                        would have copied the label and not the behaviour.
+ *   left stick / d-pad   move                 right stick    rotate camera
+ *   X                    jump; X,X double     Square         cane swing; hold = power-up whack
+ *   O                    open / pick up / activate; HOLD O near sparkles = ledge/wall sneak
+ *   Triangle             juggle; X, Square = overhead smash; X, Triangle = dive spin
+ *   X + R1               paraglide            hold R1        run
+ *   L1 / L2 / R2         use equipped gadget  R3             Binocucom    L3   job markers
  *
- * `sneak`/`crouch`/`focus`/`binocu`/`recentre` have no counterpart in the reference at all (it
- * has no stealth modifier, no lock-on and no Binocucom) and are ours. `focus` and `binocu` sit on
- * the analog triggers because both are hold-to-use.
+ * Derivation, row by row — the source decides, and every gap is documented not invented:
+ *
+ *   jump     [0]  Cross     verbatim (X = jump, X,X = double jump — our double jump matches)
+ *   attack   [2,3] Square + Triangle. Square is the cane swing verbatim. Triangle carries Sly 2's
+ *                  juggle and X-then-Triangle dive spin — both cane strikes; our air-attack IS
+ *                  the dive, so Triangle joins the attack family rather than gaining an invented
+ *                  verb. (Triangle = Binocucom is Sly 1's layout, not Sly 2's, and the Binocucom
+ *                  is cut from this demo by the user's scope ruling anyway.)
+ *   interact [1]  Circle    verbatim: the contextual thief action (open/pick up/activate, hold-
+ *                  to-sneak at sparkles) is exactly our E family — grabs, mounts, pickpocket.
+ *   glide    [5]  R1        from `X + R1 = paraglide`, verbatim for the air half. The ground
+ *                  half (`hold R1 = run`) is delivered by the analog stick instead: magnitude
+ *                  IS the walk→run gradient here (see `_padStick`), so a run modifier would be
+ *                  a second control for a thing the stick already expresses.
+ *   pause    [9]  Options   (Start on a DS2). The demo has no pause menu; the verb is inert.
+ *   recentre [11] R3        OURS. Sly 2 puts the Binocucom here; it is cut, so the slot carries
+ *                  our camera recentre rather than nothing.
+ *   sneak    [4] L1 · crouch [6] L2 · focus [7] R2 — OURS, in Sly 2's GADGET slots. This demo
+ *                  has no gadget system (out of scope), so the three slots carry our three
+ *                  modifiers; `focus` (Thief-o-Vision) sits on an analog trigger because it is
+ *                  hold-to-use, through the existing hysteresis. Documented as the gap: a Sly 2
+ *                  player expects gadgets on these, and there are none to bind.
+ *   binocu   —    UNBOUND on the pad. The Binocucom is out of scope by the user's ruling; a
+ *                  button that opens nothing teaches distrust (the HUD's own prompt rule).
+ *   d-pad    [12-15] move, verbatim ("digital buttons = move character").
  */
 export const PAD_BINDINGS = {
-  forward:  [12],       // d-pad up    — theirs binds the d-pad to ui_* alongside the stick
+  forward:  [12],
   back:     [13],
   left:     [14],
   right:    [15],
-  jump:     [0],
-  attack:   [2],
-  interact: [1],
-  glide:    [3],
-  sneak:    [4],        // LB
-  crouch:   [5],        // RB
-  focus:    [6],        // LT, analog — thresholded below
-  binocu:   [7],        // RT, analog
-  recentre: [11],       // R3
-  pause:    [9],        // Start
+  jump:     [0],        // Cross
+  attack:   [2, 3],     // Square + Triangle (juggle / dive-spin family)
+  interact: [1],        // Circle
+  glide:    [5],        // R1 — X+R1 paraglide
+  sneak:    [4],        // L1 — ours (gadget slot, no gadgets in scope)
+  crouch:   [6],        // L2 — ours (gadget slot)
+  focus:    [7],        // R2 — ours (gadget slot), analog hold via hysteresis
+  recentre: [11],       // R3 — ours (Sly 2: Binocucom, which is cut)
+  pause:    [9],        // Options
 };
 
 /** Standard Gamepad axis indices. 0/1 left stick, 2/3 right stick; +y is DOWN on both. */
@@ -203,9 +227,12 @@ function keyLabel(code) {
 }
 
 const MOUSE_LABEL = ['LMB', 'MMB', 'RMB', 'Mouse 4', 'Mouse 5'];
+/* §516: DS4 names, not the Xbox letters the scaffold shipped with — `describe('jump')` under a
+   Sly-2-derived PlayStation mapping must say "Space / Cross", not "Space / A". Same W3C indices
+   either way; only the vocabulary follows the §516 ruling that this game speaks PS4. */
 const PAD_LABEL = [
-  'A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Back', 'Start', 'L3', 'R3',
-  'D-Up', 'D-Down', 'D-Left', 'D-Right', 'Guide',
+  'Cross', 'Circle', 'Square', 'Triangle', 'L1', 'R1', 'L2', 'R2', 'Share', 'Options', 'L3', 'R3',
+  'D-Up', 'D-Down', 'D-Left', 'D-Right', 'PS',
 ];
 
 export class Input {
@@ -243,7 +270,7 @@ export class Input {
      * first draft of this file had one, and it was **read by nothing** — the exact defect
      * `Controller.js` keeps a register of (`c.pole`, `lastWallRec`, `spireLaunch`, `hitWall`).
      * `wishMag` already carries everything gameplay needs, and a prompt that wants to say
-     * "Space / A" should ask `describe(action)`, which is device-agnostic and always right.
+     * "Space / Cross" should ask `describe(action)`, which is device-agnostic and always right.
      */
     this.move = { x: 0, y: 0 };
 
@@ -252,6 +279,10 @@ export class Input {
     this.locked = false;
     this._lockFailed = false;   // §514: a failed grant opens the click gate until a real grant
     this._lockTimer = 0;
+    /* §516: which device the player used last — 'kbm' or 'pad'. HUD prompts read it to show
+       keycaps or shapes. Set on every press by source and on stick deflection past deadzone;
+       emitted as 'inputDevice' only on change. */
+    this.lastDevice = 'kbm';
     this.enabled = true;
     this.padEnabled = true;
     /** Live copy of INPUT_TUNE so a settings screen can nudge one number without a rebuild. */
@@ -367,7 +398,7 @@ export class Input {
 
   keysFor(action) { return [...(this._keys[action] || [])]; }
 
-  /** Human-readable, e.g. `describe('jump')` -> "Space / A". */
+  /** Human-readable, e.g. `describe('jump')` -> "Space / Cross". */
   describe(action) {
     const parts = (this._keys[action] || []).map(keyLabel);
     const mb = this._mouse[action];
@@ -516,7 +547,14 @@ export class Input {
    * `beginFrame` after the increment, i.e. at the frame boundary itself, and stamping +1 there
    * would push a pad press one real frame late. `inject` and the DOM sources get +1.
    */
+  _setDevice(dev) {
+    if (this.lastDevice === dev) return;
+    this.lastDevice = dev;
+    try { this.engine.emit('inputDevice', dev); } catch { /* HUD-less builds */ }
+  }
+
   _press(a, src = 'key') {
+    this._setDevice(src === 'pad' ? 'pad' : 'kbm');
     const s = this._src[src];
     if (!s || s.has(a)) return;
     s.add(a);
@@ -665,6 +703,7 @@ export class Input {
     let y = ax[PAD_AXES.moveY] || 0;
     const len = Math.hypot(x, y);
     if (len <= dz) return;
+    this._setDevice('pad');
     // Normalise first so a square-gated stick can't report 1.41 on the diagonal, then re-apply
     // the remapped magnitude. This is the honest reading of `normalized() * pressure`.
     const t = Math.min(1, (len - dz) / (1 - dz));

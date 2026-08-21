@@ -526,3 +526,87 @@ test('the HUD stays self-contained: no runtime fetches, no CDN, no web fonts', (
   }
   assert.equal(checked, 4);                                          // §211.1
 });
+
+/* ========================================================== §516 pad glyphs */
+
+test('§516: prompts follow the device, and every pad glyph they can name is a committed Kenney file', async () => {
+  /* ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : the real HUD under the shim — a keyboard 'E' prompt renders a keycap; after
+   *               the pad claims the device flag and `inputDevice` fires, the same on-screen
+   *               prompt re-renders as Circle's imported glyph and the OPEN pause cel's key
+   *               columns re-render to shapes in place, keeping their open state; flipping back
+   *               restores keycaps. Statically: every glyph name the cel's `p:` columns and the
+   *               PAD_KEY prompt map can reach resolves through PAD_GLYPH_FILES to a file that
+   *               exists under `public/assets/prompts/`, every payload file there is consumed
+   *               (nothing imported unused), and the licence + provenance ride beside them.
+   *   fails  on : RUN in-arm — a glyph name with no file ('L9') must render the text fallback
+   *               and no <image>; and, by construction, a deleted or renamed asset, a PAD_KEY
+   *               or `p:` row naming an unshipped glyph, or a 13th committed file no code path
+   *               consumes.
+   *   does NOT  : discriminate pixels — the shim renders nothing, so the white-glyph-on-dark-cap
+   *   discrim.    legibility argument in Icons.padBtn is design reasoning verified only by eyes
+   *               (hardware sheet item 14); nor a physical DualShock 4, which does not exist in
+   *               this container.
+   */
+  const { existsSync, readdirSync } = await import('node:fs');
+  const { padBtn, PAD_GLYPH_FILES } = await import('../src/ui/Icons.js');
+  const PROMPTS = new URL('../public/assets/prompts/', import.meta.url);
+
+  /* ---- static: the three name tables and the directory agree in every direction ---- */
+  const onDisk = readdirSync(PROMPTS).filter((f) => f.endsWith('.svg')).sort();
+  const shipped = [...new Set(Object.values(PAD_GLYPH_FILES))].sort();
+  assert.equal(shipped.length, 12, 'PAD_GLYPH_FILES gained or lost a glyph — re-pin this count deliberately');
+  assert.deepEqual(onDisk, shipped,
+    'public/assets/prompts/ and Icons.PAD_GLYPH_FILES disagree — a glyph is either committed with '
+    + 'no consumer (dead import) or named with no file (broken <image> at runtime)');
+  for (const doc of ['LICENSE.txt', 'PROVENANCE.md']) {
+    assert.ok(existsSync(new URL(doc, PROMPTS)), `${doc} must travel beside the CC0 assets`);
+  }
+  const hudSrc = read('ui/HUD.js');
+  const celNames = [...hudSrc.matchAll(/P\('([^']+)'\)/g)].map((m) => m[1])
+    .map((n) => (n === 'stick' ? 'LS' : n === 'stickR' ? 'RS' : n));
+  const mapBody = /const PAD_KEY = \{([\s\S]*?)\};/.exec(hudSrc)?.[1] ?? '';
+  const mapNames = [...mapBody.matchAll(/:\s*'([^']+)'/g)].map((m) => m[1]);
+  assert.ok(celNames.length >= 12 && mapNames.length >= 9,
+    `the scrape went blind — ${celNames.length} cel names, ${mapNames.length} map names`);   // §211.1
+  for (const n of [...celNames, ...mapNames]) {
+    assert.ok(PAD_GLYPH_FILES[n], `'${n}' is offered to players but PAD_GLYPH_FILES has no glyph for it`);
+  }
+
+  /* ---- RUN counterexample: an unknown name must fall back to text, not a dead image ---- */
+  const junk = padBtn('L9');
+  assert.ok(!junk.includes('<image') && junk.includes('L9'),
+    'an unmapped pad label must render as a text cap — a dead <image> is an invisible button');
+
+  /* ---- behavioural: the live prompt and the open cel follow the device flag ---- */
+  const { hud, engine } = await bootHud();
+  hud.prompt('Grab', 'E');
+  assert.ok(!hud.el.promptKey.innerHTML.includes('<image'),
+    'keyboard-last must render a keycap, and did not');
+  hud.el.pause.classList.add('on');                       // the cel is OPEN during the flip
+  engine.input.lastDevice = 'pad';
+  engine.emit('inputDevice', 'pad');
+  assert.ok(hud.el.promptKey.innerHTML.includes(PAD_GLYPH_FILES.circle),
+    "the on-screen 'E' prompt did not become Circle when the pad took the device");
+  assert.ok(hud.el.pause.classList.contains('on'),
+    'the device flip closed the open pause cel — the in-place re-render regressed to replacement');
+  const cols = hud.el.pause.querySelector('.sly-cols').innerHTML;
+  const used = new Set([...cols.matchAll(/href="assets\/prompts\/([^"]+)"/g)].map((m) => m[1]));
+  assert.equal(used.size, 12,
+    `the pad cel should render all 12 imported glyphs, rendered ${used.size} — a row lost its pad column`);
+  for (const f of used) {
+    assert.ok(existsSync(new URL(f, PROMPTS)), `the cel names ${f} and the file is not committed`);
+  }
+  hud.prompt('Thief-o-Vision', 'RMB');
+  assert.ok(hud.el.promptKey.innerHTML.includes(PAD_GLYPH_FILES.R2),
+    'a mouse-bound prompt (RMB) must map to its pad verb (R2) while the pad is live');
+  hud.prompt('Open', undefined);
+  assert.ok(hud.el.promptKey.innerHTML.includes(PAD_GLYPH_FILES.circle),
+    "a keyless prompt defaults to the interact family — on pad that is Circle, not a keycap 'E'");
+  engine.input.lastDevice = 'kbm';
+  engine.emit('inputDevice', 'kbm');
+  hud.prompt('Grab', 'E');
+  assert.ok(!hud.el.promptKey.innerHTML.includes('<image'),
+    'returning to the keyboard must restore keycaps, and did not');
+  hud.dispose();
+});

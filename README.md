@@ -21,20 +21,30 @@ npm run dev          # http://localhost:5173
 
 ## Controls
 
-| | |
-|---|---|
-| `W A S D` | move (camera-relative) |
-| Mouse | look · scroll to zoom |
-| `Space` | jump · double jump · wall jump · spire jump — hold for height |
-| `Shift` | sneak |
-| `Ctrl` | crouch · tap while running to roll |
-| Left Mouse | cane combo · in air, dive attack |
-| Right Mouse | hold for Thief-o-Vision and hook lock-on |
-| `E` | interact · pickpocket · grab hook · mount rail |
-| `Q` | paraglide (hold) |
-| `Tab` | Binocucom |
-| `R` | recentre camera |
-| `F1` `F2` `F3` | debug overlay · quality · collider view |
+Keyboard/mouse and a PS4 controller both work, together — the game follows whichever you touched
+last (HUD prompts switch with it). The pad column is the Sly 2: Band of Thieves layout (per the
+GameFAQs control listings for the PS2 release); on the pad, stick pressure gives the genuine
+walk-to-run the keyboard cannot.
+
+| Keyboard / mouse | PS4 | |
+|---|---|---|
+| `W A S D` | left stick / d-pad | move (camera-relative) |
+| Mouse | right stick | look · scroll / — to zoom |
+| `Space` | Cross | jump · double jump · wall jump · spire jump — hold for height |
+| `Shift` | L1 | sneak |
+| `Ctrl` | L2 | crouch · tap while running to roll |
+| Left Mouse / `F` | Square · Triangle | cane combo · in air, dive attack (Sly 2's X-then-Triangle dive) |
+| Right Mouse | R2 (hold) | Thief-o-Vision and hook lock-on |
+| `E` | Circle | interact · pickpocket · grab hook · mount rail |
+| `Q` | R1 (hold) | paraglide — Sly 2's own X + R1 |
+| `Tab` | — | Binocucom (not in this demo) |
+| `R` | R3 | recentre camera |
+| `F1` `F2` `F3` | — | debug overlay · quality · collider view |
+
+Sly 2 puts gadgets on L1/L2/R2 and the Binocucom on R3; this demo has neither system, so those
+slots carry the sneak/crouch/vision modifiers and the camera recentre instead — the gaps are
+documented in `src/core/Input.js`, not silently rebound. The on-screen button glyphs are from
+Kenney's CC0 Input Prompts pack (provenance: `public/assets/prompts/PROVENANCE.md`).
 
 ## The moveset
 

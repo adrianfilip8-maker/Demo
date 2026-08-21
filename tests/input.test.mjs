@@ -476,10 +476,11 @@ test('rebinding: conflicts() finds a double-bound key and describe() names every
   assert.deepEqual([...c[jump]].sort(), ['jump', 'sneak']);
 
   // describe() is what a prompt renders, so it must name the pad as well as the key. `jump` is
-  // Space on the keyboard and button 0 (A) on the pad.
+  // Space on the keyboard and button 0 on the pad — which §516 names Cross, not the Xbox 'A'
+  // the scaffold shipped: the mapping is Sly 2's, so the vocabulary is the DualShock's.
   const d = input.describe('jump');
   assert.ok(d.includes('Space'), `describe('jump') = "${d}" — the keyboard binding is missing`);
-  assert.ok(d.includes('A'), `describe('jump') = "${d}" — the pad binding is missing`);
+  assert.ok(d.includes('Cross'), `describe('jump') = "${d}" — the pad binding is missing or mis-labelled`);
 });
 
 /* ====================================================================== */
@@ -617,4 +618,88 @@ test('attack has a lock-independent keyboard route', () => {
   assert.equal(input.pressed('attack'), true,
     `a ${code} tap did not press attack on the frame after dispatch — the §468 stamp contract broke`);
   keyUp(code);
+});
+
+/* ====================================================================== */
+/* 6 — §516: the PS4 pad — Sly mapping, analog gait, edges, device flag    */
+/* ====================================================================== */
+
+test('pad: the Sly 2 mapping holds, the stick is a genuine walk-to-run, and pad edges stamp the polled frame', () => {
+  /* ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : a `standard`-mapping stub driven through the real `_findPad`/`beginFrame`
+   *               path — Cross jumps, Square AND Triangle attack, Circle interacts, R1 glides;
+   *               half deflection lands strictly between moveFloor and 1; inside the radial
+   *               deadzone the stick is centred; the press is visible on the SAME frame the pad
+   *               is polled (the §468 pad leg: `_padButtons` runs inside `beginFrame` after the
+   *               increment, so pad stamps need no +1).
+   *   fails  on : RUN in-arm — the diagonal at full deflection, which must NOT report magnitude
+   *               1.41 (the square-gate bug the radial normalise exists to prevent); and a
+   *               second press without release, which must NOT re-edge (hysteresis).
+   *   does NOT  : discriminate a physical DualShock 4 — no controller exists in this container;
+   *   discrim.    axis conventions and the browser's `standard` layout for real DS4 hardware are
+   *               verified only by the user's re-test (sheet item 14). Nor does it cover the
+   *               right stick's feel (sensitivity/expo are sheet material).
+   */
+  const { input, events } = makeInput();
+  const B = (n) => { const b = Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })); if (n >= 0) b[n] = { pressed: true, value: 1 }; return b; };
+
+  /* the mapping, row by row against the fetched Sly 2 layout (Input.js §516 block) */
+  for (const [idx, action] of [[0, 'jump'], [2, 'attack'], [3, 'attack'], [1, 'interact'], [5, 'glide']]) {
+    pads = [pad({ buttons: B(idx) })];
+    input.beginFrame(1 / 60);
+    assert.equal(input.pressed(action), true,
+      `standard button ${idx} did not press '${action}' on its polled frame — the Sly 2 row `
+      + '(Cross=jump, Square/Triangle=attack, Circle=interact, R1=paraglide) has drifted');
+    pads = [pad({ buttons: B(-1) })];
+    input.beginFrame(1 / 60);   // release so the next row re-edges
+  }
+
+  /* hysteresis: held is not a second press */
+  pads = [pad({ buttons: B(0) })];
+  input.beginFrame(1 / 60);
+  assert.equal(input.pressed('jump'), true, 'first frame of the hold must edge');
+  input.beginFrame(1 / 60);
+  assert.equal(input.pressed('jump'), false, 'second frame of the same hold re-edged — pad hysteresis broke');
+  assert.equal(input.down('jump'), true, 'held must stay down while pressed');
+  pads = [pad({ buttons: B(-1) })];
+  input.beginFrame(1 / 60);
+
+  /* analog gait: the prize — magnitude survives to `move` with floor and radial deadzone */
+  const dz = INPUT_TUNE.deadzone, floor = INPUT_TUNE.moveFloor;
+  pads = [pad({ axes: [0, -(dz * 0.9), 0, 0] })];          // inside the deadzone: centred
+  input.beginFrame(1 / 60);
+  assert.equal(Math.hypot(input.move.x, input.move.y), 0,
+    'a deflection inside the radial deadzone leaked into move');
+  pads = [pad({ axes: [0, -0.5, 0, 0] })];                  // half forward
+  input.beginFrame(1 / 60);
+  const half = Math.hypot(input.move.x, input.move.y);
+  assert.ok(half > floor && half < 1,
+    `half deflection delivered ${half.toFixed(3)} — the walk-to-run gradient must sit strictly `
+    + `between moveFloor ${floor} and 1, or the pad is the two-state switch the keyboard already is`);
+  pads = [pad({ axes: [0, -1, 0, 0] })];                    // full forward
+  input.beginFrame(1 / 60);
+  assert.ok(Math.abs(Math.hypot(input.move.x, input.move.y) - 1) < 1e-6, 'full deflection must be 1');
+  /* the counterexample, RUN: the diagonal must not exceed 1 */
+  pads = [pad({ axes: [1, -1, 0, 0] })];
+  input.beginFrame(1 / 60);
+  assert.ok(Math.hypot(input.move.x, input.move.y) <= 1 + 1e-6,
+    `full diagonal delivered ${Math.hypot(input.move.x, input.move.y).toFixed(3)} — the radial `
+    + 'normalise is gone and diagonals run 41% faster');
+
+  /* the device flag: pad flips it, a key flips it back, each change emits once */
+  const flips = events.filter((e) => e.evt === 'inputDevice').map((e) => e.p);
+  assert.equal(input.lastDevice, 'pad', 'pad input did not claim the device flag');
+  /* Release the stick before the key: a stick still deflected re-claims the pad inside the same
+     beginFrame — the arm's first version missed that, and it is CORRECT behaviour (a held stick
+     is ongoing pad use), so the arm releases rather than the code special-casing. */
+  pads = [pad({ axes: [0, 0, 0, 0] })];
+  keyDown(firstKey(input, 'jump'));
+  input.beginFrame(1 / 60);
+  assert.equal(input.lastDevice, 'kbm', 'a key press did not reclaim the device flag');
+  keyUp(firstKey(input, 'jump'));
+  const after = events.filter((e) => e.evt === 'inputDevice').map((e) => e.p);
+  assert.ok(after.length > flips.length && after[after.length - 1] === 'kbm',
+    'the device change did not emit inputDevice — HUD prompts cannot follow the player\'s hands');
+  const dupes = after.filter((d, i) => i > 0 && after[i - 1] === d);
+  assert.equal(dupes.length, 0, 'inputDevice emitted without a change — the HUD re-renders every frame');
 });

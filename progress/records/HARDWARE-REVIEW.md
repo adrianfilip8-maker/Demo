@@ -1171,3 +1171,32 @@ without ever being seen; if the slam's kick reads as flinch rather than impact t
 size, that lane's). (2) **doubling** — the HUD's DOM wobble still fires on the same events; if
 lens + HUD together read as a broken monitor, the HUD's `shakeGain` is the one to turn down, not
 this wiring.
+
+---
+
+## 14. PS4 controller — plug in and play; three checks if it doesn't
+
+**Commit** this round · **Files** `src/core/Input.js`, `src/ui/HUD.js`, `src/ui/Icons.js`,
+`public/assets/prompts/` (Kenney Input Prompts glyphs, CC0 — the online import you asked for)
+
+Your pad request is in: Sly 2's own layout (Cross jump, Square/Triangle cane, Circle interact,
+X+R1 paraglide; the gadget slots carry sneak/crouch/vision since this demo has no gadgets — the
+full table with its source is in the README). Keyboard and mouse are unchanged and both devices
+work at once; prompts follow whichever you touched last — the pause cel's key column becomes PS4
+shapes, and the on-screen prompt at a hook reads Circle instead of E. **Stick pressure is the
+real prize: it walks→runs continuously, which the keyboard cannot.**
+
+No physical controller exists where this was built (a scripted pad drove the real input path and
+the live loop; your DualShock is the one thing it cannot stand in for), so your re-test is the
+closing evidence. Three checks, in order, each localizing a different layer:
+
+1. **Does the left stick move Sly?** No → the browser isn't reporting the pad as `standard`
+   mapping (try Chromium; check `navigator.getGamepads()` in the console shows buttons).
+2. **Does Cross jump and Square swing?** Stick yes but buttons no → the button table is off for
+   your pad — say which button does what and we re-derive.
+3. **After touching the pad, does the prompt near a hook/rail show a Circle glyph, and does the
+   pause screen show shapes?** No → the device flag isn't flipping or the glyphs aren't loading;
+   everything else can still work.
+
+And one feel note: half stick should be a genuine walk. If it feels like a switch, say so —
+deadzone 0.18 and the floor remap are one named constant each.
