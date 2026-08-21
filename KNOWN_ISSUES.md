@@ -41952,3 +41952,35 @@ stronger record; the lost JSON would have duplicated it.
   (`takeWith`): they guard the §474 mechanics, which ship as the `?anim=proc` control.
 - `tests/bundle.test.mjs` registers `sly-godot-moves.glb` as the fourth build-time input.
 - Suite **874/874**, EXIT=0, from a clean worktree at this commit.
+
+### §516.5 The corrected probe's first clean pass — at 0.2 fps, which is the point
+
+Run in the first window the capture-lock FIFO granted after §516 shipped (the probe waited its
+turn 40 minutes behind the sibling lane's captures), on the committed tip `19973af`, **all arms
+pass, exit 0** — with the container at **0.2 fps**, fifteen times slower than the 3 fps that broke
+the original wall-clock bars. That is the re-derivation validated as a class fix, not an instance
+fix: frame-count windows pass wherever the loop is honest, at any speed the box can manage.
+
+```
+[A poll  ] getGamepads called 32× over 32 rAF frames (1.00/frame · 0.2 fps in this container)
+[B cross ] state idle → fall (jumped=true) · consumed via pressed 0× / buffered 1× · device pad
+[C stick ] deflect 0.30 → wishMag 0.360 · speed 2.59 m/s
+[C stick ] deflect 0.50 → wishMag 0.543 · speed 3.91 m/s
+[C stick ] deflect 0.80 → wishMag 0.817 · speed 5.88 m/s
+[C stick ] deflect 1.00 → wishMag 1.000 · speed 7.20 m/s
+[D reclaim] device kbm · inputDevice emits ["pad","kbm"]
+```
+
+Three details worth the ink. **`pressed 0× / buffered 1×`** is §516.4's attribution confirmed on
+the shipped code: the jump was consumed through `jumpBuffered()` exactly as the re-derivation
+claimed, and a pressed-only instrument would have read 0 again while Sly jumped. **Arm B samples
+`fall`** because at 0.2 fps the arc had already peaked by the read after `frames(2)` — which is why
+the arm's bar is the `playerState` latch (`jumped=true`) and not the instantaneous state name.
+**The speed sweep is cleaner than run 1's** (2.59/3.91/5.88/7.20 vs 1.05/3.13/3.62/7.20): the
+land-before-sweep grounded wait and the per-step `frames(6)` gave every plateau real sim time, so
+the settled numbers now track the wishMag gradient instead of sampling mid-acceleration. `wishMag`
+itself reproduced run 1 to the third decimal at every deflection — the remap is deterministic and
+both runs measured the same curve.
+
+Nothing in shipped gameplay code changed for this pass; the §516.4 record already said the
+composition was right and the instrument was wrong, and this is the instrument agreeing.
