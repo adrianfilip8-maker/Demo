@@ -434,6 +434,14 @@ export function buildClipSet(raw) {
     if (o && o.events) timed = { ...timed, events: o.events };
     let built = spliceClip(game, timed, CLIPS[game], fill);
     if (godot) built = openElbows(built, elbowOpenFor(game));   // §479.6 — ships at 0, see above
+    /* SOURCE IDENTITY, carried on the clip itself rather than looked up in a side table (§525).
+       Two game clips with the same `source` are the SAME authored motion under two names — which
+       is the normal case for an imported set with fewer clips than we have verbs (their tree has
+       ONE ground attack, so all three combo slots are `godot:Canehit`). `play()` uses this to
+       refuse to layer a motion on top of itself; see the one-shot coalesce there for why an
+       average of one arc with itself is not a pose the animator ever drew. Procedural clips
+       carry NO source — each is its own motion — so the rule cannot reach them. */
+    built = { ...built, source: `${tag}:${src}` };
     table[game] = built;
     origin[game] = `${tag}:${src}`;
     used.add(src);
@@ -674,6 +682,45 @@ export class Animation {
         tr.target = weight; tr.loop = loop || tr.loop; tr.speed = speed; tr.lock = tr.lock || lock;
         if (loop) this._demoteOthers(tr, fade);
         return tr;
+      }
+    }
+
+    /**
+     * ONE-SHOT COALESCE (§525) — a motion may not be layered on top of itself.
+     *
+     * THE DEFECT. `Canehit` is the reference's ONLY ground attack (censused by content in §525,
+     * not taken on the strength of its name), so all three of our combo slots resolve to it.
+     * Mashing attack re-swings at `_elapsed >= _t * 0.55` = 0.154 s against a 0.5 s clip, so the
+     * old code had THREE tracks of the same arc live at three different phases, every one of them
+     * pinned at weight 1.0 for 0.30 s. `PoseBuffer.addQuat` averages them, and the average of one
+     * arc with itself out of phase is not a pose from that arc: measured at up to 32.3° from the
+     * NEAREST hand orientation anywhere in the authored clip (`tools/comboseam.mjs`). The cane is
+     * socketed rigidly to `handR` (`SlyModelDLRig`), so an invented hand orientation is an
+     * invented cane direction — which is exactly the cane-trailing frame §479.9 photographed and
+     * left unpatched pending the census.
+     *
+     * THE RULE. When a one-shot fires and a live one-shot is already playing the same `source`,
+     * END the old one instead of adding a fourth voice. The two then cross-fade — old weight
+     * strictly falling, new strictly rising — which is an ordinary transition rather than an
+     * equal-weight average of three phases of one curve.
+     *
+     * WHY THIS SHAPE. It is the reference's own answer, adapted rather than ported: their tree
+     * has a SINGLE `Hit Shot` AnimationNodeOneShot (fadein 0.1, fadeout 0.1) that every square
+     * press re-fires (`player__sly.gd:640` sets `transition_request` + `ONE_SHOT_REQUEST_FIRE`,
+     * with no combo index anywhere in the script) — so their attack never has two instances live
+     * either. We keep our own three-slot chain, its lunges, its per-slot events and its shake;
+     * only the layering of identical motion is removed.
+     *
+     * WHAT IT DOES NOT TOUCH. Procedural clips have no `source`, so a proc combo still layers
+     * three genuinely different motions and reads exactly as before — the swap-back under
+     * `?anim=proc` is unaffected. Distinct sources (`hook_grab`/`hook_swing`) never match. Loop
+     * clips take the `_demoteOthers` path above and never reach here.
+     */
+    if (!loop && c.source) {
+      for (const tr2 of this.tracks) {
+        if (tr2.clip && !tr2.ending && !tr2.loop && tr2.clip !== c && tr2.clip.source === c.source) {
+          this._end(tr2, fade);
+        }
       }
     }
 

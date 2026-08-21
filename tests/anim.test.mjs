@@ -675,3 +675,122 @@ test('combat/pickpocket/hook wiring (§479.8): sourced from the reference, whole
     assert.ok(p.table[n], `?anim=proc has no "${n}" at all`);
   }
 });
+
+test('combo chain seam (§525): a motion is never layered on top of itself, and every strike in a mash delivers its full reach', async () => {
+  /* THE DEFECT THIS GUARDS. Their tree has exactly ONE ground attack — established in §525 by
+     censusing all 24 clips of `SlyCooper_Anims27.gltf` BY CONTENT rather than by name, plus the
+     four `[Action Stash]*` in Anims4 (two are byte-identical duplicates of Jump and Walk; the
+     other two are an idle and a run variant) and `KeyAction.001` (a single facial morph-weight
+     channel on Head_LowPoly, no body motion at all). So all three of our combo slots resolve to
+     `godot:Canehit`, and the old mixer put three tracks of that one arc on the body at three
+     different phases, each pinned at weight 1.0 for 0.30 s. `PoseBuffer.addQuat` averages them,
+     and the average of an arc with itself out of phase is a pose the arc never passes through —
+     which is an invented cane direction, because the shipped model sockets the cane rigidly to
+     `handR` (`SlyModelDLRig`).
+
+     THE MEASURE is §479.8's, reused rather than reinvented: max forward reach of the swinging
+     hand relative to the hips. It is calibrated in the arm above against the house's own
+     `cane_hit`, so a number out of it means something.
+
+     DOMAIN (§418.3) — passes on: the shipped godot table under a mashed chain at the real
+     cadence (`Combo.update` re-swings at `_elapsed >= _t*0.55`, `TUNE.comboTimes`), where each
+     of the three slots delivers a peak within 2% of a clean single swing and no more than two
+     tracks are ever live. Fails on: the SAME table with `source` stripped, RUN BELOW as the
+     control — that is exactly the pre-§525 mixer (the rule's whole input is `c.source`), and it
+     reproduces the defect at three live tracks and strikes 2 and 3 short of the clean peak.
+     Cannot discriminate: whether the chain READS as three hits at game framing, whether the
+     cross-fade during the brief 2-track overlap is the right length, or anything about the
+     torso, feet or lunge — this reads one hand. `shots/seam1-{before,after}-*` carry the picture. */
+
+  const { Animation } = await import('../src/player/Animation.js');
+  const g = buildClipSet('godot').table;
+  const rig = reachRig();
+  const pb = new PoseBuffer(RIG3.BONE_ORDER);
+  const wp = (n) => new THREE.Vector3().setFromMatrixPosition(rig.bones[n].matrixWorld);
+  const DT = 1 / 60;
+
+  /* Drive the REAL mixer. `_advance` + a manual sample need neither character nor rig, and using
+     the real one means a change to fades, track count or the chain rule shows up here. */
+  const mash = (table) => {
+    const a = new Animation({ warn() {}, emit() {} });
+    a.pose = new PoseBuffer(RIG3.BONE_ORDER);
+    /* play() resolves through the module-level ACTIVE table, so drive the arm by swapping the
+       three entries under test — the same seam the tool uses, and the reason the control below
+       is a real control rather than a parallel reimplementation. */
+    const saved = {};
+    for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3']) { saved[n] = ACTIVE[n]; ACTIVE[n] = table[n]; }
+    try {
+      let idx = 0, elapsed = 0, t = 0;
+      const peak = { 1: -Infinity, 2: -Infinity, 3: -Infinity };
+      let maxLive = 0;
+      const swing = () => { idx = idx >= 3 ? 1 : idx + 1; elapsed = 0; a.play(`cane_combo_${idx}`, { fade: 0.08, loop: false, speed: 1 }); };
+      swing();
+      while (t < 1.2) {
+        a._advance(DT, t);
+        a.pose.clear();
+        const live = [];
+        for (const tr of a.tracks) {
+          if (!tr.clip || tr.w <= 0.001) continue;
+          sampleInto(tr.clip, tr.time, a.pose, tr.w);
+          live.push(tr);
+        }
+        if (live.length) {
+          maxLive = Math.max(maxLive, live.length);
+          for (const n of RIG3.BONE_ORDER) {
+            const b = rig.bones[n]; if (!b) continue;
+            if (a.pose.w[n] > 0) b.quaternion.copy(a.pose.q[n]); else b.quaternion.identity();
+          }
+          rig.rt.updateMatrixWorld(true);
+          const r = wp('handR').z - wp('hips').z;
+          const dom = live.reduce((x, y) => (y.w > x.w ? y : x));
+          const m = /cane_combo_(\d)/.exec(dom.clip.name);
+          if (m) peak[m[1]] = Math.max(peak[m[1]], r);
+        }
+        t += DT; elapsed += DT;
+        if (elapsed >= TUNE.comboTimes[idx - 1] * 0.55 && idx < 3) swing();
+      }
+      return { peak, maxLive };
+    } finally { for (const n of Object.keys(saved)) ACTIVE[n] = saved[n]; }
+  };
+
+  /* A clean single swing is the yardstick every slot is measured against. */
+  let clean = -Infinity;
+  for (let t = 0; t <= g.cane_combo_1.dur + 1e-9; t += DT) {
+    pb.clear();
+    sampleInto(g.cane_combo_1, Math.min(t, g.cane_combo_1.dur), pb, 1);
+    for (const n of RIG3.BONE_ORDER) {
+      const b = rig.bones[n]; if (!b) continue;
+      if (pb.w[n] > 0) b.quaternion.copy(pb.q[n]); else b.quaternion.identity();
+    }
+    rig.rt.updateMatrixWorld(true);
+    clean = Math.max(clean, wp('handR').z - wp('hips').z);
+  }
+  assert.ok(clean > 0.2, `the clean swing's reach (${clean.toFixed(4)}) is implausible — the yardstick is broken, so nothing below means anything`);
+
+  /* ---- CONTROL: strip `source` and the defect must come back ------------------------------ */
+  const stripped = {};
+  for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3']) { const { source, ...rest } = g[n]; stripped[n] = rest; }
+  const before = mash(stripped);
+  assert.equal(before.maxLive, 3,
+    `CONTROL FAILED: with \`source\` stripped the mixer should layer three copies of Canehit (that is the pre-§525 build), but maxLive was ${before.maxLive} — `
+    + `the control no longer reproduces the defect, so the pass below is not evidence of anything`);
+  assert.ok(before.peak[3] < clean * 0.95,
+    `CONTROL FAILED: the layered build's third strike reached ${before.peak[3].toFixed(4)} of a clean ${clean.toFixed(4)} — the defect did not reproduce`);
+
+  /* ---- the shipped table: at most a cross-fade, and every strike whole -------------------- */
+  const after = mash(g);
+  assert.ok(after.maxLive <= 2,
+    `the shipped chain put ${after.maxLive} tracks of the same source on the body at once — a motion is being layered on itself again`);
+  for (const slot of [1, 2, 3]) {
+    assert.ok(after.peak[slot] >= clean * 0.98,
+      `strike ${slot} of a mashed chain delivered ${after.peak[slot].toFixed(4)} m of reach against ${clean.toFixed(4)} for a clean single swing `
+      + `(${((after.peak[slot] / clean - 1) * 100).toFixed(1)}%) — the chain is smearing strikes together again`);
+  }
+
+  /* The procedural set must be untouched by all of this: no clip there carries a `source`, so
+     the rule cannot reach it and `?anim=proc` restores the old layering exactly. */
+  const p = buildClipSet('proc').table;
+  for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3']) {
+    assert.equal(p[n].source, undefined, `procedural "${n}" carries a source — the coalesce rule would reach the proc set and ?anim=proc would no longer restore it`);
+  }
+});
