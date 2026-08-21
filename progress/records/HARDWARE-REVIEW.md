@@ -866,6 +866,16 @@ under every swing in the game and are not the lever (§509.4).
 > frame units first), and the clamp simply makes them a composition question instead of a
 > lost-subject question.
 
+> ### ✅ PHOTOGRAPHED (thief4, §476) — the ring arrival's browser pair, beside the slam's
+>
+> f54ea3f's camlane5 pair covered the slam half; the ring half now has its own: hold
+> `thief2-t3t2-ring` (ndcY −41.59 at ndcZ −0.99 — behind the camera plane, the frame all sky
+> and dunes) beside `thief4-t3t2-ring` (**−0.88** at z +0.90 — Sly from overhead, riding the
+> bottom margin on the ring platform), and the settled shot **−2.11 → −0.88**. Whole takes,
+> not snaps: T3's clean take goes 41 uncontained frames (4 behind the plane) → **0**, and the
+> booms are unchanged (0.55 / 1.401) — the clamp bought the frame; the boom crush at arrival
+> is still this item's open shot question, with the levers below.
+
 **~~No commit — nothing has changed in source~~** (true until the verdict box above; everything
 below describes the pre-ruling rig, which `clampMargin: 0` still runs — kept because three lanes
 quote it). §467 is the mechanism; `tools/slamtrace.mjs` and
@@ -1069,6 +1079,13 @@ ever authored against a column, that is the frame to re-read this item on.
 > so that beat is now an extreme close-up OF Sly rather than the inside of his hat — the
 > recovery clock and the ring-beside-the-shaft remain the levers if the close-up itself reads
 > wrong.
+
+> ### ✅ PHOTOGRAPHED (thief4, §476) — the debt mount holds the margin in the browser
+>
+> Both T1 mounts: ndcY **+1.26/+1.34 → +0.88** (the margin, to the hundredth) at the same
+> boom 0.55; the composed climb and top frames reproduce thief2's numbers **bit-identical**
+> (3.362/3.452 · 5.845/5.842), and the T3 drainpipe control is byte-for-byte its photographed
+> band — the clamp's zero-contribution guarantee, on camera.
 
 ---
 

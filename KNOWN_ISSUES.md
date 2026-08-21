@@ -41593,3 +41593,91 @@ time, at amplitudes authored blind — is item 17 of the hardware sheet.
 
 The sheet: item 12 carries the verdict box and the flip to shipped-with-ruling; item 15's mount
 dip inherits the clamp (the debt arm is its measurement); item 17 is the newly-live shake.
+
+## §476 — The thief lines on the ruling rig: the arrival photographs a subject for the first time, the margin holds to the hundredth, and every composed beat reproduces to the digit
+
+thief4 re-photographs T1/T3 with §475's clamp live — the browser pair the ruling still owed.
+f54ea3f gave the SLAM its pair (camlane4/camlane5); the ring arrival and the mount debt had
+headless replays (`camclamp`) and no frames. Protocol: sha stamp **6cbb612 clean** at lock,
+1080p Q=high, 19 captures, 0 page errors, 1,226 telemetry entries, take scripts unchanged from
+thief1/thief2.
+
+### §476.1 The three uncontained beats, before → after, same takes, same azimuth
+
+```
+                       thief2 (pre-clamp, cb074e7)       thief4 (ruling rig, 6cbb612)
+  T1 mount  take 1/2   boom 0.55  · ndcY +1.26 / +1.34   boom 0.55  · ndcY +0.88 / +0.88
+  T3 ring arrival      boom 0.55  · ndcY −41.59, z −0.99  boom 0.55  · ndcY −0.88, z +0.90
+  T3 ring settled      boom 1.401 · ndcY −2.11           boom 1.401 · ndcY −0.88
+```
+
+The arrival that photographed sky and dunes with the subject BEHIND THE CAMERA PLANE now holds
+Sly from overhead at the bottom margin (`thief4-t3t2-ring.png` beside `thief2-t3t2-ring.png` —
+item 12's ring half, on frames). ±0.88 is `clampMargin` exactly: the invariant lands on its own
+constant to the hundredth on three different beats, which is what "enforced, not approached"
+looks like from the browser.
+
+### §476.2 Whole takes, not snap frames — and the zero-cost guarantee on camera
+
+Per traced frame, uncontained = |ndcY| > 0.90 ∨ |ndcX| > 1.6 ∨ outside the depth range:
+
+```
+              frames      thief2 uncontained · ndcY range      thief4 uncontained · ndcY range
+  T1.1  mount+climb  56     5 · −0.45..+1.35                     0 · −0.45..+0.88
+  T1.2  mount+climb  57     4 · −0.34..+1.31                     0 · −0.34..+0.88
+  T3.2  full take   279    41 (4 behind plane) · −16.39..−0.24   0 · −0.88..−0.24
+  T3.1  full take  ~808   242 (46 behind plane) · −29.32..−0.04  2 · −3.51..−0.04   (§476.3)
+```
+
+Every composed beat reproduces **bit-identical**: T1 climb boom 3.362/3.452 and top 5.845/5.842,
+T3 mount 5.844/5.879 and climb 6.019/6.025, approaches 2.37/4.648/5.725/5.805 — thief2's numbers
+to the third decimal, ndcY to the second. And the boom is unchanged at the crushes too (0.55
+stays 0.55; the settle's 1.401 stays 1.401): §475.6's "containment is not composition",
+photographed — the debt beats are now extreme close-ups OF the character, and the boom crush
+remains item 12's open shot question with its levers priced there.
+
+### §476.3 The two residual frames are respawn warps, one frame wide, in every regime
+
+T3.1 reproduces §472.3's hazard strike (`st: hurt` at the pipe-top hop, both regimes, same
+beat) and finishes on the y 12.5 upper ledge exactly as thief2's take did. Its two uncontained
+frames are one shape: the player WARPS to the take's teleport anchor (19.8, 0, −2) — once at a
+refused first mount, once after the hurt tumble — and the probe catches the single step where
+the warp has landed after the rig already wrote its frame; on the very next probe the rig's own
+`teleportSnap` has re-seeded (boom 0.55 → 5.76 between consecutive entries). At write time the
+subject the rig knew about was inside the margin, so this is not a containment miss; the
+one-frame cut is the authored teleport behaviour (`TUNE.teleportSnap`), older than the clamp and
+present in both arms. Movement registers before camera, so the writer is a later-ordered respawn
+path, not `Controller.update` — left at that resolution rather than attributed further (§442.3).
+
+### §476.4 Protocol: the prefix slip, and how the build is pinned
+
+The run was launched as `PRE=thief3` — a launcher slip; that prefix is §473's committed T2 set —
+so the tool overwrote `shots/thief3-telemetry.json` in the worktree at exit. Repaired before
+commit: the 19 captures and the telemetry are renamed **thief4-***, and the committed
+thief3-telemetry.json is restored byte-identical from HEAD. The build is pinned two independent
+ways: the tool's own lock-time stamp (**6cbb612 · clean**; f54ea3f above it touches only
+shots/docs), and the frames themselves — the composed climb requires §471's gate, the ±0.88
+holds require §475's clamp, and the bit-identical reproduction of thief2's composed numbers
+pins the rest of the rig. The run started inside §477's stale-ref window, which is why the
+content pin is stated and not just the stamp.
+
+## §477 — The recovery window has a new variant: the local view healed underneath a live session, and only `ls-remote` never lied
+
+The rollback that killed the previous session (#13 by this ledger's count) resolved while THIS
+session was already working, and the resolution was asynchronous. Observed, in order, all
+within ~four minutes, no process dying in between (the §476 capture ran unbroken through the
+whole window):
+
+- `git fetch` + `status` + `branch -vv`: **b4d4fca**, "up to date", clean — a stale lineage
+  presented as current, exactly §523's trap;
+- `git ls-remote origin`: **f54ea3f** — the truth, eleven commits ahead;
+- the same local commands minutes later: f54ea3f, clean, mtimes preserved from before the
+  window — the worktree, index and refs had healed in place with no command of mine moving them.
+
+The runbook line this adds: after any rollback, the FIRST read that counts is
+`git ls-remote origin` against the branch, and a local view that disagrees is not evidence of
+loss — wait, or re-read, before recovering anything. And artifact provenance must be carried by
+content, not by session timing: §476 pins its build by the tool's lock-time stamp plus frame
+content that requires the shipped mechanisms, which survives any amount of ref weather. Nothing
+was lost; nothing needed the §524 cure; the trap this time was purely diagnostic — a session
+that trusted its first local read would have "recovered" eleven commits that were never gone.
