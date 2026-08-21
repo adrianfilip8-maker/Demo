@@ -234,28 +234,73 @@ test('R1 right stick: it drives the camera, on a t^exp curve, in the mouse\'s ow
 
 test('R1b instrument: the pinned clock agrees with one built from real sleeps', async () => {
   /* ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
-   *   passes on : a full right stick held for 30 frames paced by real `setTimeout`, with NO pin,
-   *               giving the same deg/s as R1's pinned reading to within 2%.
+   *   passes on : a full right stick held for 30 frames paced by real `setTimeout`, with NO pin —
+   *               `dtReal` then comes from `performance.now()`, which the pin cannot manufacture
+   *               — giving the same deg/s as R1's pinned reading to within 2%.
    *   fails  on : RUN in-arm — the same 30 frames with neither a pin nor a sleep, which reads a
    *               near-zero rate. That is the harness fault this arm exists to detect, and
    *               running it is what shows the agreement above is not automatic.
    *   verdict   : passes on either honest clock, fails on the tight loop. It discriminates the
    *               INSTRUMENT, not the code — which is the point (§439).
+   *
+   * ── The ceiling, derived before the mechanism was chased (§450.4) ─────────────────────────
+   *
+   * The first version of this arm asserted deg/s against wall time unconditionally, and it went
+   * red in the full suite while passing alone. Nothing was wrong with the stick. `beginFrame`
+   * CLAMPS `dtReal` at 1/20 s — deliberately, so a GC hitch cannot tunnel a wall — so once the
+   * container is loaded enough that a `setTimeout(16)` takes longer than 50 ms, the integrated
+   * time is capped below the wall time and `rotation / wall` reads low by exactly the clamped
+   * excess. **The quantity was bounded by the box, not by the code**, which is the instrument
+   * fault this project keeps a detector for, and asserting through it would have made the arm a
+   * measure of how many sibling lanes were running.
+   *
+   * So the arm now looks for a clean window instead of assuming one: up to three attempts, and an
+   * attempt counts only if no frame hit the clamp. A starved run reports the starvation and falls
+   * back to the two claims that survive it — that the rig turned, and that the input layer cannot
+   * integrate more time than actually elapsed. A genuinely dead right stick still fails either
+   * way, which is the property that had to be preserved.
    */
-  const { input, rig } = await camRig();
-  const y0 = rig.yaw;
-  axes([0, 0, 1, 0]);
-  const t0 = performance.now();
-  for (let i = 0; i < 30; i++) {
-    await new Promise((r) => setTimeout(r, 16));
-    input.beginFrame(DT); rig.update(DT, i * DT); input.endFrame();
-  }
-  const wall = (performance.now() - t0) / 1000;
-  const slept = Math.abs(rig.yaw - y0) / wall * 180 / Math.PI;
   const expect = INPUT_TUNE.padLook * 180 / Math.PI;
-  assert.ok(Math.abs(slept - expect) / expect < 0.02,
-    `real-clock run measured ${slept.toFixed(2)} deg/s against padLook's ${expect.toFixed(2)} — the `
-    + 'pinned readings elsewhere in this file are measuring the pin, not the stick');
+  const CLAMP = 1 / 20;
+  let clean = null;
+  const attempts = [];
+  for (let a = 0; a < 3 && !clean; a++) {
+    const { input, rig } = await camRig();
+    const y0 = rig.yaw;
+    axes([0, 0, 1, 0]);
+    const dts = [];
+    const t0 = performance.now();
+    for (let i = 0; i < 30; i++) {
+      await new Promise((r) => setTimeout(r, 16));
+      input.beginFrame(DT);
+      dts.push(input.dtReal);
+      rig.update(DT, i * DT); input.endFrame();
+    }
+    const wall = (performance.now() - t0) / 1000;
+    const turned = Math.abs(rig.yaw - y0);
+    const sumDt = dts.reduce((s, d) => s + d, 0);
+    const clamped = dts.filter((d) => d >= CLAMP - 1e-9).length;
+    const r = { turned, wall, sumDt, clamped, degPerS: turned / wall * 180 / Math.PI };
+    attempts.push(r);
+    /* Survives starvation: the layer cannot integrate more time than the wall gave it. */
+    assert.ok(sumDt <= wall + 1e-3,
+      `the input layer integrated ${sumDt.toFixed(4)} s of dtReal across ${wall.toFixed(4)} s of `
+      + 'real time — dtReal is not coming from a real clock');
+    assert.ok(turned > 0, 'a full right stick turned the rig not at all over 30 real frames');
+    if (!clamped) clean = r;
+  }
+
+  if (clean) {
+    assert.ok(Math.abs(clean.degPerS - expect) / expect < 0.02,
+      `real-clock run measured ${clean.degPerS.toFixed(2)} deg/s against padLook's `
+      + `${expect.toFixed(2)} — the pinned readings elsewhere in this file are measuring the pin, `
+      + 'not the stick');
+  } else {
+    console.log(`\n[R1b] NO clean window in 3 attempts — every one hit the ${CLAMP} s dtReal clamp `
+      + `(${attempts.map((a) => `${a.clamped}/30 frames`).join(', ')}). The container is starved, so `
+      + 'the deg/s comparison is withheld rather than asserted through a number the box is '
+      + 'bounding. The starvation-immune clauses above still ran.');
+  }
 
   /* RUN the fault: no pin, no sleep. */
   const { input: i2, rig: r2 } = await camRig();
@@ -267,7 +312,12 @@ test('R1b instrument: the pinned clock agrees with one built from real sleeps', 
   const tightWall = (performance.now() - tt) / 1000;
   assert.ok(tight * 180 / Math.PI < expect * tightWall * 1.05 + 1e-9,
     'a tight loop produced MORE rotation than its own wall clock allows — dtReal is not being read');
-  console.log(`\n[R1b] real sleeps: ${slept.toFixed(2)} deg/s vs padLook ${expect.toFixed(2)} deg/s`
+  assert.ok(tight < (clean ? clean.turned : attempts[0].turned) * 0.5,
+    `the tight loop turned ${tight.toFixed(4)} rad against the paced run's `
+    + `${(clean ? clean.turned : attempts[0].turned).toFixed(4)} — the two clocks are not being `
+    + 'told apart, so this arm cannot detect the harness fault it exists for (§418)');
+
+  console.log(`\n[R1b] real sleeps: ${clean ? `${clean.degPerS.toFixed(2)} deg/s vs padLook ${expect.toFixed(2)} deg/s (clean window)` : 'starved, see above'}`
     + ` · tight loop (the fault): ${(tight * 180 / Math.PI).toFixed(4)} deg over ${tightWall.toFixed(4)} s`);
 });
 

@@ -42910,6 +42910,33 @@ sign and order-of-magnitude through the rig so a camera retune cannot redden an 
 
 ---
 
+
+### §541.7 R1b measured the container, and the suite is where that showed
+
+The arm above was written asserting deg/s against wall time unconditionally. It passed alone and
+**went red in the full suite** — 894/895, the one failure its own. Nothing was wrong with the
+stick, and the number it reported was not the stick's.
+
+`beginFrame` clamps `dtReal` at 1/20 s, deliberately, so a GC hitch cannot tunnel a wall. Once the
+box is loaded enough that a `setTimeout(16)` takes longer than 50 ms, the integrated time is capped
+below the wall time and `rotation / wall` reads low by exactly the clamped excess. **The quantity
+was bounded by the container, not by the code** — the instrument fault this project keeps a
+detector for, and the same one `tools/padprobe.mjs` already records against its own first run
+("frames, not wall clock: this container renders in software at single-digit fps"). Asserting
+through it would have made a right-stick test into a measure of how many sibling lanes were
+running.
+
+Repaired by deriving the ceiling rather than loosening the tolerance, which would have hidden it:
+the arm now takes up to three windows and uses one only if **no frame hit the clamp**. A starved
+run says so and falls back to the two claims that survive starvation — the rig turned, and the
+input layer cannot integrate more `dtReal` than the wall actually gave it. A genuinely dead right
+stick still fails either way, which is the property that had to be kept, and the tight-loop
+counterexample is now asserted to be less than half the paced run rather than merely small, so the
+arm cannot pass when the two clocks have stopped being distinguishable.
+
+Verified at the fix's own commit in a clean worktree under full load: **895/895, 0 fail**, with
+R1b reporting 148.95 deg/s against padLook's 148.97 from a clean window found on the first attempt.
+
 ## §560 — Flight B's collider stood 0.47 m above its own staircase: the offset sign was not mirrored with the rotation
 
 `tests/slopewalk.test.mjs` arm B · `src/world/EgyptLevel.js` (tomb descent)
@@ -43111,3 +43138,190 @@ slopes resist" and "this capsule is standing beside a drop".
 
 **Verdict on the user's P1: fixed, and it generalizes.** What remains on a slope in this level is
 §561, and §561 is a headroom defect with the pitch working perfectly underneath it.
+
+## §525 — The repo has exactly one attack clip, established by content; the chain seam was ours, and it was a motion averaged with itself
+
+§479.9 photographed a defect at the combo's chain seam and deliberately left it unpatched: three
+tracks of the SAME source clip live at three phases, the blended pose putting the cane somewhere
+that is not a strike. The reason for leaving it was a prior question — the asset turned out to
+carry 23 clips where `PROVENANCE.md` had known 18, so "their tree has one ground attack" was a
+claim resting on a name (`Canehit`) and on a play site, not on having looked at what the other
+clips *are*. A second swing hiding under an unobvious name would have fixed the seam properly,
+where any blending trick only hides it.
+
+### 1. The census, by content
+
+`scratchpad/census23.mjs` — every clip in all four character glTFs (Anims27's 24, Anims19's 21,
+Anims14's 13, Anims4's 9), world-space FK on the source skeleton, reporting per clip: duration,
+animated channel and node counts, swept angle grouped by limb, root travel, and the measure
+§479.8 calibrated — max forward reach of each hand relative to the hips.
+
+**`Canehit` is their only attack, and it is not close.** It carries the largest right-arm sweep in
+the entire corpus (1498° against a next-highest 1207°) *and* the largest hand reach (0.66 m against
+a next-highest 0.549 m) *and* the largest reach excursion (span 0.355 against 0.268). The two clips
+that come nearest on arm sweep are both known non-attacks with their own play sites — `PoleGrab`
+(1207°, the pole mount) and `CaneSwing Grab` (928°, the hook catch) — and both sit well under
+`Canehit` on reach. Two independent content metrics pick out the same single clip.
+
+**The four `[Action Stash]*` actions are not hidden anything.** This was the real risk: the most
+unobvious names in the repository. `dupcheck.mjs` compared them sampler-by-sampler rather than by
+my summary rows, which is the check that matters, because two of the summary rows matched exactly
+and a matching summary is not identity. `[Action Stash]` is **byte-identical** to `Jump` (all 524
+channels, worst delta 0) and `[Action Stash].002` is byte-identical to `Walk`. `.001` matches
+nothing but is near-static (33° of arm, 0.005 m of reach excursion) — an idle. `.003` shares 468 of
+524 channels with `Run` and is leg-dominated — a run variant. None is an attack.
+
+**`KeyAction.001` is not a body motion at all**: one channel, targeting `Head_LowPoly`'s morph
+`weights`. A facial blendshape key. PROVENANCE said "1 animated channel, no verb of ours to serve",
+which was true but did not say *what* it was; now it does.
+
+**No skeletal clip hides in the scenes either.** The only two tscn-baked animations in
+`player__sly.tscn` are `spin` (a Vector3 position wiggle) and `detect targets` (a
+`CollisionShape3D`'s `disabled` flag, false→true over 0.3 s). Neither is skeletal; neither is an
+attack.
+
+I nearly wrote that second one up as a free corroboration of §479.8's contact time — a 0.3 s
+damage window agreeing with a 0.10 s contact. It is not: `detect targets` is played by
+`$"Target Area/AnimationPlayer"` on **circle in the AIR** (`player__sly.gd:605`), which is a
+different move altogether. Their ground attack takes no window from any animation — it starts a
+timer (`cane_hitbox.hit_time`, default 0.5 in `hitbox.gd`, whose own comment says it used to be
+0.3). So their damage, like ours, is decoupled from the clip, and nothing in their hitbox
+corroborates or refutes the contact time. Recorded because the wrong reading was one line of
+context away from being written down as a result.
+
+### 2. `hook_release`'s absence is real
+
+Tested rather than assumed (§435.4 — a probe from my model tests the model). My model says a
+release is a clip that BEGINS with the cane hand high, in the overhead grip `CaneSwing` holds, and
+ENDS with it back at body height: a large negative start→end excursion in hand height above the
+hips. The calibration is built in — `CaneSwing Grab` is the KNOWN catch and must show the mirror
+image, and it does: **+0.143 m**, rising into the grip, peaking at 0.626.
+
+No clip in the corpus has the release shape. Nothing starts at the hang height (`CaneSwing` 0.152,
+`CaneSwing Idle` 0.135 — both perfectly static across their length) and descends to rest. The
+largest negative right-hand excursion anywhere is `SpireJumplanding`'s −0.044 m, an order of
+magnitude short and a different verb. `hook_release` stays procedural on evidence now, not on a
+name search.
+
+### 3. Their combo wiring, read for intent
+
+`player__sly.gd:640`, the whole of it: every `square` press sets `Hit Transition/transition_request`
+to `"hit_floor"` and fires `Hit Shot` with `ONE_SHOT_REQUEST_FIRE`. There is **no combo index, no
+slot, no counter, no sequence anywhere in the script.** Their `Hit Shot` is a single
+`AnimationNodeOneShot` (fadein 0.1, fadeout 0.1) that a mash re-fires from the start.
+
+So their answer to "the player is mashing attack" is: *one live instance, restarted*. They never
+have two copies of `Canehit` on the body. We had three.
+
+### 4. The defect, measured — and it is not what the frame's caption said
+
+`tools/comboseam.mjs` drives the real mixer at the real cadence (`Combo.update` re-swings at
+`_elapsed >= _t·0.55` = 0.154 s against a 0.5 s clip). Pre-fix, on the shipped set:
+
+| | before | after |
+|---|---|---|
+| frames with 3 live tracks | 18 (0.300 s) | **0** |
+| max live tracks | 3 | **2** |
+| off-manifold hand orientation, 2+ tracks | 32.3° | **9.3°** |
+| per-strike peak reach, slot 1 / 2 / 3 | 0.7214 / 0.6403 / 0.6215 | **0.7214 / 0.7214 / 0.7214** |
+
+Two things here corrected my own prior account.
+
+**The run-wide peak is a decoy, and I nearly reported it.** "Peak reach, mashed" is 0.7214 both
+before and after — 0.0% change — because the *first* swing of a mash is always clean, nothing yet
+layered on it. What the defect destroys is the modulation: strikes 2 and 3 came in at 89% and 86%
+of a clean swing and the reach curve flattened into a 0.60–0.68 plateau where there should be three
+separate lunges. The quantity had to be attributed per strike before it said anything.
+
+**"The cane trails behind him" was a caption on a frame, and reach alone cannot support it.** The
+hand stays forward (0.60–0.68 m) through the whole seam. What actually goes wrong is *orientation*:
+the blend produces hand rotations up to **32.3° away from the nearest hand orientation anywhere in
+the authored clip**, and since `SlyModelDLRig` sockets the cane rigidly to `handR`, an invented
+hand orientation is an invented cane direction. Averaging an arc with itself out of phase does not
+land on that arc. The clean single-track frames score 0.0° against the same manifold, which is the
+in-run zero that makes the 32.3° mean something.
+
+### 5. The fix, and why this one of the five
+
+Options priced against the census result (one source clip, permanently):
+
+- **Phase offset per slot** — refused on §479.8's own lesson. Offsetting slot 2 into the clip
+  deletes its strike: contact is at t 0.10, so any head offset past that ships the recovery only.
+  That is the exact error §479.8 corrected; it must not be re-committed as a fix for something else.
+- **Per-slot rate** — does not address the mechanism. Overlapping copies still average toward the
+  middle of the arc, just at different speeds, and it desynchronises each slot's `cane_hit` from
+  the contact it marks.
+- **Mirrored slot 2** — wrong for the character before it is wrong for the code: the cane socket is
+  on the right hand, so a mirrored Sly swings a cane he is not holding.
+- **Hard cut between slots** — removes the seam by removing the blend, at the price of a visible pop
+  on every chained press and the loss of each swing's follow-through.
+- **One live instance, re-fired** — taken. On a one-shot firing, END any live one-shot of the same
+  `source` rather than adding a voice. The two then cross-fade, old weight strictly falling and new
+  strictly rising, which is an ordinary transition rather than an equal-weight average of three
+  phases of one curve.
+
+The last is the reference's own mechanism, adapted rather than ported — nothing copied, only the
+design decision their tree demonstrates. Our three-slot chain, its lunges, per-slot events and
+slot-3 shake all stay.
+
+Source identity is carried **on the clip** (`built.source = 'godot:Canehit'`), not in a side table,
+so the rule is mechanism-keyed rather than a name list: if a future import ever gives the slots
+distinct sources, the origins differ and layering resumes on its own with no code change.
+
+**Blast radius, enumerated before editing rather than after** (this codebase's standing
+one-branch-of-N tally). The change lives in `Animation.play()`, which is the single choke point
+every one-shot passes through, so it reaches every play site by construction rather than by my
+having found them all — `Moveset.js`'s three `double_jump` sites are the standing reminder of what
+happens when a fix is applied per-site instead. Of the 18 clips carrying a source, exactly two
+groups share one: `godot:Run` → `run` + `run_fast`, and `godot:Canehit` → the three combo slots.
+The rule requires a one-shot on BOTH sides, and `run`/`run_fast` are both loops, so the only group
+it can reach is the combo trio. That is the whole reach of this change, and it is a printed list
+rather than an assurance.
+
+### 6. What this does NOT touch, and one thing it deliberately leaves broken
+
+Procedural clips carry no `source`, so the rule cannot reach them; `?anim=proc` restores the old
+behaviour exactly, asserted in-arm.
+
+**And the procedural set has the same class of defect, unfixed, now measured.** Running the tool at
+`--regime proc`: 15 frames of three live tracks, off-manifold 29.8°, and per-strike peaks of 0.3467
+/ 0.3630 / 0.3490 against a clean 0.4653 — **every** strike loses about a quarter of its reach. The
+godot set did not introduce this; it made it degenerate enough to see, because averaging one arc
+with itself is worse than averaging three different ones. I am not fixing it here: `?anim=proc` is
+the restore path and a standing constraint, its baseline has to stay what it has always been, and
+the §470 gait work lives in that set. Recorded so the next person does not rediscover it as new.
+
+### 7. Instrument errors worth more than the result
+
+Two, both self-inflicted, both caught by the same tell — **both arms printing identical numbers**.
+
+`--regime proc` was inert: `play()` resolves clips through the module-level `ACTIVE` table that
+`Animation.js` binds once at load, so a flag that only called `buildClipSet` itself built a table
+the mixer never consults. The tool measured the shipped set under every flag value. Worse, I had
+already written a calibration claim into its header on the strength of that inert flag. The fix is
+to set `globalThis.__ANIM_AB` before the dynamic import — the real pre-module seam — plus a hard
+throw if `CLIP_REGIME` does not come back as asked, so the failure can never again be silent.
+
+`--nocoalesce` then stripped `source` *after* the measurement runs. Same class: a knob wired
+downstream of the thing it is supposed to change.
+
+The general lesson, and the reason both are in the file rather than quietly fixed: an A/B whose two
+arms agree to four decimal places is not a null result, it is a broken instrument, and the
+temptation is to report it as "no difference found". The calibration in the header is now run
+rather than asserted — `cane_combo_1` peaks at 0.150 against a declared `cane_hit` of 0.150, exact;
+combos 2 and 3 land +53 ms and −27 ms — and those residuals are printed as the honest width of the
+measure rather than rounded away.
+
+### 8. Limits
+
+The tool reads ONE hand — position and orientation. A chain that keeps both while mangling the
+torso, the feet or the left arm scores identically to a clean one, and the off-manifold angle is
+computed against the three solos' hand orientations alone. It does not model the lunge, so the
+on-screen distance covered is larger than any number in it. It is a seam detector, not a pose
+judge. The frames are what settle whether the chain reads.
+
+The census covers the four character glTFs and the tscn-baked libraries. It does not cover the
+`.blend`/`.blend1` files (unreadable here) or the orphaned `SlyCooper_2025.bin` / `slygltf.bin`,
+which PROVENANCE already records as unloadable — their `.gltf` siblings are not in the repository.
+If an attack exists in a Blender file that was never exported, nothing in this repository can play
+it and no import of ours could either.
