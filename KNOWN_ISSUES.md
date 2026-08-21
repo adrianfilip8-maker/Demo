@@ -42729,3 +42729,181 @@ the sixth instance in this project. The rig now publishes `_clampOn` (any stage)
   enter Sly.
 - Three regime switches now exist so each pre-repair behaviour is *runnable*: `clampStandoff`,
   `clampBankFirst`, and the no-`height` facade. All three are exercised by the arms that own them.
+
+## §541 — The right stick, the drift region, and the prompt that followed the hardware instead of the player
+
+§540 audited thirteen verbs, the d-pad and the left stick's upper range, and passed. Three things
+a player meets in the first ten seconds with a real pad were not in that sample, and each is
+invisible to a parity table by construction: **camera look is not a moveset verb**, so a dead
+right stick would have shown as a clean pass on every row; **the sweep started at 0.20**, above
+the deadzone, so the region a worn stick lives in was never sampled; and **the prompt swap is a
+HUD claim**, which nothing had driven together with the input layer. `tests/padrest.test.mjs`,
+five arms.
+
+### §541.1 The right stick is live, and it is the curve the file claims
+
+Not missing. Driven through the real `Input` into the real `CameraRig`:
+
+```
+  deflect 0.05  0.0000e+0 rad/frame     0.00 deg/s        (inside padLookDead 0.14)
+  deflect 0.20  1.2129e-4               0.73 deg/s
+  deflect 0.30  8.5992e-4               5.16 deg/s
+  deflect 0.50  4.3504e-3              26.10 deg/s
+  deflect 0.70  1.0527e-2              63.17 deg/s
+  deflect 0.90  1.9391e-2             116.34 deg/s
+  deflect 1.00  2.4828e-2             148.97 deg/s
+```
+
+Every row matches `padLook · ((d − padLookDead)/(1 − padLookDead))^padLookExp · dtReal` to within
+1e-6 rad — so the documented t² expo is real, not aspirational, and the rim rate is `padLook`'s
+2.6 rad/s exactly. Against the mouse the user is keeping: 600 px of movement in the same second
+turns the rig 75.6°, so a full stick is about twice a brisk mouse sweep, **and both turn the same
+way** — asserted, because a sign flip between the two devices is the kind of thing that is obvious
+in the hand and invisible in a diff. Pitch clamps at 1.309 rad (75°), which is the rig's, not ours.
+
+**The instrument nearly lied, and the arm that caught it is kept.** `_padLook` integrates on
+`dtReal`, which `beginFrame` takes from `performance.now()` — so a tight test loop reads a dtReal
+of ~0 and reports "the right stick does nothing". Every reading above is taken with `_lastReal`
+back-dated to force a 1/60 s frame, and **R1b re-runs full deflection on real `setTimeout` sleeps
+with no pin at all**: 148.94 deg/s against the pinned 148.97. Two clocks, one answer. The tight
+loop is run in the same arm as the counterexample — 0.1025° over 0.0007 s — so the agreement is
+shown not to be automatic (§439).
+
+### §541.2 Both deadzones are RADIAL — checked, and already correct
+
+The concern was a per-axis (square) dead region, which lets a diagonal through only at 0.71 per
+axis and reads in the hand as the character preferring the compass points. The diagonal is the
+discriminator, because per-axis-passes is a strict subset of radial-passes:
+
+```
+  left  deadzone 0.18:  (0.12, 0.12) len 0.1697  dead
+                        (0.13, 0.13) len 0.1838  LIVE   <- per-axis would need 0.18 on an axis
+  right deadzone 0.14:  (0.09, 0.09) len 0.1273  dead
+                        (0.10, 0.10) len 0.1414  LIVE   <- same
+```
+
+Both gates open at radial length, not per-axis. No diagonal bias exists. `_padStick`'s own comment
+already argued for this against the reference's per-action deadzones; it is now measured.
+
+### §541.3 Drift: where motion begins, and what it costs
+
+A fine sweep below §540's starting point, with both sticks posed off-centre and left alone —
+a worn pad on the table:
+
+```
+  rest 0.05 .. 0.17   Sly walked 0.00 m in 5 s   camera spun 0.00 .. -0.91 deg
+  rest 0.19           Sly walked 9.30 m          1.866 m/s      camera -2.52 deg
+  rest 0.22           Sly walked 10.28 m         2.063 m/s      camera -6.45 deg
+  rest 0.25           Sly walked 11.26 m         2.261 m/s      camera -12.19 deg
+  rest 0.30           Sly walked 12.88 m         2.590 m/s
+```
+
+And the gate itself, at 0.001 resolution: **0.180 → 0.000 m/s, 0.181 → 1.807 m/s.** That step is
+`moveFloor` 0.25 × `runSpeed` 7.2, working exactly as designed — the floor exists so the smallest
+live deflection commits to a definite creep rather than a magnitude every `wishMag > 0.12`
+predicate reads as "not moving". The consequence, stated plainly: **a stick worn enough to rest
+past 0.18 does not make Sly creep, it makes him walk at 1.8 m/s, forever.**
+
+**Measured, not repaired, and the reasoning is on the record.** Softening the floor near the gate
+would put small deflections back under 0.12 and reintroduce the exact defect the floor was
+imported to fix. Raising `deadzone` costs every player range to protect a worn minority. So the
+number stays, `settings.deadzone` is already live-adjustable per instance for a future options
+screen, and the threshold is now pinned by a test so a change to it has to be deliberate. The
+right stick has no floor and a t² curve, so it degrades gracefully instead — 0.10° of spin over
+five seconds at a 0.15 rest — which is the contrast worth noticing between the two designs.
+
+### §541.4 The defect: the device flag was read off stick POSITION
+
+`_padStick` claimed the prompt device on every frame the left stick sat outside the deadzone, and
+the comment defending it said *"a held stick is ongoing pad use"*. A held stick is. A **worn** one
+is not, and nothing could tell them apart. Driven with the real `Input` and the real `HUD`, a
+stick resting at 0.19, untouched:
+
+- it claimed the device on the first poll and never let go;
+- five keystrokes became **eleven `inputDevice` emits** — each `_press` claiming `kbm`, then
+  `_padStick` re-claiming `pad` later in the *same* `beginFrame` — and every emit re-renders the
+  live prompt and all twelve glyph columns of the controls cel;
+- and it settled on `pad`, so **a keyboard player read PS4 shapes for the rest of the session**.
+
+The right stick had the mirror-image bug: it never claimed at all, because only `_padStick` called
+`_setDevice`. Picking the pad up and looking around — 149°/s of camera, an unambiguous act — left
+keycaps on screen.
+
+**Fix: `_padDevice`, which claims from TRAVEL.** And the shape of the test was derived before the
+constant was chosen (§450.4), which changed the design:
+
+```
+  centre -> full over  1 s: per-frame delta claims NEVER · travel-from-reference at frame 4
+  centre -> full over  3 s: per-frame delta claims NEVER · travel-from-reference at frame 11
+  centre -> full over 10 s: per-frame delta claims NEVER · travel-from-reference at frame 37
+```
+
+A per-frame threshold is the obvious rule and it cannot work: a one-second push moves 0.0167 per
+frame, under the 0.0625 a four-code jitter produces, so no rest-immune per-frame rule can ever
+fire for a deliberate slow push. Travel from the position the stick was last resting at has no
+such blind spot. `padWake` 0.08 clears measured rest jitter (3000 samples, max 0.0625) and fires
+within 0.08 of travel however slowly it is covered.
+
+Three details are each load-bearing, and the first was found by the probe catching itself: the
+**first poll of a pad adopts its resting position and claims nothing** — otherwise a drifting
+stick's offset reads as travel-from-zero and claims on frame one, which is the bug being removed.
+(The first version of the probe posed the stick before the first poll and reported the fix as a
+regression. That is §435.4 exactly: it was testing its own sequencing, not the world's — a real
+pad is polled from boot, so its position at boot *is* rest.) A claim also requires the stick to
+end up **live**, so letting go and coming home to centre is travel without actuation and does not
+steal the flag back from a keyboard the player just moved to. And the reference re-seeds on any
+travel past `padWake`, claim or not, so it tracks the stick instead of ageing into a stale point.
+`_releaseSource('pad')` nulls it, for the same reason §540's `_adopt` exists: after a focus loss
+we stopped watching, so the next reading is a rest to adopt, not travel to attribute.
+
+### §541.5 The prompt swap works, and it deliberately has no hysteresis
+
+The HUD half was already right. A pad press swaps the live prompt to a PS4 shape and fills all
+twelve cel columns; a real keydown brings the keycaps back; each genuine change emits exactly
+once. Over an eight-step interleave — pad, key, pad, key — four alternations produce four emits
+and four re-renders, and the prompts always show the device the player last **acted** on.
+
+Asked to find the hysteresis or find that there is none: **there is none, and after §541.4 it does
+not need any.** A time-based hold-off was the wrong instrument for the problem it looked like it
+would solve. The flicker was never caused by a player alternating quickly — it was caused by a
+stationary stick asserting itself sixty times a second, and a debounce would have hidden that
+while leaving the flag pinned to `pad` at the end of it. Deciding the claim on travel removes the
+cause; a deliberate alternation is a real signal and should swap immediately, which it does.
+
+### §541.6 DOMAIN, and what none of this can discriminate
+
+Each arm carries its own §418.3 block; the shape they share:
+
+- **R1 right stick** — *passes on* nine swept deflections matching the t^exp model into
+  `input.look`, plus rig yaw agreeing in sign with the mouse; *fails on* a deflection inside
+  `padLookDead`, run, which must accumulate exactly zero. *Verdict: passes on a live deflection,
+  fails on one inside the deadzone, and discriminates the CURVE because the model is compared at
+  nine points, not one.*
+- **R1b instrument** — *passes on* a real-sleep run agreeing with the pinned clock to 2%; *fails
+  on* the un-pinned tight loop, run. It discriminates the instrument, not the code.
+- **R2 deadzones** — *passes on* a diagonal only a radial gate admits; *fails on* one just inside
+  the same radius. Per-axis-passes ⊂ radial-passes, so the diagonal is the only discriminator
+  there is, and the arm re-derives its own test points from the tune so a retune reddens it
+  honestly rather than silently.
+- **R3 drift** — *passes on* every rest offset leaving `lastDevice` on `kbm` with zero emits;
+  *fails on* the PRE-FIX position rule executed in-arm, which produces nine emits and ends on
+  `pad`. Separately it pins the walk threshold as a measurement.
+- **R4 prompts** — *passes on* the real HUD swapping on an act, both sticks included; *fails on* a
+  pad merely present with an off-centre stick, which must change nothing. *Passes on an act, fails
+  on a presence.*
+
+Mutation-checked and restored: reverting `_padDevice` to the old position rule reddens R3 and R4
+and leaves R1, R1b and R2 green, which is the right blast radius — the curve and the deadzone
+shape are independent of who owns the prompts.
+
+**What none of it discriminates.** A physical DualShock 4: no controller exists in this container,
+so axis signs, trigger rest values and real drift magnitudes are the user's re-test, and the rest
+offsets swept above are *chosen*, not sampled from hardware — only the user's own pad can say
+where it sits. Nor feel: that 149°/s is the right rim rate, that the t² curve is the right expo,
+that 1.8 m/s reads as a walk. Nor pixels — the shim renders no image, so "the glyph is legible"
+stays eyes-only, as `hud.test.mjs` already says of `padBtn`.
+
+**Read-only, reported not touched:** `src/player/CameraRig.js` belongs to the CAM lane. Nothing in
+it needed changing — the right stick's problem was upstream, in who claimed the device flag — and
+the arms above assert precise numbers only on `input.look`, which this lane owns, taking merely
+sign and order-of-magnitude through the rig so a camera retune cannot redden an input test.

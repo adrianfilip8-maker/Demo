@@ -253,6 +253,21 @@ export const INPUT_TUNE = {
   padLook:    2.6,     // rad/s at full right-stick deflection (~149°/s)
   padLookExp: 2.0,     // response exponent: fine near centre, quick at the rim
   padLookDead: 0.14,
+  /**
+   * How far a stick must TRAVEL from where it was resting before it counts as the player
+   * reaching for the pad (§541). Not a deadzone — the deadzones above decide what MOVES; this
+   * decides what the HUD's prompts believe about whose hands are on what.
+   *
+   * Derived, not picked. A DS4 reports axes at roughly 8-bit resolution, so one LSB is 0.0078,
+   * and a worn stick flickering across four codes produces frame-to-frame deltas up to 0.0625
+   * (measured over 3000 samples). The threshold has to clear that. It also has to catch a
+   * deliberate push, and the shape of the test matters more than the number: a per-frame delta
+   * **cannot** — a leisurely one-second push from centre to full moves only 0.0167 per frame,
+   * under any rest-immune threshold, so a per-frame rule would never fire for it at all. This is
+   * therefore travel from a resting REFERENCE, which fires at any speed once the stick has gone
+   * 0.08 — 0.8 s into even an absurd ten-second push, and immediately for any real one.
+   */
+  padWake:    0.08,
 };
 
 const BUFFER_MS = INPUT_TUNE.bufferMs;
@@ -366,6 +381,8 @@ export class Input {
      * pressing it — see `_adopt` and guarantee (3).
      */
     this._padResync = false;
+    /** Where the sticks were last seen resting, and for which pad. See `_padDevice`. */
+    this._padRest = null;
     this._lockClick = false;          // the click that grabbed pointer lock must not also swing
 
     this._bind();
@@ -679,7 +696,13 @@ export class Input {
        so a stale `_padHeld` entry would leave a physically-held button reading as released until
        the player let go of it and pressed again. The re-discovery is armed rather than left to
        `_press`, because a button that never went up did not go down again either — `_adopt`. */
-    if (src === 'pad') { this._padHeld.clear(); this._padResync = true; }
+    if (src === 'pad') {
+      this._padHeld.clear();
+      this._padResync = true;
+      /* Same reason, for the sticks: we stopped watching, so whatever they read on the next poll
+         is a resting position to be adopted, not travel to be attributed to the player. */
+      this._padRest = null;
+    }
   }
 
   /**
@@ -780,6 +803,63 @@ export class Input {
   }
 
   /**
+   * Which device the player is USING — decided from stick TRAVEL, not stick position (§541).
+   *
+   * ── What position got wrong, measured ───────────────────────────────────────────────────────
+   *
+   * `_padStick` used to call `_setDevice('pad')` on every frame the left stick sat outside the
+   * deadzone, and the comment defending it said "a held stick is ongoing pad use". A held stick
+   * is; a WORN one is not, and nothing here could tell them apart. Real DualShock sticks rest off
+   * centre, and a worn one rests well off it. Driven with the real `Input` and the real `HUD`
+   * (`tests/padrest.test.mjs` R3), a stick resting at 0.19 — untouched, on the table:
+   *
+   *   · claimed the device on the first poll and never let go;
+   *   · turned five keystrokes into **eleven** `inputDevice` emits, because each `_press` claimed
+   *     'kbm' and `_padStick` re-claimed 'pad' later in the SAME `beginFrame` — every one of
+   *     which re-renders the live prompt and all twelve glyph columns of the controls cel;
+   *   · and settled on 'pad', so a keyboard player read PS4 shapes for the rest of the session.
+   *
+   * The right stick had the opposite bug: it never claimed at all, so picking up the pad and
+   * looking around — 149°/s of camera, an unambiguous act — left keycaps on screen.
+   *
+   * ── Why travel from a REFERENCE and not a per-frame delta ───────────────────────────────────
+   *
+   * A per-frame delta is the obvious rule and it does not work: a one-second push from centre to
+   * full moves 0.0167 per frame, well under the 0.0625 a four-code jitter can produce, so no
+   * rest-immune per-frame threshold can ever fire for a slow push. Both bounds are measured (see
+   * `INPUT_TUNE.padWake`). Travel from the position the stick was last resting at has no such
+   * blind spot: it fires once the stick has gone `padWake`, however slowly it gets there.
+   *
+   * Three details that are each load-bearing:
+   *   · the FIRST poll of a pad adopts its resting position and claims nothing — otherwise a
+   *     drifting stick's offset would read as travel-from-zero and claim on frame one, which is
+   *     the bug this method exists to remove;
+   *   · a claim requires the stick to end up LIVE (past its own deadzone), so letting go and
+   *     coming home to centre — real travel, no actuation — does not steal the flag back from a
+   *     keyboard the player has just moved to;
+   *   · the reference re-seeds on any travel past `padWake`, claim or no claim, so it tracks the
+   *     stick instead of ageing into a stale far-away point.
+   */
+  _padDevice(gp) {
+    const ax = gp.axes || [];
+    const lx = ax[PAD_AXES.moveX] || 0, ly = ax[PAD_AXES.moveY] || 0;
+    const rx = ax[PAD_AXES.lookX] || 0, ry = ax[PAD_AXES.lookY] || 0;
+    const rest = this._padRest;
+    if (!rest || rest.pad !== this._padIndex) {
+      this._padRest = { pad: this._padIndex, lx, ly, rx, ry };
+      return;
+    }
+    const wake = this.settings.padWake;
+    const lTravel = Math.hypot(lx - rest.lx, ly - rest.ly);
+    const rTravel = Math.hypot(rx - rest.rx, ry - rest.ry);
+    if (lTravel <= wake && rTravel <= wake) return;
+    rest.lx = lx; rest.ly = ly; rest.rx = rx; rest.ry = ry;
+    const live = (lTravel > wake && Math.hypot(lx, ly) > this.settings.deadzone)
+      || (rTravel > wake && Math.hypot(rx, ry) > this.settings.padLookDead);
+    if (live) this._setDevice('pad');
+  }
+
+  /**
    * Left stick -> `move`, with a radial deadzone and the reference's magnitude floor.
    *
    * The shape, in order:
@@ -808,7 +888,8 @@ export class Input {
     let y = ax[PAD_AXES.moveY] || 0;
     const len = Math.hypot(x, y);
     if (len <= dz) return;
-    this._setDevice('pad');
+    /* The device flag used to be claimed here, from POSITION — see `_padDevice`, which claims it
+       from travel instead, and the measurement that moved it. */
     // Normalise first so a square-gated stick can't report 1.41 on the diagonal, then re-apply
     // the remapped magnitude. This is the honest reading of `normalized() * pressure`.
     const t = Math.min(1, (len - dz) / (1 - dz));
@@ -908,7 +989,7 @@ export class Input {
        digital vector is folded below — otherwise the d-pad would lag the keyboard by a frame and
        the stick would win a direction the player pushed on the pad. */
     const gp = (this.padEnabled && this.enabled) ? this._findPad() : null;
-    if (gp) this._padButtons(gp);
+    if (gp) { this._padButtons(gp); this._padDevice(gp); }
 
     let x = 0, y = 0;
     if (this.down('left')) x -= 1;
