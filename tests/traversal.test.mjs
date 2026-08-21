@@ -2951,11 +2951,19 @@ test('census: which of the 32 states any test in this project has ever entered',
      `thiefspots` asserts `railWalk` on the westbound walk-on — so the state the §495 rope made
      STRUCTURALLY unreachable is now driven outside this file, which is the fix being visible
      from here. Same mover, same committed-file rule. */
-  assert.ok(elsewhere.length <= 26,
-    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, 11, 15, 17, 22, 23, 24, 25, 26) ` +
+  /* 26 -> 29 and 6 -> 3, three states moving together, re-based by the mover (input lane, §540):
+     `padparity.test.mjs` drives every verb the moveset consults on BOTH devices, and the three
+     that were still traversal-only — `pickpocket`, `combatStrafe`, `crouch` — are exactly the
+     ones whose only route is a held or pressed input, which is the thing a parity arm has to
+     drive by construction. Nothing else here moved: `poleSwing`, `bounce` and `crawl` remain
+     traversal-only, and they are the three the bound below is now protecting. Measured off the
+     census's own table in a clean worktree at the committed sha, not inferred from intent; same
+     committed-file rule as the four re-bases above. */
+  assert.ok(elsewhere.length <= 29,
+    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6, 11, 15, 17, 22, 23, 24, 25, 26, 29) ` +
     `— coverage has spread, which is good: update this bound. ${elsewhere.join(', ')}`);
-  assert.ok(onlyMine.length >= 6,
-    `only ${onlyMine.length} states are traversal-only (was 21, 17, 15, 10, 9, 8, 7, 6) — if that dropped, other ` +
+  assert.ok(onlyMine.length >= 3,
+    `only ${onlyMine.length} states are traversal-only (was 21, 17, 15, 10, 9, 8, 7, 6, 3) — if that dropped, other ` +
     'lanes have started driving the moveset and this arm should say so rather than assert the old ' +
     'concentration');
   /* The thinness pins. Both are stated as "no worse than", so widening coverage never reddens
