@@ -700,7 +700,7 @@ test('combo chain seam (§525): a motion is never layered on top of itself, and 
      reproduces the defect at three live tracks and strikes 2 and 3 short of the clean peak.
      Cannot discriminate: whether the chain READS as three hits at game framing, whether the
      cross-fade during the brief 2-track overlap is the right length, or anything about the
-     torso, feet or lunge — this reads one hand. `shots/seam1-{before,after}-*` carry the picture. */
+     torso, feet or lunge — this reads one hand. `shots/chain1-{before,after}-*` carry the picture. */
 
   const { Animation } = await import('../src/player/Animation.js');
   const g = buildClipSet('godot').table;

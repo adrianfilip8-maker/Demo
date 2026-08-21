@@ -1271,7 +1271,11 @@ the hook looks different this build too.
 1. **The three-hit chain.** Their tree has exactly one ground attack, so all three of our combo
    slots now play the same swing. That is faithful to the reference and *less varied* than what
    it replaced. Run a full three-hit chain and say whether it reads as a combo or as a stutter.
-   If it stutters, the fix is a per-slot phase or mirror, not a re-trim of the clip.
+   ~~If it stutters, the fix is a per-slot phase or mirror, not a re-trim of the clip.~~
+   **Superseded — see item 20.** That last sentence was wrong, and a defect was found in the
+   chain before you had to sit through it: mashing stacked three copies of the one swing on the
+   body at once and pointed the cane the wrong way. It is fixed, by neither a phase nor a mirror.
+   The *question* above still stands and is still yours to answer.
 2. **Swing reach.** The repo's swing extends 0.92 m from the hips; ours extended 0.30 m. It is a
    much bigger, more committed motion. Damage still resolves on the button press, so the reach is
    cosmetic — but a swing that *looks* like it should have connected and did not is a complaint
@@ -1288,3 +1292,56 @@ the hook looks different this build too.
 
 `?anim=proc` restores the previous procedural attack, pickpocket and hook in one URL token if you
 want to compare them live.
+
+## 20. The three-hit chain was smearing its own strikes together — item 19's question 1, answered offline
+
+Item 19 asked you to run a full three-hit chain and say whether it read as a combo or as a
+stutter, and said that if it stuttered the fix would be "a per-slot phase or mirror". Both halves
+needed correcting before they reached you, so this is that correction rather than a new request.
+
+**First: their tree really does have only one attack.** Item 19 asserted that from the clip's name
+and its play site. It has now been established by looking at what every clip in the reference
+actually *does* — all 24 in the file we import from, plus the 13 and 21 in the two older bakes,
+plus the four actions parked under the deliberately uninformative name `[Action Stash]`. `Canehit`
+carries the largest arm sweep and the largest hand reach in the entire corpus, by clear margins,
+on two independent measures. Two of the stash actions are byte-for-byte copies of Jump and Walk,
+the other two an idle and a run variant, and the one remaining unimported clip turns out to be a
+single facial expression key with no body motion in it at all. There is no second swing anywhere.
+So the three slots playing one clip is permanent, not a first-pass simplification.
+
+**Second: it was not a stutter, and the frames say what it was.** Mashing attack put three copies
+of that one swing on the body at once, each at a different point in its arc and each at full
+strength, for about a third of a second. Averaging a motion against itself out of phase does not
+produce a pose from that motion — it produces something the animator never drew. Because the cane
+is rigidly attached to the right hand, that showed up as the *cane pointing the wrong way*: hand
+reaching forward, cane trailing down and behind him. Strikes two and three also lost about an
+eighth of their reach, so the three lunges flattened into one long shove.
+
+**Fixed, by doing what their game does.** Their whole attack script is: on every press, re-fire one
+animation slot from the start. No combo counter exists anywhere in it. So ours now ends a live
+swing when the next one fires instead of stacking on top of it. The two cross-fade, which is an
+ordinary transition. Measured: three simultaneous copies drops to zero, and all three strikes now
+deliver a full clean swing's reach instead of 89% and 86%. Our own chain — the three slots, the
+lunge on each, the per-slot sound and the shake on the third — is unchanged.
+
+Before and after are in `shots/chain1-before/` and `shots/chain1-after/`, same three presses, same
+sample points, one commit apart.
+
+**What only you can tell us.**
+
+1. **Does it read as three hits now?** The measurement says each strike delivers its full motion;
+   it cannot say whether three of the *same* swing in a row reads as a combo or as a repeat. This
+   is the one item 19 asked for and it is still the open question — the fix removed a defect, it
+   did not add variety, and variety is a judgement about feel.
+2. **Is the cross-fade the right length?** Ending the old swing means a brief blend where both are
+   present. Offline that window is short and clean. On a pad, mashing as fast as the game allows,
+   tell us if the transition reads as a snap, a smear, or nothing you notice.
+3. **The first hit versus the rest.** The first swing of any chain was always clean; only the
+   later ones were damaged. If hits two and three now feel *different* from before in a way you
+   like or dislike, that is this change and it is worth naming.
+
+**One thing left deliberately broken, so it is not a surprise.** `?anim=proc`, which restores the
+old hand-made animations, has the same defect and still has it — every strike there loses about a
+quarter of its reach to the same stacking. That set is the comparison baseline and a standing
+restore path, so changing its behaviour would have made the A/B dishonest. If you compare the two
+this build, know that the procedural arm is carrying a flaw the reference arm no longer has.

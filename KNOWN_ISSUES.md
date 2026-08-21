@@ -43325,3 +43325,53 @@ The census covers the four character glTFs and the tscn-baked libraries. It does
 which PROVENANCE already records as unloadable — their `.gltf` siblings are not in the repository.
 If an attack exists in a Blender file that was never exported, nothing in this repository can play
 it and no import of ours could either.
+
+## §525.1 — The chain seam on camera: the cane was behind him at the contact frame, and the fix is visible in one pair
+
+`tools/canelook.mjs`, both arms, shipped model, same three `KeyF` presses at the chain's own
+cadence, same sample offsets, one commit apart — `66fca1b` (before) against `eef310b` (after),
+each captured from its own clean worktree so no sibling lane's uncommitted `src/` sits between
+the press and the clip. `shots/chain1-before/` and `shots/chain1-after/`, 16 frames and a telemetry
+file per arm, `errs 0` both.
+
+**The track composition, from the real browser rather than the offline probe.** The telemetry
+records every live track's clip, playhead and weight beside every frame, and the two tables are
+the whole story:
+
+```
+                    BEFORE (66fca1b)                          AFTER (eef310b)
+combo2-f6   c1@0.317/w1  c2@0.083/w1                  c2@0.083/w1
+combo3-f3   c1@0.5/w1    c2@0.267/w1  c3@0.033/w0.42  c3@0.033/w0.42  c2@0.267/w0.58
+combo3-f6   c1@0.55/w0.72 c2@0.317/w1 c3@0.083/w1     c3@0.083/w1
+```
+
+Before, every strike frame from the second press onward carried at least TWO full-weight copies
+of `Canehit`, and the third press carried three tracks at once. After, **every contact frame is a
+single track at full weight**, and the only two-track frames are the `f3` cross-fades whose
+weights sum to exactly 1.00 — 0.58 falling against 0.42 rising, which is an ordinary transition
+and not an average. The offline probe predicted exactly this; the browser confirms it in the
+shipped renderer with the real state machine and real key presses.
+
+**The picture, and it is worse than the numbers suggested.** At the third strike's CONTACT frame
+(`combo3-f6`) the before arm shows Sly lunging forward with his right hand open and extended — and
+the cane lying almost horizontally BEHIND him, running back under his tail. There is no cane in
+the strike at all; he is reaching out with what reads as an empty hand while the weapon trails
+behind. At `combo3-f3` the same thing one beat earlier: hand forward, cane angled down and back.
+The after frames put the cane where the hand is going — hook leading, shaft forward and up, arm
+committed into the swing — at both sampled phases.
+
+This is what the 32.3° off-manifold number *was*, and it is the answer to why a channel sum could
+never have found it: every track was playing its authored arc correctly the whole time. Only the
+average was wrong, and only the picture shows how wrong.
+
+**Two samples per claim** (§466.5): `combo3-f3` and `combo3-f6` both, in both arms.
+
+**Limits.** Captured at `Q=low`, 1600×900, recorded in the telemetry — the box ran at load 10–14
+with a full suite alongside, and `q=high` turns the settle into minutes here. Quality changes
+post-processing only (model, skeleton, clip table, splice, skinning identical), so these carry a
+POSE read and not a look read; nothing above depends on grade, bloom or edge treatment. The
+frames show the third strike because that is where three tracks overlapped; the first strike was
+always clean and its frames are unchanged between arms, which is itself the control — a change
+that altered the first swing would mean the rule had reached further than intended, and it did
+not. What no frame here can settle is whether three of the SAME swing reads as a combo; that is
+feel, it needs hands, and it is item 20 on the hardware sheet.
