@@ -1238,3 +1238,50 @@ longer-strided gait now. Three judgements only hardware can make:
    takes on the shipped model (the audit's stated limit) — on hardware, hang off a real ledge,
    climb the SE drainpipe, run the rail: any of the three reading wrong in situ is exactly the
    evidence the posed audit cannot produce.
+
+## 19. The cane swing, the pickpocket reach and the hook hang are the repo's now — and the swing's whoosh moved onto the actual contact
+
+Your follow-up was "check to see if the attack and pickpocket animations were properly ported."
+They were not, and the miss is worth one paragraph because it is the kind that survives a
+plausible-looking check.
+
+Their ground attack is a single clip, `Canehit`, fired on every attack press with no time
+scaling. The first pass of this port looked for the strike by finding the fastest moment of the
+swinging hand — 14.8 m/s, late in the half-second clip — and trimmed a quarter-second off the
+front to bring that moment into our combo's window. Measuring where the hand actually *is*, not
+how fast it is moving, says the opposite: the hand goes from 0.09 m behind the hips to 0.92 m in
+front of them in the first 0.10 s, holds through a follow-through, and then snaps back to guard.
+The fast late moment is the hand *leaving* the target. The trim deleted the attack and kept the
+recovery.
+
+That is fixed. `Canehit` plays whole, from its own first frame, at its own rate — the way their
+tree fires it — and the `cane_hit` beat now sits on the measured contact (0.108 s measured
+against a 0.100 s event, under one frame apart). That beat is not cosmetic bookkeeping: it drives
+both the swing SFX and the cane-swipe particle burst, so the sound and the spark moved onto the
+contact with it.
+
+`PickPocket` is exported as a 4-second idle bake whose motion is over in about 0.6 s; it ships
+cut to the 1.1 s the pickpocket state actually spends on it, reach peaking at 0.25 s inside a
+0.55 s window. The `CaneSwing` clips turned out not to be attacks at all — their scene graph
+plays them on the hook swing — so they took our hook hang and hook catch instead, which is why
+the hook looks different this build too.
+
+**What to re-test.**
+
+1. **The three-hit chain.** Their tree has exactly one ground attack, so all three of our combo
+   slots now play the same swing. That is faithful to the reference and *less varied* than what
+   it replaced. Run a full three-hit chain and say whether it reads as a combo or as a stutter.
+   If it stutters, the fix is a per-slot phase or mirror, not a re-trim of the clip.
+2. **Swing reach.** The repo's swing extends 0.92 m from the hips; ours extended 0.30 m. It is a
+   much bigger, more committed motion. Damage still resolves on the button press, so the reach is
+   cosmetic — but a swing that *looks* like it should have connected and did not is a complaint
+   worth catching early. Watch it against a guard at the edge of range.
+3. **The pickpocket and the hook in situ.** These two carry the least evidence of anything here.
+   The swap itself is measured offline — reach curves, durations, loop flags, and the state that
+   drives each one — but the shared build box was saturated while this landed and the on-camera
+   pass for them is thinner than the audit's earlier rounds. Treat them as the items most worth
+   your eyes: steal from a walking guard, swing a real hook. Either reading wrong in context is
+   exactly the evidence no offline measurement can produce.
+
+`?anim=proc` restores the previous procedural attack, pickpocket and hook in one URL token if you
+want to compare them live.
