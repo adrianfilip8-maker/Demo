@@ -140,10 +140,16 @@ export const ANIM_TUNE = {
  * 0°→−360°), not assumed here.
  */
 const GODOT_ALIAS = {
-  /* game name     source + delivered timing (see the window derivation above). Each row is a
-     verb the movement-set audit (§479) swapped WITH FRAMES BEHIND IT; rows land per
-     verb-group so each swap is one reviewable change. */
-  double_jump: { src: 'FrontFlip', dur: 0.41 },
+  /* game name       source + delivered timing (see the window derivation above).
+     THE AUDITED SET (§479): each row is a verb where the repo authored a clip for the same
+     beat; each survives only with frames in shots/ (moves1 pairs) behind it. Rows the audit
+     REFUSED are recorded in §479, not deleted silently. Sources play at authored duration
+     unless a `dur` says otherwise; walk/run/rail carry strides DERIVED from their own foot
+     geometry (godot2clips' report), so the tree rate-matches them exactly as the hand set. */
+  double_jump:   { src: 'FrontFlip', dur: 0.41 },
+  walk:          'Walk',
+  run:           'Run',
+  run_fast:      'Run',            // no second run in the source; the tree needs the node filled
 };
 
 /** A raw authoring-format clip replayed over a different duration (events rescale with it). */
