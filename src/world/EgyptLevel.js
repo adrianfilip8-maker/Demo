@@ -2674,12 +2674,47 @@ function tomb(A) {
    * roofing nothing, with 3.8 m of clear gap. They are a gateway, and the stair now starts inside it.
    */
   const A_HEAD = 0;
+  /**
+   * ── §561: flight A's drawn centre line is roofed, and the repair space is EMPTY ────────────
+   * Named rather than left as a literal because the number was SWEPT, and the sweep is the
+   * finding. `A_Z` is where the flight's 3.2 m width sits in a 1.55 m slot — the gap between the
+   * gate corridor floor (`groundProxy` x +-3.4, y -1..0, ending z -55.7) and the descent landing
+   * (trimmed to z -57.25 by §482). At -55.6 the flight's own centre is 0.10 m SOUTH of that
+   * slot, so the drawn middle of the staircase is the roofed half. Measured with the capsule
+   * SETTLED from a metre above the flight line (not teleported to a probed y — §562 records what
+   * that mistake produced): headroom on the centre line runs 6.00 m down to x -4.5, then 1.77,
+   * 1.51, 0.07, 0.00, 0.10 over x -4.0..-2.0 against a 1.80 m capsule. Driven from the gate
+   * corridor, held forward, the centre-line WALK stalls **609 frames** and the RUN **748**.
+   * A lane 1.2 m north (z -56.8) completes to the mid landing, walk and run, so the descent is
+   * usable — off its own centre.
+   *
+   * ── Why it is not moved into the slot, which is the obvious repair ─────────────────────────
+   * Because the parameter was swept before the mechanism was described (§450.4), and the sweep
+   * says the repair space is empty. Flight A's proxy is 1.2 m thick and flight B lies directly
+   * under it in the same shaft, so every metre A moves north is a metre of B's ceiling:
+   *
+   *     A_Z      descent WALK      descent RUN      flight B best-lane min headroom
+   *     -55.6    1/4  stall 609    1/4  stall 748   **6.00 m**   (shipped: B fully passable)
+   *     -56.0    1/4  stall 493    4/4  stall   0     1.51 m
+   *     -56.2    1/4  stall 550    4/4  stall   0     1.38 m
+   *     -56.475  4/4  stall   3    4/4  stall   0     1.38 m     (A_Z = the slot's midpoint)
+   *     -56.7    4/4  stall   1    4/4  stall   0     1.38 m
+   *
+   * Every value that frees A's centre line takes B from passable to impassable **everywhere
+   * across its width** — 1.38 m under a 1.80 m capsule. The trade is strictly worse, so the
+   * shipped value stays and the defect is written down instead of swapped for a bigger one.
+   * The honest repair is to notch the corridor slab around the stairwell, which splits one
+   * collider into two, and `tests/basketvary.test.mjs:424` pins ARCHITECTURE+PROPS registrations
+   * at 282 — moving that bar to pass one's own change is §141.1. Left for whoever owns both.
+   * `tests/slopewalk.test.mjs` arm H carries the numbers and fails if the stairwell is re-cut.
+   */
+  const A_Z = -55.6;
   const fA = K.stairFlight({ steps: 14, rise: 0.4, run: 0.69, width: 3.2, rng: R, cheek: 0.9 });
-  A.add('tomb', 'sandstone_worn', K.place(fA, { x: A_HEAD, y: 0, z: -55.6, ry: Math.PI }));
+  A.add('tomb', 'sandstone_worn', K.place(fA, { x: A_HEAD, y: 0, z: A_Z, ry: Math.PI }));
   /* stairFlight climbs +X from its origin, so mirror it: descend west from A_HEAD to A_HEAD-9.66.
      Box centre = top-face midpoint minus the half-thickness normal, so the TOP lands on the art. */
   A.proxy(new THREE.BoxGeometry(Math.hypot(A_RUN, A_RISE), 1.2, 3.2), { tag: 'ground', material: 'stone' },
-    { x: (A_HEAD - A_RUN / 2) + 0.6 * Math.sin(A_ANG), y: -A_RISE / 2 - 0.6 * Math.cos(A_ANG), z: -55.6, rz: A_ANG });
+    { x: (A_HEAD - A_RUN / 2) + 0.6 * Math.sin(A_ANG), y: -A_RISE / 2 - 0.6 * Math.cos(A_ANG), z: A_Z, rz: A_ANG });
 
   const B_RUN = 16 * 0.63, B_RISE = 16 * 0.4, B_ANG = Math.atan2(B_RISE, B_RUN);
   /* Flight B's HIGH end is anchored to the mid landing it has to meet — x -9.9 is inside the
@@ -2689,8 +2724,32 @@ function tomb(A) {
   const B_TOP_X = -9.9;
   const fB = K.stairFlight({ steps: 16, rise: 0.4, run: 0.63, width: 3.2, rng: R, cheek: 0.9 });
   A.add('tomb', 'sandstone_worn', K.place(fB, { x: B_TOP_X + B_RUN, y: -12.0, z: -57.9, ry: Math.PI }));
+  /**
+   * ── §560: the half-thickness offset has to be MIRRORED with the rotation, and it was not ───
+   * §482 fixed this proxy's LENGTH and its DIRECTION and left its OFFSET copied from flight A,
+   * whose `rz` has the other sign. For `rz = θ` a box's local +Y points at (−sin θ, cos θ), so
+   * the centre that puts the top face on a given plane is `topMid + (0.6 sin θ, −0.6 cos θ)`.
+   * Flight A carries `rz: +A_ANG` and writes `+0.6 sin` — correct. Flight B carries
+   * `rz: −B_ANG`, so its x term must be **−0.6 sin B_ANG**; it wrote `+`.
+   *
+   * The error is a 2 × 0.6 sin(32.4°) = 0.643 m displacement along x of a plane that descends at
+   * 32.4° toward +x, which lifts it 0.643 × tan(32.4°) = **0.408 m** off the masonry. Measured
+   * before the fix, proxy top minus the flight's own `steps × rise / steps × run` line, sampled
+   * every metre down the centre: **+0.47 m at every x**, against flight A's +0.05 (the drawn
+   * tread nosing). 0.47 − 0.05 = 0.42, which is the 0.408 the sign predicts, to a centimetre —
+   * computed and then measured, not either alone.
+   *
+   * What it cost the player: a walker ASCENDING flight B was launched off the floating plane and
+   * `_probeGround`'s rising guard (`velocity.y <= 0.02`) then refused to re-ground it, so the
+   * climb ran ungrounded in `fall` at 1.37 m/s with the ground probe reporting `ok` on every
+   * frame — the user's P1 ("difficult to walk or run up slopes other than by jumping") on the
+   * one authored slope §515's material-scoped repair could not reach. Descending was unaffected
+   * (2.60 m/s, grounded on every frame), which is why no instrument had ever caught it: §8.1's
+   * route only ever goes DOWN this flight. `tests/slopewalk.test.mjs` arm T now drives it both
+   * ways.
+   */
   A.proxy(new THREE.BoxGeometry(Math.hypot(B_RUN, B_RISE), 1.2, 3.2), { tag: 'ground', material: 'stone' },
-    { x: (B_TOP_X + B_RUN / 2) + 0.6 * Math.sin(B_ANG), y: -12.0 + B_RISE / 2 - 0.6 * Math.cos(B_ANG), z: -57.9, rz: -B_ANG });
+    { x: (B_TOP_X + B_RUN / 2) - 0.6 * Math.sin(B_ANG), y: -12.0 + B_RISE / 2 - 0.6 * Math.cos(B_ANG), z: -57.9, rz: -B_ANG });
 
   groundProxy(A, -13.6, -9.6, -5.6, -59.4, -54.2);        // mid landing
   /* The bridge that used to close flight A's 3.54 m foot gap is DELETED (§484): with the flight

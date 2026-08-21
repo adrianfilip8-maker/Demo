@@ -42907,3 +42907,207 @@ stays eyes-only, as `hud.test.mjs` already says of `padBtn`.
 it needed changing — the right stick's problem was upstream, in who claimed the device flag — and
 the arms above assert precise numbers only on `input.look`, which this lane owns, taking merely
 sign and order-of-magnitude through the rig so a camera retune cannot redden an input test.
+
+---
+
+## §560 — Flight B's collider stood 0.47 m above its own staircase: the offset sign was not mirrored with the rotation
+
+`tests/slopewalk.test.mjs` arm B · `src/world/EgyptLevel.js` (tomb descent)
+
+§482 rebuilt both tomb flights' proxies "DERIVED from the drawn run, not eyeballed near it" and
+fixed flight B's LENGTH and its DIRECTION. It left flight B's half-thickness OFFSET copied from
+flight A, whose `rz` carries the other sign.
+
+For `rz = θ` a box's local +Y points at `(−sin θ, cos θ)`, so the centre that puts the top face on
+a given plane is `topMid + (0.6 sin θ, −0.6 cos θ)`. Flight A carries `rz: +A_ANG` and writes
+`+0.6 sin` — correct. Flight B carries `rz: −B_ANG`, so its x term must be **−0.6 sin B_ANG**; it
+wrote `+`. The consequence is a `2 × 0.6 sin(32.4°) = 0.643 m` displacement along x of a plane
+descending at 32.4° toward +x, lifting it `0.643 × tan(32.4°) = 0.408 m` off the masonry.
+
+**Computed, then measured — not either alone.** Proxy top minus the flight's own
+`steps × rise / steps × run` line, sampled every metre down the centre: **+0.47 m at every x**,
+against flight A's +0.05 (the drawn tread nosing). 0.47 − 0.05 = 0.42, the 0.408 the sign
+predicts, to a centimetre. After the fix: **+0.06**, flight A's number.
+
+What it cost the player is 0.41 m of daylight between the feet and the drawn stair — an
+art/collider desync, the defect class §482 opened this flight for. It cost the *walk* nothing:
+see §562.
+
+**DOMAIN (§418.3)** — *passes on* the shipped placement (worst |delta| 0.06 m). *Fails on* the
+pre-fix sign, **constructed and raycast in-arm** from the level's own three numbers, which lifts
+the top face 0.41 m. *Does not discriminate*: whether the desync affected traversal — it did not,
+and arm B says so in its own docblock rather than letting the fix borrow credit.
+
+## §561 — Flight A's drawn centre line is roofed, the parameter was swept, and the repair space is empty
+
+`tests/slopewalk.test.mjs` arm H (tripwire) · declined, not fixed
+
+Flight A is 3.2 m wide. The slot it descends through is **1.55 m** — the gap between the gate
+corridor floor (`proxy:ground`, x ±3.4, y −1…0, z −55.7…−48.3) and the descent landing, trimmed
+to z −57.25 by §482. A 3.2 m flight in a 1.55 m slot is roofed over 1.65 m of its width and that
+is simply what a stairwell is. What is wrong is **which** 1.65 m: the flight's centre line at
+z −55.6 lies 0.10 m south of the slot, so the drawn middle of the staircase is the roofed half.
+
+Measured, capsule **settled** from a metre above the flight line (never teleported to a probed y —
+§562): headroom on the centre line runs 6.00 m down to x −4.5, then **1.77, 1.51, 0.07, 0.00,
+0.10** over x −4.0…−2.0 against a 1.80 m capsule. Driven from the gate corridor, held forward:
+the centre-line **WALK stalls 709 frames** and the **RUN 848**, both in `tiptoe`, reaching 1 of 4
+waypoints. The same drive 1.2 m north (z −56.8) completes to the mid landing at 4/4 with a
+1-frame stall, walk and run — so the descent is usable, off its own centre.
+
+**The obvious repair is to move the flight into the slot. It was tried, and the parameter was
+swept before the mechanism was written up (§450.4).** Flight A's proxy is 1.2 m thick and flight
+B lies directly under it in the same shaft, so every metre A moves north is a metre off B's
+ceiling:
+
+| `A_Z` | descent WALK | descent RUN | flight B best-lane min headroom |
+|---|---|---|---|
+| **−55.6** (shipped) | 1/4, stall 609 | 1/4, stall 748 | **6.00 m** |
+| −56.0 | 1/4, stall 493 | 4/4, stall 0 | 1.51 m |
+| −56.2 | 1/4, stall 550 | 4/4, stall 0 | 1.38 m |
+| −56.475 (slot midpoint) | **4/4, stall 3** | 4/4, stall 0 | 1.38 m |
+| −56.7 | **4/4, stall 1** | 4/4, stall 0 | 1.38 m |
+
+Every value that frees A's centre line takes B from passable to **impassable across its whole
+width** — 1.38 m under a 1.80 m capsule. The trade is strictly worse, so the shipped value stays,
+`A_Z` is named rather than left a literal, and the table is written into the call site. The
+honest repair notches the corridor slab around the stairwell, which splits one collider into two,
+and `tests/basketvary.test.mjs:424` pins ARCHITECTURE+PROPS registrations at **282** — moving that
+bar to pass one's own change is §141.1. Left for whoever owns both files.
+
+**And the §435.4 note the arm exists to carry.** A ray from head height over the same feet reports
+**1.30–8.00 m** of clear space where the capsule measures **0.00–1.77 m**. This lane's own history
+is a probe that read two rectangles and reported 1.100 m where the real route failed at 0.48 m on
+an unmodelled parapet. Both measurements are made side by side in the arm so the contrast cannot
+be lost again.
+
+**DOMAIN (§418.3)** — *passes on* the shipped stairwell (centre stall 709 f, working lane 4/4 at
+1 f, flight B's best lane clearing 6.00 m). *Fails on* a re-cut stairwell — deliberately, it is a
+tripwire; and on any change that moves flight A north, because the flight-B seal at the end of the
+arm is exactly the cost the sweep refused to pay. *Does not discriminate*: whether a player
+naturally finds the north lane, or anything about the drawn art, which no instrument here sees.
+
+## §562 — The defect that did not exist: a teleported probe launched the capsule and I nearly shipped it
+
+**Retraction, recorded because the number was produced correctly by a correct-looking method about
+a game that does not behave that way.**
+
+The stone half of this sweep first reported: *"flight B cannot be walked up — 60 frames of `fall`
+at 1.37 m/s with the ground probe answering `ok` on every one, grounded 0.00, maxVy +0.93."* Every
+one of those numbers is real. The diagnosis chain was real too, and it went three levels deep:
+the refusal was not the slope gate (32.4° against a 50° stone limit, `probe = ok`), not the band
+(`dy` −0.02), not `narrowGround` — it was `_probeGround`'s rising guard, `velocity.y <= 0.02`,
+latching on a capsule the sweep kept pushing upward.
+
+**It was the placement.** The probe put the capsule at `groundCheck(...).y + 0.05` using an origin
+chosen by hand, which on that flight found a different surface and left the capsule
+interpenetrating; the sweep then launched it and the rising guard did the rest. Settled from a
+metre above instead — the way a player arrives — the same flight walks uphill at **2.60 m/s,
+grounded on every frame**, in every lane from z −59.2 to −57.6.
+
+Ablated both ways to be sure the retraction is not itself a mistake: with the §560 sign **and**
+with the shipped sign, the settled walk is 2.60 m/s grounded 1.00 (the only difference is the
+settled height, −8.013 against −7.605 — the 0.41 m §560 measures). So §560 is a desync repair and
+**not** a P1 repair, and it is written up as one.
+
+Three of this file's own instrument faults preceded it and are recorded because they are the same
+family: (1) walk and run reported *identical* numbers across every swept row, because `sprint` is
+not the discriminator — `Move.update` targets `runSpeed × wishMag`, so walk is stick 0.361;
+(2) displacement-over-time reported the terrace ramp at 0.00 m/s for a run, because the window was
+longer than the 2.6 m surface — the ramp is length-bounded, not slope-bounded; (3) a fixed grid
+sampled ramp EDGES, where `narrowGround` correctly answers true, and produced "every stone slope
+tiptoes" from capsules standing 0.25–0.43 m from a real drop. §435.4 is not only about rays: *a
+teleport is not how the agent arrives either.*
+
+## §563 — Every thief spot, entered: 29 of 31, and the frontier that had a working neighbour
+
+`tests/reachcensus.test.mjs` (new)
+
+The question asked of the whole level, not of the three spots §495 added: a spot that exists in
+the level data but cannot be **entered** from a surface the player can already stand on is
+decorative. The set is everything COLLISION offers after §514.3's thin-pole gate — **pole 4,
+rail 7, hook 11, spire 5, vent 4 = 31**. (The other 15 `pole` recs — colonnade r 1.62, pinnacles
+r 0.85, obelisk shaft r 1.50 — are gated out by the user's columns ruling and are not spots.)
+
+Stances were **searched, not authored**: a ring of candidates around every sample point of every
+affordance, every floor under each found by repeated downward raycast, then the real capsule
+settled at each for 30 frames — a stance is where the shipped Controller ends up `grounded`.
+
+- **24 entered from a settled ground stance**, each with the verb the search found (walk / walk+E /
+  jump+E / sneak). Verbs and stances are in the arm.
+- **5 more entered from a driven NEIGHBOUR** — the mid-chain hook rings, which have no ground
+  stance at all. Six main-chain hops plus `low-2 → low-1` and **`low-1 → low-0`** all catch on a
+  release at frame 8 after the mount.
+
+`hook-low-0` is the one the level's own source records as an open reachability hole, on the
+measurement *"nearest `pole` 21.01 m; nearest standable surface 11.60 m straight down"*. Both
+numbers are correct and the conclusion drawn from them is not: **a frontier whose own neighbour
+passes is not a frontier**, and a distance is not a route. Reproduced before quoting: the ring
+positions and the 21 m gap check out; what does not is "unreachable".
+
+**The two that remain are the buried vent segments, and the real boundary is not the vents.** The
+tunnel's INTERIOR IS HOLLOW — a crouched capsule depenetrates by 0.000 m at 8 of 8 samples from
+z −53 to −60.6 and along the whole east run to x −14. *Before calling a surface a lid, look
+underneath it*: there is a room under it. What is solid is the two **portals** — the hall's north
+wall (`proxy:wall` x −24…−3.4, y 0…13, **z −52…−49.9**) across the mouth and the tomb's west wall
+(x −14.05…−12.05, y −12…−2) across the exit — with the terrain sand sheet an unbroken lid between.
+So §8.1's ALTERNATE ("CRAWL the `vent`") is a dead end: the walker enters `crawl` at the hall's NW
+corner at z −48.1, crawls 1.4 m, and stops at **z −49.56** — the wall face at −49.90 plus the 0.34
+capsule radius, to the centimetre — and holds there for as long as forward is held (1290 frames
+measured; grounded and stationary, which both §504 watchdogs exempt by design).
+
+Not repaired: opening it means cutting a doorway through two wall proxies **and** the terrain
+heightfield, each of which becomes two or three colliders against `basketvary`'s 282. Tripwired
+instead (arm V), with the stopping coordinate asserted so a re-cut reddens it.
+
+**DOMAIN (§418.3)** — *passes on* the shipped level: 24/24 direct, 8/8 chain hops, the offered
+census `{hook 11, pole 4, rail 7, spire 5, vent 4}` asserted against the collider layer. *Fails on*
+(both run in-arm) the same 8 drives from stances backed off 12 m along their own approach — 1 of 8
+still enters, and the arm bars ≤1; and the same chain hops with the release suppressed — 0 of 8
+catch. *Does not discriminate*: art — a spot whose rope is invisible passes here, which is the
+standing art/collision seam this project audits elsewhere; difficulty — the hop is driven at one
+measured release phase, not swept, so it says "reachable", never "forgiving"; and guards, which
+are out of scope by user ruling.
+
+## §564 — The slope fix generalizes: the level has two walkable-slope materials and both carry a walk and a run
+
+`tests/slopewalk.test.mjs` arms S and T
+
+§515 was material-scoped (`slopeSandDeg` 58) and certified on `traversal.test.mjs`'s **synthetic**
+`rampCollision(deg)` — a perfect infinite plane that answers `material: 'sand'`. An instrument
+built from the same assumption as the thing it measures cannot falsify it (§439), so the question
+was re-asked on the shipped colliders.
+
+**The census first, because the ceiling comes before the mechanism (§450.4).** `groundCheck` over
+the whole level at 0.5 m — 122,293 ground hits:
+
+    sand    101,656 samples   41.0 % at ≥ 20°   steepest 68.7
+    stone    20,300 samples    9.8 % at ≥ 20°   steepest 89.9  (walls, grazed by the cast)
+    wood        322 samples   palm trunks, tag `misc`, ~90° — not a surface
+    metal/cloth      15 samples   0° — pole tops
+
+So the level has **exactly two** materials with walkable slopes, which is why a material-scoped fix
+could not have the generalization gap its shape predicts. Enumerating the colliders (every proxy
+mesh with an up-facing face tilted ≥ 4° and ≥ 1.5 m²) finds **exactly three** authored sloped
+walkable surfaces: the terrace flight-1 ramp (33.5°) and the two tomb flights (30.1° / 32.4°).
+
+- **Sand.** 14 measured route faces from 7.0° to 40.7°, driven uphill from a settled capsule, walk
+  and run: worst delivered ratio **0.97 walk / 1.00 run**, ≤ 8 ground/air crossings.
+- **Stone.** All three surfaces deliver **2.60 m/s** against a commanded 2.60, grounded, walk and
+  run.
+- **The 58° ceiling is right, and now enumerated.** Every sand face in the level steeper than 58°
+  is one of 8 patches on the approach ridge's west flank (x −73…−80, z 59…83, rises 2.1–15.3 m),
+  40 m off any route. The pad-edge faces at x ±26.5 that read up to 68.7° are the `padLip` kerb,
+  0.5 m wide — `stepHeight` 0.42 territory, not a climb.
+
+**DOMAIN (§418.3)** — arm S *passes on* the 14 route faces above; *fails on* `slopeSandDeg` pulled
+back to the stone limit of 50, **run in-arm** against the steepest sand the level has (the ridge
+flank at (−81, 65), 55.1°): delivered ratio 0.12 → 0.00. *Does not discriminate* the shedding half
+(no unwalkable sand exists on any route to shed off — the synthetic ramp keeps that job) or the
+narrow-ground half. Arm T *passes on* all three stone surfaces walked and run; *fails on* the same
+drive 1.2 m off flight A's centre, run in-arm — 0.54 m/s and 90 tiptoe frames, a capsule 0.35 m
+from a real edge, which is the probe telling the truth and is the discriminator between "stone
+slopes resist" and "this capsule is standing beside a drop".
+
+**Verdict on the user's P1: fixed, and it generalizes.** What remains on a slope in this level is
+§561, and §561 is a headroom defect with the pitch working perfectly underneath it.
