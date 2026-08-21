@@ -695,9 +695,10 @@ test('combo chain seam (§525): a motion is never layered on top of itself, and 
      DOMAIN (§418.3) — passes on: the shipped godot table under a mashed chain at the real
      cadence (`Combo.update` re-swings at `_elapsed >= _t*0.55`, `TUNE.comboTimes`), where each
      of the three slots delivers a peak within 2% of a clean single swing and no more than two
-     tracks are ever live. Fails on: the SAME table with `source` stripped, RUN BELOW as the
-     control — that is exactly the pre-§525 mixer (the rule's whole input is `c.source`), and it
-     reproduces the defect at three live tracks and strikes 2 and 3 short of the clean peak.
+     tracks are ever live. Fails on: the SAME table with `source` AND `excl` stripped, RUN BELOW
+     as the control — that is exactly the pre-§525 mixer (those two fields are the rule's whole
+     input), and it reproduces the defect at three live tracks and strikes 2 and 3 short of the
+     clean peak.
      Cannot discriminate: whether the chain READS as three hits at game framing, whether the
      cross-fade during the brief 2-track overlap is the right length, or anything about the
      torso, feet or lunge — this reads one hand. `shots/chain1-{before,after}-*` carry the picture. */
@@ -767,12 +768,18 @@ test('combo chain seam (§525): a motion is never layered on top of itself, and 
   }
   assert.ok(clean > 0.2, `the clean swing's reach (${clean.toFixed(4)}) is implausible — the yardstick is broken, so nothing below means anything`);
 
-  /* ---- CONTROL: strip `source` and the defect must come back ------------------------------ */
+  /* ---- CONTROL: strip the rule's INPUTS and the defect must come back ---------------------- */
+  /* Both of them. The rule's input was `source` alone at §525; §526 added `excl` for the
+     procedural set and `buildClipSet` re-applies it to every regime, so a control that strips
+     only `source` no longer reaches the pre-fix mixer — it silently becomes a second copy of the
+     "after" arm and the assertions below stop being evidence. That is exactly how this arm failed
+     when §526 landed, which is the control doing its job. Strip what `play()` reads, and if a
+     third predicate is ever added this must grow with it. */
   const stripped = {};
-  for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3']) { const { source, ...rest } = g[n]; stripped[n] = rest; }
+  for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3']) { const { source, excl, ...rest } = g[n]; stripped[n] = rest; }
   const before = mash(stripped);
   assert.equal(before.maxLive, 3,
-    `CONTROL FAILED: with \`source\` stripped the mixer should layer three copies of Canehit (that is the pre-§525 build), but maxLive was ${before.maxLive} — `
+    `CONTROL FAILED: with \`source\`+\`excl\` stripped the mixer should layer three copies of Canehit (that is the pre-§525 build), but maxLive was ${before.maxLive} — `
     + `the control no longer reproduces the defect, so the pass below is not evidence of anything`);
   assert.ok(before.peak[3] < clean * 0.95,
     `CONTROL FAILED: the layered build's third strike reached ${before.peak[3].toFixed(4)} of a clean ${clean.toFixed(4)} — the defect did not reproduce`);
@@ -787,10 +794,134 @@ test('combo chain seam (§525): a motion is never layered on top of itself, and 
       + `(${((after.peak[slot] / clean - 1) * 100).toFixed(1)}%) — the chain is smearing strikes together again`);
   }
 
-  /* The procedural set must be untouched by all of this: no clip there carries a `source`, so
-     the rule cannot reach it and `?anim=proc` restores the old layering exactly. */
+  /* The procedural set still carries no `source` — the swap-back must restore procedural DATA,
+     and a `source` appearing there would mean an imported clip had leaked into it. What changed
+     at §526 is only the exclusivity POLICY, which is asserted in its own arm below. */
   const p = buildClipSet('proc').table;
   for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3']) {
-    assert.equal(p[n].source, undefined, `procedural "${n}" carries a source — the coalesce rule would reach the proc set and ?anim=proc would no longer restore it`);
+    assert.equal(p[n].source, undefined, `procedural "${n}" carries a source — an imported clip has leaked into the ?anim=proc table`);
+  }
+});
+
+test('combo chain seam, procedural set (§526): three different strikes are a hand-off, not an average, and the authored escalation survives a mash', async () => {
+  /* THE DEFECT THIS GUARDS, and why it is a second arm rather than a parameter of the one above.
+     §525 fixed "a motion averaged with ITSELF" — the imported set's shape, where all three slots
+     are `godot:Canehit`. The procedural set has three genuinely DIFFERENT strikes, so `source`
+     could never match and the rule could not reach it; §525.6 measured the defect there and
+     deliberately left it, because `?anim=proc` was then the unbanked baseline of a live A/B. The
+     A/B is banked (§525.1, `shots/chain1-*`), so the reason expired and this is the fix.
+
+     The mechanism is the same class stated one level up: `Combo.update` re-swings 0.154 s into a
+     0.46 s clip and nothing ended the outgoing strike, so three different strikes ran at full
+     weight together. Averaging three DIFFERENT motions is not automatically wrong — that is what
+     blending is for — but these are three renditions of ONE action slot and slot 2 is meant to
+     INTERRUPT slot 1, not be summed with it. Hence `excl`, beside `source`, on the clip.
+
+     THE MEASURE, and it is deliberately NOT the off-manifold angle. `PoseBuffer.addQuat` slerps
+     by `w/(acc+w)`, a normalised weighted mean, so the summed live weight IS the number of
+     motions being averaged: 1.00 is a hand-off, 3.00 is a three-way mean. Off-manifold is
+     zero-tolerance only when the tracks are the same arc; between two different clips a
+     cross-fade leaves both arcs by construction. Fixing this chain RAISED its off-manifold peak
+     from 29.8° to 43.0° while removing every 3-track frame — so this arm asserts on summed
+     weight and on the authored escalation, and not on that angle.
+
+     DOMAIN (§418.3) — passes on: the procedural table, mashed at the real cadence, where summed
+     live weight never exceeds 1.001 and per-slot peak reach rises monotonically as authored.
+     Fails on: the SAME table with `excl` stripped, RUN BELOW as the control — the pre-§526
+     mixer, which reaches summed weight 3.0 and delivers a NON-rising profile. Cannot
+     discriminate: whether the escalation reads at game framing (that is feel and it is hardware
+     item 20), the right cross-fade LENGTH at either seam, or anything about torso, feet or the
+     left arm — like the arm above it reads one hand. */
+
+  const { Animation } = await import('../src/player/Animation.js');
+  const p = buildClipSet('proc').table;
+  const rig = reachRig();
+  const wp = (n) => new THREE.Vector3().setFromMatrixPosition(rig.bones[n].matrixWorld);
+  const DT = 1 / 60;
+
+  /* Drive the REAL mixer through the REAL table seam, exactly as the arm above does. */
+  const mash = (table) => {
+    const a = new Animation({ warn() {}, emit() {} });
+    a.pose = new PoseBuffer(RIG3.BONE_ORDER);
+    const saved = {};
+    for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3']) { saved[n] = ACTIVE[n]; ACTIVE[n] = table[n]; }
+    try {
+      let idx = 0, elapsed = 0, t = 0, maxW = 0;
+      const peak = { 1: -Infinity, 2: -Infinity, 3: -Infinity };
+      const swing = () => { idx = idx >= 3 ? 1 : idx + 1; elapsed = 0; a.play(`cane_combo_${idx}`, { fade: 0.08, loop: false, speed: 1 }); };
+      swing();
+      while (t < 1.4) {
+        a._advance(DT, t);
+        a.pose.clear();
+        const live = [];
+        let wsum = 0;
+        for (const tr of a.tracks) {
+          if (!tr.clip || tr.w <= 0.001) continue;
+          sampleInto(tr.clip, tr.time, a.pose, tr.w);
+          live.push(tr); wsum += tr.w;
+        }
+        if (live.length) {
+          maxW = Math.max(maxW, wsum);
+          for (const n of RIG3.BONE_ORDER) {
+            const b = rig.bones[n]; if (!b) continue;
+            if (a.pose.w[n] > 0) b.quaternion.copy(a.pose.q[n]); else b.quaternion.identity();
+          }
+          rig.rt.updateMatrixWorld(true);
+          const r = wp('handR').z - wp('hips').z;
+          const dom = live.reduce((x, y) => (y.w > x.w ? y : x));
+          const m = /cane_combo_(\d)/.exec(dom.clip.name);
+          if (m) peak[m[1]] = Math.max(peak[m[1]], r);
+        }
+        t += DT; elapsed += DT;
+        if (elapsed >= TUNE.comboTimes[idx - 1] * 0.55 && idx < 3) swing();
+      }
+      return { peak, maxW };
+    } finally { for (const n of Object.keys(saved)) ACTIVE[n] = saved[n]; }
+  };
+
+  /* The three slots are three DIFFERENT clips, so each needs its OWN clean peak — §525.6's
+     "every strike loses about a quarter" came from measuring all three against the largest of
+     the three, and that artefact is corrected in §526.1. */
+  const soloPeak = (clip) => {
+    const pb = new PoseBuffer(RIG3.BONE_ORDER);
+    let best = -Infinity;
+    for (let t = 0; t <= clip.dur + 1e-9; t += DT) {
+      pb.clear();
+      sampleInto(clip, Math.min(t, clip.dur), pb, 1);
+      for (const n of RIG3.BONE_ORDER) {
+        const b = rig.bones[n]; if (!b) continue;
+        if (pb.w[n] > 0) b.quaternion.copy(pb.q[n]); else b.quaternion.identity();
+      }
+      rig.rt.updateMatrixWorld(true);
+      best = Math.max(best, wp('handR').z - wp('hips').z);
+    }
+    return best;
+  };
+  const solo = [1, 2, 3].map((i) => soloPeak(p[`cane_combo_${i}`]));
+  assert.ok(solo[0] < solo[1] && solo[1] < solo[2],
+    `the procedural chain is supposed to ESCALATE — solo peaks came back ${solo.map((s) => s.toFixed(4)).join(' / ')}, which is not rising, so the premise of this arm is gone`);
+
+  /* ---- CONTROL: strip `excl` and the defect must come back -------------------------------- */
+  const stripped = {};
+  for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3']) { const { excl, ...rest } = p[n]; stripped[n] = rest; }
+  const before = mash(stripped);
+  assert.ok(before.maxW > 2.5,
+    `CONTROL FAILED: with \`excl\` stripped the procedural mash should pile three strikes to a summed weight near 3.0 (the pre-§526 mixer), but the max was ${before.maxW.toFixed(2)} — `
+    + `the control no longer reproduces the defect, so the pass below is not evidence of anything`);
+  const bRise = before.peak[1] <= before.peak[2] && before.peak[2] <= before.peak[3];
+  assert.equal(bRise, false,
+    `CONTROL FAILED: the piled build still delivered a rising profile (${[1, 2, 3].map((i) => before.peak[i].toFixed(4)).join(' / ')}) — the defect did not reproduce`);
+
+  /* ---- the shipped procedural table: a hand-off, and the escalation intact ---------------- */
+  const after = mash(p);
+  assert.ok(after.maxW <= 1.001,
+    `the procedural chain summed ${after.maxW.toFixed(2)} of live weight — above 1.0 is an AVERAGE of that many strikes, not a cross-fade between two of them`);
+  assert.ok(after.peak[1] <= after.peak[2] && after.peak[2] <= after.peak[3],
+    `a mashed procedural chain delivered ${[1, 2, 3].map((i) => after.peak[i].toFixed(4)).join(' / ')} — the authored escalation `
+    + `(${solo.map((s) => s.toFixed(4)).join(' / ')}) is being flattened again`);
+  for (const slot of [1, 2, 3]) {
+    assert.ok(after.peak[slot] >= solo[slot - 1] * 0.95 && after.peak[slot] <= solo[slot - 1] * 1.08,
+      `strike ${slot} delivered ${after.peak[slot].toFixed(4)} m against its OWN clean peak of ${solo[slot - 1].toFixed(4)} `
+      + `(${((after.peak[slot] / solo[slot - 1] - 1) * 100).toFixed(1)}%) — a strike that is well over its authored reach is being dragged by the one overlapping it`);
   }
 });

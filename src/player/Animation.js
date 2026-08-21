@@ -442,6 +442,12 @@ export function buildClipSet(raw) {
        average of one arc with itself is not a pose the animator ever drew. Procedural clips
        carry NO source — each is its own motion — so the rule cannot reach them. */
     built = { ...built, source: `${tag}:${src}` };
+    /* EXCLUSION GROUP travels with the game NAME, not with the data (§526). `spliceClip` returns
+       an explicit field list built from the imported clip, so `excl` would otherwise be dropped
+       here and silently again in the `-pure` arms — leaving the imported regimes layerable where
+       the procedural one is not. Whether two clips may be live together is a statement about the
+       action slot, so it is re-applied from the procedural def for every regime. */
+    if (CLIPS[game].excl) built.excl = CLIPS[game].excl;
     table[game] = built;
     origin[game] = `${tag}:${src}`;
     used.add(src);
@@ -711,16 +717,45 @@ export class Animation {
      * either. We keep our own three-slot chain, its lunges, its per-slot events and its shake;
      * only the layering of identical motion is removed.
      *
-     * WHAT IT DOES NOT TOUCH. Procedural clips have no `source`, so a proc combo still layers
-     * three genuinely different motions and reads exactly as before — the swap-back under
-     * `?anim=proc` is unaffected. Distinct sources (`hook_grab`/`hook_swing`) never match. Loop
-     * clips take the `_demoteOthers` path above and never reach here.
+     * THE SECOND HALF OF THE CLASS (§526) — a motion averaged with one it should have REPLACED.
+     *
+     * `source` only catches one arc layered on itself, which is the shape the imported set makes
+     * because their corpus has a single attack. The procedural set has three genuinely DIFFERENT
+     * combo clips and carries no `source` at all, so the rule above could not reach it — and it
+     * had the same defect for the same reason: `Combo.update` re-swings at 0.154 s into a 0.46 s
+     * clip and nothing ever ended the outgoing strike, so three different strikes ran at full
+     * weight together for 15 frames, 29.8° off-manifold.
+     *
+     * Averaging three DIFFERENT strikes is not automatically wrong — that is what blending is
+     * for — but these three are not alternatives the body can hold at once; they are three
+     * renditions of ONE action slot, and slot 2 is meant to INTERRUPT slot 1, not to be summed
+     * with it. What that summing destroys here is the escalation: the three are authored with
+     * rising reach (0.3105 → 0.3781 → 0.4653 m solo, the finisher furthest), and the layered
+     * chain flattens them to 0.3467 / 0.3630 / 0.3490 — the finisher, the pose `combat` freezes
+     * on, loses 25% of its lunge while slot 1 is dragged 12% ABOVE its own authored reach by the
+     * strike overlapping it. Neither number is visible without attributing per slot against that
+     * slot's OWN clean peak (§526.1 — the single `clean` scalar that was right for one repeated
+     * clip is the wrong yardstick for three different ones).
+     *
+     * So exclusivity is declared on the clip as `excl`, beside `source`, and the rule takes
+     * either. It is a property of the action SLOT rather than of the data behind it, which is
+     * why `buildClipSet` copies it from the procedural def onto every imported build of the same
+     * game name: swapping the data must not change whether two clips may coexist.
+     *
+     * WHAT IT DOES NOT TOUCH. A clip carries no `excl` unless its def asks for one, and none
+     * carries a `source` in the procedural set, so both predicates are opt-in and the reachable
+     * set is a printed list rather than an assurance (see the census in §526.2). Distinct sources
+     * and distinct groups never match — `hook_grab`/`hook_release` are different verbs, and the
+     * probe in §525 established the release is not even the same authored shape. Loop clips take
+     * the `_demoteOthers` path above and never reach here; a re-fire of the SAME clip takes the
+     * retarget path above and never reached here either.
      */
-    if (!loop && c.source) {
+    if (!loop) {
       for (const tr2 of this.tracks) {
-        if (tr2.clip && !tr2.ending && !tr2.loop && tr2.clip !== c && tr2.clip.source === c.source) {
-          this._end(tr2, fade);
-        }
+        if (!tr2.clip || tr2.ending || tr2.loop || tr2.clip === c) continue;
+        const sameMotion = !!c.source && tr2.clip.source === c.source;   // §525 — the same arc twice
+        const sameSlot = !!c.excl && tr2.clip.excl === c.excl;           // §526 — one action slot
+        if (sameMotion || sameSlot) this._end(tr2, fade);
       }
     }
 

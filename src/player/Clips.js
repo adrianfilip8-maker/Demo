@@ -2069,7 +2069,7 @@ def('spire_balance', {
  * `cane_hit` fires on the contact frame.
  */
 def('cane_combo_1', {
-  dur: 0.46, loop: false, hold: 0.16,
+  dur: 0.46, loop: false, hold: 0.16, excl: 'cane_strike',
   events: [{ t: 0.15, n: 'cane_hit', d: { index: 1 } }],
   keys: [
     // anticipation: wind back and away, weight onto the back foot, cane cocked behind
@@ -2109,7 +2109,7 @@ def('cane_combo_1', {
 
 /* Hit two: the backhand return, mirrored across the body and faster. */
 def('cane_combo_2', {
-  dur: 0.42, loop: false, hold: 0.14,
+  dur: 0.42, loop: false, hold: 0.14, excl: 'cane_strike',
   events: [{ t: 0.13, n: 'cane_hit', d: { index: 2 } }],
   keys: [
     { t: 0, e: 'in', P: P({
@@ -2151,7 +2151,7 @@ def('cane_combo_2', {
  * from the raised heel through the hips to the cane tip.
  */
 def('cane_combo_3', {
-  dur: 0.62, loop: false, hold: 0.22,
+  dur: 0.62, loop: false, hold: 0.22, excl: 'cane_strike',
   events: [
     { t: 0.21, n: 'cane_hit', d: { index: 3 } },
     { t: 0.21, n: 'land', d: { force: 0.5 } },
@@ -2573,6 +2573,13 @@ export function compile(name, d) {
     hold: Math.min(dur, d.hold ?? dur * 0.4),
     stride: d.stride || 0,
     mask: d.mask || null,
+    /* EXCLUSION GROUP (§526) — "these clips are alternative renditions of ONE action slot, and
+       two of them may never be live at once". Distinct from `source` (§525), which says "these
+       two names are the SAME authored motion". `source` catches a motion averaged with itself;
+       `excl` catches a motion averaged with one it should have INTERRUPTED. Both are read by
+       `Animation.play()`'s one-shot coalesce; neither has any effect on sampling. Null unless a
+       def asks for it, so a clip is layerable by default and exclusivity is opt-in and printable. */
+    excl: d.excl || null,
     events: (d.events || []).map((e) => ({ t: e.t, n: e.n, d: e.d || null })).sort((a, b) => a.t - b.t),
     bones,
     scales,

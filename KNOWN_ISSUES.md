@@ -43586,3 +43586,122 @@ trust rule reddens H4 and H2; H1b and H3 are correctly indifferent to the second
 real unplug looks like in `navigator.getGamepads()`, the axis signs, and where a worn stick
 actually rests all remain the user's re-test. `src/player/CameraRig.js` was not touched: nothing
 here needed it.
+
+## §526 — The procedural chain gets the same rule, by the other half of the mechanism; and the yardstick that made §525.6's headline wrong
+
+§525.6 measured the same class of defect in the procedural set and deliberately left it, on the
+grounds that `?anim=proc` was the unbanked baseline of a live A/B and its behaviour had to stay
+what it had always been. That A/B is banked — committed, photographed, pushed (§525.1,
+`shots/chain1-*`) — so the reason expired and the defect is fixed here.
+
+### 1. Why `source` could never have reached it
+
+§525's rule keys on `source`: two clips with the same `source` are the SAME authored motion, and
+a motion may not be layered on itself. That is the imported set's shape, because their corpus has
+exactly one ground attack and all three of our slots resolve to `godot:Canehit`.
+
+The procedural set is the opposite shape. `cane_combo_1/2/3` are three genuinely DIFFERENT
+authored clips and carry no `source` at all, so the predicate was structurally unable to match —
+and yet the chain had the same defect, for the same underlying reason: `Combo.update` re-swings at
+`_elapsed >= _t*0.55` = 0.154 s into a 0.46 s clip and **nothing ever ended the outgoing strike**.
+
+So the class is wider than §525 stated it. It is not "a motion averaged with itself"; it is *a
+motion averaged with one it should have replaced*. Averaging three DIFFERENT strikes is not
+automatically wrong — that is what blending is for — but these three are not alternatives the body
+can hold at once. They are three renditions of ONE action slot, and slot 2 is meant to INTERRUPT
+slot 1, not to be summed with it.
+
+`excl` is therefore declared on the clip beside `source`, and `play()` takes either. It is a
+property of the action SLOT rather than of the data behind it, which is why `buildClipSet`
+re-applies it from the procedural def onto every imported build of the same game name: swapping
+the data behind a verb must not change whether two clips may coexist. `spliceClip` returns an
+explicit field list and would otherwise have dropped it — silently, and again in the `-pure` arms.
+
+### 2. The measure — and the reason it is NOT the off-manifold angle
+
+`PoseBuffer.addQuat` slerps incrementally by `w/(acc+w)`. It is a **normalised** weighted mean, so
+three tracks at weight 1.0 do not overdrive anything: they produce the equal-weight average of
+three poses. Read from the combiner rather than inferred, and it settles two things at once — why
+no channel sum could see this defect (every track is correct and the combiner is behaving as
+designed), and what the honest measure is.
+
+**Summed live weight is the number of motions being averaged.** 1.00 is a hand-off; 3.00 is a
+three-way mean. That is the invariant, it is regime-independent, and it states the class exactly.
+
+| procedural, mashed | before | after |
+|---|---|---|
+| frames with 3 live tracks | 15 (0.250 s) | **0** |
+| max summed live weight | 3.00 | **1.00** |
+| frames with summed weight > 1 | 33 (0.550 s) | **0** |
+| per-slot peak vs that slot's OWN clean | +11.7% / −4.0% / −25.0% | **+3.2% / −1.2% / +0.0%** |
+| authored escalation delivered | **NOT rising** | **rising** |
+| off-manifold, 2+ tracks | 29.8° | **43.0°** |
+
+**The off-manifold angle went the wrong way, and that is the metric's fault rather than the fix's.**
+It is a zero-tolerance measure only when the overlapping tracks are the same authored arc, where
+every degree away from that arc is a pose nobody drew. Between two DIFFERENT clips a cross-fade
+leaves both arcs *by construction* — that is what a transition is — so the angle there measures
+how far apart the two clips are, not how broken the blend is. The 43.0° peak is four frames at the
+slot-2→slot-3 seam, where slot 2's follow-through (cane out at [128, 96, 0]) hands over to slot 3's
+overhead wind-up (cane at [−124, 40, 0]); those poses are genuinely far apart and the midpoint is
+far from both. Every one of those frames sums to exactly 1.00. Recorded rather than quietly
+dropped, because a number that moves the wrong way after a fix is the tell that either the fix or
+the metric is wrong, and here it was the metric's DOMAIN — the tool now prints summed weight first
+and says so in its header.
+
+### 3. §525.6's headline was an artefact of a single-scalar yardstick
+
+§525.6 reported that in the procedural set "**every** strike loses about a quarter of its reach",
+comparing 0.3467 / 0.3630 / 0.3490 against a clean 0.4653. That comparison is wrong, and it was
+wrong independently of anything fixed here.
+
+`comboseam`'s `peakSolo` is the max over all three solo runs. In an imported regime that is exactly
+right, because all three slots resolve to the same clip and therefore to the same clean peak —
+which is why §525's table could quote one number three times. In the procedural set the three
+slots are three different clips with deliberately different envelopes:
+
+```
+cane_combo_1 solo peak 0.3105 m @ t 0.150      cane_combo_3 solo peak 0.4653 m @ t 0.183
+cane_combo_2 solo peak 0.3781 m @ t 0.183
+```
+
+They **escalate** — the finisher reaches furthest, which is what a finisher is for and what the
+clip's own comment describes. Measuring all three against the largest of the three reports slots 1
+and 2 as catastrophically short when they were never authored to reach that far. Against each
+slot's own clean peak the real picture is: slot 1 runs **12% OVER** its authored reach — it is
+being dragged forward by the strike overlapping it — slot 2 is near-unchanged at −4.0%, and only
+slot 3 loses the quarter. The thing the pile actually destroys is not reach, it is the
+**escalation**: 0.31 → 0.38 → 0.47 flattens to 0.35 / 0.36 / 0.35, and the strike it costs most is
+the finisher, the pose `combat` freezes on.
+
+This is §442.3 again — the quantity had to be attributed against the right reference before it said
+anything — and it is the second time in two sections that a per-slot attribution changed the story.
+The tool now prints each slot against its own clean peak, and prints whether the delivered profile
+rises.
+
+### 4. Blast radius, printed rather than asserted
+
+Clips carrying `excl` after this change: `cane_combo_1`, `cane_combo_2`, `cane_combo_3`, and
+nothing else, in every regime. A clip is layerable by default; exclusivity is opt-in. The rule
+requires a one-shot on both sides, so no loop can reach it, and a re-fire of the SAME clip takes
+the retarget path above it and never reached it either.
+
+Both published comparisons survive unchanged, verified rather than assumed: the imported regime
+still reports 0.7214 / 0.7214 / 0.7214, max 2 live tracks and 9.3° off-manifold, and
+`--nocoalesce` still reproduces the pre-§525 build at 32.3° and 0.7214 / 0.6403 / 0.6215. §525's
+table and §525.1's `shots/chain1-*` frames therefore stand exactly as published.
+
+### 5. The control that caught its own obsolescence
+
+`--nocoalesce` and the test arm's control both work by stripping the rule's inputs to rebuild the
+pre-fix mixer. With `excl` added, a control that stripped only `source` no longer reached the
+pre-fix mixer — it silently became a second copy of the "after" arm, and its assertions would have
+stopped being evidence while still passing. The `anim.test.mjs` control failed loudly the moment
+§526 landed, which is the control doing exactly its job, and both it and the tool now strip both
+fields. If a third predicate is ever added, both must grow with it; that requirement is written at
+each site rather than left to be rediscovered.
+
+**Limits.** Everything above reads ONE hand, position and orientation, as §525's did — a chain that
+keeps the hand while mangling the torso, feet or left arm scores identically. The escalation is
+measured as peak forward reach per slot, which is not the same thing as reading as three hits at
+game framing; that is feel, it needs hands, and it is hardware item 20.

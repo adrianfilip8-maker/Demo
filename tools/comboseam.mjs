@@ -31,6 +31,15 @@
  *   node tools/comboseam.mjs --regime proc       # the procedural set, for calibration
  *   node tools/comboseam.mjs --json out.json
  *
+ * OFF-MANIFOLD IS NOT A UNIVERSAL DEFECT MEASURE (§526.1). It is zero-tolerance only when the
+ * overlapping tracks are the SAME authored arc: there, every degree away from the arc is a pose
+ * nobody drew. When the tracks are DIFFERENT clips — which is the procedural set's whole shape —
+ * a cross-fade leaves both arcs by construction, and the angle measures how far apart the two
+ * clips are, not how broken the blend is. Fixing the procedural chain RAISED its off-manifold
+ * peak from 29.8° to 43.0° while removing every 3-track frame, restoring the authored escalation
+ * and bringing every summed weight to exactly 1.00: the metric went the wrong way because the
+ * metric does not mean there what it means in §525. Read `max summed live weight` first.
+ *
  * WHAT IT CANNOT DISCRIMINATE (§418.3, third line). It reads the right hand only — its position
  * (reach) and its orientation (off-manifold angle). A chain that keeps both while mangling the
  * TORSO, the FEET or the left arm scores identically to a clean one, and the off-manifold angle
@@ -79,9 +88,16 @@ const { Animation, CLIP_REGIME, ACTIVE: TBL } = await import('../src/player/Anim
    printed identical numbers, which is the same class of mistake as the inert `--regime` above:
    a knob wired downstream of the thing it is supposed to change. */
 if (NOCOALESCE) {
-  let n0 = 0;
-  for (const n of Object.keys(TBL)) if (TBL[n] && TBL[n].source) { delete TBL[n].source; n0++; }
-  console.log(`!! --nocoalesce: source stripped from ${n0} clips — this is the PRE-§525 mixer.`);
+  let n0 = 0, n1 = 0;
+  for (const n of Object.keys(TBL)) {
+    if (!TBL[n]) continue;
+    if (TBL[n].source) { delete TBL[n].source; n0++; }
+    /* `excl` is the §526 half of the same rule and has to come off too, or `--nocoalesce` would
+       reproduce the pre-§525 mixer in the imported regimes and the POST-§526 one in `proc` —
+       an arm that is "before" for one regime and "after" for another is not a before/after. */
+    if (TBL[n].excl) { delete TBL[n].excl; n1++; }
+  }
+  console.log(`!! --nocoalesce: source stripped from ${n0} clips, excl from ${n1} — this is the PRE-§525/§526 mixer.`);
 }
 if (CLIP_REGIME !== REGIME) {
   throw new Error(`comboseam: asked for regime "${REGIME}" but the module loaded "${CLIP_REGIME}" `
@@ -245,8 +261,30 @@ const three = mashed.frames.filter((f) => f.n >= 3);
 const seamMin = three.length ? Math.min(...three.map((f) => f.reach.fwd)) : null;
 const seamMax = three.length ? Math.max(...three.map((f) => f.reach.fwd)) : null;
 
+/**
+ * SUMMED LIVE WEIGHT — the invariant, and the one number that states the defect class exactly.
+ *
+ * `PoseBuffer.addQuat` slerps incrementally by `w/(acc+w)`, so it is a NORMALISED weighted mean:
+ * three tracks at weight 1.0 do not overdrive anything, they produce the equal-weight average of
+ * three poses. That is why no channel sum could ever see this defect — every track is correct and
+ * the combiner is behaving as designed — and it is why the summed weight is the honest measure of
+ * how many voices are being averaged. Two tracks summing to 1.00 is a hand-off; anything above
+ * 1.00 is a pile, and the pose is a mean of motions the body cannot be in at once.
+ *
+ * Prefer this over the off-manifold angle wherever the blended clips DIFFER. Off-manifold is a
+ * zero-tolerance measure only when the two tracks are the same authored arc (§525's case), where
+ * every degree away from that arc is invented. A cross-fade between two DIFFERENT clips leaves
+ * both arcs by construction — that is what a transition is — so a larger angle there is transition
+ * width, not damage. See the limits note at the foot of this file.
+ */
+const wsum = mashed.frames.map((f) => f.live.reduce((a, b) => a + b.w, 0));
+const maxW = Math.max(...wsum);
+const overW = wsum.filter((w) => w > 1.001).length;
+
 console.log(`\n--- summary ---`);
 console.log(`frames with 3 live tracks : ${three.length}  (${(three.length * DT).toFixed(3)} s)`);
+console.log(`max summed live weight    : ${maxW.toFixed(2)}   <- 1.00 is a hand-off; >1 is an average of that many motions`);
+console.log(`frames with summed w > 1  : ${overW}  (${(overW * DT).toFixed(3)} s)`);
 console.log(`peak reach, clean swing   : ${peakSolo.toFixed(4)} m`);
 console.log(`peak reach, mashed        : ${peakMash.toFixed(4)} m   (${((peakMash / peakSolo - 1) * 100).toFixed(1)}%)`);
 if (seamMin != null) console.log(`reach while 3 live        : ${seamMin.toFixed(4)} … ${seamMax.toFixed(4)} m`);
@@ -274,8 +312,27 @@ for (const f of mashed.frames) {
   const m = /cane_combo_(\d)/.exec(dom.clip);
   if (m) perSlot[m[1]] = Math.max(perSlot[m[1]], f.reach.fwd);
 }
+/**
+ * EACH SLOT AGAINST ITS OWN CLEAN PEAK (§526.1), not against one scalar.
+ *
+ * `peakSolo` above is the max over all three solos. In an IMPORTED regime that is exactly right,
+ * because all three slots resolve to the same authored clip and therefore to the same clean peak
+ * — which is why the §525 table could quote one number three times. In the PROCEDURAL set the
+ * three slots are three different clips with deliberately different envelopes (0.3105 / 0.3781 /
+ * 0.4653 m — an escalation, the finisher furthest), so measuring all three against the largest
+ * of them reports slots 1 and 2 as catastrophically short when they were never meant to reach
+ * that far. §525.6's "every strike loses about a quarter of its reach" is that artefact; the
+ * per-slot ratios below say slot 1 runs 12% OVER its own authored reach (it is being dragged
+ * forward by the strike overlapping it) and only slot 3 loses the quarter.
+ *
+ * The escalation itself is the thing to watch: monotonically rising per-slot peaks is the chain
+ * reading as three strikes, and a flat profile is the smear, regardless of the absolute numbers.
+ */
+const soloPeak = solos.map((s) => Math.max(...s.map((f) => f.reach.fwd)));
 console.log(`per-strike peak reach      : ${[1, 2, 3].map((i) => `slot${i} ${perSlot[i].toFixed(4)}`).join('  ')}`);
-console.log(`   (clean single swing ${peakSolo.toFixed(4)} m — three numbers near it is a chain that reads)`);
+console.log(`   vs that slot's own clean : ${[1, 2, 3].map((i) => `slot${i} ${soloPeak[i - 1].toFixed(4)} (${((perSlot[i] / soloPeak[i - 1] - 1) * 100 >= 0 ? '+' : '')}${((perSlot[i] / soloPeak[i - 1] - 1) * 100).toFixed(1)}%)`).join('  ')}`);
+const escal = (a) => (a[0] <= a[1] && a[1] <= a[2] ? 'rising' : 'NOT rising');
+console.log(`   escalation, authored     : ${escal(soloPeak)}   delivered: ${escal([perSlot[1], perSlot[2], perSlot[3]])}`);
 
 if (JSON_OUT) {
   writeFileSync(JSON_OUT, JSON.stringify({ regime: CLIP_REGIME, mashed: mashed.frames, solos, peakSolo, peakMash, seamMin, seamMax }, null, 1));
