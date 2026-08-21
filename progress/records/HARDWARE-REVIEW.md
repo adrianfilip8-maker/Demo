@@ -1144,6 +1144,9 @@ Say whether the climb feels weightless before anyone builds it.
 
 ## 17. The impact shake reaches the lens for the first time — every amplitude is authored blind
 
+> ### ✅ USER VERDICT — "the Impact shake is good." The blind-authored amplitudes are ratified by
+> play as-shipped; every TUNE constant stands untouched. Item closed.
+
 **Commit** this round · **File** `src/player/CameraRig.js` (`init`, one subscription) · **Ledger** §475.4
 
 The camera's impact shake — rotation-dominant, three-octave noise, five TUNE constants, its own

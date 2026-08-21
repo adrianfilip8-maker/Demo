@@ -41681,3 +41681,10 @@ content, not by session timing: §476 pins its build by the tool's lock-time sta
 content that requires the shipped mechanisms, which survives any amount of ref weather. Nothing
 was lost; nothing needed the §524 cure; the trap this time was purely diagnostic — a session
 that trusted its first local read would have "recovered" eleven commits that were never gone.
+
+## §524 — Hardware verdict: item 17, the impact shake, is good as shipped
+
+The user, verbatim: *"17. the Impact shake is good."* The shake's five TUNE constants were authored
+blind years-of-sections ago and reached a lens for the first time in §475.4, when the containment
+work found the subscription had never existed; the first human to see them ratifies them untouched.
+Item 17 closes. Recorded per the sheet's own rule: an answer of "leave it" is worth recording too.
