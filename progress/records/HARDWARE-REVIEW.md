@@ -1276,12 +1276,15 @@ the hook looks different this build too.
    much bigger, more committed motion. Damage still resolves on the button press, so the reach is
    cosmetic — but a swing that *looks* like it should have connected and did not is a complaint
    worth catching early. Watch it against a guard at the edge of range.
-3. **The pickpocket and the hook in situ.** These two carry the least evidence of anything here.
-   The swap itself is measured offline — reach curves, durations, loop flags, and the state that
-   drives each one — but the shared build box was saturated while this landed and the on-camera
-   pass for them is thinner than the audit's earlier rounds. Treat them as the items most worth
-   your eyes: steal from a walking guard, swing a real hook. Either reading wrong in context is
-   exactly the evidence no offline measurement can produce.
+3. **The pickpocket and the hook in situ.** Both arms are on camera
+   (`shots/cane1-{godot,proc}-*`) and the hook in particular changed a lot: ours held the cane
+   aloft while standing upright, the repo's hangs from a fully extended arm under a vertical
+   cane, body and legs swinging beneath it. That reads far more like a hook swing — but it is a
+   *posed* take, with the state machine that would re-base the pose deliberately parked, which
+   is the same limit the earlier audit rounds carried. So these two are still the items most
+   worth your eyes: steal from a walking guard, swing a real hook off a real anchor. Either
+   reading wrong in context is exactly the evidence no posed take and no offline measurement can
+   produce.
 
 `?anim=proc` restores the previous procedural attack, pickpocket and hook in one URL token if you
 want to compare them live.
