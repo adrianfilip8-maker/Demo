@@ -115,6 +115,12 @@ async function drive(opts) {
       if (stop) break;
     }
     out.samples = samples; out.shakes = shakes;
+    /* Retire the rig before the next one is minted. `realWorld()`'s engine is CACHED and shared,
+       and `CameraRig.init` subscribes to `shake` and `shot` on it — the same hazard `_moveset.mjs`
+       documents for the Controller's listeners, and this file builds ~200 rigs against one
+       engine. Nothing here reads a retired rig, so it changes no number; it stops the bus growing
+       a listener per drive, which is the thing that eventually does. */
+    rig.dispose?.();
     return out;
   } finally {
     TUNE.clampMargin = keep.margin; TUNE.clampBankFirst = keep.bank;
