@@ -153,6 +153,11 @@ const GODOT_ALIAS = {
   jump_rise:     'Jump',
   jump_fall:     'Falling',
   land_soft:     'Landing',
+  ledge_hang:    'LedgeGrab Idle',
+  pole_climb:    'PoleClimbing',
+  rail_walk:     'railrun',
+  spire_balance: 'SpireJumpIdle',
+  spire_land:    'SpireJumplanding',
 };
 
 /** A raw authoring-format clip replayed over a different duration (events rescale with it). */

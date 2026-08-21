@@ -1,0 +1,256 @@
+{
+  "sha": "3785e10",
+  "dirty": "M src/core/Input.js\n M src/player/Animation.js\n M src/ui/HUD.js\n M src/ui/Icons.js\n?? src/player/GodotClips.js",
+  "W": 1920,
+  "H": 1080,
+  "Q": "high",
+  "ARM": "godot",
+  "errs": [],
+  "tele": {
+    "gaits": {
+      "walk": {
+        "node": "walk",
+        "stride": 3.038,
+        "speed": 3.24,
+        "phaseRate": 0.847,
+        "skate": 0.668,
+        "state": "move"
+      },
+      "run": {
+        "node": "run",
+        "stride": 6.195,
+        "speed": 4.369,
+        "phaseRate": 0.849,
+        "skate": 0.89,
+        "state": "move"
+      },
+      "sprint": {
+        "node": "run_fast",
+        "stride": 6.195,
+        "speed": 0.435,
+        "phaseRate": 0.137,
+        "skate": 0.411,
+        "state": "move"
+      }
+    },
+    "jump": {
+      "rise": [
+        {
+          "n": "jump_rise",
+          "w": 1,
+          "t": 0.083,
+          "lp": 1,
+          "end": 0
+        }
+      ],
+      "fall": [
+        {
+          "n": "jump_rise",
+          "w": 0.524,
+          "t": 0.467,
+          "lp": 1,
+          "end": 1
+        },
+        {
+          "n": "jump_apex",
+          "w": 0.476,
+          "t": 0.067,
+          "lp": 1,
+          "end": 0
+        }
+      ],
+      "land": [
+        {
+          "n": "hurt",
+          "w": 0.833,
+          "t": 0.383,
+          "lp": 0,
+          "end": 1
+        },
+        {
+          "n": "jump_fall",
+          "w": 0.833,
+          "t": 0.717,
+          "lp": 1,
+          "end": 1
+        }
+      ],
+      "landState": "move"
+    },
+    "poses": {
+      "ledge_hang": {
+        "dur": 1,
+        "loop": true,
+        "caps": [
+          {
+            "ph": 0.15,
+            "t": 0.167,
+            "w": 1
+          },
+          {
+            "ph": 0.4,
+            "t": 0.4,
+            "w": 1
+          },
+          {
+            "ph": 0.65,
+            "t": 0.65,
+            "w": 1
+          },
+          {
+            "ph": 0.9,
+            "t": 0.9,
+            "w": 1
+          }
+        ]
+      },
+      "pole_climb": {
+        "dur": 0.5,
+        "loop": true,
+        "caps": [
+          {
+            "ph": 0.15,
+            "t": 0.167,
+            "w": 1
+          },
+          {
+            "ph": 0.4,
+            "t": 0.2,
+            "w": 1
+          },
+          {
+            "ph": 0.65,
+            "t": 0.333,
+            "w": 1
+          },
+          {
+            "ph": 0.9,
+            "t": 0.45,
+            "w": 1
+          }
+        ]
+      },
+      "rail_walk": {
+        "dur": 0.75,
+        "loop": true,
+        "caps": [
+          {
+            "ph": 0.15,
+            "t": 0.114,
+            "w": 1
+          },
+          {
+            "ph": 0.4,
+            "t": 0.302,
+            "w": 1
+          },
+          {
+            "ph": 0.65,
+            "t": 0.49,
+            "w": 1
+          },
+          {
+            "ph": 0.9,
+            "t": 0.678,
+            "w": 1
+          }
+        ]
+      },
+      "spire_balance": {
+        "dur": 4,
+        "loop": true,
+        "caps": [
+          {
+            "ph": 0.15,
+            "t": 0.6,
+            "w": 1
+          },
+          {
+            "ph": 0.4,
+            "t": 1.6,
+            "w": 1
+          },
+          {
+            "ph": 0.65,
+            "t": 2.6,
+            "w": 1
+          },
+          {
+            "ph": 0.9,
+            "t": 3.6,
+            "w": 1
+          }
+        ]
+      },
+      "spire_land": {
+        "dur": 0.167,
+        "loop": false,
+        "caps": [
+          {
+            "ph": 0.15,
+            "t": 0.167,
+            "w": 1
+          },
+          {
+            "ph": 0.4,
+            "t": 0.167,
+            "w": 1
+          },
+          {
+            "ph": 0.65,
+            "t": 0.167,
+            "w": 1
+          },
+          {
+            "ph": 0.9,
+            "t": 0.167,
+            "w": 1
+          }
+        ]
+      },
+      "double_jump": {
+        "dur": 0.41,
+        "loop": false,
+        "caps": [
+          {
+            "ph": 0.15,
+            "t": 0.167,
+            "w": 1
+          },
+          {
+            "ph": 0.4,
+            "t": 0.167,
+            "w": 1
+          },
+          {
+            "ph": 0.65,
+            "t": 0.267,
+            "w": 1
+          },
+          {
+            "ph": 0.9,
+            "t": 0.383,
+            "w": 1
+          }
+        ]
+      }
+    },
+    "regime": {
+      "regime": "godot",
+      "origin": {
+        "walk": "godot:Walk",
+        "run": "godot:Run",
+        "run_fast": "godot:Run",
+        "jump_rise": "godot:Jump",
+        "jump_fall": "godot:Falling",
+        "double_jump": "godot:FrontFlip",
+        "land_soft": "godot:Landing",
+        "ledge_hang": "godot:LedgeGrab Idle",
+        "rail_walk": "godot:railrun",
+        "pole_climb": "godot:PoleClimbing",
+        "spire_land": "godot:SpireJumplanding",
+        "spire_balance": "godot:SpireJumpIdle"
+      }
+    }
+  }
+}

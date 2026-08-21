@@ -41984,3 +41984,117 @@ both runs measured the same curve.
 
 Nothing in shipped gameplay code changed for this pass; the §516.4 record already said the
 composition was right and the instrument was wrong, and this is the instrument agreeing.
+
+---
+
+## §479 — The movement-set audit the instruction implies: every verb the repo authored, on camera against ours, and the repo wins where nothing disqualifies it
+
+The instruction's second sentence — *"double check to make sure the correct movement animations
+are being used from the godot repo"* — implies more than the flip: the repo authors clips for
+eleven of our verb slots, and until this round NONE played in the shipped game. §478 built the
+pipeline; this is the audit. Default per the instruction: the repo clip wins; ours survives only
+where a swap is demonstrably worse or breaks a verified fix. Evidence: `tools/moveslook.mjs` —
+one arm per regime token, identical scripted takes on the shipped model; real drives for the
+gaits and the jump family (frames PHASE-matched: the shared stride phase is the beat), posed
+takes through the real `animation.play()` seam for the attach verbs (movement module parked;
+clip table, splice, donor fill, skinning, renderer all shipped; every capture's track weight
+recorded, all 1.0). Pairs reviewed side-by-side per the mandate (`tools/sbs.mjs`); the committed
+pairs are `shots/moves1-*`.
+
+### §479.1 The verdict table
+
+```
+verb (ours)      repo clip          verdict  the pair says (frames: moves1-{proc,godot}-*)
+walk             Walk               REPO     their sneaking-cartoon walk, stride 3.04 derived
+run              Run                REPO     their leaping 6.20 m bound; tree rate-matches it
+run_fast         Run                REPO     same source as run (no second run exists); the
+                                             sprint-speed take was REFUSED BY THE LEVEL, twice:
+                                             the plaza's straight run is < 14 m and every
+                                             full-speed take ended wall-adjacent with the
+                                             subject out of frame — run_fast's on-camera
+                                             evidence is the run pair, stated as such
+jump_rise        Jump               REPO     their launch reads; window matches (0.5 authored)
+jump_fall        Falling            REPO     held fall pose, marked a cycle (its job is a loop)
+land_soft        Landing            REPO     0.25 s absorb; donor's footstep thuds inherited
+double_jump      FrontFlip          REPO     §478 — the headline
+ledge_hang       LedgeGrab Idle     REPO     one-paw hang, cane stowed low — vs ours hanging
+                                             two-handed with the cane horizontal in the grip
+pole_climb       PoleClimbing       REPO     compact wrapped climb — vs ours upright with the
+                                             cane waving skyward mid-climb
+rail_walk        railrun            REPO     their flattened rail dash; at rail_walk's actual
+                                             walk-band speeds it cycles ~2.3/s (the 9.5 m/s
+                                             floor is rail_slide's — the grind, unswapped)
+spire_balance    SpireJumpIdle      REPO     perched crouch-sit with the cane flourish
+spire_land       SpireJumplanding   REPO     swaps WITH spire_balance — the landing's end pose
+                                             must hand off into the idle it precedes
+```
+
+Stays procedural, with reasons on the record:
+- sneak / crouch-walk / crawl / glide / hook swing / dive / roll / tiptoe / balance — the repo
+  has no clips for them; sneak_walk carries the §470 wrong-leg fix, and anim.test's fall-through
+  arm asserts its identity in every regime as the scope guard.
+- land_hard / land_roll — the repo's one Landing is a light absorb; our hard/roll landings carry
+  impact events and recovery a 0.25 s clip has no room for.
+- jump_apex — the repo has no apex pose; the fall is Falling, the apex stays ours.
+- ledge_shimmy_l/r, pole_slide, pole_swing, rail_slide — no repo counterparts (RailrunStand is a
+  standing idle, not a grind).
+- the idle family — Standupright / Crouching stand exist in the set, but idle is not on the
+  instruction's verb list and ours carry the fidget tree; unswapped, recorded.
+- LedgeGrab (their grab one-shot) and SpireJump (their leap) have NO play site in our moveset —
+  wiring one is new behaviour, not a swap; recorded as available, unused.
+
+### §479.2 Mechanisms the swaps needed (each measured, none assumed)
+
+- **Stride, derived not invented**: the tree rate-matches gaits by `stride` (m/cycle), and a
+  swapped gait without one freezes the legs (anim.test failure mode 3). godot2clips derives it
+  exactly as mixamo2clips does — planted-foot back-travel fit over contact runs — with two
+  measured adaptations: the fit runs on the 60 Hz capture (this set's cartoon stance is ≤ 2
+  samples at 20 Hz, under the fit's minimum; same motion, denser view), and it accepts 2-sample
+  runs pooled across feet (Run's sprint stance IS two samples; the pooled fit stays
+  overdetermined; every other clip's verdict unchanged, checked both ways). Results: Walk
+  3.038 m, Run 6.195 m, railrun 1.092 m — ours 2.55 / 4.05–4.85 / 1.6.
+- **Events**: gait swaps carry derived footstep events; for one-shots the splice inherits the
+  DONOR's events time-scaled when the source has none — a swap must not silently mute a landing
+  thud. `Falling` is marked a cycle (near-static, seam closed by construction).
+- **The phase-rate instrument taught the tree's own arithmetic**: both driven gaits first
+  measured the same 0.85 cyc/s — a constant across a sweep, §509's tell — and the chase found
+  no defect: `_strideLength()` rate-matches against the WEIGHTED-MEAN stride of every blended
+  node (walk@3.24 m/s is a 77/23 walk/run blend → mean 3.76 m → 0.861 cyc/s — matches). The
+  instrument's per-node "skate" column is an artifact at blend speeds and is recorded as such;
+  under the proc set the same arithmetic gives 1.10/1.37 cyc/s, also matching.
+
+### §479.3 What the audit run itself got wrong, on the record
+
+- The first gait takes drove 11 m into the stair alcove north of the plaza (RESET_Z 40 + 3.5 s
+  settle) and the first jump take landed on something that fired `hurt` — the telemetry's own
+  track table caught both. Retakes from the plaza (RESET_Z 30, 100-frame settle) replaced them.
+- One retake ran with the wrong arm CONTENT: the working tree was at the §478 commit's state
+  (alias = double_jump only) when the "godot" retake booted, so its gait frames carried
+  procedural clips under a godot label. The tool's own telemetry caught it — `origin` recorded
+  1 swap where the arm claimed 12 — and the take was re-shot after the table was restored. The
+  §474-era attribution rule (arms differ by the regime token ALONE) now has its counterexample
+  class: a shared tree being staged for a commit is an arm-content change with no token change;
+  the `origin` line in every capture is what catches it.
+- The jump-fall probe took three derivations to photograph the fall clip DOMINANT (vy < −2 and
+  vy < −4.5 both fire inside the apex fade — 0.95 then 0.24 of the blend still `jump_apex`,
+  measured); the shipped probe waits for the `jump_fall` track itself past 0.6 weight.
+- The two arms' pose boots sit ~1 h apart in the level's day cycle, so the pair frames differ
+  in ambient tint; the poses, not the pixels, are the comparanda (`sbs`'s diff panel shows the
+  whole-scene wash exactly so nobody mistakes it for a clip change).
+- `spire_land`'s 0.167 s one-shot ends inside the pose rig's fade-in, so its captures collapse
+  to the END pose at full weight (recorded in caps); the pair compares end poses, which is the
+  pose that matters — it is the one that hands off to the idle.
+
+### §479.4 Held, and the honest limits
+
+- anim.test's regime arms sweep godot/godot-pure through every registration guard (mutation
+  including GodotClips' own key grid, splice coverage, stride survival, quats, required-52);
+  the default-regime arm derives the swap set from CLIP_ORIGIN itself, so audit growth cannot
+  rot it.
+- The posed attach takes photograph POSE, not in-situ context: rail_walk on a real rail,
+  pole_climb on the drainpipe, ledge_hang off a real ledge remain hardware-sheet material
+  (item 18 hands the user the three checks). pole_climb plays at natural rate under the repo
+  clip (feet never meet floor ⇒ no honest stride ⇒ no rate-match; mixamo's pole_up shipped the
+  same shape).
+- run_fast's sprint-speed take: refused by the level, twice, as the table records.
+- Suite **874/874**, EXIT=0, from a clean worktree at this commit.

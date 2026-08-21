@@ -1200,3 +1200,41 @@ closing evidence. Three checks, in order, each localizing a different layer:
 
 And one feel note: half stick should be a genuine walk. If it feels like a switch, say so —
 deadzone 0.18 and the floor remap are one named constant each.
+---
+
+## 18. The double jump is the repo's own front flip now, and the repo's movement set is in — re-test P1 (item 16's verdict, answered)
+
+**Commit** this round · **Files** `src/player/Animation.js` (the `GODOT_ALIAS` table),
+`src/player/GodotClips.js` + `public/assets/sly-godot/sly-godot-moves.glb` (the imported set),
+`tools/godot2clips.mjs` (the pipeline) · **Ledger** §478 (flip) / §479 (audit)
+
+Your item-16 verdict — "still off" — was right, and the instrument agrees with you now that it
+measures the right thing: §474's twirl delivered +346° of CANE rotation while the BODY never
+left upright, and the body is what you watch. The reference repo authors a dedicated air-jump
+animation (`FrontFlip`); it is now the shipped `double_jump`, retargeted onto the real model and
+timed to our jump window (0.41 s — a tapped second press still shows the full rotation;
+§474.3's cut cannot eat it). On camera it reads tuck → inverted → land upright
+(`shots/flip1/after-tapped-f6/f10/f13`).
+
+And per your instruction the rest of the repo's movement set now plays by default: walk, run,
+jump, fall, land, ledge hang, pole climb, rail run, spire idle/land are the fan project's own
+clips (audit table and per-verb frames in §479 / `shots/moves1`). Sneak, crouch, crawl, glide,
+hook, dive, roll and the balance gaits stay ours — the repo has no clips for them, and the §470
+sneak fixes live there. `?anim=proc` restores the previous all-procedural look in one URL token
+if you want to compare live.
+
+**What to re-test.** Run, jump, tap jump again mid-rise — Sly should somersault, visibly upside
+down at the peak, tapped or held. Then just move around; the gaits are the repo's bouncier,
+longer-strided gait now. Three judgements only hardware can make:
+
+1. **The flip's speed.** 0.41 s is our physics window, not the repo's authored 0.75 s (their
+   game ships it at ~0.88 s inside a longer jump arc). If it reads as too snappy, the lever is
+   the alias `dur` — but past ~0.42 s the §474.3 demote eats the tail again, so slower means
+   re-timing the jump itself, a moveset decision.
+2. **Gait feel at speed.** The repo run strides 6.2 m/cycle (ours was 4.05-4.85) — leggier,
+   airier. If feet read as skating at any speed, say which speed; the stride constants are
+   derived per clip and the residual is measured (§479), so a skate report localizes fast.
+3. **The attach verbs in context.** Ledge hang, pole climb and rail run were audited as posed
+   takes on the shipped model (the audit's stated limit) — on hardware, hang off a real ledge,
+   climb the SE drainpipe, run the rail: any of the three reading wrong in situ is exactly the
+   evidence the posed audit cannot produce.
