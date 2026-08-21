@@ -43418,3 +43418,171 @@ reason it did not ship as a deletion is that the staged list was read rather tha
 command was *meant* to do rather than on what it *reported*. The suite, the frames and the fix
 were all verified by measurement in this round; the version control around them was not, until it
 had already gone wrong once.
+
+## §542 — The pad that goes away, the triggers that never rest, and a calibration that cannot reach the case it was proposed for
+
+§540 and §541 both asked what happens while a controller is present and working. Two questions
+remained, and they turned out to be the same question from opposite ends: what happens when the
+pad **stops** being there, and what happens when a control **never** reads as released.
+
+### §542.1 A pad that vanishes mid-play leaves Sly running forever
+
+`_padButtons` is the only thing that ever calls `_release` for a pad hold, and `beginFrame` only
+called it when there was a pad to poll. Measured on the shipped code, real poll loop, real
+`Controller`:
+
+```
+  d-pad up held, pad removed:   down('forward') still true · 7.200 m/s · state 'move'
+                                36.0 m travelled in the five seconds AFTER the pad was gone
+  R2 held, pad removed:         down('focus') still true · engine.timeScale stuck at 0.35
+```
+
+The first is a runaway with no input able to stop it. The second is worse and quieter: the whole
+game in permanent Thief-o-Vision slow-mo, because `_thiefVision` is edge-driven off a `down()`
+that can no longer change.
+
+**Why it survived two rounds of pad work.** The STICK does not latch — `beginFrame` rewrites
+`move` from `down()` every frame and an absent pad contributes nothing to the digital fold — so
+the obvious way to test removal is the way that reports "removal is handled". Driven both ways
+(H1b): stick removal stops Sly with or without the repair; only the buttons latch, and they latch
+completely. That near-miss is kept as its own arm so nobody re-tests this the cheap way and
+concludes it is fine.
+
+**Fix.** One test at the top of the poll: if the active pad index has changed — including to −1,
+which is removal — release the pad source first. `_releaseSource('pad')` was already the right
+exit and does four correct things at once: releases rather than forgets (guarantee 3), arms
+`_padResync` so a reconnect adopts instead of re-pressing (§540), drops the rest reference so the
+new pad is re-sampled (§541), and now clears the trust set (§542.3). A pad index change is the
+same event wearing a different hat — pad 0 unplugged while pad 1 is connected silently re-points
+the poll, and pad 0's holds would otherwise be resolved against pad 1's buttons.
+
+### §542.2 Coming back, and coming back as somebody else
+
+Reconnect is guarded, and the guard is stricter than §540's blur case **on purpose**. A blur is
+the same device with the same conventions, so a still-held control is adopted: down, not pressed.
+A replug is a fresh enumeration — the thing now in slot 0 may be a different controller — and a
+control reading full on its first poll is indistinguishable from a trigger that rests at 1.0. So on
+a replug a held control is neither pressed **nor** down until it has been seen released; the
+player lets go and everything works. That distinction was got wrong first (the arm asserted §540's
+adopt and failed), which is how it got written down.
+
+The rest reference survives none of this, correctly: measured before the fix, a stick that moved
+while the pad was unplugged read as travel on replug and claimed the prompts. It now re-samples.
+
+### §542.3 The triggers: a control is not believed until it has been seen at rest
+
+L2 and R2 are analogue and carry `crouch` and `focus`. The W3C standard mapping says a trigger
+reads 0 at rest and 1 pressed; not every driver agrees, and the code never consulted `gp.mapping`
+(nor could it usefully — `mapping: 'standard'` is a claim a non-conformant pad makes too). Four
+rest conventions, driven:
+
+```
+  rest  0.0  (W3C)                 crouch false · focus false · idle          — fine
+  rest -1.0  (signed axis)         crouch false · focus false · idle          — fine
+  rest +1.0  (inverted axis)       crouch TRUE  · focus TRUE  · 'crouch' · timeScale 0.35
+  rest  0.5  (axis mapped (v+1)/2) quiet at boot, but LATCHES ON after the first real pull
+```
+
+The +1 case is the whole game broken from the first frame with nobody touching anything. The 0.5
+case is nastier: it is below `triggerOn` so nothing fires at boot, and above `triggerOff` so the
+hysteresis holds the action on forever after the first pull.
+
+**Fix: `_padValue`.** A control reads 0 until it has been observed at or below `triggerOff` once;
+after that it is believed and the existing hysteresis is untouched. A digital button rests at 0 and
+is trusted on its first poll, so a working pad pays nothing — asserted, because a rule that
+protected the triggers by disabling them would be worse than the bug. Trust is a property of the
+DEVICE, so a blur keeps it (making a player re-pull a trigger they never released would undo §540)
+and only a change of pad index drops it.
+
+**Considered and rejected: letting `pressed` veto `value`.** The Gamepad API gives both, and a
+driver reporting `pressed: false` with `value: 1.0` is telling us its scale is wrong. But our
+hysteresis exists precisely so the driver's threshold does not decide our release, and a veto
+hands that decision straight back — on the way down through the 0.35–0.55 band the driver says
+"not pressed" while our design says "still held". The two genuinely conflict, and the trust rule
+keeps the hysteresis. Recorded because it is the obvious first idea and it is wrong for a reason
+that is not obvious.
+
+### §542.4 The rest calibration: measured, and NOT built
+
+The proposal was the standard one — sample the stick's resting position at connect and subtract
+it, so the deadzone is measured per controller instead of chosen for the worst one. Two designs
+were measured against margin, top speed, and what a bad sample does.
+
+```
+  bias   margin with / against    top speed away / toward     true-centre command after a bad sample
+  A (shift the origin)
+  0.10   0.180 / 0.180            6.54 / 7.20 m/s             (see below)
+  0.17   0.180 / 0.180            6.08 / 7.20 m/s
+  B (widen the gate by |bias|)
+  0.10   0.180 / 0.380            7.20 / 7.20 m/s             0.00 m/s — cannot invert
+  0.17   0.180 / 0.520            7.20 / 7.20 m/s             0.00 m/s
+```
+
+Design A is symmetric but costs top speed in the biased direction. Design B keeps full speed but
+is sticky against the bias — 0.52 of travel at a 0.17 rest. And a naive design A inverts
+catastrophically on a bad sample: a stick held at 1.00 when the pad connects makes true centre
+command **7.20 m/s backwards, forever**.
+
+That last one is fixable, and finding out how changed which design was viable. If the sample is
+**refused whenever the stick is outside the existing deadzone** — the only safe rule, since a
+stick out there cannot be told from a held one — then the worst permitted mis-sample is `deadzone`
+itself, and the deadzone swallows it: commanded speed at true centre is 0.00 m/s for every bias
+the guard allows. So design A plus the safe-sample guard is symmetric, keeps the margin at 0.180
+for every controller, and cannot invert.
+
+**And it still does not get built, because of where the ceiling is (§450.4).** The guard that makes
+it safe is the same guard that puts the broken case out of reach:
+
+```
+  rest 0.19: commands 1.87 m/s at rest — and a sample here is indistinguishable from a HELD stick
+  rest 0.25: commands 2.26 m/s at rest — likewise
+```
+
+Calibration can only ever help sticks resting **inside** the deadzone, and those sticks are not
+malfunctioning — Sly does not move. What they lose is margin: at a 0.15 rest a 0.03 nudge starts a
+1.8 m/s walk, which is a real precision cost on a worn pad and the only thing calibration buys.
+The case that actually walks Sly across the room is above the ceiling and stays there. Buying a
+margin improvement on non-malfunctioning hardware with a third interacting mechanism in the
+hottest path of the input layer, validated against zero physical controllers, is not the trade. The
+pinned threshold (§541 R3) stands, `settings.deadzone` remains live-adjustable per instance, and
+the design above is specified here so it can be built deliberately if the user's own pad ever
+reports the problem.
+
+### §542.5 Three existing arms changed their premise, and it was the harness that was wrong
+
+`input.test.mjs` arms 5, 9 and 18, and this lane's own P5 and R4, all posed a control as **already
+pressed on the pad's very first poll** — a sequence a physical pad cannot produce, because a pad is
+polled from boot and rests before it is pressed. Each now takes one poll at rest first. The
+assertions are unchanged; only the frame the world always has and the harness was skipping. This is
+the same §435.4 shape as §541's probe posing the stick before the first poll: five instruments,
+written at different times by the same lane, all encoding the same false assumption about
+sequencing.
+
+### §542.6 DOMAIN, and the standing limit
+
+- **H1 removal** — *passes on* a held direction and a held R2 released within a frame of the pad
+  vanishing, Sly stopping inside 2 m and `timeScale` back to 1, in both shapes a browser can
+  report a removal (a null slot and `connected: false`); *fails on* the pre-fix path run in-arm,
+  which latches: 36.0 m travelled and 7.200 m/s still commanded with no controller attached.
+- **H1b near-miss** — *does not discriminate the defect at all*, deliberately, and says so: stick
+  removal stops Sly with or without the repair. Kept so the cheap re-test cannot mislead.
+- **H2 reconnect** — *passes on* a held control being neither pressed nor down on replug and
+  working the moment it is released and pressed again; *fails on* the index branch and the trust
+  rule both defeated. Written first against `_padResync` alone, which reproduced nothing — the arm
+  was ablating a mechanism that does not govern this path, and the correction is in the comment.
+- **H3 two pads** — *passes on* pad 0's hold being released when the poll re-points to pad 1;
+  *fails on* the pose where the two paths disagree (pad 1 holding a different action). The first
+  pose alone cannot discriminate, because both paths agree on it.
+- **H4 triggers** — *passes on* rests of 0.0 and −1.0 behaving normally, pulling and releasing
+  with the hysteresis intact; *fails on* rests of +1.0 and 0.5, and on the pre-fix path run in-arm
+  (crouch true, focus true, state 'crouch', timeScale 0.35). The working-trigger clause is what
+  stops the arm being satisfied by disabling L2/R2.
+
+Mutation-checked and restored: deleting the index-change branch reddens H1 and H2; deleting the
+trust rule reddens H4 and H2; H1b and H3 are correctly indifferent to the second.
+
+**The standing limit.** No physical DualShock 4 exists in this container. Every rest convention in
+§542.3 is *constructed*, not sampled — which one a real DS4 reports through a real browser, what a
+real unplug looks like in `navigator.getGamepads()`, the axis signs, and where a worn stick
+actually rests all remain the user's re-test. `src/player/CameraRig.js` was not touched: nothing
+here needed it.

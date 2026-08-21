@@ -255,6 +255,15 @@ test('sources: a hold survives one device releasing while another still holds it
   assert.ok(Number.isFinite(padJump), 'jump has no pad binding — the test premise is stale');
 
   const buttons = [];
+  /* One poll with the pad at rest before anything is pressed (§542). `_padValue` does not believe
+     a control it has never seen released — a trigger that rests at 1.0 would otherwise read as
+     permanently held — and a button that is already down on the pad's very first poll is exactly
+     that shape. A real pad is polled from boot and rests before it is pressed; posing the press
+     first was the harness skipping a frame the world always has. */
+  buttons[padJump] = { pressed: false, value: 0 };
+  pads = [pad({ buttons })];
+  input.beginFrame(1 / 60);
+
   buttons[padJump] = { pressed: true, value: 1 };
   pads = [pad({ buttons })];
 
@@ -356,6 +365,10 @@ test('triggers: hysteresis, so a finger resting between the thresholds cannot bu
   const set = (v) => { for (const i of list) buttons[i] = { pressed: v > 0.5, value: v }; };
   pads = [pad({ buttons })];
   const step = (v) => { set(v); input.beginFrame(1 / 60); return input.down(action); };
+  /* The trigger must be seen at rest once before its pulls are believed (§542, `_padValue`) —
+     a real one always is, because a pad is polled from boot. Without this the sweep below starts
+     mid-pull, which is the one thing a physical trigger cannot do. */
+  step(0);
 
   const on = INPUT_TUNE.triggerOn, off = INPUT_TUNE.triggerOff;
   const mid = (on + off) / 2;          // 0.45 — inside the gap, both answers "look" right
@@ -642,6 +655,11 @@ test('pad: the Sly 2 mapping holds, the stick is a genuine walk-to-run, and pad 
    */
   const { input, events } = makeInput();
   const B = (n) => { const b = Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })); if (n >= 0) b[n] = { pressed: true, value: 1 }; return b; };
+
+  /* One poll of a resting pad first: `_padValue` believes a control only once it has been seen
+     released (§542), and a real pad is polled from boot so it always has been. */
+  pads = [pad({ buttons: B(-1) })];
+  input.beginFrame(1 / 60);
 
   /* the mapping, row by row against the fetched Sly 2 layout (Input.js §516 block) */
   for (const [idx, action] of [[0, 'jump'], [2, 'attack'], [3, 'attack'], [1, 'interact'], [5, 'glide']]) {

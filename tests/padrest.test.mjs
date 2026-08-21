@@ -488,6 +488,9 @@ test('R4 prompts: shapes for the pad, keycaps for the keyboard, and travel is wh
   {
     const { hud, input, emits } = await hudRig();
     assert.equal(promptIsPad(hud), false, 'a fresh boot must show keycaps');
+    /* A poll of the resting pad first: `_padValue` believes a control only once it has been seen
+       released (§542), and a pad polled from boot always has been. */
+    PIN(input); input.beginFrame(DT); input.endFrame();
     padState.buttons[1] = { pressed: true, value: 1 };
     PIN(input); input.beginFrame(DT); input.endFrame();
     assert.equal(input.lastDevice, 'pad', 'a Circle press did not claim the device');
@@ -540,6 +543,7 @@ test('R4 prompts: shapes for the pad, keycaps for the keyboard, and travel is wh
       PIN(input); input.beginFrame(DT); input.endFrame();
       seq.push(`${label} -> ${promptIsPad(hud) ? 'SHAPES' : 'keycaps'}`);
     };
+    PIN(input); input.beginFrame(DT); input.endFrame();      // at rest first (§542, `_padValue`)
     padState.buttons[0] = { pressed: true, value: 1 }; tick('pad Cross');
     padState.buttons[0] = { pressed: false, value: 0 }; tick('release');
     win.fire('keydown', { code: 'Space' }); tick('key Space');

@@ -383,6 +383,13 @@ export class Input {
     this._padResync = false;
     /** Where the sticks were last seen resting, and for which pad. See `_padDevice`. */
     this._padRest = null;
+    /**
+     * Button indices that have been SEEN at rest, and are therefore believed (§542). A control
+     * that has never once read below `triggerOff` is treated as 0 — see `_padValue`.
+     */
+    this._padTrust = new Set();
+    /** The pad index polled last frame, or -1. A change means holds belong to a pad that is gone. */
+    this._padLast = -1;
     this._lockClick = false;          // the click that grabbed pointer lock must not also swing
 
     this._bind();
@@ -699,6 +706,11 @@ export class Input {
     if (src === 'pad') {
       this._padHeld.clear();
       this._padResync = true;
+      /* `_padTrust` is deliberately NOT cleared here. A blur or a rebind comes through this path
+         too, and the pad on the other side of an alt-tab is the same physical device with the same
+         conventions — making the player release and re-pull a trigger they never let go of would
+         undo §540's adopt. Trust is a property of the DEVICE, so only a change of device drops it,
+         which `beginFrame` does at the index test. */
       /* Same reason, for the sticks: we stopped watching, so whatever they read on the next poll
          is a resting position to be adopted, not travel to be attributed to the player. */
       this._padRest = null;
@@ -778,6 +790,35 @@ export class Input {
    * `_press`/`_release`, so `pressed`, `released` and `buffered` are identical on pad and
    * keyboard — that parity is the whole point of routing it here rather than polling in gameplay.
    */
+  /**
+   * One button's value, but only once the control has PROVED it can rest (§542).
+   *
+   * `L2`/`R2` are analogue, and the W3C standard mapping says they read 0 at rest and 1 pressed.
+   * Not every driver agrees: a trigger mapped from a signed axis without a remap rests at −1, and
+   * one mapped from a signed axis with the sign inverted rests at **+1**. Measured on the shipped
+   * code (`tests/padhotplug.test.mjs` H4), a pad whose triggers rest at +1:
+   *
+   *   crouch true · focus true · state 'crouch' · timeScale 0.35
+   *
+   * — Sly permanently crouched and the whole game permanently in Thief-o-Vision slow-mo, from the
+   * first frame, with no input at all. A rest of 0.5 is quieter and worse: it is below `triggerOn`
+   * so nothing fires at boot, but it is above `triggerOff`, so the FIRST real press latches the
+   * action on for the rest of the session.
+   *
+   * Nothing here can ask the driver what its convention is — the code never consulted
+   * `gp.mapping`, and `mapping: 'standard'` is a claim a non-conformant pad makes too. What it can
+   * do is decline to believe a control it has never seen released. A digital button rests at 0 and
+   * is trusted on its first poll, so a working pad pays nothing; a stuck control reads 0 until it
+   * proves otherwise, which turns "permanently crouched" into "L2 does nothing", and the keyboard
+   * route to both verbs is still there (§540's census).
+   */
+  _padValue(gp, i) {
+    const raw = Input._buttonValue(gp.buttons?.[i]);
+    if (this._padTrust.has(i)) return raw;
+    if (raw <= this.settings.triggerOff) { this._padTrust.add(i); return raw; }
+    return 0;
+  }
+
   _padButtons(gp) {
     const on = this.settings.triggerOn, off = this.settings.triggerOff;
     /* The first poll after `_padHeld` was force-cleared re-DISCOVERS holds rather than receiving
@@ -789,7 +830,7 @@ export class Input {
     for (const [action, list] of Object.entries(this._pad)) {
       let v = 0;
       for (const i of list) {
-        const b = Input._buttonValue(gp.buttons?.[i]);
+        const b = this._padValue(gp, i);
         if (b > v) v = b;
       }
       const was = this._padHeld.has(action);
@@ -988,7 +1029,35 @@ export class Input {
     /* Pad buttons FIRST, so a d-pad press taken this frame is already in `_down` when the
        digital vector is folded below — otherwise the d-pad would lag the keyboard by a frame and
        the stick would win a direction the player pushed on the pad. */
+    /**
+     * ── A pad that GOES AWAY holding something (§542) ───────────────────────────────────────
+     *
+     * `_padButtons` is the only thing that ever calls `_release` for a pad hold, and it only runs
+     * when there IS a pad. So an unplugged controller used to leave its holds latched forever:
+     * measured on the shipped code (`tests/padhotplug.test.mjs` H1), d-pad up held and the pad
+     * yanked left `down('forward')` true and Sly running at 7.200 m/s — **36 m of travel in the
+     * five seconds after the controller was gone**, with no way to stop him. R2 held was worse
+     * than a runaway: `timeScale` stuck at 0.35, the entire game in permanent slow-mo.
+     *
+     * The stick does not latch, because the digital fold below rewrites `move` from `down()` every
+     * frame and an absent pad contributes nothing — which is exactly why this was easy to miss.
+     * Only the BUTTON holds survive, and they survive completely.
+     *
+     * A change of pad INDEX is the same event wearing a different hat: pad 0 unplugged while pad 1
+     * is connected silently re-points the poll at a controller that never pressed anything, and
+     * pad 0's holds would be resolved against pad 1's buttons. So both go through one test.
+     * `_releaseSource('pad')` is the existing, correct exit — it releases properly rather than
+     * forgetting (guarantee 3), arms `_padResync` so a reconnect ADOPTS instead of re-pressing
+     * (§540), drops the rest reference so the new pad is re-sampled (§541), and clears the trust
+     * set so a new pad proves its own controls.
+     */
     const gp = (this.padEnabled && this.enabled) ? this._findPad() : null;
+    const idx = gp ? this._padIndex : -1;
+    if (idx !== this._padLast) {
+      if (this._padLast >= 0) this._releaseSource('pad');
+      this._padTrust.clear();      // a different device proves its own controls (`_padValue`)
+      this._padLast = idx;
+    }
     if (gp) { this._padButtons(gp); this._padDevice(gp); }
 
     let x = 0, y = 0;

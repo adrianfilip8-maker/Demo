@@ -449,6 +449,10 @@ test('P5 focus loss: a pad button still physically held comes back DOWN, not PRE
 
   for (const [label, action, hold, lift] of held) {
     const { input } = await rig();
+    /* One poll of the pad at rest before anything is held. `_padValue` believes a control only
+       once it has been seen released (§542) and a real pad is polled from boot, so it always has
+       been; posing the press on the very first poll is a frame the world never skips. */
+    input.beginFrame(DT); input.endFrame();
     hold();
     input.beginFrame(DT);
     assert.equal(input.pressed(action), true, `${label}: the real press did not edge`);
@@ -491,6 +495,7 @@ test('P5 focus loss: a pad button still physically held comes back DOWN, not PRE
   /* RUN ablation: put the old path back for one poll and watch the phantom press appear. */
   {
     const { input } = await rig();
+    input.beginFrame(DT); input.endFrame();          // at rest first — see the loop above
     padPress(0);
     input.beginFrame(DT); input.endFrame();
     window.fire('blur');
