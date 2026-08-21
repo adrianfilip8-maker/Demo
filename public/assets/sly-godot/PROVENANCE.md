@@ -42,7 +42,7 @@ Two things this resolved that a filename search cannot:
 |---|---|
 | `sly-godot.glb` | the rigged mesh: 174 joints, 21 meshes, 30,346 tris, 9 morph targets |
 | `sly-godot-anims.glb` | 5 authored clips — Walk, Run, Jump, CrouchingStand, UprightStand — mesh-free |
-| `sly-godot-moves.glb` | 18 movement clips from `Assets/Models/Characters/SlyCooper_Anims27.gltf` — see below |
+| `sly-godot-moves.glb` | 23 clips (18 movement + 5 combat/pickpocket/hook) from `Assets/Models/Characters/SlyCooper_Anims27.gltf` — see below |
 | `sly-body.png` | 2048² 8-bit albedo, the material override's target |
 | `sly-head.png` | 2048² 8-bit albedo (RGBA) |
 
@@ -62,10 +62,21 @@ user's playtest direction to use this repository's movement animations. Source:
 retargets it onto RIG3 as `src/player/GodotClips.js`. **Nothing from `Assets/Music/` or
 `Assets/Effects/` — audio is untouchable here, per the project's absolute rule.**
 
-The 18 clips taken: FrontFlip, Walk, Run, Jump, Falling, Landing, LedgeGrab, LedgeGrab Idle,
-PoleGrab, PoleClimbing, PoleClimbIdle, railrun, RailrunStand, SpireJump, SpireJumpIdle,
-SpireJumplanding, Crouching stand, Standupright. NOT taken: the combat set (Canehit, CaneSwing ×3),
-PickPocket, and the 1-channel KeyAction.001 — the instruction is the movement set.
+The 18 movement clips taken first: FrontFlip, Walk, Run, Jump, Falling, Landing, LedgeGrab,
+LedgeGrab Idle, PoleGrab, PoleClimbing, PoleClimbIdle, railrun, RailrunStand, SpireJump,
+SpireJumpIdle, SpireJumplanding, Crouching stand, Standupright.
+
+**5 more added on the follow-up instruction** ("check to see if the attack and pickpocket
+animations were properly ported"), §479.8: **Canehit, PickPocket, CaneSwing, CaneSwing Grab,
+CaneSwing Idle** — 23 in the committed GLB. The `CaneSwing` three are in that list because reading
+their scene graph showed they are *not* attacks: `CaneSwing`/`CaneSwing Idle` drive the
+`swing_state` Swing BlendSpace (the hook swing) and `CaneSwing Grab` is the catch, so they serve
+our hook verbs, not the combo chain. `Canehit` is their only ground attack
+(`Hit Transition/hit_floor`, fired at `Scripts/player__sly.gd:640`); `PickPocket` fires on
+circle-on-floor at `:607`.
+
+Still NOT taken: **KeyAction.001** — 1 animated channel, no verb of ours to serve. That is the
+whole remainder; the 24th clip of the source is accounted for.
 
 Why Anims27 and not the files their game binds — established by reading the scene graph, and this
 time by **measuring** the candidate sources against each other:
