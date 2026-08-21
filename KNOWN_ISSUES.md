@@ -42571,8 +42571,11 @@ stages fire together.
 
 The lens ends up **seven millimetres from Sly's chest**, inside the near plane, and the frame
 after that it is thrown out the other side: a 60 Hz limit cycle with the camera oscillating
-*through* the character, `_clampPitch` alternating +50.8° / −80.0° and `_clampMoved` swinging
-−0.65 / −1.48 m. Two independent causes compose, which is why bounding one was not enough:
+*through* the character, `_clampPitch` alternating +50.8° / −80.0° frame to frame and
+`_clampMoved` running −0.25 .. −1.02 m. (All four figures off the SAME take — an earlier draft
+quoted a −1.48 m lift from the neighbouring pole-swing cadence beside them, which is a two-route
+table under a one-route label and exactly the §442 shape this section is about.) Two independent
+causes compose, which is why bounding one was not enough:
 
 - **Stage 2 solves a tangent equation.** `tan` is π-periodic, so "put the subject at elevation T"
   and "put it at T − 180°" are the same equation, and the root it returns can be the camera
