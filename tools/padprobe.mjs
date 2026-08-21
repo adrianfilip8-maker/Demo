@@ -10,6 +10,14 @@
  * and only that gap. Page-level mock: `navigator.getGamepads` is replaced before boot with a
  * scripted DualShock-4-shaped `standard` pad the arms pose, and every call to it is counted.
  *
+ * §540 added the other half of the division of labour, and it is worth stating so neither
+ * instrument grows into the other: `tests/padparity.test.mjs` drives EVERY verb on BOTH devices
+ * into a real `Controller` + `buildMoveset()` and compares the transitions — the parity question,
+ * cheap enough to run per-commit in Node. It structurally cannot ask whether the shipped loop
+ * polls, because it calls `beginFrame` itself. This file cannot afford the parity question, because
+ * every verb would cost a browser boot. Arm B below therefore stays a SINGLE verb (Cross → jump):
+ * it is a liveness check on the loop, not a coverage check on the map.
+ *
  * ── DOMAIN (§418.3) ─────────────────────────────────────────────────────────────────────────
  *   passes on : the live rAF loop calling `getGamepads` once per frame over a ≥30-FRAME window
  *               (frames, not wall clock: this container renders in software at single-digit

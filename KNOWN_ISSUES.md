@@ -42271,3 +42271,182 @@ passes-on RUN, the pre-fix wiring is the fails-on RUN (mutation-checked — rein
 `trim: 0.25` fails with "contact measured at 0.100s, cane_hit fires at 0.183s — -83 ms apart"),
 and neither can discriminate whether the swing READS as a hit at game framing. `shots/cane1`
 carries that.
+
+## §540 — The pad audit the user has not run yet: every verb driven on both devices, and guarantee (3) turned out to be wired for one of them
+
+§516 shipped PS4 support and f51dd8b recorded the browser probe's first clean pass. Neither
+answered the question the user actually has, which is not *"is the mapping the one the guide
+describes"* but *"can I do, with a pad in my hands, everything I can do with a keyboard"*. The
+difference matters because the existing arm — `tests/input.test.mjs` arm 6 — reads the same
+`PAD_BINDINGS` table the code reads. It confirms that a name reaches a name. It cannot see an
+action that is bound at one end and consumed at neither, which is §357.1 and is precisely how
+§514's click swallow left `attack` bound, pressed, and unable to swing a cane.
+
+So the subject this round is the COUPLING, not the mapping: a real `Input`, driven through the
+real DOM event path and the real `navigator.getGamepads` poll, into a real `Controller` with the
+real `buildMoveset()`, recording the state-machine transition each verb produced on each device.
+`tests/padparity.test.mjs`, six arms.
+
+### §540.1 The verb census — the moveset decides, not the binding table
+
+Enumerated from `src/player/Moveset.js` and `src/player/Controller.js` by grepping every
+`down/pressed/released/buffered` call rather than from any list: the actions gameplay consults are
+`jump attack interact crouch sneak glide focus forward back left right`, plus `recentre`
+(CameraRig), `pause freecam quality colliders` (Debug) and `binocu` (HUD). Every one was driven.
+
+**All 13 gameplay verbs reach the same transition on both devices.** From the same pose, the same
+frame budget, with a live bound neighbour run as the counterexample in every row:
+
+```
+  jump                   -> jump          kbm[Space]        pad[Cross]              · Circle correctly did not
+  attack (ground)        -> combo         kbm[F, LMB]       pad[Square, Triangle]   · Cross  correctly did not
+  attack (air)           -> dive          kbm[F, LMB]       pad[Square, Triangle]   · R1     correctly did not
+  interact               -> pickpocket    kbm[E]            pad[Circle]             · Square correctly did not
+  crouch (hold)          -> crouch        kbm[Ctrl]         pad[L2]                 · L1     correctly did not
+  crouch (tap at speed)  -> roll          kbm[Ctrl]         pad[L2]                 · L1     correctly did not
+  sneak                  -> sneak         kbm[Shift]        pad[L1]                 · L2     correctly did not
+  glide                  -> paraglide     kbm[Q]            pad[R1]                 · Cross  correctly did not
+  focus                  -> combatStrafe  kbm[RMB]          pad[R2]                 · L1     correctly did not
+  forward/back/left/right-> move          kbm[WASD]         pad[d-pad AND stick]    · opposite d-pad reverses
+```
+
+L1-against-`focus` is not a chosen counterexample so much as a run of `CombatStrafe`'s own rule
+("the stealth modifiers win the button") — the moveset's documented behaviour, executed rather
+than quoted. The four directions agree on `wishDir` to 1e-6 across key, d-pad and full stick
+deflection; the opposing d-pad reverses it, which is the clause that makes the agreement mean
+something (three devices equally wrong would satisfy agreement perfectly).
+
+### §540.2 The asymmetries, both directions
+
+**Pad-only: nothing.** Every pad button has a keyboard or mouse route to the same verb.
+
+**Keyboard-only: four, and every one is debug or cut by the user's ruling** — `binocu` (Tab, the
+HUD overlay), `freecam` (F1), `quality` (F2), `colliders` (F3). The last three are `Debug.js`'s
+and are keyboard-only by the same decision `HUD.js:549` already records. `padparity` P3 pins the
+set by `deepEqual`, so a gameplay verb losing its pad route reddens with the verb named, and
+ablates `bindPad('jump', [])` in-arm to prove the census reads the live map rather than restating
+the constant it was written from.
+
+**The one thing a pad can do that a keyboard cannot is a magnitude, not a verb.** Sustained speed
+1.93–7.20 m/s on the stick against a key pinned at 7.20. That is the analog axis being analog —
+`Move.update`'s own comment says so — and Sly 2's answer to it (`hold R1 = run`) is what §516's
+`glide` row declines on purpose.
+
+### §540.3 Two comments in `Input.js` were false, and the measurement says so
+
+Both were load-bearing justifications, which is why they are worth the space:
+
+- **`pause [9] Options` — "the demo has no pause menu; the verb is inert."** Driven through the
+  real `src/core/Debug.js`: Options flips `engine.debug.paused`, and `Engine.renderFrame` answers
+  that with `this.dt = 0`. The simulation stops dead with no cel, no text, no HUD change —
+  visually a hang, on the one button a console player presses first. It is recoverable
+  (`input.beginFrame`/`debug.update` are pumped OUTSIDE `renderFrame` in `main.js`, so the second
+  press is still seen) and identical to keyboard P, so the two devices ARE at parity. What is not:
+  the pause a player *means*. `HUD.setPaused` — the cel, the pointer release, `engine.paused` — is
+  reached only from a raw Escape keydown (`HUD.js` installs its own listener) or from pointer-lock
+  loss, and **no pad button can produce either**, while the cel's own controls row offers Options
+  for "Pause / release the pointer" (`HUD.js:132`). Measured: pad button 9 moved `debug.paused`
+  false→true and left `hud.pauseOn`, `hud.binocOn` and the lock untouched. **Left for the lane that
+  owns `HUD.js`** — unbinding Options here would only leave the cel advertising a button that does
+  nothing at all.
+- **`binocu` — "a button that opens nothing teaches distrust."** The premise is false: driven
+  through the real `src/ui/HUD.js`, Tab flips `hud.binocOn` false→true and raises the overlay,
+  with `Audio.js` stung to match. `binocu` stays unbound on the pad — the Binocucom is out of scope
+  by the user's ruling, which is a reason not to grow a cut feature onto a second device, not
+  evidence that it is inert. Recorded as a genuine keyboard/pad asymmetry rather than a non-verb.
+
+### §540.4 The defect: guarantee (3) was wired for one device
+
+`Input.js`'s header states, absolutely, that losing focus RELEASES held actions and clears the
+buffer with them. Measured on the shipped class through a real `blur`, with the control still
+physically held:
+
+```
+  key Space   press[jump]  -> after blur: pressed=false  down=false
+  pad Cross   press[jump]  -> after blur: pressed=TRUE   down=true     <- phantom
+  key Q       press[glide] -> after blur: pressed=false  down=false
+  pad R1      press[glide] -> after blur: pressed=TRUE   down=true     <- phantom
+```
+
+A key cannot betray the drop — the browser sends no keydown for a key already held at refocus. A
+pad is POLLED, so `_padButtons` met a still-down button with `_padHeld` freshly cleared, read a
+rising edge, and called `_press`. Alt-tab out with Cross held and Sly jumps on the way back in.
+Worse than one stray edge: `_dropAllHeld` clears `_pressedAt` precisely so a press made just
+before an alt-tab is not still live on return, and `_press` re-stamped it one frame later — on the
+pad, the clear bought nothing at all. Every pointer-lock loss goes through the same path, and
+pointer-lock loss is what raises the pause cel, so this fires on Esc as well as on alt-tab.
+
+**Fix:** `_releaseSource('pad')` arms `_padResync`; the next poll routes a re-discovered hold
+through a new `_adopt()` instead of `_press()`. `down()` becomes true (the button IS down — the
+clear exists so a held button does not read as released, and that reason survives); `pressed()`,
+`released()` and `buffered()` do not, because the player did nothing. The flag is spent on the
+poll itself rather than on finding something to adopt, so a player who let go while away gets a
+normal edge on their next real press. `bindPad`/`resetBindings` take the same path, correctly: a
+freshly-bound button that was already held must not fire the verb it just acquired.
+
+### §540.5 The analog axis is an axis — swept, per §450.4
+
+One deflection answers "what does this do"; only a sweep answers "is this quantised". Eleven
+deflections, settled speed read off a real `Controller`:
+
+```
+  deflect 0.10  wishMag 0.0000  0.000 m/s  (inside the 0.18 radial deadzone)
+  deflect 0.18  wishMag 0.0000  0.000 m/s  (at it)
+  deflect 0.20  wishMag 0.2683  1.932 m/s  walk
+  deflect 0.30  wishMag 0.3598  2.590 m/s  walk
+  deflect 0.40  wishMag 0.4512  3.249 m/s  walk
+  deflect 0.50  wishMag 0.5427  3.907 m/s  run
+  deflect 0.60  wishMag 0.6341  4.566 m/s  run
+  deflect 0.70  wishMag 0.7256  5.224 m/s  run
+  deflect 0.80  wishMag 0.8171  5.883 m/s  run
+  deflect 0.90  wishMag 0.9085  6.541 m/s  run_fast
+  deflect 1.00  wishMag 1.0000  7.200 m/s  run_fast
+  keyboard W    wishMag 1.0000  7.200 m/s  run_fast (no ramp to give)
+```
+
+Strictly increasing, and it crosses all three clip tiers `Move.update` actually switches on. The
+counterexample is RUN rather than described: `player__sly.gd`'s half-pressure split (scale below
+0.5, snap to 1.0 at or above) pushed through the same monotonicity check, which it fails — so the
+check is shown to be able to see a step function rather than assumed to be.
+
+### §540.6 DOMAIN, and what none of this can discriminate
+
+Each arm carries its own §418.3 block; the shape they share:
+
+- **P1 verbs** — *passes on* each row's kbm and pad routes reaching the named state from the same
+  pose; *fails on* the live bound neighbour, run in-arm, asserted not to reach it. *Verdict:
+  passes on the bound route of either device, fails on a bound neighbour.*
+- **P2 directions** — *passes on* key/d-pad/stick agreeing on `wishDir` to 1e-6; *fails on* the
+  opposing d-pad, run. Agreement alone does not discriminate; the reversal clause is what does.
+- **P3 census** — *passes on* the shipped tables; *fails on* the census recomputed after
+  `bindPad('jump', [])`, run in-arm. *Verdict: passes on the shipped bindings, fails on a gameplay
+  verb losing its pad route.*
+- **P4 stick** — *passes on* the swept continuum; *fails on* the reference's two-state split, run.
+- **P5 focus loss** — *passes on* the adopt path; *fails on* the pre-fix path, reconstructed
+  in-arm by clearing `_padResync` before the poll, which must report the phantom press.
+- **P6 focus/§514** — *passes on* four RMB clicks under a grant that never lands; *fails on* four
+  LMB clicks on the same canvas, all swallowed. This one discriminates the WIDTH of the swallow,
+  which is what would matter: `focus` is the only gameplay verb with **no keycap at all** (RMB and
+  R2, nothing else), so a swallow widened past button 0 would leave Thief-o-Vision reachable on
+  the pad alone. No keyboard binding was invented for it — the measurement says the mouse route is
+  lock-independent because `_onMouseDown`'s gate is `e.button === 0` only — but the RMB leg is now
+  pinned so a widening cannot pass unnoticed.
+
+Mutation-checked, not assumed: deleting the `_adopt` branch reddens P5 with *"a button that never
+went up produced a phantom press on the way back in"*; emptying `PAD_BINDINGS.glide` reddens P1
+with *"pad 5 produced [no transition] — expected 'paraglide'"* and P3 with the verb named. Both
+were run and both were restored.
+
+**None of it discriminates a physical DualShock 4.** No controller exists in this container, so
+the browser's own HID→`standard` translation — button order, axis sign, trigger rest values, stick
+drift — is asserted by nothing here and remains the user's re-test. Every arm is downstream of
+"the browser reports a `standard` pad shaped like Chromium's DS4", which is assumed. Nor does any
+of it discriminate FEEL: that a walk at 1.93 m/s reads as a walk, that R2 is a comfortable place
+for a hold, that the stick's response curve is the right one. `tools/padprobe.mjs` still owns the
+one question a Node harness structurally cannot ask — does the SHIPPED rAF loop deliver the device
+at all — and its arms are unchanged.
+
+**Not fixed here, owned elsewhere:** the pad has no route to the player-facing pause cel (§540.3);
+the d-pad is a bound movement route with no glyph in `Icons.PAD_GLYPH_FILES`, which is harmless
+today because nothing asks `padBtn` for one — the controls cel shows `P('stick')` for Move — and
+would render as `padBtn`'s text fallback if anything did.

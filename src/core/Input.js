@@ -36,6 +36,12 @@
  *    buffer as well: game time does not advance while a tab is backgrounded, so with (1) a press
  *    made just before an alt-tab would otherwise still be live on return.
  *
+ *    **And it holds on the pad too, which it did not until §540.** A key that was held when focus
+ *    left sends no keydown when focus returns; a pad is polled, so the next poll met a still-held
+ *    button with `_padHeld` freshly cleared and re-pressed it — a phantom jump on the way back in,
+ *    and a re-stamped `_pressedAt` that undid the buffer clear one frame after it happened. A
+ *    re-discovered hold now goes through `_adopt`: down, but not pressed.
+ *
  * ── Provenance: what was read while writing this, and what its licence is ─────────────────────
  *
  * The analog-stick handling and the pad button map below were written after reading the fan-made
@@ -132,7 +138,24 @@ export const MOUSE_BINDINGS = {
  *                  half (`hold R1 = run`) is delivered by the analog stick instead: magnitude
  *                  IS the walk→run gradient here (see `_padStick`), so a run modifier would be
  *                  a second control for a thing the stick already expresses.
- *   pause    [9]  Options   (Start on a DS2). The demo has no pause menu; the verb is inert.
+ *   pause    [9]  Options   (Start on a DS2). **This row said "the demo has no pause menu; the
+ *                  verb is inert" and that was false** — driven in-arm through the real
+ *                  `src/core/Debug.js` (§540): Options flips `engine.debug.paused`, and
+ *                  `Engine.renderFrame` answers that with `this.dt = 0`. The simulation stops
+ *                  dead with no cel, no text and no HUD change — visually a hang. It is
+ *                  recoverable (`input.beginFrame`/`debug.update` are pumped OUTSIDE
+ *                  `renderFrame` in `main.js`, so a second press is still seen), and it is
+ *                  exactly what P does on the keyboard, so the two devices are at parity.
+ *
+ *                  What is NOT at parity, and is not this file's to fix: the pause a PLAYER
+ *                  means. `HUD.setPaused` — the cel, the pointer release, `engine.paused` — is
+ *                  reached only from a raw Escape keydown (`HUD.js` installs its own listener)
+ *                  or from pointer-lock loss. **No pad button can produce either**, while the
+ *                  cel's own controls row offers Options for "Pause / release the pointer"
+ *                  (`HUD.js:132`). Measured, not inferred: pad button 9 moved `debug.paused`
+ *                  false→true and left `hud.binocOn`, `hud.pauseOn` and the lock untouched. The
+ *                  binding stays because removing it would leave the cel advertising a button
+ *                  that does nothing at all; the repair belongs to whoever owns `HUD.js`.
  *   recentre [11] R3        OURS. Sly 2 puts the Binocucom here; it is cut, so the slot carries
  *                  our camera recentre rather than nothing.
  *   sneak    [4] L1 · crouch [6] L2 · focus [7] R2 — OURS, in Sly 2's GADGET slots. This demo
@@ -140,9 +163,44 @@ export const MOUSE_BINDINGS = {
  *                  modifiers; `focus` (Thief-o-Vision) sits on an analog trigger because it is
  *                  hold-to-use, through the existing hysteresis. Documented as the gap: a Sly 2
  *                  player expects gadgets on these, and there are none to bind.
- *   binocu   —    UNBOUND on the pad. The Binocucom is out of scope by the user's ruling; a
- *                  button that opens nothing teaches distrust (the HUD's own prompt rule).
+ *   binocu   —    UNBOUND on the pad, and it stays that way — but **not for the reason this row
+ *                  used to give.** It said "a button that opens nothing teaches distrust", and
+ *                  that premise is false: driven in-arm through the real `src/ui/HUD.js` (§540),
+ *                  Tab flips `hud.binocOn` false→true and raises the binocucom overlay, with
+ *                  `Audio.js` stung to match. So `binocu` is a LIVE keyboard verb with no pad
+ *                  route — a real keyboard/pad asymmetry, recorded as one. It is left open
+ *                  because the Binocucom is out of scope by the user's ruling, which is a reason
+ *                  not to grow the feature onto a second device, not evidence that it is inert.
  *   d-pad    [12-15] move, verbatim ("digital buttons = move character").
+ *
+ * ── §540: the parity census, driven rather than read ────────────────────────────────────────
+ *
+ * The mapping above was written from a guide and never re-tested. `tests/padparity.test.mjs`
+ * settles it by driving each verb on each device through the real event path into a real
+ * `Controller` + `Moveset` and recording the state-machine transition it produced — the §357.1
+ * question (bound at one end only) asked of every row at once. The result:
+ *
+ *   · **Every verb the moveset consults is reachable on both devices, and all 13 produce the
+ *     same transition.** jump→jump · attack→combo (ground) and →dive (air), on F, LMB, Square
+ *     AND Triangle · interact→pickpocket · crouch→crouch, and tapped at speed →roll · sneak→
+ *     sneak · glide→paraglide · focus→combatStrafe · each of the four directions→move on key,
+ *     d-pad and stick alike. Nothing is bound-but-dead; nothing is read-but-unbindable.
+ *   · **Keyboard-only, five verbs, all of them debug or out-of-scope:** `binocu` (Tab → the HUD
+ *     overlay), `freecam` (F1), `quality` (F2), `colliders` (F3) — the last three are
+ *     `src/core/Debug.js`'s and are keyboard-only by the same decision `HUD.js:549` records —
+ *     and the player-facing pause cel, which is Escape's, not an action at all (see `pause`).
+ *   · **Pad-only, nothing.** Every pad button has a keyboard or mouse route to the same verb.
+ *     The one thing the pad can do that the keyboard cannot is a *magnitude*: a sustained speed
+ *     between 1.93 and 7.20 m/s, where a key is pinned at 7.20. That is the analog axis being
+ *     analog rather than a missing verb — `Move.update`'s own comment says so — and Sly 2's
+ *     answer to it (`hold R1 = run`) is the thing `glide`'s row above declines on purpose.
+ *   · `focus` is the only gameplay verb with **no keycap at all** — RMB and R2, nothing else.
+ *     Checked rather than assumed, because §514 is exactly the shape of hazard that would make
+ *     that fatal: on a machine where the pointer-lock grant never lands, four LMB clicks are all
+ *     swallowed and four RMB clicks all press, because the swallow in `_onMouseDown` is
+ *     `e.button === 0` only. So the mouse route to `focus` is lock-independent and no keyboard
+ *     binding is invented here — but it is a one-route verb, and `padparity.test.mjs` pins the
+ *     RMB leg so a widened swallow cannot take Thief-o-Vision out with it.
  */
 export const PAD_BINDINGS = {
   forward:  [12],
@@ -302,6 +360,12 @@ export class Input {
     /* ---- gamepad ---- */
     this._padIndex = -1;
     this._padHeld = new Set();        // action -> currently past the press threshold
+    /**
+     * Set whenever `_padHeld` is force-cleared out from under a physically-held button (focus
+     * loss, pointer-lock loss, a rebind). The next poll ADOPTS whatever is still down instead of
+     * pressing it — see `_adopt` and guarantee (3).
+     */
+    this._padResync = false;
     this._lockClick = false;          // the click that grabbed pointer lock must not also swing
 
     this._bind();
@@ -564,6 +628,38 @@ export class Input {
     this._pressedAt.set(a, this.clock);
   }
 
+  /**
+   * Take up a hold that was ALREADY physical when we stopped tracking it. `down()` becomes true;
+   * `pressed()`, `released()` and `buffered()` do not, because the player did not do anything.
+   *
+   * ── Why this exists: guarantee (3) was wired for one device only (§540) ─────────────────────
+   *
+   * A key cannot betray the drop — the browser sends no keydown for a key that was already held
+   * when focus came back — but a pad is POLLED, so `_padButtons` meets a button that is still
+   * physically down with `_padHeld` freshly cleared, reads a rising edge, and calls `_press`.
+   * Measured, real event path, real class (`tests/padparity.test.mjs` P4): hold Cross, fire
+   * `blur`, and the next `beginFrame` reports `pressed('jump')` **true** — while the same drill
+   * on Space reports false. Alt-tab out with Cross held and Sly jumps on the way back in.
+   *
+   * The buffer made it worse than one stray edge. `_dropAllHeld` clears `_pressedAt` precisely
+   * so "a press made a moment before an alt-tab is not still live on return" — and `_press`
+   * re-stamps `_pressedAt` one frame later, so on the pad the clear bought nothing at all.
+   *
+   * The clear itself is right and stays (see `_releaseSource`: a stale `_padHeld` entry leaves a
+   * held button reading as released until the player lets go). What was wrong was re-entering
+   * through the edge-stamping door. `down()` must be true — the button IS down — and that is the
+   * whole of what is true, so that is the whole of what this sets.
+   */
+  _adopt(a, src) {
+    const s = this._src[src];
+    if (!s || s.has(a)) return;
+    s.add(a);
+    if (this._down.has(a)) return;          // another device already holds it
+    this._down.add(a);
+    /* Deliberately no `_pressedFrame`, no `_pressedAt`, and no `_setDevice`: nothing about a
+       re-discovered hold is an event the player caused this frame. */
+  }
+
   _release(a, src = 'key') {
     const s = this._src[src];
     if (!s || !s.delete(a)) return;
@@ -581,8 +677,9 @@ export class Input {
     /* `_padHeld` is the pad's own memory of which actions are past the press threshold, and it
        must not outlive the hold set: `_padButtons` skips an action whose state has not *changed*,
        so a stale `_padHeld` entry would leave a physically-held button reading as released until
-       the player let go of it and pressed again. */
-    if (src === 'pad') this._padHeld.clear();
+       the player let go of it and pressed again. The re-discovery is armed rather than left to
+       `_press`, because a button that never went up did not go down again either — `_adopt`. */
+    if (src === 'pad') { this._padHeld.clear(); this._padResync = true; }
   }
 
   /**
@@ -660,6 +757,12 @@ export class Input {
    */
   _padButtons(gp) {
     const on = this.settings.triggerOn, off = this.settings.triggerOff;
+    /* The first poll after `_padHeld` was force-cleared re-DISCOVERS holds rather than receiving
+       them (§540). Spent on the poll itself, not on finding something to adopt: if the player let
+       go while the tab was away, this frame sees nothing down, the flag clears, and their next
+       real press edges normally. */
+    const resync = this._padResync;
+    this._padResync = false;
     for (const [action, list] of Object.entries(this._pad)) {
       let v = 0;
       for (const i of list) {
@@ -669,8 +772,10 @@ export class Input {
       const was = this._padHeld.has(action);
       const now = was ? v > off : v >= on;
       if (now === was) continue;
-      if (now) { this._padHeld.add(action); this._press(action, 'pad'); }
-      else { this._padHeld.delete(action); this._release(action, 'pad'); }
+      if (now) {
+        this._padHeld.add(action);
+        if (resync) this._adopt(action, 'pad'); else this._press(action, 'pad');
+      } else { this._padHeld.delete(action); this._release(action, 'pad'); }
     }
   }
 
