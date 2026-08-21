@@ -58,10 +58,32 @@ import * as K from './Kit.js';
  *  8. Through the vault gate doorway at (0, -12, -59.2) into the pillared crypt and north
  *     to the SARCOPHAGUS at (0, -12, -72).
  *
- *  ALTERNATE (stealth): from the hall's north-west corner, CRAWL the `vent` at
- *  (-21, 0, -49.5). It slopes down to y -3.1, turns east, and opens onto the vault's west
- *  shelf at (-14, -3.2, -63). Shelves at y -3.2 / -6.4 / -9.4 ledge-drop to the floor,
- *  bypassing the stair entirely.
+ *  ALTERNATE (stealth) — WITHDRAWN (§565). This route was written but never built, and the
+ *  text above it advertised it for long enough that it has to be retired explicitly rather
+ *  than quietly deleted. Measured: the tunnel's interior is genuinely hollow (a crouched
+ *  capsule depenetrates 0.000 m at 8 of 8 samples from z -53 to -60.6, and the sand sheet is
+ *  1.2-4.6 m OVERHEAD, not a lid pressing on it) — but **nothing is drawn inside it**, 0
+ *  triangles over 19 m, and both portals are drawn *and* collided as solid: the hall north
+ *  wall across the mouth (`proxy:wall` z -52..-49.9) and the tomb west wall across the exit
+ *  (x -14.05..-12.05). The paving over the shaft is drawn solid too. So a player who takes
+ *  it crawls 1.4 m and stops at z -49.56 — the wall face at -49.90 plus the 0.34 capsule
+ *  radius, to the centimetre.
+ *
+ *  The COLLIDER cost of opening it is zero and that was measured, not assumed: `A.proxy`
+ *  registers exactly one collider for any geometry, `K.mergeAll` is wired, and substituting
+ *  the hall floor slab with a four-box merged slab carrying a doorway hole leaves the level
+ *  at 255 proxies / 287 recs — the same numbers, so `basketvary.test.mjs`'s 282 never moves.
+ *  The budget was never the binding constraint. The CONTENT is: building this means authoring
+ *  19 m of tunnel art, openings in two drawn walls and the paving, and lighting for a space
+ *  with no camera in it — for a stealth bypass in a demo whose guards, cameras, searchlights
+ *  and motion trackers are all out of scope by the user's own ruling. So there is nothing to
+ *  bypass, and the route is withdrawn rather than built.
+ *
+ *  It is a cul-de-sac, not a soft-lock, and that is measured too: from the wedge, holding
+ *  back walks out 31.13 m, turning round 29.89 m, strafing 9.72 m, turn-and-jump 30.65 m.
+ *  Only "hold forward forever" and "release everything" leave you there, which is what
+ *  those inputs mean. The `vent` proxies stay where they are: the art draws a framed opening
+ *  that has been walled up, which is now exactly what the level is.
  *
  *  ROOFTOP RUN (the §8.6 payoff line, west -> east across the whole complex):
  *    east entry pylon top (14, 26.6, 34)  ->  RAIL 'pylon-drop' down to the east peristyle
@@ -2899,7 +2921,17 @@ function tomb(A) {
   vol(A, 'tomb', 'hieroglyph_gilded', -2.6, 2.6, F, F + 6.2, t.z0 + 1.7, t.z0 + 2.1, { jitter: 0.02 });
   vol(A, 'tomb', 'gold_leaf', -1.9, 1.9, F + 0.4, F + 5.4, t.z0 + 1.6, t.z0 + 1.75, { jitter: 0.01 });
 
-  /* ---- The `vent`: hall north-west corner -> vault west shelf. ---- */
+  /**
+   * ---- The `vent`: authored as a WALLED-UP passage, not a route (§565) ----
+   * The four volumes below are kept exactly where they are and the §8.1 ALTERNATE that used
+   * them is withdrawn — see the route header for the measurements and the pricing. In short:
+   * the tunnel is hollow but undrawn (0 triangles over 19 m), both portals are drawn and
+   * collided solid, and opening it costs 0 colliders but 19 m of art nobody can light or see.
+   * What the player meets is a framed opening that has been bricked up, which is what the art
+   * already draws; the `vent` tag on the mouth is what makes them crouch at it, and crouching
+   * at a blocked vent is the correct read. `tests/reachcensus.test.mjs` arm V pins the wall
+   * face and the stopping distance so a future cut reddens it instead of passing silently.
+   */
   const ventMat = { material: 'sand' };
   A.proxy(new THREE.BoxGeometry(1.35, 1.2, 10.6), { tag: 'vent', crawl: true, ...ventMat },
     { x: -21, y: -1.55, z: -54.5, rx: -D(17.2) });

@@ -43,9 +43,13 @@ import { TUNE } from '../src/player/Controller.js';
  * The two that remain are the buried vent segments, and arm V finds the real boundary: the
  * tunnel's interior is hollow but BOTH its portals are solid — the hall's north wall
  * (`proxy:wall` x -24..-3.4, y 0..13, z -52..-49.9) across the mouth, and the tomb's west wall
- * (x -14.05..-12.05, y -12..-2) across the exit — with the desert sand sheet an unbroken lid
- * over everything between. So the §8.1 ALTERNATE ("CRAWL the `vent`") is a dead end: the player
- * enters `crawl` at the hall's NW corner, walks 1.4 m, and stops against the wall.
+ * (x -14.05..-12.05, y -12..-2) across the exit. So the §8.1 ALTERNATE ("CRAWL the `vent`") is
+ * a dead end, and it has been WITHDRAWN from the route header (§565).
+ *
+ * CORRECTION to this file's first version: it also named "the desert sand sheet an unbroken lid
+ * over everything between" as a third blocker. That is wrong and arm V now measures it the other
+ * way — the sand surface sits 1.2-4.6 m ABOVE the channel the whole way down the shaft, so it
+ * is overhead, not pressing. Two blockers, not three, and both are walls.
  */
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -304,6 +308,42 @@ test('reachcensus V: the vent route is a dead end, and this is where it stops (�
   assert.ok(Math.abs(c.position.z + 49.56) < 0.15,
     `the crawl stopped at z ${c.position.z.toFixed(2)}, not the measured -49.56 (wall face -49.90 plus the `
     + '0.34 capsule radius) — something else is stopping it now and the boundary needs re-measuring');
-  console.log(`[reachcensus V] tunnel interior open at ${hollow}/8 samples; the crawl stops at `
-    + `z ${c.position.z.toFixed(2)} against the hall north wall at -49.90`);
+  /* The sand is OVERHEAD, not a lid pressing on the channel — the correction above, measured. */
+  let minClear = 99;
+  for (let z = -53; z >= -60.5; z -= 1.0) {
+    const u = Math.min(1, Math.max(0, (-49.3 - z) / (60.6 - 49.3)));
+    const g = collision.groundCheck(V(-21, 6, z), TUNE.radius, 40);
+    if (g?.hit) minClear = Math.min(minClear, g.y - (-0.05 - 3.5 * u));
+  }
+  assert.ok(minClear > 1.0,
+    `the surface over the shaft is only ${minClear.toFixed(2)} m above the channel at its tightest — `
+    + 'the first version of this file called the sand a lid and was wrong; if it has become one, the '
+    + 'terrain moved and the boundary needs re-measuring');
+
+  /* And the half that sets the priority: this is a CUL-DE-SAC, not a soft-lock. Every input a
+     stuck player actually produces gets them out, which is why §565 withdrew the route from the
+     header rather than treating the geometry as an emergency. */
+  const escape = (script) => {
+    hardReset(engine, c, V(-21.0, 0.2, -47.5), Math.PI);
+    for (let i = 0; i < 30; i++) step(() => {});
+    for (let i = 0; i < 400; i++) step((inp) => { aim(-21, -64); inp.move.y = 1; });
+    const wedged = c.position.clone();
+    let far = 0;
+    for (let i = 0; i < 400; i++) { step((inp) => script(inp, i)); far = Math.max(far, c.position.distanceTo(wedged)); }
+    return far;
+  };
+  const back = escape((inp) => { aim(-21, -64); inp.move.y = -1; });
+  const round = escape((inp) => { aim(-21, -20); inp.move.y = 1; });
+  const held = escape((inp) => { aim(-21, -64); inp.move.y = 1; });
+  assert.ok(back > 10 && round > 10,
+    `the wedge is not escapable by ordinary input — back ${back.toFixed(2)} m, turn-round ${round.toFixed(2)} m. `
+    + 'That would make it a soft-lock rather than the cul-de-sac §565 priced, and it would need repairing '
+    + 'rather than un-advertising');
+  assert.ok(held < 0.5,
+    `holding forward at the wedge moved ${held.toFixed(2)} m — the wall no longer stops it, so the `
+    + 'boundary has moved and this tripwire is stale');
+
+  console.log(`[reachcensus V] tunnel interior open at ${hollow}/8 samples; surface ${minClear.toFixed(2)} m `
+    + `overhead at its tightest; the crawl stops at z ${c.position.z.toFixed(2)} against the hall north wall `
+    + `at -49.90 · escapes: back ${back.toFixed(1)} m, turn-round ${round.toFixed(1)} m, held-forward ${held.toFixed(2)} m`);
 });

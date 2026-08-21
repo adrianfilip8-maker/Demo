@@ -43705,3 +43705,121 @@ each site rather than left to be rediscovered.
 keeps the hand while mangling the torso, feet or left arm scores identically. The escalation is
 measured as peak forward reach per slot, which is not the same thing as reading as three hits at
 game framing; that is feel, it needs hands, and it is hardware item 20.
+
+---
+
+## §565 — The vent ALTERNATE is withdrawn: the collider budget was never the constraint, the content was
+
+`src/world/EgyptLevel.js` (§8.1 route header + the vent construction block) · `tests/reachcensus.test.mjs` arm V
+
+**Recommendation asked for, so: retire it.** Not because opening it was unaffordable — it is free —
+but because there is nothing behind the wall to open onto.
+
+**The price of cutting, measured rather than declined.** §563 declined a portal cut on
+`basketvary.test.mjs:424` sealing ARCHITECTURE+PROPS registrations at 282. That reasoning was
+incomplete: `Architecture.proxy()` calls `registerCollider` **exactly once for any geometry**, and
+`K.mergeAll` (backed by `mergeGeometries`) is wired at `Architecture.init`. So a slab or a wall
+*with a doorway cut into it* is one collider, not several. Substituting the hall floor slab with a
+four-box merged slab carrying a 1.8 × 2.75 m hole and rebuilding the level:
+
+    shipped                         255 proxies · 287 recs
+    with a doorway cut in the floor 255 proxies · 287 recs
+    restored                        255 proxies · 287 recs
+
+**Zero.** No bar moves, no §141.1 authorization needed. The number is on the record so nobody
+re-declines a cut on budget grounds.
+
+**Why it is still not built.** The route is not half-finished, it is unstarted. Probing the drawn
+geometry (ARCHITECTURE's scene graph, triangle centroids in a box, proxies excluded):
+
+    the doorway opening   19 triangles — `arch:hall:hieroglyph_wall`  (the wall is drawn ACROSS it)
+    the hall floor there  32 triangles — `paving:hall`                (drawn solid over the shaft)
+    inside the shaft      **0 triangles** over 19 m                    (nothing is drawn at all)
+    the tomb-side exit    32 triangles — `arch:tomb:hieroglyph_wall`  (drawn solid)
+
+Art and collision **agree at every point**. There is no visual promise of a route and no tunnel to
+walk through — building it means authoring 19 m of interior, cutting two drawn walls and the
+paving, and lighting a space with no camera in it, to deliver a *stealth* bypass in a demo whose
+guards, cameras, searchlights and motion trackers are all out of scope by the user's own ruling.
+There is nothing to bypass.
+
+**And the priority was overstated, which is why this is the right trade.** It was described as a
+soft-lock. It is a cul-de-sac. Driven from the wedge, 400 frames per script:
+
+    hold BACK          31.13 m out        turn round + hold forward   29.89 m out
+    strafe east         9.72 m out        turn round + jump           30.65 m out
+    hold forward         0.00 m           release everything           0.00 m
+
+Only the two inputs that mean "stay here" leave you there. Nothing rescues a player who holds
+forward into a wall, and nothing should.
+
+So: the ALTERNATE is struck from §8.1 with the measurements in its place, the vent construction
+block now says the passage is authored walled-up, and the geometry is untouched — the art already
+draws a framed opening that has been bricked up, which is now exactly what the level is. Arm V
+pins the wall face (-49.90), the stopping distance (z -49.56 = face + the 0.34 capsule radius) and
+the escape distances, so a future cut reddens it instead of passing silently.
+
+## §566 — The watchdog exemption, censused: 0 reachable places where a grounded player is held
+
+`tests/pincensus.test.mjs` (new)
+
+§504's STUCK detector needs the capsule AIRBORNE and the void watchdog needs a fall, so every
+place a player can be grounded and stationary is invisible to both. The vent was one instance; the
+question was how many exist.
+
+**Two classes, and only one is a defect.** A CUL-DE-SAC stops held-forward and lets every other
+input out (the vent; also every wall in the game, correctly). A POCKET lets you get nowhere in any
+of eight directions. Only the second is a defect, and it is what was censused.
+
+**Method, and its recall.** Over x ±30, z -80..66 at 1.5 m, on **every** up-facing surface a
+downward ray finds — 10,880 of them across all levels of the temple, not a heightmap — screen by
+capsule sweep, then drive the shortlist eight ways for 5 s each. Run twice, standing and crouched,
+because the standing pass SKIPS anything a 1.80 m capsule cannot occupy and that skip is exactly
+the §498 / §473.3 crouch-pocket class:
+
+    standing screen   36 clusters   ->  driven arrivals: 0 real traps
+    crouched screen   53 clusters   ->  driven arrivals: 0 reachable traps
+
+Recall measured rather than assumed: **120 randomly chosen stances the screen PASSED were driven,
+and 0 were pinned.**
+
+**The verdict is the boring one and it is worth having measured: nothing.** Every standing
+candidate was a point buried inside merged prop geometry that a ray found an up-facing triangle
+in — driven from the standable neighbourhood, a walker either never reaches it or arrives and
+walks away. Three crouched candidates are genuinely closed as SHAPES (a capsule placed there
+cannot leave): under the courtyard paving at (±18, -1.00, 22) — 0.21 m of travel in eight
+directions — a shelf inside the approach embankment at (9, 14.94, 65.5), and one inside the east
+dune mass at (8.65, 2.39, 46). None is arrived at by any driven walk.
+
+**§498 still holds, and that is the control.** At §473.3's own pin coordinates, where a held input
+moved 0.01 m for 1347 frames on camera before the slot fills, the same instrument now measures
+**12.86 m and 14.21 m**. So the detector can see both an open space and a closed one, which is
+what makes the zero meaningful.
+
+**DOMAIN (§418.3)** — P1 *passes on* the shipped level (10,880 surfaces, 53 clusters, bar 60);
+*fails on* a screen whose reach is shrunk to 0.4 m, run in-arm, which must find strictly more
+(9,171 against 85) — a screen that does not respond to its own reach is not measuring reach.
+P2 *passes on* §473.3's two anchor slots; *fails on* the under-paving space, run in-arm at 0.21 m
+walking / 0.69 m jumping. P3 *passes on* no driven walk from the knee shelf grounding inside the
+east colossus's fill-top shelf; *fails on* the west mirror, run in-arm, which the same drive DOES
+reach (y 6.04) — without that control, "east is unreachable" is indistinguishable from "this drive
+reaches nothing". *Does not discriminate*: anything reached only mid-air. The colossus is a merged
+prop mesh with **12 stacked up-facing surfaces** in the column at (8.1, 25), and a player who
+jumps up it is in space this census does not map. That bound is stated, not hidden.
+
+## §567 — Two corrections to §563, and one failing input rejected for being unstable
+
+**The sand sheet is not a lid.** §563 named three things sealing the vent: two walls "with the
+desert sand sheet an unbroken lid over everything between". The third is wrong. Measured down the
+shaft, the ground surface sits **1.17 m to 4.57 m ABOVE** the channel the whole way — it is
+overhead, not pressing, and the channel under it is free (a crouched capsule depenetrates 0.000 m
+at 8 of 8 samples). Two blockers, and both are walls. `reachcensus` arm V now asserts the
+clearance so the correction cannot rot back.
+
+**A failing input was measured, rejected, and replaced.** `pincensus` P2 first used the shelf on
+top of the east colossus's §498 fill as its closed-space input. It reads **2.99 m** when walked
+into and **10.86 m** when a capsule is placed 0.3 m above the same point — not stable under
+placement, so it would have been a flaky bar dressed as a measurement. Replaced with the
+under-paving space, which reads 0.21 / 0.69 m however it is entered. The rejected candidate is
+recorded here because "this number was not reproducible under a placement I chose" is the same
+family as §562 and is the reason to check twice, not once.
