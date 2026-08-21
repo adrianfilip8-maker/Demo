@@ -220,12 +220,19 @@ const GODOT_ALIAS = {
 
   /* The `CaneSwing` family turned out NOT to be attacks — measured at their own play sites:
      `CaneSwing`/`CaneSwing Idle` drive their swing_state Swing BlendSpace (the hook swing;
-     the pendulum motion is the NODE's, the clip is the overhead two-paw hang, near-static —
-     max 60 Hz step 5°) and `CaneSwing Grab` is the catch (hands snap to the overhead grip in
-     0.1 s, held from 0.4). That is our hook family's exact shape — the state carries the arc,
-     the clip carries the hang — and §479's "the repo has no hook clips" is corrected by this
-     measurement, so the audit default (the repo clip wins) reaches the two verbs with play
-     sites. `hook_release` (our dismount flourish) has no counterpart and stays procedural. */
+     the pendulum motion is the NODE's, the clip is a near-static hang — max 60 Hz step 5°) and
+     `CaneSwing Grab` is the catch (hands snap to the overhead grip in 0.1 s, held from 0.4).
+     That is our hook family's exact shape — the state carries the arc, the clip carries the
+     hang — and §479's "the repo has no hook clips" is corrected by this measurement, so the
+     audit default (the repo clip wins) reaches the two verbs with play sites. `hook_release`
+     (our dismount flourish) has no counterpart and stays procedural.
+
+     The hang is ONE-ARMED: right hand on the cane overhead, left hanging free at the hip, at
+     both sampled phases (`shots/cane1/godot-hookswing-t040`, `-t105`). An earlier draft of this
+     comment called it a "two-paw hang" — that was written from a channel summary rather than
+     from a picture, and the frames say otherwise. It matters beyond pedantry: a one-armed hang
+     leaves the off hand free, which is what makes our `hook_release` flourish legible when it
+     takes the body back. */
   hook_grab:     'CaneSwing Grab',
   hook_swing:    'CaneSwing',
 };
