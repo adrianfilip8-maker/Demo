@@ -28,14 +28,15 @@ import { makeSim, DT } from './_moveset.mjs';
  * jump carries the whole turn.
  *
  * ── DOMAIN — both inputs RUN (§418.3) ────────────────────────────────────────────────────────
- *   clip def:     SHIPPED (hand-carried 360, dur 0.30)  |  PRE-§474 reconstruction (cane-track
- *                 360, dur 0.62) — inline below as OLD_RAW, injected into ACTIVE for its arm
+ *   clip def:     §474 (hand-carried 360, dur 0.30 — the `?anim=proc` control since §478)
+ *               | PRE-§474 reconstruction (cane-track 360, dur 0.62) — inline below as
+ *                 OLD_RAW, injected into ACTIVE for its arm
  *   model shape:  no `_attachPoints.cane` — the SHIPPED SlyModelDLRig shape (cane rigid to
  *                 `handR`), which is what `charStub()` builds
  *   drive:        the real Controller + Moveset + Animation, stub flat world, twirltrace's own
  *                 tapped cadence (8-frame first hold, 6-frame gap, 4-frame second tap)
  *
- *   passes on:  the shipped def — net signed handR yaw sweep ≥ 270° across the double jump's
+ *   passes on:  the §474 def — net signed handR yaw sweep ≥ 270° across the double jump's
  *               airtime (the authored 360 minus at most one crossfade's absorption)
  *   fails on:   the pre-§474 def — net sweep < 120°, while ITS OWN cane track nets ≥ 300°
  *               (T3: the turn existed and was authored into the discarded channel)
@@ -178,24 +179,36 @@ function drive(engine, c, an, ch, { air = true } = {}) {
   return { dirs, states, first, last };
 }
 
-/** Run a take against a given `double_jump` compiled clip, restoring the shipped one after. */
+/**
+ * Run a take against a given `double_jump` compiled clip, in the PROCEDURAL regime's context.
+ *
+ * Since the default regime moved to `godot` (§478), ACTIVE's air family is the repo's clips —
+ * whose own arm articulation nets ~125° of hand yaw across a plain jump, which is not a turn
+ * but is over this file's 120° "no readable turn" bar. These arms guard the §474 mechanics
+ * (the hand-carried twirl vs the discarded cane channel), and that def ships as the
+ * `?anim=proc` control arm — so the take pins the WHOLE procedural table for its duration,
+ * measuring the §474 claim in the §474 regime rather than re-deriving its bars around an
+ * unrelated clip set. The godot double jump's own delivery claim lives in §478's fliptrace
+ * and shots/flip1, on the body-pitch metric a somersault actually needs.
+ */
 async function takeWith(clip, opts) {
-  const prev = ACTIVE.double_jump;
+  const prev = {};
+  for (const n of Object.keys(CLIPS)) { prev[n] = ACTIVE[n]; ACTIVE[n] = CLIPS[n]; }
   ACTIVE.double_jump = clip;
   try {
     const { engine, c, an, ch } = await boot();
     return drive(engine, c, an, ch, opts);
   } finally {
-    ACTIVE.double_jump = prev;
+    for (const n of Object.keys(CLIPS)) ACTIVE[n] = prev[n];
   }
 }
 
-test('T1 twirl delivery: the shipped def sweeps the hand ≥270° through a tapped double jump; the pre-§474 def cannot', async () => {
+test('T1 twirl delivery: the §474 def (the ?anim=proc control since §478) sweeps the hand ≥270° through a tapped double jump; the pre-§474 def cannot', async () => {
   const now = await takeWith(CLIPS.double_jump);
   assert.ok(now.first >= 0, `doubleJump never entered (states: ${[...new Set(now.states)].join(',')})`);
   const nowNet = Math.abs(netYaw(now.dirs, now.first, now.last));
   assert.ok(nowNet >= 270,
-    `shipped def delivered ${nowNet.toFixed(0)}° net hand yaw across the double jump — the 360 did not arrive`);
+    `§474 def delivered ${nowNet.toFixed(0)}° net hand yaw across the double jump — the 360 did not arrive`);
 
   const old = await takeWith(compile('double_jump', OLD_RAW));
   assert.ok(old.first >= 0, 'doubleJump never entered on the old-def arm');
@@ -209,14 +222,14 @@ test('T2 contrast (does not discriminate): a single jump sweeps <120° under eit
   assert.ok(now.first >= 0, 'jump never entered');
   assert.equal(now.states.includes('doubleJump'), false, 'contrast take must not double jump');
   const a = Math.abs(netYaw(now.dirs, now.first, now.last));
-  assert.ok(a < 120, `single jump swept ${a.toFixed(0)}° net under the shipped def`);
+  assert.ok(a < 120, `single jump swept ${a.toFixed(0)}° net under the §474 def`);
 
   const old = await takeWith(compile('double_jump', OLD_RAW), { air: false });
   const b = Math.abs(netYaw(old.dirs, old.first, old.last));
   assert.ok(b < 120, `single jump swept ${b.toFixed(0)}° net under the old def`);
 });
 
-test('T3 channel attribution: the old def authored its turn into the cane track; the shipped def authors it into handR', () => {
+test('T3 channel attribution: the old def authored its turn into the cane track; the §474 def authors it into handR', () => {
   /* METRIC, derived from the claim rather than from either result: "authored a turn INTO A
      TRACK" is a statement about the track's own traversal, and the old cane track turns about a
      TILTING axis (its X euler swings 40 → −160 → 96 across the same keys), so the net-yaw

@@ -4,7 +4,9 @@ import * as THREE from 'three';
 import { RIG3 } from '../src/player/SlyModel3.js';
 import { CLIPS, REQUIRED } from '../src/player/Clips.js';
 import { MIXAMO_CLIPS } from '../src/player/MixamoClips.js';
-import { buildClipSet, ACTIVE, CLIP_REGIME } from '../src/player/Animation.js';
+import { buildClipSet, ACTIVE, CLIP_REGIME, CLIP_ORIGIN } from '../src/player/Animation.js';
+import { GODOT_CLIPS } from '../src/player/GodotClips.js';
+import { TUNE } from '../src/player/Controller.js';
 
 /**
  * Guards on the CLIP-SET REGISTRATION — the seam where `MixamoClips.js` becomes something the rig
@@ -37,55 +39,121 @@ import { buildClipSet, ACTIVE, CLIP_REGIME } from '../src/player/Animation.js';
  */
 
 const BONES = new Set(RIG3.BONE_ORDER);
-const REG = ['proc', 'mixamo', 'mixamo-pure'];
+const REG = ['proc', 'mixamo', 'mixamo-pure', 'godot', 'godot-pure'];
 
 /** RIG3 bones Mixamo has no source for — the ones the splice has to fill from the donor. */
 const NO_SOURCE = ['tailA', 'tailB', 'tailC', 'tailD', 'capBrim', 'jaw', 'browL', 'browR', 'earL', 'earR'];
 
 /* ------------------------------------------------------------ the default ---- */
 
-test('regime: the shipped default is `proc`, and it is Clips.js itself', () => {
-  /* Not "equivalent to" — the same objects. A regime that rebuilt the procedural clips would be a
-     second copy of them, and every past measurement in KNOWN_ISSUES was taken against these. */
-  assert.equal(CLIP_REGIME, 'proc', 'a plain `node` import must resolve to the default regime');
+test('regime: the shipped default is `godot` — the audited swaps ride on Clips.js itself', () => {
+  /* Since the FrontFlip commit the DEFAULT regime is `godot`, by the user's instruction (use the
+     repo's movement animations). Its table is Clips.js BY IDENTITY except for exactly the names
+     the audit swapped, each of which must be a real substitution sourced from GodotClips.js.
+     DOMAIN — passes on: the shipped build (swapped set ⊇ double_jump, everything else the same
+     objects every past KNOWN_ISSUES measurement was taken against); fails on: the pre-FrontFlip
+     build, RUN here as buildClipSet('proc') — its double_jump has no godot origin (asserted
+     below, the same check inverted); cannot discriminate: whether a swap LOOKS right — that is
+     the on-camera audit's job, frames in shots/, not an object-identity test's. */
+  assert.equal(CLIP_REGIME, 'godot', 'a plain `node` import must resolve to the default regime');
+  let swapped = 0, kept = 0;
+  for (const n of Object.keys(CLIPS)) {
+    if (CLIP_ORIGIN[n] === 'proc') {
+      assert.equal(ACTIVE[n], CLIPS[n], `unswapped "${n}" is not the procedural clip by identity`);
+      kept++;
+    } else {
+      const m = /^godot:(.+)$/.exec(CLIP_ORIGIN[n]);
+      assert.ok(m, `swapped "${n}" has origin "${CLIP_ORIGIN[n]}", not godot:*`);
+      assert.ok(GODOT_CLIPS[m[1]], `swapped "${n}" names source "${m[1]}", which GodotClips.js does not carry`);
+      assert.notEqual(ACTIVE[n], CLIPS[n], `swapped "${n}" is still the procedural object — the splice did not run`);
+      swapped++;
+    }
+  }
+  assert.equal(kept + swapped, 52, `expected the 52 clip names, saw ${kept + swapped}`);
+  assert.ok(CLIP_ORIGIN.double_jump?.startsWith('godot:'),
+    'double_jump is the P1 deliverable — the default regime must swap it');
+
+  /* The control arm still exists and still IS Clips.js: `?anim=proc` must reproduce the exact
+     objects, because that token is how every §474-era measurement is re-run. */
   const s = buildClipSet('proc');
-  let checked = 0;
   for (const n of Object.keys(CLIPS)) {
     assert.equal(s.table[n], CLIPS[n], `proc regime replaced "${n}" with a different object`);
     assert.equal(s.origin[n], 'proc');
-    checked++;
   }
-  assert.equal(checked, 52, `expected the 52 hand-authored clips, saw ${checked}`);
-  assert.equal(ACTIVE, buildClipSet('proc').table === ACTIVE ? ACTIVE : ACTIVE);
-  for (const n of Object.keys(CLIPS)) assert.equal(ACTIVE[n], CLIPS[n], `ACTIVE["${n}"] is not the procedural clip`);
 });
 
-test('regime: an unknown, empty or misspelled token falls through to `proc`', () => {
+test('regime: an unknown, empty or misspelled token falls through to `godot`', () => {
   /* Restoring the incumbent is the ABSENCE of a token, the same contract `?char=` states in
-     main.js. A typo must not half-install an experiment. */
-  for (const t of ['', 'mixmao', 'mixamo2', 'true', '1', 'legacy', undefined, null, 'proc']) {
+     main.js — and the incumbent is now the godot set. A typo must not half-install anything.
+     DOMAIN — passes on: junk tokens resolving to the default; fails on: an explicit 'proc'
+     being swallowed by the fall-through (RUN below — 'proc' must select proc, or the §474
+     control arm is unreachable); cannot discriminate: which regime SHOULD be the default —
+     that claim lives in the regime test above and in the ledger, not in normalisation. */
+  for (const t of ['', 'mixmao', 'godo', 'godot2', 'true', '1', 'legacy', undefined, null, 'godot']) {
     const s = buildClipSet(t);
-    assert.equal(s.regime, 'proc', `token ${JSON.stringify(t)} did not fall through to proc`);
-    assert.equal(s.table.walk, CLIPS.walk);
+    assert.equal(s.regime, 'godot', `token ${JSON.stringify(t)} did not fall through to godot`);
+    /* The default's substitutions must be IN FORCE under a junk token (double_jump swapped) while
+       the scope-guarded gaits stay procedural — sneak_walk carries the §470 wrong-leg fix and the
+       repo has no sneak, so its identity doubles as the scope guard. */
+    assert.notEqual(s.table.double_jump, CLIPS.double_jump, `token ${JSON.stringify(t)} lost the default's swaps`);
+    assert.equal(s.table.sneak_walk, CLIPS.sneak_walk, `token ${JSON.stringify(t)} swapped the §470 sneak gait`);
+  }
+  for (const t of ['proc', 'mixamo', 'mixamo-pure', 'godot-pure']) {
+    assert.equal(buildClipSet(t).regime, t, `explicit token ${JSON.stringify(t)} was swallowed by the fall-through`);
   }
   /* Case and surrounding whitespace ARE tolerated, deliberately: a URL a human typed, or a token a
      shell passed through with a trailing space, should select the arm it plainly names rather than
      silently restoring the incumbent and producing a control frame labelled as a treatment. */
-  for (const t of ['MIXAMO ', ' Mixamo', 'Mixamo-Pure']) {
+  for (const t of ['MIXAMO ', ' Mixamo', 'Mixamo-Pure', ' GODOT']) {
     assert.equal(buildClipSet(t).regime, t.trim().toLowerCase(), `token ${JSON.stringify(t)} was not normalised`);
   }
 });
 
+test('regime: the godot double_jump is FrontFlip retimed onto OUR jump window, and the retime mutates nothing', () => {
+  /* The §474.3 rule as an arm: an aliased clip's `dur` is the window the moveset delivers, and
+     the window is physics — doubleJumpV0 / |gravity| puts apex at 0.4125 s, so the clip must end
+     within half a frame of it (a held flip finishes exactly as `fall` re-bases; the tapped cut
+     at ~0.167 s lands past the flip's 180° so the demote blend resolves forward — §474.3's
+     numbers, re-verified on camera in shots/flip1). DOMAIN — passes on: the shipped alias;
+     fails on: the source's own authored duration, RUN here (0.75 s would overshoot the window
+     by 82 % — the exact §474.3 class, a clip cut mid-rotation); cannot discriminate: whether
+     0.41 s READS as a flip at game framing — the flip1 frames carry that claim. */
+  const win = TUNE.doubleJumpV0 / Math.abs(TUNE.gravity);
+  const { table, origin } = buildClipSet('godot');
+  assert.equal(origin.double_jump, 'godot:FrontFlip');
+  const dj = table.double_jump;
+  assert.ok(Math.abs(dj.dur - win) <= 0.5 / 60,
+    `double_jump dur ${dj.dur} is not the delivered window ${win.toFixed(4)} (±half a frame)`);
+  assert.ok(Math.abs(GODOT_CLIPS.FrontFlip.dur - 0.75) < 1e-6,
+    `the authored source would overshoot the window by ${(GODOT_CLIPS.FrontFlip.dur / win - 1) * 100 | 0}% — and retiming must not have rewritten it`);
+  for (const tr of dj.bones) {
+    assert.ok(tr.times[tr.times.length - 1] <= dj.dur + 1e-4,
+      `retimed track ${tr.name} ends at ${tr.times[tr.times.length - 1]}, past dur ${dj.dur}`);
+  }
+  /* the retime rebuilt keys; the SOURCE module's own key grid must still be the emitter's */
+  assert.equal(GODOT_CLIPS.FrontFlip.keys[1].t, 0.05, 'GodotClips.js FrontFlip keys were rewritten in place');
+  /* splice coverage: filled arm drives all 31 RIG3 bones, pure arm only the emitted 21 */
+  const names = new Set(dj.bones.map((t) => t.name));
+  assert.equal(names.size, 31, `godot double_jump drives ${names.size} bones, not 31 — the donor fill did not run`);
+  assert.ok(dj.cane, 'godot double_jump lost the donor cane track');
+  const pure = buildClipSet('godot-pure').table.double_jump;
+  assert.equal(new Set(pure.bones.map((t) => t.name)).size, 21, 'godot-pure double_jump must carry only the emitted bones');
+  assert.equal(pure.cane, null, 'godot-pure double_jump must not carry a cane track');
+});
+
 /* ------------------------------------------------------------- the splice ---- */
 
-test('registration: building a mixamo set does not mutate Clips.js', () => {
+test('registration: building any regime mutates neither Clips.js nor GodotClips.js', () => {
   /* Snapshot the donor key times BEFORE, build every regime, compare AFTER. `timeScale` multiplies
-     key times by durNew/durOld; done in place it would silently retune the control arm. */
+     key times by durNew/durOld and `retimeRaw` rebuilds a source clip's keys; done in place either
+     would silently retune the control arm (or the emitter's committed grid). */
   const before = new Map();
   for (const n of Object.keys(CLIPS)) {
     for (const tr of CLIPS[n].bones) before.set(`${n}/${tr.name}`, Float32Array.from(tr.times));
     if (CLIPS[n].cane) before.set(`${n}/#cane`, Float32Array.from(CLIPS[n].cane.times));
   }
+  const gBefore = new Map();
+  for (const n of Object.keys(GODOT_CLIPS)) gBefore.set(n, GODOT_CLIPS[n].keys.map((k) => k.t));
   for (const r of REG) buildClipSet(r);
   let checked = 0;
   for (const n of Object.keys(CLIPS)) {
@@ -98,6 +166,10 @@ test('registration: building a mixamo set does not mutate Clips.js', () => {
       assert.deepEqual(Array.from(CLIPS[n].cane.times), Array.from(before.get(`${n}/#cane`)), `${n} cane times were rewritten`);
       checked++;
     }
+  }
+  for (const n of Object.keys(GODOT_CLIPS)) {
+    assert.deepEqual(GODOT_CLIPS[n].keys.map((k) => k.t), gBefore.get(n), `GodotClips "${n}" key times were rewritten in place`);
+    checked++;
   }
   assert.ok(checked > 1000, `only ${checked} tracks compared`);
 });

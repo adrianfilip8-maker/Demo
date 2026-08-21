@@ -42,14 +42,57 @@ Two things this resolved that a filename search cannot:
 |---|---|
 | `sly-godot.glb` | the rigged mesh: 174 joints, 21 meshes, 30,346 tris, 9 morph targets |
 | `sly-godot-anims.glb` | 5 authored clips — Walk, Run, Jump, CrouchingStand, UprightStand — mesh-free |
+| `sly-godot-moves.glb` | 18 movement clips from `Assets/Models/Characters/SlyCooper_Anims27.gltf` — see below |
 | `sly-body.png` | 2048² 8-bit albedo, the material override's target |
 | `sly-head.png` | 2048² 8-bit albedo (RGBA) |
 
-Rebuild either `.glb` with:
+Rebuild either of the first two `.glb`s with:
 
 ```
 node tools/godot2rig.mjs --import --src <dir containing the four source files>
 node tools/godot2rig.mjs            # measure the committed asset
+```
+
+## The movement set (`sly-godot-moves.glb`)
+
+Imported on the same owner-instruction basis as the mesh (the standing instruction above), at the
+user's playtest direction to use this repository's movement animations. Source:
+**`Assets/Models/Characters/SlyCooper_Anims27.gltf`** — 24 clips, 166-joint skin. Extracted
+(mesh-free, dead channels dropped and counted) by `tools/godot2clips.mjs --extract`; the same tool
+retargets it onto RIG3 as `src/player/GodotClips.js`. **Nothing from `Assets/Music/` or
+`Assets/Effects/` — audio is untouchable here, per the project's absolute rule.**
+
+The 18 clips taken: FrontFlip, Walk, Run, Jump, Falling, Landing, LedgeGrab, LedgeGrab Idle,
+PoleGrab, PoleClimbing, PoleClimbIdle, railrun, RailrunStand, SpireJump, SpireJumpIdle,
+SpireJumplanding, Crouching stand, Standupright. NOT taken: the combat set (Canehit, CaneSwing ×3),
+PickPocket, and the 1-channel KeyAction.001 — the instruction is the movement set.
+
+Why Anims27 and not the files their game binds — established by reading the scene graph, and this
+time by **measuring** the candidate sources against each other:
+
+- Their tree (`sly_cooper_anims_4.tscn`) plays `Library_Sly_14` (Falling, FrontFlip, Landing — the
+  `SlyCooper_Anims14.gltf` bake), `Library_Sly_19` (Walk/Run/Jump/pole/spire/rail — the Anims19
+  bake) and a tscn-baked `Library Sly MASTER 006` (the LedgeGrab family). No library binds Anims27.
+- Anims27 is the consolidated re-export of the SAME authored motions: FrontFlip's pelvis curve is
+  byte-identical between Anims14 and Anims19, and Anims27 matches within 0.033° at the pelvis;
+  the worst deviation found anywhere in a five-joint probe across FrontFlip/Walk/Run/railrun is
+  0.127° (Walk, thigh.L) — export float noise, invisible.
+- Its 166-vs-174-joint delta against Anims14/19 is finger control bones only (`FingerCTL_*`/
+  `Index_CTL_*`/`Thumb_CTL_*` vs `f_index.03.*`), which the retarget map never touches; the shared
+  skeleton's rest pose matches to 7 decimals (`spine.001` translation compared directly).
+- It is the ONLY glTF in the repository carrying LedgeGrab / LedgeGrab Idle / PickPocket (their
+  game plays those from the tscn-baked library; Anims27 is that family's only re-runnable source).
+
+Delivered-speed note, measured in their scene rather than assumed: their air jump fires FrontFlip
+through `TimeScale 2/scale = 0.85` (tscn default, never rewritten by any script), so THEIR
+delivered flip is ≈ 0.88 s. Our alias table times it to OUR jump window instead (§474.3/§478).
+
+Rebuild / re-measure with:
+
+```
+node tools/godot2clips.mjs --extract --src <checkout root>   # checkout → committed GLB
+node tools/godot2clips.mjs                                   # report from the committed GLB
+node tools/godot2clips.mjs --write src/player/GodotClips.js  # GLB → retargeted module
 ```
 
 ## Measured

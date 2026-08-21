@@ -41839,3 +41839,116 @@ before this round; input arm 6 and the hud §516 arm added — the live shared t
 instrument, per the §510-era rule, and the sibling lane's in-flight Godot work never touches these
 numbers). `HUD.js` was unheld and is taken for the prompt swap, stated here; `Controller.js`
 needed no change and got none — `wishMag` was already the analog consumer end to end.
+
+---
+
+## §478 — The double jump was still off because §474 measured the cane while the player watched the body; the repo's own FrontFlip ships in its place
+
+The user, verbatim: *"The double jump animation is still off. Double check to make sure the
+correct movement animations are being used from the godot repo."* §474's repair was real on its
+own metric — +346° of cane yaw, held by three arms — and the user still reads the MOVE as off,
+because the §474 metric measured the prop. The player watches the body, and the body never left
+upright: the twirl nets ~0° about the lateral axis by construction (F1's contrast arm measures
+it below 90°, upright throughout). The instruction's second sentence is the diagnosis AND the
+fix: the reference repository authored a dedicated double-jump animation — `FrontFlip`, fired on
+their air jump at `Scripts/player__sly.gd:911` through
+`jump_state → jump_air_forward → TimeScale 2 → Library_Sly_14/FrontFlip` (read from
+`sly_cooper_anims_4.tscn`, not assumed) — and until this round NOTHING from that repository's
+movement set played in our shipped game: every clip was procedural, with the five-clip
+`sly-godot-anims.glb` referenced only by an offline tool.
+
+### §478.1 The pipeline: checkout → committed GLB → retargeted module, reproducible at each seam
+
+`tools/godot2clips.mjs`, two stages, both re-runnable from this repository alone (PROVENANCE.md
+carries the import basis; §364.3 stands — nothing from `Assets/Music/` or `Assets/Effects/`):
+
+- `--extract` → `public/assets/sly-godot/sly-godot-moves.glb`:
+  `Assets/Models/Characters/SlyCooper_Anims27.gltf`, 18 movement clips, mesh-free, dead channels
+  dropped and counted (18 morph `weights`, 2,660 identity-constant scale, 2,619 rest-constant
+  translation; 3,685 kept). Combat, PickPocket and KeyAction.001 deliberately not taken.
+- `--write` → `src/player/GodotClips.js`: mixamo2clips' world-delta retarget verbatim, 25/25
+  joints mapped, facing measured off the rest toes (+Z, no conjugation), hips scale
+  K = 0.8856 / 3.1813 = 0.2784, emitted at 20 Hz through Clips.js' own `compile()`.
+
+Both seams verified by re-running them against a fresh shallow clone: GLB and module reproduce
+**byte-identical**.
+
+Source selection was re-derived by measurement after two false claims died in draft (§435.4 —
+each was a probe of a model, and the file said otherwise): their game binds `Library_Sly_14/19`
+(the Anims14/19 bakes) plus a tscn-baked `Library Sly MASTER 006` — no library binds Anims27.
+But Anims27 is the consolidated re-export of the SAME authored motions: FrontFlip's pelvis curve
+is byte-identical between Anims14 and Anims19, Anims27 matches within 0.033° at the pelvis and
+0.127° at the worst probed joint anywhere (Walk/thigh.L — export float noise), its
+166-vs-174-joint delta is finger control bones the retarget map never touches (shared rest pose
+equal to 7 decimals), and it is the only glTF carrying the LedgeGrab family. And the flip does
+NOT ship at 2× in their game: `TimeScale 2/scale = 0.85` is the tscn default, never rewritten by
+any script — THEIR delivered flip is ≈ 0.88 s. (The first draft of the tool header claimed
+"TimeScale of 2, ships at 0.375 s" and "byte-identical across 14/19/27"; both are corrected in
+place, with the measurements.)
+
+### §478.2 Two defects in the source's own export, both measured, one repaired by decimation
+
+- **The 360° lives above the pelvis.** `RotateCTL` (562° of local path) carries the flip;
+  `spine.001`'s local track is near-static. A local-track copy would have delivered a flip with
+  no rotation in it — §474.1's failure mode exactly, dodged by construction: the world-delta
+  method folds ancestor motion into the mapped joint.
+- **The export's last quarter-turn is broken, and 20 Hz decimation repairs it.** The baked
+  pelvis curve runs 0 → +282° then snaps backward to identity in 0.05 s (raw keys …+268.6,
+  +282.4, +119.4, +18.7, 0). At their 0.85× the snap spans ~3.5 rendered frames and their game
+  simply shows it. Sampled at 20 Hz and played through Clips.js' per-segment slerp, at most one
+  emitted key lands inside the snap, adjacent emitted keys sit ≤ ~110° apart, and the short arc
+  runs the flip FORWARD through +360 with an 18° overshoot-and-settle. The emitter measures
+  rather than trusts this: the report prints per-clip source-vs-emitted hips sweep
+  (`FrontFlip: 0° → −360°` — the snap unwinds the source's own net; the emitted curve is the
+  one that flips) and flags any adjacent-key world step ≥ 120° (exactly one clip carries one).
+
+### §478.3 Timed to OUR window, not theirs — §474.3's rule, now derivable and derived
+
+`GODOT_ALIAS.double_jump = { src: 'FrontFlip', dur: 0.41 }`: doubleJumpV0 9.90 / g 24 puts apex
+at 0.4125 s, so a HELD flip ends exactly as `fall` re-bases; the source front-loads its rotation
+(complete by 0.60 of the clip), so at 0.41 the 360 closes ≈ 0.25 s — inside the tapped ~0.29 s
+demote window (§474.3), and past 180° by the 0.167 s cut, so even the demote blend resolves
+forward. Their 0.88 s delivered number cannot fit a 0.41 s rise and is not used. Measured in the
+takes below: the tapped cut lands at t = 0.167 s and the track still delivers the full turn.
+
+### §478.4 On camera, shipped model, before/after — the body metric this time
+
+`tools/fliptrace.mjs` (twirltrace's chassis; the metric is net sagittal hips sweep in the
+(up, facing-at-press) plane plus min upDot — a somersault passes through inverted, which no
+upright move can fake), same tapped cadence both arms, `?anim=proc` (the §474 twirl) vs default:
+
+```
+                       net body pitch   min upDot   §475 containment      landing seam   track cut
+  after, tapped          +376.6°          −0.96     worst ndcY −0.54,     3.0°/frame     f25 / t 0.167
+  after, held            +376.5°          −0.96     −0.63; 0 frames out   3.0°/frame     f37 / t 0.367
+  before (proc twirl)    upright throughout — measured in-suite by F1's contrast arm (< 90°,
+                         min upDot > 0.3), frames beside the after set
+```
+
+Frames committed: `shots/flip1-*` — the readable run is `after-tapped-f6` (tucked dive, ~120°
+in) → `f10` (fully inverted, feet over head, the frame no twirl can produce) → `f13` (settle
+upright before the fall pose), with the after-held pair and the `before-tapped` twirl frames
+beside them, same cadence, same framing. The §475 clamp never engaged above |ndcY| 0.63 against
+its 0.88 margin — the flip does not fight containment — and the held take's touchdown worst
+step is 3.0°/frame against the 25°/frame seam bar: no landing blend repair needed. HONEST GAP:
+the before arm's run was killed by the container after its tapped-take frames (f4–f13) were on
+disk — its telemetry JSON and held take are lost, and were NOT re-shot: the before side's
+numbers are held by F1's in-suite contrast arm (deterministic, re-runnable), which is the
+stronger record; the lost JSON would have duplicated it.
+
+### §478.5 Held as arms, and what moved underneath §474's
+
+- `tests/flip.test.mjs` F1 — real Controller+Moveset+Animation on the shipped model's shape,
+  both defs RUN (§418.3): the godot def delivers ≥ 270° net body pitch AND min upDot ≤ −0.5
+  through a tapped double jump; the §474 twirl nets < 90° and never leaves upright — not the
+  twirl's defect, but WHY "still off" survived §474. Cannot discriminate: whether 0.41 s READS
+  at game framing — shots/flip1 carries that claim.
+- The regime default moved `proc` → `godot` (`Animation.js`): unknown tokens fall through to
+  godot; `?anim=proc` restores the §474-era build exactly (asserted by identity). anim.test's
+  default/fall-through arms are re-derived from the inverted claim — the old claims are
+  inverted in the file, not deleted — and the fall-through arm now also asserts sneak_walk's
+  identity in every regime (the §470 wrong-leg fix is scope-guarded, the repo has no sneak).
+- twirl.test's arms keep their §474 claims by pinning the whole procedural table per take
+  (`takeWith`): they guard the §474 mechanics, which ship as the `?anim=proc` control.
+- `tests/bundle.test.mjs` registers `sly-godot-moves.glb` as the fourth build-time input.
+- Suite **874/874**, EXIT=0, from a clean worktree at this commit.

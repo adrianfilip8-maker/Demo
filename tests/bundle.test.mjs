@@ -203,6 +203,10 @@ const KAYKIT_UNUSED = packFiles('kaykit')
  *                            other agents' live work; it is a decision with an owner, not a sweep.
  *   sly-godot-anims.glb      split out to keep 2,620 channels OFF the boot path, then shipped.
  *                            `tools/godot2rig.mjs` writes it to this path.
+ *   sly-godot-moves.glb      BUILD-TIME input to `tools/godot2clips.mjs` (the movement set the
+ *                            default regime plays — the runtime loads the baked GodotClips.js,
+ *                            never this file). Same class and same reasoning as the three build
+ *                            inputs above; the tool writes and re-reads this exact path.
  *   kaykit/*                 40 models nobody chose to include (§265.2) — see `packFiles` above.
  *   museum-…mp3              6.94 MB, the largest single unreferenced file left, and it stays on
  *                            purpose. The **owner instructed that it be used** as the game's
@@ -223,6 +227,7 @@ const KNOWN_UNSHIPPED_PAYLOAD = [
   'sly-anim/carmelita-anims.glb',
   'sly-anim/sly-anims.glb',
   'sly-godot/sly-godot-anims.glb',
+  'sly-godot/sly-godot-moves.glb',
   ...KAYKIT_UNUSED,
   ...TOMBCHASER_ALL,
 ];
