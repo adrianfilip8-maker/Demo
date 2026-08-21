@@ -112,10 +112,10 @@ a:focus-visible { outline: 2px solid var(--felt); outline-offset: 3px; }
 <header class="top">
   <p class="eyebrow">Sly Cooper · Ancient Egypt · playtest build</p>
   <h1>Correct by measurement.<br><em>Unsettled by feel.</em></h1>
-  <p class="thesis">Fifteen entries. Four are answered by your own verdicts, one asks for a re-test, and the rest are priced questions — every number here has a committed instrument behind it.</p>
+  <p class="thesis">Eighteen entries. Five carry your verdicts — the newest, “Sly should always remain in frame,” now ships as an invariant — three ask for re-tests, and the rest are priced questions. Every number here has a committed instrument behind it.</p>
   <div class="meta">
     <span><b>source</b> progress/records/HARDWARE-REVIEW.md</span>
-    <span><b>suite</b> 862 arms, green</span>
+    <span><b>suite</b> 870 arms, green</span>
     <span><b>build</b> git pull picks up everything</span>
   </div>
 </header>
@@ -137,10 +137,13 @@ a:focus-visible { outline: 2px solid var(--felt); outline-offset: 3px; }
         <tr><td><span class="chip f">Priced</span></td><td><a href="#wallrun">9 · Wall-run snap</a></td><td>76–91% over 0.4 s, for a 0.3 s move — snappier?</td></tr>
         <tr><td><span class="chip q">Switch</span></td><td><a href="#chain">10 · Chain telegraph</a></td><td>A mark while you hang — help or noise?</td></tr>
         <tr><td><span class="chip q">Question</span></td><td><a href="#difficulty">11 · Chain difficulty</a></td><td>Is a 0.25 s window with two untaught inputs the intended skill beat?</td></tr>
-        <tr><td><span class="chip f">Priced</span></td><td><a href="#slamframe">12 · High-slam framing</a></td><td>Impact frames lose the subject — accept, or pay the trade?</td></tr>
+        <tr><td><span class="chip m">Answered ✓</span></td><td><a href="#slamframe">12 · High-slam framing</a></td><td><strong>Your verdict:</strong> always in frame — shipped as a containment invariant, zero cost to ordinary play</td></tr>
         <tr><td><span class="chip f">Structural</span></td><td><a href="#tgboom">13 · Telegraph × boom</a></td><td>Tagged content near routes eats short-visit boom delivery — recurs as spots are added</td></tr>
         <tr><td><span class="chip m">Re-test</span></td><td><a href="#retest">14 · Attacks &amp; ring release</a></td><td>Fixed two ways — please re-test on the machine that failed</td></tr>
         <tr><td><span class="chip m">Shipped</span></td><td><a href="#climbcam">15 · Climb camera</a></td><td>The climbed rope no longer crushes the boom — the trade is sight-through</td></tr>
+        <tr><td><span class="chip m">Re-test</span></td><td><a href="#twirl">16 · Double-jump twirl</a></td><td>The cane now whips a full turn on the second tap — speed and read-from-behind need eyes</td></tr>
+        <tr><td><span class="chip m">Re-test</span></td><td><a href="#slopes">13&#8239;bis · Slopes</a></td><td>Sand walks to 58° — and there is deliberately no speed penalty with angle yet</td></tr>
+        <tr><td><span class="chip m">Shipped</span></td><td><a href="#shake">17 · Impact shake, finally live</a></td><td>The lens kicks on slams and hits for the first time — every amplitude was authored blind</td></tr>
       </tbody>
     </table>
   </div>
@@ -300,14 +303,15 @@ a:focus-visible { outline: 2px solid var(--felt); outline-offset: 3px; }
 
   <article class="item" id="slamframe">
     <div class="head">
-      <span class="chip f" style="align-self:flex-start">Priced, not shipped</span>
+      <span class="chip m" style="align-self:flex-start">Answered ✓ · shipped as an invariant</span>
       <h3>The high slam's impact frame has no subject in it</h3>
-      <div class="ref"><span><b>fix evaluated and declined on the record</b></span><span>three composing bounds</span></div>
+      <div class="ref"><span><b>this round</b></span><span>src/player/CameraRig.js · rule 6, the containment clamp · §475</span></div>
     </div>
-    <p>At a 16 m slam's impact, Sly is ~3 screen-heights below frame — three bounds compose (occlusion recovery clock, the vertical leash capping pivot lag at exactly one half-frame-height, a one-frame pitch unwind), no single ablation rescues the frame, and the best candidate fix measured better everywhere and in frame nowhere. Declined with the measurements attached. Hook-ring arrivals share the leash mechanism and stay priced here.</p>
+    <div class="resolved"><span class="lab">Your verdict</span><p>“Sly should always remain in frame.” Enforced rather than approached: a final-stage clamp holds him inside 88% of the frame — pitch first, translation only where a rotation may not go — and contributes a bit-identical pose whenever he is already inside it. The three composing bounds were not retuned; the ruling bought the frame, and they still own the shot.</p></div>
+    <p>Measured on this entry's own frames: the 16 m slam impact −2.56 → <strong>−0.86</strong>; the hook-ring arrivals 41/41 frames lost (10 behind the camera plane) → <strong>0</strong>; the touchdown release 2.47°/frame against the 10°/frame pitch cut it was predicted to recreate — the clamp absorbs that cut instead. Colonnade jumps — the cost every declined lever carried — engage <strong>zero frames</strong> (an ordinary jump peaks 2.6× inside the margin), and the full spawn-to-Eye drive runs 5,870 frames with Sly out of frame on none of them. Building the proof caught two unphotographed losses now held too: running up a steep dune buries the camera in the sand and used to walk Sly off the top of frame, and a crushed hook swing orbits him out the side of it.</p>
     <div class="watch">
       <span class="lab">What to watch</span>
-      <p>Slam from real height: does losing the subject for the fall's last moments read as speed, or as a broken shot? <strong>The paying row if fixed is colonnade jumps.</strong></p>
+      <p>One question left, about the catch rather than the loss: slam from the staircase top — Sly now rides the bottom edge of frame while the camera holds him, the new impact shake (entry 17) over it. If the edge-hold reads as <em>impact</em>, done. If it reads as <em>the camera straining</em>, the shot levers on the sheet are unchanged — the frame is guaranteed either way.</p>
     </div>
   </article>
 
@@ -350,13 +354,52 @@ a:focus-visible { outline: 2px solid var(--felt); outline-offset: 3px; }
     </div>
   </article>
 
+  <article class="item" id="twirl">
+    <div class="head">
+      <span class="chip m" style="align-self:flex-start">Fixed — needs your re-test</span>
+      <h3>The double jump now twirls</h3>
+      <div class="ref"><span><b>this round</b></span><span>src/player/Clips.js · double_jump · §474</span></div>
+    </div>
+    <p>Your P1 was measured true twice over: the 360° cane twirl was authored into a channel the shipped model discards (net cane rotation across a double jump: −13.6°, <em>less</em> than a single jump's arm swing), and the clip was timed so a quick second tap saw only its wind-up. The turn now rides the hand — <strong>+346.4°</strong> on the same drive, inside the tapped window, single jump untouched to the decimal.</p>
+    <div class="watch">
+      <span class="lab">What to watch</span>
+      <p>Run, jump, tap jump again mid-rise. Two judgements: <strong>speed</strong> — the whip is three 120° steps ~0.09 s apart; if it reads as flicker rather than whip the lever is the key times, not the clip length. <strong>Read from behind</strong> — at 5.4 m the turn is a motion read; if it does not register, the cheap amplifier is the existing cane-arc FX burst, not a bigger arm.</p>
+    </div>
+  </article>
+
+  <article class="item" id="slopes">
+    <div class="head">
+      <span class="chip m" style="align-self:flex-start">Fixed — needs your re-test</span>
+      <h3>Sand walks to 58°</h3>
+      <div class="ref"><span><b>this round</b></span><span>src/player/Controller.js · slopeSandDeg · §515 · the sheet carries this as a second “13”</span></div>
+    </div>
+    <p>“Difficult to walk up slopes other than by jumping” was three stacked mechanisms, all fixed: dunes steeper than the single 50° walkable limit, a half-scoped fix shedding you downhill at a constant 1.5 m/s, and the narrow-ledge probe reading any steep slope as a tightrope. Sand now walks to <strong>58°</strong>; stone keeps 50°, so the spawn-stair jump beat is untouched.</p>
+    <div class="watch">
+      <span class="lab">What to watch</span>
+      <p>Run straight up the big western dunes without jumping — expect full speed on moderate grades and a bounding rhythm on the steepest faces. The open feel question: there is deliberately <em>no</em> speed penalty with angle — a 48° climb delivers 100% of flat speed. Say whether that feels weightless before anyone authors a slope-speed curve.</p>
+    </div>
+  </article>
+
+  <article class="item" id="shake">
+    <div class="head">
+      <span class="chip m" style="align-self:flex-start">Shipped</span>
+      <h3>The impact shake reaches the lens for the first time</h3>
+      <div class="ref"><span><b>this round</b></span><span>src/player/CameraRig.js · one subscription · §475.4</span></div>
+    </div>
+    <p>The camera's impact shake — rotation-dominant, its own noise stack, five tuning constants — has existed since the rig was written and had <strong>zero callers</strong>: the moveset announces impacts on the event bus, and only the HUD's wobble and the music duck were listening. Every impact anyone has watched on this project wobbled the HUD over a tripod-still lens. Found when entry 12's proof refused to record a shake through a real 16 m slam; wired with one subscription, so the containment guarantee is measured with the wobble live (it holds).</p>
+    <div class="watch">
+      <span class="lab">What to watch</span>
+      <p>Slam from height, take a hit, land hard off a lost wall — the lens should now kick with each. Two judgements only eyes can make: <strong>size</strong> — these amplitudes were authored without ever being seen; if the slam's kick reads as flinch rather than impact, say so. <strong>Doubling</strong> — the HUD wobble still fires on the same events; if lens + HUD together read as a broken monitor, the HUD's gain is the one to turn down.</p>
+    </div>
+  </article>
+
 </div>
 
 <div class="close">
   <section>
     <h2 class="section">Settled — no review needed</h2>
     <ul>
-      <li><strong>The acceptance run:</strong> spawn → the Eye of Ra completes — one Controller, no teleport, zero hard landings — pinned by <code>spawn2eye.test.mjs</code></li>
+      <li><strong>The acceptance run:</strong> spawn → the Eye of Ra completes — one Controller, no teleport, zero hard landings — and, since entry 12’s ruling, zero of its 5,870 frames with Sly out of frame (a live camera rides the whole drive in <code>spawn2eye.test.mjs</code>)</li>
       <li><strong>Your five playtest reports, all closed:</strong> attacks + ring release (item 14, awaiting your re-test); the rig faults — the −12° head bake and the 52%-ipsilateral sneak gait, verified in before/after frames; poles gated to thin pipes/ropes with a designed rope at the obelisk; and the new thief lines — tightrope re-hung with a real walk-on mount, crouch pocket beside the anchor stone filled with every escape driven</li>
       <li>The tomb, the terrace, the patrol rewrite, the landing coin flip, the Godot reference (remainder verified empty), real-device input</li>
     </ul>
