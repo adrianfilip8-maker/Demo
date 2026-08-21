@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { RIG3 } from '../src/player/SlyModel3.js';
-import { CLIPS, REQUIRED } from '../src/player/Clips.js';
+import { CLIPS, REQUIRED, sampleInto } from '../src/player/Clips.js';
+import { PoseBuffer } from '../src/player/Rig.js';
 import { MIXAMO_CLIPS } from '../src/player/MixamoClips.js';
 import { buildClipSet, ACTIVE, CLIP_REGIME, CLIP_ORIGIN } from '../src/player/Animation.js';
 import { GODOT_CLIPS } from '../src/player/GodotClips.js';
@@ -385,4 +386,72 @@ test('emitter: only cycles carry a stride, and only strided cycles carry footste
   assert.deepEqual(bad, []);
   const strided = Object.values(MIXAMO_CLIPS).filter((c) => c.stride > 0);
   assert.ok(strided.length >= 4, `only ${strided.length} Mixamo clips carry a derived stride`);
+});
+
+/* ------------------------------------------------- seam chirality (§479.5) ---- */
+
+test('seam chirality: proc partners of godot states hold uncrossed wrists, and the crossfade never scissors', () => {
+  /* §479.5: the HANG-family poses authored their big upperArm Z with the gait family's sign
+     habit ("L +Z raises" — Rig.js), which at hang/balance amplitude swings each arm DOWN-ACROSS
+     the body: wrists past the midline every frame. Invisible while every blend partner shared
+     the idiom; exposed the moment godot's uncrossed `LedgeGrab Idle`/`railrun` became the other
+     side of the moveset's own crossfades (hang↔shimmy 0.14/0.16 s, rail_walk↔balance_idle
+     0.2 s) — the fade swept both hands THROUGH the midline in opposite directions, the user's
+     "arms seem to get crossed when on a ledge or off balance". Fixed by re-signing the arm
+     chains of HANG, ledge_shimmy_l (and its defMirror twin) and balance_idle; this arm holds
+     the repaired chirality through the real compile+FK.
+     DOMAIN (§418.3) — passes on: ledge_shimmy_r @0.45 (sep +0.47 m, RUN below); fails on:
+     `ko` @0.5·dur, RUN below as the contrast — it is one of the ten §479.5-census clips still
+     in the crossed idiom (sep −0.10 m here), which proves the metric can say "crossed"; if a
+     later round uncrosses the census backlog, this contrast line is the one to re-derive.
+     Cannot discriminate: whether the pose READS at game framing — shots/seam1 (before/after,
+     rear and front, telemetry beside each frame) carries that claim. */
+  const abs = Object.create(null);
+  for (const [n, , p] of RIG3.SKELETON) abs[n] = p;
+  const rig = (() => {
+    const rt = new THREE.Group(), bones = Object.create(null);
+    for (const [name, parent, p] of RIG3.SKELETON) {
+      const b = new THREE.Object3D();
+      const pa = parent === 'root' ? [0, 0, 0] : abs[parent];
+      b.position.set(p[0] - pa[0], p[1] - pa[1], p[2] - pa[2]);
+      (parent === 'root' ? rt : bones[parent]).add(b);
+      bones[name] = b;
+    }
+    return { rt, bones };
+  })();
+  const pb = new PoseBuffer(RIG3.BONE_ORDER);
+  const wp = (n) => new THREE.Vector3().setFromMatrixPosition(rig.bones[n].matrixWorld);
+  const sepOf = (samples) => {
+    pb.clear();
+    for (const [clip, t, w] of samples) sampleInto(clip, t, pb, w);
+    for (const n of RIG3.BONE_ORDER) {
+      const b = rig.bones[n]; if (!b) continue;
+      if (pb.w[n] > 0) b.quaternion.copy(pb.q[n]); else b.quaternion.identity();
+    }
+    rig.rt.updateMatrixWorld(true);
+    const ua = wp('upperArmL'), ub = wp('upperArmR'), hip = wp('hips');
+    const lat = ua.sub(ub); lat.y = 0; lat.normalize();
+    const l = (p) => p.sub(hip).dot(lat);
+    return l(wp('handL')) - l(wp('handR'));
+  };
+  /* the three repaired clips: uncrossed at five phases each */
+  for (const name of ['ledge_shimmy_l', 'ledge_shimmy_r', 'balance_idle']) {
+    const c = CLIPS[name];
+    for (const f of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+      const sep = sepOf([[c, f * c.dur, 1]]);
+      assert.ok(sep > 0.07, `${name} @${(f * c.dur).toFixed(2)}s: hand sep ${sep.toFixed(3)} m — crossed or near-crossed`);
+    }
+  }
+  /* the shipped crossfades, sampled mid-blend through the same accumulate path the runtime uses */
+  const g = buildClipSet('godot').table;
+  for (const [a, b] of [['ledge_hang', 'ledge_shimmy_r'], ['ledge_hang', 'ledge_shimmy_l'], ['rail_walk', 'balance_idle']]) {
+    for (const w of [0.25, 0.5, 0.75]) {
+      const sep = sepOf([[g[a], 0.45 * g[a].dur, w], [g[b], 0.45 * g[b].dur, 1 - w]]);
+      assert.ok(sep > 0.05, `${a}×${b} @w=${w}: mid-fade hand sep ${sep.toFixed(3)} m — the seam scissors`);
+    }
+  }
+  /* contrast: the metric can say "crossed" — ko is still in the census's crossed idiom */
+  const ko = sepOf([[CLIPS.ko, 0.5 * CLIPS.ko.dur, 1]]);
+  assert.ok(ko < 0, `contrast arm: ko @0.5 reads sep ${ko.toFixed(3)} m — expected the old crossed idiom; ` +
+    'if the §479.5 census backlog was just uncrossed, re-derive this line from the census');
 });

@@ -42098,3 +42098,62 @@ Stays procedural, with reasons on the record:
   same shape).
 - run_fast's sprint-speed take: refused by the level, twice, as the table records.
 - Suite **874/874**, EXIT=0, from a clean worktree at this commit.
+
+### §479.5 "Arms crossed on a ledge / off balance" — the defect was in OUR poses all along, and the swap exposed it
+
+The user, verbatim: *"The arms seem to get crossed when on a ledge or off balance."* Both named
+states are swapped clips (`ledge_hang` ← LedgeGrab Idle, and the balance moments around
+`rail_walk` ← railrun), so the retarget map was the suspect — and the map was measured INNOCENT
+first: `tools/armcross.mjs` samples source (GLB, mixer, facing-corrected) against delivered
+(emitted keys through the real `compile()`+`sampleInto` on the shipped skeleton) in the pose's own
+shoulder-line frame, and every godot clip lands its left hand on the character's left, uncrossed,
+sides faithful to the source (LedgeGrab Idle: source sep +1.81 shoulder-widths, delivered +2.35).
+No mirroring, no L/R channel swap, no axis flip — three hypotheses, three measured noes.
+
+**The crossing is procedural, pre-dates the audit, and was invisible until the audit.** The
+census over every clip the godot regime still plays procedurally: **13 proc clips hold the
+wrists PAST EACH OTHER on the wrong sides, sustained** (hand lateral separation −0.10..−0.41
+shoulder-widths at ≥3 of 5 phases) — the whole overhead-grip family: ledge_shimmy_l/r,
+balance_idle, wall_cling, wall_jump, hook_grab/swing/release, pole_slide, pole_swing, paraglide,
+ko, jump_apex(~0). Cross-validated against `tools/poseprobe.mjs` (independent sampler, †written
+§474-era): proc ledge_hang put handL at x **−0.199** — the character's RIGHT — every frame it
+ever played. Mechanism, from Rig.js's own sign table ("upperArm: L +Z raises"): the HANG-family
+poses authored their big arm raises with the gait family's sign habit (upperArmL **−118**,
+upperArmR **+114**), which at ±30° gait amplitude reads as relaxed arms but at hang amplitude
+swings each arm DOWN-ACROSS the body. `balance_idle`'s own comment says *"arms wide"*; the signs
+delivered arms crossed over the belly. Symmetric gloves made the swap invisible from behind for
+the project's whole life — §470.2's chirality checks measured the GAITS and correctly passed
+them — until §479 made one side of three real crossfades uncrossed:
+
+    hang(godot, sep +2.4) ↔ shimmy(proc, sep −1.4)     every shimmy start/stop, 0.14/0.16 s
+    rail_walk(godot, +4.2) ↔ balance_idle(proc, −1.4)  every crossing of the 0.25 m/s line
+
+and each fade swept BOTH hands through the midline in opposite directions — the literal
+"arms get crossed", photographed: `shots/seam1-before-*` (rear + front, mid-fade beats
+with live track weights and hand separation in the telemetry beside every frame; the ledge fade
+runs sep +2.49 → +0.51 → **−1.33**, the rail fade +4.2 → −0.28 → **−1.49**).
+
+**Fix, one mechanism:** the arm chains of the shared `HANG` constant, `ledge_shimmy_l`'s
+overrides (its `_r` twin inherits via `defMirror`) and `balance_idle` re-signed into the raise
+convention, values solved against the shipped FK (coordinate descent on the real
+compile→sampleInto→skeleton path): hang hands uncrossed at ±0.19 m on the lip plane (y 1.45,
+z +0.33, elbows ~125°); shimmy keeps its authored reach rhythm (lead hand 0.28→0.33 out, trail
+−0.15→−0.29, heights bobbing 1.41–1.61 — hand-over-hand, never crossing); balance delivers the
+comment's tightrope silhouette (hands ±0.58 m, elbows ~146°, seesaw sway re-based ±14/−10).
+`ledge_climb` needed nothing: its pull key already brings hands to the midline UNCROSSED, so the
+new start converges instead of scissoring (measured t0→0.22: L +0.18→+0.15, R −0.20→−0.15).
+After, on camera, same beats: ledge fade sep 2.49→2.03→2.30, rail fade 4.2→4.54→4.46, zero
+crossings (`shots/seam1-after-*`); the census drops to the 10 UNREPORTED family members
+(wall/hook/pole_slide/pole_swing/paraglide/ko/jump_apex), which are left in their idiom on
+purpose — they seam only against each other or report nowhere, and un-crossing the user's two
+named states without re-authoring ten more poses is the scope the instruction supports. They are
+enumerated here so the next "arms crossed in X" report starts at a list, not a hunt.
+
+Held by anim.test's new seam-chirality arm (three repaired clips × 5 phases uncrossed through
+the real FK; the three shipped crossfades sampled mid-blend at w 0.25/0.5/0.75 through the same
+accumulate path; contrast arm RUN: `ko` still reads crossed −0.10 m, proving the metric can say
+no). Suite 875/875 from the working tree; the clean-worktree number is stamped in the commit
+after this one if it differs. HONEST LIMITS: seam1 frames are posed through the real
+`animation.play()` crossfade with the state machine parked (the §479 pose-take precedent) — an
+in-situ ledge drive remains hardware-sheet material; and the before-arm was captured with
+Clips.js stashed to HEAD on an otherwise-edited tree, telemetry records both shas.

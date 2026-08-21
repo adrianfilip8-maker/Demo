@@ -709,26 +709,31 @@ def('perch_idle', {
   ],
 });
 
-/** Balance: arms wide, one foot in front of the other, constant micro-correction. */
+/** Balance: arms wide, one foot in front of the other, constant micro-correction.
+ * Arms re-signed §479.5 with the HANG family: the authored −74/+78 upperArm Z used the gait
+ * sign habit at balance amplitude and delivered arms crossed low over the belly — the literal
+ * opposite of this def's own "arms wide" comment. Solved values hold the hands out at ±0.59 m,
+ * elbows ~146°, the tightrope silhouette; the seesaw sway keys keep the original ±14/−10
+ * raise/lower deltas re-based onto the uncrossed pose. */
 def('balance_idle', {
   dur: 2.6, loop: true, hold: 0.6,
   keys: [
     { t: 0, e: 'soft', P: P({
       hips: [4, 4, 6], spine: [-3, -2, -4], chest: [2, -3, -7], neck: [-6, 2, 4], head: [-8, 4, 9],
-      shoulderL: [-4, 4, -18], upperArmL: [-14, 10, -74], lowerArmL: [-16, -10, -20], handL: [8, -14, -22],
-      shoulderR: [-4, -4, 18], upperArmR: [-10, -10, 78], lowerArmR: [-14, 10, 18], handR: [6, 12, 20],
+      shoulderL: [-4, 4, 6], upperArmL: [-73, 16, 19], lowerArmL: [-52, -3, 10], handL: [8, 6, 6],
+      shoulderR: [-4, -4, -6], upperArmR: [-71, -16, -15], lowerArmR: [-54, 3, -10], handR: [4, -8, -6],
       upperLegL: [-24, 6, 4], lowerLegL: [22, 0, 0], footL: [-2, -4, 0],
       upperLegR: [12, -6, -4], lowerLegR: [16, 0, 0], footR: [4, 4, 0],
       tailA: [8, 16, 0], tailB: [4, 24, 0], tailC: [10, 16, 0], tailD: [18, -8, 0],
     }), pos: [0.01, -0.05, 0], cane: CANE.out },
     { t: 0.7, e: 'smooth', P: { hips: [4, 4, -7], chest: [2, -3, 8], head: [-8, 4, -10],
-      upperArmL: [-14, 10, -60], upperArmR: [-10, -10, 92],
+      upperArmL: [-73, 16, 33], upperArmR: [-71, -16, -5],
       tailA: [8, -14, 0], tailB: [4, -22, 0], tailC: [10, -14, 0], tailD: [18, 10, 0] }, pos: [-0.012, -0.05, 0], cane: [58, 30, 0] },
     { t: 1.5, e: 'smooth', P: { hips: [4, 4, 9], chest: [2, -3, -10], head: [-8, 4, 12],
-      upperArmL: [-14, 10, -84], upperArmR: [-10, -10, 68],
+      upperArmL: [-73, 16, 9], upperArmR: [-71, -16, -29],
       tailA: [8, 20, 0], tailB: [4, 28, 0], tailC: [10, 20, 0], tailD: [18, -12, 0] }, pos: [0.016, -0.05, 0], cane: [58, -40, 0] },
     { t: 2.6, e: 'smooth', P: { hips: [4, 4, 6], chest: [2, -3, -7], head: [-8, 4, 9],
-      upperArmL: [-14, 10, -74], upperArmR: [-10, -10, 78],
+      upperArmL: [-73, 16, 19], upperArmR: [-71, -16, -15],
       tailA: [8, 16, 0], tailB: [4, 24, 0], tailC: [10, 16, 0], tailD: [18, -8, 0] }, pos: [0.01, -0.05, 0], cane: CANE.out },
   ],
 });
@@ -1601,10 +1606,16 @@ def('wall_jump', {
 
 /* Hang: long body, both gloves over the lip, one knee drawn up, tail hanging dead straight —
    the stillness is what makes the shimmy and the mantle read as effort. */
+/* Arm chain re-signed §479.5: the old values (upperArmL z −118 / R +114) used the gait family's
+ * small-amplitude sign habit at hang amplitude, which swings each arm DOWN-ACROSS the body
+ * ("L +Z raises", the table above) — wrists crossed at the midline every frame, invisible while
+ * every blend partner shared the idiom, exposed the moment the uncrossed godot ledge clip became
+ * the hang. Values below are solved against the shipped FK (tools + scratchpad solver): hands
+ * uncrossed at ±0.19 m, on the lip plane (y 1.45, z +0.33), elbows ~125°. */
 const HANG = P({
   hips: [-4, 0, 0], spine: [4, 0, 0], chest: [8, 0, 0], neck: [-24, 0, 0], head: [-28, 4, 0],
-  shoulderL: [-16, 6, -34], upperArmL: [-10, 16, -118], lowerArmL: [-24, -20, -20], handL: [28, -16, -18],
-  shoulderR: [-16, -6, 34], upperArmR: [-8, -16, 114], lowerArmR: [-22, 20, 20], handR: [24, 18, 18],
+  shoulderL: [-16, 6, 12], upperArmL: [45, 16, 127], lowerArmL: [-30, -47, 10], handL: [28, 6, 6],
+  shoulderR: [-16, -6, -12], upperArmR: [47, -16, -123], lowerArmR: [-32, 47, -10], handR: [24, -8, -6],
   upperLegL: [-40, 10, 6], lowerLegL: [56, 0, 0], footL: [16, -8, 0], toeL: [10, 0, 0],
   upperLegR: [-8, -10, -6], lowerLegR: [20, 0, 0], footR: [24, 8, 0], toeR: [12, 0, 0],
   tailA: [-26, 4, 0], tailB: [-34, 6, 0], tailC: [-16, 4, 0], tailD: [6, -3, 0],
@@ -1631,30 +1642,30 @@ def('ledge_shimmy_l', {
   keys: [
     { t: 0, e: 'smooth', P: Object.assign({}, HANG, {
       hips: [-4, 6, 8], chest: [8, -4, -6], head: [-28, -2, -8],
-      upperArmL: [-14, 18, -104], upperArmR: [-6, -18, 122],
+      upperArmL: [41, 18, 113], upperArmR: [49, -18, -131],
       upperLegL: [-46, 12, 8], upperLegR: [-4, -8, -4],
       tailA: [-26, -12, 0], tailB: [-34, -16, 0], tailC: [-16, -10, 0], tailD: [6, 8, 0],
     }), pos: [0.03, -0.05, -0.04], cane: [132, 20, -10] },
     { t: 0.25, e: 'out', P: {
       hips: [-4, 2, 4], chest: [8, 0, -3],
-      upperArmL: [-22, 20, -132], lowerArmL: [-16, -20, -20],
+      upperArmL: [33, 20, 106], lowerArmL: [-22, -28, 10],
       upperLegL: [-30, 12, 8], lowerLegL: [40, 0, 0],
       tailA: [-24, -4, 0], tailB: [-32, -6, 0],
     }, pos: [0.05, -0.07, -0.04] },
     { t: 0.5, e: 'smooth', P: {
       hips: [-4, -6, -8], chest: [8, 4, 6], head: [-28, 4, 8],
-      upperArmL: [-10, 16, -118], lowerArmL: [-24, -20, -20],
-      upperArmR: [-14, -20, 100],
+      upperArmL: [45, 16, 127], lowerArmL: [-30, -47, 10],
+      upperArmR: [41, -20, -109],
       upperLegL: [-40, 10, 6], lowerLegL: [56, 0, 0], upperLegR: [-10, -12, -8],
       tailA: [-28, 12, 0], tailB: [-36, 16, 0], tailC: [-18, 10, 0], tailD: [4, -8, 0],
     }, pos: [-0.02, -0.05, -0.04], cane: [136, 6, -10] },
     { t: 0.75, e: 'out', P: {
-      upperArmR: [-4, -18, 126], lowerArmR: [-14, 20, 20],
+      upperArmR: [51, -18, -135], lowerArmR: [-26, 39, -10],
       upperLegR: [-18, -12, -8], lowerLegR: [34, 0, 0], hips: [-4, -2, -4],
     }, pos: [-0.04, -0.07, -0.04] },
     { t: 0.9, e: 'smooth', P: Object.assign({}, HANG, {
       hips: [-4, 6, 8], chest: [8, -4, -6], head: [-28, -2, -8],
-      upperArmL: [-14, 18, -104], upperArmR: [-6, -18, 122],
+      upperArmL: [41, 18, 113], upperArmR: [49, -18, -131],
       upperLegL: [-46, 12, 8], upperLegR: [-4, -8, -4],
       tailA: [-26, -12, 0], tailB: [-34, -16, 0], tailC: [-16, -10, 0], tailD: [6, 8, 0],
     }), pos: [0.03, -0.05, -0.04], cane: [132, 20, -10] },

@@ -1,0 +1,159 @@
+{
+  "sha": "7d69457",
+  "dirty": "M src/player/Clips.js",
+  "W": 1600,
+  "H": 900,
+  "TAG": "after",
+  "errs": [],
+  "log": [
+    {
+      "frame": "after-ledge-hang-rear",
+      "az": 35,
+      "latL": 1.41,
+      "latR": -1.08,
+      "sep": 2.49,
+      "tracks": [
+        "ledge_hang:1.00"
+      ]
+    },
+    {
+      "frame": "after-ledge-fade-f2-rear",
+      "az": 35,
+      "latL": 1.17,
+      "latR": -1.05,
+      "sep": 2.22,
+      "tracks": [
+        "ledge_hang:0.76",
+        "ledge_shimmy_r:0.24"
+      ]
+    },
+    {
+      "frame": "after-ledge-fade-f5-rear",
+      "az": 35,
+      "latL": 0.9,
+      "latR": -1.13,
+      "sep": 2.03,
+      "tracks": [
+        "ledge_hang:0.40",
+        "ledge_shimmy_r:0.60"
+      ]
+    },
+    {
+      "frame": "after-ledge-fade-f5-front",
+      "az": 155,
+      "latL": 0.9,
+      "latR": -1.13,
+      "sep": 2.03,
+      "tracks": [
+        "ledge_hang:0.40",
+        "ledge_shimmy_r:0.60"
+      ]
+    },
+    {
+      "frame": "after-ledge-fade-f8-rear",
+      "az": 35,
+      "latL": 1,
+      "latR": -1.07,
+      "sep": 2.07,
+      "tracks": [
+        "ledge_hang:0.05",
+        "ledge_shimmy_r:0.95"
+      ]
+    },
+    {
+      "frame": "after-ledge-shimmy-rear",
+      "az": 35,
+      "latL": 1.12,
+      "latR": -1.18,
+      "sep": 2.3,
+      "tracks": [
+        "ledge_shimmy_r:1.00"
+      ]
+    },
+    {
+      "frame": "after-ledge-return-f5-rear",
+      "az": 35,
+      "latL": 1.01,
+      "latR": -1.31,
+      "sep": 2.32,
+      "tracks": [
+        "ledge_hang:0.52",
+        "ledge_shimmy_r:0.48"
+      ]
+    },
+    {
+      "frame": "after-rail-walk-rear",
+      "az": 35,
+      "latL": 2.17,
+      "latR": -2.03,
+      "sep": 4.2,
+      "tracks": [
+        "rail_walk:1.00"
+      ]
+    },
+    {
+      "frame": "after-rail-fade-f3-rear",
+      "az": 35,
+      "latL": 2.2,
+      "latR": -2.19,
+      "sep": 4.39,
+      "tracks": [
+        "balance_idle:0.25",
+        "rail_walk:0.75"
+      ]
+    },
+    {
+      "frame": "after-rail-fade-f6-rear",
+      "az": 35,
+      "latL": 2.25,
+      "latR": -2.29,
+      "sep": 4.54,
+      "tracks": [
+        "balance_idle:0.50",
+        "rail_walk:0.50"
+      ]
+    },
+    {
+      "frame": "after-rail-fade-f6-front",
+      "az": 155,
+      "latL": 2.25,
+      "latR": -2.29,
+      "sep": 4.54,
+      "tracks": [
+        "balance_idle:0.50",
+        "rail_walk:0.50"
+      ]
+    },
+    {
+      "frame": "after-rail-fade-f9-rear",
+      "az": 35,
+      "latL": 2.3,
+      "latR": -2.32,
+      "sep": 4.62,
+      "tracks": [
+        "balance_idle:0.75",
+        "rail_walk:0.25"
+      ]
+    },
+    {
+      "frame": "after-rail-balance-rear",
+      "az": 35,
+      "latL": 2.53,
+      "latR": -1.93,
+      "sep": 4.46,
+      "tracks": [
+        "balance_idle:1.00"
+      ]
+    },
+    {
+      "frame": "after-rail-balance-front",
+      "az": 155,
+      "latL": 2.53,
+      "latR": -1.93,
+      "sep": 4.46,
+      "tracks": [
+        "balance_idle:1.00"
+      ]
+    }
+  ]
+}
