@@ -169,8 +169,16 @@ try {
     await page.evaluate(() => { window.__ENGINE.debug.freeCam = false; });
     await writeFile(`${OUT}/${ARM}-${name}.png`, Buffer.from(uri.split(',')[1], 'base64'));
     log.push({ frame: `${ARM}-${name}`, ...tel });
-    const c = tel.tr.find((x) => x.n.startsWith('cane_combo')) || tel.tr.find((x) => x.n === 'pickpocket' || x.n.startsWith('hook'));
-    console.log(`  -> ${ARM}-${name}.png  ${c ? `${c.n} t=${c.t} w=${c.w}` : tel.st}`);
+    /* Pick by WEIGHT, not by name order (§479.9). The first version of this line took the first
+       track whose name began `cane_combo`, and during a chain the previous swing is still live
+       at full weight while the new one fades in — so every new swing was masked by its
+       predecessor and the run read as if it had never chained at all. That was wrong for several
+       minutes on nothing but a summary line; the telemetry array had the truth the whole time.
+       When more than one is live the line says so, because during a chain that IS the state. */
+    const of = tel.tr.filter((x) => x.n.startsWith('cane_combo') || x.n === 'pickpocket' || x.n.startsWith('hook'));
+    const c = of.slice().sort((a, b) => b.w - a.w)[0];
+    const rest = of.length > 1 ? `  (+${of.length - 1} fading: ${of.filter((x) => x !== c).map((x) => `${x.n}@${x.t}/w${x.w}`).join(' ')})` : '';
+    console.log(`  -> ${ARM}-${name}.png  ${c ? `${c.n} t=${c.t} w=${c.w}${rest}` : tel.st}`);
   };
 
   /* SETTLE is the two settle windows, jumplook's 30/30 rounded up. It is env-tunable ONLY so a
