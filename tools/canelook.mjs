@@ -42,6 +42,18 @@ const W = Number(process.env.W || 1600), H = Number(process.env.H || 900);
 const AB = process.env.AB || '';
 const ARM = AB || 'godot';
 
+/* Q is the render-quality token, `high` by default like every other capture tool here. It is
+   env-tunable for one reason: on a saturated box the boot is dominated by compiling the
+   post-processing chain, and `q=low` skips that. What it changes is post-processing only — the
+   model, the skeleton, the clip table, the splice and the skinning are identical, so a pose read
+   (where is the cane at contact) survives it and a look read (bloom, grade, edge treatment) does
+   not. It is recorded in the telemetry beside every frame: any frame captured at anything but
+   `high` says so, rather than being quietly compared against one that was not. */
+const Q = process.env.Q || 'high';
+
+/* SETTLE — see its use below: a capture-cost knob for a saturated box, never a result knob. */
+const SETTLE = Number(process.env.SETTLE || 40);
+
 /* 6100, not 6000: Chromium refuses port 6000 outright (ERR_UNSAFE_PORT — it is X11's, and on its
    blocked list along with 6665-6669). Every other tool here sits in 5400-5900; this one needs its
    own lane so a parallel capture cannot collide, and 6100 is the next free one ABOVE the block. */
@@ -101,7 +113,7 @@ page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
 
 const log = [];
 try {
-  await page.goto(`http://127.0.0.1:${port}/?shot=1&q=high${AB ? `&anim=${AB}` : ''}`,
+  await page.goto(`http://127.0.0.1:${port}/?shot=1&q=${Q}${AB ? `&anim=${AB}` : ''}`,
     { waitUntil: 'domcontentloaded', timeout: 120000 });
   await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null, { timeout: 600000, polling: 500 });
   const regime = await page.evaluate(async () => (await import('/src/player/Animation.js')).CLIP_REGIME);
@@ -167,7 +179,6 @@ try {
      six seconds for the identical call before the teleport. The default is the honest one; a
      smaller SETTLE trades pose settling for wall time and is a capture-cost knob, never a
      result knob (nothing sampled below reads from it). */
-  const SETTLE = Number(process.env.SETTLE || 40);
   await sim(SETTLE);
   await page.evaluate(() => { const m = window.__ENGINE.get('movement'); m.position.set(0, 0, 30); m.velocity.set(0, 0, 0); });
   await sim(SETTLE);
@@ -213,7 +224,7 @@ try {
   await posed('hook_grab', [0.15, 0.55], 90);
   await posed('hook_swing', [0.4, 1.05], 90);
 } finally {
-  await writeFile(`${OUT}/telemetry-${ARM}.json`, JSON.stringify({ sha, dirty, W, H, ARM, errs, log }, null, 2));
+  await writeFile(`${OUT}/telemetry-${ARM}.json`, JSON.stringify({ sha, dirty, W, H, Q, SETTLE, ARM, errs, log }, null, 2));
   await browser.close().catch(() => {});
   server.kill('SIGTERM');
   await release();
