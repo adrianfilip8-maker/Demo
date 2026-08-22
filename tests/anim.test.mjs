@@ -957,7 +957,12 @@ test('landing/launch seam (§529): a whole-body posture is replaced by the next 
   const DT = 1 / 60;
 
   /** The set is asserted, not assumed: a clip gaining or losing `posture` must be deliberate. */
-  const POSTURE = ['land_hard', 'land_roll', 'land_soft', 'skid_stop'];
+  /* `double_jump` and `roll` joined at §530, on the same evidence and by the same mechanism: both
+     are whole-body one-shots whose state asserts no base clip. `Bounce` fires `double_jump` and
+     leaves it averaged 50/50 with the `jump_rise` it rebounds out of (350 ms); `Roll` fires `roll`,
+     which at 0.66 s outlives its own 0.44 s state and rode the launch, the fall AND the next
+     landing — run-wide summed weight 3.000, matching `skid_stop`, the worst §529 found. */
+  const POSTURE = ['double_jump', 'land_hard', 'land_roll', 'land_soft', 'roll', 'skid_stop'];
   for (const regime of ['proc', 'godot', 'mixamo']) {
     const t = buildClipSet(regime).table;
     const got = Object.keys(t).filter((n) => t[n]?.posture).sort();
@@ -1080,4 +1085,122 @@ test('landing/launch seam (§529): a whole-body posture is replaced by the next 
   a2._advance(DT, 0);
   assert.ok(fired.includes('footstep'),
     `a landing cancelled on its first frame emitted [${fired}] — the landing has gone silent (§443.1)`);
+});
+
+test('hook chain seam (§530): a catch and a release are one slot, and a re-catch restarts rather than inheriting', async () => {
+  /* THE DEFECT THIS GUARDS, and it is §525's shape at LEVEL scale. §575 shipped five lamp rings on
+     a cable down the nave — the route's first repeated-same-verb chain. Driven ring to ring on the
+     shipped level in `tools/hookchain.mjs`, at both cadences the chain can be played at, two
+     things went wrong at every hop:
+
+       1. `hook_release` and `hook_grab` sat on the body TOGETHER, both at full weight, summed
+          3.000 for 533 ms of a ~2 s traverse. A body cannot be letting go of a rope and biting
+          into one at the same instant.
+       2. `play()`'s "already running? retarget it" branch does not reset `tr.time`. That is right
+          for a base clip — MOVEMENT re-asserts those every frame and a restart would stutter the
+          cycle — and wrong for a one-shot, which is fired at a MOMENT. A catch landing inside the
+          grab's own 0.44 s therefore inherited the previous catch's playhead, so the throw-and-bite
+          at t 0…0.22 never played: 2 of the 4 hops, at both cadences.
+
+     THE REFERENCE SETTLES IT STRUCTURALLY. `jump_swing` (the release off a swing) and
+     `jump_cane_grab` are two INPUTS of the single `jump_state` `AnimationNodeTransition`, feeding
+     the one `OneShot` everything downstream sees. A Transition is winner-take-all, so selecting
+     one deselects the other — their graph cannot hold a catch and a release together, exactly as
+     §529 found it cannot hold a landing and a launch together. Every input carries `reset = true`,
+     which is the same statement about (2).
+
+     ONE FLAG CLOSES BOTH, which is why no fourth predicate was added to `play()`. `excl:
+     'hook_bite'` (§526's mechanism, unchanged) makes the release END the grab. A chain alternates
+     catch and release by construction, so the grab is always `ending` by the time the next catch
+     fires, and `play()`'s retarget branch — which requires `!tr.ending` — cannot be reached: a
+     fresh track is allocated from t 0.
+
+     THE MEASURE is §526.2's, reused: summed live weight is the number of motions being averaged.
+     The bound here is 2.0 rather than 1.0, and that is deliberate — `hook_grab` over `hook_swing`
+     IS an authored layer (§529 classified `hookSwing` as the one exposed state where the one-shot
+     is meant to ride over its own base), so a catch legitimately sits at 2.000 over the hang. What
+     may not happen is a THIRD motion, and that is what the assertion is written against.
+
+     DOMAIN (§418.3) — passes on: the shipped table in every regime, driven at the catch/release/
+     re-catch cadence `tools/hookchain.mjs` measured off the real machine, where the re-catch starts
+     from t≈0 and summed weight never reaches 2.5. Fails on: the SAME table with `excl` cleared,
+     RUN BELOW as the control — the pre-§530 mixer, which inherits a playhead past 0.3 and piles
+     grab+release+swing to 3.0. Cannot discriminate: whether the catch READS as a catch at game
+     framing (that is what `shots/hook1-*` is for — this reads weight and playhead, not geometry);
+     nor the right cross-fade LENGTH at either seam; nor anything about the grab-over-swing layer
+     itself, which it deliberately permits at 2.000 and which the reference does not author at all. */
+
+  const { Animation } = await import('../src/player/Animation.js');
+  const DT = 1 / 60;
+
+  /** The slot is asserted, not assumed: a clip joining or leaving it must be deliberate. */
+  const SLOT = ['hook_grab', 'hook_release'];
+  for (const regime of ['proc', 'godot', 'mixamo']) {
+    const t = buildClipSet(regime).table;
+    const got = Object.keys(t).filter((n) => t[n]?.excl === 'hook_bite').sort();
+    assert.deepEqual(got, SLOT,
+      `${regime}: the 'hook_bite' slot holds [${got}], expected [${SLOT}] — the rule's reach changed. `
+      + 'It travels with the game NAME so that swapping the data behind a verb cannot change it.');
+  }
+
+  /**
+   * Drive the mixer through ONE chain hop at the cadence the real machine produced: catch at 0,
+   * release 250 ms later, re-catch 50 ms after that — i.e. the second catch lands 300 ms in,
+   * comfortably inside `hook_grab`'s own 0.44 s, which is the whole point. The `mash` cadence in
+   * `tools/hookchain.mjs` measured exactly this (catch f0, release f15, catch f18).
+   */
+  const hop = (table) => {
+    const a = new Animation({ warn() {}, emit() {} });
+    a.pose = new PoseBuffer(RIG3.BONE_ORDER);
+    const saved = {};
+    for (const n of [...SLOT, 'hook_swing', 'jump_fall']) { saved[n] = ACTIVE[n]; ACTIVE[n] = table[n]; }
+    try {
+      let maxW = 0, maxLive = 0, reT = null;
+      const grab = () => { a.play('hook_grab', { fade: 0.08, loop: false }); a.play('hook_swing', { fade: 0.18, loop: true }); };
+      grab();
+      for (let f = 0; f < 40; f++) {
+        if (f === 15) { a.play('hook_release', { fade: 0.08, loop: false }); a.play('jump_fall', { fade: 0.14, loop: true }); }
+        if (f === 18) grab();
+        a._advance(DT, f * DT);
+        let w = 0, n = 0;
+        for (const tr of a.tracks) { if (!tr.clip || tr.w <= 0.001) continue; w += tr.w; n++; }
+        maxW = Math.max(maxW, w); maxLive = Math.max(maxLive, n);
+        /* The playhead of the grab the RE-CATCH started — the youngest instance that is not
+           already fading out. Reading `find()` here instead would return the OUTGOING grab and
+           report the fix as a failure; that is not hypothetical, it is what `hookchain` did. */
+        if (f === 19) {
+          const live = a.tracks.filter((tr) => tr.clip?.name === 'hook_grab' && tr.w > 0.001);
+          const fresh = live.filter((tr) => !tr.ending);
+          reT = (fresh.length ? fresh : live).sort((x, y) => x.time - y.time)[0]?.time ?? null;
+        }
+      }
+      return { maxW, maxLive, reT };
+    } finally { for (const n of Object.keys(saved)) ACTIVE[n] = saved[n]; }
+  };
+
+  for (const regime of ['proc', 'godot']) {
+    const table = buildClipSet(regime).table;
+
+    /* ---- CONTROL: clear the slot and both defects must come back ------------------------- */
+    const stripped = {};
+    for (const n of [...SLOT, 'hook_swing', 'jump_fall']) stripped[n] = table[n];
+    for (const n of SLOT) { const { excl, ...rest } = table[n]; stripped[n] = rest; }
+    const before = hop(stripped);
+    assert.ok(before.reT != null && before.reT > 0.28,
+      `CONTROL FAILED (${regime}): with the slot cleared the re-catch should INHERIT the first catch's `
+      + `playhead (~0.32 s into a 0.44 s clip), but it read ${before.reT} — the control no longer `
+      + 'reproduces the defect, so the pass below is not evidence of anything');
+    assert.ok(before.maxW > 2.5,
+      `CONTROL FAILED (${regime}): with the slot cleared a catch, a release and a hang should average `
+      + `to a summed weight near 3.0 (the pre-§530 mixer), but the max was ${before.maxW.toFixed(3)}`);
+
+    /* ---- the shipped table: the catch restarts, and nothing is averaged three ways -------- */
+    const after = hop(table);
+    assert.ok(after.reT != null && after.reT <= 0.05,
+      `${regime}: the second catch of a chain started at t=${after.reT} instead of ~0 — it is inheriting `
+      + 'the previous catch\'s playhead, so the throw-and-bite that IS the grab never plays');
+    assert.ok(after.maxW <= 2.001,
+      `${regime}: a chain hop summed ${after.maxW.toFixed(3)} of live weight. Above 2.0 means a THIRD `
+      + 'motion joined the authored grab-over-hang layer, and the only candidate is the release');
+  }
 });

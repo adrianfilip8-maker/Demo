@@ -1174,7 +1174,14 @@ def('skid_stop', {
 /* Roll. The root is at his feet, so the tumble is authored on the hips with a matching
    pos offset — the tuck stays centred on the ball of the body all the way round. */
 def('roll', {
-  dur: 0.66, loop: false, hold: 0.28,
+  /* `posture: true` (§530) — see skid_stop, and this is the same failure `skid_stop` had. A roll
+     is the whole body; `Roll` asserts no base clip, and its own `update` polls jump so that
+     roll-cancel works (§8), which is the exit a player actually drives. Measured on the real
+     machine, the 0.66 s clip outlived the 0.44 s roll and rode the launch, the rise, the fall AND
+     the landing that followed — `roll + jump_rise` 300 ms at summed weight 2.000 and `roll +
+     land_soft` a further 11 frames, 550 ms of a 1.6 s take averaged. §529's census had this state
+     right and left it unphotographed; the frames are `shots/hook1-roll-*`. */
+  dur: 0.66, loop: false, hold: 0.28, posture: true,
   events: [{ t: 0.50, n: 'footstep', d: { foot: 'B', power: 0.8 } }],
   keys: [
     // anticipation: he ducks and gathers before he throws himself at the ground
@@ -1352,7 +1359,14 @@ def('jump_fall', {
  * first and last body poses are the original's), the cane seam fell 112° → 52°, and `handR`
  * wraps CLEAN by construction — 330° ≡ −30° in SO(3). */
 def('double_jump', {
-  dur: 0.30, loop: false, hold: 0.11,
+  /* `posture: true` (§530) — see skid_stop. TWO states fire this clip and only one of them
+     self-cleans: `DoubleJump` follows the one-shot with `baseClip('double_jump')`, which promotes
+     the track to a loop the next base can retire, while `Bounce` fires it and asserts no base at
+     all. Driven from a real head-bounce out of a real jump, the bounce's clip then sat at full
+     weight beside the `jump_rise` that launched him for 350 ms — a mid-air rebound averaged 50/50
+     with the take-off it was supposed to replace. The flag costs `DoubleJump` nothing (its own
+     base assertion already ended everything under it) and gives `Bounce` the same ending. */
+  dur: 0.30, loop: false, hold: 0.11, posture: true,
   keys: [
     { t: 0, e: 'in', P: P({
       hips: [30, -14, 4], spine: [-6, 6, 2], chest: [-12, 16, -3], neck: [-18, -8, 2], head: [-16, -12, 4],
@@ -1723,7 +1737,34 @@ def('ledge_climb', {
 
 /* Grab: he throws the cane up, the hook bites, and his weight snaps onto it. */
 def('hook_grab', {
-  dur: 0.44, loop: false, hold: 0.2,
+  /**
+   * `excl: 'hook_bite'` (§530) — the catch and the release are ONE action slot.
+   *
+   * §525's note on this rule said, correctly, that `source` must never coalesce these two: they
+   * are different verbs and the probe there established the release is not even the same authored
+   * shape. `excl` is the other predicate and it asks the other question — is this one SLOT? — and
+   * on a five-ring chain the answer is unambiguous. Driven ring to ring down §575's nave, catch
+   * and release stack: `hook_release` and `hook_grab` both at full weight, summed 3.000 for
+   * 533 ms of a ~2 s traverse. A body cannot be letting go of a rope and biting into one at the
+   * same instant.
+   *
+   * THE REFERENCE SETTLES IT STRUCTURALLY, not by taste. In their tree `jump_swing` (the release
+   * off a swing) and `jump_cane_grab` are two INPUTS of the single `jump_state`
+   * `AnimationNodeTransition`, which feeds the single `OneShot` (fadein 0.1, fadeout 0.25) that
+   * everything downstream sees. A Transition is winner-take-all, so selecting one input
+   * necessarily deselects the other: their graph cannot hold a catch and a release together, in
+   * the same way §529 found it cannot hold a landing and a launch together.
+   *
+   * AND IT REPAIRS THE SECOND DEFECT AS A CONSEQUENCE, which is why no fourth predicate is added.
+   * `play()`'s "already running? retarget it" branch does not reset `tr.time` — right for a base
+   * clip, which MOVEMENT re-asserts every frame and a restart would stutter — so a catch landing
+   * within this clip's own 0.44 s inherited the previous catch's playhead and the throw-and-bite
+   * at t 0…0.22 never played at all. On the chain that was 2 of the 4 hops, at both cadences
+   * driven. Every re-catch is preceded by a release, so ending the grab AT the release leaves
+   * nothing for the next one to inherit and it allocates a fresh track from t 0. Their Transition
+   * inputs all carry `reset = true`, which is the same statement.
+   */
+  dur: 0.44, loop: false, hold: 0.2, excl: 'hook_bite',
   keys: [
     { t: 0, e: 'in', P: P({
       hips: [16, -8, 3], spine: [2, 4, 1], chest: [4, 10, -2], neck: [-24, -5, 2], head: [-26, -8, 4],
@@ -1810,7 +1851,9 @@ def('hook_swing', {
 
 /* Release: he snaps the cane free and flings himself forward off the arc. */
 def('hook_release', {
-  dur: 0.4, loop: false, hold: 0.14,
+  /* `excl: 'hook_bite'` — the other half of the slot; see `hook_grab` for the measurement, the
+     reference structure and why this one flag closes both chain defects. */
+  dur: 0.4, loop: false, hold: 0.14, excl: 'hook_bite',
   keys: [
     { t: 0, e: 'in', P: P({
       hips: [40, -6, 3], spine: [-10, 3, 1], chest: [-16, 8, -2], neck: [-14, -4, 2], head: [-12, -6, 4],
