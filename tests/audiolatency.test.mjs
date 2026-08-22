@@ -165,3 +165,188 @@ test('L4 the stem cross-fade is 4.0 s, and that is the biggest term the player w
     `the first-stem cross-fade is now ${m[1]} s — §550's arithmetic quotes 4.0 s and must be re-stated`);
   console.log(`  [L4] first-stem cross-fade ${m[1]} s (unchanged; a feel constant, priced not altered in §550)`);
 });
+
+/* ====================================================================== */
+/* §551 — the gesture that used to be thrown away, and the prefetch guard */
+/* ====================================================================== */
+
+/**
+ * A window just wide enough for `_armGesture` and `_prefetchStem`, installed per-test and torn
+ * down after, so the arms above keep running in a Node with no `window` at all.
+ */
+function installWindow({ search = '', withAudioCtor = true } = {}) {
+  const listeners = new Map();
+  const fetches = [];
+  const win = {
+    location: { search },
+    addEventListener: (t, fn) => { if (!listeners.has(t)) listeners.set(t, new Set()); listeners.get(t).add(fn); },
+    removeEventListener: (t, fn) => listeners.get(t)?.delete(fn),
+    dispatch: (t) => { for (const fn of [...(listeners.get(t) ?? [])]) fn({ type: t }); },
+    count: (t) => (listeners.get(t)?.size ?? 0),
+  };
+  if (withAudioCtor) win.AudioContext = function () { return new OfflineCtx(SR); };
+  const prevWin = globalThis.window, prevFetch = globalThis.fetch;
+  globalThis.window = win;
+  globalThis.fetch = (url) => { fetches.push(String(url)); return Promise.resolve({ ok: false, status: 599 }); };
+  return {
+    win, fetches,
+    restore() { globalThis.window = prevWin; globalThis.fetch = prevFetch; },
+  };
+}
+
+test('L5 §551: a gesture during boot unlocks audio, instead of being thrown away', async () => {
+  /* ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : a real `pointerdown` dispatched on the window AFTER `init()` and with no other
+   *               help, leaving the mixer ready — i.e. the click a player aims at the progress bar
+   *               now starts audio instead of hitting a handler that does not exist yet.
+   *   fails  on : RUN in-arm — the identical setup with the gesture never dispatched, which must
+   *               leave the mixer NOT ready. Without that clause an implementation that unlocked
+   *               during `init()` regardless would pass, and that is a different (worse) change.
+   *   verdict   : `main.js:306` registers its listener after every module initialises, so the
+   *               ceiling in §550 was an ORDERING artifact rather than a platform limit. This is
+   *               the half `src/audio/` owns; pointer lock stays `main.js`'s and is untouched.
+   *   does NOT  : discriminate the browser's autoplay policy. This container applies none, and
+   *   discrim.    forcing `--autoplay-policy=user-gesture-required` does not change that because
+   *               there is no audio device — the §551 probe voided itself on its own calibration
+   *               twice rather than answer. That is exactly why `unlock()` is called from INSIDE
+   *               the handler: the design does not depend on the answer.
+   */
+  const W = installWindow();
+  try {
+    const engine = stubEngine();
+    const a = new Audio(engine);
+    /* ARMED AT CONSTRUCTION, and this assertion is the one that matters. The first version armed
+       in `init()`, which passed this test and was still nearly useless in the real page: `main.js`
+       constructs all 31 modules in one loop and initialises them in a SECOND, and `audio` is 30th,
+       so the listener came up in the last moments of boot. A browser run clicking 2 s into a 34 s
+       boot still lost the click. Asserting BEFORE init() is what stops that placement returning. */
+    assert.ok(W.win.count('pointerdown') > 0,
+      'the gesture listener is not armed at construction — in the real page it would arm after ~30 '
+      + 'module inits, which is the placement a browser run already caught as too late');
+    a.available = true;
+    await a.init();
+    assert.equal(a.ready, false, 'construction or init unlocked audio on its own — the gesture must be what does it');
+
+    W.win.dispatch('pointerdown');
+    assert.equal(a.ready, true, 'a gesture during boot did not unlock audio');
+    assert.equal(W.win.count('pointerdown'), 0, 'the gesture listener did not disarm itself after firing');
+
+    a.dispose();
+  } finally { W.restore(); }
+
+  /* The counterexample: no gesture, no unlock. */
+  const W2 = installWindow();
+  try {
+    const a2 = new Audio(stubEngine());
+    a2.available = true;
+    await a2.init();
+    assert.equal(a2.ready, false, 'audio unlocked with no gesture at all');
+    a2.dispose();
+  } finally { W2.restore(); }
+  console.log('  [L5] a boot-time pointerdown unlocks the mixer; without one it stays locked');
+});
+
+test('L6 §551: the stem prefetch runs for a player and is GUARDED OFF for the capture harness', async () => {
+  /* ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : `update()`'s not-ready branch issuing exactly one fetch for the explore stem
+   *               on an ordinary page load, and issuing NONE when the URL carries `?shot`.
+   *   fails  on : RUN in-arm — both halves are asserted against each other, so a guard that is
+   *               written but not wired reddens here rather than costing a critic set 2.24 MB x 16.
+   *   verdict   : the guard is the job. `unlock(existing)` already declines `_loadTrack` for this
+   *               reason; this tests the same discriminator `main.js` uses rather than a second
+   *               policy that could drift from it.
+   *   does NOT  : discriminate whether the prefetch is FASTER in a real browser — that is
+   *   discrim.    `tools/audiostart.mjs`, and network time is the user's machine's, not this box's.
+   */
+  /* a) an ordinary page load: one fetch, and only one however many frames run */
+  const W = installWindow({ search: '' });
+  try {
+    const a = new Audio(stubEngine());
+    a.available = true;
+    await a.init();
+    for (let i = 0; i < 5; i++) a.update(1 / 60);
+    assert.equal(W.fetches.length, 1, `expected exactly one prefetch, saw ${W.fetches.length}: ${W.fetches.join(', ')}`);
+    assert.match(W.fetches[0], /assets\/audio\/bc-explore\.mp3$/, `prefetched the wrong asset: ${W.fetches[0]}`);
+    a.dispose();
+  } finally { W.restore(); }
+
+  /* b) the capture harness: ?shot, and not a byte */
+  const S = installWindow({ search: '?shot=1&q=high' });
+  try {
+    const a = new Audio(stubEngine());
+    a.available = true;
+    await a.init();
+    for (let i = 0; i < 5; i++) a.update(1 / 60);
+    assert.deepEqual(S.fetches, [],
+      `the capture harness prefetched ${S.fetches.length} asset(s) — 2.24 MB x 16 boots for a signal no frame can show`);
+    a.dispose();
+  } finally { S.restore(); }
+  console.log('  [L6] prefetch: 1 fetch on a normal load, 0 under ?shot');
+});
+
+test('L7 §551: a prefetched buffer is spent once, and a failed prefetch still leaves music working', async () => {
+  /* `decodeAudioData` DETACHES the ArrayBuffer it is given, so a retained entry would decode to
+     nothing the second time round. The map must give the bytes up on use. */
+  const W = installWindow();
+  try {
+    const a = new Audio(stubEngine());
+    a.available = true;
+    await a.init();
+    a._bytes.set('explore', new ArrayBuffer(8));
+    assert.equal(a._bytes.size, 1);
+    /* Unlock on an offline context so `_loadTrack` is not reached, then drive it directly. */
+    a.unlock(new OfflineCtx(SR));
+    a.ctx.decodeAudioData = async () => { throw new Error('decode refused (probe)'); };
+    await a._loadTrack('explore');
+    assert.equal(a._bytes.size, 0, 'the prefetched bytes were not spent — a second decode would get a detached buffer');
+    assert.ok(a.score?._started, 'a failed stem left no music at all; the procedural score must continue');
+    a.dispose();
+  } finally { W.restore(); }
+  console.log('  [L7] prefetched bytes are spent on use; a failed stem leaves the score playing');
+});
+
+test('L8 §551: a mid-boot unlock does not fetch the stem until frames are running', async () => {
+  /* ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : unlocking with no frame yet ticked issuing ZERO fetches, and the first
+   *               `update()` then issuing exactly one.
+   *   fails  on : RUN in-arm — the offline/capture context, which must issue none EVER, however
+   *               many frames run. That is the same guard `unlock(existing)` has always had, and
+   *               deferring the fetch is exactly the change that could have leaked past it.
+   *   verdict   : §551 lets a gesture during boot unlock audio. An unconditional fetch there would
+   *               pull 2.24 MB alongside the level's own asset loading and make BOOT slower — and
+   *               boot is the dominant term in §550. Earlier music is not worth a later game.
+   *   does NOT  : discriminate bandwidth contention itself, which is the user's network and not
+   *   discrim.    this box's. This pins the ORDERING that avoids it.
+   */
+  const W = installWindow();
+  try {
+    const a = new Audio(stubEngine());
+    a.available = true;
+    await a.init();
+    W.fetches.length = 0;                       // ignore any prefetch; this arm is about the stem
+    a.unlock();                                 // mid-boot: no frame has ticked
+    assert.ok(a.ready, 'unlock() failed in the stub window');
+    assert.deepEqual(W.fetches, [],
+      `unlocking mid-boot fetched ${W.fetches.length} asset(s) — that competes with boot's own loading`);
+
+    a.update(1 / 60);
+    assert.equal(W.fetches.length, 1, `the first frame should kick exactly one stem load, saw ${W.fetches.length}`);
+    a.update(1 / 60); a.update(1 / 60);
+    assert.equal(W.fetches.length, 1, 'the stem load is being kicked more than once');
+    a.dispose();
+  } finally { W.restore(); }
+
+  /* The capture harness: an offline context, and not a byte however long it runs. */
+  const S = installWindow({ search: '?shot=1' });
+  try {
+    const a = new Audio(stubEngine());
+    a.available = true;
+    await a.init();
+    a.unlock(new OfflineCtx(SR));
+    for (let i = 0; i < 10; i++) a.update(1 / 60);
+    assert.deepEqual(S.fetches, [],
+      `the offline/capture path fetched ${S.fetches.length} asset(s) — unlock(existing) has always declined this`);
+    a.dispose();
+  } finally { S.restore(); }
+  console.log('  [L8] mid-boot unlock: 0 fetches until the first frame, then exactly 1; offline path: 0 ever');
+});

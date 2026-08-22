@@ -126,45 +126,51 @@ await page.addInitScript(() => {
 const ms = (v) => (v == null ? '—' : `${v.toFixed(0)} ms`);
 
 try {
-  const t0 = Date.now();
+  /* EARLY=1 clicks DURING the loading screen — the §551 case. The click is aimed at the progress
+     bar, which is what a player actually does, and before §551 it hit no handler at all. */
+  const EARLY = process.env.EARLY === '1';
   await page.goto(`http://127.0.0.1:${port}/?q=high`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+
+  if (EARLY) {
+    await page.waitForTimeout(2000);                       // mid-boot, long before ready
+    const readyYet = await page.evaluate(() => !!window.__GAME?.ready);
+    /* Mark BEFORE dispatching. Marking after it meant a fetch triggered BY the click timestamped
+       ~57 ms EARLIER than the click, and the report then labelled it "PREFETCHED, before the
+       gesture" — evidence for a mechanism that had not run at all. The label was the instrument's,
+       not the game's. */
+    await page.evaluate(() => { window.__T.marks.click = performance.now(); });
+    await page.mouse.click(640, 400);
+    const unlocked = await page.evaluate(() => !!(window.__GAME && document.querySelector('canvas')) && true);
+    console.log(`\n[start] EARLY CLICK at ~2 s: __GAME.ready was ${readyYet} at click time`);
+  }
+
   await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null, { timeout: 600000, polling: 250 });
   await page.evaluate(() => { window.__T.marks.ready = performance.now(); });
   const bootMs = await page.evaluate(() => window.__T.marks.ready);
   console.log(`\n[start] 1. BOOT (page load -> __GAME.ready): ${ms(bootMs)}`);
-  console.log('        Nothing can sound before this: the gesture listener that calls unlock()');
-  console.log('        is registered at main.js:306, after every module has initialised.');
+  console.log('        Nothing can sound before this UNLESS the gesture was captured during boot');
+  console.log('        (§551). main.js:306 still registers its own listener only after boot.');
 
-  /* 2/3/4 — the gesture, then whatever unlock() sets in motion. */
-  await page.evaluate(() => { window.__T.marks.click = performance.now(); });
-  await page.mouse.click(640, 400);
-  /* DO NOT step frames while the fetch and decode are in flight.
-     The first version of this tool ran `__GAME.step(4)` in a tight loop here and then reported
-     74,685 ms to fetch 2.24 MB **over loopback** and 19,633 ms to decode it. Loopback does not
-     take 74 seconds; software-rasterised WebGL frames on the main thread do. The instrument
-     manufactured the contention it then measured. Neither term needs frames: `decodeAudioData`
-     is off-thread and the fetch is the network stack. Only the procedural score's look-ahead
-     scheduler needs `Audio.update`, and that is measured offline in audiolatency.test.mjs. */
+  if (!EARLY) {
+    await page.evaluate(() => { window.__T.marks.click = performance.now(); });
+    await page.mouse.click(640, 400);
+  }
   await page.waitForFunction(() => window.__T.decodes.length > 0, null, { timeout: 300000, polling: 250 });
-
   const T = await page.evaluate(() => window.__T);
 
   const click = T.marks.click;
   const f = T.fetches[0], d = T.decodes[0];
-  console.log(`\n[start] 2. GESTURE: the click is at ${ms(click)}; a suspended context needs it.`);
+  console.log(`\n[start] 2. GESTURE at ${ms(click)}${EARLY ? '  (DURING boot)' : '  (after boot)'}`);
   if (f) {
     console.log(`\n[start] 3. FETCH  ${f.url}  ${(f.bytes / 1048576).toFixed(2)} MB`);
-    console.log(`        began ${ms(f.start - click)} after the click — i.e. inside unlock(), not before it`);
+    console.log(`        began ${ms(f.start - click)} relative to the click`
+      + `${f.start < click - 5 ? '  <-- began BEFORE the gesture, i.e. prefetched (§551)' : '  (triggered by the gesture)'}`);
     console.log(`        took  ${ms(f.end - f.start)} on loopback (a real network will be slower)`);
   } else console.log('\n[start] 3. FETCH  — no mp3 fetch observed');
   if (d) {
     console.log(`\n[start] 4. DECODE ${(d.bytes / 1048576).toFixed(2)} MB -> ${ms(d.end - d.start)}`);
-    console.log(`        first stem audible from ${ms(d.end - click)} after the click, then a 4.0 s`);
-    console.log(`        cross-fade (Audio.js FADE = 4.0) before it reaches full level.`);
-    console.log(`\n[start] RECOGNISABLE MUSIC ~= ${ms((d.end - click) + 4000)} after the click,`);
-    console.log(`        on top of ${ms(bootMs)} of boot. The procedural score has been playing`);
-    console.log('        since ~120 ms after the click throughout.');
-  } else console.log('\n[start] 4. DECODE — no decode observed');
+    console.log(`        first stem audible ${ms(d.end - click)} after the click, then a 4.0 s cross-fade.`);
+  }
 } catch (err) {
   console.log(`[start] FAIL — ${err?.message || err}`);
   process.exitCode = 1;

@@ -47576,3 +47576,118 @@ samples `mv.position`, the capsule, directly (`CameraRig.js:1202`), and no visua
 exists anywhere in `src/player/` or `src/render/`. The camera would still snap the full 5.16 m
 while the model swept in, which reads as a camera fault rather than a rope. Making it viable needs
 the camera to follow the visual position — the camera lane's file, and a routing question.
+## §551 — The gesture that was thrown away: audio now starts on the click a player actually makes
+
+§550 measured the startup path and derived a ceiling of `boot + gesture + 5 ms`. **That ceiling was
+an ordering artifact, not a platform limit**, and this section removes it. Two changes ship, both in
+`src/audio/Audio.js`. `FADE = 4.0` is untouched — it is a feel constant and the user's call.
+
+### §551.1 The defect: a click during loading hit no handler at all
+
+`main.js` registers its gesture listener at **line 306, after every module has initialised**. A
+player who clicks the progress bar — the natural thing to do while a game loads — clicked nothing,
+and had to click again once the game was up. That is very likely most of what the user felt.
+
+**The fix is not to move `unlock()`. It is to take the first gesture on the page, whenever it
+happens.** `Audio` now arms its own `pointerdown`/`keydown`/`touchstart` listener and calls
+`unlock()` from inside the handler.
+
+**Where that listener is armed is the whole of the fix, and my first attempt got it wrong.** I armed
+it in `Audio.init()`. The unit test passed. Then a browser run clicked 2 s into a 34 s boot and the
+click was **still thrown away** — because `main.js` builds all 31 modules in one loop and
+initialises them in a **second** loop, and `audio` is **30th of 31**. Arming in `init()` armed it in
+the last moments of boot. It is now armed in the **constructor**: the construction loop only awaits
+dynamic imports, while the init loop is where the texture bake, the level build and the shader
+compile happen — which is where the time goes, and what the progress bar is showing. `L5` asserts
+the listener exists *before* `init()` is called, so that placement cannot come back.
+
+### §551.2 The assumption I could not verify, and the design that does not need it
+
+The cheap version of this fix records "a gesture happened" and replays `unlock()` at end of boot. It
+depends on Chrome's autoplay policy keying on the activation having *occurred* rather than on the
+context predating it. That is very likely true and **this container cannot measure it**: headless
+Chromium applies no autoplay restriction at all, and forcing
+`--autoplay-policy=user-gesture-required` does not change that, because there is no audio device for
+the policy to govern. The probe's calibration arm caught it and **voided itself twice** rather than
+report a comfortable answer.
+
+So the context is created **inside the real handler**, which satisfies the strictest reading of the
+policy and the loosest one identically, and is also strictly earlier than end of boot. No assumption
+is load-bearing.
+
+### §551.3 The prefetch, and the guard that is the actual job
+
+The stem fetch begins *inside* `unlock()` — §550 measured it at 356 ms after the click, with nothing
+preloading it anywhere. `_prefetchStem()` now pulls the bytes from `update()`'s not-ready branch:
+frames are running, so `engine.start()` has happened, and nobody has touched the page yet. That is
+time currently spent waiting for a human to react.
+
+**The guard is the job.** The screenshot harness boots this game sixteen times a critic set and never
+clicks; an unguarded prefetch is 2.24 MB × 16 for a signal no frame can show. It tests the same
+`?shot` discriminator `main.js` uses rather than inventing a second policy that could drift from it,
+and **L6 asserts both halves against each other** — one fetch on an ordinary load, zero under
+`?shot`. Removing the guard reddens L6 with the byte count in the message.
+
+`decodeAudioData` **detaches** the ArrayBuffer, so a prefetched entry is spent on first use; L7 pins
+that, and pins that a failed stem still leaves the procedural score playing.
+
+### §551.4 The regression this could have shipped, and the arm that stopped it
+
+Letting a gesture unlock audio mid-boot means `unlock()` would start a 2.24 MB fetch **alongside the
+level's own asset loading** — trading a faster music start for a slower boot, when boot is the
+dominant term in §550. Earlier music is not worth a later game.
+
+The stem load is therefore **deferred to the first frame** (`_kickTrack`, called from `update()`),
+which is `engine.start()` and the end of boot's heavy phase. A player who clicks at the "click to
+start" prompt is already past that point, so for them nothing changes.
+
+**L8 caught a real misplacement while being written**: the deferred call first landed in `play()`
+rather than `update()`, so `_startBeds()` triggered the fetch from inside `unlock()` — the exact
+contention the deferral exists to prevent, reintroduced by the fix for it. The arm failed on the
+first run and named it.
+
+### §551.5 What is NOT fixed, plainly
+
+- **Pointer lock still needs a post-boot click.** `main.js`'s `begin()` owns it and that file is not
+  this lane's. A player who clicks during loading now gets audio immediately but still clicks once
+  more to capture the mouse. The audio half is fixed; the input half is a one-line change in a file
+  I do not own.
+- **The prefetch window only exists after `engine.start()`.** A player who clicks *during* loading
+  gets the gesture fix instead, and their stem is fetched on the first frame. Both paths improve;
+  neither gets both benefits.
+- **Boot itself is untouched** and remains the dominant term.
+
+### §551.7 What the browser runs prove, and what they do not
+
+Two runs, same tool, differing only in where the listener is armed. The click is dispatched ~2 s
+into boot, with `__GAME.ready` verified `false` at the moment of the click:
+
+```
+  armed in init()          click at 2 s -> NO decode in 300 s   the click was thrown away
+  armed in the constructor click at 3.1 s -> decode complete,   the click landed
+                                            stem audible 1.06 s later
+```
+
+That is the A/B for §551.1 and it is the change that matters. **It proves nothing about the
+prefetch**, and the tool's first report claimed otherwise: it labelled the fetch *"PREFETCHED,
+before the gesture"* because the click MARK was taken after the click was dispatched, so a fetch
+triggered BY the click timestamped 57 ms earlier than it. The label was the instrument's, not the
+game's; the mark now precedes the dispatch and the annotation distinguishes the two cases. The
+prefetch's evidence is L6, with the guard mutation-checked — not this run.
+
+Boot in these runs is 34–56 s. That is a software-rasterising container and is quoted only to place
+the click within it, never as the user's experience.
+
+### §551.6 DOMAIN
+
+- **L5** — *passes on* a dispatched `pointerdown` leaving the mixer ready; *fails on* the same setup
+  with no gesture (mixer must stay locked), and **fails on a real source mutation** moving the arm
+  back to `init()`, with the message naming the placement a browser run already rejected.
+- **L6** — *passes on* one fetch for a player and zero under `?shot`; *fails on* the guard removed,
+  run in-arm.
+- **L7** — the prefetched buffer is spent on use, and a failed stem leaves the score playing.
+- **L8** — *passes on* zero fetches before the first frame and exactly one after; *fails on* the
+  offline/capture context fetching at all, however many frames run.
+- **What none of this reaches.** Whether a real Chrome honours a context created after activation is
+  unmeasured here and deliberately not depended upon. And no test in this file can say the player
+  *hears* anything: `OfflineCtx` is not a sound card, exactly as this container is not a frame rate.

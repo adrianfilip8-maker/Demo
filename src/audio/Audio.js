@@ -60,6 +60,9 @@ export const STEM_STATS = {
 /* Music.js's six sections onto the three arrangements that exist. `menu` and `treasure` borrow
    `explore` rather than getting a stem of their own — TRACK_SECTION still moves their level and
    filter, so they are distinguishable without pretending an arrangement exists that does not. */
+/** §551: the gesture kinds that count as "the player has touched the page". */
+const GESTURE_EVENTS = ['pointerdown', 'keydown', 'touchstart'];
+
 export const SECTION_STEM = {
   explore: 'explore', treasure: 'explore',
   sneak: 'sneak', alert: 'chase', chase: 'chase',
@@ -337,10 +340,32 @@ export class Audio {
     this._windOpen = 0.8;
 
     this._unsub = [];
+    /* §551: stem bytes fetched BEFORE the gesture, waiting to be decoded. Keyed by stem name.
+       `decodeAudioData` detaches the ArrayBuffer, so an entry is spent on first use. */
+    this._bytes = new Map();
+    this._prefetched = false;
+    this._gestureGo = null;
+    /* §551: true once the module loop has ticked us — i.e. `engine.start()` has run and boot's
+       heavy phase is over. The stem fetch waits for it; see `unlock()`. */
+    this._framed = false;
+    this._offline = false;
+    this._trackKicked = false;
+
     this._animHooked = false;
     this._animRetry = 0;
     this._pendingMusic = null;
     this._warned = false;
+
+    /* §551: arm the gesture listener HERE, in the constructor, not in `init()`.
+       Measured, and this is the correction to my own first attempt: `main.js` builds every module
+       in one loop and then initialises them in a SECOND loop, and `audio` is 30th of 31. Arming in
+       `init()` therefore armed it in the last moments of boot — a click 2 s into a 34 s boot was
+       still thrown away, which a browser run caught after the unit test had passed. The
+       construction loop only awaits dynamic imports; the init loop is where the texture bake, the
+       level build and the shader compile happen, which is where the time goes and which is what
+       the progress bar is showing. Arming at construction moves this from "after 30 module inits"
+       to "after 30 module imports". */
+    this._armGesture();
   }
 
   /* ===================== lifecycle =================================== */
@@ -350,7 +375,98 @@ export class Audio {
     // the first gesture are simply dropped, and nothing has to be re-subscribed later.
     this._wireEngine();
     this._hookAnimation();
+    /* Idempotent: normally the constructor already armed this. It is repeated here as the
+       safety net for a harness that constructs before `window` exists and only then supplies it. */
+    this._armGesture();
     if (!this.available) this._warn('WebAudio unavailable — running silent.');
+  }
+
+  /**
+   * §551 — take the FIRST gesture on the page, whenever it happens.
+   *
+   * The defect this closes, measured in §550: `main.js` registers its own gesture listener at
+   * line 306, **after every module has initialised**. A player who clicks the progress bar — the
+   * natural thing to do while a game loads — clicks nothing at all, because no handler exists yet,
+   * and must click a second time once the game is up. The audio ceiling was `boot + gesture + 5 ms`
+   * only because of that ordering.
+   *
+   * This listener is armed during module init, so it is live for the whole of the rest of boot.
+   *
+   * **It calls `unlock()` from inside the real handler rather than recording a flag and replaying
+   * it later, and that is a deliberate choice about an assumption I could not verify.** The
+   * cheaper design is to note "a gesture happened" and unlock at end of boot; it depends on
+   * Chrome's autoplay policy keying on the activation having *occurred* rather than on the context
+   * predating it. That is very likely true, but this container **cannot measure it**: headless
+   * Chromium applies no autoplay restriction at all, and forcing
+   * `--autoplay-policy=user-gesture-required` does not change that, because there is no audio
+   * device for the policy to govern. The probe's own calibration arm caught it and voided itself
+   * twice rather than reporting a comfortable answer (§551).
+   *
+   * Creating the context INSIDE the handler needs no such assumption: it satisfies the strictest
+   * reading of the policy and the loosest one identically. It is also strictly earlier than end of
+   * boot, so it beats the target it replaces.
+   *
+   * The consequence, stated rather than buried: a player who clicks during loading now hears the
+   * ambience and the score for the remainder of loading, instead of silence and a wasted click.
+   * `main.js`'s own `begin()` still runs on the next gesture and still owns pointer lock — that
+   * half is not this file's and is unchanged.
+   */
+  _armGesture() {
+    /* Not gated on `available`: `unlock()` already declines safely when WebAudio is missing, and
+       gating here would mean a harness that sets `available` after construction never arms. */
+    if (typeof window === 'undefined' || this._gestureGo) return;
+    const go = () => {
+      this._disarmGesture();
+      try { this.unlock(); } catch { /* a failed unlock must never break the page */ }
+    };
+    this._gestureGo = go;
+    for (const t of GESTURE_EVENTS) {
+      try { window.addEventListener(t, go, { passive: true, capture: true }); } catch {}
+    }
+  }
+
+  _disarmGesture() {
+    const go = this._gestureGo;
+    if (!go) return;
+    this._gestureGo = null;
+    for (const t of GESTURE_EVENTS) {
+      try { window.removeEventListener(t, go, { capture: true }); } catch {}
+    }
+  }
+
+  /**
+   * §551 — pull the first stem's BYTES while the player is still reading "click to start".
+   *
+   * Measured in §550: the fetch begins *inside* `unlock()`, 356 ms after the click, and nothing
+   * preloads it — there is no `<link rel=preload>` anywhere and `_loadTrack` has two callers. The
+   * bytes need no AudioContext, only the network, so the whole transfer can happen in time that is
+   * currently spent waiting for a human to react.
+   *
+   * Called from `update()`'s not-ready branch, which is exactly the window this wants: frames are
+   * running, so boot has reached `engine.start()`, and audio has not been unlocked yet.
+   *
+   * **The guard is the point.** The screenshot harness boots this game sixteen times a critic set
+   * and never clicks, so an unguarded prefetch would pull 2.24 MB × 16 for a signal no frame can
+   * show. `unlock(existing)` already declines `_loadTrack` for precisely that reason; this
+   * inherits that decision by testing the same thing `main.js` tests, rather than inventing a
+   * second policy that could drift away from it. `tests/audiolatency.test.mjs` asserts the guard.
+   */
+  _prefetchStem() {
+    if (this._prefetched) return;
+    this._prefetched = true;
+    if (typeof window === 'undefined' || typeof fetch !== 'function') return;
+    try { if (new URLSearchParams(window.location.search).has('shot')) return; } catch { return; }
+    const name = SECTION_STEM[this._section] || 'explore';
+    /* `_stems` is built in `_buildGraph`, which only runs at unlock — and the whole point of this
+       method is that it runs BEFORE that. Optional, therefore, rather than assumed. */
+    if (this._stems?.has(name) || this._bytes.has(name)) return;
+    const url = `assets/audio/${STEM_FILES[name] || STEM_FILES.explore}`;
+    try {
+      fetch(url)
+        .then((res) => (res.ok ? res.arrayBuffer() : null))
+        .then((b) => { if (b) this._bytes.set(name, b); })
+        .catch(() => { /* the gesture path re-fetches; a failed prefetch costs nothing */ });
+    } catch { /* no fetch in this environment */ }
   }
 
   /**
@@ -408,9 +524,24 @@ export class Audio {
      * deliberately not awaited on the live path: `unlock()` is documented as returning fast enough
      * to sit inside a click handler, and that contract is worth more than the track starting a
      * few hundred milliseconds sooner. */
-    if (!existing) this._loadTrack(SECTION_STEM[this._section] || 'explore').catch(() => {});
+    this._offline = !!existing;
+    /* §551: DEFER the stem fetch until frames are running.
+       Now that a gesture during boot unlocks audio (see `_armGesture`), an unconditional fetch
+       here would pull 2.24 MB alongside the level's own asset loading and make BOOT slower — and
+       boot is the dominant term in §550's measurement. Trading a slower game for earlier music is
+       the wrong trade. `update()` kicks it on the first frame instead, which is `engine.start()`,
+       after boot's heavy phase. A player who clicks at the "click to start" prompt is already past
+       that point, so for them this is unchanged. */
+    if (!existing && this._framed) this._kickTrack();
 
     return this.ready;
+  }
+
+  /** Start the first stem load exactly once, and never under the offline/capture harness. */
+  _kickTrack() {
+    if (this._trackKicked || this._offline || !this.ready) return;
+    this._trackKicked = true;
+    this._loadTrack(SECTION_STEM[this._section] || 'explore').catch(() => {});
   }
 
   /**
@@ -429,9 +560,18 @@ export class Audio {
     this._trackState = 'loading';
     let buf;
     try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      buf = await this.ctx.decodeAudioData(await res.arrayBuffer());
+      /* §551: use the bytes `_prefetchStem` already pulled, if it got there first. Spent on use —
+         `decodeAudioData` DETACHES the ArrayBuffer, so a retained entry would decode to nothing
+         the second time. Falling back to the fetch keeps this path correct when the prefetch was
+         guarded off (the capture harness), failed, or simply has not landed yet. */
+      let raw = this._bytes.get(name);
+      if (raw) this._bytes.delete(name);
+      else {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        raw = await res.arrayBuffer();
+      }
+      buf = await this.ctx.decodeAudioData(raw);
     } catch (err) {
       this._trackState = this._stems.size ? 'playing' : 'failed';
       this._warn(`music stem "${name}" unavailable (${err?.message || err})`
@@ -868,11 +1008,18 @@ export class Audio {
   /* ===================== frame ======================================= */
 
   update(dt, t) {
+    this._framed = true;
     if (!this.ready) {
       // ANIMATION may land after AUDIO; keep trying for a while, cheaply.
       if (!this._animHooked && this._animRetry++ < 600 && (this._animRetry & 31) === 0) this._hookAnimation();
+      /* Frames are running but nobody has touched the page yet: the one window in which the
+         stem's bytes can be fetched for free. Guarded and idempotent — see `_prefetchStem`. */
+      this._prefetchStem();
       return;
     }
+
+    /* Deferred from `unlock()` when the gesture arrived mid-boot (§551); a no-op afterwards. */
+    this._kickTrack();
     if (!this._animHooked && this._animRetry++ < 600 && (this._animRetry & 31) === 0) this._hookAnimation();
 
     const ctx = this.ctx;
@@ -1566,6 +1713,8 @@ export class Audio {
   }
 
   dispose() {
+    this._disarmGesture();
+    this._bytes.clear();
     for (const off of this._unsub) { try { off(); } catch {} }
     this._unsub.length = 0;
     if (!this.ctx) return;
