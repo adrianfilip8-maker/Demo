@@ -1420,3 +1420,41 @@ the same time. Lever B is closed.
 **What none of this can settle.** Whether pacing alone fixes a repeat is exactly the kind of
 question that has needed hands every previous time it has come up. The measurements above bound
 what each lever *can* change; they say nothing about how much change is enough.
+
+## 22. A landing and a launch were being averaged on the commonest path in the game — fixed, and one thing about it needs hands
+
+**What to do:** run, land, and press jump the instant you touch down — then do it the other way,
+pressing jump *just before* you land so the buffer carries it in. Then run flat out, slam the stick
+the other way to skid, and jump out of the skid. Those are the two inputs.
+
+**What was wrong.** `Land` and `Skid` each fired an animation that is the body's *entire* pose, and
+nothing in the mixer could ever end it — it ran for its full authored length underneath whatever
+came next. So a landing absorb and a jump launch sat on Sly at the same time and were averaged
+together, half each, for about a third of a second. On camera he was doubled over with his head
+past his knees while rising through the air; out of a skid he floated upright with both arms at his
+sides, neither skidding nor jumping. Frames are in `shots/land1-*`, before and after, shot from the
+same camera position so only the pose differs.
+
+Worst case measured was a skid averaged three ways with a landing and a fall at once. It was on the
+commonest path in a platformer — run, land, jump again — which is why it was taken first.
+
+**What is already verified offline, so please do not spend your time on it:** the pose now reads as
+the launch and matches the launch played on its own; the landing's thump and dust still fire on
+every landing, including the ones the jump now cuts short; and the suite is green.
+
+**The question that needs hands.** When you buffer a jump into the landing, the absorb is now
+cancelled *outright* rather than blended out — the two states resolve inside a single frame, so the
+landing pose never gets to appear at all. Offline that is the correct call and it looks right in a
+still. But "correct" and "feels good" are different things here, and there is a specific reason to
+ask: the reference project's own animation graph would give the landing a short blend (0.1 s) on
+its way out rather than cancelling it, so there is a real alternative and it is one line to switch
+to.
+
+So: **does jumping the instant you land feel crisp, or does it feel like the landing got skipped?**
+If it reads as skipped, say so and it becomes a brief blend instead. The skid case already gets a
+blend (the skid has usually had time to start before you jump), so if the two feel inconsistent
+with each other that is also worth reporting — it is the same dial.
+
+**What none of this can settle offline.** Weight and pose can be measured; the *feel* of an
+interruption cannot. Every previous question of this shape on this sheet has needed hands, and this
+one is narrower than most: it is one dial with two settings and I have argued for one of them.
