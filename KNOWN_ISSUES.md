@@ -46402,6 +46402,31 @@ row now carries `OPT` and says so. Card text only; no behaviour changed.
   an element which changed is an element the player can *see* is a floor this cannot raise, exactly
   as the container cannot raise a frame rate.
 
+**The suite claim, stated exactly.** Clean worktree at `21aab7d`: **962 tests, 960 pass, 2 fail** —
+`camclamp` (hook-ring debt sequence) and `camstate` (85 % body-missing). Both **pre-existing and not
+this section's**: re-run in the same worktree at `21aab7d~1`, the camera lane's own tip, they fail
+identically. A/B'd rather than asserted, because "two reds in my suite run" and "two reds I caused"
+are the pair most easily conflated by whoever reads the log next.
+
+### §549.6 The §548 music escalation, ruled — leave it as it is
+
+§548.1 escalated the `bc-*.mp3` cues as an owner decision and changed nothing. **The owner has now
+ruled: leave the music as it is** — *"Leave the music, ignoring the others instead of synthesizing."*
+The three cues stay unchanged and unmoved, the standing instruction is **not** extended to cover
+them, and synthesised replacements are **not** wanted.
+
+Recorded in `public/assets/audio/PROVENANCE.md` under a dated heading beside the facts it answers,
+because a decision that leaves no trace is indistinguishable from nobody having looked — the next
+reader must be able to see that this was *decided*. As in `Audio.js`, **nothing is claimed on the
+owner's behalf in either direction**: the ruling says what this project does with these files, not
+whose they are, and every line above it in that record still stands — origin unstated, no licence
+asserted.
+
+The §548 `Audio.js` correction is untouched by this and stays correct: that was a **false
+attribution** — the header claiming the stems were owner-supplied when the record declines to say so
+— which is a different thing from the ruling, and would have been wrong whichever way the ruling
+went.
+
 ## §586 — §579 shipped in raw metres and broke an authored beat; the fix is to score each gate in its own units
 
 **The full suite at `7df1041` was 951 tests, 949 pass, 2 fail** — `camclamp`'s kiosk hook-ring debt

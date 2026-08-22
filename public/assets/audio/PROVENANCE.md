@@ -26,6 +26,32 @@ that instruction names that file and the `Sly_Cooper` model, not these. If they 
 episode music from the same commercial soundtrack then the same considerations apply to them,
 but nobody has said so, so nothing is claimed here on their behalf.
 
+### Raised, escalated, and ruled on by the owner — 2026-08-22
+
+**This was decided, not overlooked**, and that is the only reason this heading exists: a decision
+that leaves no trace is indistinguishable from nobody having looked.
+
+The question above was put to the project owner during the §548 audio audit, with the facts as
+they are recorded here and nothing added to them — that these three cues were installed by commit
+`6f03a03` from *"97 MB of WAV"* whose origin the commit does not state, that the same commit's
+message names *"the three Black Chateau loops"*, that no licence is asserted anywhere in the
+repository, and that the standing instruction recorded below names the museum track and the
+`Sly_Cooper` model rather than these files.
+
+**The owner's ruling: leave the music as it is.** In their words, *"Leave the music, ignoring the
+others instead of synthesizing."* Concretely, and all three parts are theirs rather than inferred:
+
+- the three `bc-*.mp3` cues **stay**, unchanged and unmoved;
+- the standing instruction below is **not** extended to cover them;
+- original synthesised replacements are **not** wanted.
+
+**Nothing is claimed on their behalf in either direction.** The ruling is a decision about what
+this project does with these files. It is not a statement about their licence, their origin, or
+anyone's rights, and it should not be read as one — everything above this heading still stands
+exactly as written, including that the origin is unstated and that no licence is asserted.
+
+See `KNOWN_ISSUES.md` §548.1 for the audit that raised it and §549 for the ruling as ledgered.
+
 **They are three separate pieces, not three mixes of one.** `Audio.js` used to state the
 opposite as fact and build its cross-fade on it. Decoded and cross-correlated on their
 short-time energy envelopes, `explore` scores **0.122** against `sneak` and **0.013** against
