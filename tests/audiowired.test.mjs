@@ -226,9 +226,17 @@ test('A2 provenance: nothing references the reference repo\'s commercial recordi
     }
   }
 
-  /* `public/` is copied into `dist/` VERBATIM (§265), so scanning it is the build-output check —
-     `dist/` itself is gitignored and untracked, so no test can rely on it existing. Any path
-     component named Music or Effects anywhere under public/ would ship. */
+  /* THE BUILD OUTPUT, by its two roots. `dist/` itself is gitignored and 0 files tracked, so no
+     durable test can scan it — but everything in it arrives through exactly two doors, and both
+     are in the tree:
+
+       public/  copied into dist/ VERBATIM (§265)
+       src/     anything imported is bundled/hashed into dist/assets/ by vite
+
+     The content scan below cannot see either one, because it only opens .js/.mjs/.ts/.html/.json —
+     a directory of MP3s named Music/ has no source file in it to match. So this arm looks at PATH
+     NAMES rather than contents, across both roots. (`src/assets/` today holds fonts, sly-cane and
+     sly-dl; that is the shape a dropped-in Music/ would take.) */
   const walkAll = (dir, out = []) => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
       const p2 = join(dir, e.name);
@@ -236,11 +244,15 @@ test('A2 provenance: nothing references the reference repo\'s commercial recordi
     }
     return out;
   };
-  const pub = walkAll(join(ROOT, 'public'));
-  assert.ok(pub.length > 10, `the public/ scan found only ${pub.length} entries — it went blind`);
-  const shipped = pub.filter((p2) => /(^|[\/\\])(Music|Effects)[\/\\]/i.test(p2.slice(ROOT.length)));
-  assert.deepEqual(shipped, [],
-    `public/ carries paths that would ship into dist/: ${shipped.join(', ')}`);
+  const BAD_DIR = /(^|[\/\\])(Music|Effects)[\/\\]/i;
+  for (const [root, floor] of [['public', 10], ['src', 40]]) {
+    const entries = walkAll(join(ROOT, root));
+    assert.ok(entries.length > floor,
+      `the ${root}/ scan found only ${entries.length} entries — it went blind`);
+    const shipped = entries.filter((p2) => BAD_DIR.test(p2.slice(ROOT.length)));
+    assert.deepEqual(shipped, [],
+      `${root}/ carries paths that would ship into dist/: ${shipped.join(', ')}`);
+  }
 
   const RE = /assets[\/\\](music|effects)[\/\\]/i;
   const walk = (dir, out = []) => {

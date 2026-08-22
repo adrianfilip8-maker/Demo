@@ -45810,15 +45810,27 @@ land on a real footstep, so this too needed reporting rather than testing.
   reference run in-arm, and is separately checked not to match the project's own `assets/audio/`
   path, so it can neither go blind nor fire on everything. It explicitly **does not** clear the
   `bc-*.mp3` question, which is §548.1's and is not a code matter.
-- **A2, second arm: the build output.** The first version scanned source only, which is the half of
-  the instruction I was told not to settle for. `dist/` cannot be scanned by a durable test — it is
-  gitignored, 0 files tracked, and absent on a clean checkout — so the guard scans **`public/`**
-  instead, which §265 copies into `dist/` **verbatim**: any path component named `Music` or
-  `Effects` under `public/` would ship. *Passes on* the tree as shipped (`public/assets/sly-godot/`
-  holds 6 entries: a PROVENANCE, two PNGs, three GLBs — no audio). *Fails on* a planted
-  `public/assets/sly-godot/Assets/Music/planted.txt`, run in-arm, naming both the directory and the
-  file. It also asserts the walk found >10 entries, so a path typo that makes it scan nothing reads
-  as a failure rather than a pass.
+- **A2, second arm: the build output — and it took two passes to get its own scope right.** The
+  first version scanned source only, which is the half of the instruction I was told not to settle
+  for. `dist/` cannot be scanned by a durable test — gitignored, 0 files tracked, absent on a clean
+  checkout — so the guard scans the tree roots `dist/` is *built from*.
+
+  I first wrote **one** root, `public/`, on the strength of §265's verbatim copy. That was wrong by
+  omission: **`dist/` has two doors, not one.** `public/` is copied verbatim; **`src/`** is the
+  other, because vite bundles and hashes anything imported through it, and `src/assets/` already
+  ships real binaries that way (`fonts`, `sly-cane`, `sly-dl` — `sly-cane.glb` is §294's shipped
+  cane). The content scan cannot cover that door, and the reason is worth stating because it is the
+  same trap the whole arm exists for: **the content walk only opens `.js/.mjs/.ts/.html/.json`.** A
+  directory of MP3s has no source file in it to match, so a `src/assets/Music/` would have passed a
+  scan that reported "80 source files scanned, zero hits". The guard now walks **path names** —
+  not contents — across both roots.
+
+  *Passes on* the tree as shipped. *Fails on* a plant in **each** root, both run in-arm and both
+  naming the directory and the file: `src/assets/Music/planted.mp3` → *"src/ carries paths that
+  would ship into dist/"*, and `public/assets/Effects/planted.wav` → the same for `public/`. Both
+  names in the rule are exercised, not just one. Each root also asserts its walk found entries at
+  all (>40 for `src/`, >10 for `public/`), so a path typo that makes it scan nothing reads as a
+  failure rather than as a clean bill of health.
 
 **What none of this can discriminate.** Audibility: a voice that starts at zero gain, is masked by
 the bed, or sits behind the listener counts as started here — level, spectrum and clipping are
