@@ -1275,21 +1275,21 @@ def('jump_apex', {
   keys: [
     { t: 0, e: 'smooth', P: P({
       hips: [8, -6, 3], spine: [-6, 3, 1], chest: [-12, 8, -2], neck: [-16, -4, 2], head: [-18, -6, 3],
-      shoulderL: [-12, 10, -22], upperArmL: [-34, 16, -70], lowerArmL: [-44, -20, -20], handL: [14, -16, -16],
-      shoulderR: [-12, -10, 22], upperArmR: [-20, -16, 62], lowerArmR: [-40, 20, 20], handR: [10, 18, 16],
+      shoulderL: [-10, 8, -22], upperArmL: [27, -63, 60], lowerArmL: [-44, -24, -18], handL: [14, -16, -16],
+      shoulderR: [-16, -11, 22], upperArmR: [8, 64, -25], lowerArmR: [-28, 12, 34], handR: [10, 18, 16],
       upperLegL: [-46, 8, 5], lowerLegL: [56, 0, 0], footL: [14, -6, 0], toeL: [12, 0, 0],
       upperLegR: [-20, -8, -5], lowerLegR: [36, 0, 0], footR: [22, 6, 0], toeR: [16, 0, 0],
       tailA: [-10, -8, 0], tailB: [-22, -12, 0], tailC: [-6, -8, 0], tailD: [16, 6, 0],
     }), pos: [0, -0.02, 0.01], cane: [96, -12, -8] },
     { t: 0.4, e: 'smooth', P: {
       hips: [6, 6, -3], chest: [-10, -8, 2], head: [-16, 7, -3],
-      upperArmL: [-26, 16, -62], upperArmR: [-28, -16, 70],
+      upperArmL: [-2, -55, 10], upperArmR: [-32, 67, -6],
       upperLegL: [-34, 8, 5], lowerLegL: [44, 0, 0], upperLegR: [-30, -8, -5], lowerLegR: [46, 0, 0],
       tailA: [-14, 10, 0], tailB: [-26, 14, 0], tailC: [-10, 9, 0], tailD: [12, -7, 0],
     }, pos: [0, 0.01, -0.01], cane: [100, 10, -8] },
     { t: 0.8, e: 'smooth', P: {
       hips: [8, -6, 3], chest: [-12, 8, -2], head: [-18, -6, 3],
-      upperArmL: [-34, 16, -70], upperArmR: [-20, -16, 62],
+      upperArmL: [27, -63, 60], upperArmR: [8, 64, -25],
       upperLegL: [-46, 8, 5], lowerLegL: [56, 0, 0], upperLegR: [-20, -8, -5], lowerLegR: [36, 0, 0],
       tailA: [-10, -8, 0], tailB: [-22, -12, 0], tailC: [-6, -8, 0], tailD: [16, 6, 0],
     }, pos: [0, -0.02, 0.01], cane: [96, -12, -8] },
@@ -1576,17 +1576,17 @@ def('wall_cling', {
   keys: [
     { t: 0, e: 'soft', P: P({
       hips: [-12, 0, 0], spine: [6, 0, 0], chest: [10, 0, 0], neck: [-26, 0, 0], head: [-30, 6, 0],
-      shoulderL: [-14, 8, -30], upperArmL: [-16, 20, -106], lowerArmL: [-34, -22, -26], handL: [26, -18, -22],
-      shoulderR: [-14, -8, 30], upperArmR: [-12, -20, 102], lowerArmR: [-30, 22, 26], handR: [22, 20, 22],
+      shoulderL: [-9, 10, -34], upperArmL: [54, -47, 127], lowerArmL: [-43, -30, -11], handL: [26, -18, -22],
+      shoulderR: [-8, -12, 33], upperArmR: [55, 46, -123], lowerArmR: [-35, 36, 7], handR: [22, 20, 22],
       upperLegL: [-34, 16, 8], lowerLegL: [46, 0, 0], footL: [-16, -10, 0], toeL: [10, 0, 0],
       upperLegR: [-20, -16, -8], lowerLegR: [30, 0, 0], footR: [-12, 10, 0], toeR: [10, 0, 0],
       tailA: [-20, 10, 0], tailB: [-30, 14, 0], tailC: [-14, 9, 0], tailD: [10, -7, 0],
     }), pos: [0, -0.14, 0.10], cane: [126, 20, -10] },
     // he slips a few centimetres and re-grips — the beat that says this is costing him
     { t: 0.9, e: 'in', P: { hips: [-10, 0, 0], head: [-28, 4, 0] }, pos: [0, -0.19, 0.10] },
-    { t: 1.05, e: 'out', P: { hips: [-14, 0, 0], head: [-32, 8, 0], upperArmL: [-20, 20, -110], upperArmR: [-16, -20, 106],
+    { t: 1.05, e: 'out', P: { hips: [-14, 0, 0], head: [-32, 8, 0], upperArmL: [54, -61, 112], upperArmR: [57, 59, -108],
       tailA: [-26, 10, 0], tailB: [-36, 14, 0] }, pos: [0, -0.12, 0.10] },
-    { t: 2.2, e: 'soft', P: { hips: [-12, 0, 0], head: [-30, 6, 0], upperArmL: [-16, 20, -106], upperArmR: [-12, -20, 102],
+    { t: 2.2, e: 'soft', P: { hips: [-12, 0, 0], head: [-30, 6, 0], upperArmL: [54, -47, 127], upperArmR: [55, 46, -123],
       tailA: [-20, 10, 0], tailB: [-30, 14, 0] }, pos: [0, -0.14, 0.10], cane: [126, 20, -10] },
   ],
 });
@@ -1599,23 +1599,23 @@ def('wall_jump', {
   keys: [
     { t: 0, e: 'in', P: P({
       hips: [-6, -10, -14], spine: [4, 4, -4], chest: [8, 10, -6], neck: [-22, -6, 4], head: [-24, -8, 8],
-      shoulderL: [-12, 10, -26], upperArmL: [-22, 18, -92], lowerArmL: [-46, -20, -24],
-      shoulderR: [-10, -10, 22], upperArmR: [6, -18, 60], lowerArmR: [-58, 22, 20],
+      shoulderL: [-8, 9, -26], upperArmL: [72, -80, 118], lowerArmL: [-40, -39, -7],
+      shoulderR: [-10, -9, 28], upperArmR: [42, 48, -34], lowerArmR: [-44, 20, 34],
       upperLegL: [-72, 12, 6], lowerLegL: [86, 0, 0], footL: [-8, -8, -8], toeL: [10, 0, 0],
       upperLegR: [-58, -12, -6], lowerLegR: [72, 0, 0], footR: [-6, 8, -6], toeR: [10, 0, 0],
       tailA: [10, 16, 0], tailB: [-2, 22, 0], tailC: [-4, 14, 0], tailD: [16, -9, 0],
     }), pos: [0, -0.30, 0.08], sc: { hips: [1.07, 0.89, 1.05] }, cane: [104, -28, -8] },
     { t: 0.14, e: 'out', P: {
       hips: [-2, 26, 16], spine: [0, -10, 5], chest: [-6, -26, 8], neck: [-16, 12, -5], head: [-20, 20, -10],
-      upperArmL: [-44, 18, -70], lowerArmL: [-26, -20, -24],
-      upperArmR: [-48, -18, 88], lowerArmR: [-22, 22, 24],
+      upperArmL: [-4, -54, 27], lowerArmL: [-37, -32, -23],
+      upperArmR: [73, 22, -160], lowerArmR: [-5, 50, -17],
       upperLegL: [-10, 12, 6], lowerLegL: [16, 0, 0], footL: [28, -8, 0], toeL: [18, 0, 0],
       upperLegR: [12, -12, -6], lowerLegR: [10, 0, 0], footR: [32, 8, 0], toeR: [18, 0, 0],
       tailA: [-16, -22, 0], tailB: [-28, -30, 0], tailC: [-12, -20, 0], tailD: [12, 12, 0],
     }, pos: [0, 0.05, -0.04], sc: { hips: [0.92, 1.13, 0.94] }, cane: [76, 44, -8] },
     { t: 0.5, e: 'smooth', P: {
       hips: [8, 8, 4], chest: [-8, -10, 3], head: [-18, 8, -4],
-      upperArmL: [-30, 16, -72], upperArmR: [-26, -16, 68],
+      upperArmL: [-9, -58, 20], upperArmR: [7, 62, -21],
       upperLegL: [-40, 8, 5], lowerLegL: [50, 0, 0], upperLegR: [-20, -8, -5], lowerLegR: [34, 0, 0],
       tailA: [-10, -8, 0], tailB: [-22, -12, 0], tailC: [-6, -8, 0], tailD: [16, 6, 0],
     }, pos: [0, 0, 0], sc: { hips: [1, 1, 1] }, cane: [96, 6, -8] },
@@ -1857,8 +1857,8 @@ def('hook_release', {
   keys: [
     { t: 0, e: 'in', P: P({
       hips: [40, -6, 3], spine: [-10, 3, 1], chest: [-16, 8, -2], neck: [-14, -4, 2], head: [-12, -6, 4],
-      shoulderL: [-18, 8, -34], upperArmL: [-32, 18, -108], lowerArmL: [-44, -20, -22],
-      shoulderR: [-18, -8, 34], upperArmR: [-34, -18, 104], lowerArmR: [-42, 20, 22],
+      shoulderL: [-13, 10, -35], upperArmL: [37, -47, 125], lowerArmL: [-49, -21, -19],
+      shoulderR: [-13, -9, 34], upperArmR: [54, 59, -126], lowerArmR: [-44, 38, 5],
       upperLegL: [-88, 10, 7], lowerLegL: [66, 0, 0], footL: [-4, -8, 0],
       upperLegR: [-78, -10, -7], lowerLegR: [60, 0, 0], footR: [0, 8, 0],
       tailA: [-28, 8, 0], tailB: [-36, 12, 0], tailC: [-18, 8, 0], tailD: [8, -6, 0],
@@ -1866,15 +1866,15 @@ def('hook_release', {
     // let go and throw the arms wide — the release reads as a decision, not a slip
     { t: 0.12, e: 'out', P: {
       hips: [4, -10, 5], spine: [4, 5, 2], chest: [8, 12, -3], neck: [-26, -6, 3], head: [-28, -10, 6],
-      upperArmL: [-52, 20, -70], lowerArmL: [-22, -22, -24], handL: [10, -18, -22],
-      upperArmR: [-46, -20, 66], lowerArmR: [-20, 22, 24],
+      upperArmL: [-35, -66, 13], lowerArmL: [-41, -13, -19], handL: [10, -18, -22],
+      upperArmR: [-39, 73, -2], lowerArmR: [-31, 29, 18],
       upperLegL: [-20, 10, 6], lowerLegL: [26, 0, 0], footL: [24, -8, 0], toeL: [16, 0, 0],
       upperLegR: [-2, -10, -6], lowerLegR: [14, 0, 0], footR: [28, 8, 0], toeR: [16, 0, 0],
       tailA: [-22, -12, 0], tailB: [-32, -16, 0], tailC: [-16, -11, 0], tailD: [10, 9, 0],
     }, pos: [0, 0.03, -0.02], sc: { hips: [0.94, 1.10, 0.95] }, cane: [-40, 40, 0] },
     { t: 0.4, e: 'smooth', P: {
       hips: [12, -4, 2], chest: [-2, 6, -1], head: [-20, -4, 2],
-      upperArmL: [-32, 16, -72], upperArmR: [-26, -16, 68],
+      upperArmL: [-13, -62, 21], upperArmR: [-5, 65, -26],
       upperLegL: [-40, 8, 5], lowerLegL: [50, 0, 0], upperLegR: [-20, -8, -5], lowerLegR: [34, 0, 0],
       tailA: [-12, -8, 0], tailB: [-24, -12, 0], tailC: [-8, -8, 0], tailD: [16, 6, 0],
     }, pos: [0, 0, 0], sc: { hips: [1, 1, 1] }, cane: [96, 6, -8] },
@@ -1902,13 +1902,13 @@ def('rail_slide', {
     { t: 0, e: 'smooth', P: RAIL, pos: [0.03, -0.30, 0], cane: [64, -50, -8] },
     { t: 0.45, e: 'smooth', P: {
       hips: [24, -52, -6], chest: [-2, 26, 4], head: [-18, 24, -2],
-      upperArmL: [-52, 20, -68], upperArmR: [28, -18, 34],
+      upperArmL: [-45, -82, -1], upperArmR: [2, -62, 19],
       upperLegL: [-42, 26, 8], lowerLegL: [52, 0, 0], upperLegR: [-36, -22, -8], lowerLegR: [48, 0, 0],
       tailA: [4, -14, 0], tailB: [-6, -20, 0], tailC: [-2, -13, 0], tailD: [18, 8, 0],
     }, pos: [0.02, -0.335, 0], cane: [68, -38, -8] },
     { t: 0.95, e: 'smooth', P: {
       hips: [20, -52, 12], chest: [-2, 26, -12], head: [-18, 24, 14],
-      upperArmL: [-40, 20, -48], upperArmR: [40, -18, 52],
+      upperArmL: [-33, -45, -11], upperArmR: [52, 39, 7],
       upperLegL: [-52, 26, 8], lowerLegL: [62, 0, 0], upperLegR: [-26, -22, -8], lowerLegR: [38, 0, 0],
       tailA: [4, -34, 0], tailB: [-6, -44, 0], tailC: [-2, -28, 0], tailD: [18, 18, 0],
     }, pos: [0.04, -0.285, 0], cane: [60, -58, -8] },
@@ -1994,8 +1994,8 @@ def('pole_slide', {
   keys: [
     { t: 0, e: 'smooth', P: P({
       hips: [-18, -4, 0], spine: [8, 2, 0], chest: [12, 4, 0], neck: [-24, -2, 0], head: [-26, 10, 0],
-      shoulderL: [-16, 8, -34], upperArmL: [-12, 18, -122], lowerArmL: [-30, -20, -22], handL: [30, -18, -20],
-      shoulderR: [-16, -8, 34], upperArmR: [-10, -18, 118], lowerArmR: [-28, 20, 22], handR: [26, 18, 20],
+      shoulderL: [-9, 6, -37], upperArmL: [42, -42, 143], lowerArmL: [-44, -15, -15], handL: [30, -18, -20],
+      shoulderR: [-10, -9, 36], upperArmR: [50, 48, -139], lowerArmR: [-43, 19, 9], handR: [26, 18, 20],
       upperLegL: [-52, 22, 10], lowerLegL: [76, 0, 0], footL: [-4, -18, 0], toeL: [10, 0, 0],
       upperLegR: [-52, -22, -10], lowerLegR: [76, 0, 0], footR: [-4, 18, 0], toeR: [10, 0, 0],
       tailA: [-30, 6, 0], tailB: [-38, 9, 0], tailC: [-20, 6, 0], tailD: [4, -5, 0],
@@ -2013,21 +2013,21 @@ def('pole_swing', {
   keys: [
     { t: 0, e: 'smooth', P: P({
       hips: [10, -26, -22], spine: [-4, 8, 6], chest: [-8, 18, 10], neck: [-18, -8, -6], head: [-20, -14, -10],
-      shoulderL: [-16, 10, -36], upperArmL: [-20, 20, -116], lowerArmL: [-34, -20, -24], handL: [28, -18, -22],
-      shoulderR: [-4, -10, 14], upperArmR: [32, -18, 40], lowerArmR: [-34, 24, 18], handR: [12, 18, 12],
+      shoulderL: [-14, 10, -37], upperArmL: [74, -43, 159], lowerArmL: [-42, -27, -5], handL: [28, -18, -22],
+      shoulderR: [-4, -10, 17], upperArmR: [25, 2, 9], lowerArmR: [-18, 19, 32], handR: [12, 18, 12],
       upperLegL: [-24, 20, 10], lowerLegL: [46, 0, 0], footL: [14, -16, 0], toeL: [12, 0, 0],
       upperLegR: [-4, -20, -10], lowerLegR: [30, 0, 0], footR: [20, 16, 0], toeR: [12, 0, 0],
       tailA: [-8, -28, 0], tailB: [-18, -38, 0], tailC: [-8, -25, 0], tailD: [14, 16, 0],
     }), pos: [-0.04, -0.08, 0.04], cane: [70, -40, -8] },
     { t: 0.42, e: 'smooth', P: {
       hips: [10, -26, 22], chest: [-8, 18, -10], head: [-20, -14, 10],
-      upperArmL: [-28, 20, -96], upperArmR: [24, -18, 56],
+      upperArmL: [32, -51, 73], upperArmR: [33, 44, -3],
       upperLegL: [-8, 20, 10], lowerLegL: [34, 0, 0], upperLegR: [-20, -20, -10], lowerLegR: [42, 0, 0],
       tailA: [-8, 26, 0], tailB: [-18, 36, 0], tailC: [-8, 24, 0], tailD: [14, -15, 0],
     }, pos: [0.04, -0.06, 0.04], cane: [70, -22, -8] },
     { t: 0.85, e: 'smooth', P: {
       hips: [10, -26, -22], chest: [-8, 18, 10], head: [-20, -14, -10],
-      upperArmL: [-20, 20, -116], upperArmR: [32, -18, 40],
+      upperArmL: [74, -43, 159], upperArmR: [25, 2, 9],
       upperLegL: [-24, 20, 10], lowerLegL: [46, 0, 0], upperLegR: [-4, -20, -10], lowerLegR: [30, 0, 0],
       tailA: [-8, -28, 0], tailB: [-18, -38, 0], tailC: [-8, -25, 0], tailD: [14, 16, 0],
     }, pos: [-0.04, -0.08, 0.04], cane: [70, -40, -8] },
@@ -2262,8 +2262,8 @@ def('dive_attack', {
   keys: [
     { t: 0, e: 'in', P: P({
       hips: [-30, -6, 3], spine: [10, 3, 1], chest: [16, 8, -2], neck: [-30, -4, 2], head: [-34, -6, 4],
-      shoulderL: [-16, 14, -30], upperArmL: [-30, 20, -94], lowerArmL: [-40, -22, -22],
-      shoulderR: [-18, -16, 32], upperArmR: [-40, -24, 104], lowerArmR: [-38, 28, 26], handR: [22, 24, 20],
+      shoulderL: [-10, 15, -30], upperArmL: [48, -62, 100], lowerArmL: [-47, -30, -3],
+      shoulderR: [-15, -12, 29], upperArmR: [44, 79, -112], lowerArmR: [-38, 42, 5], handR: [22, 24, 20],
       upperLegL: [20, 10, 6], lowerLegL: [40, 0, 0], footL: [22, -8, 0], toeL: [14, 0, 0],
       upperLegR: [26, -10, -6], lowerLegR: [36, 0, 0], footR: [24, 8, 0], toeR: [14, 0, 0],
       tailA: [-24, 8, 0], tailB: [-34, 12, 0], tailC: [-18, 8, 0], tailD: [6, -6, 0],
@@ -2271,8 +2271,8 @@ def('dive_attack', {
     // committed: body vertical, cane speared straight down past his boots
     { t: 0.18, e: 'out', P: {
       hips: [36, -4, 2], spine: [-14, 2, 1], chest: [-24, 5, -1], neck: [-2, -3, 1], head: [4, -4, 2],
-      shoulderL: [12, 10, -14], upperArmL: [-104, 12, -18], lowerArmL: [-34, -16, -10], handL: [30, -12, -6],
-      shoulderR: [12, -10, 14], upperArmR: [-108, -12, 18], lowerArmR: [-30, 16, 10], handR: [28, 12, 6],
+      shoulderL: [14, 9, -12], upperArmL: [-97, -4, -9], lowerArmL: [-29, -18, -12], handL: [30, -12, -6],
+      shoulderR: [14, -11, 13], upperArmR: [-103, 4, 9], lowerArmR: [-23, 16, 16], handR: [28, 12, 6],
       upperLegL: [-52, 8, 5], lowerLegL: [86, 0, 0], footL: [16, -6, 0], toeL: [14, 0, 0],
       upperLegR: [-46, -8, -5], lowerLegR: [80, 0, 0], footR: [18, 6, 0], toeR: [14, 0, 0],
       tailA: [-34, -4, 0], tailB: [-42, -6, 0], tailC: [-22, -4, 0], tailD: [2, 3, 0],
@@ -2365,22 +2365,22 @@ def('paraglide', {
   keys: [
     { t: 0, e: 'smooth', P: P({
       hips: [-16, -8, 4], spine: [6, 4, 2], chest: [10, 10, -3], neck: [-28, -5, 2], head: [-30, -8, 5],
-      shoulderL: [-18, 10, -34], upperArmL: [-20, 20, -112], lowerArmL: [-26, -22, -24], handL: [26, -18, -22],
-      shoulderR: [-18, -10, 34], upperArmR: [-18, -20, 108], lowerArmR: [-24, 22, 24], handR: [24, 20, 22],
+      shoulderL: [-12, 11, -38], upperArmL: [43, -49, 131], lowerArmL: [-40, -20, -14], handL: [26, -18, -22],
+      shoulderR: [-14, -6, 34], upperArmR: [63, 76, -130], lowerArmR: [-32, 32, 0], handR: [24, 20, 22],
       upperLegL: [10, 12, 6], lowerLegL: [34, 0, 0], footL: [22, -8, 0], toeL: [14, 0, 0],
       upperLegR: [18, -12, -6], lowerLegR: [28, 0, 0], footR: [26, 8, 0], toeR: [14, 0, 0],
       tailA: [-22, 10, 0], tailB: [-32, 14, 0], tailC: [-16, 9, 0], tailD: [8, -7, 0],
     }), pos: [0, -0.04, -0.04], cane: [-92, 0, 0] },
     { t: 0.7, e: 'smooth', P: { hips: [-12, 8, -4], chest: [10, -10, 3], head: [-30, 8, -5],
-      upperArmL: [-14, 20, -104], upperArmR: [-24, -20, 116],
+      upperArmL: [61, -63, 119], upperArmR: [43, -31, -155],
       upperLegL: [16, 12, 6], upperLegR: [10, -12, -6],
       tailA: [-26, -10, 0], tailB: [-36, -14, 0], tailC: [-18, -9, 0], tailD: [6, 7, 0] }, pos: [0, -0.01, -0.04], cane: [-88, 0, 0] },
     { t: 1.4, e: 'smooth', P: { hips: [-18, -6, 5], chest: [10, 8, -4], head: [-30, -6, 6],
-      upperArmL: [-24, 20, -116], upperArmR: [-14, -20, 104],
+      upperArmL: [51, -40, 135], upperArmR: [59, 61, -102],
       upperLegL: [6, 12, 6], upperLegR: [22, -12, -6],
       tailA: [-20, 12, 0], tailB: [-30, 16, 0], tailC: [-15, 11, 0], tailD: [9, -8, 0] }, pos: [0, -0.05, -0.04], cane: [-96, 0, 0] },
     { t: 2.0, e: 'smooth', P: { hips: [-16, -8, 4], chest: [10, 10, -3], head: [-30, -8, 5],
-      upperArmL: [-20, 20, -112], upperArmR: [-18, -20, 108],
+      upperArmL: [43, -49, 131], upperArmR: [63, 76, -130],
       upperLegL: [10, 12, 6], upperLegR: [18, -12, -6],
       tailA: [-22, 10, 0], tailB: [-32, 14, 0], tailC: [-16, 9, 0], tailD: [8, -7, 0] }, pos: [0, -0.04, -0.04], cane: [-92, 0, 0] },
   ],
@@ -2392,8 +2392,8 @@ def('hurt', {
   keys: [
     { t: 0, e: 'snap', P: P({
       hips: [-24, 12, -8], spine: [-10, -6, 4], chest: [-22, 14, -8], neck: [16, -8, 5], head: [22, 12, -10],
-      shoulderL: [-14, 14, -30], upperArmL: [-56, 20, -76], lowerArmL: [-24, -22, -24], handL: [22, -20, -24],
-      shoulderR: [-14, -14, 30], upperArmR: [-48, -20, 72], lowerArmR: [-22, 22, 24], handR: [20, 22, 24],
+      shoulderL: [-17, 9, -31], upperArmL: [1, -95, 39], lowerArmL: [-21, -35, 1], handL: [22, -20, -24],
+      shoulderR: [-11, -11, 37], upperArmR: [3, 48, -65], lowerArmR: [-34, 16, 15], handR: [20, 22, 24],
       upperLegL: [-38, 12, 6], lowerLegL: [50, 0, 0], footL: [8, -8, 0], toeL: [10, 0, 0],
       upperLegR: [-14, -12, -6], lowerLegR: [26, 0, 0], footR: [16, 8, 0], toeR: [10, 0, 0],
       tailA: [26, -14, 0], tailB: [16, -20, 0], tailC: [-4, -13, 0], tailD: [8, 9, 0],
@@ -2406,7 +2406,7 @@ def('hurt', {
       sc: { chest: [1.06, 0.94, 1.04], pupilL: [0.35, 0.35, 1], pupilR: [0.35, 0.35, 1] }, cane: [60, 60, 0] },
     { t: 0.16, e: 'out', P: {
       hips: [18, 8, -5], chest: [-8, 10, -5], neck: [-8, -5, 3], head: [-6, 8, -6],
-      upperArmL: [-30, 16, -50], upperArmR: [-24, -16, 46],
+      upperArmL: [1, -43, 7], upperArmR: [4, 48, 2],
       upperLegL: [-58, 10, 5], lowerLegL: [70, 0, 0], upperLegR: [-40, -10, -5], lowerLegR: [56, 0, 0],
       tailA: [-2, 10, 0], tailB: [-12, 14, 0], tailC: [4, 9, 0], tailD: [20, -7, 0],
     }, pos: [0, -0.30, 0.02], sc: { chest: [1, 1, 1], pupilL: [0.35, 0.35, 1], pupilR: [0.35, 0.35, 1] }, cane: [86, 20, 0] },
@@ -2414,7 +2414,7 @@ def('hurt', {
     { t: 0.42, e: 'out', sc: { pupilL: [1, 1, 1], pupilR: [1, 1, 1] } },
     { t: 0.36, e: 'out', P: {
       hips: [10, 4, -2], chest: [2, 4, -2], head: [-12, 6, -4], jaw: [7, 0, 0],
-      upperArmL: [-18, 10, -36], upperArmR: [-12, -10, 34],
+      upperArmL: [15, -31, 10], upperArmR: [14, 35, 4],
       upperLegL: [-28, 8, 5], lowerLegL: [36, 0, 0], upperLegR: [-20, -8, -5], lowerLegR: [28, 0, 0],
     }, pos: [0, -0.12, 0.01] },
     { t: 0.62, e: 'soft', P: IDLE_A, pos: [-0.078, -0.018, 0], cane: CANE.plant },
@@ -2428,8 +2428,8 @@ def('ko', {
   keys: [
     { t: 0, e: 'in', P: P({
       hips: [-18, 10, -6], spine: [-8, -5, 3], chest: [-18, 12, -6], neck: [12, -6, 4], head: [18, 10, -8],
-      upperArmL: [-48, 18, -66], lowerArmL: [-28, -20, -22],
-      upperArmR: [-40, -18, 62], lowerArmR: [-26, 20, 22],
+      upperArmL: [-28, -92, 4], lowerArmL: [-28, -7, -7],
+      upperArmR: [-18, 65, 2], lowerArmR: [-14, 4, 18],
       upperLegL: [-30, 10, 5], lowerLegL: [42, 0, 0], upperLegR: [-12, -10, -5], lowerLegR: [24, 0, 0],
       tailA: [20, -10, 0], tailB: [10, -14, 0], tailC: [-6, -9, 0], tailD: [10, 7, 0],
       jaw: [16, 0, 0], browL: [0, 0, -16], browR: [0, 0, 14],
@@ -2439,8 +2439,8 @@ def('ko', {
     }), pos: [0, -0.08, -0.08], sc: { pupilL: [0.45, 0.45, 1], pupilR: [0.45, 0.45, 1] }, cane: [70, 50, 0] },
     { t: 0.34, e: 'out', P: {
       hips: [86, 6, -4], spine: [-16, -3, 2], chest: [-26, 8, -4], neck: [26, -4, 2], head: [30, 6, -5],
-      upperArmL: [-70, 22, -96], lowerArmL: [-14, -22, -26], handL: [16, -22, -26],
-      upperArmR: [-62, -22, 92], lowerArmR: [-12, 22, 26], handR: [14, 22, 26],
+      upperArmL: [-2, -80, 72], lowerArmL: [-35, -3, -8], handL: [16, -22, -26],
+      upperArmR: [-10, 78, -57], lowerArmR: [3, 30, -23], handR: [14, 22, 26],
       upperLegL: [-96, 16, 8], lowerLegL: [104, 0, 0], footL: [-8, -12, 0],
       upperLegR: [-58, -18, -8], lowerLegR: [70, 0, 0], footR: [-4, 14, 0],
       tailA: [-10, 16, 0], tailB: [-20, 22, 0], tailC: [-10, 15, 0], tailD: [12, -10, 0],
@@ -2455,7 +2455,7 @@ def('ko', {
     // a small dead bounce
     { t: 0.46, e: 'out', P: { hips: [80, 6, -4], head: [26, 6, -5] }, pos: [0, -0.80, 0.02], sc: { hips: [1.06, 0.94, 1.05], chest: [1, 1, 1] } },
     { t: 0.62, e: 'smooth', P: { hips: [90, 8, -5], head: [34, 8, -7],
-      upperArmL: [-76, 22, -100], upperArmR: [-68, -22, 96],
+      upperArmL: [-3, -78, 68], upperArmR: [5, 82, -57],
       upperLegL: [-88, 16, 8], upperLegR: [-52, -18, -8],
       tailA: [-14, 20, 0], tailB: [-24, 26, 0] }, pos: [0, -0.90, 0.02], sc: { hips: [1.02, 0.97, 1.02] } },
     { t: 1.3, e: 'soft', P: { head: [32, 10, -8], jaw: [10, 0, 0],
@@ -2730,6 +2730,14 @@ export function sampleCane(clip, time, out) {
 
 export const CLIPS = Object.create(null);
 export const MISSING = [];
+
+/**
+ * The AUTHORING source, exported for the same reason `compile` is: offline instruments that
+ * reason about what was authored rather than what was sampled (`tools/uncross.mjs` solves arm
+ * chains against the shipped FK and needs the keys, not the tracks). Read-only by convention —
+ * nothing in `src/` writes it, and a tool that mutates it is mutating every clip in the build.
+ */
+export const RAW_CLIPS = RAW;
 
 for (const name in RAW) CLIPS[name] = compile(name, RAW[name]);
 for (const name of REQUIRED) if (!CLIPS[name]) MISSING.push(name);

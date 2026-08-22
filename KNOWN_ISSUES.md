@@ -47703,3 +47703,153 @@ the click within it, never as the user's experience.
 - **What none of this reaches.** Whether a real Chrome honours a context created after activation is
   unmeasured here and deliberately not depended upon. And no test in this file can say the player
   *hears* anything: `OfflineCtx` is not a sound card, exactly as this container is not a frame rate.
+
+---
+
+## §532 — "Still tucked in too much and crossed in some animations": the two complaints were one mechanism, and the order mattered
+
+The user, from the live build carrying §531's `{ elbow: 0.45, knee: 0.35 }`: *"The arms are still
+tucked in too much and crossed in some animations."* Both halves land in this block, and the
+first thing measured was whether they are independent. **They are not**, and that decided the
+order of the work.
+
+### §532.1 The coupling, measured first — the lever deepens every crossing
+
+§479.5 repaired the two states the user named then (ledge, balance) and left a census of ten
+clips carrying the same defect, recorded so the next report would begin from a list rather than
+a hunt. Cashing that list started by re-measuring it against the CURRENT build, not the old
+note — and the list had already moved: **eight, not ten**, because §479.8's hook port replaced
+`hook_grab`/`hook_swing` with the repo's own (uncrossed) `CaneSwing` clips. The stale list would
+have sent me to fix two clips that no longer exist in that form.
+
+Then the coupling, which is the finding this section exists for. Sweeping the same eight through
+the lever:
+
+```
+    clip            k=0 (faithful)   0.45/0.35 (shipped)   0.75/0.60      deeper?
+    jump_apex           -0.01              -0.41             -0.63          yes
+    wall_cling          -1.10              -1.56             -1.81          yes
+    wall_jump           -0.68              -0.86             -0.95          yes
+    hook_release        -0.99              -1.20             -1.38          yes
+    pole_slide          -1.08              -1.51             -1.76          yes
+    pole_swing          -0.80              -1.11             -1.27          yes
+    paraglide           -1.00              -1.42             -1.66          yes
+    ko                  -1.27              -1.34             -1.35          yes
+```
+
+Monotone, every clip, no exception. The mechanism is one sentence: **opening a fold pushes the
+hand along the forearm's own direction, so on a pose whose forearm already points across the
+body it drives the hand further past the midline.** §531 shipped the lever and thereby made the
+residual crossings worse — which is exactly when the user reported them. So the two complaints
+are one job with a required order: uncross first, and only then is the lever free to move. Doing
+it the other way round would have deepened eight crossings to buy a wider stance.
+
+### §532.2 The repair: solved, not reflected, and not by hand
+
+`tools/uncross.mjs`. The defect is §479.5's unchanged — raise-amplitude poses authored with the
+gait family's sign habit (`upperArmL` negative Z / `upperArmR` positive Z), which per Rig.js's
+own table swings each arm DOWN-ACROSS the body — and the obvious repair is the sagittal
+reflection of each arm's own channels, `(x, y, z) → (x, −y, −z)`. **Measured and rejected**: it
+uncrosses 7 of the 8, and ruins them, because it reflects the whole arm and the verb's intent
+lives in the parts it inverts — `wall_cling`'s hands leave the wall (fwd +0.30 → −0.19) and rise
+35 cm. Only the lateral is wrong.
+
+So each keyed arm chain is solved numerically against the real
+`compile → sampleInto → SlyModel` FK: hand onto its own side, **height and reach preserved**,
+and the elbow fold pinned at its current value so the repair cannot move §531's "tucked" metric
+and the two complaints stay separately measurable. Three things the solver had to be taught,
+each by being wrong first:
+
+- **Seed from the mechanism, anchor to the seed.** Anchoring the regularizer to the AUTHORED
+  values anchors it to the defect: a sign flip then costs ~0.9 against position terms of ~1e-3,
+  so the descent dutifully walked the seed back and bought the hand position with a 67° shoulder
+  yaw instead — geometrically valid, and a shoulder that no longer deforms like a shoulder.
+- **Measure in the body frame.** The first pass solved in model X while the census measures in
+  the shoulder-line frame; on poses that yaw the whole body (wall, pole) those disagree, and it
+  reported every key uncrossed while the cycle still read −0.81.
+- **A cycle's last key is not a pose.** Solving it independently split the seam on four looping
+  clips (`jump_apex` 99.7°, `wall_cling` 91.8°, `pole_swing` 107.1°, `paraglide` 88.8°) — caught
+  by `rig.test`'s existing "a looping clip closes its loop" arm, not by me. Closure is decided
+  PER BONE, because a key authored as `P({...})` merges the STAND base and the two ends of a
+  loop routinely differ on inherited bones while the authored ones match exactly.
+
+Eleven clips solved, 108 channel values, applied in document order by a script that aborts
+without writing if any target text is not found after the previous one. Results: every one of
+the eight from −1.35..−0.01 to **+1.02..+1.24** shoulder-widths, plus `rail_slide`, `dive_attack`
+and `hurt`, which were clear at the shipped lever and cross only once it opens further.
+
+`RAW_CLIPS` is newly exported from `Clips.js` for this — the authoring source, for the same
+reason `compile` is already exported: an offline instrument that reasons about what was authored
+rather than what was sampled.
+
+### §532.3 The lever's second ruling, and where the ladder runs out
+
+The ladder extended past §531's top rung, on the now-uncrossed set:
+
+```
+    elbow/knee     elbow°   knee°   hand-spread  foot-spread   lowest foot y
+    0.45 / 0.35     143.4   133.0        1.56         0.60         0.078   ← ruled "still tucked"
+    0.55 / 0.45     150.3   139.4        1.59         0.70         0.073
+    0.65 / 0.50     157.0   142.6        1.61         0.74         0.072
+    0.75 / 0.60     163.5   149.0        1.63         0.83         0.071   ← SHIPS
+    0.85 / 0.70     169.2   155.4        1.64         0.91         0.073
+    1.00 / 1.00     172.0   174.3        1.65         1.12         0.059   ← both limbs straight
+    (procedural reference: 131.9 / 139.5 / 0.79 / 0.62 / 0.056)
+```
+
+`0.75 / 0.60` ships: the largest rung that still leaves a readable bend — +20° of elbow and +16°
+of knee on the ruled-against value, elbow still 8.5° short of the ladder's straight 172°. Past it
+the returns collapse; hand-spread moves 0.01 per rung while the joints go rigid, and a limb with
+no bend left has no follow-through to animate.
+
+**The bound the coordinator asked me to look for is real, and it is not the combat arm.** The
+combat chain is exempt already (§531) and unaffected — its contact stays at 0.100 s. What the
+larger value does push is `wall_run_l/r`: the wall run plants the INSIDE arm on the wall, so that
+forearm points across the body BY DESIGN, and opening it drives the hand 5.9 cm past the midline
+at 0.75. They are the only clips in the set that cross at any rung above 0.55, and they are
+**capped rather than re-authored** (`GODOT_LIMB_OPEN`, the §531 mechanism), because unlike the
+eleven this is not a sign defect — the arm is reaching where the animator sent it. `wall_run_r`
+needs the cap in its own name: it is a `defMirror` of `_l`, and mirroring copies keys, not table
+rows.
+
+**If the user rules "still tucked" a third time, the honest next step is not another rung.** The
+lever would be at 0.85+ where limbs are visibly stiff, and the finding would be that the fold is
+not what they are reading. The measurement to run then is lateral carry at the SHOULDER and HIP
+rather than the distal fold — this section's own numbers say the set is already carried wider
+than anything this project has shipped (hand-spread 1.63 against the procedural 0.79), so a
+third ruling would mean the eye is reading something neither number describes.
+
+### §532.4 On camera, and DOMAIN
+
+`tools/spreadlook.mjs` grew two knobs: `ELBOW=`/`KNEE=` to pin the lever explicitly — so the arm
+the user has ALREADY ruled on can be re-shot against the new one, which the faithful-zero control
+cannot show — and a `cross` take that poses the repaired clips through the same real
+`animation.play()` seam as the hang.
+
+- **crossing**, two clips × two framings, before/after: `shots/cross532/{crossed,uncrossed}-*`.
+  `paraglide` before has both arms wrapped in front of the face with the cane hooked across the
+  head; after, the arm extends out along its own side. `wall_cling` before folds the near arm
+  across to grip in front of the chin; after it reaches out flat to the wall.
+- **lever**, `shots/spread532/{prev045,new075}-*`, idle and loaded hang. At 0.45 the forearm is
+  folded up with the hand at the waist; at 0.75 the arm hangs long, hand lower and clear of the
+  hip, stance leg straighter.
+
+`anim.test`'s seam-chirality arm re-derived, exactly as its own DOMAIN note predicted it would
+have to be: its contrast case used to point at `ko` — one of the ten §479.5 left crossed — and
+§532 solved `ko`, so the fails-on input is now a SYNTHETIC pose carrying the defect idiom
+itself. It cannot rot when a clip is repaired, because it is not a clip. A second assertion adds
+the §532 census as an arm: no clip in the shipped set holds sustained crossed wrists.
+
+DOMAIN (§418.3) for the census arm — *passes on*: the shipped build, 0 of 52 clips crossed at
+≥3 of 5 phases; *fails on*: the pre-§532 build, where eight are (RUN as the synthetic contrast,
+which reads −1.45); *cannot discriminate*: whether an uncrossed pose READS right — the frames
+above carry that, and the in-situ versions of these verbs (a real wall, a real pole, an actual
+glide) remain hardware-sheet material, since all four are posed takes with the state machine
+parked.
+
+**Suite: 972 of 974 from the working tree.** The two failures are not this work and were
+attributed before claiming so: `spawn2eye` is the movement lane's own file, in flight; and
+`telegraph`'s four-ring chain fails only inside the full parallel run and passes in isolation on
+both my tree and a clean worktree at HEAD — an observed load flake on a busy box, recorded as
+that rather than as a green with an asterisk. `camstate` failed the same way in one run and
+passed in the next, same character.

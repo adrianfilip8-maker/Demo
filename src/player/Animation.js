@@ -302,7 +302,39 @@ const GODOT_ALIAS = {
  * walk stride, below what the blend arithmetic in §479.2 already moves, and the live-drive skate
  * column is the instrument that would show it. Recorded as a limit, not silently absorbed.
  */
-export const LIMB_OPEN = { elbow: 0.45, knee: 0.35 };
+/*
+ * §532.2 — the SECOND ruling on this lever, and where the ladder runs out. The user, on the
+ * live build carrying `{ 0.45, 0.35 }`: *"The arms are still tucked in too much."* That value
+ * already delivered elbow 143.4° against the 131.9° this project shipped for its whole life
+ * before the swap, so "more than the old rig" was not the bar — the bar is the eye. The ladder
+ * (`tools/armcross.mjs --sweep`, extended past §531's top rung for this ruling):
+ *
+ *      elbow/knee     elbow°   knee°   hand-spread  foot-spread   lowest foot y
+ *      0.45 / 0.35     143.4   133.0        1.56         0.60         0.078   ← ruled "still tucked"
+ *      0.55 / 0.45     150.3   139.4        1.59         0.70         0.073
+ *      0.65 / 0.50     157.0   142.6        1.61         0.74         0.072
+ *      0.75 / 0.60     163.5   149.0        1.63         0.83         0.071   ← SHIPS
+ *      0.85 / 0.70     169.2   155.4        1.64         0.91         0.073
+ *      1.00 / 1.00     172.0   174.3        1.65         1.12         0.059   ← both limbs straight
+ *      (procedural reference: 131.9 / 139.5 / 0.79 / 0.62 / 0.056)
+ *
+ * `0.75 / 0.60` is chosen as the largest rung that still leaves a READABLE bend: +20° of elbow
+ * and +16° of knee on the ruled-against value, and the elbow still 8.5° short of the straight
+ * 172° the top of the ladder delivers. Past it the returns collapse — hand-spread moves 0.01
+ * per rung while the joints go rigid, and a limb with no bend left has no follow-through to
+ * animate. If the user rules "still tucked" a third time, the honest next step is NOT another
+ * rung: it is that the fold is not what they are reading, and the measurement to run is the
+ * one at the top of §532.3 rather than this constant.
+ *
+ * WHAT BOUNDS IT, measured (§532.1): opening the fold pushes a hand along the forearm's own
+ * direction, so on a pose whose forearm already points ACROSS the body it drives the hand
+ * further past the midline — the lever deepens a crossing monotonically (every clip in the
+ * §479.5 census got worse from 0 → 0.45 → 0.75). That is why this ruling's two halves are one
+ * job: the eleven crossed clips are solved onto their own sides first, and only then is the
+ * lever free to move. After that repair the whole ladder is crossing-free except `wall_run_*`,
+ * capped below.
+ */
+export const LIMB_OPEN = { elbow: 0.75, knee: 0.60 };
 
 /**
  * Per-clip overrides, `{ clip: { elbow, knee } }`. The ruling is set-wide, with ONE exemption
@@ -318,6 +350,18 @@ export const GODOT_LIMB_OPEN = {
   cane_combo_1: { elbow: 0, knee: 0 },
   cane_combo_2: { elbow: 0, knee: 0 },
   cane_combo_3: { elbow: 0, knee: 0 },
+
+  /* §532.2's second exemption, found the same way — by a measurement, not by taste. The wall
+     run plants the INSIDE arm on the wall, so that forearm points across the body by design
+     (the pose is correct; §470's gait census counts the same crossover in run at 17% and calls
+     it the passing pose). Opening the elbow drives that hand further across: at the shipped
+     0.75 the wall runs sit 5.9 cm past the midline, the only clips in the whole set that cross
+     at any rung above 0.55. They are capped at the last rung that keeps them clear rather than
+     re-authored, because unlike the eleven this is not a sign defect — the arm is reaching
+     where the animator sent it. `wall_run_r` is a `defMirror` of `_l` and needs the same cap
+     in its own name: mirroring copies the keys, not this table's row. */
+  wall_run_l: { elbow: 0.5, knee: 0.6 },
+  wall_run_r: { elbow: 0.5, knee: 0.6 },
 };
 
 function limbOpenFor(game) {

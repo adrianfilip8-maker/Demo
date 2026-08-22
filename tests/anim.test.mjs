@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { RIG3 } from '../src/player/SlyModel3.js';
-import { CLIPS, REQUIRED, sampleInto } from '../src/player/Clips.js';
+import { CLIPS, REQUIRED, sampleInto, compile } from '../src/player/Clips.js';
 import { PoseBuffer } from '../src/player/Rig.js';
 import { MIXAMO_CLIPS } from '../src/player/MixamoClips.js';
 import { buildClipSet, ACTIVE, CLIP_REGIME, CLIP_ORIGIN, LIMB_OPEN } from '../src/player/Animation.js';
@@ -477,10 +477,34 @@ test('seam chirality: proc partners of godot states hold uncrossed wrists, and t
       assert.ok(sep > 0.05, `${a}×${b} @w=${w}: mid-fade hand sep ${sep.toFixed(3)} m — the seam scissors`);
     }
   }
-  /* contrast: the metric can say "crossed" — ko is still in the census's crossed idiom */
-  const ko = sepOf([[CLIPS.ko, 0.5 * CLIPS.ko.dur, 1]]);
-  assert.ok(ko < 0, `contrast arm: ko @0.5 reads sep ${ko.toFixed(3)} m — expected the old crossed idiom; ` +
-    'if the §479.5 census backlog was just uncrossed, re-derive this line from the census');
+  /* CONTRAST (§418.3's fails-on case), re-derived in §532.1 exactly as this line predicted it
+     would have to be. It used to point at `ko`, one of the ten clips §479.5 measured as crossed
+     and deliberately left; §532 solved all of them, so pointing at any shipped clip now asserts
+     something no clip does. The durable form is a SYNTHETIC pose carrying the defect itself —
+     the raise-amplitude idiom with the gait family's signs (`upperArmL` negative Z / `upperArmR`
+     positive Z), which is what every one of those eleven clips was written in. It cannot rot
+     when a clip is repaired, because it is not a clip. */
+  const CROSSED_IDIOM = compile('__contrast', {
+    dur: 1, loop: false, hold: 0.5,
+    keys: [{ t: 0, e: 'soft', P: {
+      shoulderL: [-16, 6, -34], upperArmL: [-10, 16, -118], lowerArmL: [-24, -20, -20], handL: [28, -16, -18],
+      shoulderR: [-16, -6, 34], upperArmR: [-8, -16, 114], lowerArmR: [-22, 20, 20], handR: [24, 18, 18],
+    } }],
+  });
+  const idiom = sepOf([[CROSSED_IDIOM, 0.5, 1]]);
+  assert.ok(idiom < 0, `contrast arm: the pre-§479.5 HANG idiom reads sep ${idiom.toFixed(3)} m — `
+    + 'expected NEGATIVE (crossed). If this passes, the metric has stopped being able to say "crossed" '
+    + 'and every uncrossed assertion above it is vacuous.');
+
+  /* and the whole shipped set is clear of it — the §532 census, as an arm */
+  const g532 = buildClipSet('godot').table;
+  const stillCrossed = [];
+  for (const [name, clip] of Object.entries(g532)) {
+    let n = 0;
+    for (const f of [0.1, 0.3, 0.5, 0.7, 0.9]) if (sepOf([[clip, f * clip.dur, 1]]) < 0) n++;
+    if (n >= 3) stillCrossed.push(name);
+  }
+  assert.deepEqual(stillCrossed, [], 'clips shipping with sustained crossed wrists');
 });
 
 test('limb lever (§531): ships OPEN on both joints, and zero is still bit-exact identity', () => {

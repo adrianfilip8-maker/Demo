@@ -9,6 +9,13 @@
  * One invocation is one arm, selected by the boot override alone (the §474 attribution rule):
  *   node tools/spreadlook.mjs               shipped LIMB_OPEN  -> shots/spread1/open-*
  *   FAITHFUL=1 node tools/spreadlook.mjs    elbow 0 / knee 0   -> shots/spread1/faithful-*
+ *
+ * §532 additions:
+ *   ELBOW=/KNEE=  pin the lever explicitly, so the arm the USER has already ruled on can be
+ *                 re-shot against the new one (0.45/0.35 was the §531 ship; the faithful zero
+ *                 is not the comparison the second ruling is about). ARM= names the output.
+ *   TAKES=cross   poses the clips §532.1 solved back onto their own sides, through the same
+ *                 real play() seam as the hang, so the uncrossing has frames of its own.
  */
 import { chromium } from 'playwright';
 import { acquire } from './lock.mjs';
@@ -22,9 +29,11 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const OUT = process.env.OUT || `${ROOT}/shots/spread1`;
 const W = Number(process.env.W || 1600), H = Number(process.env.H || 900);
 const FAITHFUL = !!process.env.FAITHFUL;
+const ELBOW = process.env.ELBOW !== undefined ? Number(process.env.ELBOW) : null;
+const KNEE = process.env.KNEE !== undefined ? Number(process.env.KNEE) : null;
 const SETTLE = Number(process.env.SETTLE || 55);
 const RESET_Z = Number(process.env.RESET_Z || 30);
-const ARM = FAITHFUL ? 'faithful' : 'open';
+const ARM = process.env.ARM || (FAITHFUL ? 'faithful' : ELBOW !== null ? `e${ELBOW}k${KNEE}` : 'open');
 const TAKES = (process.env.TAKES || 'idle,run,hang').split(',');
 const take = (k) => TAKES.includes(k);
 
@@ -85,6 +94,7 @@ const log = [];
 try {
   /* the faithful arm is the boot override; the open arm is simply the shipped constant */
   if (FAITHFUL) await page.addInitScript(() => { window.__LIMB_OPEN = { elbow: 0, knee: 0 }; });
+  else if (ELBOW !== null) await page.addInitScript(([e, k]) => { window.__LIMB_OPEN = { elbow: e, knee: k }; }, [ELBOW, KNEE ?? ELBOW]);
   await page.goto(`http://127.0.0.1:${port}/?shot=1&q=high`, { waitUntil: 'domcontentloaded', timeout: 120000 });
   await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null, { timeout: 600000, polling: 500 });
   await page.evaluate((rz) => {
@@ -184,6 +194,37 @@ try {
   await sim(40);
   await snap('hang-front34', 145, 2.4);
   await snap('hang-profile', 90);
+  }
+
+  /* 4. THE UNCROSSED CLIPS (§532.1). Posed through the same real play() seam, same staging
+     discipline as the hang. These are the poses the user reported as "crossed in some
+     animations": each one held its wrists past the body's midline, and the lever made it
+     worse. Two framings each — the front three-quarter is the one that reads. */
+  if (take('cross')) {
+  await page.evaluate(() => { window.__MOVEMAG = null; window.__SKIPMOVE = false; });
+  await sim(20);
+  for (const verb of (process.env.CROSS_CLIPS || 'paraglide,wall_cling,pole_slide,ko').split(',')) {
+    await page.evaluate(() => {
+      const m = window.__ENGINE.get('movement');
+      m.position.set(0, 0, window.__RESETZ); m.velocity.set(0, 0, 0);
+    });
+    await page.evaluate(() => { window.__SKIPMOVE = false; });
+    await sim(70);
+    const grounded = await page.evaluate(() => !!window.__ENGINE.get('movement')?.grounded);
+    await page.evaluate(() => { window.__SKIPMOVE = true; });
+    await sim(5);
+    const ok = await page.evaluate(async (n) => {
+      const { ACTIVE } = await import('/src/player/Animation.js');
+      if (!ACTIVE[n]) return false;
+      window.__ENGINE.get('animation').play(n, { fade: 0.06, loop: ACTIVE[n].loop, speed: 1 });
+      return true;
+    }, verb);
+    if (!ok) { console.log(`  [cross] no such clip ${verb} — skipped`); continue; }
+    await sim(40);
+    console.log(`  [cross] ${verb} · grounded-at-stage=${grounded}`);
+    await snap(`${verb}-front34`, 145, 2.4);
+    await snap(`${verb}-profile`, 90);
+  }
   }
 
 } finally {

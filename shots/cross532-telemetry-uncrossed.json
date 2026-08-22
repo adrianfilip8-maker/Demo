@@ -1,0 +1,53 @@
+{
+  "sha": "69aa3a1",
+  "ARM": "uncrossed",
+  "faithful": false,
+  "takes": [
+    "cross"
+  ],
+  "W": 1600,
+  "H": 900,
+  "errs": [],
+  "log": [
+    {
+      "frame": "uncrossed-paraglide-front34",
+      "phase": 0,
+      "sp": 0
+    },
+    {
+      "frame": "uncrossed-paraglide-profile",
+      "phase": 0,
+      "sp": 0
+    },
+    {
+      "frame": "uncrossed-wall_cling-front34",
+      "phase": 0,
+      "sp": 0
+    },
+    {
+      "frame": "uncrossed-wall_cling-profile",
+      "phase": 0,
+      "sp": 0
+    },
+    {
+      "frame": "uncrossed-pole_slide-front34",
+      "phase": 0,
+      "sp": 0
+    },
+    {
+      "frame": "uncrossed-pole_slide-profile",
+      "phase": 0,
+      "sp": 0
+    },
+    {
+      "frame": "uncrossed-ko-front34",
+      "phase": 0,
+      "sp": 0
+    },
+    {
+      "frame": "uncrossed-ko-profile",
+      "phase": 0,
+      "sp": 0
+    }
+  ]
+}

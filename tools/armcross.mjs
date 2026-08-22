@@ -337,7 +337,7 @@ if (process.argv.includes('--sweep')) {
   console.log('candidate          elbow°   knee°   hand-spread  foot-spread   lowest foot y');
   console.log(`  PROC (reference) ${p.fold.toFixed(1).padStart(6)} ${p.kfold.toFixed(1).padStart(7)} ${p.hand.toFixed(2).padStart(12)} ${p.foot.toFixed(2).padStart(12)} ${p.minFootY.toFixed(3).padStart(15)}`);
   const base = measure(buildClipSet('godot').table);
-  for (const [e, k] of [[0, 0], [0.25, 0.2], [0.35, 0.25], [0.45, 0.35], [0.55, 0.45], [0.5, 0.5], [0.7, 0.6]]) {
+  for (const [e, k] of [[0, 0], [0.25, 0.2], [0.35, 0.25], [0.45, 0.35], [0.55, 0.45], [0.65, 0.5], [0.75, 0.6], [0.85, 0.7], [1.0, 0.85], [1.0, 1.0]]) {
     globalThis.__LIMB_OPEN = { elbow: e, knee: k };
     const m = measure(buildClipSet('godot').table);
     delete globalThis.__LIMB_OPEN;
