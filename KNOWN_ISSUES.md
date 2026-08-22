@@ -44246,3 +44246,203 @@ the load it was to be used on. Every window is now flushed before its count is r
   been seen to report something. Explicitly does **not** discriminate bytes per frame (§544.5).
 
 No source file was changed this round: every lever in §544.3 belongs to another lane.
+
+## §581 — The boom crush is the smaller half: 84 % of the Sly that is missing is where the camera POINTS, and the clamp was aiming at his navel
+
+§580 shipped the containment ruling as an invariant on the subject's CENTRE and deliberately gated
+nothing on the silhouette, because whole-body containment is unreachable at the boom floor and a
+predicate no pose can satisfy would have convicted the boom under the clamp's name. That reasoning
+stands. But it left the ruling half open: the clamp guarantees a point, and the user said "Sly".
+The worst frame on the record showed 11 % of him.
+
+Commissioned to find what drives the boom to `distHardMin`, price the levers, and recommend one.
+**The obvious suspect is the smaller half by a factor of five, and the fix is free.**
+
+### §581.0 The ceiling, before any tuning (§450.4)
+
+A segment of length H subtends its largest angle at a viewpoint level with its midpoint, so a
+1.80 m body fits whole in a 52° lens only at horizontal stand-off ρ ≥ H/(2·tan 26°):
+
+```
+  whole body fits at          ρ ≥ 1.845 m          — 3.4 × the boom floor distHardMin 0.55
+  at ρ 0.55 the body subtends 117.1°  vs a 52° frame  → the BEST any orientation can do is 46 %
+  at ρ 1.00                    84.0°                  →                                   59 %
+  at ρ 1.40                    65.5°                  →                                   76 %
+```
+
+Derived two ways that can disagree — the closed form and the two-pointer widest-window search the
+arms actually use — agreeing to < 1e-3 across a swept ρ, and disagreeing by > 0.05 when the search
+is fed the horizontal half-angle instead. A bound derived once by one method is a bound nobody has
+checked.
+
+One consequence matters more than the headline and was not obvious: **above ~2.4 m of camera
+height the whole body fits at any horizontal distance at all**, because looking down foreshortens
+it to a point. A crushed boom costs body only when the camera is also LOW. That is why the crush
+frequency and the body loss turn out not to be the same quantity.
+
+### §581.1 Measured, not derived (§442.3): where the loss actually is
+
+The §580 battery, rig live in the input loop, 14,966 frames over 62 routes and 31 states. For each
+frame: the fraction of the live capsule inside the written frame (`actual`), and the fraction the
+SAME camera POSITION could have shown with the best possible orientation (`best`). The gap between
+them is aim; the gap between `best` and 1 is where the camera is standing.
+
+```
+  boom at distHardMin              1,251 frames   8.5 %
+  boom occluded below `want`       5,580 frames  37.8 %
+
+  mean body fraction 0.898  →  total loss 0.102
+        POSITION loss (where the camera IS)     0.016   16 %
+        ORIENTATION loss (where it POINTS)      0.086   84 %
+
+  frames under 70 % body            2,853  (19 %)
+        …at a position that could have shown ≥ 75 %   2,542   (89 % of them)
+
+  by bucket        n        actual   best
+    clamp+occluded 3,399    0.620    0.947     ← the whole loss lives here
+    clamp, no occl   174    0.770    1.000
+    occluded only  2,181    0.928    0.976
+    neither        9,012    0.999    1.000     ← ordinary play is already perfect
+```
+
+`ledgeHang` is the cleanest instance: 640 frames, boom 2.14 m, **never once crushed**, position
+ceiling **1.000** — the camera could show every pixel of him — and it showed 0.585. Nothing was
+wrong with where the camera was.
+
+**The cause is the clamp itself.** Holding the centre at |ndcY| = 0.88 puts, by construction, about
+half the character outside the frame on every frame it engages. The stage that exists to keep Sly
+in frame is what was cutting him in half.
+
+### §581.2 The fix: hold the span, not the point
+
+`clampSubject: 'extent'`. `need` is computed from the feet and head elevations rather than one
+point: if the extent fits inside the margin band, hold the whole band; if it cannot fit, centre it,
+because the widest window on a monotone bearing is the centred one and that is the exact maximiser
+of visible body at that camera position. Same subject §580 defended (the live capsule), same angle
+space, still exact behind the near plane.
+
+**One thing had to be given back, and it took a measurement to find.** The degrade branch aims at
+the ANGULAR midpoint, which is not the centre's angle: a camera 1.5 m up at ρ 0.3 puts the feet at
+−78.7°, the head at +45°, the midpoint at −16.9° and the CENTRE at −63.4°. Centring the midpoint
+throws the centre 46.5° off axis and out of the frame — driven, that cost **142 frames of §580's
+invariant** for +0.068 of body. Visible body is unimodal in the rotation, so the constrained
+maximiser is the boundary: `need` is clamped to the window that keeps the centre inside the margin.
+§580's invariant is the floor this stands on, and the arms assert the centre never leaves in
+either regime so the trade cannot quietly be made again.
+
+Stage 2's trigger and solve are UNTOUCHED — still the anchor's own `need`, exactly as §580 shipped
+them. Only the rotation stage 1 finally applies is aimed at the extent. The translate is the uncast
+stage and nobody has priced a wider trigger for it; measured, it now fires *less* (141 → 125), and
+the lateral stage with it (39 → 29).
+
+### §581.3 What it bought and what it cost
+
+```
+                                        centre (§580)      extent (shipped)
+  mean body fraction                       0.8983             0.9681
+  frames under 70 % body                2,853 (19.1 %)      760 (5.1 %)
+        …orientation-bound of those       2,542               481
+  clamp engaged                            23.8 %             34.6 %      ← the cost
+  view step, median                        0.044              0.032  °/f
+  view step, p99                           5.50               5.12   °/f
+  frames over 10 / 30 / 60 °per frame      56 / 25 / 13       53 / 18 / 13
+  16 m slam impact ndcY                    −0.86              −0.65
+  slam release, worst step                 2.47               1.85   °/f
+```
+
+**Engaging earlier is engaging more gently**, and that is the whole answer to the restlessness the
+user's rulings protect: holding the span starts correcting when the head reaches the margin instead
+of waiting for the centre, so every correction is smaller. Not one restlessness measure got worse.
+
+The protected class, driven under both regimes:
+
+```
+                   clamp engaged      worst °/frame       mean body
+  idle                0 →   0          0.17 → 0.17       1.000 → 1.000
+  walk                0 →   0          0.20 → 0.20       1.000 → 1.000
+  run + jumps        52 → 123         15.17 →  8.38      0.852 → 0.942
+  plain run          65 → 174         17.24 → 15.06      0.852 → 0.933
+  settled climb     402 → 420         32.83 → 21.41      0.616 → 0.825
+```
+
+Standing still and walking engage it zero times in both regimes — the extent hold does not reach
+down into ordinary uncrushed play, because at a normal boom the whole body sits far inside the
+margin. camclamp's own replay control is unmoved: **`run + jumps 0 f engaged, max 0.00°`.**
+
+The honest cost, stated plainly: **the zero-cost guarantee's inactive set shrank.** It was never
+"the centre is inside the margin"; it was "the subject is inside the margin", and the subject is
+now the span. Inside-margin frames 12,138 → 10,340, and 0 of them moved. Three arms went red on
+exactly this and were corrected rather than relaxed — a control that does not use the mechanism's
+own trigger is not a control (§442).
+
+### §581.4 The levers that were NOT taken, priced
+
+Every one of these targets the 0.016 position half, which is a sixth of the loss:
+
+- **Raise `distHardMin`.** To buy the body it must reach 1.845 m, 3.4× its current value. The floor
+  exists to keep the lens out of geometry; this is the one number that cannot move for it.
+- **Soften the pull-in.** Same sixth, and the user has ruled the boom chain reads responsive as-is.
+- **Dolly-zoom — widen the lens as the boom shortens.** Priced from §581.0 rather than from taste:
+  fitting the body at ρ 0.55 needs a **117° vertical** lens, at ρ 1.0 an **84°** one. Both are far
+  outside "the camera should not open up much", and neither is a near miss.
+- **The level's geometry.** 37.8 % of frames are occluded below `want`, and the dune ascent and the
+  crushed hook swing are on file as level findings. Real, world lane's, and still the same sixth.
+
+**Recommendation: the shipped one.** 84 % of the loss, no new constant, no camera restlessness, no
+geometry moved, and the two rulings in the area (the sprint framing and the boom chain) untouched.
+The remaining 16 % is bounded by the ceiling in §581.0 and is not worth what any of the four costs.
+
+### §581.5 The frames, and the four staging faults they cost
+
+`tools/camlook.mjs` S6 photographs both regimes at the SAME sim frame — `clampSubject` poked
+through `camera.tune` (a harness seam the rig grew for this; `Terrain` and `ToonMaterial` both had
+one and the rig did not, so no browser capture in this project had ever run a camera-constant
+A/B). Two poses per §466.5, both driven:
+
+```
+  pose                                   centre hold            extent hold
+  T3 drainpipe climb, boom 1.53     body 0.561, ndcY −0.88   body 0.951, ndcY −0.20
+  slam settle in the open, boom 3.30  body 0.780, ndcY −0.85   body 1.000, ndcY −0.61
+```
+
+The pictures say it more plainly than the numbers: under the centre hold the climb frame is cut
+off at Sly's waist with the wall above him filling the shot, and the slam frame cuts him at the
+shins on the bottom edge. Under the extent hold both frames hold him hat to feet. Same sim state,
+same props, same light — the only difference is where the lens points.
+
+**Getting there cost four staging faults, and every one was caught by a check rather than by
+luck.** Recorded because the failure modes are general:
+
+1. **The telemetry was stale by one poke.** The probe ran after the poke but BEFORE `capture()`,
+   and `capture()` is what runs `renderFrame(0)` and therefore what re-runs `_write` with the new
+   constant — so every row described the PREVIOUS regime's pose and was stapled to this regime's
+   PNG. The first run's numbers were inverted against its own pictures. Caught only because the
+   pictures disagreed with every node measurement in this section. A number and a frame under one
+   label have to come from the same render.
+2. **The first second-pose was not a pose.** A ledge hang set up in-page with `probeLedge` +
+   `sm.set('ledgeHang')`: the state name read `ledgeHang` and the frame showed Sly buried in the
+   courtyard paving with his hat poking through the deck. **A matching state name is not a valid
+   pose.** A placed pose is a picture of my model of the world (§435.4).
+3. **The dune ascent could not be driven from the keyboard here** — 420 frames of held W never
+   engaged the clamp at a short boom. The tool printed that and shot nothing, which is the
+   behaviour worth keeping.
+4. **An `attach` state re-snaps the position it owns.** Staging the slam with `position.set` — and
+   then with `teleport()` — left Sly welded to the drainpipe at y 9.34 while the harness believed
+   it had moved him to y 16, and photographed a `poleSwing` at pose A's own spot under a `slam`
+   label. S2's press-check ("ATTACK DID NOT REGISTER") caught it; the frames were deleted.
+   `sm.set('fall')` runs `PoleClimb.exit`, which is what actually releases him.
+
+Cost, for the record: five capture runs, ~30 minutes of a shared FIFO-locked box, for four
+usable frames. Not a quality problem — 960×540 on the software rasteriser is legible for a framing
+judgement, and these are framing judgements. It is an iteration-latency problem, and it is the
+reason the numeric evidence was gathered first and the frames used to confirm it rather than to
+find it.
+
+### §581.6 Reported, not fixed: the whip at the boom floor
+
+13 frames of 14,966 exceed 60° of view rotation in a single frame, up to ~133°, all on the
+pole-swing take at `distHardMin`, and **identical in both regimes** — this hold neither causes nor
+cures them. §580 bounded the camera's POSITION at that pose; the rotation is still unbounded frame
+to frame. The obvious repair is a rate limit, and §475.3 already rejected one on the grounds that
+it breaks the statelessness the zero-cost guarantee rests on. Priced here, not shipped, and named
+so it is not rediscovered as new.
