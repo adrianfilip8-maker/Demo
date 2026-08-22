@@ -47194,3 +47194,26 @@ stilt". That was written from the mechanism before the sweep was run, and the sw
 opposite: opening the knee DROPS the foot (lowest foot 0.115 m at k=0 → 0.078 m shipped, against
 0.056 m for the procedural set). The claim was corrected in place with the measurement beside
 it. §435.4 — a probe from the model tests the model, and this one failed.
+
+### §531.5 On camera, shipped model, both arms from the same commit
+
+`tools/spreadlook.mjs`, one invocation per arm, the arms differing by the boot override alone
+(`__LIMB_OPEN = { elbow: 0, knee: 0 }` is the repo-faithful control; the other arm is simply the
+shipped constant) — both shot at 595172a. Poses picked where the tuck is visible and two samples
+each: the standing **idle** (profile + front three-quarter) and a **loaded hang** through the
+real `play()` seam, limbs carrying the body, which a standing pose cannot show. Committed as
+`shots/spread1-{faithful,open}-*`:
+
+- **idle** — faithful folds both forearms tight against the chest, hands in at the ribs; open
+  hangs the arm with a straight elbow, hand clear of the torso, and the stance leg longer.
+- **hang** — faithful bends the raised arm sharply, the hand cocked back over the head; open
+  extends it up and out along the reach, knee lower.
+
+Two staging faults on the way, both the §479.3 class and both recorded rather than quietly
+re-shot: the first hang take parked the state machine wherever the RUN take had left him and
+photographed the inside of a stairwell (fixed by resetting to the plaza and settling grounded
+BEFORE parking — the tool now prints `grounded=` per take); and the run take at full sprint
+ends wall-adjacent with the body mid-leap, which is §479's own recorded refusal for `run_fast`
+— it now drives at the `run` node's 0.75 magnitude, and even so the plaza's straightaway is
+short enough that the run pair is the weakest of the three. The run pair is committed as a
+secondary sample with that limit stated; the idle and hang pairs carry the claim.

@@ -1,0 +1,45 @@
+{
+  "sha": "595172a",
+  "ARM": "faithful",
+  "faithful": true,
+  "takes": [
+    "idle",
+    "run",
+    "hang"
+  ],
+  "W": 1600,
+  "H": 900,
+  "errs": [],
+  "log": [
+    {
+      "frame": "faithful-idle-profile",
+      "phase": 0,
+      "sp": 0
+    },
+    {
+      "frame": "faithful-idle-front34",
+      "phase": 0,
+      "sp": 0
+    },
+    {
+      "frame": "faithful-run-a-profile",
+      "phase": 0.244,
+      "sp": 5.4
+    },
+    {
+      "frame": "faithful-run-b-profile",
+      "phase": 0.751,
+      "sp": 4.67
+    },
+    {
+      "frame": "faithful-hang-front34",
+      "phase": 0.201,
+      "sp": 0
+    },
+    {
+      "frame": "faithful-hang-profile",
+      "phase": 0.201,
+      "sp": 0
+    }
+  ]
+}
