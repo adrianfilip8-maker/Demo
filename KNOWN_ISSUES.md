@@ -46067,7 +46067,8 @@ pole's E entry outright.
 ### The chooser
 
 `ePressWinner(c)` in `Moveset.js` scores every eligible tag's best candidate as
-**`distance × Collision.facingPenalty(...)`** and returns the winner; each of the three
+**`(distance ÷ that tag's own gate) × Collision.facingPenalty(...)`** and returns the winner; each
+of the three
 `pressed('interact')` clauses then asks *"am I the winner?"* instead of *"is there one of mine?"*.
 
 - **One aim model.** `facingPenalty` is a new public delegate to the *existing* `_facingPenalty` —
@@ -46400,3 +46401,67 @@ row now carries `OPT` and says so. Card text only; no behaviour changed.
 - **What none of this reaches.** `_hudshim` is not a browser: no layout, no paint, no z-order. That
   an element which changed is an element the player can *see* is a floor this cannot raise, exactly
   as the container cannot raise a frame rate.
+
+## §586 — §579 shipped in raw metres and broke an authored beat; the fix is to score each gate in its own units
+
+**The full suite at `7df1041` was 951 tests, 949 pass, 2 fail** — `camclamp`'s kiosk hook-ring debt
+sequence and `camstate`'s hard-cut census. Both are the camera lane's files and both passed at
+`49b90e6`, so the first question was whether they were mine or the two other lanes' commits that
+landed in between. **Isolated by running them at my own parent `2ddd0af`: 15/15 pass there, 2 fail
+with §579 on top. Mine.**
+
+### What broke
+
+`ePressWinner` scored candidates as `distance × facingPenalty` — **in metres**. §8.1 step 3 is an
+authored beat: from the kiosk lintel, E onto the hook chain. That stance also stands **2.36 m** from
+the obelisk rope (§495.A, a `pole`), and the kiosk ring is **5.88 m** away. Scored in metres:
+
+```
+  pole (obelisk rope)   d 2.36  pen 1.11  ->  2.64   <- wins
+  hook (kiosk ring)     d 5.88  pen 1.01  ->  5.93
+```
+
+So the press took the rope, `camclamp`'s drive never caught the ring, and its whole debt sequence
+fell off the trace. `camstate`'s hard cuts rose 47→49 and 13→16 for the same reason — the drive
+entered different states and the camera moved differently.
+
+### Why metres were the wrong unit, and what replaced them
+
+**Metres compare things that do not mean the same thing by them.** The gates are the moveset's own
+statement of how far away each hold is *meant* to be taken from — a hook is a ranged grab at
+`hookGrab` 9.0, a pole a contact mount at `poleMount×1.5` 2.85. At 2.4 m a pole is nearly out of
+reach; at 2.4 m a hook is point blank. Scored in metres the pole wins every contest it enters, which
+is a different accident from the tag-priority accident §579 removed, not a fix for it.
+
+The score is now **distance as a fraction of that tag's own gate**, still multiplied by the same
+`facingPenalty`. Dimensionless, and it asks the question the comparison is actually asking — *how
+deep inside its own envelope is this hold*:
+
+```
+  hook (kiosk ring)   5.88 / 9.00  x 1.01  ->  0.659   <- wins, and the beat is intact
+  pole (obelisk rope) 2.36 / 2.85  x 1.11  ->  0.925
+```
+
+Nothing else about §579 changed: same single aim model, same yardstick, still a weight and never a
+filter, still the E press only.
+
+### It did not cost the fork, and that was checked rather than hoped
+
+At the fork stance the two candidates sit at almost identical gate fractions — rope 2.41/2.85 =
+0.846, ring 7.63/9.00 = 0.848 — so **facing decides**, which is exactly the intended behaviour.
+Re-measured after the change: `epress` R still reports **6/6** mixed-kind stances selectable by aim
+with the fixed-aim control at 0, `navefork` F still resolves rope-facing to `poleClimb` and
+ring-facing to `hookSwing`, and the whole movement-facing set is 90/90.
+
+### The guard
+
+`epress` K pins the kiosk beat directly, in this lane's own file rather than relying on the camera
+lane's: it asserts the ring wins the press, drives it to `hookSwing`, and its failing input
+**recomputes the raw-metre scoring live** and asserts the rope would win it. The regression cannot
+rot into a comment, and if the geometry ever moves so that metres no longer pick the rope, the arm
+says so instead of passing quietly.
+
+**The lesson, which is the reusable part:** a cross-tag comparison needs a common unit, and metres
+are not one when each tag carries its own reach. The first version passed every test this lane
+owned and was caught only by another lane's driven beat — which is the argument for running the
+whole suite from a clean worktree rather than the subset you think you touched.

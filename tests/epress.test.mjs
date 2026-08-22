@@ -244,6 +244,76 @@ test('epress W: E follows aim across tags, and stays a weight rather than a filt
 });
 
 /* ====================================================================================== */
+test('epress K: the kiosk beat still grabs the ring, and metres alone would take the rope', async () => {
+  /* §8.1 step 3 is an authored beat: from the kiosk lintel, E onto the hook chain. The lintel
+   * stance also stands 2.36 m from the obelisk rope, so it is exactly the case where cross-tag
+   * resolution decides a ROUTE rather than a preference — and the first version of §579 got it
+   * wrong, scoring in metres and handing the press to the rope. `camclamp` caught it (the camera
+   * lane's file, which is why the guard belongs here too).
+   *
+   * The repair is to score distance as a FRACTION OF EACH TAG'S OWN GATE. The gates are the
+   * moveset's own statement of how far away a hold is meant to be taken from, so the ratio asks
+   * "how deep inside its own envelope is this" instead of comparing metres across kinds that do
+   * not mean the same thing by them.
+   *
+   * DOMAIN (§418.3)
+   * passes on : the shipped scoring — at the lintel the ring wins the press (ratio 0.659 against
+   *             the rope's 0.925) and a driven E enters `hookSwing`.
+   * fails  on : RUN IN-ARM — the same two candidates scored in RAW METRES, where the rope wins
+   *             (2.64 against 5.93). That is the exact regression, recomputed from the live
+   *             numbers rather than quoted, so it cannot rot into a comment.
+   * does NOT  : assert the rest of the debt sequence — the swing, the bail, the transfer and the
+   * discrim.    containment are `camclamp`'s, and this arm only guards which affordance the
+   *             press means at its first frame.
+   */
+  const { engine, c, step } = await harness();
+  hardReset(engine, c, V(2.3, 9.02, 13.55), Math.PI);
+  for (let i = 0; i < 40; i++) step(() => {});
+  assert.ok(c.grounded, `the kiosk lintel stance did not settle (y ${c.position.y.toFixed(2)})`);
+
+  const dx = -0.34 - c.position.x, dz = 11.36 - c.position.z;
+  engine.camera.rotation.set(0, Math.atan2(-dx, -dz), 0, 'YXZ');
+  engine.camera.updateMatrixWorld(true);
+  step(() => {});
+
+  const fwd = new THREE.Vector3();
+  engine.camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
+  const GATE = { hook: TUNE.hookGrab, pole: TUNE.poleMount * 1.5 };
+  const scored = {};
+  for (const tag of ['hook', 'pole']) {
+    const a = c.afford(tag);
+    assert.ok(a, `no ${tag} in range of the kiosk lintel — this arm's premise is gone`);
+    const pen = c.col.facingPenalty(a.point.x - c.position.x, a.point.y - (c.position.y + 1.15),
+      a.point.z - c.position.z, a.distance, fwd, Math.PI / 2);
+    scored[tag] = { d: a.distance, metres: a.distance * pen, ratio: (a.distance / GATE[tag]) * pen };
+  }
+  assert.equal(ePressWinner(c), 'hook',
+    `the kiosk lintel press resolves to ${ePressWinner(c)}, not the ring. §8.1 step 3's E-grab onto `
+    + 'the hook chain is an authored beat and this is where it is decided');
+  assert.ok(scored.hook.ratio < scored.pole.ratio,
+    `gate-fraction scoring puts the ring at ${scored.hook.ratio.toFixed(3)} and the rope at `
+    + `${scored.pole.ratio.toFixed(3)} — the ring must be the smaller`);
+  /* the failing input, recomputed live: metres alone hand the beat to the rope */
+  assert.ok(scored.pole.metres < scored.hook.metres,
+    `scored in RAW METRES the rope is ${scored.pole.metres.toFixed(2)} and the ring `
+    + `${scored.hook.metres.toFixed(2)}. This arm exists because the rope used to win that way; if it `
+    + 'no longer does, the geometry moved and the regression this guards is no longer reachable — '
+    + 're-read before trusting the arm');
+
+  /* and drive it, because a score is not a state */
+  let got = null;
+  for (let i = 0; i < 60 && !got; i++) {
+    step((inp) => { if (i === 5) inp.hold('interact'); else inp.let_go('interact'); });
+    if (c.stateName === 'hookSwing' || c.stateName === 'poleClimb') got = c.stateName;
+  }
+  assert.equal(got, 'hookSwing',
+    `driven, the kiosk press entered ${got}. The beat takes the ring, not the obelisk rope`);
+  console.log(`[epress K] kiosk lintel: ring ratio ${scored.hook.ratio.toFixed(3)} beats rope `
+    + `${scored.pole.ratio.toFixed(3)}; in metres the rope would win `
+    + `(${scored.pole.metres.toFixed(2)} vs ${scored.hook.metres.toFixed(2)}) · driven -> ${got}`);
+});
+
+/* ====================================================================================== */
 test('epress R: RATCHET — every stance offering two KINDS can select either by aim', async () => {
   /* ── A ratchet on a PROPERTY, not on a current value (§584). ──────────────────────────────
    * The count of such stances is content and must stay free to move — §575 took it from 0 to 6

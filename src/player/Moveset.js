@@ -112,7 +112,16 @@ export function ePressWinner(c) {
       ? col.facingPenalty(a.point.x - c.position.x, a.point.y - (c.position.y + 1.15),
         a.point.z - c.position.z, a.distance, _face, Math.PI / 2)
       : 1;
-    const score = a.distance * pen;
+    /* DISTANCE AS A FRACTION OF THIS TAG'S OWN GATE, not in metres. Raw metres compare things
+       that are not comparable: the gates are the designer's statement of how far away each hold
+       is MEANT to be taken from — a hook is a ranged grab at 9.0, a pole a contact mount at 2.85
+       — so 2.4 m from a pole is nearly out of reach while 2.4 m from a hook is point blank.
+       Scored in metres the pole always wins, and it did: §8.1 step 3's authored E-grab off the
+       kiosk lintel onto the hook chain started taking the obelisk rope instead, because the rope
+       stands 2.36 m from that stance and the ring is further. `camclamp` caught it. The ratio is
+       dimensionless and says "how deep inside its own envelope is this", which is the question
+       the comparison is actually asking. */
+    const score = (a.distance / e.gate()) * pen;
     if (score < bestScore) { bestScore = score; bestTag = e.tag; }
   }
   return bestTag;
