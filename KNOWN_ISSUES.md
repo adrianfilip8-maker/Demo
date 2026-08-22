@@ -44098,3 +44098,151 @@ the control proving the metric responds to the route rather than to level densit
 the driven plinth climb reaching y 4.90; *fails on* the same drive with jump suppressed, run
 in-arm, which stays on the paving at 0.00. *Does not discriminate*: whether a gap is bad rather
 than long; whether a climb is discoverable (one scripted cadence, not a sweep); the rooftop run.
+
+## §544 — The frame budget, measured as load rather than as frame rate; and the allocation number that three instruments could not agree on
+
+The brief was explicit that any fps taken here measures the container, not the game. So nothing
+below is a duration. Every figure is a count or a ratio, because counts predict cost on the user's
+machine and milliseconds here do not.
+
+### §544.1 What already existed, reproduced before being quoted
+
+- **`tests/enginefps.test.mjs` asserts no container fps, and that is by construction.** It drives
+  `FpsMeter` from a synthetic monotonic clock and touches no renderer, rAF or browser (zero
+  matches for playwright/chromium/renderer/requestAnimationFrame in the file). 5/5 pass. It also
+  records the measurement that justifies the whole caution: a driven session here presented **38
+  frames in 53.9 s — 0.70 fps — while the old readout said 21**.
+- **`tools/scenebudget.mjs`** reproduces: worst main view **73 draws / 0.578 M tris**, 29% of the
+  250-draw and 48% of the 1.2 M-triangle budget. World modules only.
+- **`tools/budgetattrib.mjs`** reproduces: scene total culling-off **86 meshes / 0.650 M tris**,
+  and a predicted `renderer.info` of **303 draws / 2.44 M tris** for the worst shot.
+- `tools/budget.mjs` needs a browser boot and the capture lock; not run, and nothing is quoted
+  from it.
+
+### §544.2 The ceiling: what the scene contains before asking what a frame costs
+
+Built headlessly, world modules plus the Controller:
+
+```
+  Object3D in graph            356
+  drawables                    348   of which 12 InstancedMesh carrying 1072 instances
+  unique geometries            348   -> reuse 1.00x: NOTHING is shared
+  unique materials              39   <- the floor on distinct shader programs
+  triangles (instances x)    0.597 M
+```
+
+**The 348 reconciles with the tools' 73–86 once visibility is applied**, and that reconciliation
+was the point of doing it: 274 of the 348 drawables are **hidden collision proxies** (88 ledge, 77
+wall, 51 ground, 19 pole, 11 hook, 5 spire, 4 vent), never submitted. The submitted set is **74
+drawables / 578 k tris**, which is scenebudget's 73 / 0.578 M. No discrepancy — two instruments
+counting different things, now stated.
+
+Mass is concentrated: the **top 12 drawables are 66.9% of all triangles**, led by
+`arch:hall:hieroglyph_wall` 74.1 k and `sand_ring0` 73.7 k.
+
+### §544.3 The ranked list — what would buy the most
+
+1. **Shadow cascades: ~120 draws / 1.14 M tris**, i.e. **47% of the predicted 2.44 M** submitted
+   triangles, against a main view of 0.65 M. Three cascades at quality `high`. This is the largest
+   single item in the frame by a wide margin. *Owner: `src/render/Lighting.js`.*
+2. **The normal prepass draws the whole main view a second time** (`PostFX.js`, overrideMaterial)
+   — another ~86 draws / 0.65 M tris. Worth asking whether it is needed at every quality.
+   *Owner: `src/render/PostFX.js`.*
+3. **262 invisible proxies still carry `matrixAutoUpdate`.** 306 of 355 nodes (86%) recompose a
+   matrix every frame, and **263 of those 306 are the collider subtree, 262 of them invisible** —
+   the renderer's `scene.updateMatrixWorld(true)` walks and recomposes meshes that are never
+   drawn. `matrixAutoUpdate = false` on a static subtree is the cheapest item on this list.
+   *Owner: `src/world/Architecture.js`.*
+4. **Zero geometry reuse: 348 drawables over 348 geometries.** Instancing is used well where it is
+   used (12 meshes carry 1072 instances, including one 900-instance mesh at 18 tris each), but
+   nothing else shares. Repeated architecture is the candidate. *Owner: world lane.*
+5. **11 meshes have `frustumCulled = false`** — `nile` (18.4 k), `coins`, `clue_bottles` and eight
+   unnamed instanced meshes. They are submitted in every pass and every cascade regardless of
+   camera. *Owner: world lane.*
+6. **Decimation targets**, in order: `arch:hall:hieroglyph_wall` 74.1 k, `sand_ring0` 73.7 k,
+   `arch:court:mudbrick` 46.9 k, `arch:court:hieroglyph_wall` 40.7 k.
+
+### §544.4 GC pressure: measured, and it is NOT the hazard
+
+Driven over 3000–8000 frames of the real Controller and world:
+
+```
+  major collections            0
+  scavenges                    ~1.3-2.0 per 1000 frames
+  retained after full GC       0.31 MiB over 8000 frames, and the rate DECAYING
+                               (17.51 MiB baseline -> 17.82 MiB) — JIT warm-up, not a leak
+```
+
+At 60 fps that is a minor collection roughly every 10 s and no stop-the-world pause at all. The
+suspicion this was chased on — that GC pauses are the frame-time collapse §543's tap bound waits
+for — **is not borne out for the update loop.**
+
+### §544.5 The number I could not establish, and why that is the finding
+
+Bytes allocated per frame. Three instruments, disagreeing by up to **470x**:
+
+```
+  heapUsed delta over GC-free windows   ~22,700 B/frame   (spread 1.05x across 9 windows)
+  scavenge cadence vs nursery size      ~3,000-25,000 B/frame (nursery resizes; wide)
+  sampling heap profiler, differential  48 B/frame
+```
+
+The controls settled which to believe, and the answer was *none of them for the absolute value*:
+
+- a **negative control** (empty loop) reads 8 B/frame — good;
+- a **positive control** of 8 KiB/frame of `Uint8Array` reads 185 B/frame, because typed-array
+  backing stores are **external memory and invisible to `heapUsed`**;
+- a positive control of 100 small objects per frame reads 1 B/frame, because **escape analysis
+  deletes the allocation**;
+- a *genuinely escaping* churn control of ~3.2 KiB/frame could not produce a single GC-free window
+  in three attempts — so the very windows the 22,700 figure came from are windows in which
+  significant churn is impossible by construction.
+
+And the decisive one: after 8000 frames the heap **returns to baseline**, so the 22–26 KB/frame
+rise was the nursery filling between collections, not a rate of anything retained. The sampling
+profiler's absolute total could not be reconciled either and is used **only for ranking**, where it
+puts `Kit.nrm`, `BVH.closestPtSegSeg`, `Rand.gradNoise2` and `BVH.sweepCapsuleTri` at the top of
+the loop's allocation.
+
+So the reportable fact is the **collision count**, which survived its controls, and not a byte
+rate, which did not. `tests/framebudget.test.mjs` F3 asserts only the former.
+
+**A separate instrument fault worth recording, because it produced a confident wrong answer.**
+The first GC detector observed **0 collections across every window** while the heap moved by
+megabytes. `PerformanceObserver` delivers entries **asynchronously**, and a frame loop is
+synchronous, so no entry can ever be delivered inside the window being measured. The positive
+control passed only because it awaited a timer — it validated the channel, not the channel under
+the load it was to be used on. Every window is now flushed before its count is read.
+
+### §544.6 What this environment cannot discriminate
+
+- **Any frame time, on any machine.** No fps, no milliseconds, no "this costs 2 ms". SwiftShader
+  on a shared box; §544.1 is why.
+- **Texture memory.** `main.js`'s MANIFEST carries **21 modules**; this harness builds **4** plus
+  the Controller. `Textures` is not among them, so the "2 textures" in the census is an artifact
+  of the harness and **texture memory and upload timing are simply not measured here**. That needs
+  a boot, and it is the largest remaining gap.
+- **Shader program count.** 39 distinct materials is a FLOOR: three.js compiles a program per
+  material *variant* (lights, shadows, instancing, fog), so the real program count is higher and
+  only a real renderer can report it. Whether any compile happens mid-play is answered
+  structurally by F1 (no material is created during play) rather than by timing.
+- **Occlusion.** Frustum culling is modelled by the existing tools; nothing here knows what is
+  hidden behind a wall.
+- **The character, guards, FX, HUD, post-processing and audio** — 17 of the 21 shipped modules are
+  absent from these counts. Every figure is a floor on the shipped scene.
+
+### §544.7 DOMAIN
+
+- **F1 mid-play** — *passes on* 900 driven frames leaving geometries, materials, textures and node
+  count unchanged; *fails on* a mesh with a new geometry+material+texture added in-arm. Proxy for
+  two costs only real hardware shows (shader compile, GPU upload); the count is measurable here,
+  the milliseconds are not.
+- **F2 visibility** — *passes on* 74 submitted of 348 drawables, reconciling with scenebudget;
+  *fails on* the proxy meshes made visible, which submits 336 — a 4.5x draw increase. (The first
+  version flipped the GROUP and reproduced nothing: the meshes are hidden individually.)
+  Discriminates submission, not graph size.
+- **F3 GC** — *passes on* zero major collections in 3000 frames; *fails on* a churn loop through
+  the same observer, run as the positive control so a zero is only believed once the channel has
+  been seen to report something. Explicitly does **not** discriminate bytes per frame (§544.5).
+
+No source file was changed this round: every lever in §544.3 belongs to another lane.
