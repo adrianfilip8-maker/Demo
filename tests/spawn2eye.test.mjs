@@ -184,10 +184,26 @@ function chainHop(tgt, { dj = false, wantLand = null, attempts = 8, sideBar = 0.
             const dT = Math.hypot(c.position.x - tgt[0], c.position.z - tgt[2]);
             const dS = srcAnchor ? Math.hypot(c.position.x - srcAnchor.x, c.position.z - srcAnchor.z) : 99;
             if (dT < dS - 0.5 && FRAME % 5 === 0) inp.hold('interact'); else inp.let_go('interact');
+          } else {
+            /* §592: and RELEASE it otherwise. This branch's own comment says "a LANDING exit must
+               not re-grab the chain", which used to be true for free because grabbing was automatic
+               and this drive never touched the button. Now that Circle is required and is HELD
+               through a flight, a hold carried into the exit hop re-grabs the ring being left —
+               measured: leg5d ended in `hookSwing` on ring 6 instead of landing. Same class as the
+               bail edge above: automatic grabbing was hiding it. */
+            inp.let_go('interact');
           }
         }
       });
-      if (!bailed && bailFrame && c.stateName !== 'hookSwing') bailed = true;
+      /* §592: the bail edge used to be "left `hookSwing`". With Circle held and the press clause
+         reaching `hookGrab` 9.0, the next ring is often caught on the SAME frame the old one is
+         released, so the capsule never appears outside the state and this edge never fired — the
+         hop then looped its full 8 attempts while actually hanging on the target. Detect the bail
+         by the ANCHOR MOVING instead, which is true whether or not there was a gap. This is an
+         instrument defect that automatic grabbing was hiding, not a consequence of the ruling. */
+      if (!bailed && bailFrame && (c.stateName !== 'hookSwing'
+          || (srcAnchor && c.anchor && Math.hypot(c.anchor.x - srcAnchor.x, c.anchor.y - srcAnchor.y,
+            c.anchor.z - srcAnchor.z) > 0.7))) bailed = true;
       if (bailed) {
         const d3 = Math.hypot(c.position.x - tgt[0], c.position.y + 1.6 - tgt[1], c.position.z - tgt[2]);
         if (!chainHop._min || d3 < chainHop._min.d) chainHop._min = { d: d3, at: c.position.clone(), st: c.stateName, vy: c.velocity.y };
