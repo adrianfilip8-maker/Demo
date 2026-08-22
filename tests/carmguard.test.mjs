@@ -9,6 +9,7 @@ import {
 } from '../src/ai/CarmelitaGuard.js';
 import { RIG3 } from '../src/player/SlyModel3.js';
 import { GUARD_TUNE } from '../src/ai/Guard.js';
+import { ROSTER } from '../src/ai/Patrol.js';
 
 /**
  * The Carmelita guard body, bound to RIG3 — checked structurally, in plain Node.
@@ -227,12 +228,21 @@ test('the head/body split is pinned, because nothing has verified it', () => {
 
 test('the garrison cost is measured, not assumed', () => {
   need();
-  // 6 temple + 3 heavy on Carmelita, 2 scarab still procedural (1244 tris each).
+  /* Counted off ROSTER rather than written down. The literals were `9 * perGuard + 2 * 1244` and
+     `11 * 2` — true until §589 took the two scarab bodies off the level, after which this arm
+     went on PRINTING a garrison of 11. It still passed, because the two assertions below are
+     both about `perGuard` and neither reads these numbers; the fault was that an arm titled
+     "measured, not assumed" was reporting an assumed figure into the log a budget decision gets
+     made from. Humanoid types ride the bound Carmelita mesh; the scarab is still procedural at
+     1244 tris, so the term stays for the day a scarab is rostered again. */
   const perGuard = BOUND.tris;
-  const garrison = 9 * perGuard + 2 * 1244;
-  const draws = 11 * 2;
-  console.log(`[carmguard] ${perGuard} tris per guard; garrison ${garrison} tris in ${draws} skinned draws`);
-  console.log('[carmguard] geometry is SHARED across all 11 — one upload, per-instance Skeleton only');
+  const humanoids = ROSTER.filter((e) => e.type !== 'scarab').length;
+  const scarabs = ROSTER.length - humanoids;
+  const garrison = humanoids * perGuard + scarabs * 1244;
+  const draws = ROSTER.length * 2;
+  console.log(`[carmguard] ${perGuard} tris per guard; garrison ${garrison} tris in ${draws} skinned draws`
+    + ` (${humanoids} humanoid + ${scarabs} scarab)`);
+  console.log(`[carmguard] geometry is SHARED across all ${ROSTER.length} — one upload, per-instance Skeleton only`);
   assert.ok(perGuard > 1000, `inspected a ${perGuard}-triangle mesh; the bind produced almost nothing`);
   // Not a budget assertion — a tripwire. A tenfold change means the asset or the cull changed.
   assert.ok(perGuard < 45000, `${perGuard} tris per guard is far past the extracted body's 29,791`);

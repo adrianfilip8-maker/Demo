@@ -198,15 +198,27 @@ async function main() {
   console.log('assembly');
   {
     const { guards, engine } = await makeGuards();
+    /* Derived from ROSTER rather than written down (§589). These were `11`, `11` and `3`, and
+       the day the scarab came off the level all three went stale at once — the count of bodies,
+       the count of skeletons and the count of shared geometries are all facts ABOUT the roster,
+       so restating them as literals is three copies of one number. One geometry per TYPE on the
+       roster is the claim that was actually meant: geometry shared, skeletons not. */
     check('one guard per ROSTER entry, each with its own skeleton', () => {
-      assert(guards.list.length === 11, `expected 11 guards, got ${guards.list.length}`);
+      assert(guards.list.length === ROSTER.length,
+        `expected ${ROSTER.length} guards, got ${guards.list.length}`);
       const skels = new Set(guards.list.map((g) => g.skeleton));
-      assert(skels.size === 11, 'skeletons are shared between instances');
+      assert(skels.size === ROSTER.length, 'skeletons are shared between instances');
       const geos = new Set(guards.list.map((g) => g.mesh.geometry));
-      assert(geos.size === 3, `expected 3 shared geometries, got ${geos.size}`);
+      const types = new Set(ROSTER.map((e) => e.type)).size;
+      assert(geos.size === types, `expected ${types} shared geometries (one per rostered type), got ${geos.size}`);
     });
     check('the whole garrison fits the 40 draw-call budget', () => {
-      // 11 × (body + metal) + 11 ink shells + beam + pool.
+      /* Was written as "11 × (body + metal) + 11 ink shells + beam + pool" — the arithmetic, not
+         the budget, went stale at §589: the roster is 9 now. 40 is a ceiling the frame has to
+         live under and not a count of what is there, so the assertion is still the right one.
+         Worth saying plainly, though: two fewer bodies is two draw calls of headroom this arm
+         did not have when it was written, so it discriminates less than it used to. If the
+         garrison ever grows back, it tightens again by itself. */
       const withShells = guards.stats.draws + guards.list.length;
       assert(withShells <= 40, `${withShells} draw calls`);
     });
@@ -471,8 +483,17 @@ async function main() {
     let fell = null;
     let roofStray = 0;
     let ledgeStray = 0;
-    const roof = guards.list[7];
-    const ledge = guards.list[9];
+    /* BY ROUTE, not by array position (§589). These were `guards.list[7]` and `guards.list[9]`,
+       and `Guard.js`'s own note says why that is wrong: `this.guards` is 1:1 with `ROSTER` only
+       when every entry builds, so one skipped line re-points every later index at somebody
+       else's body. It went from wrong-in-principle to wrong-in-fact the moment the scarab came
+       off the roster — index 9 WAS the architrave scarab, and this line started reading
+       `undefined.position` and crashing the file. Selecting by the route each check is about
+       cannot drift, and says out loud which body the assertion means. */
+    const walksRoute = (name) => guards.list.find((g) => ROSTER[g.index]?.route === name);
+    const roof = walksRoute('rooftop_run');
+    const ledge = walksRoute('architrave_ledge');
+    assert(roof, 'no guard walks rooftop_run — the rooftop checks below have no subject');
 
     // Every frame, not just the last one: a guard who crosses the wall and comes back is
     // still a guard who walked through a wall.
@@ -490,15 +511,24 @@ async function main() {
         prev[i].copy(g.position);
       }
       roofStray = Math.max(roofStray, Math.abs(roof.position.x) - 24, Math.abs(roof.position.z + 34) - 18);
+      /* A SECOND, UNNAMED ASSERTION LIVES IN HERE AND IT IS NOW DEAD (§589). `ledgeStray` is one
+         accumulator carrying two different claims: the rooftop guard's height wander (the line
+         below, and the only one its assert message describes) and a per-frame flag that the
+         architrave guard has slipped off his ledge in x (the line after). With no body on
+         `architrave_ledge` the second claim can never fire, so `ledgeStray` now means exactly
+         what its assert message always said it meant.
+         Written down rather than deleted, and rather than left to be found: unlike the named
+         architrave arm below, this one goes quiet with nothing printed, which is the harder kind
+         of unreachable. Restoring a scarab to the roster revives it with no edit here. */
       ledgeStray = Math.max(ledgeStray, Math.abs(roof.position.y - 17));
-      if (ledge.position.x < 20 || ledge.position.x > 25.5) ledgeStray = Math.max(ledgeStray, 1);
+      if (ledge && (ledge.position.x < 20 || ledge.position.x > 25.5)) ledgeStray = Math.max(ledgeStray, 1);
     };
 
     run(guards, engine, 90, 1 / 30, (t, i) => {
       watch();
       // Keep the rooftop and ledge guards charging at something well past their edge, so the
       // ledge refusal is actually put under load rather than merely never exercised.
-      for (const [g, tx, tz] of [[roof, 40, -34], [ledge, -20, 9]]) {
+      for (const [g, tx, tz] of [[roof, 40, -34], [ledge, -20, 9]].filter(([g]) => g)) {
         g.senses.suspicion = DETECT.ceiling;
         g.senses.lastSeenValid = true;
         g.senses.timeSinceSeen = 0;
@@ -515,7 +545,7 @@ async function main() {
     if (roof.position.x < -25 || roof.position.x > 25 ||
         roof.position.z < -53 || roof.position.z > -15 ||
         Math.abs(roof.position.y - 17) > 0.6) offDeck = roof.position.toArray().map((v) => v.toFixed(2)).join(', ');
-    const ledgeOff = (ledge.position.x < 20 || ledge.position.x > 25.5 || Math.abs(ledge.position.y - 9) > 0.6)
+    const ledgeOff = (ledge && (ledge.position.x < 20 || ledge.position.x > 25.5 || Math.abs(ledge.position.y - 9) > 0.6))
       ? ledge.position.toArray().map((v) => v.toFixed(2)).join(', ') : null;
 
     check('no guard walks through a wall, on any frame', () => {
@@ -527,7 +557,22 @@ async function main() {
       assert(roofStray <= 0.6, `rooftop guard strayed ${roofStray.toFixed(2)} m past the deck edge`);
       assert(ledgeStray <= 0.6, `rooftop guard's height wandered ${ledgeStray.toFixed(2)} m`);
     });
+    /* KEPT, NOT DELETED (§589). The user's ruling took the scarab bodies off the level, so
+       `architrave_ledge` has no walker and this assertion has no subject. It is not deleted,
+       because the route, the type and the clips all still exist and one roster line puts a body
+       back — at which point this must start asserting again by itself. What it must NOT do is
+       pass quietly with nothing in it, so the unexercised case is announced and the REASON is
+       asserted: if the route ever disappears, or a body is on it and simply was not found, this
+       fails instead of going green for the wrong reason. */
     check('the architrave scarab never steps off the ledge', () => {
+      if (!ledge) {
+        assert(ROUTES.architrave_ledge, 'architrave_ledge is gone from ROUTES entirely');
+        assert(!ROSTER.some((e) => e.route === 'architrave_ledge'),
+          'a body IS rostered on architrave_ledge but was not found in guards.list — the lookup is broken, '
+          + 'not the roster');
+        console.log('      (not exercised: no body walks architrave_ledge since §589 — route and type kept)');
+        return;
+      }
       assert(!ledgeOff, `ledge scarab at (${ledgeOff})`);
     });
     check('nobody falls out of the world', () => {
@@ -787,11 +832,43 @@ async function main() {
         assert(a[i] === b[i], `guard ${i} diverged:\n        ${a[i]}\n        ${b[i]}`);
       }
     });
-    check('the roster is 6 temple, 3 heavy, 2 scarab', () => {
+    /* Deliberately literal, unlike the assembly check above. That one asks "did we build what
+       ROSTER says"; this one asks "is ROSTER still what was agreed", so deriving the expectation
+       from ROSTER would turn it into a tautology that passes on any roster at all. The numbers
+       were `6 / 3 / 2` until §589, when a user playtest ruling took the two scarab bodies off the
+       level. `scarab` is asserted absent rather than merely uncounted, because the type, its
+       clips, `DETECT.scarabScale` and both its routes are all still here — re-rostering one is a
+       two-line accident and this is the line that catches it.
+       DOMAIN (§418.3) — passes on: the shipped ROSTER. Fails on: a re-rostered scarab, a dropped
+       temple body, a temple body retyped heavy, and — the one that matters — a body INSERTED
+       mid-list below every index a shot or a sibling arm names by number. All four run in-arm
+       below, because out-of-arm mutation runs are not evidence a shipped arm carries. The
+       mid-list insert is why this arm stays literal: it shifts no named index and changes no
+       route, so the composition count is the only thing left that can see it. Cannot
+       discriminate: whether a rostered body can actually WALK its route — `open` routes and the
+       soak carry that; nor whether the scarab TYPE still works, which is deliberately untouched
+       and unexercised (see the architrave arm above). */
+    const composition = (types) => {
       const counts = {};
-      for (const r of ROSTER_TYPES) counts[r] = (counts[r] || 0) + 1;
-      assert(counts.temple === 6 && counts.heavy === 3 && counts.scarab === 2,
-        JSON.stringify(counts));
+      for (const r of types) counts[r] = (counts[r] || 0) + 1;
+      return [counts.temple === 6 && counts.heavy === 3 && counts.scarab === undefined, counts];
+    };
+    check('the roster is 6 temple, 3 heavy, and no scarab', () => {
+      /* The four contrasts are perturbations of the LIVE roster, not of a second copy written
+         out here — a hand-typed `shipped` array would drift silently and leave the contrasts
+         proving something about a fiction. */
+      const L = ROSTER_TYPES, last = L.length - 1;
+      for (const [why, types] of [
+        ['a scarab re-rostered', [...L, 'scarab']],
+        ['a temple body dropped', L.filter((t, i) => i !== L.indexOf('temple'))],
+        ['a temple body retyped heavy', L.map((t, i) => (i === L.indexOf('temple') ? 'heavy' : t))],
+        ['a body inserted mid-list', [...L.slice(0, last), 'temple', L[last]]],
+      ]) {
+        const [ok, counts] = composition(types);
+        assert(!ok, `the count does not see ${why}: ${JSON.stringify(counts)}`);
+      }
+      const [ok, counts] = composition(L);
+      assert(ok, JSON.stringify(counts));
     });
   }
 

@@ -46834,3 +46834,221 @@ fix it before the play session with the reasoning recorded.
 **The level-side alternative was rejected, and by the lane that would have shipped it.** Moving the
 rope to x 3.2 buys a guard problem off with a discoverability problem, breaks §571's derived
 1.90–2.85 m band, and leaves the defect in place for every future piece of vertical content.
+
+---
+
+## §589 — The scarab is off the level, and only off the level
+
+**User ruling from a live playtest: "remove the crab guard."** The crab is the scarab. The change
+itself is two lines out of one array. Everything else here is establishing *which* two lines, and
+then finding out what stops being true once they are gone. That second part is most of the length
+below, because almost none of it announces itself: one file crashed, and everything else went on
+passing while quietly meaning less than it used to.
+
+### The indices were established by evaluating the roster, not by reading it
+
+`ROSTER` in `src/ai/Patrol.js` is positional and `Guard.js:2236` already carries the warning in its
+own words — `this.guards` is 1:1 with `ROSTER` **only when every entry built**, so "one
+warned-and-skipped roster line shifts every later guard, and a shot would then stage somebody
+else's body without saying so." Counting lines by eye is precisely the method that trap defeats, so
+the indices came out of `node`:
+
+```
+type counts     {"temple":6,"heavy":3,"scarab":2}
+scarab indices  9, 10   of 11
+trailing?       true
+```
+
+**They were the last two entries, and that is load-bearing rather than lucky.** Everything that
+names a guard by number names a low one: `SHOT_POSE.guard` stages roster #0, and `SHOTS.alert.stage`
+(`src/core/Shots.js:673,675`) stages #1 and #2. Removing the trailing pair shifts nothing any other
+file counts on. Had they been indices 3 and 4, this change would have needed every later index
+rewritten and every shot re-photographed, and the report would have said so instead.
+
+Recorded in the roster docblock for whoever edits it next: **anything added below must go below
+nothing — append, never insert.**
+
+### What was deliberately *not* removed
+
+The ruling was about a body in the world, not about a type in the code. Still present and
+untouched: the `scarab` block in `VISION` (`Patrol.js`) and in `GUARD_TUNE` (`Guard.js`), its clip
+section in `GuardAnim.js`, `DETECT.scarabScale`, and both routes it walked — `architrave_ledge` and
+`tomb_scarab`. Re-rostering the body is one line if the user ever wants it back.
+
+### What quietly stops being true, and is worth knowing before it is rediscovered
+
+**Two routes now have no walker.** `architrave_ledge` and `tomb_scarab` are the only unwalked
+entries in `ROUTES` — confirmed by evaluating the set, not by grep. The architrave and the crypt
+have nobody on them. Before this change both route names appeared in `src/ai/Patrol.js` and nowhere
+else in the tree, so nothing else breaks on the absence; `architrave_ledge` now also appears in the
+preserved `Guard.test.mjs` arm below, put there by this change and by nothing else.
+
+Nothing breaks because route construction never depended on the roster: `buildRoutes` splines
+*every* entry in `ROUTES` and `Guards.init` then walks `ROSTER` and looks each route up by name.
+Both unwalked routes are still built and still sitting in `Guards.routes` — two splines nobody
+reads, which is the negligible price of keeping re-rostering a one-liner. Confirmed live rather
+than by reading: `Guard.test.mjs`'s `init raised no warnings` arm is green, and both warnings
+`Guards.init` can emit are per-roster-entry — one for a type or route that failed to resolve, one
+for a constructor that threw — so all nine bodies built and none of them silently fell through.
+That arm and the `guards.list.length === ROSTER.length` assembly assertion are the pair that make
+"nine" a fact rather than an intention.
+
+**`tests/patrol.test.mjs` C1 now certifies those two routes against a body that has left.** Its
+clearance helpers are seeded — `widestOn` is `Math.max(0.26, …roster radii)` and `tallestOn` is
+`Math.max(0.34, …roster headTops)` — and 0.26 / 0.34 are *exactly* `radius.scarab` and
+`headTop.scarab`. So the arm still passes, and still passes with the right numbers, but for those
+two routes it is no longer reading a rostered body: the seed is standing in for the guard that used
+to supply it. That is a real loss of discrimination on two routes and is written down rather than
+papered over. It is also why the seed should not be "tidied up" to something smaller — it is the
+only thing keeping those routes certified to scarab clearance for the day the body comes back.
+
+**Two fewer pockets to pick, and it is the cheapest two.** `Guard.js:175` prices loot per type —
+temple `[45, 90]`, heavy `[80, 150]`, scarab `[10, 25]`. The garrison's pickpocketable purse goes
+from **530–1040 coins to 510–990**: the two scarabs were worth 20–50 between them, under 5% of the
+minimum. Nothing in the tree computes a level coin total and no test asserts one (checked by
+searching for it, not assumed), so this changes what a completionist can bank and nothing else.
+Recorded so a lower purse in the next playtest is not read as a regression in the economy wiring.
+
+**The open-route turn-around arm lost one of its six subjects.** `architrave_ledge` is an *open*
+route (`closed: false`, `baseY: 9`, 3 points) and `Guard.test.mjs` builds that arm's subject list
+by filtering `ROSTER`, so it now runs on 5 open routes instead of 6. `tomb_scarab` is closed and
+was never in it. Five subjects is not vacuous and the arm was left alone; recorded because "how
+many subjects does this arm still have" is the question that decides whether it was.
+
+### One foreign test file had to be re-based, and it kept its assertions
+
+`src/ai/Guard.test.mjs` is the world lane's, last theirs at `b7b7bea`, and it is run as a child
+process by `tests/guardsuite.test.mjs` — so an in-`src` test file is effectively in the suite.
+Removing two bodies took it from 45 green to a hard crash. The brief was explicit that assertions
+must not be deleted to make room, so none were — and that is countable rather than asserted:
+**45 `check()` arms before and 45 after, 101 `assert(` calls before and 105 after.** Every line the
+diff removes is either a stale literal rewritten in place, a positional lookup replaced by a lookup
+by route, or a line that comes straight back guarded.
+
+- **The crash was the documented trap, in the file that documents it.** `const ledge =
+  guards.list[9]` — a positional index into the built list, where index 9 *was* the architrave
+  scarab. `Cannot read properties of undefined (reading 'position')`. Replaced with a
+  `walksRoute(name)` helper that finds by `ROSTER[g.index]?.route`, which is the lookup
+  `Guard.js:2236` argues for.
+- **The assembly check was strengthened, not patched.** It asserted the literals `11`, `11` and
+  `3`; it now derives all three from `ROSTER`, because its actual question is "did we build what
+  the roster says", and that question has no business knowing the roster's length.
+- **The ledge arm was preserved with its reason.** `the architrave scarab never steps off the
+  ledge` cannot be exercised with no body on the route. Rather than delete it, the no-body branch
+  asserts *why* it is unexercised — that `ROUTES.architrave_ledge` still exists and that no roster
+  entry claims it — and prints `(not exercised: no body walks architrave_ledge since §589 — route
+  and type kept)`. If a scarab is ever re-rostered, the arm arms itself again. If the lookup breaks
+  instead, the arm says the lookup is broken and not the roster.
+- **The composition arm was left literal on purpose.** `the roster is 6 temple, 3 heavy, and no
+  scarab`. Deriving those counts from `ROSTER` would have been the tidy-looking move and would have
+  turned the arm into a tautology that passes on any roster at all. `scarab` is asserted *absent*
+  rather than merely uncounted, because the type and both its routes are still here and
+  re-rostering one is a two-line accident.
+
+### Two more assertions went quiet, and they are the harder kind, so they are written down
+
+Neither is a failure and neither was touched. Both are recorded in the file itself, next to the
+code, because a lane that finds them cold will otherwise read them as working.
+
+**A second, unnamed assertion died silently inside a shared accumulator.** `ledgeStray` is one
+variable carrying two unrelated claims: the rooftop guard's height wander, and a per-frame flag
+that the architrave guard has slipped off his ledge in x. Only the first is described by the assert
+message it feeds. With no body on `architrave_ledge` the second can never fire. This is worse than
+the named architrave arm, which announces its own unreachability on stdout — this one just goes
+quiet. It revives with no edit the moment a scarab is re-rostered.
+
+**The draw-call budget arm now has headroom it was not written with.** `the whole garrison fits the
+40 draw-call budget` asserts a live count against a ceiling, so it is still correct — but its
+comment read "11 × (body + metal) + 11 ink shells + beam + pool" and the roster is 9. The
+arithmetic went stale, not the budget. Two fewer bodies is two draw calls of slack, so the arm
+discriminates less than it did; it tightens again by itself if the garrison grows back. Comment
+corrected, assertion left exactly as it was.
+
+### A green arm was printing a false number, which is the failure mode a passing suite hides
+
+`tests/carmguard.test.mjs`, `the garrison cost is measured, not assumed`. Its two assertions are
+both about `perGuard`, so it passed the whole way through this change — but the figures it *prints*
+were hardcoded at `9 * perGuard + 2 * 1244` tris and `11 * 2` skinned draws, and it went on
+reporting a garrison of eleven bodies after two of them left. An arm with that title reporting an
+assumed figure into the log a budget decision is made from is worth correcting even though nothing
+was red:
+
+```
+before   29791 tris per guard; garrison 270607 tris in 22 skinned draws … SHARED across all 11
+after    29791 tris per guard; garrison 268119 tris in 18 skinned draws (9 humanoid + 0 scarab)
+```
+
+Counted off `ROSTER` now. The `1244`-tri procedural scarab term is kept rather than dropped, so the
+line stays right on the day a scarab is rostered again. Both assertions untouched. This is the one
+place in the change where a *passing* test was edited, and the reason is that passing was not the
+same as correct.
+
+**One dead branch left deliberately.** `tests/patrol.test.mjs:609` still carries `t.type ===
+'scarab' ? 1.25 : 1` in its cruise-speed expectation. It is unreachable today and correct the
+moment a scarab is rostered, which is the right state for it to be in — noted so it is not read as
+an oversight.
+
+**One stale comment left on purpose, in a file this lane was fenced out of.** `src/ai/Guard.js:55`
+still reads *"11 guards × (body + metal + ink shell) = 33, plus 1 beam + 1 pool = **35 draw
+calls**"*. The true figure is now 9 × 3 + 2 = **29**. The brief kept this lane out of `Guard.js`
+and a stale comment is not worth breaching that for, so it is reported rather than edited — the
+world lane owns the line. Nothing depends on it: `tools/budgetattrib.mjs` attributes from the live
+scene and hardcodes no guard count, and the only draw-call *assertion* is the ceiling in
+`Guard.test.mjs`, which is corrected above.
+
+### DOMAIN, in-arm
+
+The composition arm carries four contrasts that run inside it (§418.3), each a perturbation of the
+live `ROSTER_TYPES` rather than of a second hand-typed copy, so the contrasts cannot drift into
+proving something about a fiction. It fails on: a re-rostered scarab, a dropped temple body, a
+temple body retyped heavy, and a body **inserted mid-list**. That last one is the whole argument
+for keeping the arm literal — it shifts no index any shot names, changes no route, and the
+composition count is the only thing left in the suite that can see it. Verified non-vacuous by
+forcing the predicate to `true`, which reddens the arm on the first contrast.
+
+### Mutation check, out of arm
+
+Five mutations applied to `src/ai/Patrol.js`, each run against the full 45-arm `Guard.test.mjs` and
+the file restored bit-identical afterwards:
+
+```
+M1  re-roster a scarab (appended)        caught  composition        {"temple":6,"heavy":3,"scarab":1}
+M2  drop a temple body                   caught  roster #0 route    (throws before composition)
+M3  insert at the head                   caught  roster #0 route    (throws before composition)
+M4  retype a temple body heavy           caught  5 arms red
+M5  insert mid-list, below every         caught  composition ONLY   {"temple":7,"heavy":3}
+    index a shot or sibling arm names
+```
+
+M5 is the one that justifies the design: it is invisible to every other arm in the suite.
+
+### Green
+
+45/45 in `src/ai/Guard.test.mjs`; 53/53 across `guardsuite`, `patrol`, `alertshot`, `guardart`,
+`guardreach`, `carmguard` — the same 53 as the pre-change baseline, taken before the roster was
+touched. **Full suite 969/969**, from a worktree detached at committed HEAD with only the three
+changed files copied in.
+
+The isolation was necessary, not ceremonial. The shared tree had another lane's uncommitted edits
+to `Animation.js`, `Moveset.js`, `anim.test.mjs`, `spawn2eye.test.mjs` and `tools/armcross.mjs`
+appearing *during* this work — several arrived between one `git status` and the next. A suite run
+there would have been measuring somebody else's in-flight work alongside mine and reporting the
+total as a verdict on this change.
+
+**The branch tip moved three times during verification** — `f734153` → `8b97297` → `1ca779c` — so
+"the suite at committed HEAD" was a moving target and each clean run went stale before it finished.
+Chasing it was the wrong shape. The verification target is therefore **this commit itself**: the
+suite below was run from a worktree detached at the commit being pushed, which by construction
+cannot move underneath it.
+
+Each time, the composition would in fact have been sound — `spawn2eye.test.mjs` reaches guards only
+through `_moveset.mjs`'s `stubGuards` and has no import path to `Patrol.js`, and `tools/cardshot.mjs`
+is outside the `tests/*.test.mjs` glob entirely. Both arguments were correct and neither was used.
+An argument that a run is *still* valid is exactly the sort that eventually lets something through,
+and a fixed point costs one more run.
+
+### Nothing look-bearing changed, so nothing was photographed
+
+Two bodies fewer on patrol is a content change with no new geometry, no new material and no new
+camera behaviour. The pictures that would show it are the ones the user is about to take with a
+pad.

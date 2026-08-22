@@ -469,7 +469,26 @@ export const ROUTES = {
   },
 };
 
-/** Which guard walks which route. 11 bodies: 6 temple, 3 heavy, 2 scarab. */
+/**
+ * Which guard walks which route. 9 bodies: 6 temple, 3 heavy.
+ *
+ * **THE SCARAB IS OFF THE LEVEL, and only off the level (§589).** User ruling from a live
+ * playtest — "remove the crab guard" — so the two `scarab` bodies that used to close this list
+ * are gone. What is deliberately still here: the `scarab` entry in `GUARD_TUNE`/`VISION`, its
+ * clip section in `GuardAnim.js`, `DETECT.scarabScale`, and both routes it walked
+ * (`architrave_ledge`, `tomb_scarab`). The ruling was about a body in the world, not about the
+ * code that could put one back — and putting one back is these two lines, while re-deriving a
+ * deleted type is not.
+ *
+ * They were the LAST two entries and that is load-bearing rather than lucky: `Guard.js` warns
+ * that one warned-and-skipped roster line shifts every later index, `SHOT_POSE.guard` parks
+ * roster #0 and `SHOTS.alert.stage` stages #1 and #2. Established by evaluating the array
+ * rather than counting lines — indices 9 and 10 of 11 — so nothing any shot stages moved.
+ * Anything added below must go BELOW nothing; append, never insert.
+ *
+ * Consequence worth knowing before it is rediscovered: `architrave_ledge` and `tomb_scarab` are
+ * now routes with no walker. The architrave and the crypt have nobody on them.
+ */
 export const ROSTER = [
   { type: 'temple', route: 'south_gate', u: 0.00, speed: 1.00 },
   { type: 'temple', route: 'courtyard_ring', u: 0.00, speed: 1.05 },
@@ -480,8 +499,6 @@ export const ROSTER = [
   { type: 'heavy', route: 'hall_weave', u: 0.48, speed: 0.88 },
   { type: 'temple', route: 'rooftop_run', u: 0.15, speed: 1.12 },
   { type: 'heavy', route: 'tomb_vault', u: 0.20, speed: 0.90 },
-  { type: 'scarab', route: 'architrave_ledge', u: 0.00, speed: 1.00 },
-  { type: 'scarab', route: 'tomb_scarab', u: 0.35, speed: 1.10 },
 ];
 
 /* ========================================================================== */
