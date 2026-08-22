@@ -47648,10 +47648,22 @@ first run and named it.
 
 ### §551.5 What is NOT fixed, plainly
 
-- **Pointer lock still needs a post-boot click.** `main.js`'s `begin()` owns it and that file is not
-  this lane's. A player who clicks during loading now gets audio immediately but still clicks once
-  more to capture the mouse. The audio half is fixed; the input half is a one-line change in a file
-  I do not own.
+- **Pointer lock still needs a post-boot click, and this is a KNOWN LIMIT rather than an open task.**
+  `main.js`'s `begin()` owns it. A player who clicks during loading now gets audio immediately but
+  still clicks once more to capture the mouse.
+
+  I proposed replaying the captured gesture into `input.requestLock()` and called it a one-line
+  change. **On review it is not, and it is deliberately not being built.** `requestPointerLock`
+  carries the same user-activation requirement `unlock()` does and a stricter one in places: it
+  generally must be called from *inside* a gesture handler, and a replayed call issued after boot
+  may simply be refused. §551.2 is the reason that matters here — **this container cannot test
+  user-activation policy at all**, so the change could not be verified before it reached the live
+  build, on the exact surface the user is about to touch. An unverifiable change to boot is not a
+  one-liner however few lines it is.
+
+  The behaviour as it stands — one click during loading for audio, one more to capture the mouse —
+  is ordinary for a browser game and costs nothing. Recorded so the next reader finds the reasoning
+  rather than the idea.
 - **The prefetch window only exists after `engine.start()`.** A player who clicks *during* loading
   gets the gesture fix instead, and their stem is fetched on the first frame. Both paths improve;
   neither gets both benefits.
