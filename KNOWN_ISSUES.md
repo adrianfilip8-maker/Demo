@@ -45296,3 +45296,118 @@ its own, so the penetration test was blind to exactly the case that mattered.
 
 Verification: camstate 11/11, camclamp 4/4, climbcam and camdrive unchanged, full suite
 **940/940 from a clean worktree at 031762c**.
+
+## §547 — §545 settled, and it is half wrong: the shadow cache is total with a still camera and worth nothing while the camera turns
+
+The task was to settle §545 with one boot. The boot missed its budget for the third time, so the
+question was answered a different way — and the answer is sharper than the A/B would have been,
+because it says *when* the cache works rather than averaging over one camera path.
+
+### §547.1 The one-boot A/B, attempted and abandoned
+
+Written as instructed: one boot, sample `renderer.info` and `_cacheStats` with the cache on, flip
+`TUNE.shadowStaticCache` live on the same camera and content, sample again, flip back and sample a
+third time so drift is separable from the lever. Launched into a free lock, budget started at the
+grant, and it spent **over 9 minutes without reaching `__GAME.ready`** — the same unbounded boot
+§546.4 named, now three failures against one success (101 s). The 101 s boot is the outlier.
+
+Declared unaffordable and substituted an experiment that needs no renderer at all.
+
+### §547.2 What the cache actually saves, by camera motion
+
+The cache saves the static redraw only on frames where it does **not** refresh, and its key
+includes the cascade's fitted box — which follows the camera. So the saving is a function of camera
+motion, and that is measurable headlessly by driving the real `Lighting.update()` (fit included)
+and counting refreshes. `main.js`'s own shadow sweep is applied first, so the caster set is real:
+**341 casters, 352 static (527 k tris), 1 dynamic**; 3 cascades, c0 legacy, c1 and c2 cached.
+
+```
+  camera STILL              0 refreshes / 100 frames   ->  cache avoids 100% of static redraws
+  camera WALKING 7.2 m/s  143 refreshes / 100 frames   ->  cache avoids  28.5%
+  camera TURNING 90 deg/s 200 refreshes / 100 frames   ->  cache avoids   0%
+  WALKING + TURNING       200 refreshes / 100 frames   ->  cache avoids   0%
+```
+
+(200/100 is 100% of *cached-cascade* frames: two cached cascades, sixty frames each.)
+
+### §547.3 The mechanism, measured rather than reasoned
+
+Per-component diff of the cache key over 60 turning frames, cached cascades only:
+
+```
+  c1:  tgt.x=60  tgt.y=58  tgt.z=60  lit.x=60  lit.y=58  lit.z=60  radius=0  far=0  mapSize=0
+  c2:  tgt.x=60  tgt.y=58  tgt.z=60  lit.x=60  lit.y=58  lit.z=60  radius=0  far=0  mapSize=0
+```
+
+**The radius is rotation-invariant exactly as designed — 0 changes in 60 frames.** `Lighting.js`'s
+header says the sphere fit exists so "the ortho box stops resizing as the camera turns", and that
+claim is confirmed here. But the box's **centre** is not rotation-invariant, it moves on 58-60 of
+60 frames, and the cache key contains it. The design note is true and the cache is defeated anyway,
+because rotation invariance of the *radius* was never the property the cache needed.
+
+Translation behaves differently and consistently: walking crosses the snapped centre's quantum
+often but not every frame, which is the 71.5%.
+
+### §547.4 So §545 is half wrong, and the half that is wrong is the common case
+
+§545 said budgetattrib's un-cached shadow model is "an upper bound the shipped code does not pay".
+Measured:
+
+- **Still camera** — §545 is right, and completely: the cache eliminates every static redraw.
+- **Turning camera** — §545 is wrong: the shipped code pays *exactly* the un-cached cost, because
+  every cached cascade refreshes every frame. budgetattrib's model is the correct one there.
+
+In a third-person platformer the camera turns whenever the player does, so the case where the
+correction fails is the case that is normally running. **§546.3's near-match is now explained**:
+the live frame measured 284 draws / 2.456 M tris against an un-cached prediction of 303 / 2.44 M
+because at that moment the cache was, in all likelihood, refreshing every frame like every other
+moving-camera frame.
+
+The honest summary of the three rounds: §544 ranked shadows first from a tool that ignores the
+cache; §545 corrected that from the mechanism and over-claimed; §547 measures the mechanism and
+finds the correction holds only while nobody moves.
+
+### §547.5 The instrument nearly produced the opposite headline
+
+The first run of this experiment reported **100% refresh on a still camera** — which would have
+been a far more dramatic finding, and was entirely my harness. `Lighting.update()` reads
+`engine.debug.timeOfDay`; a stub without it sets `this.timeOfDay = undefined` on the first call,
+the sun direction goes NaN, every cache key component goes NaN, and `stale` is true forever because
+NaN never equals itself. The tell was in the key dump — light positions and `far` serialising as
+`null` while `radius` and `mapSize` were finite.
+
+§435.4, again: a probe written from my model of the world tests my model. The diagnosis cost one
+step and would have cost a published headline.
+
+### §547.6 The lead this opens, and why it is not taken here
+
+If the cache key's centre were quantised the way its radius already is, a turning camera would stop
+invalidating it and the cache would work in motion — the single largest available saving in the
+frame. But centre snapping is exactly what stops shadow crawl, so coarsening it is **look-bearing
+in the most visible way this renderer has**, and §466.5 wants two frames per claim on the shots
+that would show it. This box cannot produce those frames affordably (three failed boots this
+round). Recorded as a specified lead, not attempted: *quantise the cache key's centre, or key the
+cache on a coarser grid than the fit uses, and price the crawl.*
+
+### §547.7 The compile question is still open, and it is the one that matters most
+
+Whether `programs.length` grows during play was written into the abandoned probe (drive attack,
+jump, run+glide, focus through `Input.inject`, read the count either side) and died with the boot.
+It remains **unanswered**. It is a count over frames, so a starved box cannot corrupt it — the only
+cost is reaching `ready` once. The cheapest path is to ride it on any future boot any lane makes,
+which is how it is now written.
+
+Known so far: **102 programs at boot plus six frames** (§546.2), and nothing compiled across the
+900 headless frames §544's F1 drives — but F1 sees only the four world modules, and the program
+list is dominated by `fx.*`, `guard_*` and `postfx.*`, which F1 never builds.
+
+### §547.8 DOMAIN
+
+- **S6 fit** — *passes on* the real `Lighting.update()` (fit included) refreshing zero times over
+  60 frames with a still camera, and on the fitted radius being unchanged by a 90 deg/s turn;
+  *fails on* a static caster moved through the same path, run in-arm, so "zero refreshes" cannot be
+  satisfied by a cache that has stopped deciding. Mutation-checked: withholding
+  `engine.debug.timeOfDay` reproduces §547.5's NaN and reddens S6 with the right message.
+- It deliberately **does not assert what a turning camera does**. The number is measured and
+  printed; asserting it would redden the day someone fixes §547.6, which is the wrong direction for
+  a ratchet to point.

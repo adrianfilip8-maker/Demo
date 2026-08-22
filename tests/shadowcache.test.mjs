@@ -295,3 +295,81 @@ test('S5 geometry: a static whose SHAPE changes under a still transform dirties 
     + 'subsequent edit');
   console.log(`\n[S5] geometry ${r1} · position ${r2} · index ${r3} · drawRange ${r4} · Infinity ${r5} · after ${r6}`);
 });
+
+/* ====================================================================== */
+/* S6 — the cache key follows the fitted box, so camera motion invalidates */
+/* ====================================================================== */
+
+test('S6 fit: a still camera refreshes nothing, and the radius is rotation-invariant', async () => {
+  /* ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : the REAL `Lighting.update()` — fit included, not just `_updateShadowCache` —
+   *               driven for 60 frames with a still camera, producing zero refreshes; and the
+   *               fitted radius never changing under a 90 deg/s turn, which is the rotation
+   *               invariance the sphere fit exists to provide.
+   *   fails  on : RUN in-arm — a static caster moved, which must dirty the cache through the same
+   *               path. Without it "zero refreshes" would be satisfied by a cache that had stopped
+   *               deciding anything at all.
+   *   verdict   : passes on a quiescent fit, fails on a real change. It pins the STILL-camera
+   *               guarantee, which is the half the cache reliably delivers.
+   *   does NOT  : assert what a TURNING camera does. §547 measured the centre moving on 58-60 of
+   *   discrim.    60 turning frames while the radius moved on 0 — so the cache is fully effective
+   *               still and ineffective turning — but asserting that would redden the day someone
+   *               improves it. The turning number is printed, not asserted.
+   *
+   * ── The harness trap this arm also guards ───────────────────────────────────────────────
+   * `Lighting.update()` reads `engine.debug.timeOfDay`; a stub without it sets `timeOfDay =
+   * undefined` on the first call, which makes the sun direction NaN, which makes every cache key
+   * NaN, which makes `stale` true forever. §547's first run measured "100% refresh on a still
+   * camera" from exactly that and it was the harness, not the code (§435.4). The assertion below
+   * that a still camera refreshes ZERO would have caught it.
+   */
+  const { L, scene, engine } = await lighting();
+  engine.debug.timeOfDay = 0.79;                 // see the note above — without this it is all NaN
+  scene.add(mesh('wall_a'), mesh('wall_b'));
+  const cam = engine.camera;
+  const DT = 1 / 60;
+  let t = 0;
+  const step = (n) => { for (let i = 0; i < n; i++) { cam.updateMatrixWorld(true); L.update(DT, t += DT); } };
+
+  cam.position.set(0, 6, 20); cam.rotation.set(0, 0, 0);
+  step(24);                                      // past the first-frame refresh and the %8 beat
+  const r0 = L._cacheStats.refreshes;
+  step(60);
+  const still = L._cacheStats.refreshes - r0;
+  assert.equal(still, 0,
+    `${still} refreshes over 60 frames with a STILL camera and a quiescent world. The fit is `
+    + 'moving when nothing is, so the cache pays its full bill every frame and saves nothing — '
+    + 'and if every key component is NaN (the `timeOfDay` trap above) this is exactly what it '
+    + 'looks like.');
+
+  /* the sphere fit's stated property: radius is rotation-invariant */
+  const radii = L.cascades.map((c) => c.radius);
+  let ry = 0;
+  for (let i = 0; i < 60; i++) {
+    ry += (Math.PI / 2) * DT;
+    cam.rotation.set(0, ry, 0);
+    cam.updateMatrixWorld(true);
+    L.update(DT, t += DT);
+  }
+  L.cascades.forEach((c, i) => {
+    assert.equal(c.radius, radii[i],
+      `cascade ${i}'s fitted radius moved from ${radii[i]} to ${c.radius} under a pure rotation — `
+      + 'the bounding-sphere fit exists precisely so it does not, and that is what stops the ortho '
+      + 'box resizing as the camera turns');
+  });
+  const turning = L._cacheStats.refreshes - r0 - still;
+
+  /* RUN the counterexample: a real change must still dirty it through this same path. */
+  cam.rotation.set(0, ry, 0);
+  step(12);
+  const r1 = L._cacheStats.refreshes;
+  const w = scene.children.find((o) => o.name === 'wall_a');
+  w.position.x += 6; w.updateMatrixWorld(true);
+  step(1);
+  assert.ok(L._cacheStats.refreshes > r1,
+    'moving a static caster did not dirty the cache through the full update path — this arm '
+    + 'cannot tell a quiescent cache from a dead one (§418)');
+
+  console.log(`\n[S6] still camera: ${still} refreshes / 60 frames · turning 90 deg/s: ${turning} `
+    + `(radius invariant on all ${L.cascades.length} cascades; §547 measured the CENTRE moving instead)`);
+});
