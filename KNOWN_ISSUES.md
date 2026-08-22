@@ -47217,3 +47217,100 @@ ends wall-adjacent with the body mid-leap, which is §479's own recorded refusal
 — it now drives at the `run` node's 0.75 magnitude, and even so the plaza's straightaway is
 short enough that the run pair is the weakest of the three. The run pair is committed as a
 secondary sample with that limit stated; the idle and hang pairs carry the claim.
+
+## §592 — Circle must be pressed for thief moves: built, measured, held one leg short
+
+**User ruling, from a live playtest:** *"Make it so that the circle button must be pressed to do
+thief moves rather than it being automatic."* Written by the coordinator from `8b97297`'s commit
+message, because the world lane stood down before `KNOWN_ISSUES.md` was safe to touch — it was
+carrying another lane's uncommitted §589 throughout, and two lanes correctly refused to `git add`
+it rather than repeat §525.2's sweep. **Nothing here is new work; it is the record catching up with
+a commit that already carries the reasoning.**
+
+### The census — automatic attachment was wider than the two paths anyone knew about
+
+Driven or read from the real `canEnter` bodies, not from a list: `HookSwing` (fly-through inside
+`hookAuto`, no input), `PoleClimb` (held stick into the shaft inside `poleMount` 1.90),
+`RailSlide` (contact from above — landing on a rail mounts it), `RailWalk`, `SpireLand` (**no press
+clause at all**), `LedgeHang`, `WallRun`/`WallClimb`/`WallCling`, `Crawl` (`inVent()`), and
+`ToTarget` magnetism, whose `arrive` routes through the destination state's own `canEnter` and so
+follows whatever that state does.
+
+### The measurement that inverted the worry
+
+The coordinator warned the user that a press per catch might make the hook chain — the best sequence
+in the game by §575's play report — materially harder or uncompletable. **The opposite is true, and
+the reason is arithmetic that was available in advance:** `hookAuto` is 2.9 m and the press clause
+reaches `hookGrab` **9.0 m**, so requiring a press *widens* the catch sphere **3.1×**.
+
+```
+auto-grab, fixed cadence:        3 of 6 courtyard hops catch
+Circle held (hookAuto ablated):  6 of 6 catch
+narrowest window:                27 frames = 450 ms
+ring-skip, measured on leg5b:    a held catch reached a ring 7.11 m PAST the intended target
+```
+
+**Provenance, stated because it matters:** these come from a standalone driver, **not** from the
+acceptance route, and have no commit behind them. §450.4's discipline applied to a figure that
+flatters the change.
+
+### The shape that is settled, and the predicate that splits
+
+- **hook `down`** — a mid-flight catch at 9 m cannot be tapped to time.
+- **pole `pressed`** — with `down`, a player who holds Circle to climb and then jumps is re-grabbed
+  by the same held button, because `poleLockout` expires before a long top-hop lands. Driven, that
+  turned §495.C's pipe climb into a loop that never reached the y 9.0 architrave ring.
+- **rail `down`**, plus a **coyote-timer exemption** for §497's authored walk-on. The coordinator's
+  first instruction — "keep `RailWalk`'s continuation, gate `RailSlide`'s mount" — was **wrong**:
+  that distinction does not exist in code, because walking off the colossus knee is *airborne* on
+  arrival and is therefore structurally `RailSlide`'s from-above clause. `TUNE.coyote` (0.110 s)
+  says the real thing — inside coyote you are still finishing a step, and a drop, jump or swing
+  arrival is nowhere near it. A principled boundary rather than a carve-out; `B-walkonWE` passed on
+  its own terms.
+- **spire `down`.**
+- **Scope line, ruled by the coordinator:** gate hook, pole, rail and spire; leave ledge-grab, the
+  wall moves and vent-crawl automatic. Those are body-against-geometry rather than thief
+  attachments, and gating ledge-grab would mean falling past every ledge in the level.
+
+**`spawn2eye` now certifies chain PROGRESS, not ring identity** — caught ring N+1 *or beyond*, never
+backward, chain completes, route completes. Ring-by-ring was an implementation detail of how the
+chain happened to be crossed under automatic grabbing; it got into the assertions because it was
+incidentally true, not because anyone decided the chain must be taken one ring at a time. The
+narrower alternative — require the chooser's winner to be the nearest ring — was rejected: it would
+trade away the forgiveness that makes this ruling good in order to preserve a rhythm nobody authored.
+
+### Why it is held
+
+leg6c went green on the diagnosed fix (`dS > TUNE.hookL` — the departed ring is genuinely released
+— rather than `dT < dS - 0.5`, which opens too late on return legs where rings sit close in XZ
+early in the flight). **leg6d then failed with the same signature one leg along.** Under the agreed
+hard stop, none of the gating was committed and no fourth approach was started. That is two
+datapoints on one pattern rather than a puzzle, which is a better starting position than this pass
+had.
+
+**What landed instead**, because both are wrong *today* and merely invisible while grabbing is
+automatic — `8b97297`, verified green against the shipped un-gated moveset:
+
+1. **A bail edge that cannot fire when the catch is instant.** `chainHop` detected a bail by
+   *leaving* `hookSwing`; at 9 m the next ring is caught on the same frame the old one is released,
+   so the capsule never appears outside the state. Detected by **anchor change** now.
+2. **A landing exit that never released the button.** That branch's own comment already said *"a
+   LANDING exit must not re-grab the chain"* — true for free while nothing held interact.
+
+Both are the session's dominant shape: **a check that is true by accident looks exactly like a check
+that is true by construction, until the accident stops holding.**
+
+### Also expired, and left in place deliberately
+
+§571's rope was placed in a 1.90–2.85 m band whose **near edge existed to prevent accidental
+auto-mounts while walking the route**. With auto-mount gated, accidental mounts are impossible and
+the near edge prevents nothing — the rope could sit as close to the walked line as the art allows,
+which would directly address §585's finding that it is in gate for only 4 % of the route. **Not
+moved**: that is a level change with a discoverability consequence and deserves its own commit and
+its own frames rather than riding along inside a control change.
+
+### Remaining
+
+The return-leg hold window on the last two hops. Everything else is built and was green under it —
+`thiefspots`, `level`, `epress`, `navefork`, `naverope`, `reachcensus` — and the route reached
+leg6d.
