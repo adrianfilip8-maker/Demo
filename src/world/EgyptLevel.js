@@ -47,9 +47,24 @@ import * as K from './Kit.js';
  *     14.6 m/s, just under the threshold) — and enter the hall at grade through the doorway.
  *     Whether the route should instead gain descent furniture here is an open design call;
  *     nothing below prices the doorway drop as the default any more.
- *  5. INSIDE THE HALL: pole climb any of the 12 papyrus columns; the aisle architrave
- *     circuit (y 13.5) and the interior tiptoe cornice (y 10.0) ring the whole room. The
- *     taut cable at y 12.6 crosses the nave diagonally as a `rail`.
+ *  5. INSIDE THE HALL — **three of this line's four claims are false, measured (§569)**, and
+ *     the corrections matter because they are the whole of the hall's interior traversal:
+ *       · "pole climb any of the 12 papyrus columns" — NO. They register as `pole` but at
+ *         r 1.62 they are refused by §514.3's thin gate, which is the user's own columns
+ *         ruling. Nothing in the hall is climbable from the floor.
+ *       · "the interior tiptoe cornice (y 10.0)" — does not exist. A downward ray at x ±10,
+ *         z −30 finds surfaces at 17.00, 16.15, 0.00 and −1.00 and NOTHING within 1.6 m of
+ *         y 10.
+ *       · "the aisle architrave circuit (y 13.5) ... rings the whole room" — the east side is
+ *         a surface at y 13.50 that carries a 14.4 m walk at 100 % grounded, but with **0.80 m
+ *         of headroom** against a 1.80 m capsule: it is a soffit you could crawl, not a
+ *         circuit you can walk. The west side does not settle a capsule at all (`ledgeHang`).
+ *       · The taut cable IS there and IS a `rail`, at y 13.33 → 13.53 (not 12.6), and it ends
+ *         on that east architrave with a 0.03 m drop.
+ *     What the hall really offers above the floor is the NAVE DECK at y 17.00 — measured
+ *     standable, a 14.3 m walk at 80 % grounded with 6 m of headroom — reached from the
+ *     rooftop line, plus the two roof rails at y 17.42, x ±11.4. The floor and the deck are
+ *     **not connected by anything**: see §570 for the 35.5 m gap that follows from it.
  *  6. NORTH END: walk out of the hall through the inner pylon gate (x ±3, y 0..7.6) at
  *     z -52 onto the descent landing (0, 0, -57).
  *  7. TOMB DESCENT: flight A drops west 0 -> -5.6, landing, flight B drops east -5.6 -> -12,
@@ -1925,7 +1940,28 @@ function courtyardTraversal(A) {
     K.normaliseAttrs(g);
     const y0 = mz > 0 ? L.peri.ledge : 13.5;
     A.add('court', 'bronze_dark', K.boxProjectUVs(K.place(g, { x: mx, y: (y0 + my) / 2, z: mz, rz: D(R.jitter(0.7)) })));
-    poleProxy(A, mx, mz, y0, my, 0.4, { material: 'metal' });
+    /**
+     * ── §568: the north mast is a BOLLARD, not a climb ────────────────────────────────────
+     * Both masts used `poleProxy`, which is convenient and, for the east one, right: it stands
+     * 6.90 m from the y 9.0 peristyle circuit to the ring at 15.9, and `reachcensus` drives a
+     * player up it onto `hook-main-0`. The north one is **0.40 m tall** — `y0` is hardcoded to
+     * 13.5 for a mast whose top is 13.9 — so it published a `pole` affordance offering a 0.4 m
+     * climb that arrives back where it started. Measured in the §563 census: it entered
+     * `poleClimb` and was counted among the level's four climbable poles, which made the
+     * affordance census say something untrue about how much traversal the level has.
+     *
+     * That is the shape the route audit was sent to find — enterable, and nothing on the other
+     * side — so it is closed at the smallest scale it occurs at. The post keeps its collision
+     * (a walker on the west aisle roof still meets it; removing the proxy outright would have
+     * been an art/collision desync in the other direction) and simply stops being a traversal
+     * offer. `tag: 'misc'` rather than `pole`, so `_buildAffordances` never files it.
+     * COLLIDER-NEUTRAL: still one `A.proxy`, so `basketvary`'s registration total is unmoved.
+     */
+    if (my - y0 >= 2.0) poleProxy(A, mx, mz, y0, my, 0.4, { material: 'metal' });
+    else {
+      A.proxy(new THREE.CylinderGeometry(0.4, 0.4, my - y0, 8, 1),
+        { tag: 'misc', material: 'metal' }, { x: mx, y: (y0 + my) / 2, z: mz });
+    }
   }
 
   /* ---- Main hook chain: z 27 -> -13, y 14.9 -> 14.0, swingable end to end. ----

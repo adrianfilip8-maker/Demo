@@ -44005,3 +44005,96 @@ identical), so these carry a POSE read and not a look read. The first strike's f
 between arms, which is the control: the rule reached the chain seam and nothing else. What no frame
 here settles is whether the restored escalation READS as three hits — that is feel, it needs hands,
 and it is hardware item 20.
+
+---
+
+## §568 — The north mast was a 0.40 m climb to nowhere, and the route audit is what found it
+
+`src/world/EgyptLevel.js` · `tests/reachcensus.test.mjs`
+
+Both hook-chain masts were built with `poleProxy`. For the east one that is right: it stands
+6.90 m from the y 9.0 peristyle circuit up to ring `hook-main-0`, and §563 drives a player up it.
+The north one is **0.40 m tall** — its `y0` is hardcoded to 13.5 for a mast whose top is 13.9 —
+so it published a `pole` affordance offering a climb that arrives where it started.
+
+§563 counted it among the level's four climbable poles and drove it into `poleClimb`, so the
+affordance census was overstating how much traversal the level has by one. That is the exact
+shape this pass was sent to look for — *enterable, and nothing on the other side* — occurring at
+the smallest scale it can.
+
+Closed by tagging it `misc` instead of `pole`: it keeps its collision (a walker on the west aisle
+roof still meets the post; deleting the proxy would have been an art/collision desync in the other
+direction) and stops being a traversal offer. **Collider-neutral** — still one `A.proxy`, measured
+at 255 proxies / 287 recs before and after, so `basketvary`'s total is unmoved. Offered `pole`
+affordances 4 → 3; `reachcensus`'s census assertion updated with it.
+
+## §569 — §8.1's hall interior: three of four claims were false
+
+Measured against the shipped colliders, and corrected in the route header rather than the ledger
+because a route document that asserts traversal nobody has will license the next author to build
+on it (§481):
+
+| §8.1 said | measured |
+|---|---|
+| "pole climb any of the 12 papyrus columns" | **No.** They register as `pole` but r 1.62 is refused by §514.3's thin gate — the user's own columns ruling. Nothing in the hall is climbable from the floor. |
+| "the interior tiptoe cornice (y 10.0)" | **Does not exist.** A downward ray at x ±10, z −30 finds 17.00, 16.15, 0.00, −1.00 and nothing within 1.6 m of y 10. |
+| "the aisle architrave circuit (y 13.5) rings the whole room" | East side is a surface at 13.50 carrying a 14.4 m walk at 100 % grounded — with **0.80 m of headroom** against a 1.80 m capsule. A soffit you could crawl, not a circuit you can walk. West side does not settle a capsule at all (`ledgeHang`). |
+| "the taut cable at y 12.6 crosses the nave as a `rail`" | **True**, at y 13.33 → 13.53, and it lands on that east architrave with a 0.03 m drop. |
+
+What the hall really has above its floor is the **nave deck at y 17.00** — measured standable,
+14.3 m of walk at 80 % grounded, 6 m of headroom — plus the two roof rails at y 17.42, x ±11.4,
+and four open roof slots at x 0 (z −25.19, −32.45, −39.71, −46.97, each 2.6 × 2.3 m) with a clear
+16 m shaft to the floor. The floor and the deck are connected by **nothing**.
+
+## §570 — The route measured: 68 % of the walked line has nothing to do, and the fill for the worst gap is priced but not shipped
+
+`tests/routeplay.test.mjs` (new)
+
+`reachcensus` answers "how many affordances exist and can they be entered" — 31 and 29. That is
+not what the user asked for. The way to pass it and still fail them is to own plenty of
+affordances the player never stands beside, so this measures the ROUTE.
+
+**Method.** The level's own `api.route` (11 waypoints) plus the Eye. Five segments are WALKS and
+are driven; five are BEATS (a jump, a double jump, a hook grab, a swing, a retrace) and are
+excluded, because a beat is the opposite of a gap. Branch factor at each 0.5 m sample is the
+number of distinct affordance records a standing player could commit to, using the moveset's own
+`canEnter` gates from AFFORD's own eye offsets.
+
+    branch factor over 170 walked samples   0 on every one of them
+    gap total                               58.0 m of 85.0 m walked (68 %)
+    worst gap                               35.5 m — the hypostyle hall floor, z −20 → −54.6
+    then                                    12.0 m crypt · 8.0 m spawn approach
+    offset to the route (beats included)    5 affordances < 3 m · 7 at 3–9 · 7 at 9–20 · 12 > 20
+
+The 12 beyond 20 m are the §8.6 ROOFTOP RUN, a separate authored line — expected, not a defect.
+
+**Branch factor 0 does not always mean no line, and that limit is measured (arm R3).** The spawn
+approach scores 0 for its whole 8 m and still has one: the colossi plinth courses step
+0 → 1 → 2 → 3.6 → 4.5, and a driven run-and-jump reaches grounded **y 4.90** on the anchor stone —
+which is where §495.B's rope is walked on from. So the rope's near side is real; the metric counts
+affordances, not terrain.
+
+**The 35.5 m hall gap is real and its fill is designed, priced, and NOT shipped.** The fill is a
+rope hanging through one of the four roof slots — say (0, 0.2 … 16.6, −39.71), r 0.14, material
+`cloth`, exactly §495.A's shape — from the hall floor to the nave deck. Both ends are already
+authored and already walkable, the shaft is already open, and it converts §489's lethal 16 m
+clerestory drop into a two-way line. It respects the columns ruling by being a rope.
+
+It costs **+1 collider** (`pole` 3 → 4). `basketvary.test.mjs:424` is not a frozen seal — it is a
+running ledger the world lane has updated three times with a histogram entry each
+(272 → 276 §495, 276 → 280 §497, 280 → 282 §498), so the protocol for this is established. But
+that file is **not this lane's to edit**, and shipping the rope without updating it turns the
+suite red. So the wall is named rather than climbed over: the design and the number are above,
+ready to ship the moment the ledger line can be updated with it.
+
+Two zero-cost improvements went in instead: §568 and §569.
+
+**DOMAIN (§418.3)** — R1 *passes on* the shipped route (5 walk segments, 170 samples, worst gap
+35.5 m in the hall, 68 % total); *fails on* the same measurement with every entry gate widened to
+40 m, run in-arm, which collapses the worst gap to 0.0 m — proving the gaps are a property of
+REACH and not of the resampling. R2 *passes on* 11 of 30 affordances within 9 m of the route;
+*fails on* the same metric against a one-point route (spawn alone), run in-arm, which finds 1 —
+the control proving the metric responds to the route rather than to level density. R3 *passes on*
+the driven plinth climb reaching y 4.90; *fails on* the same drive with jump suppressed, run
+in-arm, which stays on the paving at 0.00. *Does not discriminate*: whether a gap is bad rather
+than long; whether a climb is discoverable (one scripted cadence, not a sweep); the rooftop run.
