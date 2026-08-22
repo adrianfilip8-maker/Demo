@@ -52,9 +52,15 @@ import {
  * a little real light onto nearby stone. That is a garnish, not the effect (see `_updateSpill`).
  *
  * ── Draw budget ──────────────────────────────────────────────────────────────────────────
- * 11 guards × (body + metal + ink shell) = 33, plus 1 beam + 1 pool = **35 draw calls** for
+ * 9 guards × (body + metal + ink shell) = 27, plus 1 beam + 1 pool = **29 draw calls** for
  * the entire garrison. Geometry is built once per type and shared; only the `Skeleton` is
  * per-instance, which is all a SkinnedMesh needs to animate independently.
+ *
+ * This read 11 guards and 35 draw calls until §589 took the two scarab bodies off the roster
+ * and nothing here followed. Corrected against a count rather than an edit to the arithmetic:
+ * `carmguard` prints `268119 tris in 18 skinned draws (9 humanoid + 0 scarab)`, measured off
+ * `ROSTER` itself. Re-rostering a scarab moves both numbers, so count again rather than
+ * trusting this line — it has been wrong once already, and a comment cannot be tested.
  */
 
 /* ============================== TUNE ====================================== */
