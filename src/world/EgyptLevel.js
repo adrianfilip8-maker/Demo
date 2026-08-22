@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import * as K from './Kit.js';
+/* §587: the level's own rope-coil vocabulary, reused rather than re-modelled. `Props` already
+   places eight of these; this is a ninth, sited deliberately instead of scattered. */
+import { ropeCoil } from './PropKit.js';
 
 /**
  * EgyptLevel — the Temple of Ra, laid out to the AGENTS.md §8.1 coordinate contract.
@@ -2746,6 +2749,38 @@ function hypostyleHall(A) {
     new THREE.CylinderGeometry(0.055, 0.07, NR.y1 - NR.y0, 6, 1)),
   { x: NR.x, y: (NR.y0 + NR.y1) / 2, z: NR.z, rz: D(0.8) }));
   poleProxy(A, NR.x, NR.z, NR.y0, NR.y1, NR.r, { material: 'cloth' });
+
+  /* ---- §587 A coil of slack at the rope's foot. SHIPPED ON JUDGEMENT, NOT MEASUREMENT. -----
+   *
+   * §585 measured how each piece of new content is actually found, and the two answers are
+   * opposites. The lamp chain is carried entirely by the HUD — its rings are telegraphed on
+   * 1–15 % of route samples and are on screen, inside a real 46° frustum, for **2 %** of the hall
+   * leg, because they hang overhead. This rope is the reverse: `TELEGRAPH_KINDS` has no `pole` in
+   * it, so it is telegraphed **0 %** of the time, while its FOOT is on screen for **31 %** of the
+   * hall leg. The eye is its only channel, and the foot is the part of it the eye is already on.
+   *
+   * So the cue goes where the player is already looking. That much is measured. What is NOT
+   * measured — and cannot be, from here — is whether a coil of rope on the floor makes anyone
+   * look UP a 16 m line. That is a playtest question, and this went in as a coordinator's call on
+   * a one-drawable bet, not because an instrument said so. **It is therefore the first thing to
+   * revert if the foot of this rope reads as clutter.**
+   *
+   * Cost, measured rather than estimated — and it came in under the estimate. It was priced as
+   * "one drawable"; it is **624 triangles and ZERO extra draw calls**, because `A.add` merges
+   * into the `hall` group's batch rather than making a mesh of its own. Zero collider
+   * registrations too: a collider digest of tag, material and world bounds is byte-identical
+   * before and after, same hash, 293 rows either way — which is also the RNG-neutrality proof,
+   * since a single shifted seed draw would move masonry all over the level. (`ropeCoil` and the
+   * `ropeSpan` tail it builds only touch `rng` when one is passed, and none is.) `basketvary`
+   * P-A1 — "a rope coil is set dress and carries no gameplay volume" — is the seal that catches
+   * this if it ever stops being true.
+   *
+   * Sited 0.4 m off the shaft toward the walked line rather than around it, so a climber standing
+   * at the foot does not stand inside it, and the `tail` runs out toward the route — the slack
+   * points at the player instead of away. */
+  A.add('hall', 'rope_fibre', K.place(K.boxProjectUVs(ropeCoil({
+    r: 0.52, tube: 0.07, coils: 4, oval: 1.05, taper: 0.2, tail: 0.9,
+  })), { x: NR.x - 0.40, y: 0.02, z: NR.z - 0.15, ry: D(198) }));
 
   /* Pinnacles on the aisle roof: the §8.1 spire tips at (±16, 21, −50). */
   for (const sx of [-1, 1]) {

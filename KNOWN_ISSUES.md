@@ -46630,3 +46630,32 @@ is reported to the coordinator and not chased.
 Five browser runs, ~20 minutes each on the shared FIFO lock, for two frames — and the two that
 landed came from the deterministic pose replay, not from any of the driven searches. The lesson is
 not about the box: **when the pose is a knife edge, replay it; do not hunt it.**
+
+## §587 — The rope coil at the foot of the nave rope: shipped on judgement, not measurement
+
+Authorised by the coordinator after §585 priced it. **It is the first thing to revert if the foot
+of that rope reads as clutter**, and it is recorded that way on purpose.
+
+**What measurement supports.** §585 found the two pieces of new content are discovered through
+opposite, non-overlapping channels. The lamp chain is carried entirely by the HUD — telegraphed on
+1–15 % of route samples, on screen inside a real 46° frustum for **2 %** of the hall leg, because
+the rings hang overhead. The rope is the reverse: `TELEGRAPH_KINDS` contains no `pole`, so it is
+telegraphed **0 %** of the time, while its **foot is on screen for 31 % of the hall leg**. The eye
+is the rope's only channel and the foot is the part of it the eye is already on. Putting a cue
+there aims it where the player is already looking. All of that is measured.
+
+**What measurement does NOT support**, stated plainly: whether a coil of rope on the floor makes
+anyone look *up* a 16 m line. That is a playtest question and no instrument in this repo can answer
+it. This went in as a judgement call on a cheap bet, not because a number said so.
+
+**Cost, measured rather than estimated, and under the estimate.** Priced as "one drawable"; it is
+**624 triangles and zero extra draw calls**, because `A.add` merges into the `hall` group's batch
+instead of making its own mesh. Zero collider registrations: the collider digest — tag, material
+and rounded world bounds for all 293 recs — is byte-identical before and after, **same hash both
+ways**, which is simultaneously the RNG-neutrality proof, since one shifted seed draw would move
+masonry across the level. `ropeCoil` and the `ropeSpan` tail it builds only read `rng` when one is
+passed, and none is. `basketvary` P-A1 (*"a rope coil is set dress and carries no gameplay
+volume"*) is the seal that catches this if it ever stops being true.
+
+Sited 0.4 m off the shaft toward the walked line rather than wrapped around it, so a climber
+standing at the foot does not stand inside it, with the `tail` running out toward the route.
