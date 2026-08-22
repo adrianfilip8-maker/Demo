@@ -936,7 +936,7 @@ test('landing/launch seam (§529): a whole-body posture is replaced by the next 
 
      Driven from the REAL state machine in `tools/landseam.mjs`, pre-fix: `land -> jump` held
      `land_soft` + `jump_rise` for 383 ms at summed weight 2.167, and `skid -> jump` reached 3.00
-     with `skid_stop` still live through the following landing. `shots/land1/*` carry the picture:
+     with `skid_stop` still live through the following landing. `shots/land1-*` carry the picture:
      at the worst beat he is neither skidding nor launching but hanging at rest, arms at his sides.
 
      THE MEASURE is §526.2's, reused rather than reinvented: SUMMED LIVE WEIGHT is the number of

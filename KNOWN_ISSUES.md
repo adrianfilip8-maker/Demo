@@ -45411,3 +45411,263 @@ list is dominated by `fx.*`, `guard_*` and `postfx.*`, which F1 never builds.
 - It deliberately **does not assert what a turning camera does**. The number is measured and
   printed; asserting it would redden the day someone fixes §547.6, which is the wrong direction for
   a ratchet to point.
+
+## §529 — A landing and a launch are not simultaneously true of a body: the two seams §527 named, fixed by the half of the mechanism neither §525 nor §526 had
+
+`src/player/Animation.js` (`play`, `_demoteOthers`, `buildClipSet`) · `src/player/Clips.js` (`compile`,
+four defs) · `tools/landseam.mjs` · `tools/landtrace.mjs` · `shots/land1-*` · `tests/anim.test.mjs`
+
+§527 censused the whole transition space, flagged 28 reachable candidates, and recommended
+`land → jump` and `skid → jump` first — a landing absorb and a launch share all 31 bones and both
+sit on the commonest path in a platformer. It also said, honestly, that the two were *candidates*
+rather than demonstrated defects: what the suite actually observed was 1.17 and 1.21, mild.
+
+**The suite was not a player.** Driven from the real state machine with real input, the two are
+not mild at all, and one of them reaches summed weight 3.00.
+
+### 1. What the correct behaviour is, settled before the mechanism was chosen
+
+Their tree was read for intent; nothing was ported, and nothing under `Assets/Music` or
+`Assets/Effects` was touched.
+
+**Their landing clip exists and is wired, and their game never plays it.** `Library_Sly_14/Landing`
+sits in `player__sly.tscn`'s tree as the node `floor_land`, behind a `Floor Shot`
+`AnimationNodeOneShot` (fadein 0.1, fadeout 0.1). Grepping the whole of `Scripts/` for
+`Floor Shot` returns **one line, and it is for a different node** (`Hat Fall Sub/sub_amount`).
+Nothing ever sets `parameters/Floor Shot/request`. So their tree has no *exercised* opinion about
+a landing meeting a launch: they never face the case.
+
+It has a **structural** one, and it is unambiguous. Reading `node_connections`, the graph is
+
+```
+floor_state ─┐
+             ├→ Floor Shot ─→ state ─→ Hit Shot ─→ OneShot ─→ output
+floor_land  ─┘   (landing)                          (jump)
+```
+
+The jump's one-shot sits **downstream** of the landing's. `OneShot` (fadein 0.1, fadeout 0.25)
+takes `jump_state` as its shot and everything below — including whatever `Floor Shot` produced —
+as its input. When the jump fires, its blend rises 0 → 1 over 0.1 s and the landing is blended
+*out* by exactly that much. **A launch out of a landing gets a brief blend that COMPLETES.** Not a
+hard cut, and never a sustained average: their graph cannot express one.
+
+Three details corroborate that this is deliberate rather than incidental:
+
+- `jump_state` is a single `AnimationNodeTransition` (`jump_floor`, `jump_air_forward`,
+  `ledge_grab`, `jump_swing`, `jump_spin`, `jump_pole`) feeding **one** `AnimationNodeOneShot`
+  that every jump re-fires. Two jump variants can never be live together either — the same shape
+  §525 read off `Hit Shot`, found independently here.
+- `player__sly.gd:216` sets `parameters/OneShot/request` to **3** — `ONE_SHOT_REQUEST_FADE_OUT`,
+  not FIRE — when a floor ray is colliding and `velocity.y <= 0`. They actively clear the jump
+  one-shot on the approach to the ground.
+- `player__sly.gd:596`, `if jump_when_hit_floor == true and state == FLOOR: jump()`, is their jump
+  buffer, and it is precisely our case: a press made in the air, deferred to the landing frame.
+  `jump()` then re-fires the same single one-shot.
+
+**They have no skid clip and no skid state, so their tree has no opinion at all on
+`skid → jump`.** Recorded because the absence is a real answer and the temptation was to
+generalise from the landing.
+
+And our own tree already agrees for one exit out of two: `land → idle` and `land → move` go
+through `play()`'s blend-tree branch, which ends every non-locked track. **The landing clip
+outliving its state was never a designed behaviour — it is what happens on the exits that miss
+that branch.** That, more than anything in the reference, is what settled the question.
+
+### 2. Measured, on the real machine, from pure input
+
+`tools/landseam.mjs` drives `tests/_moveset.mjs` — the harness the suite itself uses — so the
+dwell, the jump buffer and the state priorities are the game's. No state is poked: the land case
+runs forward, jumps, jumps again in the air (spending the air jump, as a player does constantly)
+and taps jump on the way down; the buffer carries the press into the landing.
+
+The measure is §526.2's, reused rather than reinvented. `PoseBuffer.addQuat` is a **normalised**
+mean, so N tracks at weight 1.0 do not overdrive — they produce the equal-weight average of N
+poses. **Summed live weight is the number of motions being averaged.**
+
+| shipped (godot) regime | before | after |
+|---|---|---|
+| `land → jump`: `land_soft` + `jump_rise` together | 383 ms, summed **2.167** | **0 ms — never co-live** |
+| `land → jump`: run-wide above 1.00 | 450 ms | 67 ms (a pre-existing `double_jump`+`jump_rise` transient, not this seam) |
+| `skid → jump`: `skid_stop` + `jump_rise` together | 300 ms, summed **2.000** | 50 ms, summed **0.750** |
+| `skid → jump`: run-wide max summed weight | **3.000** | **1.000**, 0 ms above 1.00 |
+| `fall → land`: `jump_fall` + `land_soft` together | 383 ms, summed **2.000** | 67 ms, summed **1.000** |
+
+Procedurally the before column is worse still (`land → jump` 533 ms) because `land_soft` is 0.42 s
+there against 0.25 s imported. The after column is identical in both regimes.
+
+**`skid_stop` at 3.00 is the worst of it and it is worth naming.** Pre-fix, the skid clip stays at
+weight 1.0 through the launch, the whole rise, the fall, *and into the next landing*, where it is
+averaged three ways with `land_soft` and `jump_fall`. One reversal of the stick contaminated
+0.58 s of everything that followed it.
+
+**`fall → land` is not one of §527's 28, and it is the commonest of the three.** Those 28 are
+one-shot PAIRS; this is the other polarity of the same hole — `play()` calls `_demoteOthers` only
+`if (loop)`, so a new one-shot demotes nothing, and `Fall`'s promoted `jump_fall` base sat at full
+weight under **every landing in the game**. It is on the same path as both assigned cases and
+every frame of them contains it, so it was measured rather than left to be rediscovered.
+
+### 3. `land → jump` happens inside ONE frame, and the first instrument could not see it
+
+`StateMachine.update` resolves up to four times per frame — deliberately, so a jump pressed on the
+landing frame does not eat a frame of gravity. So `Fall.update` returns `'land'`, `Land.enter`
+fires `land_soft`, and `Jump` (priority 64) preempts `Land` (50) on the *next pass of the same
+frame*. The end-of-frame state never reads `land`.
+
+The first version of `landseam` sampled state once per frame and **rejected the case as
+unreachable**, printing `fall → jump` with no `land` in it, while `land_soft` was unmistakably on
+the body. Dwell here is not "worst case → 0"; it is structurally zero on every buffered jump.
+Transitions are now recorded from `onStateChanged`, the machine's own hook.
+
+This is only visible because the tool refuses to report a run that did not drive the transition it
+names. Three scripted inputs in a row produced confident, complete tables for runs that never
+reached the seam — a jump tapped in the air eaten by `doubleJump`, a jump tapped after
+`landSoftTime` finding `idle`. Each would have shipped as a measurement of something else.
+
+### 4. The fix, and why this shape
+
+`land_soft`, `land_hard`, `land_roll` and `skid_stop` are **base clips wearing a one-shot's
+clothes**: they animate all 31 bones and describe the entire pose of their state. `oneShot`'s own
+contract says the opposite — "does not become the base, so the base resumes underneath it" — which
+is right for a flourish riding over locomotion and wrong for these.
+
+Options priced:
+
+- **Assert them as base clips** — what the thirteen self-cleaning states do (`Jump` fires
+  `oneShot('jump_rise')` then calls `baseClip('jump_rise')`, which promotes the track to a loop so
+  `_demoteOthers` can retire it). Refused: promotion makes them loops, and a loop is ended only by
+  the *next* base clip. `land → combo`, `skid → combo` and `skid → roll` are driven transitions
+  whose target asserts **no base clip at all**, so the track would hold its final pose
+  indefinitely. Today a one-shot at least expires on its own duration. That is a change that makes
+  three paths worse to make two better.
+- **End the clip in the state's `exit()`** — refused: the clip is 0.25–0.78 s against a 0.09 s
+  state, and cutting at exit ships the squash without the recovery. That is §479.8's error
+  (offsetting past the contact ships only the follow-through) re-committed in the other direction.
+- **Declare the clip a POSTURE — taken.** A `posture` clip retires live postures when it starts,
+  and is retired by the next clip that takes the body. It behaves like a base clip in the one
+  respect that was missing while staying a one-shot, which is what keeps it bounded: on the three
+  paths above it still expires on its own duration exactly as before. **This rule can improve a
+  path; it cannot make one worse.**
+
+Two lines in `Animation.js` (`play()` calls `_demoteOthers` when `loop || c.posture`;
+`_demoteOthers` ends `tr.loop || tr.clip.posture`), one field in `compile()`, one re-application in
+`buildClipSet` so the flag travels with the game NAME rather than the data, and the flag on four
+defs. It is the third predicate `play()` reads, after `source` (§525) and `excl` (§526).
+
+**Blast radius, printed rather than asserted.** Clips carrying `posture`, in all three regimes:
+`land_soft`, `land_hard`, `land_roll`, `skid_stop` — and nothing else. Asserted per regime in
+`anim.test.mjs`, so the set cannot drift silently.
+
+**§443.1 checked, not assumed: every landing still speaks.** The rule can cancel `land_soft` on
+the very frame it starts, since a buffered jump preempts `Land` inside one frame. Emitted-event
+counts across the whole land take are byte-identical before and after — `landed` 1, `footstep` 1,
+`jumped` 2, `doubleJump` 1 — because `_advance` runs `_trackEvents` *before* it reaps a finished
+track. That ordering is now pinned by its own assertion, because the obvious tidy-up would mute
+the landing beat on the commonest input in the game and no weight or pose assertion would notice.
+
+### 5. The residual, reported rather than tuned away
+
+`jump_rise` fires as a one-shot one frame before `Jump.update` asserts it as a base, and only that
+second call retires the landing. In a synthetic drive that lets the landing rise to full weight
+first, one frame sums to **1.167**. Flagging `jump_rise` `posture` too would erase it, and is
+deliberately not done: `Jump` is one of the thirteen self-cleaning states and has no defect of its
+own, so widening the rule to shave a frame off another state's fix is exactly the blanket
+application §527 warned against.
+
+Driven from the real machine the residual is smaller than the synthetic bound: `land → jump` shows
+**no overlap at all** (both `enter`s land in one frame, so the absorb never rises) and
+`skid → jump` peaks at **0.750**. Summed weight above 1.0 *during a hand-over* is what a hand-over
+is — one weight falling while another rises. What made this a defect was that neither ever fell.
+The test arm therefore bounds how LONG the average persists and asserts that the outgoing clip
+actually leaves, rather than pinning a peak.
+
+### 6. The other six, classified by evidence — and `Combo` asserting no base clip is NOT the general repair
+
+§527's predicate ("fires a one-shot, never re-asserts it as a base clip") is the right test for
+**exposure**. It is not the repair, because it does not distinguish the two reasons a state might
+not re-assert. Crossing each exposed state's own base clips against its driven successors:
+
+| state | fires | own base | verdict |
+|---|---|---|---|
+| `land` | `land_soft`/`hard`/`roll` | none | **fixed here** |
+| `skid` | `skid_stop` | none | **fixed here** |
+| `bounce` | `double_jump` | none | **same shape, reachable** — exits `dive`/`fall`, whose bases are non-tree loops that cannot end a one-shot |
+| `roll` | `roll` | none | **same shape**, but three of four driven exits are `idle`/`move` (the tree branch already ends it); only `fall`/`jump` are exposed |
+| `hurt` | `hurt` | none | same shape, **already covered** — every driven exit is `idle`, and the tree branch ends every non-locked track |
+| `ledgeClimb` | `ledge_climb` | none | same shape, **already covered** — exits are `idle`/`move` only |
+| `hookSwing` | `hook_grab` | **`hook_swing`** | **different shape** — the catch is authored to ride over the hang |
+| `pickpocket` | `pickpocket` | **`sneak_walk`** | **different shape** — the lift is authored to ride over the creep |
+
+So the eight are not one class. Two are fixed, two are already covered by an exit nobody wrote
+down, two are genuine layers that `posture` would *break* rather than repair, and two — `bounce`
+and `roll` — are the same shape as the two fixed here. `bounce` is the interesting one: `Bounce`
+and `DoubleJump` fire the **same clip**, and `DoubleJump` re-asserts it as a base while `Bounce`
+does not, so one path self-cleans and the other does not.
+
+**Priced, not applied:** `posture: true` on `double_jump` and `roll` is two lines plus a test
+extension, and by construction cannot make any path worse. It is not applied here because neither
+has been photographed, `double_jump` is the clip the user has already called out twice, and the
+standing instruction is that two fixed properly beats eight fixed on a count.
+
+### 7. Limits
+
+**The census's `shared bones` column carries no information, and that is worth knowing before
+anyone else reads it.** Every clip in the corpus animates all 31 bones — checked across sixteen of
+them. So "shared 31" is constant, and the cheapest exoneration §527 offered (disjoint bone sets)
+can never fire. It also means these clips can only ever be alternatives, never layers, on
+geometry alone; which of two is right is a question about the verbs.
+
+`landseam` counts weight and bones, not poses: two clips averaged 50/50 score 2.00 whether the
+mean is grotesque or nearly identical to both. It says a defect of this class is present and how
+long it lasts, never that it looks wrong — the frames do that. It sees only what its own scripts
+drive, so silence about a transition is a statement about this file, not about the game.
+
+`landtrace` shoots at `Q=low` for SwiftShader, so it is a POSE read and not a lighting one. One
+azimuth per beat plus one opposite quarter at the worst beat; a defect hiding at both is not
+caught. The cane rides a rigid socket on `handR`, so its direction is implied by the hand rather
+than measured independently.
+
+Nothing here touches the six states above, the combo rule, or the procedural gait work in §470.
+
+## §529.1 — The seam on camera: he was doubled over while going up, and the pair is exact
+
+`shots/land1-{before,after}-{land,skid,solo}-f{4,8}[-opp].png` · `shots/land1-*-telemetry.json`
+
+§529's numbers say a landing and a launch were averaged. They cannot say it looked wrong, and a
+mild-sounding summed weight is exactly the case where a number will not settle it. So both arms
+were photographed on the shipped model at the two beats where the average is at its worst.
+
+**The pairs are exact, and that is checked rather than hoped.** Every frame records the player's
+position and yaw beside its track weights. `land1-before-land-f8` and `land1-after-land-f8` are both at
+`[0, 0.57, 30]`, yaw `3.142`, azimuth 90; the skid pair are both at `[0.85, 0.57, 24.5]`, yaw
+`-1.491`. The takes are deterministic and both arms come from one boot, so nothing but the mixer
+rule differs between the two images.
+
+| beat | before | after |
+|---|---|---|
+| `land` f4 | 2.167 — `land_soft` 1.0 + `jump_rise` 1.0 + `jump_fall` 0.167 | **1.00 — `jump_rise` alone** |
+| `land` f8 | 2.000 — `land_soft` 1.0 + `jump_rise` 1.0 | **1.00 — `jump_rise` alone** |
+| `skid` f4 | 1.833 — `skid_stop` 1.0 + `jump_rise` 0.833 | **0.833 — `jump_rise` alone** |
+| `skid` f8 | 2.000 — `skid_stop` 1.0 + `jump_rise` 1.0 | **1.00 — `jump_rise` alone** |
+
+**What the before frames show.** On `land-f8` he is doubled over — spine folded forward, head down
+past his knees, shoulders hunched, the arm hanging limp, legs tucked under the hips — while
+0.57 m in the air and *rising*. It is a landing squash, played on a body that is going up. On
+`skid-f8` he is the opposite kind of wrong: bolt upright with both arms at his sides, legs
+together and straight, cane hanging straight down, floating. Neither a skid nor a launch — the
+mean of two committed poses is an uncommitted one. That is the same shape §526.1 photographed at
+the combo's contact frame, where the average of three strikes left him standing at rest.
+
+**What the after frames show.** Both read as the launch: chest lifted, chin up, the free arm swept
+back, legs extended and pointed, cane trailing behind the hip.
+
+**The third arm is what makes it a correction rather than a change.** `jump_rise` is also captured
+SOLO, played alone and advanced to the same clip time with nothing else live. `after-*-f8` and
+`solo-f8` agree; `before-*-f8` does not resemble either. The claim the frames support is not
+"after differs from before" but "after is the launch and before was not", and a reader can check
+that without trusting a number in §529.
+
+**Limits.** `Q=low` for SwiftShader, so this is a pose read and not a lighting one — accepted for
+this purpose, as in §525.1. Two beats per take at one azimuth plus one opposite quarter at the
+worse beat; a defect hiding at both azimuths is not caught. The frames show the body — the cane
+rides a rigid socket on `handR`, so its direction follows the hand rather than being independent
+evidence.

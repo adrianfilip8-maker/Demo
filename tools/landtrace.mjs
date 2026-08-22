@@ -51,7 +51,11 @@ import net from 'node:net';
 import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const OUT = process.env.OUT || `${ROOT}/shots/land1`;
+/* Top-level `shots/`, with a run prefix. `shots/*/` is gitignored working output; the curated
+   record is `shots/<run>-*.png` (the convention §525.1's `chain1-*` frames follow). The prefix is
+   checked against the tracked set before a run commits — §525.2 lost a set to a `seam1-*` clash. */
+const OUT = process.env.OUT || `${ROOT}/shots`;
+const RUN = process.env.RUN || 'land1';
 const W = Number(process.env.W || 1280), H = Number(process.env.H || 720);
 let TAG = 'after';   // set per arm by runArm(); both arms come from ONE boot (see header)
 const Q = process.env.Q || 'low';
@@ -165,10 +169,10 @@ try {
     void tel;
     const uri = await page.evaluate(() => window.__GAME.capture('image/png'));
     await page.evaluate(() => { window.__ENGINE.debug.freeCam = false; });
-    await writeFile(`${OUT}/${TAG}-${name}.png`, Buffer.from(uri.split(',')[1], 'base64'));
+    await writeFile(`${OUT}/${RUN}-${TAG}-${name}.png`, Buffer.from(uri.split(',')[1], 'base64'));
     const p = await probe();
-    shotIndex.push({ shot: `${TAG}-${name}`, az, pos: p.pos, yaw: p.yaw, st: p.st, sum: p.sum, tracks: p.tracks });
-    console.log(`      -> ${TAG}-${name}.png  at [${p.pos}] yaw ${p.yaw}  sum ${p.sum}  [${p.tracks.map((t) => `${t.n}:${t.w}`).join(' ')}]`);
+    shotIndex.push({ shot: `${RUN}-${TAG}-${name}`, az, pos: p.pos, yaw: p.yaw, st: p.st, sum: p.sum, tracks: p.tracks });
+    console.log(`      -> ${RUN}-${TAG}-${name}.png  at [${p.pos}] yaw ${p.yaw}  sum ${p.sum}  [${p.tracks.map((t) => `${t.n}:${t.w}`).join(' ')}]`);
   };
 
   const key = async (code, down) => (down ? page.keyboard.down(code) : page.keyboard.up(code));
@@ -333,7 +337,7 @@ try {
     telemetry.tag = tag;
     telemetry.shots = shotIndex.slice();
     telemetry.errors = errs.slice();
-    await writeFile(`${OUT}/${tag}-telemetry.json`, JSON.stringify(telemetry, null, 1));
+    await writeFile(`${OUT}/${RUN}-${tag}-telemetry.json`, JSON.stringify(telemetry, null, 1));
     console.log(`[landtrace:${tag}] arm done`);
   };
 
