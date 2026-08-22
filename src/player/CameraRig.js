@@ -2329,14 +2329,15 @@ export class CameraRig {
          * translating — the authority is about a subject nearly overhead, and centring a subject
          * that cannot fit is exactly the case pitching alone DOES answer.
          */
+        /* No closures in here. The first draft expressed the two re-used steps as arrow
+           functions, which is two allocations per frame in the rig's hot path — invisible to
+           `framebudget`'s F3 arm, because that loop drives the Controller and never builds a
+           camera, and a per-frame allocation nothing happens to watch is still a per-frame
+           allocation. Both are straight-line now, at the cost of writing the band twice. */
         const extent = TUNE.clampSubject !== 'centre';
-        const centrePhi = () => {
-          _sv.set(_pPos.x, _pPos.y + anchorY, _pPos.z).sub(_camPos).applyQuaternion(_q3);
-          return Math.atan2(_sv.y, -_sv.z);
-        };
-        const bandNeed = (a) => (a > am ? a - am : a < -am ? a + am : 0);
-        let phi = centrePhi();
-        let need = bandNeed(phi);
+        _sv.set(_pPos.x, _pPos.y + anchorY, _pPos.z).sub(_camPos).applyQuaternion(_q3);
+        let phi = Math.atan2(_sv.y, -_sv.z);
+        let need = phi > am ? phi - am : phi < -am ? phi + am : 0;
         if (Math.abs(need) > TUNE.clampPitchMax) {
           /* Stage 2, vertical translate. Solve the vertical camera move that puts the
              subject's elevation at exactly ±(clampPitchMax + αm): with ŵ = world up in view
@@ -2368,11 +2369,12 @@ export class CameraRig {
             if (TUNE.clampStandoff !== false) dy = standoff(dy, _sv.dot(_wv), _sv.lengthSq());
             _camPos.y += dy;
             this._clampMoved = dy;
-            phi = centrePhi();
-            need = bandNeed(phi);
+            _sv.set(_pPos.x, _pPos.y + anchorY, _pPos.z).sub(_camPos).applyQuaternion(_q3);
+            phi = Math.atan2(_sv.y, -_sv.z);
+            need = phi > am ? phi - am : phi < -am ? phi + am : 0;
           }
         }
-        /* Now aim at the whole body. `_sv` is the anchor in view space from `centrePhi()`; the
+        /* Now aim at the whole body. `_sv` still holds the anchor in view space; the
            span endpoints are taken relative to the SAME camera position, translate included. */
         if (extent) {
           const h = this._pHeight > 0 ? this._pHeight : TUNE.clampAnchorY * 2;
@@ -2381,7 +2383,8 @@ export class CameraRig {
           _wv.set(_pPos.x, _pPos.y + h, _pPos.z).sub(_camPos).applyQuaternion(_q3);
           const b = Math.atan2(_wv.y, -_wv.z);
           const lo = Math.min(a, b), hi = Math.max(a, b);
-          need = (hi - lo <= 2 * am) ? bandNeed(hi > am ? hi : lo) : (lo + hi) * 0.5;
+          if (hi - lo <= 2 * am) need = hi > am ? hi - am : lo < -am ? lo + am : 0;
+          else need = (lo + hi) * 0.5;
           /* §580'S INVARIANT IS THE FLOOR THIS STANDS ON, and it took a measurement to notice.
              Stage 1 moves a point at θ to θ − `need`, so the centre lands at `phi − need`; the
              degrade branch aims at the ANGULAR midpoint, which is not the centre's angle, and at

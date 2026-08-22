@@ -44432,6 +44432,15 @@ luck.** Recorded because the failure modes are general:
    label. S2's press-check ("ATTACK DID NOT REGISTER") caught it; the frames were deleted.
    `sm.set('fall')` runs `PoleClimb.exit`, which is what actually releases him.
 
+**Every number in this section comes from a clean worktree at a committed sha, and that mattered
+here.** Run against the live shared tree the same rig code reads mean body 0.8968 and total loss
+0.103; against the committed tree, 0.8983 and 0.102. The difference is the world lane's
+uncommitted `EgyptLevel.js` moving the geometry these routes are driven through — a coupled drive
+is sensitive to the level, so a body-fraction aggregate measured in a shared tree is partly a
+measurement of somebody else's afternoon. The rig-side refactor that prompted the check (removing
+two per-frame closures from `_write`) was verified bit-identical by A/B in the same tree, which is
+how the two effects were told apart.
+
 Cost, for the record: five capture runs, ~30 minutes of a shared FIFO-locked box, for four
 usable frames. Not a quality problem — 960×540 on the software rasteriser is legible for a framing
 judgement, and these are framing judgements. It is an iteration-latency problem, and it is the
