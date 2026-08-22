@@ -46729,3 +46729,90 @@ helping" or "the stick is broken" — that is the pad session's question and the
 report-only. And it samples one route and one stick direction family; a stick held DOWN engages
 *less* than no stick at all (33 % against 41 %), because looking down at Sly from above frames him
 without help, so this is not a uniform tax on all aiming.
+
+## §588.1 — A guard's swing had no top: the reach test was a cylinder of unbounded height
+
+The camera lane's live browser run left the §571 nave rope at **y 10.24 into `hurt`** and correctly
+stopped at the scope boundary rather than chasing it. Chased here, because it lands on content
+this lane shipped the same night.
+
+### Ruled out by measurement before anything was named
+
+The level owns exactly **8 `hazard`-tagged colliders and the nearest is 28.4 m away** horizontally.
+Sampling the rope's full 16 m climb line at 0.5 m, nothing within 2.5 m of it carries any tag but
+`ground`, `pole`, `rail` and `ledge`. `TAGS_HAZARD` is `['hazard']` alone, so
+`Controller._hazards` cannot fire there. **The rope does not route a player through a hazard
+volume; there is no hazard volume involved.** Only two sites in the codebase emit `damage` — that
+one and `src/ai/Guard.js`.
+
+### The mechanism
+
+```
+  Guard.js:921  _v1.subVectors(aim, this.position); _v1.y = 0;  if (d <= attackRange)      // decide
+  Guard.js:872  _v3.subVectors(target, this.position); _v3.y = 0;  if (len > 2.6 * 1.15)   // resolve
+```
+
+**Both flatten `y` to zero before measuring**, so the reach was a cylinder with no top. The
+`hall_nave` patrol — authored deliberately, because two guards on `hall_weave` left the nave and
+the inner gate watched *0 % of a 240 s window* — runs straight up **x = 0** from z −19.5 to −48.5.
+The rope hangs at x 2.40, **2.40 m** off that line, against a 2.6 m swing trigger and a 2.99 m
+resolve. A guard on the floor was therefore inside range of a climber at any height, and y 10.24
+was not special: the whole shaft was exposed.
+
+**It is worse for the lamp chain.** Ring offsets from the patrol line are 0.0, 3.4, 4.0, 2.0 and
+0.6 m, so **rings 0, 3 and 4 sit inside the 2.6 m trigger** — ring 0 directly on the line. A player
+swinging the chain could be swatted out of the air by somebody standing underneath.
+
+The rope did not create this. It was the first content that put a player above a patrol route long
+enough for anyone to notice.
+
+### The band is the guard's own body, not a new number
+
+Both positions are feet (`playerPos` is MOVEMENT's `position`; `headY` is built as
+`position.y + headTop`). A guard can strike between the floor he stands on and the top of his own
+head, so the player is in reach exactly when their capsule **overlaps** that span — with
+`dy = target.y − guard.y`:
+
+```
+  dy <=  headTop[type]      temple 1.95 · heavy 2.22 · scarab 0.34
+  dy >= -playerStanding     1.80, MOVEMENT's standing capsule
+```
+
+`headTop` was already per-type and already in `TUNE`, which gives the right shape for free: the
+heavy reaches higher than the temple guard and a scarab cannot swat anyone two metres up, all of
+it following from the bodies rather than from taste.
+
+**A separate height gate, deliberately, and not a true 3-D distance.** Switching to 3-D would
+quietly shorten the *horizontal* reach for anyone standing above the guard's feet — a change to how
+combat works on every stair and terrace in the level, which is not the defect. A separate gate
+leaves the tuned horizontal reach intact at every height a guard can plausibly reach.
+
+**Ground behaviour cannot move, by construction rather than by tuning:** a player on the same floor
+is at `dy = 0`, inside the band for every type, so the horizontal test decides exactly what it
+decided before. Asserted rather than argued — `guardreach` G1 sweeps 3 roster types × 20 ranges and
+compares every outcome against the pre-§588.1 horizontal-only rule, recomputed in-arm.
+
+Three logic lines: one constant, a three-line `_inSwingBand`, two call sites. Nothing in detection,
+patrol, alert or chase was touched, and the guards' own 45 hand-run behaviour tests — including the
+alert machine, determinism and the five-minute soak — still pass.
+
+### Driven both ways
+
+`tests/guardreach.test.mjs`. G2 puts a guard on the patrol line beneath the rope: the foot is hit,
+dy 1.85 (just under headTop) is hit, and six heights from 2.05 to 16.0 all miss — with the control
+raising the guard to each of those heights, where every swing comes back, so "unreachable" is a
+fact about the height *difference* and not about the instrument running out of steam. G3 does ring
+0, the sharpest case at 0.00 m horizontal offset: hit on the floor, safe hanging at y 4.55, and hit
+again with the gate defeated. G4 is the mutation check — forcing the band open restores the swing
+at y 10.24 exactly, so the fix and the reported defect are the same mechanism.
+
+### Scope
+
+This is a defect fix, not guard integration. The user's ruling fences *building* guard systems —
+searchlights, motion trackers, cameras, patrol features — and none of that is here. A reach test
+that ignores height is a bug that made new content hostile, and the coordinator made the call to
+fix it before the play session with the reasoning recorded.
+
+**The level-side alternative was rejected, and by the lane that would have shipped it.** Moving the
+rope to x 3.2 buys a guard problem off with a discoverability problem, breaks §571's derived
+1.90–2.85 m band, and leaves the defect in place for every future piece of vertical content.

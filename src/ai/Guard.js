@@ -66,6 +66,12 @@ const TUNE = {
   radius: { temple: 0.42, heavy: 0.56, scarab: 0.26 },
   headTop: { temple: 1.95, heavy: 2.22, scarab: 0.34 },
   chestY: { temple: 1.15, heavy: 1.30, scarab: 0.20 },
+  /* §588.1's lower bound: MOVEMENT's standing capsule height, mirrored here rather than imported
+     so that AI keeps depending on nothing in `src/player/` for its own logic. It is only the
+     BOTTOM of the swing band — the case of a guard on a ledge and a player beneath him — so if
+     the player's capsule ever changes, the drift costs a few centimetres of downward reach and
+     nothing above the guard's head, which fails in the safe direction. */
+  playerStanding: 1.80,
 
   /* --- locomotion --- */
   stepUp: 0.85,            // how high a guard will climb without a stair
@@ -863,11 +869,51 @@ class Guard {
    * Three ways the swing misses, all of them things the player can do: leave the reach, knock
    * him out, or stun him. A guard bounced off mid-swing must not still connect.
    */
+  /**
+   * §588.1 — how far a swing reaches VERTICALLY, which until now was "infinitely".
+   *
+   * Both reach tests in this class flattened `y` to zero before measuring: the decision to swing
+   * in CHASE and the resolve here. So the range check was a CYLINDER of unbounded height, and a
+   * guard standing on the hypostyle floor was inside swing range of a player anywhere up the
+   * 16 m nave rope. Driven, the live run left that rope at **y 10.24** into `hurt`. Three of the
+   * five nave lamp rings sit inside the same cylinder as well — ring 0 is directly on the
+   * `hall_nave` patrol line — so a player swinging the chain could be swatted out of the air by
+   * somebody standing underneath. The rope did not create this; it was the first content that
+   * put a player above a patrol route long enough to notice.
+   *
+   * ── The band is the guard's own body, not a new tuning number ─────────────────────────────
+   * He can strike anything between the floor he stands on and the top of his own head, so the
+   * player is in the band exactly when their capsule OVERLAPS that span. Both positions are
+   * feet (`playerPos` is MOVEMENT's `position`; `headY` is built as `position.y + headTop`), so
+   * with `dy = target.y − this.position.y`:
+   *
+   *     dy <= headTop[type]        the player's feet are no higher than his head
+   *     dy >= −PLAYER_STANDING     the player's head is no lower than his feet
+   *
+   * `headTop` is already per-type and already in TUNE — temple 1.95, heavy 2.22, scarab 0.34 —
+   * which is the right shape without inventing a constant: the heavy reaches higher than the
+   * temple guard, and a scarab cannot swat anyone two metres up, all of which follows from the
+   * bodies rather than from taste.
+   *
+   * GROUND BEHAVIOUR CANNOT MOVE, and that is by construction rather than by tuning: a player
+   * on the same floor has `dy = 0`, which is inside the band for every type, so the horizontal
+   * test decides exactly what it decided before — at every range, standing or crouched. A player
+   * on a 1 m terrace is still at dy 1.0 and still reachable. This is why the fix is a separate
+   * height gate and NOT a true 3-D distance: switching to 3-D would quietly shorten the
+   * horizontal reach for anyone standing above the guard's feet, which is a change to how combat
+   * works on stairs and terraces, and none of that is the defect.
+   */
+  _inSwingBand(targetY) {
+    const dy = targetY - this.position.y;
+    return dy <= (TUNE.headTop[this.type] ?? 1.95) && dy >= -TUNE.playerStanding;
+  }
+
   _resolveSwing() {
     this._swing = 0;
     if (this.state === STATE.KO || this.state === STATE.STUNNED) return false;
     const target = this.owner?.playerPos;
     if (!target) return false;
+    if (!this._inSwingBand(target.y)) return false;      // §588.1
     _v3.subVectors(target, this.position); _v3.y = 0;
     if (_v3.length() > DETECT.attackRange * DETECT.attackReach) return false;
     _v3.normalize();
@@ -919,7 +965,7 @@ class Guard {
           wantYaw = this._yawToward(aim);
           _v1.subVectors(aim, this.position); _v1.y = 0;
           const d = _v1.length();
-          if (d <= DETECT.attackRange) {
+          if (d <= DETECT.attackRange && this._inSwingBand(aim.y)) {      // §588.1
             this.speed = 0;
             if (this._attackCd <= 0) {
               this._attackCd = DETECT.attackCooldown;
