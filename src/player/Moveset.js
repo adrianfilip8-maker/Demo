@@ -38,6 +38,87 @@ function travelDir(c, out) {
 }
 
 /* ====================================================================== */
+/* what one button means — cross-tag resolution for the E press (§579)     */
+/* ====================================================================== */
+
+/**
+ * `Controller.afford(tag)` is per-TAG by construction, and `Collision.nearest` ranks candidates
+ * only against others carrying the same tag. Nothing in the engine ever compared a hook to a
+ * pole — so which affordance E took was decided by the order this file's states happen to be
+ * polled in, an emergent accident rather than an authored ranking.
+ *
+ * §576 measured what that costs: standing 2.41 m from a rope with the camera on it, E took a
+ * hook **7.63 m away**, and a hook anywhere within `hookGrab` 9.0 deleted the pole's E entry
+ * outright. This is the ranking that was missing.
+ *
+ * ── Three properties it has to have, and how each is obtained ───────────────────────────────
+ *  1. ONE aim model. The score is `distance × Collision.facingPenalty(...)` — literally the
+ *     function `nearest` already ranks with, called through a public delegate rather than
+ *     re-derived here. There is no second cone, no second bias constant.
+ *  2. A WEIGHT, never a filter. The penalty is a multiplier used only to ORDER candidates that
+ *     are already eligible, so it can never make something unreachable: a lone affordance wins
+ *     no matter what angle it sits at, and the only thing that changes is which one you get when
+ *     two compete. A hard cutoff reads as the game ignoring you, and `nearest`'s docblock says
+ *     so; this must not undo that through the back door.
+ *  3. It touches the E PRESS ONLY. The auto paths are deliberately not routed through it — the
+ *     hook's `hookAuto` fly-through, the rail's contact-from-above, the pole's run-into-the-shaft
+ *     and `SpireLand` (which has no interact clause at all, so spire is not an E entry and is not
+ *     listed below). Those are how a chain flows, and `Controller.js:1417` exists precisely so a
+ *     cone miss cannot hide a hook Sly is flying into. `Controller`'s telegraph and `Pickpocket`'s
+ *     veto keep calling `afford` directly and never call this, which is why they cannot move.
+ *
+ * One yardstick, deliberately: `Math.PI / 2` for every tag, which is the value `_facingPenalty`
+ * itself falls back to when given none. The per-tag cones are not comparable to each other (hook
+ * carries `hookCone` 1.75, the rest carry 0 and so are never given a facing at all inside
+ * `nearest`), and a comparison scored on three different yardsticks would not be a comparison.
+ * Direction is likewise taken from one origin — the eye at 1.15 — for the same reason, even
+ * though each tag's own `distance` is measured from its own eye height.
+ *
+ * Eligibility is asked of the STATES, not restated here: each answers `ePressEligible`, so a
+ * spent ring, a rail Sly just stepped off, or a locked-out pole drops out of the ranking instead
+ * of winning it and blocking the affordance that should have taken the press.
+ */
+const E_PRESS = [
+  { tag: 'hook', state: 'hookSwing', gate: () => TUNE.hookGrab },
+  { tag: 'rail', state: 'railSlide', gate: () => TUNE.railMount * 1.6 },
+  { tag: 'pole', state: 'poleClimb', gate: () => TUNE.poleMount * 1.5 },
+];
+const _face = new THREE.Vector3();
+
+/**
+ * Which affordance an E press means right now, or null when it means none of them.
+ *
+ * Exported for `tests/epress.test.mjs`, which has to assert that the telegraph's chosen hold and
+ * this answer can DISAGREE — that is the evidence the telegraph is not routed through here.
+ */
+export function ePressWinner(c) {
+  const cam = c.engine?.camera;
+  _face.set(0, 0, 0);
+  if (cam && typeof cam.getWorldDirection === 'function') { cam.getWorldDirection(_face); _face.y = 0; }
+  if (_face.lengthSq() < 1e-6) _face.copy(c.faceDir).setY(0);
+  if (_face.lengthSq() < 1e-6) _face.set(0, 0, 1); else _face.normalize();
+
+  const col = c.col;
+  const canScore = col && typeof col.facingPenalty === 'function';
+  let bestTag = null, bestScore = Infinity;
+  for (const e of E_PRESS) {
+    const a = c.afford(e.tag);
+    if (!a || a.distance > e.gate()) continue;
+    const st = c.sm?.get?.(e.state);
+    if (st && typeof st.ePressEligible === 'function' && !st.ePressEligible(c, a)) continue;
+    /* Degrades to nearest-first if a build ever hands MOVEMENT a collision object without the
+       delegate — the same direction every other fallback in this file fails in. */
+    const pen = canScore
+      ? col.facingPenalty(a.point.x - c.position.x, a.point.y - (c.position.y + 1.15),
+        a.point.z - c.position.z, a.distance, _face, Math.PI / 2)
+      : 1;
+    const score = a.distance * pen;
+    if (score < bestScore) { bestScore = score; bestTag = e.tag; }
+  }
+  return bestTag;
+}
+
+/* ====================================================================== */
 /* ground locomotion                                                       */
 /* ====================================================================== */
 
@@ -913,12 +994,22 @@ class HookSwing extends State {
     const a = c.afford('hook');
     if (!a) return false;
     if (this.spent(a)) return false;
-    // E always works; RMB lock-on works; and flying close enough grabs on its own, because
-    // making the player press a button mid-chain is what kills a swing line.
-    if (c.pressed('interact')) return a.distance <= TUNE.hookGrab;
+    // E works when E means this ring (§579); RMB lock-on works; and flying close enough grabs on
+    // its own, because making the player press a button mid-chain is what kills a swing line.
+    /* FALLS THROUGH when the press is not this ring's, and that is load-bearing rather than
+       stylistic. This clause used to be `if (pressed) return dist <= hookGrab`, an early return —
+       so adding the chooser to it made a press that resolved elsewhere return FALSE and skip the
+       `hookAuto` clause below entirely. An E press would then suppress the fly-through auto-grab
+       that `Controller.js:1417` exists to protect, and `reachcensus` C caught it on the very first
+       courtyard hop (the east mast stands 0.83 m off ring 0 and wins the press). A press must
+       never be able to take a grab AWAY. */
+    if (c.pressed('interact') && a.distance <= TUNE.hookGrab && ePressWinner(c) === 'hook') return true;
     if (c.down('focus') && (c.pressed('jump') || c.pressed('attack'))) return a.distance <= TUNE.hookGrab;
     return !c.grounded && a.distance <= TUNE.hookAuto;
   }
+
+  /** §579: the guards above that an E press must clear, asked by the cross-tag chooser. */
+  ePressEligible(c, a) { return c.sm.group !== 'attach' && !this.spent(a); }
   enter(c) {
     const a = c.afford('hook');
     this._spent = false;              // attached again: nothing is owed
@@ -1169,11 +1260,18 @@ class RailSlide extends RailBase {
       if (a.distance <= TUNE.railMount * 1.6) return false;
       this._offRec = null;                 // clear of the rail he left: it is a rail again
     }
-    if (c.pressed('interact') && a.distance <= TUNE.railMount * 1.6) return true;
+    if (c.pressed('interact') && a.distance <= TUNE.railMount * 1.6
+        && ePressWinner(c) === 'rail') return true;
     // Auto-engage on contact from above (§ affordance discovery). Generous on purpose.
     if (!c.grounded && c.velocity.y <= 0.6 && a.distance <= TUNE.railMount
         && a.point.y <= c.position.y + 0.65) return true;
     return false;
+  }
+
+  /** §579: the guards above that an E press must clear, asked by the cross-tag chooser. */
+  ePressEligible(c, a) {
+    if (c.sm.group === 'attach') return false;
+    return !(this._offRec && a.rec === this._offRec && a.distance <= TUNE.railMount * 1.6);
   }
   enter(c) {
     const a = c.afford('rail');
@@ -1241,7 +1339,8 @@ class PoleClimb extends State {
     if (c.poleLock > 0) return false;
     const a = c.afford('pole');
     if (!a) return false;
-    if (c.pressed('interact') && a.distance <= TUNE.poleMount * 1.5) return true;
+    if (c.pressed('interact') && a.distance <= TUNE.poleMount * 1.5
+        && ePressWinner(c) === 'pole') return true;
     if (a.distance > TUNE.poleMount) return false;
     // Running or jumping into a column grabs it, if you're actually heading for it.
     if (c.wishMag < 0.4) return false;
@@ -1250,6 +1349,9 @@ class PoleClimb extends State {
     _a.normalize();
     return dot2(c.wishDir.x, c.wishDir.z, _a.x, _a.z) > 0.4;
   }
+
+  /** §579: the guard above that an E press must clear, asked by the cross-tag chooser. */
+  ePressEligible(c) { return c.poleLock <= 0; }
   enter(c) {
     const a = c.afford('pole');
     const p = c.pole;

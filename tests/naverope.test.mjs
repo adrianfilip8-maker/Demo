@@ -82,7 +82,7 @@ test('naverope U: the hall floor climbs to the hall cable', async () => {
   let mounted = false, topY = startY, onCable = false, left = -1;
   for (let i = 0; i < 1600; i++) {
     step((inp) => {
-      if (!mounted) { aim(ROPE.x, ROPE.z); inp.move.y = 1; inp.let_go('interact'); }   // §575: walk in, no E
+      if (!mounted) { aim(ROPE.x, ROPE.z); inp.move.y = 1; if (i % 5 === 0) inp.hold('interact'); else inp.let_go('interact'); }
       else if (c.stateName === 'poleClimb') {
         inp.let_go('interact');
         if (c.position.y < 12.6) inp.move.y = 1;            // climb to the cable's height
@@ -93,11 +93,7 @@ test('naverope U: the hall floor climbs to the hall cable', async () => {
     else if (mounted && left < 0) left = i;
     if (mounted && (c.stateName === 'railSlide' || c.stateName === 'railWalk')) { onCable = true; break; }
   }
-  assert.ok(mounted,
-    'walking into the nave rope from the hall floor never entered poleClimb. The mount here is the '
-    + 'AUTO clause (`poleMount` 1.90 on a held stick), not E: since §575 hung the lamp chain within '
-    + '`hookGrab` 9.0 of this floor, an E press resolves to the ring by tag priority — see the note '
-    + 'in reachcensus\'s SPOTS table and navefork F');
+  assert.ok(mounted, 'walking into the nave rope from the hall floor with E never entered poleClimb');
   assert.ok(topY > 12.5,
     `the climb reached y ${topY.toFixed(2)}; the hall cable it exists to serve passes at y 13.00, so a `
     + 'rope that stops short of it is a climb to the ceiling');
@@ -119,7 +115,7 @@ test('naverope D: the cable descends to the hall floor by the rope, softly', asy
   let mounted = false, high = 0;
   for (let i = 0; i < 1200; i++) {
     step((inp) => {
-      if (!mounted) { aim(ROPE.x, ROPE.z); inp.move.y = 1; inp.let_go('interact'); }   // §575: walk in, no E
+      if (!mounted) { aim(ROPE.x, ROPE.z); inp.move.y = 1; if (i % 5 === 0) inp.hold('interact'); else inp.let_go('interact'); }
       else { inp.move.y = 1; inp.let_go('interact'); }
     });
     if (c.stateName === 'poleClimb') { mounted = true; high = Math.max(high, c.position.y); }

@@ -892,6 +892,24 @@ export class Collision {
   }
 
   /**
+   * The same weight `nearest` ranks with, made available to callers that must compare candidates
+   * `nearest` never sees together (§579).
+   *
+   * `nearest` is per-TAG: it ranks hooks against hooks and poles against poles, and nothing in
+   * the engine has ever compared a hook to a pole. MOVEMENT's E press has to, because one button
+   * means one of them. Exposing this rather than re-deriving the blend in `src/player/` is the
+   * point — there is exactly one aim model in this codebase and this is it. Callers pass the
+   * offset from whatever origin they measured `dist` from.
+   *
+   * Still a WEIGHT and never a filter, by construction: it returns a multiplier, so a caller can
+   * only ever use it to order candidates it already has. It cannot make one unreachable, which is
+   * the property `nearest`'s own docblock argues for and this must not quietly undo.
+   */
+  facingPenalty(dx, dy, dz, dist, facing, maxAngle) {
+    return this._facingPenalty(dx, dy, dz, dist, facing, maxAngle);
+  }
+
+  /**
    * Distance/angle blend. 1.0 dead ahead, ~2.3 at the cone edge, growing beyond it — so a
    * ring behind Sly can still be chosen when it is the only one in reach, but never wins
    * over the one he is flying toward.

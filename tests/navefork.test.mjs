@@ -155,21 +155,28 @@ test('navefork N: the chain is entered from the floor, every hop catches, and th
 });
 
 /* ====================================================================================== */
-test('navefork F: the fork is two VERBS, because E is winner-take-all at 9 m', async () => {
-  /* THE POINT OF THE FILE. Branch factor counts affordances in range; it cannot see that one of
-   * them is unreachable *because another one is also in range*.
+test('navefork F: the fork is chosen by AIM, and the second verb still works', async () => {
+  /* THE POINT OF THE FILE, and it has moved once already — the record is in the arm because the
+   * arm is what moved it.
+   *
+   * Written at §575 this asserted that E gives the hook EVEN WHEN AIMED AT THE ROPE, with the
+   * note "if entry now resolves by aim, re-read this arm before trusting it". §579 made entry
+   * resolve by aim and this arm went red, on purpose, and is now re-based on the new behaviour:
+   * the fork is chosen the way a player would expect, by pointing at the thing you want.
    *
    * DOMAIN (§418.3)
-   * passes on : the shipped fork — from one settled stance, E enters `hookSwing` and walking
-   *             into the shaft enters `poleClimb`.
-   * fails  on : RUN IN-ARM — pressing E while FACING THE ROPE, which must still give the hook.
-   *             That is the assertion that would break if someone "fixed" entry to resolve by
-   *             aim, and it is deliberately written as a fact about today's moveset rather than
-   *             as an approval of it.
+   * passes on : the shipped fork — from one settled stance, E aimed at the ring gives
+   *             `hookSwing`, E aimed at the rope gives `poleClimb`, and walking into the shaft
+   *             with no E at all still gives `poleClimb`.
+   * fails  on : RUN IN-ARM — the two E presses must give DIFFERENT states. A build where both
+   *             give the same one has either lost the chooser (back to tag priority) or lost one
+   *             of the two branches, and either way this stretch scores 2 on the metric and
+   *             plays as 1.
    * control   : RUN IN-ARM — the same walk, at a stance on the same chain with no rope in
    *             range, must NOT enter `poleClimb`; otherwise "walking mounts the rope" would be
    *             indistinguishable from "walking mounts anything".
-   * does NOT  : claim a player discovers the two verbs. Discoverability is not measured here.
+   * does NOT  : claim a player discovers the two verbs, or re-test the chooser's own guarantees
+   * discrim.    (telegraph and auto-grab unmoved) — those are `tests/epress.test.mjs`.
    */
   const { c, aim, step, settle } = await harness();
 
@@ -194,12 +201,17 @@ test('navefork F: the fork is two VERBS, because E is winner-take-all at 9 m', a
     return { state: mounted ? 'poleClimb' : c.stateName, y: c.position.y, ended: c.stateName };
   };
 
-  assert.equal(press(RINGS[2][0], RINGS[2][2]), 'hookSwing',
-    'E facing the ring did not enter hookSwing — the high branch is gone');
-  /* the failing input, run in-arm: E aimed at the ROPE still takes the hook */
-  assert.equal(press(ROPE[0], ROPE[1]), 'hookSwing',
-    'E facing the ROPE entered something other than hookSwing. If entry now resolves by aim, the '
-    + 'whole reason this fork needs two verbs has changed — re-read this arm before trusting it');
+  const atRing = press(RINGS[2][0], RINGS[2][2]);
+  const atRope = press(ROPE[0], ROPE[1]);
+  assert.equal(atRing, 'hookSwing', 'E facing the ring did not enter hookSwing — the high branch is gone');
+  assert.equal(atRope, 'poleClimb',
+    `E facing the ROPE entered ${atRope}, not poleClimb. §579's chooser scores each tag's best `
+    + 'candidate by distance x the facing weight, so a press aimed at the shaft must mean the shaft');
+  /* the failing input, run in-arm: the two presses must not collapse to one answer */
+  assert.notEqual(atRing, atRope,
+    `both E presses gave ${atRing} regardless of aim. That is the pre-§579 behaviour — one button `
+    + 'resolving by tag priority — and it means there is no fork here at all, only a metric that '
+    + 'counts two things in range');
 
   const rope = walkInto(FORK[0], FORK[1], ROPE[0], ROPE[1]);
   assert.equal(rope.state, 'poleClimb',
@@ -213,7 +225,7 @@ test('navefork F: the fork is two VERBS, because E is winner-take-all at 9 m', a
   assert.notEqual(ctrl.state, 'poleClimb',
     'CONTROL: walking at empty air under ring 3 also entered poleClimb, so the mount above is not '
     + 'evidence the rope did anything');
-  console.log(`[navefork F] E -> hookSwing (even aimed at the rope) · walk -> poleClimb y `
+  console.log(`[navefork F] E at the ring -> hookSwing, E at the rope -> poleClimb · walk -> poleClimb y `
     + `${rope.y.toFixed(2)} · control walk -> ${ctrl.state}`);
 });
 

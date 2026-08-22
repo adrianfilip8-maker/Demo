@@ -46050,3 +46050,96 @@ more than ~12 m from the rope, which restores §571's designed E entry and gives
 the gates allow. Branch factor would fall from 54 of 170 back toward 6, and the honest fork count
 from 1 to 0. The chain itself — worst gap 35.5 → 12.0 m, gap total 68 % → 26 % — survives either
 way, because it does not depend on the overlap.
+
+## §579 — The cross-tag chooser: one button, one meaning, and the two readers proved unmoved by test
+
+§578 measured the blast radius and stopped. Authorised afterwards with conditions, so this is the
+implementation and, more importantly, the evidence for the two things it was scoped not to break.
+
+### What was wrong, in one line
+
+`afford(tag)` is per-tag and `Collision.nearest` ranks only within a tag, so **nothing in the
+engine had ever compared a hook to a pole.** Which affordance E took was decided by the order this
+project's states happen to be polled in — an emergent accident. Standing 2.41 m from a rope with
+the camera on it, E took a hook **7.63 m** away, and any hook inside `hookGrab` 9.0 deleted the
+pole's E entry outright.
+
+### The chooser
+
+`ePressWinner(c)` in `Moveset.js` scores every eligible tag's best candidate as
+**`distance × Collision.facingPenalty(...)`** and returns the winner; each of the three
+`pressed('interact')` clauses then asks *"am I the winner?"* instead of *"is there one of mine?"*.
+
+- **One aim model.** `facingPenalty` is a new public delegate to the *existing* `_facingPenalty` —
+  literally the function `nearest` already ranks with. No second cone, no second bias constant.
+- **One yardstick.** `Math.PI / 2` for every tag, which is what `_facingPenalty` itself falls back
+  to when given none; the per-tag cones are not comparable (hook carries 1.75, the rest carry 0 and
+  are never handed a facing at all). Direction is taken from a single origin, the eye at 1.15, for
+  the same reason.
+- **A weight, never a filter.** The penalty only *orders* candidates that are already eligible, so
+  it can never make one unreachable. Asserted, not asserted-by-construction: four facings at the
+  fork stance, including straight away from everything, all still resolve to something.
+- **Eligibility is asked of the states**, via `ePressEligible`, so a spent ring, a rail just
+  stepped off, or a locked-out pole drops out of the ranking instead of winning it and blocking
+  the affordance that should have taken the press.
+- `SpireLand` has no interact clause at all, so spire is not an E entry and is not in the table.
+
+### The regression it caused, which the conditions are the reason I found
+
+Wired into `HookSwing.canEnter`'s existing **early return** — `if (pressed) return dist <= hookGrab
+&& winner === 'hook'` — a press that resolved elsewhere returned **false and never reached the
+`hookAuto` clause below it**. An E press could then *suppress* the fly-through auto-grab that
+`Controller.js:1417` exists to protect. `reachcensus` C caught it on the very first courtyard hop:
+the east mast stands **0.83 m** off ring 0 and wins the press (measured scores — pole 16.21, hook
+24.20), so ring 0 became unmountable. The clause now falls through. **A press must never be able to
+take a grab away.**
+
+### The two readers, proved by test rather than by argument
+
+`tests/epress.test.mjs`:
+
+- **Arm T — the telegraph.** Five driven stances, kind and point identical to the values captured
+  at `49b90e6` before the chooser existed. Its failing input is the good part: at the fork stance
+  the telegraph must say `hook` while `ePressWinner` says `pole`. **That disagreement is the
+  evidence of separation** — a table of marks alone would still pass if the two were wired together
+  and happened to agree.
+- **Arm A — the auto-grab.** A ballistic fly-through catches with no input (frame 9) and with E
+  held (frame 0), plus the exact regression reproduced: holding E at ring 0's hang point, where the
+  chooser answers "pole", must still reach `hookSwing` through the auto clause. Ablated to prove it
+  bites — restoring the early-return form turns arm A red and the fall-through turns it green.
+- `Pickpocket`'s veto reads `afford` directly and never calls the chooser, so it cannot move.
+
+Two instrument faults on the way, both mine, both in arm T. The telegraph is **edge-triggered on
+the identity of the hold**, so listening after a 70-frame settle catches nothing — the settle
+already consumed the emission — and I first read that silence as "the telegraph stopped marking".
+And the mark is delivered on the event bus, not left in `engine.events`, so scraping the queue
+found nothing either. Fixed by subscribing and by invalidating `_teleRec` before each stance.
+Separately, the first draft asserted the mark's `distance` and failed by 0.28 m — distance is
+measured from the eye and is a fact about where the probe settles, not about which hold was
+chosen. **(kind, point) is the hold's identity**; distance is not, and asserting it was measuring
+my own instrument.
+
+### Condition 4, answered honestly: branch factor did NOT improve
+
+```
+  branch factor >= 2     54 of 170 samples   ->  54 of 170   (unchanged)
+  mixed-kind stances      6                  ->   6          (unchanged)
+  SELECTABLE by aim       0 of 6             ->   6 of 6
+```
+
+The chooser cannot change what is *in range*; it only changes which one the button means. So the
+honest fork count is **still one fork, 6 samples, 3.0 m of walked line** — the geometry did not
+move. What changed is that all six stances now yield two different E outcomes by aim alone, where
+before every one of them gave `hookSwing` no matter where the camera pointed.
+
+**§571's designed E entry is restored**, which is the concrete win: the rope was sited at x 2.40
+precisely so that E took it from the walked line, §575 took that away, and `reachcensus`'s SPOTS
+row and `naverope`'s mount are both back on `walkE` with the note at each site. The §576 fallback
+(rings ~12 m away, buy back E, lose the fork) is no longer needed and is withdrawn.
+
+### Untouched by instruction
+
+`TELEGRAPH_KINDS` still has no `pole` in it, so §571's rope is never telegraphed and §575's rings
+now are, in a hall that previously had nothing to mark. Both remain live behaviour changes under
+review-sheet items 4 and 10, flagged in §578 and still flagged. Nothing here alters what gets
+marked.

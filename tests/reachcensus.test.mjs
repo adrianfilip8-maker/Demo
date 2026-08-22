@@ -67,15 +67,12 @@ const SPOTS = [
      the from-above catch window and the walker tiptoes along the shelf instead (measured). */
   ['rail colossi-rope (§495.B)', [-7.90, 4.72, 27.00], [9.00, 4.95, 27.00], 'rail', 'sneak'],
   ['pole SE drainpipe (§495.C)', [21.95, 0.00, -2.00], [21.35, 4.80, -2.00], 'pole', 'walk'],
-  /* `walk`, not `walkE`, and §575 is the reason. The nave lamp chain now hangs within
-     `hookGrab` 9.0 of this stance, and `afford` resolves an E press by TAG PRIORITY — the hook
-     wins over the pole outright, and `hookCone` 1.75 rad does not discriminate, so E here
-     returns the ring even with the camera pointed at the rope (measured: still `hookSwing`
-     standing 0.5 m from the shaft, facing it). The rope's other authored entry is unaffected:
-     `PoleClimb.canEnter` auto-mounts at `poleMount` 1.90 on a held stick, so walking into the
-     shaft still takes it. That is what this row drives now, and `navefork` F is where the two
-     verbs are asserted side by side. */
-  ['pole nave rope (§571)', [0.00, 0.00, -33.20], [2.40, 8.00, -33.20], 'pole', 'walk'],
+  /* Back to `walkE` at §579. §575 hung the lamp chain within `hookGrab` 9.0 of this stance and
+     E resolved by tag priority, so the press returned the ring and this row had to drive the
+     rope's auto-mount instead. §579's cross-tag chooser scores by distance x the SAME facing
+     weight `nearest` ranks with, so an E press aimed at the shaft now means the shaft again and
+     §571's designed entry is restored. */
+  ['pole nave rope (§571)', [0.00, 0.00, -33.20], [2.40, 8.00, -33.20], 'pole', 'walkE'],
   ['pole east mast', [22.40, 9.00, 27.50], [20.60, 12.45, 27.50], 'pole', 'walk'],
   ['hook main-0', [20.42, 15.90, 27.42], [20.00, 14.90, 27.00], 'hook', 'walk'],
   ['hook main-3', [4.20, 9.00, 6.90], [4.20, 14.80, 4.50], 'hook', 'walkE'],
