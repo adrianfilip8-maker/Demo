@@ -47490,3 +47490,89 @@ The build redeploys on push and the user plays next session, so nothing here shi
 - **What none of this reaches.** Whether the procedural score is *noticed* under the beds, and
   whether 4 s reads as patience or as absence, are playtest questions. Every number here is an
   onset time, not a judgement about attention.
+
+## §594 — The long teleport is a property of the chain, not one authored beat
+
+§593 assumed the 5 m displacement was §8.1's chain entry — a single bad beat that could be eased
+in isolation. Instrumented instead: every `HookSwing.enter` in one `telegraph` run recorded its
+grab distance. **126 catches.**
+
+```
+    excess over hookL (= the single-frame displacement)
+      0.44 – 1.30 m    the ordinary chain rhythm, 118 of 126
+      4.56 m           ×1   mid-chain
+      4.65 m           ×6   mid-chain
+      5.16 m           ×1   §8.1's authored entry (kiosk lintel -> ring 3)
+    -> 8 of 126 are long catches, and only ONE of them is the entry
+```
+
+**The chain makes 4.65 m snaps seven times in a single run.** So there is no threshold that eases
+the complaint and leaves the chain alone: the chain *is* most of the complaint. Any cap low enough
+to soften a 5 m displacement also softens those seven, which changes the chain's timing — and that
+is exactly what `telegraph`'s ordering assertion and `camstate`'s hard-cut census detect.
+
+This would have been guessed wrong indefinitely. "Fix the one bad entry" is the natural reading of
+the user's report and it is false.
+
+## §595 — A cap on the placement did nothing, because `enter` and `update` add in the same frame
+
+The first threshold variant capped the *placement*: on a long catch, place the capsule
+`HOOK_SNAP_MAX` from where it stood instead of on the rope sphere. Measured, a 7.5 m grab still
+moved **2.16 m** against a 1.2 m cap.
+
+`enter` and `update` both run in the same frame. The capped placement moved 1.2 m, then the reel
+step in `update` shortened the rope again and moved it a further 0.96 m, and the two **added**. A
+cap that does not mean what it says is a check that is true by accident, one level below the ones
+this session has been finding all night.
+
+Making the take-up **linear at `HOOK_SNAP_MAX` per frame** — and doing no displacement in `enter`
+at all on the long path — makes the cap exact:
+
+```
+    grab distance     shipped     capped (1.6 m per frame)
+    2.5 m             0.30 m      0.30 m    <- original path, untouched
+    3.5 m             1.30 m      1.30 m    <- original path, untouched
+    5.5 m             3.30 m      1.60 m
+    7.5 m             5.30 m      1.60 m    <- worst single frame, at any distance
+```
+
+Preserved as `scratchpad/capped-variant.patch`; not shipped, because §594 means it still moves the
+chain and §596 blocks the repair that would let it.
+
+## §596 — UNFIXED: the chain works because the re-grab guard is wrong
+
+`HookSwing.spent()` refuses a re-grab of the ring just released. Its first clause cleared the flag
+outright the moment `afford` offered any ring more than `hookL` away — *"a different ring entirely
+— nothing to refuse"*. But `_spent` is a **single flag guarding one anchor**, so disarming it on a
+glance at a neighbour leaves the released ring grabbable again while Sly is still hanging beside
+it. Whether that happens depends on which candidate `afford` returns on a given frame — that is, on
+the rope's dynamics. **The guard is correct only by accident of how the rope currently behaves.**
+
+§593's reel-in changed those dynamics and the accident stopped holding: `telegraph` saw the
+four-ring chain close as **`[1,1,2,3]`** — ring 1 caught twice, the chain a leg short. A player
+would re-grab the ring they just let go of and stall.
+
+**The repair is small and it is NOT shippable, which is the finding.** Keying the lockout on the
+CAPSULE's distance from the anchor it released — refusing that anchor until Sly has actually
+carried himself clear, while leaving every other ring catchable so a chain still flows — is 56
+lines including its derivation (`scratchpad/spent-fix.patch`). Verified in isolation on the
+SHIPPED build with no reel-in, which is the test that matters:
+
+```
+    telegraph   pass
+    camstate    FAIL x2  — including the zero-cost claim: "the margin-0 subject is inside the
+                           margin and the shipped rig still moved the pose"
+    spawn2eye   FAIL     — the authored route no longer completes
+```
+
+So this is not a latent fragility that §593 exposed. **Today's chain traversal depends on the guard
+being wrong**, and correcting it is a behaviour change in its own right, needing its own decision
+and its own drive re-cadences. Recorded unfixed, with the cost attached, so the next person to
+touch rope dynamics finds it deliberately instead of rediscovering it.
+
+**And the visual-only escape is closed from a fourth direction:** easing what is *drawn* rather
+than what is simulated would leave physics, `_spent` and chain timing untouched — but `CameraRig`
+samples `mv.position`, the capsule, directly (`CameraRig.js:1202`), and no visual-position concept
+exists anywhere in `src/player/` or `src/render/`. The camera would still snap the full 5.16 m
+while the model swept in, which reads as a camera fault rather than a rope. Making it viable needs
+the camera to follow the visual position — the camera lane's file, and a routing question.
