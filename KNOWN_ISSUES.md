@@ -47039,7 +47039,14 @@ written before the run produces it. What each number actually is:
 | 53/53 guard set (`guardsuite`, `patrol`, `alertshot`, `guardart`, `guardreach`, `carmguard`) | live tree; identical to the baseline taken *before* the roster was touched |
 | 13/13 `carmguard` alone | live tree, after the print fix |
 | **969/969 full suite** | clean worktree at `f734153` with the three changed files copied in — real, and **not** at the commit that shipped |
-| full suite at `a236b49` itself | **still running when this correction was written**, from a clean worktree detached at the shipped commit — 592 arms in, 0 failures. The number is added below when the process exits, and this row stays until it does. |
+| **full suite 969/969 at `a236b49` itself** | clean worktree detached at the shipped commit, no local edits — `# tests 969 / # pass 969 / # fail 0`, **process exit code 0**, 822.9 s |
+
+The last row is the one that matters, and it is the row that took three attempts to get honestly: it
+is the suite run against the commit that shipped, from a worktree with nothing copied into it. It
+reports through the test process's **exit code**, not through a pattern found in its own output —
+see §589.1 for why that distinction is not pedantry. Inside it, `ok 387 - src/ai/Guard.test.mjs
+passes` carries the 45 re-based guard arms, and `# [carmguard] … garrison 268119 tris in 18 skinned
+draws (9 humanoid + 0 scarab)` is the corrected print, measured rather than asserted.
 
 The isolation was necessary, not ceremonial. The shared tree had another lane's uncommitted edits
 to `Animation.js`, `Moveset.js`, `anim.test.mjs`, `spawn2eye.test.mjs` and `tools/armcross.mjs`
@@ -47095,7 +47102,9 @@ token — which is the point: the token was never what made it wrong.
 
 **Nothing forged it.** `grep -c "^# duration_ms"` returns 0 on every in-flight log and 1 at the end,
 so the tallies reported above stand. The gate was still wrong and has been replaced by **the test
-process's own exit**, written by the shell and not reachable from inside the suite.
+process's own exit**, written by the shell and not reachable from inside the suite. §589's shipping
+number came through the new gate: exit code 0, with the terminator at line 7141 of 7141 — the last
+line of the file rather than a line somewhere in it, which is what a real terminator looks like.
 
 This is worth generalising past monitors. The same shape is anywhere a measurement is read out of a
 channel its own subject can write into — and this lane has now hit it twice: §582's residue scan
