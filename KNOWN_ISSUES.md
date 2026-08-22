@@ -45671,3 +45671,125 @@ this purpose, as in §525.1. Two beats per take at one azimuth plus one opposite
 worse beat; a defect hiding at both azimuths is not caught. The frames show the body — the cane
 rides a rigid socket on `handR`, so its direction follows the hand rather than being independent
 evidence.
+
+## §548 — The audio audit: it makes sound, it is the best-tested subsystem here, and the provenance problem is not the one the rule names
+
+Three questions were asked. Two have reassuring answers and the third does not, so the third goes
+first.
+
+### §548.1 Provenance: the named rule is satisfied, and there is a larger finding beside it
+
+**The rule as stated is met, verified by search rather than assumption:**
+
+- `public/assets/sly-godot/` carries six entries — `PROVENANCE.md`, two PNGs, three GLBs. There
+  is **no `Music/` and no `Effects/` directory in the tree at all**.
+- No source file references either. 80 source files scanned for `assets/(music|effects)/`: zero
+  hits, with a planted reference run in-arm to prove the scan still matches what it is for.
+- `dist/` carries no such file.
+
+**But the music the game actually plays is a separate matter, and it is not covered by anything.**
+`Audio.js`'s `STEM_FILES` loads three cues, `bc-explore/sneak/chase.mp3`, ~2.3 MB each, 168-172 s,
+and they ship in `dist/`. They were installed by commit `6f03a03`, whose own message reads —
+reproduced from the commit rather than quoted from the record that cites it:
+
+> `ALSO: the three Black Chateau loops encoded and installed -- explore/sneak/chase, 2.24/2.30/2.23 MB`
+> `from 97 MB of WAV.`
+
+"The Black Chateau" is the first episode of *Sly 2: Band of Thieves* (2004); its score is Peter
+McConnell's. **Where the 97 MB of source WAV came from is stated nowhere, and no licence is
+asserted anywhere.** `public/assets/audio/PROVENANCE.md` already records all of this honestly, and
+records the part that matters most: the owner's standing instruction — that copyright is not an
+obstacle for this project, for undisclosed reasons — names `museum-of-natural-history.mp3` and the
+`Sly_Cooper` model **by name**, and that record states explicitly that the `bc-*.mp3` cues are
+**not** covered by it.
+
+So the hazard the absolute rule exists to prevent is present in this build by a different route
+than the one the rule names: not copied from the reference repo, but encoded in-container from
+source material of unstated origin that the installing commit itself identifies with a commercial
+soundtrack. **This is an owner decision, not an agent's**, and it is escalated rather than acted
+on. Nothing was deleted, moved or re-pointed.
+
+Recorded alongside it, because it is the same directory: `museum-of-natural-history.mp3` is
+**6.7 MB shipped in `dist/` and loaded by no code path** — over half the audio payload, for audio
+nothing plays. `tests/bundle.test.mjs` already holds it in `KNOWN_UNSHIPPED_PAYLOAD` as a decision
+rather than an oversight.
+
+### §548.2 Does the demo make sound? Yes, and this is the most thoroughly tested part of it
+
+43 named sounds in the catalogue; the mixer subscribes to 26 events; **22 of them start a voice.**
+It boots on an offline context, and the synthesis is real — `Synth.js` takes an explicit
+`BaseAudioContext` precisely so the shipping recipes can be rendered and measured, and
+`tests/webaudio.mjs` implements the node set to the spec's own formulas to do it.
+
+What already exists, reproduced this round rather than trusted (58 arms, all green):
+`audio.test.mjs` proves every authored surface is a spectrally distinct sound with a
+same-surface-twice calibration arm, that **the world's surface tags all reach a real footstep**,
+that nothing in the catalogue renders silence, that nothing clips at its base gain, that every
+guard rung has both a music section and a sound, and that the mixer never throws on any event it
+subscribes to. `eventbus.test.mjs` proves codebase-wide and in both directions that no
+subscription lacks a publisher and no publication lacks a subscriber.
+
+### §548.3 The §357.1 sweep, and the one gap between those two files
+
+`eventbus` proves the wire exists. The no-throw arm proves the handler survives being called.
+**Neither proves the handler does anything** — a listener that fires, throws nothing and starts no
+voice passes both and is silent in the game, which is the pointer-lock click swallow's exact shape.
+
+`tests/audiowired.test.mjs` A1 closes it: every subscribed event is emitted with a payload of the
+shape its handler reads, and must start a voice or appear in a named exception list with its
+reason. The result:
+
+```
+  26 subscribed events · 22 voice · 4 silent BY DESIGN
+    shake           ducks the music bus — deliberately not a sound of its own
+    shot            stops every loop so a capture never records a stale bed
+    treasureBanked  raises a music hold; the treasure cue is the score, not an sfx
+    paraglide       STOP half only — the loop is STARTED from per-frame state in update()
+```
+
+**`paraglide` looked like the defect and is not.** Its subscription only stops the glide loop; the
+loop is started at `Audio.js:1117` from per-frame state (`_loops.glide = this.play('paraglide')`).
+Read as a census it is a listener that makes no sound; read as a mechanism it is an early-out on a
+polled loop. The census could not tell those apart, which is why the exception list carries reasons
+rather than names.
+
+**And the sweep's own first draft reported a false positive**, which is the reusable part: a single
+permissive payload object was sprayed at every handler, and `playerState` — which reads a *string* —
+looked dead because it was handed an object. Per-event payloads fixed it, and the arm now fails if
+anything in the exception list starts voicing, so the list cannot rot into a place where real
+results hide. §435.4 once more: the probe tested my model of the handlers, not the handlers.
+
+### §548.4 The moments that matter, and why two of them needed no new work
+
+All wired and driven: `landed` → `land_soft`/`land_hard` (force-gated), `pickpocket` →
+`pickpocket`, `hookGrab` → `hook_catch`, `hookRelease` → `rope_creak`, `caneHit` → `cane_swing` +
+`cane_hit`.
+
+**The cane hit followed the rig lane's contact-frame move by construction, not by coincidence.**
+`Audio._hookAnimation` subscribes to the *animation* event `cane_hit` rather than scheduling off a
+fixed time, so the sound is wherever the clip's event is; and `tests/anim.test.mjs` (§479.8) pins
+that event within one frame of independently measured contact on every clip, with a calibration
+arm. Moving the event moved the sound, and the test that guarantees it already exists — nothing to
+add.
+
+**Footsteps are material-aware end to end**, and the chain is worth writing down because it crosses
+four files: `Controller.groundMaterial` → `LOCO.surface` → `Animation.setLocomotion` →
+`loco.surface`, injected into the dispatched payload at `Animation.js:1158` → `Audio.stepFor()` →
+one of six surface recipes. `audio.test.mjs` T5 already asserts the world's own surface tags all
+land on a real footstep, so this too needed reporting rather than testing.
+
+### §548.5 DOMAIN
+
+- **A1 wiring** — *passes on* every subscribed event, read off the bus rather than grepped,
+  starting a voice or being a named exception; *fails on* a handler hollowed to a no-op, run as a
+  real source mutation (`on('pickpocket', () => {})`), which reddens with the right message. It
+  discriminates the COUPLING, not the sound.
+- **A2 provenance** — *passes on* the tree as shipped; *fails on* a planted `assets/Music/…`
+  reference run in-arm, and is separately checked not to match the project's own `assets/audio/`
+  path, so it can neither go blind nor fire on everything. It explicitly **does not** clear the
+  `bc-*.mp3` question, which is §548.1's and is not a code matter.
+
+**What none of this can discriminate.** Audibility: a voice that starts at zero gain, is masked by
+the bed, or sits behind the listener counts as started here — level, spectrum and clipping are
+`audio.test.mjs`'s. And `OfflineCtx` is not a browser: that the player's machine actually produces
+sound is a floor this cannot raise, exactly as the container cannot raise a frame rate.
