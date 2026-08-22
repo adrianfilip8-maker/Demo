@@ -44897,3 +44897,97 @@ the geometry terms from the fingerprint reddens S5 alone.
 whether the blit lands, whether the dynamic overdraw registers — all need a real context and belong
 to a capture. This file answers only "does the cache notice", which is the half that fails
 silently. And no frame rate: SwiftShader on a contended box, per §544.1.
+
+## §573 — 263 collision proxies recomposed a matrix every frame for a transform written once, and the saving is 0.126 %
+
+The perf lane's §544 routed two items into `src/world/`. Both figures were reproduced before
+either was acted on, and the reproduction is the reason the second one was declined.
+
+**Item 1 reproduced exactly.** 308 of 357 scene nodes carried `matrixAutoUpdate`, 264 of them in
+`Architecture.proxyRoot`, 263 flagged `userData.collisionProxy`, and every one of those 263 has
+`visible === false`. The lane measured 306 / 355 / 262; the difference is one node, §571's nave
+rope, added between their measurement and mine. Their numbers were right.
+
+**Why it is safe, checked rather than assumed.** `matrixAutoUpdate = false` is only correct if
+the transform never changes after setup. The only writes to `.position` / `.rotation` / `.scale`
+/ `.quaternion` anywhere in `Architecture.js` are the two lines inside `proxy()` itself, and no
+other module touches `proxyRoot` or the `collisionProxy` flag. Ordering matters and is the one
+way to get this wrong: `updateMatrix()` has to run *before* the flag is cleared, or the node
+keeps whatever matrix it had at construction and the collider silently sits at the origin.
+
+**The ceiling, derived before the change and reported at its real size.** Nothing here can
+measure milliseconds inside a real frame, so the unit is the call the renderer actually makes —
+`scene.updateMatrixWorld()`, unforced, averaged over 4,000 runs: **60.9 µs → 39.9 µs, a 21.0 µs
+saving = 0.126 % of a 16.67 ms frame.** That is small. It is also free and permanent, so it
+shipped, but it is not a fix for anything anyone would notice.
+
+**Collision is this lane's contract, so the change was re-driven, not reasoned about.** A proxy
+that stops colliding surfaces as falling through the world. Re-ran the collision-facing suite:
+26/26 (`pincensus`, `reachcensus`, `naverope`, `slopewalk`, `routeplay`, `grounding`) and 118/118
+(`spawn2eye`, `level`, `terracestair`, `cluevault`, `collectroute`, `tombdoor`, `basketvary`,
+`thiefspots`, `traversal`) — 144 green. New `tests/proxystatic.test.mjs` arm S asserts every proxy
+is static with a matching `matrixWorld`, its failing input being a proxy moved 5 m without
+`updateMatrix()` (whose `matrixWorld` must *not* follow) against a control node that does follow;
+arm C settles a capsule on six proxy families with an air control.
+
+## §574 — The 11 meshes that skip frustum culling cannot be fixed by enabling it: their bounding spheres contain the camera
+
+**Item 2 reproduced exactly too**: 11 meshes with `frustumCulled === false`, `nile` at 18,432
+triangles, plus `coins`, `clue_bottles` and 8 instanced, 82,394 triangles in total. Every number
+matched. The ranking was by triangles *submitted*, though, and the question that decides the item
+is what culling could **remove**.
+
+**The stated rationale is stale.** `Vegetation.js:420` reads *"instances span the whole map; the
+per-mesh bounds lie"*. In three 0.185.1 `Frustum.intersectsObject` checks `object.boundingSphere`
+first and `InstancedMesh` both has one and computes it across its instance matrices, so the
+three.js that comment describes no longer exists. That looked like the opening: give them correct
+volumes, turn culling back on.
+
+**Measured, it removes essentially nothing.** With correct spheres the radii come out at **29.9 to
+394.5 m** — these are objects that span the level, and the camera stands inside them. Across all
+18 canonical shots enabling culling would remove **2,112 of 1,483,092 submitted triangles: 0.14 %**,
+and all of it is `coins` in a single shot.
+
+**And the shadow cascades do not rescue it, which is the finding.** The obvious objection is that
+cascade frusta are far smaller. Ortho boxes at the half-extents `Lighting.js` names — 14.5 / 25 /
+42 / 160 m — placed on all 11 route waypoints cull **0 triangles at every size**. The spheres do
+not merely overlap those boxes, they *contain* them, and a sphere-versus-frustum test whose sphere
+swallows the frustum can only ever answer "keep". This item is not a missing flag; it is a
+bounding volume of the wrong *granularity*. (Nothing in `src/render/` was touched — the split
+distances were read from its own comment. `nile` sets `receiveShadow = false` and never sets
+`castShadow`, so it is not in the shadow passes at all.)
+
+**The version that would pay, priced rather than waved at.** Subdivision, not flags: splitting
+`nile` — the 278 x 760 m water plane — into 4x4 tiles with their own spheres culls **56.9 %** of
+its triangles across the 18 shots (68.3 % at 8x8, 71.5 % at 16x16). The bill is **1.82 % of the
+level's 577,690 drawn triangles for 20.3 % more draw calls** (74 → 89); it multiplies a collider
+registration on the plane whose entire job is making a fall into the river a soft fail; and every
+tile sphere would need inflating by the vertex shader's wave amplitude (0.148 m vertical plus the
+gerstner horizontal) or the water pops along tile seams. Declined — but priced, so nobody has to
+re-derive it.
+
+**There is a trap in doing the naive thing anyway, and it is asserted rather than described.**
+`clue_bottles`' instance matrices are written only in `Props.update()`, never at build, so its
+build-time bounding sphere is **r 0.24 at the origin**. Setting `frustumCulled = true` there — the
+obvious action straight off the perf list — deletes it from **9 of the 18** canonical cameras until
+something recomputes the sphere. A visible pop, in exchange for 0.14 %. `tests/proxystatic.test.mjs`
+arm F is a tripwire holding all of it: the min correct radius, the 0.14 %, the cascade zero, the
+bottles' build-time sphere *and* the 9-of-18 consequence.
+
+**In-repo precedent, which is worth naming because it points the same way.** `GuardModel.js:1900`
+hit this exact class of bug from the other side — `SkinnedMesh.boundingSphere` frozen at the first
+pose — and the resolution there was to keep `frustumCulled = true` and set a generously inflated
+explicit `object.boundingSphere`. Fix the volume, not the flag. Here the volumes are already
+correct; they are correct and enormous, which is why there is nothing to collect.
+
+**Two instrument faults caught in this arm, both mine.** The first control was a 0.5 m sphere at
+(400, 0, 400), asserted to be culled by all 18 cameras. It failed, 17 of 18 — because the level is
+**2,304 m across** (`nile` spans x/z ±1,150) so 400 m is *inside* it, comfortably within the shot
+at (−3, 1, 28) whose 600 m far plane looks straight down that diagonal. A coordinate guessed from
+an intuition about level size is not a control. The replacement is derived from the level's own
+bounding box and runs the *same* `copy(sphereOf(o)).applyMatrix4(...)` expression the measurement
+uses, on the largest bypassing mesh, in both directions: displaced clear of the level it must be
+culled by all 18, and where it actually stands it must be kept by at least one. Second: the arm's
+own log line printed `clue_bottles build-time sphere r 56.81` while the assertion above it had
+just proved r < 1.0 — it read the field *after* the post-`Props.update()` sweep recomputed it. The
+assertion was right and the log said the opposite of it. Both now hold the build-time value.

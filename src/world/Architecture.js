@@ -305,6 +305,23 @@ export class Architecture {
   /**
    * Invisible collision proxy. Added to the scene graph (so matrixWorld is valid) but never
    * drawn. COLLISION must not filter registered meshes on `.visible`.
+   *
+   * ── §573: STATIC, and the flag now says so ────────────────────────────────────────────────
+   * A proxy's transform is written once, here, and never again — checked before relying on it:
+   * the only writes to `.position` / `.rotation` / `.scale` / `.quaternion` anywhere in this
+   * file are the two lines below, and no other module reaches into `proxyRoot` or the
+   * `collisionProxy` flag at all. So `matrixAutoUpdate` bought nothing and cost a `compose()`
+   * per proxy per frame on 263 invisible nodes.
+   *
+   * Measured, on the call `WebGLRenderer` actually makes (`scene.updateMatrixWorld()`,
+   * UNFORCED — the forced variant is a bigger and misleading number): **60.9 µs → 39.9 µs**,
+   * a 21.0 µs saving, or **0.126 % of a 16.67 ms frame**. Small, free, and safe; it is
+   * recorded rather than oversold.
+   *
+   * `updateMatrix()` before the flag, so `m.matrix` is composed from the position/rotation just
+   * set — after this, nothing recomputes it, and moving a proxy without calling `updateMatrix()`
+   * would silently leave collision reading the old transform. `tests/proxystatic.test.mjs`
+   * drives exactly that mistake as its failing input.
    */
   proxy(geoOrMesh, opts = {}, { x = 0, y = 0, z = 0, ry = 0, rx = 0, rz = 0 } = {}) {
     const m = geoOrMesh.isMesh ? geoOrMesh : new THREE.Mesh(geoOrMesh, this._proxyMat());
@@ -314,6 +331,8 @@ export class Architecture {
     m.rotation.set(rx, ry, rz);
     m.name = `proxy:${opts.tag || 'ground'}`;
     this.proxyRoot.add(m);
+    m.updateMatrix();
+    m.matrixAutoUpdate = false;
     m.updateMatrixWorld(true);
     this._geoms.add(m.geometry);
     this.engine.registerCollider(m, opts);
