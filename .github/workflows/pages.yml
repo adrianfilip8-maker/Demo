@@ -1,0 +1,67 @@
+# Publishes the playable demo to GitHub Pages so it can be opened from a URL during a playtest
+# instead of cloned and built. The repository's history is ~2.3 GB of committed capture frames, so
+# `npm run dev` is a heavy way to look at the game; this is the light one.
+#
+# Sourcemaps are switched OFF for this build only. `vite.config.js` keeps them on because every
+# capture tool and every stack trace in this project depends on them, but they are ~40 MB of the
+# 74 MB `dist/` and nothing reads them over the wire during a playtest.
+#
+# `vite.config.js` sets `base: './'`, so the bundle is path-relative and works unchanged at a
+# project-page URL (`/<repo>/`) without a base override here.
+
+name: Deploy demo to Pages
+
+on:
+  push:
+    branches: [claude/sly-cooper-ancient-egypt-0koo0u]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a newer push supersedes an in-flight one rather than queueing behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # playwright is a devDependency and `npm ci` runs its postinstall. The runner has no use for
+      # browsers here and downloading them costs minutes.
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npx vite build --sourcemap false
+
+      - uses: actions/configure-pages@v5
+        with:
+          # Turns Pages on for the repository the first time this runs, so no manual step in
+          # Settings is needed. Harmless once it is already enabled.
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
