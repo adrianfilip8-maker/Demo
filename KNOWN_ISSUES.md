@@ -44747,3 +44747,153 @@ total is what briefly made the cornice look unusable.
 
 **No construction was done to make the doc true**, per the ruling. Where §8.1 promises something
 good the level lacks, that is §570's business and is a recommendation there.
+
+## §545 — Both of §544's top two items were already solved; my ranking quoted a model twelve days out of date, and the real gap was that none of it is tested
+
+The brief was the two largest items on my own §544 list, and the instruction that mattered was
+*derive what the mechanism is FOR before touching it*. Doing that first is what turned this round
+from an optimisation into a correction of my own published numbers.
+
+### §545.1 What the cascades are for, and what has already been done to them
+
+One sun, N shadow maps: three gives a `DirectionalLight` exactly one map, so the cascades are N
+co-directional lights plus a patch to `lights_fragment_begin` gating each to its own slice of view
+depth — without which N lights at 1/N intensity would give shadows 1/N as dark. Frusta are fitted
+to a bounding SPHERE of each slice, not its corners, because a sphere is rotation-invariant and
+stops the box resizing as the camera turns; that plus texel snapping is what kills shadow crawl.
+
+Two optimisations already shipped, both recorded in the file:
+
+- **`shadowDistance` 420 → 160.** The 420 existed so the Great Pyramid would cast; checked against
+  the sun track, that shadow never lands in a canonical frame at all.
+- **The static-caster shadow cache** (`002f27e`, **2026-08-02**). 48 of 61 casters are static;
+  per cached cascade the statics are rendered once into a private depth target and re-rendered only
+  when a fingerprint of everything that could change their depth image changes. Every frame the
+  cached depth is blitted and the ~13 dynamic casters are drawn on top. `shadowCacheFrom: 1` — c0
+  stays on the legacy path because its ~1.2 cm texels mean any camera walk refreshes it anyway.
+
+### §545.2 The correction: §544.3 item 1 is wrong, and here is why
+
+`tools/budgetattrib.mjs` predicts `renderer.info` from "the passes the frame actually runs", and
+its shadow term is **N cascades each drawing the casters inside its own fitted ortho box**. It
+contains **zero** references to the cache — grepped for `staticcache`, `static cache`, `cached`.
+And it is the NEWER artifact: budgetattrib's shadow attribution landed **2026-08-14**, twelve days
+after the cache.
+
+So the **120 draws / 1.14 M tris / "47% of submitted triangles"** I put at the top of §544.3 is an
+**upper bound that the shipped code does not pay** — it is what the cascades would cost with the
+cache off, which is exactly what `TUNE.shadowStaticCache = false` exists to restore. I ranked it
+first on a model that predates the fix by a fortnight, having reproduced the tool faithfully and
+never asked whether the tool was reproducing the game. **Reproducing an instrument is not the same
+as validating its model**, and that is the lesson worth keeping from this round.
+
+### §545.3 The prepass is already conditional, and every consumer of it is look-bearing
+
+`PostFX` does not run the normal prepass unconditionally. The gate is four named consumers:
+
+```js
+needNormals = passes.edge.enabled || (ao && passes.ao.enabled) || debugNeedsNormals || bloomNeedsNormals
+```
+
+- **edge** — the ink outlines: five `slyDecodeNormal` taps for the crease pass. The signature look.
+- **ao** — built only when `settings.ssao`, so it does not exist at `low`.
+- **the ledger-#31 subject mask** — `uNormal.a = 1 - subject`, read by the bloom subject cut, the
+  dispersion/chroma path and a dilated subject test. The code notes that with the buffer never
+  written, a cleared alpha of 0 decodes to "subject EVERYWHERE" and silently kills all bloom.
+- **the debug visualisers**, kept alive deliberately so `debugRaw('ao')` cannot present a stale
+  buffer and read as an AO change.
+
+`passes.edge.enabled` is hard-coded true and the `quality` handler only calls `setSize()`, so the
+prepass runs at **every** quality level — because the ink outline needs it at every level. **There
+is no quality tier where cutting it is free, and no consumer that is not look-bearing.**
+
+My §544 phrasing — "draws the whole main view a second time" — also overstates the cost twice
+over: it renders through `scene.overrideMaterial` with a trivial normal shader, so the fragment
+work is nothing like the beauty pass; and `beginNormalPass()` hides the inverted-hull ink shells
+for its duration, so the set is the main view **minus** the shells, not a duplicate of it.
+
+**Nothing was changed in either mechanism, and nothing should be.** No frames were captured
+because no look-bearing change was proposed; §466.5 applies to a change, and there is none.
+
+### §545.4 What was actually wrong: the cache is not tested at all
+
+A grep of `tests/` for `shadowStaticCache`, `_cacheStats` and `cascade` matches **no file**. The
+largest single saving in the frame, whose failure mode is silent — a fingerprint that misses a
+change serves the OLD shape's shadow indefinitely, "§15's exact failure shape" — had no regression
+guard, and neither did the two repairs the file records making:
+
+- an unconditional `_staticSig = NaN` used to make every 8th frame dirty (26 refreshes per 100
+  frames on a quiescent world, paying the full bill for nothing);
+- an invisible caster's transform used to enter the fingerprint, so an invisible mesh that merely
+  moved forced a refresh that reproduced the previous map pixel for pixel — and §544 measured that
+  the static set is **dominated** by exactly those meshes (262 invisible collider proxies).
+
+`tests/shadowcache.test.mjs` pins both, plus the geometry terms that closed the PREREG gap. It
+runs with **no GPU**: `Lighting.init()` completes headlessly, and only the three renderer-touching
+helpers are stubbed, so the decision logic under test is the shipped one and every assertion reads
+`_cacheStats.refreshes` — the counter the shipped code increments when it decides the depth is
+stale.
+
+### §545.5 Two smaller findings inside `src/render/`, neither worth a change
+
+- **`settings.shadowMap` has exactly one consumer** (`Lighting._cascadeMapSize`) and is capped at
+  `maxCascadeMap: 2048`. So `high`'s 3072 and `ultra`'s 4096 both clamp to 2048 for c0 and c1;
+  only c2's `base >> 1` differs (1536 vs 2048). The cap is deliberate and documented — it is about
+  fill rate and texel size — but the preset numbers advertise a resolution no cascade receives.
+  Changing them buys no performance (the clamp already applies) and moves shadow texel size, which
+  is look-bearing. Recorded, not touched.
+- **At `low` the cache never engages**: it requires `cascades.length > shadowCacheFrom` and `low`
+  ships one cascade, so the quality tier meant for weak machines is the one tier with no shadow
+  caching at all. It is also the tier the user will not run — `Engine`'s default is `high` — so by
+  the standing rule this is named and left.
+
+### §545.6 The measurement gap, and what closing it costs on this box
+
+§544 named it: the headless harness builds 4 of the 21 shipped modules, so texture memory, upload
+timing and true shader-program count are unmeasured. A full boot is the only way to close it, and
+the cost was measured this round rather than estimated:
+
+```
+  capture lock wait (contended)          ~85 s
+  vite start + page boot to __GAME.ready ~4 min
+  first 10 engine frames + a 4 s sample  did not complete in the following 7 min
+  total process lifetime when abandoned  11 min 28 s, one line of output
+  renderer                               ANGLE / Vulkan 1.3 / SwiftShader (Subzero)
+```
+
+The page reaches `ready` and then advances frames slower than one per several seconds, which is the
+same starvation `padprobe` recorded and §544.1 quotes at 0.70 fps. **The boot is not the problem;
+the frame rate after it is** — every arm I wrote is frame-counted, so a run needs ~220 engine
+frames and there is no wall-clock shortcut. **I am taking the offer of an uncontended box**: the
+probe is written and parked, it needs roughly 220 frames plus two quality switches, and on a
+machine at even 10 fps it is a two-minute run.
+
+Until then, every §544 resource figure remains a floor, and the true program count remains
+unknown — 39 distinct materials is the floor, and three compiles per material *variant*.
+
+### §545.7 DOMAIN
+
+- **S1 census** — *passes on* `sly_root`/`guard_root` descendants and a loose SkinnedMesh being
+  dynamic while ordinary world meshes are static; *fails on* the same body re-parented out of
+  `sly_root`, run in-arm, which must become static.
+- **S2 movement** — *passes on* a moved visible static dirtying the cache; *fails on* 24 quiescent
+  frames, asserted zero. That clause is the one that matters: it is the `%8` regression's exact
+  signature, and without it a cache that refreshed *always* would pass.
+- **S3 invisible** — *passes on* an invisible caster moved three times producing zero refreshes;
+  *fails on* the same mesh made visible and moved the same way. It discriminates the visibility
+  term specifically rather than movement in general.
+- **S4 visibility flip** — *passes on* hide and show each dirtying; *fails on* the ANCESTOR-level
+  flip, which is the case both live reveal paths actually use, and which a fingerprint reading only
+  `mesh.visible` would miss.
+- **S5 geometry** — *passes on* geometry replacement, position version, index version and
+  drawRange each dirtying under a still transform; *fails on* the quiescent frames between them,
+  and specifically drives the `drawRange.count === Infinity` trap — Infinity is equal to itself
+  forever, so a later real edit must still be seen after it.
+
+Mutation-checked and restored: deleting the `if (!vis) continue` skip reddens S3 and S4; dropping
+the geometry terms from the fingerprint reddens S5 alone.
+
+**What none of it discriminates: pixels.** Whether a refresh produces the RIGHT depth image,
+whether the blit lands, whether the dynamic overdraw registers — all need a real context and belong
+to a capture. This file answers only "does the cache notice", which is the half that fails
+silently. And no frame rate: SwiftShader on a contended box, per §544.1.
