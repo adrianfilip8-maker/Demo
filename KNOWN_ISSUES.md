@@ -47314,3 +47314,86 @@ its own frames rather than riding along inside a control change.
 The return-leg hold window on the last two hops. Everything else is built and was green under it —
 `thiefspots`, `level`, `epress`, `navefork`, `naverope`, `reachcensus` — and the route reached
 leg6d.
+
+## §593 — "The catch reach is too far" and "it teleports to the spot" are one event: the grab SETS the capsule onto the rope
+
+Two rulings from a live playtest, and they describe the same frame from opposite sides.
+
+### The snap arithmetic
+
+`HookSwing.enter` ends with `c.position.copy(c.anchor).addScaledVector(_a, TUNE.hookL)` — the
+capsule is **set** onto the rope sphere on the frame of the catch. So
+
+```
+    single-frame displacement = grabDistance − hookL(2.2)
+```
+
+Measured on the shipped build, standing still and pressing Circle at a courtyard ring:
+
+```
+    2.5 m away  ->  moved 0.30 m in one frame
+    3.5 m       ->  1.30 m
+    4.5 m       ->  2.30 m
+    5.5 m       ->  3.30 m
+    6.5 m       ->  4.30 m
+    7.5 m       ->  5.30 m
+```
+
+**§8.1's own authored chain entry — kiosk lintel (2.34, 8.81, 8.48) to ring 3 (4.2, 14.8, 4.5),
+7.43 m — moves the player 5.23 m in a single frame.** A person meeting that would describe it
+exactly as "it teleports to the spot", and would reasonably blame the reach, because the reach is
+what permits the distance. The reach is the permission; the *set* is what makes it instant.
+
+### The bisection: a third (3.0 m) makes the demo uncompletable
+
+`hookGrab` is the constant a player feels. `AFFORD.hook.range` **is** that same constant, and
+§586's chooser reads it too, so one edit moves three consumers: chain entry, the telegraph's
+marked hold, and cross-tag scoring. (`hookAuto` 2.9 is separate — the automatic fly-through.)
+Driven against the acceptance route:
+
+| `hookGrab` | acceptance route | notes |
+|---|---|---|
+| 3.0 (the literal ruling) | **STOP at leg5a** | 0 of 6 chain hops catch in isolation |
+| 4.0 | STOP, 4 legs | |
+| 5.0 | STOP, 4 legs | |
+| 6.0 | STOP, 4 legs | |
+| 7.0 | completes, 19 legs | but reddens `epress` T and `reachcensus` C |
+| 9.0 (shipped) | completes | |
+
+The floor is not a tuning preference: it is §8.1's authored entry at **7.43 m**, which is what
+`hookGrab` 9.0 exists to cover — the chain's own docblock says so. A ruling that makes the demo
+uncompletable at its first chain beat goes back to the user rather than getting executed.
+
+### The reel-in: right mechanism, and it works — but it moves the chain's exit
+
+The fix that attacks the mechanism rather than the symptom is to let the rope **reel in**: record
+the true rope length at the catch and ease it to `hookL` in `update`, so the capsule swings in on a
+shortening line instead of being placed. Measured:
+
+```
+    7.5 m grab, worst single frame:   5.30 m  ->  1.24 m      (77 % reduction)
+    reel rate swept:  14 /s -> 1.24 m · 25 /s -> 2.21 m · 40 /s -> 3.53 m
+    chain:            legs 1 through 6e all pass
+```
+
+14 /s is a measurement, not a preference — all three rates complete the chain identically and 14
+gives the smallest worst frame.
+
+**It was still not shipped, and this is the finding that stopped it.** A longer early rope changes
+the swing's dynamics enough to move where the chain EXIT lands: leg6e went from finishing on the
+plinth at **y 9.00** to a lower surface at **y 6.30**, at (−1.82, 6.30, 9.63). From there the drive
+cannot leave — 2500 frames of sneaking toward the courtyard leaves it at (0.00, 6.30, 13.51) having
+never descended, and a self-routed `floodWalk` cannot plan it either because the descent needs a
+drop rather than a step. A capsule that is grounded, stationary and unable to reach the route is
+the §473.3 pin class, and this lane owns the census that exists to catch it. **Whether that ledge
+is a trap for a player as well as for the drive is unmeasured and is the thing to settle before
+this ships.**
+
+### Recorded, not acted on
+
+- §592's premise changes with any reach cut. At 3.0 the press clause (3.0) and the auto clause
+  (2.9) converge, so press-to-grab stops being a 3.1× forgiveness gain and becomes a pure
+  restriction. Whatever reach lands, §592's trade is re-derived rather than resumed.
+- The reach cut is not recommended in any form: 7.0 completes the route but still moves the
+  telegraph's marked hold (`epress` T) and breaks the mid-chain neighbour entries
+  (`reachcensus` C).
