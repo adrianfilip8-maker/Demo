@@ -46806,6 +46806,24 @@ fact about the height *difference* and not about the instrument running out of s
 again with the gate defeated. G4 is the mutation check — forcing the band open restores the swing
 at y 10.24 exactly, so the fix and the reported defect are the same mechanism.
 
+### One foreign test file had to be taught the change, and it was strengthened rather than patched
+
+`tests/health.test.mjs` does not build a `Guard`: it **lifts the body of `_resolveSwing` out of the
+source with a regex** and runs it against a stub, handing it only `STATE`, `DETECT` and `_v3`. That
+is deliberate and good — it runs the actual code, so deleting a guard clause turns it red — but it
+also pins the method's dependencies by construction, so a sibling call throws on the stub. Two arms
+went red for that reason and **not** for a behaviour change: both place guard and player at
+`dy = 0`, which the band passes.
+
+There is no way to add a vertical gate to `_resolveSwing` without teaching that harness — a new
+`DETECT` field would read `undefined` there and fail the same way. The stub therefore carries a
+faithful copy of the band rather than a pass-through returning `true`, because a pass-through would
+let the band be deleted from `Guard.js` with nothing noticing, which is the opposite of what that
+file is for. A new arm — *"a swing the player climbed out of does not land either"* — sits beside
+the existing *"a swing the player walked out of does not land"*, since leaving the reach upward is
+a thing the player can do exactly like walking out of it. Mutation-checked: stripping the gate from
+`Guard.js` reddens that one arm and nothing else.
+
 ### Scope
 
 This is a defect fix, not guard integration. The user's ruling fences *building* guard systems —

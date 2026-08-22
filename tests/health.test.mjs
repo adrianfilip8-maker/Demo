@@ -546,6 +546,13 @@ const stubGuard = (playerAt, { state = 'chase', at = new THREE.Vector3() } = {})
     state, position: at, id: 'g7', type: 'temple', _swing: 0.0001,
     owner: { playerPos: playerAt },
     engine: { emit: (evt, p) => emitted.push({ evt, p }) },
+    /* §588.1's vertical reach band, mirrored here for exactly the reason `DETECT` above is: the
+       extracted method only sees what this harness hands it, so a sibling it calls has to be
+       provided or the lift throws. Faithful to the shipped one rather than a pass-through — a
+       stub that always returned true would let the band be deleted from `Guard.js` without
+       anything here noticing, which is the opposite of what this file is for. The numbers are the
+       temple guard's own `headTop` 1.95 and MOVEMENT's 1.80 standing capsule. */
+    _inSwingBand(y) { const dy = y - this.position.y; return dy <= 1.95 && dy >= -1.80; },
     emitted,
   };
 };
@@ -568,6 +575,28 @@ test('a swing the player walked out of does not land', async () => {
   const outside = stubGuard(new THREE.Vector3(reach + 0.05, 0, 0));
   assert.equal(resolveSwingWith(outside), false);
   assert.equal(outside.emitted.length, 0, 'a guard whose target left the reach must emit no damage');
+});
+
+test('a swing the player climbed out of does not land either (§588.1)', async () => {
+  /* The vertical twin of the arm above, and it exists because the vertical case was missing for
+     the whole project: both reach tests flattened `y` to zero, so the range check was a cylinder
+     of unbounded height and a guard on the hypostyle floor was inside range of a player anywhere
+     up the 16 m nave rope. Driven, the live run left that rope at y 10.24 into `hurt`.
+
+     Leaving the reach upward is a thing the player can do, exactly like walking out of it, so it
+     belongs beside it. The band is the guard's own body — floor to `headTop` — so the boundary
+     here is 1.95 for a temple guard rather than a number chosen for the test. */
+  const at = new THREE.Vector3();
+  const under = stubGuard(new THREE.Vector3(0.5, 1.90, 0), { at });
+  assert.equal(resolveSwingWith(under), true,
+    'a player 1.90 m up — inside a temple guard\'s 1.95 m headTop — must still be hit; the band must '
+    + 'not make anyone standing on a low block invulnerable');
+  const above = stubGuard(new THREE.Vector3(0.5, 2.00, 0), { at });
+  assert.equal(resolveSwingWith(above), false, 'a player just above headTop must not be hit');
+  const climbed = stubGuard(new THREE.Vector3(0.5, 10.24, 0), { at });
+  assert.equal(resolveSwingWith(climbed), false,
+    'a guard on the floor still reached a climber at y 10.24 — the reported defect exactly');
+  assert.equal(climbed.emitted.length, 0, 'a guard whose target climbed out of reach must emit no damage');
 });
 
 test('a guard knocked out or stunned mid-swing does not still connect', async () => {
