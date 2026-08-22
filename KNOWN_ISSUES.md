@@ -45793,3 +45793,135 @@ land on a real footstep, so this too needed reporting rather than testing.
 the bed, or sits behind the listener counts as started here — level, spectrum and clipping are
 `audio.test.mjs`'s. And `OfflineCtx` is not a browser: that the player's machine actually produces
 sound is a floor this cannot raise, exactly as the container cannot raise a frame rate.
+
+## §575 — The route's first fork: a lamp chain down the nave, and the 35.5 m gap is now 12.0 m
+
+§570's second number was the damning one. Branch factor — how many affordances a standing player
+can commit to inside the moveset's own `canEnter` gates — was **0 on all 170 route samples**, and
+§571's rope moved 6 of them to 1. A single line you must climb is not a choice; it is a corridor
+with a ladder in it.
+
+**Where a choice was cheapest, measured rather than guessed.** The instrument crossed the route
+census with the entry census: for every 0.5 m sample, what is in gate, and what is *nearby but
+not* in gate. The first version of that scan nominated the hypostyle **columns** — and it was
+wrong, in the way this project keeps paying for. Columns carry a `pole` collider tag but §514.3's
+girth gate (r 1.62 against a 0.5 m limit) keeps them out of the affordance table entirely, so the
+candidate set had to be built from `collision._aff` — what the moveset reads — not from collider
+tags. Corrected, the honest picture was stark: **4 pole affordances on the whole level**, and the
+hypostyle hall — the worst gap — containing **zero hooks**, every one of the 11 sitting at z ≥ −13.
+
+**A hook, and the gates decide that, not taste.** Two affordances are committable from one stance
+only if that stance lies in both catchments. The gates are `poleMount×1.5` **2.85 m**,
+`railMount×1.6` **2.16 m**, spire **3.0 m** — against `hookGrab` **9.0 m**. Every gate but the
+hook needs the two things within about 3 m of each other, which is a pile, not a fork. On this
+level a fork is a hook plus something, or it is nothing.
+
+**What shipped.** Five bronze lamp rings on a cable down the nave, in the level's own idiom (the
+two courtyard chains, `K.hookRing` / `K.chain` / `K.railGeo`, both cable ends tied to drawn
+geometry per §506). Three constraints pin them to y 6.60–6.75 and only overlap in a narrow band:
+
+| constraint | number | the draft that failed it |
+|---|---|---|
+| low enough to dismount | 4.4 m drop, **14.5 m/s** vs `landHard` 15 | rings at 9.80 → **18.1 m/s** |
+| low enough to be seen | eye-relative grab circle **7.0–7.2 m** | rings at 9.0–9.8 → 2.5–4.4 m |
+| near level, for the return leg | 0.15 m/hop | descending draft, **1.3 m/hop** |
+
+That last one is not a preference. `level.test.mjs` derives every hop ballistically **in both
+directions**; a chain that descends 1.3 m per hop is easy northbound and an impossible climb
+southbound. A one-way chain is a one-way door and §565 retired one of those already.
+
+**Result, driven end to end in `tests/navefork.test.mjs`:** all five rings taken by E from the
+floor beneath them, all four hops caught with the release suppressed catching **0 of 4**, dismount
+at **14.1 m/s** onto the inner-gate end. And on the route census:
+
+```
+  branch factor >= 2   0 of 170 samples  ->  54 of 170
+  worst gap          35.5 m (hall floor) ->  12.0 m (the crypt)
+  gap total            68 % of walked    ->  26 %
+```
+
+**The honest split, because the headline oversells it.** Of those 54, **48 are hook+hook** — two
+rings of the same chain, which is not a choice of route because E picks one for you (§576). Only
+**6 samples, 3.0 m of walked line, mix two kinds.** One honest fork, which is what was asked for,
+and the number is reported the way it measures rather than the way it flatters.
+
+**Two siting defects, both driven, both invisible to reasoning.** Ring 2 was first placed by
+symmetry at x 1.2, and the two affordances fought over the same body twice in opposite directions:
+at **1.24 m** it sat inside `poleClimb`'s 1.90 m airborne auto-grab, so the hop from ring 1 was
+*captured by the rope in flight* and ended standing on the nave deck at y 17.0 — a log line that
+reads like a wild overshoot and is the opposite. Moved to x −1.5 that stopped, and a subtler one
+appeared 12 m up: §571's whole purpose is the rope-top handoff to the hall cable, an E press in
+mid-air at y ≈ 12.6, and from there the eye at 13.75 was **8.07 m** from ring 2 — inside `hookGrab`
+— so the press meant for the cable took the ring six metres below, and `naverope` U went red with
+the rope stopping at 12.61. The chain had stolen the rope's exit. **x −4.0** settles both: 6.42 m
+from the shaft, **9.53 m** from the rope-top eye, just outside the gate.
+
+**RNG-neutral, proven rather than claimed.** A digest of every collider's tag, material and
+rounded world bounds, before and after: **5 rows added, 0 rows changed or removed.** Histogram
+measured both ways — **hook 11 → 16**, all else byte-identical. `basketvary`'s ledger bumped
+283 → 288 under its own protocol, one assertion line, the other three verified untouched.
+
+## §576 — E is winner-take-all: two affordances in range is not two options, and it never was
+
+The finding that outlasts this round, and it constrains every fork anyone builds on this level.
+
+**`afford` resolves the E press by TAG PRIORITY, not by aim.** At the fork stance,
+`afford('hook')` reports 7.63 m and `afford('pole')` 2.41 m, and **E takes the hook every time —
+including with the camera pointed straight at the rope, and including standing 0.5 m from the
+shaft.** `TUNE.hookCone` is 1.75 rad (≈100°) and does not discriminate: a ring 4 m *behind* the
+player still wins. So a stance with a hook and a pole in gate scores **2 on the branch-factor
+metric and plays as 1** — and worse, the pole's E entry is *deleted* anywhere within 9 m of a ring.
+
+**This fork survives only because the pole has a second, non-E entry.** `PoleClimb.canEnter`
+auto-mounts at `poleMount` 1.90 on a held stick, so the two branches are chosen with two different
+verbs, and that is measured, not assumed:
+
+```
+  press E at the fork stance          -> hookSwing   (enters at frame 5)
+  walk into the shaft, no E at all    -> poleClimb, climbing to y 9.70
+  CONTROL: same walk, no rope in range -> stays in `move`/`skid` at y 0.00
+```
+
+**It cost §571 its designed entry, and that is stated rather than buried.** §571 sited the rope at
+x 2.40 from the walked line precisely so the route walk would not auto-mount it (past 1.90) while
+E still would (inside 2.85). Since §575 the E half of that band is gone: from the route line the
+rope can no longer be *selected*, only approached. `tests/reachcensus.test.mjs` and
+`tests/naverope.test.mjs` now drive it with `walk` instead of `walkE`, each with the reason at the
+call site. Whether that trade is worth one fork is a design call, and it is flagged here for one:
+**the alternative is to keep every ring more than ~12 m from the rope, which buys back the E entry
+and gives up the only fork the gates allow.**
+
+**For the movement lane, not this one.** `afford` and the state-machine poll order live in
+`src/player/`, so nothing here touches them. If E ever resolves by aim within range instead of by
+tag, this level gains forks for free and `navefork` F is written to go red and say so.
+
+## §577 — The §8.3 cornice circuit is standable, orphaned, and still orphaned — the landing was rejected on its own measurements
+
+The chain was meant to finish on the interior tiptoe circuit at y 10.01. It does not, and the
+reasons are worth keeping because the circuit is the best unclaimed real estate in the level.
+
+**It is genuinely orphaned.** It takes a settled capsule with **0.65 m of spare rise above a
+standing one** on both side runs and the north cross-beam at x 12, and it scores **branch factor
+0**. A 1 m grid over the entire hall (1,645 cells) finds nothing standable between the floor and
+it except Props clutter (`props_bronze` 4.37, `props_dark` 6.9, `props_lime` 1.2) — RNG-placed
+rubble, not a route. Authored, walkable, and nothing leads to it.
+
+**Two measurements killed the landing anyway.** At the nave centre of the north cross-beam — the
+only span a nave chain can reach — a settled capsule **does not ground at all** (the surface reads
+10.89 at x 0.6 and x −8, against 10.01 at x 12 and on both side runs). And driven regardless, the
+release-and-double-jump onto it landed in exactly **1 of 84** sampled (release, second-jump) pairs,
+a window **1 frame wide** at every release phase. A 16 ms window is a trap, not a beat.
+
+**What it would actually take**, so nobody re-derives it: a chain running down an *aisle* and
+landing along a side run, where the walkway is 31 m long and standable end to end — roughly six
+rings threading two colonnades at x ≈ 20, under an aisle roof that leaves about 3 m of headroom.
+That is a second set piece, not a tweak to this one, and it is a recommendation rather than
+something smuggled in here.
+
+**An instrument fault worth recording, because it nearly decided the design.** The first headroom
+probe walked a column of `groundCheck` calls downward, stepping 0.25 m below each hit. Over the
+cornice it returned a dense series of "wall" surfaces 0.19 m apart from 10.45 upward, which reads
+as a ceiling 44 cm above the walkway — and would have condemned the circuit as uninhabitable. It
+was the walker crawling down a single vertical face and reporting it once per step. A settled
+capsule plus an upward capsule sweep (§435.4 — the probe must occupy space like the agent) gives
+the true answer, 0.65 m of clearance above a standing capsule, and the opposite conclusion.

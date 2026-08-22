@@ -222,7 +222,7 @@ test('routeplay R2: affordance offset from the route, and the hall floor has not
     else if (e.box) pts.push(e.box.getCenter(new THREE.Vector3()));
     affs.push({ tag: e.rec.tag, pts });
   }
-  assert.equal(affs.length, 31,
+  assert.equal(affs.length, 36,
     `${affs.length} offered affordances, expected 31 (§568 retagged the 0.4 m north mast out of the pole `
     + 'count, §571 added the nave rope). If this moved, re-run the offset census before the bands below');
   const near = affs.filter((a) => Math.min(...a.pts.map((p) => distTo(p, R))) <= 9).length;
@@ -251,12 +251,20 @@ test('routeplay R2: affordance offset from the route, and the hall floor has not
     'the hall floor at (0, 0, -33) offers nothing. §571 hung the nave rope 2.40 m off the walked line '
     + `specifically so it lands inside poleMount*1.5 = ${(TUNE.poleMount * 1.5).toFixed(2)} m from it; if `
     + 'this is 0 the rope is out of reach of the route it was hung for');
+  /* This tripwire read `=== 0` at z −25 and −47 and it FIRED, which is what it was for: §575
+     hung the nave lamp chain and those two stations are no longer empty. The point of the arm is
+     unchanged — the hall floor used to answer at exactly one station and now answers along its
+     whole length — so the numbers are re-based rather than the assertion deleted. */
   for (const z of [-25, -47]) {
-    assert.equal(optsAt(z), 0,
-      `the hall floor at (0, 0, ${z}) now offers ${optsAt(z)} affordance(s) — if a second line went in, `
-      + "update §570's numbers and R1's ceiling with it");
+    assert.ok(optsAt(z) >= 1,
+      `the hall floor at (0, 0, ${z}) offers ${optsAt(z)} affordance(s). Since §575 the lamp chain `
+      + 'covers this stretch; 0 here means a ring moved out of hookGrab of the walked line');
   }
-  console.log(`[routeplay R2] ${near}/${affs.length} affordances within 9 m of the route (spawn-only control: ${nearSpawn}) · hall floor offers ${optsAt(-33)} at the rope station and 0 at z -25/-47`);
+  assert.ok(optsAt(-33) >= 2,
+    `the fork station at (0, 0, -33) offers only ${optsAt(-33)} — §575's whole claim is that the rope `
+    + 'and a lamp ring are in gate together there. navefork F is what proves the two are separately '
+    + 'ENTERABLE; this only checks both are in range');
+  console.log(`[routeplay R2] ${near}/${affs.length} affordances within 9 m of the route (spawn-only control: ${nearSpawn}) · hall floor offers ${optsAt(-33)} at the fork station, ${optsAt(-25)} at z -25, ${optsAt(-47)} at z -47`);
 });
 
 /* ====================================================================================== */

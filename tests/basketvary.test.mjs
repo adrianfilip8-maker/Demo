@@ -452,8 +452,46 @@ test('P-A1: a rope coil is set dress and carries no gameplay volume', () => {
      Histogram measured both ways rather than derived: **pole 18 → 19**, all else byte-identical.
      (`pole` reads 18 and not 19 before this because §568 retagged the north hook mast — a
      `poleProxy` 0.40 m tall, publishing a climb that arrives where it started — to `misc` at
-     constant total.) */
-  assert.equal(REG.length, 283, 'collider registrations unchanged by this seal');
+     constant total.)
+
+     ── 283 → 288: §575 strings the nave lamp cable, the route's first fork (hook +5) ─────────
+     §570's second number, and the worse of the two: branch factor — how many affordances a
+     standing player can commit to — was **0 on all 170 route samples**, and §571's rope moved 6
+     of them to 1. One line you must climb is not a choice. Five bronze lamp rings on a cable
+     down the hypostyle nave are the second line, and the hall floor at z −32…−34 is where both
+     are in range at once.
+
+     A hook, specifically, and not a second rope: the gates decide it. Two affordances are
+     committable from one stance only if that stance lies in both catchments, and the gates are
+     `poleMount×1.5` 2.85, `railMount×1.6` 2.16, spire 3.0 — against `hookGrab` **9.0**. Every
+     gate but the hook needs the two things within ~3 m of each other, which is a pile, not a
+     fork. On this level a fork is a hook plus something or it is nothing.
+
+     Three constraints pin the rings to 6.60–6.75 and only overlap in a narrow band: low enough
+     that stepping off is a 4.4 m drop arriving at 14.5 m/s under `landHard` 15 (the 9.80 draft
+     arrived at 18.1); low enough that the eye-relative grab circle is 7.0–7.2 m rather than
+     2.5–4.4, which is what makes a 30 m dead stretch answer continuously; and nearly LEVEL,
+     because `level.test.mjs` derives every hop both ways and a 1.3 m-per-hop descent makes the
+     return leg an impossible climb — a one-way chain is a one-way door, and §565 retired one.
+
+     No `swingTarget` on these five, by the level's own magnetism rule rather than by omission:
+     that rule wants a miss to cost the route, not a step, and a miss here drops the player 4.4 m
+     onto the floor they just left, under the hard-landing threshold. Rule 2 fails, so the assist
+     is not authored.
+
+     Driven before shipping in `tests/navefork.test.mjs`: all four hops catch with the release
+     suppressed catching 0, every ring mounts from the floor beneath it, the dismount lands at
+     14.1 m/s, and the fork itself is driven as two VERBS — E gives `hookSwing`, walking into the
+     rope with no E gives `poleClimb` — because `afford` resolves E by tag priority and the hook
+     wins at 9 m even when the camera faces the rope. Ring 2 sits 3.93 m from §571's rope on
+     purpose: sited by symmetry at 1.24 m it was inside `poleClimb`'s 1.90 m airborne auto-grab,
+     and the hop from ring 1 was captured by the rope in flight, ending on the nave deck at
+     y 17.0 — a log line that reads like a wild overshoot and is nothing of the kind.
+
+     Histogram measured both ways rather than derived: **hook 11 → 16**, all else byte-identical,
+     and a digest of every collider's tag, material and world bounds shows five rows added and
+     **zero rows changed or removed** — the seeded RNG is untouched. */
+  assert.equal(REG.length, 288, 'collider registrations unchanged by this seal');
   assert.equal(P.stats.decals, 46, 'contact decals unchanged by this seal');
   assert.equal(P._fx.length, 24, 'fx emitters unchanged');
   assert.equal(P._lights.length, 24, 'lights unchanged');

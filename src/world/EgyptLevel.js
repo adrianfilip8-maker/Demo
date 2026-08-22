@@ -2355,6 +2355,141 @@ function hypostyleHall(A) {
     ledgeProxy(A, -22.4, 22.4, 10.01, pz - 0.5, pz + 0.5, { thick: 0.62 });
   }
 
+  /* ---- §575 The nave lamp cable: the hall's SECOND line, and the route's first fork. --------
+   *
+   * §570 measured branch factor — the number of affordances a standing player can commit to —
+   * as **0 on all 170 route samples**, and §571's rope moved 6 of them to 1. One line you must
+   * climb is not a choice; it is a corridor with a ladder in it. This is the first place on the
+   * route where a player can see two ways on and pick one.
+   *
+   * ── Why a hook chain, and not a second rope ───────────────────────────────────────────────
+   * Not taste — the moveset's own gate ranges decide it. Two affordances are simultaneously
+   * committable only if one standing point is inside both catchments, and the gates are
+   * `poleMount*1.5` **2.85 m**, `railMount*1.6` **2.16 m**, spire **3.0 m** — and `hookGrab`
+   * **9.0 m**. Every gate but the hook demands the two things be within about 3 m of each
+   * other, i.e. physically stacked, which is not a fork, it is a pile. The hook is the only
+   * gate wide enough to overlap another affordance's catchment from across the room. So a fork
+   * on this level is a hook plus something, or it is nothing.
+   *
+   * ── The two branches, and where each one goes ─────────────────────────────────────────────
+   *   LOW  §571's rope at (2.40, ·, −33.20): climb to 16.10, hand off to the hall cable at
+   *        y 13 or the nave deck at 17 — vertical, slow, and it feeds the rooftop line.
+   *   HIGH this chain: E-grab a ring from the floor and swing the whole 30 m of empty nave in
+   *        the air, dismounting at the inner gate — horizontal, fast, and it crosses the level's
+   *        worst gap without touching it.
+   * They overlap on the floor at z −32…−34, where both are inside their gates at once. That
+   * overlap is the fork.
+   *
+   * ── The fork is chosen with a different VERB, not by aiming, and that is measured ─────────
+   * Two affordances in range does not by itself make a choice. Driven from the fork point,
+   * `afford('hook')` reports 7.63 m and `afford('pole')` 2.41 m, and **E takes the hook every
+   * time — including when the camera faces the rope**, because the hook's gate reaches 9 m and
+   * the tag wins outright. If E were the only verb, this stretch would score 2 on the metric and
+   * play as 1, which is the failure mode the metric cannot see by itself.
+   * It is a real fork because the two branches use different entries:
+   *   · press E              → `hookSwing` on ring 2  (driven: enters at frame 5)
+   *   · walk into the rope   → `poleClimb`            (driven: no E at all, climbs to y 9.70)
+   * The control matters here: the same walk at the same spot with the rope absent stays in
+   * `move` at y 0.00, so the mount is the rope's doing and not a side effect of walking. Any
+   * future fork on this level has to be built the same way — two verbs, not two things — for as
+   * long as E resolves by tag priority rather than by aim.
+   *
+   * ── The line hangs LOW and NEARLY LEVEL, and both of those are forced, not chosen ─────────
+   * 6.60–6.75 across all five rings. Three constraints pin it there and they only overlap in a
+   * narrow band:
+   *   · LOW enough to dismount. A ring hangs the player `hookL` 2.2 below it, so stepping off
+   *     6.70 is a **4.4 m** drop landing at √(2·24·4.4) = **14.5 m/s against `landHard` 15** —
+   *     under the threshold, so the line ends in a landing rather than a punishment. The first
+   *     draft hung at 9.80 and the same dismount arrives at **18.1 m/s**; that is why it moved.
+   *   · LOW enough to be seen. Grab range is measured from the eye at 1.15, so a ring at height
+   *     Y is catchable from a floor circle of radius √(81 − (Y−1.15)²): **7.0–7.2 m** here,
+   *     against 2.5–4.4 m for the 9.0–9.8 draft. That is what turns a 30 m dead stretch into
+   *     one that answers almost continuously rather than at five points.
+   *   · NEARLY LEVEL because the chain must work in BOTH directions. `level.test.mjs` derives
+   *     each hop ballistically and inspects it forwards and back; the courtyard chain descends
+   *     only 0.15 m per hop, so its return leg is as cheap as its outward one. The draft that
+   *     descended 9.60 → 6.60 dropped up to 1.3 m per hop, which makes the northbound trip easy
+   *     and the southbound one an impossible climb. A one-way chain is a one-way door, and this
+   *     file has retired one of those already (§565).
+   * Hops are 6.90–7.28 m, inside the 6.36–9.71 m band the two courtyard chains are proven
+   * across, and far above `hookL` 2.2. The tightest ring gap in the LEVEL stays the courtyard's
+   * 6.36 m, so nothing about telling two rings apart moves.
+   *
+   * ── Ring 2 stands 6.42 m from §571's rope, and BOTH defects that forced it were driven ────
+   * Sited by symmetry it first landed at x 1.2, and the two affordances promptly fought over the
+   * same body — twice, in opposite directions:
+   *   · At **1.24 m** it was inside `poleClimb`'s 1.90 m airborne auto-grab, so the hop from
+   *     ring 1 was CAPTURED by the rope in flight and ended standing on the nave deck at y 17.0.
+   *     In a log that reads like a wild overshoot; it is the opposite, a catch by the wrong thing.
+   *   · Moved to x −1.5 that stopped, and a subtler one appeared 12 m up. §571's whole purpose is
+   *     the handoff from the rope's top to the hall cable, and that handoff is an E press in
+   *     mid-air at y ≈ 12.6. From there the eye sits at 13.75 and ring 2 was **8.07 m** away —
+   *     inside `hookGrab` 9.0 — so the press meant for the cable took the ring six metres below
+   *     instead, and `naverope` U went red with the rope stopping at 12.61. The chain had stolen
+   *     the rope's exit.
+   * x −4.0 settles both: 6.42 m from the shaft (clear of the 1.90 auto-grab and the 2.85 E gate)
+   * and **9.53 m from the rope-top eye**, just outside `hookGrab`, so the cable handoff is the
+   * chain's business no longer. The fork survives it — from the stance at (0, 0, −33) the rope is
+   * 2.41 m away and ring 2 is 6.87 m, both inside their gates.
+   *
+   * ── The §8.3 cornice was the intended landing, and it is REJECTED with the measurement ────
+   * The plan was to finish on the interior tiptoe circuit (y 10.01), which is authored, takes a
+   * settled capsule with 0.65 m of spare rise above a standing one, and scores **branch factor
+   * 0** with no authored way up — a 1 m grid over the whole hall finds nothing standable between
+   * the floor and it but Props clutter (`props_bronze` 4.37, `props_dark` 6.9), which is
+   * RNG-placed rubble, not a route. It is exactly the orphan a second line should adopt.
+   * It was dropped anyway, on two measurements:
+   *   · At the nave centre of the north cross-beam — the only part of the circuit a nave chain
+   *     can reach — a settled capsule **does not ground at all** (surface reads 10.89 at x 0.6
+   *     and x −8, against 10.01 at x 12 and on both side runs). The one span the chain could
+   *     deliver to is the one span of the circuit that is not standable.
+   *   · Driven anyway, the release-and-double-jump onto it landed at y 10.01 in exactly **one**
+   *     of 84 sampled (release, second-jump) pairs, and that window was 1 frame wide at every
+   *     release phase. A 16 ms window is a trap, not a beat.
+   * Reaching the circuit honestly means a chain that runs down an AISLE and lands along a side
+   * run, where the walkway is 31 m long and standable — six rings threading two colonnades, not
+   * a tweak to this one. That is a recommendation, not something smuggled in here.
+   *
+   * RNG-NEUTRAL: `K.hookRing`, `K.chain` and `K.railGeo` take no draws (hookRing accepts an
+   * `rng` and never reads it), and every rotation below is a constant. Nothing downstream of
+   * this block shifts by a single seed step.
+   *
+   * Both cable ends tie to drawn geometry, which §506 made a standing rule after both courtyard
+   * cables were found ending in mid-air: south at the z −18.55 cornice beam, north at the
+   * z −49.45 one — the same beam the swing lands on. */
+  const naveRings = [
+    [0.0, 6.75, -21.0], [-3.4, 6.65, -27.0], [-4.0, 6.70, -33.7],
+    [-2.0, 6.60, -40.8], [0.6, 6.70, -47.6],
+  ];
+  {
+    const cable = new THREE.CatmullRomCurve3(
+      [[0.0, 9.90, h.z1 - 2.55], ...naveRings.map(([x, y, z]) => [x, y + 0.85, z]),
+        [0.6, 7.45, h.z0 + 2.1]].map((p) => new THREE.Vector3(...p)), false, 'catmullrom', 0.4);
+    A.add('hall', 'rope_fibre', K.railGeo(cable, { r: 0.07, seg: 72, rad: 4 }));
+    const ringGeo = K.hookRing({ r: 0.62, tube: 0.115 });
+    const mats = [];
+    for (let i = 0; i < naveRings.length; i++) {
+      const [x, y, z] = naveRings[i];
+      const m = new THREE.Matrix4();
+      m.compose(new THREE.Vector3(x, y, z),
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, D(24 * i - 48), 0, 'YXZ')),
+        new THREE.Vector3(1, 1, 1));
+      mats.push(m);
+      A.add('hall', 'bronze_dark', K.place(K.chain({ len: 0.9, r: 0.06, links: 4 }), { x, y: y + 1.65, z }));
+      hookPoint(A, x, y, z);
+      /* NO `swingTarget` here, and the level's own magnetism rule is the reason rather than
+       * convenience. That rule admits a point only when "a miss is expensive — the fall costs
+       * the route, not a step". The courtyard rings earn it at 11–13 m over paving. These hang
+       * 6.60–6.75 with a `hookL` 2.2 drop below them, so a miss is a 4.4 m fall onto the hall
+       * floor the player was standing on a moment earlier, arriving at √(2·24·4.4) = 14.5 m/s
+       * against `landHard` 15 — under the threshold, so it is not even a hard landing. Rule 2
+       * fails outright and the assist is not authored. Registering it anyway would also have
+       * put five rings into `SPECS` that `level.test.mjs`'s `CHAINS` list does not inspect,
+       * which is how the omission was noticed; the rule is why it stays omitted. */
+    }
+    A.instance('gold_leaf', ringGeo, mats, 'hooks:nave');
+  }
+
   /* ---- Architraves. Nave at 16.2..17.0, aisle at 12.65..13.5. ---- */
   for (const sx of [-1, 1]) {
     /* The nave architraves run the full 34 m of the shot `temple` is composed around. A
