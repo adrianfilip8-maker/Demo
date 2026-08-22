@@ -47397,3 +47397,96 @@ this ships.**
 - The reach cut is not recommended in any form: 7.0 completes the route but still moves the
   telegraph's marked hold (`epress` T) and breaks the mid-chain neighbour entries
   (`reachcensus` C).
+## §550 — "The music and sounds take a while": the audio system is not what the player is waiting for
+
+User report from a live playtest on the deployed build: *"The music and sounds take a while to begin
+playing."* §548 established that the audio works; **when it starts had never been measured.** This
+measures it, separates the two complaints, and ships **no behaviour change** — the build is live and
+every term worth changing is either another lane's or a feel constant.
+
+### §550.1 The critical path, and the ceiling (§450.4)
+
+Nothing can make a sound before **all four** of these have happened, in this order:
+
+| # | term | who owns it | measured |
+|---|---|---|---|
+| 1 | **boot** — page load → `__GAME.ready` | not `src/audio/` | 51 s *in this container*; **not the user's number** |
+| 2 | **the gesture** — the click | the platform | unavoidable |
+| 3 | **fetch** — 2.24 MB `bc-explore.mp3` | ours | 79 ms on loopback; a real network is slower |
+| 4 | **decode** — `decodeAudioData` on those bytes | ours | 467 ms |
+
+**Term 1 is a hard gate and it is the surprising one.** The listener that calls `unlock()` is
+registered at `main.js:306`, *after every module has initialised*. A player who clicks during the
+progress bar clicks nothing: there is no handler yet. So the earliest possible first sound is
+`boot + gesture + ~5 ms`, and **no amount of audio work moves it**. That is the ceiling.
+
+Boot's 51 s here is a software-rasterising container and is quoted only to place the term, never as
+the user's experience — §544's standing rule.
+
+### §550.2 The two complaints are not the same defect
+
+Measured on the **shipping graph** through `Audio.unlock(existing)` — the real pool, panners, sends
+and limiter, not a model of them:
+
+```
+  from unlock() to the first audible sample     (|x| > 1e-3)
+    SFX one-shot ............  5.1 ms
+    ambience beds ...........  28.1 ms
+    procedural score ........  120.9 ms
+```
+
+- **Sounds are not late.** An SFX is synthesised, needs no decode, and is out of the graph in 5 ms.
+  If SFX felt late, the cause is term 1 — they were waiting for boot, like everything else.
+- **Music is not waiting on the MP3 either.** `unlock()` starts the procedural score *before* it
+  ever asks for a stem, so there is music from ~121 ms. What the player waits for is the
+  **recognisable** track, and that is a different thing from "music".
+
+**The recognisable track arrives at roughly `fetch + decode + 4.0 s`**, measured here at ~4.9 s
+after the click. The dominant term is not the network and not the decode — it is
+`Audio.js`'s deliberate `const FADE = 4.0`, the first-stem cross-fade, whose own comment gives the
+reason: *"Four seconds, because both are music and a fast swap between two pieces of music reads as
+a glitch."* **It is the one term that does not shrink on a faster machine.**
+
+So the honest reading of the report: the player waited through boot for everything, and then waited
+a further ~5 s for the music to become the music they recognise — while a quieter procedural score
+played underneath the whole time.
+
+### §550.3 What is fixable, priced and NOT built
+
+The build redeploys on push and the user plays next session, so nothing here ships without a ruling.
+
+1. **Prefetch the stem bytes while the player reads "click to start".** Nothing preloads: there is
+   no `<link rel=preload>` anywhere in `index.html`, and `_loadTrack` has exactly two callers — the
+   fetch begins **inside** `unlock()`, measured at 356 ms *after* the click. The bytes need no
+   AudioContext, so they could be pulled as soon as frames are running and decoded at the gesture.
+   Removes term 3 from what the player perceives, entirely.
+   **Price:** small, and it has one trap worth stating — the capture harness boots the game
+   sixteen times a critic set and never clicks, so an unguarded prefetch adds 2.24 MB × 16 to a
+   signal no frame can show. That is exactly why `unlock(existing)` already skips `_loadTrack`, and
+   any prefetch has to inherit the same guard.
+2. **Shorten `FADE = 4.0`.** The largest single term. It is a **feel** constant with a stated
+   reason, and shortening it trades "the music takes a while" for "the music lurches". Not a change
+   to make unilaterally against a live build the day of a session.
+3. **Boot.** The dominant term and not `src/audio/`'s.
+
+### §550.4 DOMAIN
+
+- **L0** — the control: an idle graph renders a peak of exactly 0, so "sound arrived in 5 ms" cannot
+  be the harness counting anything.
+- **L1/L2/L3** — *pass on* the shipping graph; **L3 fails on a real source mutation** (`unlock()` no
+  longer starting the score), reddening with *"unlock() did not start the procedural score at all"*.
+- **L4** — reads `FADE` out of the source so this section's arithmetic and the code cannot drift.
+- **The instrument fault this file exists to not repeat.** `Music.update(now)` is a 0.45 s
+  look-ahead scheduler driven only from `Audio.update()`. The first probe never ticked it, so the
+  procedural score rendered **pure silence** and came within one step of being reported as *"the
+  documented fallback makes no sound at all"* — a headline finding that would have been entirely
+  my harness. L3 now asserts BOTH directions: pumped it sounds, unpumped it is silent.
+  Same shape as §549's control card that "fits" while never having opened.
+- **And the browser probe manufactured the contention it measured.** Its first run reported
+  **74,685 ms to fetch 2.24 MB over loopback** and **19,633 ms to decode** — because it was
+  stepping software-rasterised WebGL frames in a tight loop while both were in flight. Removing the
+  stepping: 79 ms and 467 ms. A 945× and 42× error, in the direction that would have made me
+  "fix" the wrong thing. Neither term needs frames; only the score's scheduler does.
+- **What none of this reaches.** Whether the procedural score is *noticed* under the beds, and
+  whether 4 s reads as patience or as absence, are playtest questions. Every number here is an
+  onset time, not a judgement about attention.
