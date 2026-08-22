@@ -44569,3 +44569,73 @@ bones can still fight over the cane socket or the root offset. `_clipprobe` sees
 suite drives, so its silence about a transition is a statement about coverage, not about the game.
 And neither instrument says whether an averaged pose looks wrong; that is what frames are for, and
 no frames were taken for these 28.
+
+## §528 — The variety question, priced and not answered: rate buys pacing, the mirror is closed for the reason it was always closed, and only an authored clip changes the shape
+
+Hardware item 20 asks whether three of the same swing reads as a combo or a repeat. That is feel and
+it is the user's. This prices the follow-up so that a "repeat" verdict lands on a decision rather
+than an investigation. **Nothing is shipped or started**; item 21 on the sheet is the user-facing
+form.
+
+The permanent constraint: the reference corpus has exactly one ground attack, established by content
+in §525. There is no second swing to import, so variety must be manufactured.
+
+### Lever A — rate and amplitude on the existing clip
+
+Both knobs already exist (`oneShot(name, speed)`, `play`'s `weight`); per-slot values are a table and
+about five lines in `Combo.swing`.
+
+Measured across ±15% rate on `cane_combo_1`, through the real mixer: **peak reach 0.7214 → 0.7199–
+0.7227 m (±0.2%, sampling noise) and contact moving ±17 ms.** The pose is unchanged — `speed` scales
+`tr.time`, so it plays the same drawing sooner or later. It varies pacing and cannot vary shape.
+
+`weight` is a trap and is recommended against. `treeW = clamp01(1 - used)` and `addQuat` is a
+normalised mean, so a strike at weight 0.8 is one-fifth the locomotion tree by construction: it
+reduces commitment rather than scaling the arc, and it deliberately re-introduces the averaging
+§525/§526 just removed from this exact chain.
+
+**Instrument note.** My first amplitude arm reported all four weights identical to four decimals —
+the §439 tell, and mine this time. The harness samples only the tracks and never the tree, so
+weight simply renormalised to 1.0 and the arm was measuring nothing. The statement above is a code
+read (`_sampleTracks` + `treeW`), not that measurement, and it is labelled as such rather than
+dressed up as one.
+
+### Lever B — a mirrored second strike, and the direct answer to whether §525.5's reason also kills it
+
+**It does, and it is the same reason rather than a related one.** `defMirror` exists and is already
+used three times (`turn_r`, `wall_run_r`, `ledge_shimmy_r`), so the change is one line. But `mir()`
+swaps the L/R suffix on every bone name, so the swing moves from `upperArmR` to `upperArmL`, while
+`SlyModelDLRig` sockets the cane rigidly to `handR` (`staff: 'handR'`). Mirrored, Sly swings an
+empty hand and the cane rides in the other. That is a property of the mirror and the socket, not of
+the purpose the mirror is put to, so it holds for variety exactly as it held for the seam fix.
+
+`defMirror`'s own comment — "the cane never changes hands, but its sweep does flip with the body" —
+looks at first like it handles this. It does not: it flips the cane's local delta while the mirror
+moves the swing to the other arm. It is right for `wall_run_r`, where the cane is not the point.
+
+A partial mirror (hips, legs, tail; arms untouched) would give stance variety under an unchanged
+swing — about ten lines for a bone filter on `mir`. Real, and small.
+
+### Lever C — an authored second strike
+
+Cost, concretely: each existing strike is 4 keys × 31 bone tracks plus cane, scale and event
+channels — 40–45 dense lines of hand-authored angles. The authoring is not the expensive part; the
+iteration is, and §479's history prices it: `cane_combo_3`'s impact pose was re-authored once after
+the critic read it as a quadruped.
+
+**The wrinkle that has to be decided first.** The shipped default is the imported regime. An
+authored strike is procedural by definition, so putting one in slot 2 makes the chain
+mixed-provenance — slots 1 and 3 the reference's swing, slot 2 ours. Whether that reads as variety
+or as inconsistency is a second feel question that item 20's answer does not settle.
+
+### Recommendation
+
+A first, if the verdict is "repeat": nearly free, one commit, and a chain whose beats land at
+different intervals is a materially different thing to hold even though every frame is the same
+drawing. Re-test. Only then is C worth its cost, for slot 2 alone, with the provenance question
+asked at the same time. B is closed.
+
+**Limits.** These bound what each lever CAN change; none of them says how much change is enough,
+and that has needed hands every previous time it has come up. The rate measurement is one clip
+(`cane_combo_1`) in the shipped regime, and the reach measure reads one hand, as everything in this
+family does.

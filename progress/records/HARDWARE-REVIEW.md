@@ -1345,3 +1345,78 @@ old hand-made animations, has the same defect and still has it — every strike 
 quarter of its reach to the same stacking. That set is the comparison baseline and a standing
 restore path, so changing its behaviour would have made the A/B dishonest. If you compare the two
 this build, know that the procedural arm is carrying a flaw the reference arm no longer has.
+
+## 21. If item 20 comes back "a repeat" — the three variety levers, priced in advance
+
+Item 20 asks whether three of the same swing reads as a combo or as a repeat. Only you can answer
+that. But if the answer is "a repeat" the follow-up is immediate, so it is costed here first.
+**Nothing in this item is shipped or started** — it exists so the next round is a decision rather
+than an investigation.
+
+The constraint behind all three: the reference corpus contains exactly ONE ground attack, and that
+is now established by content rather than by name (item 20). There is no second swing to import,
+ever. So variety has to be manufactured, and there are only three ways to do it.
+
+### Lever A — rate and amplitude on the clip we have · cost: near zero · buys: pacing only
+
+Both knobs already exist: `oneShot(name, speed)` and `play`'s `weight`. Per-slot values would be a
+small table and about five lines at the one place the chain swings.
+
+Measured rather than assumed, across ±15% rate: **the pose does not change at all.** Peak reach
+moves by 0.2% (sampling noise), and the strike simply arrives 17 ms earlier or later. That is what
+`speed` is — the same drawing, played sooner. It varies the *pacing* of the chain and cannot make
+the second strike look different from the first.
+
+`weight` is worse than it sounds. Below 1.0 the mixer fills the remainder from the locomotion tree
+(the pose combiner is a normalised average, so a strike at 0.8 is by construction one-fifth
+something else). It makes a strike *less committed*, not differently shaped — and it deliberately
+re-introduces the averaging that was just removed from this exact chain. **Not recommended at any
+price.**
+
+Honest note: the chain already varies in two ways that are not the arm arc — each slot lunges a
+different distance, and the third carries a screen shake. If the chain reads as a repeat, those did
+not carry it.
+
+### Lever B — a mirrored second strike · cost: one line · but it is ruled out, and for the same reason as before
+
+The machinery exists and is already used three times elsewhere in the clip file (the right-hand
+turn, the right wall run, the right ledge shimmy). Adding a mirrored strike is literally one line.
+
+It still does not work, and the reason it was rejected as a *fix* is the same reason it fails as a
+*variety lever* — the question was asked directly and this is the answer. The mirror swaps the L/R
+suffix on every bone, so the swinging arm becomes the LEFT arm. The cane is socketed rigidly to the
+RIGHT hand. Mirrored, Sly swings an empty hand while the cane rides along in the other one. That is
+a property of the mirror and the socket, not of what the mirror is being used for, so it holds
+whatever the purpose.
+
+One salvage worth knowing about: mirroring only the hips, legs and tail and leaving the arms alone
+would give a different *stance* under an unchanged swing — footwork variety, roughly ten lines to
+add a bone filter. It is real, and it is small: the cane still draws the same arc.
+
+### Lever C — an authored second strike · cost: high, and it is the only one that changes the shape
+
+Concretely, what one costs: each existing strike is four keyframes across 31 bone tracks plus a
+cane channel, scales and events — 40 to 45 dense lines of hand-authored angles. The authoring is
+not the expensive part; the *iteration* is. The finisher's impact pose in the current set had to be
+re-authored once already after it read as a quadruped rather than a lunge, and that is the normal
+cost of a pose that has to survive being looked at as a still.
+
+**The wrinkle that has to be decided before anyone starts.** The shipped default plays the imported
+set. An authored strike is by definition procedural, so putting one in slot 2 makes the chain
+mixed-provenance: slots 1 and 3 the reference's swing, slot 2 ours. Whether that reads as variety
+or as an inconsistency is itself a feel question — and it is one your answer to item 20 does not
+settle, so it would need its own look.
+
+### Recommendation
+
+If item 20 comes back "reads as a combo", do nothing.
+
+If it comes back "a repeat", **take Lever A first** — it is nearly free, it ships in one commit,
+and a chain whose beats land at different intervals is a materially different thing to hold even
+though every frame is the same drawing. Re-test it. Only if that still reads as a repeat is Lever C
+worth its cost, and then for slot 2 alone, with the mixed-provenance question asked explicitly at
+the same time. Lever B is closed.
+
+**What none of this can settle.** Whether pacing alone fixes a repeat is exactly the kind of
+question that has needed hands every previous time it has come up. The measurements above bound
+what each lever *can* change; they say nothing about how much change is enough.
