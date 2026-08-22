@@ -45788,6 +45788,15 @@ land on a real footstep, so this too needed reporting rather than testing.
   reference run in-arm, and is separately checked not to match the project's own `assets/audio/`
   path, so it can neither go blind nor fire on everything. It explicitly **does not** clear the
   `bc-*.mp3` question, which is §548.1's and is not a code matter.
+- **A2, second arm: the build output.** The first version scanned source only, which is the half of
+  the instruction I was told not to settle for. `dist/` cannot be scanned by a durable test — it is
+  gitignored, 0 files tracked, and absent on a clean checkout — so the guard scans **`public/`**
+  instead, which §265 copies into `dist/` **verbatim**: any path component named `Music` or
+  `Effects` under `public/` would ship. *Passes on* the tree as shipped (`public/assets/sly-godot/`
+  holds 6 entries: a PROVENANCE, two PNGs, three GLBs — no audio). *Fails on* a planted
+  `public/assets/sly-godot/Assets/Music/planted.txt`, run in-arm, naming both the directory and the
+  file. It also asserts the walk found >10 entries, so a path typo that makes it scan nothing reads
+  as a failure rather than a pass.
 
 **What none of this can discriminate.** Audibility: a voice that starts at zero gain, is masked by
 the bed, or sits behind the listener counts as started here — level, spectrum and clipping are

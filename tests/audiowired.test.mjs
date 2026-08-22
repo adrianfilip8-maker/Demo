@@ -226,6 +226,22 @@ test('A2 provenance: nothing references the reference repo\'s commercial recordi
     }
   }
 
+  /* `public/` is copied into `dist/` VERBATIM (§265), so scanning it is the build-output check —
+     `dist/` itself is gitignored and untracked, so no test can rely on it existing. Any path
+     component named Music or Effects anywhere under public/ would ship. */
+  const walkAll = (dir, out = []) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p2 = join(dir, e.name);
+      if (e.isDirectory()) { out.push(p2 + '/'); walkAll(p2, out); } else out.push(p2);
+    }
+    return out;
+  };
+  const pub = walkAll(join(ROOT, 'public'));
+  assert.ok(pub.length > 10, `the public/ scan found only ${pub.length} entries — it went blind`);
+  const shipped = pub.filter((p2) => /(^|[\/\\])(Music|Effects)[\/\\]/i.test(p2.slice(ROOT.length)));
+  assert.deepEqual(shipped, [],
+    `public/ carries paths that would ship into dist/: ${shipped.join(', ')}`);
+
   const RE = /assets[\/\\](music|effects)[\/\\]/i;
   const walk = (dir, out = []) => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
