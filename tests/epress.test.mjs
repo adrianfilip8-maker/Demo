@@ -242,3 +242,88 @@ test('epress W: E follows aim across tags, and stays a weight rather than a filt
   console.log(`[epress W] rope-facing -> poleClimb, ring-facing -> hookSwing; four facings all still `
     + `resolve to something (${lone.join(', ')})`);
 });
+
+/* ====================================================================================== */
+test('epress R: RATCHET — every stance offering two KINDS can select either by aim', async () => {
+  /* ── A ratchet on a PROPERTY, not on a current value (§584). ──────────────────────────────
+   * The count of such stances is content and must stay free to move — §575 took it from 0 to 6
+   * and the next level change may take it anywhere. What must never regress is the property:
+   * wherever two different affordance KINDS are inside their gates at once, the player must be
+   * able to have either one. A stance that fails this is §576 returning — the branch-factor
+   * metric reads 2 and the game plays 1 — and it is a defect however few stances there are.
+   *
+   * So the bar is a ratio pinned at 100%, and the count is printed beside it as the histogram.
+   * Improvement is MORE stances at 100%, never a lower ratio.
+   *
+   * DOMAIN (§418.3)
+   * passes on : the shipped hall — every mixed-kind stance found on a 0.5 m sweep of the nave
+   *             resolves to a different tag when aimed at each of its candidates.
+   * fails  on : RUN IN-ARM — the same sweep with aim held FIXED instead of pointed at each
+   *             candidate, which must collapse to one answer everywhere. Without that, "aiming
+   *             selects" is indistinguishable from "the answer varies for some other reason".
+   * does NOT  : assert how MANY such stances exist, or that they are good ones.
+   * discrim.
+   */
+  const { engine, collision, c, step, settle } = await harness();
+
+  const GATES = [
+    ['pole', 0.95, TUNE.poleMount * 1.5],
+    ['rail', 0.55, TUNE.railMount * 1.6],
+    ['hook', 1.15, TUNE.hookGrab],
+  ];
+  const lookAt = (p) => {
+    const dx = p.x - c.position.x, dz = p.z - c.position.z;
+    engine.camera.rotation.set(0, Math.atan2(-dx, -dz), 0, 'YXZ');
+    engine.camera.updateMatrixWorld(true);
+  };
+  /* find the mixed-kind stances on the nave centre line */
+  const stances = [];
+  for (let z = -20; z >= -51; z -= 0.5) {
+    const g = collision.groundCheck(V(0, 3, z), TUNE.radius, 8);
+    const feet = V(0, g?.hit ? g.y : 0, z);
+    const recs = new Set();
+    for (const [tag, eye, range] of GATES) {
+      for (const h of collision.query(V(feet.x, feet.y + eye, feet.z), range, [tag]) || []) if (h.rec) recs.add(h.rec);
+    }
+    if (new Set([...recs].map((r) => r.tag)).size >= 2) stances.push({ z, recs: [...recs] });
+  }
+  assert.ok(stances.length > 0,
+    'no stance on the nave floor offers two different affordance kinds, so this ratchet has nothing '
+    + 'to protect — the level has lost its only fork');
+
+  const pointOf = (rec) => {
+    const o = rec.object || rec.mesh; if (!o) return null;
+    o.geometry?.computeBoundingSphere?.();
+    const s = o.geometry?.boundingSphere; if (!s) return null;
+    return s.center.clone().applyMatrix4(o.matrixWorld);
+  };
+  const winnersAt = (st, fixedAim) => {
+    const out = new Set();
+    for (const rec of st.recs) {
+      const p = pointOf(rec); if (!p) continue;
+      settle(0, st.z);
+      for (let i = 0; i < 20; i++) { lookAt(fixedAim || p); step(() => {}); }
+      const w = ePressWinner(c);
+      if (w) out.add(w);
+    }
+    return out;
+  };
+
+  const failed = [];
+  for (const st of stances) {
+    if (winnersAt(st).size < 2) failed.push(`z ${st.z.toFixed(1)}`);
+  }
+  assert.deepEqual(failed, [],
+    `${failed.length} of ${stances.length} mixed-kind stances cannot select both options by aim `
+    + `(${failed.join(', ')}). Two affordances in range that resolve to the same one is §576's defect: `
+    + 'the metric reads 2 and the game plays 1');
+
+  /* the failing input: hold aim FIXED and selection must collapse */
+  const fixed = V(0, 0, -80);
+  const varied = stances.filter((st) => winnersAt(st, fixed).size >= 2);
+  assert.equal(varied.length, 0,
+    `${varied.length} stances still produced two different winners with the camera held FIXED, so this `
+    + 'arm is not measuring aim at all and the result above means nothing');
+  console.log(`[epress R] ${stances.length}/${stances.length} mixed-kind stances select either option by `
+    + `aim (100%, the bar) · fixed-aim control produced two winners at ${varied.length} of them`);
+});

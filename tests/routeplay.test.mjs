@@ -162,17 +162,27 @@ test('routeplay R1: the walked route\'s gap distribution, as a seal', async () =
   const gaps = gapsOf(samples);
   const worst = gaps[0];
   const totalGap = gaps.reduce((s, g) => s + g.n, 0);
-  /* The bar is now a CEILING, not a floor. It was `>= 25` when it recorded a 35.5 m gap nobody
-     had filled; §571's nave rope split that run to 20.0 m, so the useful thing to protect is the
-     fill. If the rope is removed or moved out of the walked line's reach this goes straight back
-     to ~35.5 and reddens here. */
-  assert.ok(worst && worst.n * 0.5 <= 25,
-    `the worst gap is now ${(worst ? worst.n * 0.5 : 0).toFixed(1)} m, measured at 20.0 m after §571 hung `
-    + 'the nave rope (35.5 m before it). A gap back near 35 m means the rope has moved outside '
-    + `poleMount*1.5 = ${(TUNE.poleMount * 1.5).toFixed(2)} m of the walked line, or gone`);
-  assert.ok(totalGap / samples.length < 0.75,
-    `${(100 * totalGap / samples.length).toFixed(0)}% of the walked route is gap, measured at 68% before `
-    + '§571 and lower after. Something has removed affordances from beside the route');
+  /* ── RATCHET (§584). Both bars are CEILINGS, and DOWN is improvement. ─────────────────────
+     A mover who lowers these re-bases them; a mover who raises them has removed something the
+     player had. The history is the point — this is the third setting and each one records what
+     filled the gap, so the next person can tell a regression from a redesign:
+
+         §570  worst 35.5 m · total 68 %   the hall floor, nothing in it
+         §571  worst 20.0 m · total ~50 %  the nave rope splits the hall run
+         §575  worst 12.0 m · total  26 %  the lamp chain covers the rest of the hall
+                                           — worst is now the CRYPT, not the hall
+
+     Set with headroom over the measurement (12.0 → 15, 26 % → 35 %) so that ordinary content
+     work does not red this, while the failure it exists to catch — the hall reverting to a dead
+     corridor at ~35 m — trips it immediately. */
+  assert.ok(worst && worst.n * 0.5 <= 15,
+    `the worst gap is ${(worst ? worst.n * 0.5 : 0).toFixed(1)} m against a ceiling of 15 (measured 12.0 m `
+    + `in the crypt at §575). If this is back near 20 the nave rope has moved outside poleMount*1.5 = `
+    + `${(TUNE.poleMount * 1.5).toFixed(2)} m of the walked line; near 35, the hall has lost both its lines. `
+    + 'Lower is better — if you improved it, re-base this bar and add a row to the table above');
+  assert.ok(totalGap / samples.length < 0.35,
+    `${(100 * totalGap / samples.length).toFixed(0)}% of the walked route is gap, against a ceiling of 35% `
+    + '(measured 26% at §575, from 68% at §570). Lower is better; re-base rather than raise');
 
   /* the failing input: widen the gates and the gaps must collapse */
   const WIDE = GATES.map(([t, e]) => [t, e, 40]);

@@ -46143,3 +46143,108 @@ row and `naverope`'s mount are both back on `walkE` with the note at each site. 
 now are, in a hall that previously had nothing to mark. Both remain live behaviour changes under
 review-sheet items 4 and 10, flagged in §578 and still flagged. Nothing here alters what gets
 marked.
+
+## §584 — Two ratchets, and the list of things deliberately left unpinned
+
+Most of what this session measured lives in a report, not in a bar, so the next mover — me
+included — can undo it invisibly. Two properties were pinned. The selection matters more than the
+count: **a ratchet on a number that should be free to move is worse than none**, and this session
+already re-based one coverage bar three times for good reasons.
+
+### Ratchet 1 — the route's gap ceilings (`routeplay` R1)
+
+Both bars were stale by a wide margin: `<= 25 m` against a measured 12.0, and `< 75 %` against 26.
+Re-based to **15 m** and **35 %**, with headroom over the measurement so ordinary content work does
+not red them, and with the history in the file so a future mover can tell a regression from a
+redesign:
+
+```
+  §570  worst 35.5 m · total 68 %   the hall floor, nothing in it
+  §571  worst 20.0 m · total ~50 %  the nave rope splits the hall run
+  §575  worst 12.0 m · total  26 %  the lamp chain covers the rest — worst is now the CRYPT
+```
+
+DOWN is improvement, and the assertion says so: *"if you improved it, re-base this bar and add a
+row to the table above"*. What it exists to catch is the hall reverting to a dead corridor at ~35 m.
+
+### Ratchet 2 — selectability, which is a property rather than a value (`epress` R)
+
+The COUNT of stances offering two affordance kinds is content and must stay free to move (§575
+took it 0 → 6; the next change may take it anywhere). What must never regress is the property:
+**wherever two different kinds are in gate at once, the player must be able to have either one.**
+A stance failing that is §576 returning — the metric reads 2 and the game plays 1 — and it is a
+defect at any count. So the bar is a **ratio pinned at 100 %** with the count printed beside it as
+the histogram, currently 6/6. Its failing input holds the camera FIXED instead of pointing it at
+each candidate, which must collapse selection everywhere: measured 0 of 6, so the arm is reading
+aim and not something else.
+
+### Left unpinned on purpose, with the reason
+
+- **Branch factor 54/170, and the fork's 6 samples / 3.0 m.** Current values, not invariants. Any
+  content change moves them legitimately, in either direction.
+- **29 of 31 thief spots, 0 reachable pin traps, slope walkability.** Already pinned, by
+  `reachcensus` A's 24 driven stances at zero failures, `pincensus`, and `slopewalk` — a second bar
+  on the same property would be duplication, not safety.
+- **The telegraph's marks.** `epress` T pins them as an unchanged-by-§579 seal, which is a
+  different claim from "these are the right marks". They are under review (items 4 and 10) and
+  pinning them as correct would be pinning an open question shut.
+
+## §585 — Discoverability of the new content, measured: the rope is seen and never announced, the rings are announced and never seen
+
+Report only. **Nothing about telegraphing was changed** — items 4 and 10 are open with the user,
+and this is the measurement for when they rule.
+
+**Method.** Drive the route the way a walking player does — facing the next waypoint — and at every
+0.5 m sample record, per affordance: is it the hold the HUD is currently marking; is there
+unoccluded line of sight to it; is it inside its own entry gate. Then, more sharply, is it **on
+screen** — inside a real 46° frustum at eye height and unoccluded — because "visible somewhere
+behind you" is not what a cold player gets. 136 walked samples.
+
+```
+  affordance              telegraphed   line of sight   in gate    verdict
+  §575 lamp rings ×5         1-15 %        44-46 %      10-17 %    ANNOUNCED
+  §571 nave rope                0 %           42 %          4 %    visible, silent
+```
+
+**And the sharper number reverses the picture:**
+
+```
+  on screen (46° frustum + occlusion)        whole route      the HALL leg
+  §571 rope, FOOT (y 1.2)                    16/136  12 %      16/51   31 %
+  §571 rope, mid-span (y 8.0)                 0/136   0 %       0/51    0 %
+  §575 ring 2 (y 6.7)                         1/136   1 %       1/51    2 %
+```
+
+So the two pieces of new content are discovered by **opposite and non-overlapping** channels:
+
+- **The lamp chain is carried entirely by the HUD.** The rings hang at 6.6–6.75 m and a player
+  walking at eye level has one on screen **2 %** of the hall leg. They are marked, and that is all.
+- **The rope is carried entirely by the eye.** Its foot is on screen **31 %** of the hall leg — the
+  player is already looking at it — and it is telegraphed **0 %** of the time, because
+  `TELEGRAPH_KINDS` has no `pole` in it.
+
+**The dependency worth flagging:** if the telegraph changes under items 4/10 in a way that stops
+marking hooks, the lamp chain loses its only discovery channel and becomes 2 %-visible overhead
+furniture. The chain's discoverability is not robust to a telegraph decision; the rope's is
+independent of one.
+
+**A limitation, stated rather than hidden.** The walked census excludes the five BEAT segments
+(§570's method), so the courtyard hook chains read 0 % telegraphed and 0 % in-gate here. They are
+entered during a beat — the E-grab off the kiosk lintel — which this instrument does not sample.
+Those rows describe the walk, not the chain.
+
+### The cheap non-telegraph option, priced and NOT shipped
+
+The rope is looked at and says nothing, and its foot is the part that gets looked at. The fix that
+needs no telegraph decision is **set dress at the foot**: a `K.ropeCoil` spill where the rope meets
+the hall floor at (2.40, ~0.1, −33.20), tying the line visually to the ground the player is walking
+on. The level already owns the vocabulary — `PropKit.ropeCoil` exists and `Props` places eight of
+them — so this is a placement, not new art.
+
+Cost: **one drawable, zero colliders, RNG-neutral** if built with fixed parameters rather than
+`rng: R`. It must stay collider-free or `basketvary` P-A1 (*"a rope coil is set dress and carries
+no gameplay volume"*) reddens, which is exactly the seal that would catch it going wrong.
+
+What it does NOT do, said plainly: it cannot be measured from here. Whether a coil at the foot
+makes a player look up a 16 m rope is a playtest question, and every number above is about geometry
+and frusta rather than attention. It is brought as a recommendation for that reason, not shipped.
