@@ -45153,3 +45153,146 @@ whatever wrote last**, which is a silent cross-lane failure with no detector.
   It no longer discriminates another lane's memory pressure.
 
 Both were re-run together with `shadowcache` and `padtiming`: 18/18.
+
+## §582 — The boom floor's two questions: the 133° whip was a tangent solve shipping whatever came back, and the pull-in turned out to be honest
+
+Two items, both surfaced by §581's own measurements and both about the camera rather than the
+subject. Every number below is from a clean worktree at a committed sha, per the lane's standing
+rule; where a figure comes from an exploratory probe rather than a shipped arm, it says so.
+
+### §582.1 The whip: not one cause, three, and two of them are geometry
+
+§581 reported 13 view steps over 60°/frame, up to ~133°, all on the pole-swing take at the boom
+floor, identical in both containment regimes, and did not fix them — noting that §475.3 had
+rejected a rate limit. The brief's counter was that a rate limit is a symptom fix and the idiom
+here is to go at the mechanism. That was right, and the mechanism was not one thing.
+
+Instrumented at the stage boundaries, the whip frame reads:
+
+```
+  f113 poleClimb  preY 6.078  anchor 5.450  φ0 −105.7°  need −81.1°  →  dy −0.245  postY 5.833  φ −104.6°  applied −80.0°
+  f114 poleClimb  preY 6.111  anchor 5.500  φ0 −107.8°  need −83.2°  →  dy −0.649  postY 5.461  φ  +75.4°  applied +50.8°
+```
+
+At f114 the solve puts the camera at 5.461 with the anchor at 5.500 — **it crossed to the other
+side of the subject**, φ flipped sign, and the rotation stage 1 applies flipped with it. 131° in
+one frame. §580's stand-off bounds the camera's *distance* to the subject and this crosses it at a
+distance, so the stand-off never bound.
+
+Then, hunting the residue, a second and larger one:
+
+```
+  f327 jump  φ0 −134.6°  need −109.2°  →  dy = 88.624 m      (probe, pole-swing take)
+  worst single-frame vertical translate on the 9-route probe set:  dy = 562.93 m
+```
+
+`den = ŵ.y + tan(T)·ŵ.z` can be small without tripping the existing 1e-4 guard, and the root then
+runs to infinity. **The shipped rig throws the lens half a kilometre and back inside one frame.**
+The stand-off never saw that either, because it only forbids getting *closer*.
+
+Both are the same family §580.1 named — a tangent equation is π-periodic and does not distinguish
+"put the subject at elevation T" from "put it at T − 180°" — and both are now checked on the
+RESULT rather than predicted from the inputs. That is deliberately the same shape as the overlap
+bisection `_castBoom` already runs after its whiskers: *when a closed form can return a wrong
+branch, verify the branch you got.* A rejected translate leaves stage 1 to rotate uncapped, which
+still lands the anchor on the margin, so the guard costs composition and never containment.
+
+Measured in-arm on the pole-swing take, and across the 62-route battery:
+
+```
+                            max |dy|        worst step   steps >60°/f   p99
+  pre-§582 solve            268.51 m         132.1°/f         6         130.59
+  guarded                     2.62 m          50.8°/f         0          30.45
+
+  62-route battery, hard cuts caused by a stage-2 translate:   11  →  0
+```
+
+The arm's 268.51 m is the pole-swing take alone and is a **lower bound** on the defect: the
+9-route probe saw 562.93 m, and §581's own restlessness table recorded a 562.828 m/frame camera
+move independently. Two sightings of the same number by different instruments.
+
+**Which is the part I have to own.** That 562.828 was in front of me a round ago. I wrote "clearly
+a teleport/route reset, not a camera behaviour" and filtered it out — by the *player's* motion,
+which is the correct filter for its purpose and which is exactly why it hid this. An exclusion
+rule written for one question will silently answer a different one.
+
+### §582.2 What remains is a π-wrap, and no stateless rule removes it
+
+`need` is a function of φ alone: `φ − sign(φ)·αm` outside the band, 0 inside. On the circle of φ
+any such function that always lands the subject on the margin must be discontinuous somewhere, and
+it breaks at the back of the lens — driven, φ steps **−179.0° → +174.3°** between two frames as
+the subject passes directly behind, and the applied rotation reverses with it. The break's size is
+exactly 2π − 2·αm, asserted against the closed form.
+
+```
+  cuts over 60°/frame, 62 routes    wrap   stage 2 idle   from a stage-2 translate   worst
+  guarded (shipped)                   2          1                   0               143.4°/f
+  unguarded                           0          2                  11               132.5°/f
+```
+
+So the repaired mechanism and the residue are distinguishable, and the guard removed one class
+entirely without touching the other.
+
+**A draft of this section claimed the wrap is bounded by 2·αm ≈ 46°** — reasoning that a
+2π − 2·αm jump in `need` is a 2·αm rotation the other way. Driven, the debt route steps **143.4°**,
+because the extent hold's degrade branch clamps `need` into a window around φ and φ is itself what
+wraps, so the rule's own jump is not the applied jump. The bound was wrong and is retracted rather
+than widened.
+
+Removing the wrap needs hysteresis on the turn direction — remember which way you turned and keep
+turning that way while the subject is behind — which is state, which is §475.3's question.
+**Handed back with the measurement attached**, per the brief's instruction: it is not "a rate limit
+or nothing", it is "state, or don't be in that pose", and the second is §582.3's territory.
+
+### §582.3 The pull-in fires on more than a third of frames, and it is earned
+
+The hypothesis was the standing detector's: *before calling a surface a lid, look underneath it.*
+Three measurements, and the hypothesis loses all three.
+
+**It is not firing on grazes.** The shortfall `want − allowed` across the route set has median
+**3.63 m**, min 0.01, max 7.39. Only ~0.1 % of occluded frames are under half a metre. The
+instrument demonstrably resolves small values and the distribution is simply not small.
+
+**It is not firing on nothing.** The camera still treats two of the five traversal affordance tags
+as solid — `rail`, `hook` and `spire` are already in `CAM_SWEEP_OPTS.ignoreTags`, `ledge` and
+`pole` are not — which is the asymmetry that made this look promising. Checked against the scene
+graph: **all 90 `ledge` and all 19 `pole` colliders overlap a visible mesh.** Not one is a bare
+affordance volume. The check is shown to discriminate by running it against a 1 m box in open air
+60 m above the courtyard, which reports bare.
+
+**It is not §471's second instance.** `LedgeHang` publishes `attached = L.rec` and the §471 gate
+only tests `tag === 'pole'`, so a held ledge is not exempt. Driven over 600 hang frames the boom is
+bound by a `ledge` collider on **600 of 600** — and by the held one on **0**. The binder is always
+a different piece of masonry.
+
+**The ablation was run and rejected.** Ignoring `ledge` and `pole` for the camera moves frames at
+the boom floor from **20.2 % to 5.4 %** and mean boom from 3.478 to 3.977 m — which is precisely
+the position sixth §581 priced and declined to buy by raising `distHardMin`. It was not taken,
+because it buys that by putting the lens through visible stone. A first pass at the safety check
+looked only for the camera entering `wall`/`ground` colliders and found no change at all (11
+frames either way, all the known dune-sand dip) — which would have licensed the change. The
+visible-mesh check is what caught it: the geometry behind a ledge proxy has no wall collider of
+its own, so the penetration test was blind to exactly the case that mattered.
+
+**Answer: the pull-in is correct on all of it.** That closes a question nobody had asked, and the
+20.2 % floor rate is honestly earned by a dense temple rather than by a loose probe.
+
+### §582.4 Four instrument faults, all caught, all worth keeping
+
+- **A NaN read as a result.** The residue scan read `fr[i].clamp` where the field is `pitch`. Every
+  comparison went false and the arm reported a confident **"0 wraps"** — a clean zero manufactured
+  by an instrument that could not see anything. Caught only because it contradicted a probe from
+  ten minutes earlier. The field is now asserted finite.
+- **A bar picked by eye.** The wrap arm first asserted the rule's gap was `> 6.0` rad and failed at
+  5.452; the true jump is 2π − 2·αm = 5.472. The bar is now the closed form, not a round number.
+- **The wrong sample asked the right question.** The shortfall-distribution check was first run on
+  the ledge-hang routes alone, where every frame sits in a ~2.56 m band, and failed on a property
+  of the route rather than of the measurement (§440). It now runs on the broad set.
+- **A story fitted frame by frame.** An intermediate draft classified residual cuts three ways
+  including "the subject genuinely moved fast" — true, and at a 0.55 m boom a pole swing does
+  traverse tens of degrees per frame — but explaining every frame is curve-fitting, not testing.
+  The arm now asserts the one thing about the mechanism it repaired: no residual cut comes from a
+  stage-2 translate. The rest is reported.
+
+Verification: camstate 11/11, camclamp 4/4, climbcam and camdrive unchanged, full suite
+**940/940 from a clean worktree at 031762c**.
