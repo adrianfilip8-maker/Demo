@@ -46465,3 +46465,143 @@ says so instead of passing quietly.
 are not one when each tag carries its own reach. The first version passed every test this lane
 owned and was caught only by another lane's driven beat — which is the argument for running the
 whole suite from a clean worktree rather than the subset you think you touched.
+
+## §583 — The φ wrap is not moot: 125–143° of camera for 9 cm of Sly, and the nave rope's handoff is shot from the boom floor
+
+Two items. All coupled numbers from a clean worktree at a committed sha; where a figure comes from
+an exploratory probe rather than a shipped arm, it says so.
+
+### §583.0 The premise, corrected before it was measured
+
+The disposition offered was that the wrap may no longer manifest, on the strength of §582's row
+reading *"guarded 2.62 m, 50.8°/f, 0 over 60°"*. **That row is the pole-swing take alone.** The
+arm beside it measures the whole battery and says something different:
+
+```
+  §582, stage-2 solve arm  (1 route ):  guarded … 0 steps over 60°/frame
+  §582, π-wrap arm         (65 routes):  guarded … 2 wrap cuts, worst 143.4°/f
+```
+
+Two of my own rows, adjacent in the same output, with different samples and no label saying so.
+The single-route row is the one that reads like a clean result, which is exactly why it is the one
+that got quoted. Sample scope belongs in the sentence, not in the reader's memory (§440).
+
+### §583.1 It manifests, and the size is not marginal
+
+Two independent samples on two routes, per §466.5:
+
+```
+                                     view step   of which subject   pure camera   subject ndcY      after
+  pole swing, slow cadence  f236      125.3°/f        5.5°             119.8°     −0.366 → +0.563   holds (next step 0.2°/f)
+  hook-ring debt + a hit    f177      143.4°/f        7.3°             136.2°     +0.88  → −0.88    unwinds over ~10 frames
+```
+
+At f236 the **player moves 9 cm** — (21.651, 9.822, −2.235) to (21.619, 9.903, −2.205) — while the
+camera quaternion goes from (−0.9313, −0.0038, −0.0098, 0.3640) to (0.7510, −0.0059, 0.0068,
+0.6603). The world rotates 125° around a character who barely moved. At f177 Sly crosses the
+entire frame vertically, top edge to bottom edge, in one frame.
+
+**The threshold is not invented for the occasion.** §475.3 pre-registered 10°/frame as the size of
+the fallPitch unwind *the shipped rig itself calls a cut*. Both events are 12–14× that.
+
+**And the wrap frame is the worst frame in the battery on a second, independent measure.** The
+battery's closest lens-to-subject approach across all 73 routes is **0.184 m, at f177** — the wrap
+frame. That is inside the capsule radius 0.34: at the wrap the lens is *inside Sly* and the view
+flips 143°. Containment still holds (the near plane is 0.10 and the arm asserts it), but the two
+worst things the camera does happen at the same frame, which is not a coincidence — the wrap is
+by construction the pose where the subject is directly behind a crushed lens.
+
+**Photographed.** `shots/camlane4-s9-wrap-{before,after}.png`, the two consecutive frames of the
+f236 event. Before: the lens is pitched steeply down — temple floor, columns receding, Sly's hat
+at the top-left corner. After: pitched steeply up — open sky across two thirds of the frame, birds,
+the underside of a stone crossbeam, Sly's arm and cane in the left foreground. **The world goes
+from floor-below to sky-above in one frame while the player moves 9 cm.** These two are a REPLAY,
+not a drive — the pose comes from the node rig trace and only the render is the browser's, with
+the rig held off so it cannot re-solve a different pose — and they are labelled that way in
+`camlook` S9 because a replayed frame photographed beside driven ones would be two things under
+one heading (§442).
+
+**Disposition: the wrap is real in φ AND on screen. The statelessness question is live, not moot.**
+It should not be recorded as closed. What it needs is hysteresis on the turn direction — remember
+which way you turned and keep turning that way while the subject is behind — and that is state.
+
+### §583.2 The nave rope, driven both directions and looked at as a shot
+
+`src/world/EgyptLevel.js`'s §571 line — hall floor → rope → jump at the cable's height → catch the
+hall cable — is now three routes in the containment battery, derived from the level rather than
+written down: the rope's own collider and the cable's spline decide the start points and the
+handoff height, so a world-lane re-placement moves them instead of silently missing them.
+
+```
+  73 routes · 17,370 frames · 32/32 states · subject out of frame 0
+  ascent   poleClimb 248 f, y 0.20 → 12.55 → railSlide      out of frame 0/342
+  descent  from both cable ends: crouch off, catch, y 12.9x → 1.14   out of frame 0/435, 0/409
+```
+
+**The climb reads, and the handoff is legible on approach.** Sampling the cable span the player is
+about to catch and asking how much of it projects inside the frame:
+
+```
+  y 10.60   boom 6.00   cable 88 % on screen, nearest point 0.05 from frame centre
+  y 11.60   boom 6.00   cable 84 %,           nearest 0.23
+  y 12.20   boom 3.52   cable 72 %,           nearest 0.30
+  y 12.55   boom 0.55   cable 53 %,           nearest 0.05     ← the jump
+  y 13.74   boom 0.55   cable 50 %,           nearest 0.62
+```
+
+For most of the climb the cable sits near the middle of the frame at a full 6 m boom. A player can
+see what they are climbing toward. **Then the camera crushes to the floor exactly at the beat the
+line is built around**, and the thing they are aiming at drops from 88 % of its span on screen to
+53 %.
+
+**The cause is honest and it is not the camera's policy.** The binder is `ground` — the nave
+ceiling above a climber near the top of a 16 m rope — on 8 of 248 climb frames, and every one of
+those 8 is at the top. By §582 the pull-in is earned: `ground` is visible architecture and the
+shortfall is metres. So this is a **geometry consequence, not a camera bug**: the rope's top sits
+where the camera behind a climber has ceiling in it. Flagged to the coordinator for the world lane
+rather than acted on here — the camera's honest answer to "there is a ceiling behind you" is to
+pull in, and the fix, if one is wanted, is where the rope's exit hangs.
+
+**This is the exit, and §585 measured the entry — they compose rather than collide.** The playtest
+lane's walked census says the rope's foot is on screen 31 % of the hall leg and telegraphed 0 %
+("carried entirely by the eye"), and its mid-span is on screen 0 % of 136 samples. Different
+subject and different question: theirs is whether a walking player finds the rope, mine is what the
+camera does once he is on it. Read together the line is **undiscovered at the bottom and legible at
+the top until the moment it matters** — and neither half is evidence about the other, so §585's
+0 % mid-span is not a contradiction of the 88 % cable visibility here. Reproduced their framing
+before citing it; their numbers are theirs and are not re-quoted as mine.
+
+Verdict on the coordinator's actual question — designed or survived: **designed for four fifths of
+its length and survived at the top.** The approach is legible, the exit beat is not.
+
+### §583.3 One drive fault, and one confirmation
+
+**A drive that never presses cannot complete this line.** The first ascent script held `jump` and
+released `interact` and produced a `wallJump` off the rope every single time — `RailSlide.canEnter`
+wants an `interact` press or an apex arrival. Driven that way, the line reads as broken. It is not;
+the drive was.
+
+**The shared tree drifts, and it is now measured twice.** The battery read 17,826 frames and a
+0.301 m closest approach in the live tree, then 17,785 minutes later with identical code, while
+`EgyptLevel.js` was being written 22 seconds before the check. Two back-to-back runs after the
+world settled were identical. The committed-HEAD figure is 17,370 / 0.184 and it is the one quoted.
+§581.5 recorded this once; it is recorded again because it changed a number I would otherwise have
+reported as a finding of mine.
+
+**Three capture staging faults, and what they cost.** `camlook` S7 hunts the wrap by driving, with
+three attack cadences over 400 frames each; it shot nothing on all three, correctly — the node
+route swings with an analog `move.x = 0.8` and `KeyD` gives 1.0, so the browser is on a different
+trajectory and the wrap is a knife-edge pose. S8 then failed twice on the rope: first because
+`tp()` builds a `THREE.Vector3` from a `window.THREE` the page does not expose, so it throws and
+falls back to a bare `position.set` carrying NO yaw — and `W` is camera-forward, so the runner
+walked wherever the camera happened to point. Fixed, it failed again because the climb loop had a
+success exit and no failure exit: when Sly came off the rope early it kept simming with `W` held,
+walked him 66 m across the level, and photographed the courtyard under the label `s8-climb-10m`.
+**Every loop needs a failure exit, not just a success one.** With one added, the diagnostic became
+useful immediately: *left the rope at y 10.24 into `hurt`* — the live game injects damage on this
+route that the node harness does not. Guards and hazards are out of scope by user ruling, so that
+is reported to the coordinator and not chased.
+
+Five browser runs, ~20 minutes each on the shared FIFO lock, for two frames — and the two that
+landed came from the deterministic pose replay, not from any of the driven searches. The lesson is
+not about the box: **when the pose is a knife edge, replay it; do not hunt it.**

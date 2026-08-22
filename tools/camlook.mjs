@@ -373,7 +373,7 @@ try {
      frame for frame or the "before" picture is not the frame before — the staging fault §581.5
      cost four runs to. `stopAt < 0` locates and captures nothing; `stopAt >= 0` re-runs the
      identical drive and stops there. */
-  const swingRun = async (frames, stopAt) => {
+  const swingRun = async (frames, stopAt, per) => {
     await tp(19.8, 0.02, -2.0, Math.PI);
     await sim(6);
     await page.keyboard.down('KeyW');
@@ -381,7 +381,7 @@ try {
     let flip = -1, prev = 0;
     for (let i = 0; i < frames; i++) {
       const s = await probe();
-      if (s.st === 'poleClimb' && i % 90 === 0) {
+      if (s.st === 'poleClimb' && i % per === 0) {
         await page.mouse.down({ button: 'left' }); await sim(1); await page.mouse.up({ button: 'left' });
       }
       await sim(1);
@@ -393,16 +393,134 @@ try {
     await page.keyboard.up('KeyW'); await page.keyboard.up('KeyD');
     return flip;
   };
-  const at = await swingRun(360, -1);
+  let at = -1, cadence = 0;
+  for (const per of [90, 60, 120]) {
+    at = await swingRun(400, -1, per);
+    if (at >= 1) { cadence = per; break; }
+    console.log(`      cadence ${per}: no wrap in 400 frames`);
+  }
   if (at < 1) {
-    console.log('      !! no φ wrap reached from the keyboard in 360 frames — pair skipped rather than shot at the wrong pose');
+    console.log('      !! no φ wrap reached from the keyboard in 400 frames — pair skipped rather than shot at the wrong pose');
   } else {
-    console.log(`      wrap at drive frame ${at}; re-running the identical drive to ${at - 1}`);
-    await swingRun(360, at - 1);
+    console.log(`      wrap at drive frame ${at} (attack cadence ${cadence}); re-running the identical drive to ${at - 1}`);
+    await swingRun(400, at - 1, cadence);
     await snap('s7-wrap-before', 'S7');
     await sim(1);
     await snap('s7-wrap-after', 'S7');
   }
+  }
+
+  /* ---- S8: the nave rope (§571) as a shot, not as containment ------------- */
+  if (seq('s8')) {
+  console.log('[S8] the nave rope — climb, handoff, catch');
+  const cable = await page.evaluate(() => {
+    const col = window.__ENGINE.get('collision');
+    const r = (col.recs || []).find((x) => x.tag === 'rail' && x.mesh?.name === 'rail:hall-cable');
+    const sp = r?.mesh?.userData?.spline; if (!sp) return null;
+    let bt = 0, bd = 1e9;
+    for (let t = 0; t <= 1; t += 0.002) { const q = sp.getPointAt(t); const d = Math.hypot(q.x - 2.40, q.z + 33.20); if (d < bd) { bd = d; bt = t; } }
+    const p = sp.getPointAt(bt);
+    return { x: p.x, y: p.y, z: p.z, gap: bd };
+  });
+  if (!cable) console.log('      !! no hall cable in this build — sequence skipped');
+  else {
+    console.log(`      cable closest to the rope at (${cable.x.toFixed(2)}, ${cable.y.toFixed(2)}, ${cable.z.toFixed(2)}), gap ${cable.gap.toFixed(2)} m`);
+    /* `tp()` builds a THREE.Vector3 from `window.THREE`, which the page does not expose, so it
+       throws and falls back to a bare `position.set` that carries NO yaw — and `W` is
+       camera-forward, so the runner then walks wherever the camera happened to point. The first
+       S8 run never reached the rope for exactly that reason. Set the facing on both the player
+       and the rig, then CHECK the approach is closing before spending 240 frames on it. */
+    await page.evaluate((r) => {
+      const e = window.__ENGINE, m = e.get('movement'), c = e.get('camera');
+      m.position.set(0, 0.1, -33.2); m.velocity.set(0, 0, 0); m.grounded = true;
+      if ('yaw' in m) m.yaw = Math.atan2(1, 0);
+      c.yaw = Math.atan2(1, 0); c.snap(true);
+    }, null);
+    await sim(8);
+    const d0 = await page.evaluate(() => { const m = window.__ENGINE.get('movement'); return Math.hypot(m.position.x - 2.40, m.position.z + 33.20); });
+    await page.keyboard.down('KeyW');
+    await sim(20);
+    const d1 = await page.evaluate(() => { const m = window.__ENGINE.get('movement'); return Math.hypot(m.position.x - 2.40, m.position.z + 33.20); });
+    console.log(`      approach: ${d0.toFixed(2)} m -> ${d1.toFixed(2)} m from the rope axis`);
+    if (d1 >= d0) console.log('      !! walking AWAY from the rope — the facing is wrong');
+    let mounted = false;
+    for (let i = 0; i < 240 && !mounted; i++) {
+      if (i % 8 === 0) { await page.keyboard.down('KeyE'); await sim(1); await page.keyboard.up('KeyE'); }
+      await sim(1);
+      mounted = (await probe()).st === 'poleClimb';
+    }
+    if (!mounted) console.log('      !! never mounted the rope — sequence skipped rather than shot at the wrong pose');
+    else {
+      /* EVERY loop needs a failure exit, not just a success one. The first version broke only on
+         reaching a height; when Sly came off the rope early it kept simming with W held and walked
+         him 66 m across the level, then photographed the courtyard and labelled it a climb. Break
+         on leaving `poleClimb` too, and say which exit was taken. */
+      const climbTo = async (want) => {
+        for (let i = 0; i < 700; i++) {
+          await sim(1);
+          const s = await probe();
+          if (s.st !== 'poleClimb') return { ok: false, why: `left the rope at y ${s.p[1].toFixed(2)} into ${s.st}` };
+          if (s.p[1] >= want) return { ok: true, y: s.p[1] };
+        }
+        return { ok: false, why: 'never reached the height' };
+      };
+      const a = await climbTo(10.5);
+      if (!a.ok) { console.log(`      !! climb frame skipped: ${a.why}`); }
+      else { await snap('s8-climb-10m', 'S8'); }
+      const b = a.ok ? await climbTo(cable.y - 0.45) : { ok: false, why: 'climb already failed' };
+      if (!b.ok) { console.log(`      !! handoff frame skipped: ${b.why}`); }
+      else { await snap('s8-handoff', 'S8'); }
+      const proceed = b.ok;
+      /* jump and reach */
+      if (proceed) {
+      await page.keyboard.down('Space'); await sim(2); await page.keyboard.up('Space');
+      let caught = false;
+      for (let i = 0; i < 90 && !caught; i++) {
+        if (i % 3 === 0) { await page.keyboard.down('KeyE'); await sim(1); await page.keyboard.up('KeyE'); }
+        await sim(1);
+        const s = await probe(); caught = !!(s.st && s.st.startsWith('rail'));
+      }
+      if (caught) { await sim(3); await snap('s8-caught', 'S8'); }
+      else console.log('      !! never caught the cable from the keyboard — catch frame skipped');
+      }
+    }
+    await page.keyboard.up('KeyW');
+  }
+  }
+
+  /* ---- S9: the φ wrap, REPLAYED from a node-traced pose ------------------- */
+  /* §583. The wrap is a knife-edge pose the keyboard could not reach in 400 frames at three
+     cadences (analog move.x 0.8 vs KeyD's 1.0 is a different trajectory), so these two frames are
+     a REPLAY, not a drive: the player position and camera pose come from the node rig trace on
+     `pole swing, slow cadence`, and only the render is the browser's. Labelled as such because a
+     replayed pose photographed beside driven ones would be two things under one heading (§442).
+     The rig is switched off for these two frames on purpose — the pose it produced is the
+     subject, and letting it re-solve would compose a different one. */
+  if (seq('s9')) {
+  console.log('[S9] the φ wrap — replayed from the node trace, rig off');
+  const POSES = [
+    { n: 'before', p: [21.651, 9.8217, -2.235],  cam: [22.2486, 11.1157, -2.851],  q: [-0.931335, -0.003845, -0.009836, 0.36401] },
+    { n: 'after',  p: [21.6194, 9.9025, -2.2049], cam: [22.2383, 10.0732, -2.5106], q: [0.750951, -0.005947, 0.006764, 0.660297] },
+  ];
+  for (const P of POSES) {
+    const info = await page.evaluate((o) => {
+      const e = window.__ENGINE, m = e.get('movement'), cam = e.camera;
+      m.position.set(o.p[0], o.p[1], o.p[2]); m.velocity.set(0, 0, 0); m.grounded = false;
+      e.debug.freeCam = true;                       // hold the rig off this frame
+      cam.position.set(o.cam[0], o.cam[1], o.cam[2]);
+      cam.quaternion.set(o.q[0], o.q[1], o.q[2], o.q[3]);
+      cam.updateMatrixWorld(true);
+      const ch = e.get('character');
+      let ndc = null;
+      if (ch?.root) { const v = ch.root.position.clone(); v.y += 0.9; const n = v.project(cam); ndc = [+n.x.toFixed(2), +n.y.toFixed(2)]; }
+      return { ndc, camY: +cam.position.y.toFixed(3) };
+    }, P);
+    const uri = await page.evaluate(() => window.__GAME.capture('image/png'));
+    await writeFile(`${OUT}/s9-wrap-${P.n}.png`, Buffer.from(uri.split(',')[1], 'base64'));
+    log.push({ tag: 'S9', frame: `s9-wrap-${P.n}`, ...info });
+    console.log(`      -> s9-wrap-${P.n}.png  ndc ${JSON.stringify(info.ndc)} camY ${info.camY}`);
+  }
+  await page.evaluate(() => { window.__ENGINE.debug.freeCam = false; });
   }
 } finally {
   await writeFile(`${OUT}/telemetry.json`, JSON.stringify({ sha, dirty, W, H, Q, errs, log }, null, 2));
