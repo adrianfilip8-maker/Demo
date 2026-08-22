@@ -211,6 +211,42 @@ const CASES = {
     setup: (c) => { c.position.y = 3.0; c.velocity.y = 0; c.grounded = false; },
     script: (i, input) => { input.let_go('jump'); void i; },
   },
+  /**
+   * bounce → fall (§530). §529 §6 classified `bounce` as the same shape as the two fixed there:
+   * it fires `double_jump` and asserts no base of its own, and both its driven exits (`dive`,
+   * `fall`) assert non-tree loops, which before §529 could not end a one-shot at all. The
+   * interesting half is that `Bounce` and `DoubleJump` fire the SAME clip and only `DoubleJump`
+   * re-asserts it as a base — so one path self-cleans and the other does not, from one clip.
+   *
+   * `c.bounce()` is the game's own public entry (`Controller.bounce`, what GUARDS calls on a head
+   * stomp and what the `enemyBounce` event routes to), not a poked state: the request goes through
+   * `sm.request` and `Bounce.canEnter` exactly as it does in play.
+   */
+  bounce: {
+    from: 'bounce', to: 'fall', a: 'double_jump', b: 'jump_fall',
+    frames: 120,
+    script: (i, input, c) => {
+      input.move.y = -1;
+      if (i === 20 || i === 21) input.hold('jump'); else input.let_go('jump');
+      if (i === 30) c.bounce();
+    },
+  },
+  /**
+   * roll → jump (§530), the roll-cancel. §529 §6 found three of `roll`'s four driven exits are
+   * `idle`/`move`, which take `play()`'s blend-tree branch and end every non-locked track already;
+   * only `fall` and `jump` are exposed. `jump` is the one a player actually drives — roll-cancel
+   * is standard vocabulary for this character and `Roll.update` was given a jump poll for exactly
+   * that reason — so it is the case measured here.
+   */
+  roll: {
+    from: 'roll', to: 'jump', a: 'roll', b: 'jump_rise',
+    frames: 100,
+    script: (i, input) => {
+      input.move.y = -1;
+      if (i === 40) input.hold('crouch'); else input.let_go('crouch');
+      if (i === 46 || i === 47) input.hold('jump'); else input.let_go('jump');
+    },
+  },
 };
 
 const out = { regime: CLIP_REGIME, nofix: NOFIX, cases: {} };
