@@ -925,3 +925,159 @@ test('combo chain seam, procedural set (§526): three different strikes are a ha
       + `(${((after.peak[slot] / solo[slot - 1] - 1) * 100).toFixed(1)}%) — a strike that is well over its authored reach is being dragged by the one overlapping it`);
   }
 });
+
+test('landing/launch seam (§529): a whole-body posture is replaced by the next one, never averaged with it', async () => {
+  /* THE DEFECT THIS GUARDS. `Land` and `Skid` fire a one-shot that IS the body's entire pose and
+     then never re-assert it as a base clip. Nothing in the mixer could end such a track (§527's
+     ceiling: `_demoteOthers` skipped non-loops, `play()` called it only for loops, `_advance`
+     waits for the clip's own duration), so a landing absorb held weight 1.0 straight through the
+     launch that replaced it. `PoseBuffer.addQuat` is a NORMALISED mean, so the two did not
+     overdrive — they AVERAGED, and the mean of a landing and a launch is neither.
+
+     Driven from the REAL state machine in `tools/landseam.mjs`, pre-fix: `land -> jump` held
+     `land_soft` + `jump_rise` for 383 ms at summed weight 2.167, and `skid -> jump` reached 3.00
+     with `skid_stop` still live through the following landing. `shots/land1/*` carry the picture:
+     at the worst beat he is neither skidding nor launching but hanging at rest, arms at his sides.
+
+     THE MEASURE is §526.2's, reused rather than reinvented: SUMMED LIVE WEIGHT is the number of
+     motions being averaged. 1.00 is a hand-off; 2.00 is a two-way mean. A per-clip channel sum
+     cannot see this at all — every track plays its authored arc correctly and the defect exists
+     only in the composition.
+
+     DOMAIN (§418.3) — passes on: the shipped table in every regime, where asserting a new base
+     clip over a live posture one-shot cross-fades it out and summed weight stays at 1.00. Fails
+     on: the SAME table with `posture` stripped, RUN BELOW as the control — that is exactly the
+     pre-§529 mixer, since `posture` is the rule's whole input, and it reproduces the 2.00 mean.
+     Cannot discriminate: whether the resulting pose LOOKS right (it reads weight, not geometry —
+     two clips that happen to agree score the same as two that fold him in half); nor anything
+     about the six other states §527 flagged, which carry no `posture` flag and are untouched
+     here; nor whether the cross-fade's LENGTH is the right one for the verb. */
+
+  const { Animation } = await import('../src/player/Animation.js');
+  const DT = 1 / 60;
+
+  /** The set is asserted, not assumed: a clip gaining or losing `posture` must be deliberate. */
+  const POSTURE = ['land_hard', 'land_roll', 'land_soft', 'skid_stop'];
+  for (const regime of ['proc', 'godot', 'mixamo']) {
+    const t = buildClipSet(regime).table;
+    const got = Object.keys(t).filter((n) => t[n]?.posture).sort();
+    assert.deepEqual(got, POSTURE,
+      `${regime}: posture clips are [${got}], expected [${POSTURE}] — the rule's reach changed. `
+      + 'It travels with the game NAME so that swapping the data behind a verb cannot change it.');
+  }
+
+  /**
+   * Drive the mixer the way `Land -> Jump` drives it: the posture one-shot fires, then one frame
+   * later the incoming state asserts ITS clip as a looping base — which is what `Jump.update`'s
+   * `baseClip('jump_rise')` does on the frame after `Jump.enter`'s `oneShot`.
+   */
+  const seam = (table) => {
+    const a = new Animation({ warn() {}, emit() {} });
+    a.pose = new PoseBuffer(RIG3.BONE_ORDER);
+    const saved = {};
+    for (const n of [...POSTURE, 'jump_rise']) { saved[n] = ACTIVE[n]; ACTIVE[n] = table[n]; }
+    try {
+      let maxSum = 0, both = 0, sustained = 0, gone = Infinity;
+      a.play('land_soft', { fade: 0.08, loop: false });
+      for (let f = 0; f < 40; f++) {
+        if (f === 3) a.play('jump_rise', { fade: 0.08, loop: false });   // Jump.enter
+        if (f === 4) a.play('jump_rise', { fade: 0.10, loop: true });    // Jump.update's baseClip
+        a._advance(DT, f * DT);
+        let sum = 0, live = new Set();
+        for (const tr of a.tracks) { if (!tr.clip || tr.w <= 0.001) continue; sum += tr.w; live.add(tr.clip.name); }
+        maxSum = Math.max(maxSum, sum);
+        if (sum > 1.05) sustained++;
+        if (live.has('land_soft') && live.has('jump_rise')) both++;
+        if (gone === Infinity && f > 4 && !live.has('land_soft')) gone = f;
+      }
+      return { maxSum, both, sustained, gone };
+    } finally { for (const n of Object.keys(saved)) ACTIVE[n] = saved[n]; }
+  };
+
+  for (const regime of ['proc', 'godot']) {
+    const table = buildClipSet(regime).table;
+
+    /* ---- CONTROL: strip the rule's input and the average must come back ------------------ */
+    /* `posture` is the third predicate `play()` reads, after `source` (§525) and `excl` (§526).
+       Every control that reconstructs the pre-fix mixer has to strip ALL of them — a control that
+       strips only the older ones silently becomes a second copy of the treatment arm and its
+       assertions stop being evidence while still passing. That is exactly how the §525 control
+       broke when §526 landed. If a fourth predicate is ever added, this must grow with it. */
+    const stripped = {};
+    for (const n of [...POSTURE, 'jump_rise']) { const { posture, ...rest } = table[n]; stripped[n] = rest; }
+    const before = seam(stripped);
+    const ownLength = table.land_soft.dur / DT;
+    /* Pre-fix the landing DOES eventually go — on its own authored duration, because that is the
+       only thing that could ever end it. (An earlier draft of this arm asserted it never leaves at
+       all; the control failed and was right to. `_advance` ends a one-shot at `tr.time >= dur`, so
+       in a 40-frame window a 0.42 s clip expires at frame ~33 on its own. The defect was never
+       "it runs forever" — it is "nothing but its own length can end it".) So the control pins that
+       it survived essentially its whole authored length, which is what the fix has to change. */
+    assert.ok(before.gone >= ownLength * 0.8,
+      `CONTROL FAILED (${regime}): with \`posture\` stripped the landing should have survived to its own `
+      + `authored duration (~${ownLength.toFixed(0)} frames) because nothing else can end it, but it went at `
+      + `frame ${before.gone} — the control is not reproducing the pre-§529 mixer`);
+    /* Scaled to the clip, not a bare 20: `land_soft` is 0.42 s procedurally and 0.25 s in the
+       imported set, so an absolute frame count is a different demand in each regime — and it
+       failed the godot arm at 18 for exactly that reason. What is regime-independent is that the
+       average persists for about as long as the clip itself. */
+    assert.ok(before.sustained >= ownLength * 0.8,
+      `CONTROL FAILED (${regime}): with \`posture\` stripped the landing should sit under the launch for roughly `
+      + `its own length (~${ownLength.toFixed(0)} frames), but summed weight exceeded 1.05 on only `
+      + `${before.sustained} — the control is not reproducing the defect`);
+    assert.ok(before.maxSum > 1.9,
+      `CONTROL FAILED (${regime}): with \`posture\` stripped the landing should sit under the launch at a summed `
+      + `weight near 2.0 — that is the pre-§529 mixer — but the max was ${before.maxSum.toFixed(3)}. `
+      + 'The control no longer reproduces the defect, so the pass below is not evidence of anything.');
+
+    /* ---- the shipped table: a cross-fade, one weight falling as the other rises ---------- */
+    /* THE INVARIANT IS DURATION, NOT PEAK, and the difference is the whole of §526.2's lesson.
+       Summed weight above 1.0 *during a hand-over* is what a hand-over IS — one weight falling
+       while the other rises, and for one frame both are high. What made this a defect was that
+       neither ever fell. So the arm bounds how LONG the average persists, and keeps a loose cap
+       on the peak beside it.
+
+       The residual is real and is reported rather than tuned away: `jump_rise` fires as a
+       one-shot one frame before `Jump.update` asserts it as a base, and only that second call
+       retires the landing, so a single frame sums to 1.167. Flagging `jump_rise` `posture` too
+       would erase it — and is deliberately NOT done: `Jump` is one of the thirteen self-cleaning
+       states and has no defect of its own, so widening the rule to shave one frame off another
+       state's fix would be exactly the blanket application §527 warned against. Driven from the
+       real machine the residual is smaller still: `land -> jump` shows NO overlap at all (both
+       `enter`s land in one frame, so the absorb never rises) and `skid -> jump` peaks at 0.750. */
+    const after = seam(table);
+    /* THE MECHANISM ASSERTION, and it is the one that cannot be satisfied by tuning a number:
+       the outgoing posture must actually LEAVE. Pre-fix it never does inside the window — it is
+       pinned at weight 1.0 until its own duration expires — so `gone` is Infinity in the control
+       and a small frame index here. */
+    assert.ok(after.gone <= 12,
+      `${regime}: the landing was still live ${after.gone === Infinity ? 'for the whole window' : `at frame ${after.gone}`} `
+      + 'after the launch asserted itself — the incoming posture is not retiring the outgoing one');
+    assert.ok(after.sustained <= 6,
+      `${regime}: summed live weight stayed above 1.05 for ${after.sustained} frames against ${before.sustained} pre-fix — `
+      + 'a cross-fade of the authored length (0.08 s in, 0.10 s out) is expected; this is long enough to be an average again');
+    assert.ok(after.maxSum <= 1.2,
+      `${regime}: the landing and the launch peaked at ${after.maxSum.toFixed(3)} summed weight — a one-frame `
+      + 'hand-over transient is expected, but this is high enough to be an average again');
+    assert.ok(after.both < before.both,
+      `${regime}: the two clips were live together for ${after.both} frames against ${before.both} pre-fix — `
+      + 'the outgoing posture is not being retired by the incoming one');
+  }
+
+  /**
+   * §443.1 — EVERY LANDING STILL SPEAKS. The rule can end `land_soft` on the very frame it starts
+   * (a jump buffered into the landing preempts `Land` inside one frame, so the absorb is cancelled
+   * outright rather than blended). Its `land`/`footstep` events must still fire: `_advance` runs
+   * `_trackEvents` BEFORE it reaps a finished track, and this pins that ordering, because the
+   * obvious "tidy" reordering would silently mute the landing beat on the commonest input in the
+   * game and no pose or weight assertion above would notice.
+   */
+  const fired = [];
+  const a2 = new Animation({ warn() {}, emit: (e) => fired.push(e) });
+  a2.pose = new PoseBuffer(RIG3.BONE_ORDER);
+  a2.play('land_soft', { fade: 0.08, loop: false });
+  a2.play('jump_rise', { fade: 0.08, loop: true });          // demotes land_soft on frame 0
+  a2._advance(DT, 0);
+  assert.ok(fired.includes('footstep'),
+    `a landing cancelled on its first frame emitted [${fired}] — the landing has gone silent (§443.1)`);
+});

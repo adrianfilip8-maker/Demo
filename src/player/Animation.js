@@ -448,6 +448,13 @@ export function buildClipSet(raw) {
        the procedural one is not. Whether two clips may be live together is a statement about the
        action slot, so it is re-applied from the procedural def for every regime. */
     if (CLIPS[game].excl) built.excl = CLIPS[game].excl;
+    /* POSTURE travels with the game NAME too, and for the same reason (§529): whether a clip is
+       the body's whole pose is a fact about the VERB — a landing absorbs, whatever data draws
+       it — so an imported `land_soft` must retire the same tracks the procedural one does. This
+       is the third predicate `play()` reads; `--nofix`-style controls and the test arm that
+       reconstruct the pre-fix mixer must strip all three, or they silently stop being controls
+       (that is precisely how the §525 control broke when §526 added the second one). */
+    if (CLIPS[game].posture) built.posture = true;
     table[game] = built;
     origin[game] = `${tag}:${src}`;
     used.add(src);
@@ -686,7 +693,7 @@ export class Animation {
     for (const tr of this.tracks) {
       if (tr.clip === c && !tr.ending) {
         tr.target = weight; tr.loop = loop || tr.loop; tr.speed = speed; tr.lock = tr.lock || lock;
-        if (loop) this._demoteOthers(tr, fade);
+        if (loop || c.posture) this._demoteOthers(tr, fade);
         return tr;
       }
     }
@@ -770,7 +777,7 @@ export class Animation {
     tr.lock = lock;
     tr.base = loop;
     tr.ending = false;
-    if (loop) this._demoteOthers(tr, fade);
+    if (loop || c.posture) this._demoteOthers(tr, fade);
     return tr;
   }
 
@@ -951,11 +958,39 @@ export class Animation {
     tr.fade = Math.max(0.001, fade ?? ANIM_TUNE.fade);
   }
 
-  /** A new looping base retires the old one; one-shots are left to finish on top. */
+  /**
+   * A new looping base retires the old one; one-shots are left to finish on top.
+   *
+   * POSTURE CLIPS ARE THE EXCEPTION, AND THEY RETIRE TOO (§529).
+   *
+   * "Left to finish on top" is right for a one-shot that RIDES a base — a flourish, a reaction,
+   * something layered over locomotion that is still true underneath. It is wrong for a clip that
+   * IS the body's whole posture, and `land_soft`/`land_hard`/`land_roll`/`skid_stop` are exactly
+   * that: they animate all 31 bones and describe the entire pose of their state. Nothing in the
+   * mixer could end them (§527's ceiling: `_demoteOthers` skipped non-loops, `play()` called it
+   * only for loops, `_advance` waits for the clip's own duration), so a landing absorb held full
+   * weight straight through the launch that replaced it. `PoseBuffer.addQuat` is a normalised
+   * mean, so the two did not fight — they AVERAGED, at summed weight 2.00 for 383 ms, and the
+   * mean of a landing and a launch is neither: measured and photographed in §529, it is a limp
+   * neutral pose floating upward with the arms at the sides.
+   *
+   * Marking those four `posture` makes them behave like a base clip in the one respect that was
+   * missing — they end, and are ended, when the body commits to a different whole-body pose —
+   * while staying one-shots, which is what keeps them bounded. That distinction is load-bearing:
+   * promoting them to real loops (the repair 13 self-cleaning states use, by re-asserting their
+   * one-shot as a base clip) would leave a track holding its final pose forever on any exit whose
+   * next state asserts no base clip of its own — `land → combo`, `skid → roll`, `skid → combo`.
+   * A one-shot still expires on its own duration there, so this rule can improve those paths but
+   * cannot make any path worse than it already was.
+   *
+   * `posture` is opt-in and carried on the clip beside `source` (§525) and `excl` (§526), so the
+   * reachable set is a printed list rather than an assurance, and `buildClipSet` re-applies it
+   * per game NAME so swapping the data behind a verb cannot change whether two clips may coexist.
+   */
   _demoteOthers(keep, fade) {
     for (const tr of this.tracks) {
       if (tr === keep || !tr.clip) continue;
-      if (tr.loop) this._end(tr, fade || ANIM_TUNE.fade);
+      if (tr.loop || tr.clip.posture) this._end(tr, fade || ANIM_TUNE.fade);
     }
   }
 

@@ -1135,7 +1135,10 @@ def('turn_l', {
 /* Skid: the classic cartoon stop — heels dug in, body reclined *behind* the feet, arms
    windmilling forward, cane thrown out for balance, then a snap upright. */
 def('skid_stop', {
-  dur: 0.62, loop: false, hold: 0.14,
+  /* `posture: true` (§529): a skid IS the whole body, so a launch out of it must REPLACE it
+     rather than be averaged with it. `Skid` never re-asserts this as a base clip, so before the
+     flag existed nothing in the mixer could end it and it rode the next 0.62 s at full weight. */
+  dur: 0.62, loop: false, hold: 0.14, posture: true,
   events: [{ t: 0.03, n: 'footstep', d: { foot: 'B', power: 1.4 } }],
   keys: [
     { t: 0, e: 'snap', P: P({
@@ -1393,7 +1396,10 @@ def('double_jump', {
 /* §6: 0.82 scale-y over 90 ms, ease-out back. The squash is a *pose*, not just a scale —
    knees fold, the chest drops between the shoulders, the tail flies up from the impact. */
 def('land_soft', {
-  dur: 0.42, loop: false, hold: 0.09,
+  /* `posture: true` — see skid_stop. `Land` dwells `landSoftTime` 0.09 s against a clip that
+     runs far longer, and every exit except the one to the blend tree left this at weight 1.0
+     underneath whatever came next (§529). */
+  dur: 0.42, loop: false, hold: 0.09, posture: true,
   events: [
     { t: 0.0, n: 'land', d: { force: 0.45 } },
     { t: 0.01, n: 'footstep', d: { foot: 'B', power: 0.7 } },
@@ -1431,7 +1437,8 @@ def('land_soft', {
 
 /* Hard landing: three-point, one glove punched into the paving, cane out wide. */
 def('land_hard', {
-  dur: 0.72, loop: false, hold: 0.13,
+  /* `posture: true` — see land_soft; the hard landing has the longest tail of the three. */
+  dur: 0.72, loop: false, hold: 0.13, posture: true,
   events: [
     { t: 0.0, n: 'land', d: { force: 1 } },
     { t: 0.01, n: 'footstep', d: { foot: 'B', power: 1.5 } },
@@ -1469,7 +1476,8 @@ def('land_hard', {
 
 /* Landing straight into a roll — the impact is absorbed by rotating through it. */
 def('land_roll', {
-  dur: 0.78, loop: false, hold: 0.1,
+  /* `posture: true` — see land_soft. `Land` fires one of these three, so all three carry it. */
+  dur: 0.78, loop: false, hold: 0.1, posture: true,
   events: [
     { t: 0.0, n: 'land', d: { force: 0.8 } },
     { t: 0.30, n: 'footstep', d: { foot: 'B', power: 0.6 } },
@@ -2580,6 +2588,13 @@ export function compile(name, d) {
        `Animation.play()`'s one-shot coalesce; neither has any effect on sampling. Null unless a
        def asks for it, so a clip is layerable by default and exclusivity is opt-in and printable. */
     excl: d.excl || null,
+    /* POSTURE (§529) — "this one-shot IS the body's whole pose, not a flourish riding over one".
+       The third and last predicate `Animation.play()`'s coalesce reads. `source` and `excl` both
+       ask whether two clips are the same ACTION; this asks whether a clip is a whole-body POSE,
+       and a new pose ends it the way a new base clip ends the old base. Without it a landing
+       absorb sat at full weight under the launch that replaced it and the two were averaged.
+       Opt-in, so a clip is layerable by default; no effect on sampling. */
+    posture: !!d.posture,
     events: (d.events || []).map((e) => ({ t: e.t, n: e.n, d: e.d || null })).sort((a, b) => a.t - b.t),
     bones,
     scales,
