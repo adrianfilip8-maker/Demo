@@ -592,3 +592,71 @@ test('R4 prompts: shapes for the pad, keycaps for the keyboard, and travel is wh
       + `\n     ${emits.length} emits for 4 alternations · a present-but-untouched pad: 0`);
   }
 });
+
+/* ====================================================================== */
+/* R5 — the playtest's literal first interaction                          */
+/* ====================================================================== */
+
+test('R5 first touch: a pad player who presses Options first gets the card, in shapes', async () => {
+  /* ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : a cold boot whose FIRST input of any kind is the pad's Options button, driven
+   *               through the real frame order — `Input.beginFrame` polls, `Debug`'s line flips
+   *               `engine.debug.paused`, then the HUD's mirror runs — leaving the controls card
+   *               OPEN and its columns rendered as PS4 glyphs rather than keycaps.
+   *   fails  on : RUN in-arm — the same cold boot with the pad merely CONNECTED and Options never
+   *               pressed, which must leave the card shut and the columns as keycaps.
+   *   verdict   : this is the one interaction the upcoming pad session is guaranteed to perform,
+   *               and it crosses three files that no single existing arm spans — `Input._press`
+   *               claims the device and emits, `HUD`'s `inputDevice` handler re-renders the card's
+   *               columns IN PLACE, and `HUD.update`'s §543 mirror is what opens the card at all.
+   *               R4 proves the swap for the live PROMPT; the card is different markup on a
+   *               different trigger, and ORDER is the thing that could go wrong: if the card
+   *               opened before the columns re-rendered, the first screen a pad player ever sees
+   *               would be a wall of keycaps.
+   *   does NOT  : discriminate pixels, same as R4 — the shim renders no image.
+   *   discrim.
+   */
+  const cardIsPad = (hud) =>
+    (hud.el.pause.querySelector('.sly-cols')?.innerHTML || '').includes('assets/prompts/');
+  const cardOpen = (hud) => hud.el.pause.classList.contains('on');
+
+  /* One frame, in main.js's order: input poll, then Debug's toggle, then the module loop. */
+  const frame = (input, hud, engine) => {
+    PIN(input);
+    input.beginFrame(DT);
+    if (input.pressed('pause')) engine.debug.paused = !engine.debug.paused;   // Debug.js:328
+    hud.update(DT);
+    input.endFrame();
+  };
+
+  /* ---- the act: Options is the very first input this session ---- */
+  {
+    const { hud, engine, input } = await hudRig();
+    hud.el.pause.classList.remove('on');          // hudRig opens it for readability; start cold
+    engine.debug.paused = false;
+    assert.equal(cardOpen(hud), false, 'the card must start shut');
+    assert.equal(cardIsPad(hud), false, 'a cold boot must render keycaps — nothing has been touched yet');
+
+    /* A poll of the resting pad first: `_padValue` trusts a control only once it has been seen
+       released (§542), and a pad polled from boot always has been. */
+    frame(input, hud, engine);
+    assert.equal(cardOpen(hud), false, 'merely polling a resting pad opened the card');
+
+    padState.buttons[9] = { pressed: true, value: 1 };   // Options
+    frame(input, hud, engine);
+
+    assert.equal(input.lastDevice, 'pad', 'Options did not claim the device flag');
+    assert.ok(cardOpen(hud), 'Options did not open the controls card — the only place the moveset is written down');
+    assert.ok(cardIsPad(hud), 'the card opened, but showing KEYCAPS to a pad player on their first press');
+  }
+
+  /* ---- the counterexample: connected, never pressed ---- */
+  {
+    const { hud, engine, input } = await hudRig();
+    hud.el.pause.classList.remove('on');
+    engine.debug.paused = false;
+    for (let f = 0; f < 4; f++) frame(input, hud, engine);
+    assert.equal(cardOpen(hud), false, 'a connected pad opened the card without anyone pressing anything');
+    assert.equal(cardIsPad(hud), false, 'a connected-but-untouched pad swapped the card to shapes');
+  }
+});

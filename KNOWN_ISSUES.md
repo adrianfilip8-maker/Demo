@@ -46427,6 +46427,27 @@ attribution** — the header claiming the stems were owner-supplied when the rec
 — which is a different thing from the ruling, and would have been wrong whichever way the ruling
 went.
 
+### §549.7 The playtest's literal first interaction, pinned
+
+The session ahead is a PS4 pad, and there is exactly one interaction it is guaranteed to perform:
+somebody picks up the controller and presses **Options**. That path crosses three files and no
+existing arm spanned it — `Input._press` claims the device flag and emits `inputDevice`, the HUD's
+handler re-renders the control card's columns **in place**, and §543's mirror in `HUD.update` is
+what opens the card at all. R4 pins the swap for the live PROMPT; the card is different markup on a
+different trigger.
+
+**ORDER is the thing that could go wrong**, and it is why this is a test rather than a paragraph: if
+the card opened before the columns re-rendered, the first screen a pad player ever saw would be a
+wall of keycaps. `padrest.test.mjs` **R5** drives one frame in `main.js`'s real order — poll,
+`Debug.js:328`'s toggle, then the module loop — from a cold boot whose first input of any kind is
+Options.
+
+*Passes on* that act: device claimed, card open, columns in PS4 shapes. *Fails on* the
+counterexample run in-arm — a pad merely CONNECTED and never pressed, which must leave the card shut
+and the columns as keycaps. Mutation-checked by defeating the column re-render, which reddens it
+with the message it was written for: *"the card opened, but showing KEYCAPS to a pad player on their
+first press"*.
+
 ## §586 — §579 shipped in raw metres and broke an authored beat; the fix is to score each gate in its own units
 
 **The full suite at `7df1041` was 951 tests, 949 pass, 2 fail** — `camclamp`'s kiosk hook-ring debt
