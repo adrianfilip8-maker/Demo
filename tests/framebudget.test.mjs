@@ -214,12 +214,40 @@ test('F3 GC: the update loop causes no major collection, and does not leak', asy
   await flush();
   const scav = gc - g0 - (major - m0), maj = major - m0;
 
-  assert.equal(maj, 0,
-    `${maj} major collection(s) in ${N} frames. A major GC is a multi-millisecond stop-the-world `
-    + 'pause — the frame-time collapse that opens the §543 sub-frame-tap window.');
-  assert.ok(scav <= 20,
-    `${scav} scavenges in ${N} frames (${(scav / N * 1000).toFixed(1)} per 1000). The measured `
-    + 'baseline is ~1.3-1.5 per 1000; a large rise means the loop started allocating.');
+  /**
+   * ── A GC is global, so the box can cause one (§546) ─────────────────────────────────────
+   *
+   * This arm asserted `maj === 0` outright, and the camera lane observed it red in one suite run
+   * and green in isolation — four lanes share this machine, and another lane's memory pressure
+   * triggers a collection in THIS process's observer just as readily as our own allocation would.
+   * The channel cannot attribute a collection to a cause.
+   *
+   * So the comparison is against a within-run BASELINE: an idle loop of the same length, in the
+   * same process, moments later. If the box is collecting, both see it and the arm says so; only
+   * an EXCESS over the baseline is attributable to the update loop. That keeps the finding —
+   * "`Controller.update` is not what triggers collections" — and drops the environment's vote.
+   */
+  await flush();
+  const bg0 = gc, bm0 = major;
+  let sink = 0;
+  for (let i = 0; i < N; i++) sink += i & 7;          // idle: allocates nothing
+  await flush();
+  const baseScav = gc - bg0 - (major - bm0), baseMaj = major - bm0;
+  assert.ok(sink > 0, 'the idle baseline was optimised away entirely');
+
+  assert.ok(maj <= baseMaj,
+    `${maj} major collection(s) during ${N} driven frames against ${baseMaj} during an idle loop `
+    + 'of the same length in the same process. The excess is attributable to the update loop, and '
+    + 'a major GC is a multi-millisecond stop-the-world pause — the frame-time collapse §543\'s '
+    + 'sub-frame-tap window waits for.');
+  assert.ok(scav - baseScav <= 20,
+    `${scav} scavenges in ${N} driven frames against ${baseScav} idle — an excess of `
+    + `${scav - baseScav}. The measured baseline is ~1.3-1.5 per 1000; a large rise means the loop `
+    + 'started allocating.');
+  if (baseMaj > 0 || baseScav > 2) {
+    console.log(`\n[F3] NOTE: the idle baseline itself saw ${baseScav} scavenges and ${baseMaj} major `
+      + 'collections — this box is collecting for reasons outside this process (§544.1).');
+  }
 
   /* POSITIVE CONTROL, RUN: prove the channel can see a collection. */
   {

@@ -310,12 +310,29 @@ test('R1b instrument: the pinned clock agrees with one built from real sleeps', 
   for (let i = 0; i < 30; i++) { i2.beginFrame(DT); r2.update(DT, i * DT); i2.endFrame(); }
   const tight = Math.abs(r2.yaw - yy);
   const tightWall = (performance.now() - tt) / 1000;
-  assert.ok(tight * 180 / Math.PI < expect * tightWall * 1.05 + 1e-9,
-    'a tight loop produced MORE rotation than its own wall clock allows — dtReal is not being read');
-  assert.ok(tight < (clean ? clean.turned : attempts[0].turned) * 0.5,
-    `the tight loop turned ${tight.toFixed(4)} rad against the paced run's `
-    + `${(clean ? clean.turned : attempts[0].turned).toFixed(4)} — the two clocks are not being `
-    + 'told apart, so this arm cannot detect the harness fault it exists for (§418)');
+  /**
+   * The counterexample is a RELATIONSHIP, not a magnitude (§546).
+   *
+   * This clause used to be `tight < paced.turned * 0.5` — "the unpinned loop barely moves". That
+   * is true only while the loop is actually tight, and on a contended box it is not: preempt the
+   * 30 iterations and their wall time grows, `dtReal` grows with it, and the rotation approaches
+   * the paced run's. The camera lane observed exactly that — this arm red in one suite run and
+   * green in isolation, with nothing wrong in the code (§544.1's box, again).
+   *
+   * What the arm is actually for is that `_padLook` integrates the REAL clock, so rotation must
+   * track `padLook x wall` at ANY wall time. That holds whether the loop is tight or starved,
+   * and it is the stronger statement: it fails for a pinned/frozen clock, which is the harness
+   * fault, and cannot fail merely because the box was busy.
+   */
+  const allowed = expect * tightWall;                       // degrees this loop's wall time permits
+  const got = tight * 180 / Math.PI;
+  assert.ok(got <= allowed * 1.05 + 1e-9,
+    `the tight loop turned ${got.toFixed(4)} deg in ${tightWall.toFixed(4)} s, which is more than `
+    + `padLook allows (${allowed.toFixed(4)} deg) — dtReal is not being read from a real clock`);
+  assert.ok(got >= allowed * 0.5 - 1e-9,
+    `the tight loop turned ${got.toFixed(4)} deg against the ${allowed.toFixed(4)} its own wall `
+    + 'time allows — rotation has stopped tracking real elapsed time, so this arm can no longer '
+    + 'tell an honest clock from a frozen one (§418)');
 
   console.log(`\n[R1b] real sleeps: ${clean ? `${clean.degPerS.toFixed(2)} deg/s vs padLook ${expect.toFixed(2)} deg/s (clean window)` : 'starved, see above'}`
     + ` · tight loop (the fault): ${(tight * 180 / Math.PI).toFixed(4)} deg over ${tightWall.toFixed(4)} s`);

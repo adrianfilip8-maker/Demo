@@ -44991,3 +44991,155 @@ culled by all 18, and where it actually stands it must be kept by at least one. 
 own log line printed `clue_bottles build-time sphere r 56.81` while the assertion above it had
 just proved r < 1.0 — it read the field *after* the post-`Props.update()` sweep recomputed it. The
 assertion was right and the log said the opposite of it. Both now hold the build-time value.
+
+## §546 — The measurement shrunk to fit the box: the true program count, 124 MiB of textures, and a first frame that argues against my own §545
+
+§545 parked a 220-frame probe that produced one line in 11.5 minutes. The instruction was to stop
+waiting the box out and design around it, which is the move I had already made three times on
+instruments and had not made on the harness.
+
+### §546.1 What the shrunk probe cost, and what it bought
+
+Cut from 220 frames to **a boot plus six**, because `renderer.info.memory` and
+`renderer.info.programs` are readable as soon as the scene has drawn once. The budget was moved to
+start at the capture lock's grant rather than at process start — `withGame`'s `onLocked` hook is
+exactly that seam — so a queue in front of the run no longer eats the run's own time.
+
+```
+  lock grant -> __GAME.ready        101 s   (the same boot took ~4 min in §545's attempt)
+  ready -> census (6 frames drawn)   ~30 s
+  arm B (25 further frames)          DID NOT COMPLETE — killed at the ten-minute rule
+```
+
+Arm B was then **folded into the next probe's own frames** rather than given frames of its own: the
+program/texture/geometry counts are read before and after sampling that was happening anyway. A
+measurement that needs no frames of its own is the right shape for this box.
+
+### §546.2 The census — arm A, real renderer, quality `high`
+
+```
+  renderer.info.memory        geometries 94 · textures 108 (render targets included)
+  COMPILED PROGRAMS           102
+  scene-reachable textures    67, estimated 123.8 MiB
+  texture dimensions          37 x 512²  ·  13 x 1024²  ·  15 x 256²  ·  1 x 128²  ·  1 x 64²
+  one frame                   284 draws · 2.456 M tris
+  renderer                    ANGLE / Vulkan 1.3 / SwiftShader (Subzero)
+```
+
+**The program count stops being a floor.** §544 could only say "39 distinct materials" and note
+that three compiles a program per *variant*. The true figure is **102 — 2.6x the floor** — and the
+name breakdown says where the difference comes from, in two parts. Most named materials appear
+**twice** (`toon_sand`, `guard_body`, `kaykit:atlas`, `fx.spark`…), which is the variant
+multiplication; and a large block simply does not exist in the headless harness at all —
+`fx.*` (17 programs), `guard_*` (8), `postfx.*` (7), `slyNormalPass` (5), `slyInk_2.5@1080` (4),
+`slydlrig:body`, `pickups:glass`, `smash:clay`. §544's floor was low for two independent reasons,
+and only one of them was the one I named.
+
+**Texture memory is the figure that had never been taken at all: ~124 MiB of scene textures**, and
+it is dominated by the thirteen 1024² maps (≈69 MiB of the 124) rather than by the thirty-seven
+512²s (≈52 MiB). The estimate is dimensions x format x a 1.334 mip factor, checked against itself:
+the arithmetic reproduces 126 MiB against the 123.8 the probe computed. It is an *estimate*, not a
+driver reading — no `WEBGL_debug` memory extension is consulted — and it excludes the render
+targets that `info.memory.textures` counts (108 against the scene's 67). `texSize` is 1024 at
+`high` and `med`, 512 at `low`, 2048 at `ultra`, so this figure roughly quarters and quadruples
+across the tiers.
+
+### §546.3 The first real frame argues against §545, and I am not going to bury that
+
+§545 corrected my §544 ranking by arguing from the mechanism that `budgetattrib`'s 1.14 M shadow
+term is an upper bound the shipped code does not pay, because the static-caster cache blits
+statics instead of redrawing them. The first frame ever measured came in at **284 draws / 2.456 M
+tris**, against that tool's **un-cached** prediction of 303 / 2.44 M for its worst shot. If the
+cache were saving what §545 implied, the live frame should have come in well under the prediction.
+It did not.
+
+**Two reasons this is not yet a refutation, and neither is a defence of the claim:**
+
+1. **Different cameras.** The measured frame is the live gameplay view at spawn; budgetattrib's
+   303 / 2.44 M is its worst *canonical shot* (`dunes`). Nothing says those two see the same set.
+2. **The tool omits what the live frame has.** budgetattrib's own header records the character as
+   absent and guards as partial; the live frame carries character, guards, FX and pickups — the
+   §546.2 program list is full of them. So the tool **under**-predicts the main view while
+   **over**-predicting shadows, and the two errors push the total in opposite directions. A near
+   match is exactly what partially cancelling errors look like.
+
+So §545's claim is **unconfirmed, not refuted**, and the honest status is that I corrected a
+published number with an argument from mechanism and the first measurement did not support it.
+The only instrument that settles it is the documented live A/B lever — `TUNE.shadowStaticCache`
+flipped within one boot, which holds camera, module set and content fixed and measures the cache's
+saving against itself.
+
+### §546.4 The A/B was attempted twice and not obtained — and the reason is the finding
+
+The cache A/B probe is written (`_cacheStats` deltas plus `renderer.info` per frame, either side
+of `TUNE.shadowStaticCache`) and was launched twice. Neither run reached its first sample:
+
+```
+  attempt 1   queued behind the world lane's `tools/landtrace.mjs` on the capture lock; killed
+              while still queued rather than left to seize the lock unattended
+  attempt 2   lock granted, then >7 minutes inside the boot without reaching `__GAME.ready`
+```
+
+**My budget design has a hole and this is where it showed.** The deadline guards `frames()` inside
+the callback; it does not guard `withGame`'s own wait for `__GAME.ready`, and that wait is the
+unbounded part. The same boot took **101 s** in §546.1 and **over 7 minutes** here, an order of
+magnitude apart on the same machine within the hour. Arm A landed because its boot happened to be
+a fast one — not because the probe was well budgeted.
+
+So the honest statement about this environment is sharper than "it is slow": **boot time here is
+not bounded, so a boot-dependent measurement cannot be scheduled, only attempted.** A probe that
+must boot should be written to produce something useful from its first drawn frame — which is why
+arm A survived and arm B did not.
+
+§545's claim therefore stands unconfirmed, with §546.3's tension recorded against it.
+
+### §546.5 Two of my own tests hardened after the camera lane's contention report
+
+The camera lane traced two non-reproducible suite failures to contention on this box — an `F3 GC`
+arm and an `R1b instrument` arm, each passing in isolation. Both are mine, and both were genuinely
+fragile rather than unlucky.
+
+- **`padrest.test.mjs` R1b.** The fragile clause was `tight < paced.turned * 0.5` — "the unpinned
+  loop barely moves". True only while the loop is actually tight: preempt its 30 iterations and
+  the wall time grows, `dtReal` grows with it, and the rotation approaches the paced run's. It now
+  asserts the RELATIONSHIP the arm is really about — rotation tracks `padLook x wall` at any wall
+  time — which holds tight or starved and is the stronger statement. Mutation-checked: freezing
+  `dtReal` at 1/60 still reddens R1b alone.
+- **`framebudget.test.mjs` F3.** It asserted `maj === 0` outright. A collection is global: another
+  lane's memory pressure fires the observer in this process exactly as our own allocation would,
+  and the channel cannot attribute a cause. It now compares against a **within-run idle baseline**
+  — a loop of the same length, in the same process, moments later — so only the EXCESS is
+  attributable to `Controller.update`, and a box that is collecting says so in the log instead of
+  reddening the arm. The finding is unchanged: the update loop is not what triggers collections.
+
+### §546.6 What this box still cannot give, stated precisely
+
+- **Upload timing.** Genuinely needs per-frame wall cost. **Parked, not attempted** — it is the one
+  figure on the §544 list that this container cannot produce at all.
+- **Per-quality program counts.** Needs quality switches, each a rebuild, on top of a boot whose
+  duration is unbounded (§546.4). Not affordable.
+- **Frame rate.** Never, on any of it — SwiftShader on a shared box (§544.1).
+- **Driver texture memory.** The 123.8 MiB is an arithmetic estimate from dimensions and formats,
+  not a driver reading.
+
+### §546.7 A cross-lane hazard: the scratchpad is shared, not session-private
+
+Confirmed independently this round — the scratchpad root holds other lanes' working files
+(`Anim.coalesce.bak`, `Clips.bak.js`, `Egypt.mine.js`, `Kit.mine.js`) beside mine. My own backups
+were sitting there under generic names (`Input.js.bak`, `Lig.bak`, `HUD.bak5`), where another lane
+could clobber them or restore from them believing they were its own. Moved under
+`scratchpad/render-lane/`. **Anyone restoring from a bare `*.bak` in that tree is restoring
+whatever wrote last**, which is a silent cross-lane failure with no detector.
+
+### §546.8 DOMAIN for the changed arms
+
+- **R1b** — *passes on* a real-sleep window agreeing with `padLook` to 2%, and on the unpinned
+  tight loop's rotation tracking `padLook x wall` at whatever wall time it got; *fails on* a frozen
+  `dtReal`, run in-arm as a source mutation. It no longer discriminates "the box was busy", which
+  is the point of the change.
+- **F3** — *passes on* the driven loop showing no EXCESS collections over an idle baseline of the
+  same length; *fails on* the deliberate churn loop through the same observer, still run as the
+  positive control so a zero is only believed once the channel has been seen to report something.
+  It no longer discriminates another lane's memory pressure.
+
+Both were re-run together with `shadowcache` and `padtiming`: 18/18.
