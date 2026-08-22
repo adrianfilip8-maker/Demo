@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { realWorld, hardReset, V, DT } from './_moveset.mjs';
+import { TUNE as CT } from '../src/player/Controller.js';
 import { CameraRig, TUNE } from '../src/player/CameraRig.js';
 
 /**
@@ -115,7 +116,19 @@ function replay(samples, shakes, collision, margin, camYaw) {
       _rel.copy(_subj).sub(cam.position);
       const inFront = _rel.dot(_fwd) > cam.near;      // §419: never trust a behind-plane ndc
       const ndc = _subj.clone().project(cam);
-      out.push({ state: s.state, boom: rig.boom, inFront, ndcY: ndc.y, ndcX: ndc.x,
+      /* The BODY's ndc as well as the centre's, because the two answer different questions and
+         §581 separated them. Containment (the ruling's pass/fail) stays on the centre — the
+         predicate §580 defended as achievable at every boom. The ZERO-COST control has to move,
+         because a control must use the mechanism's own trigger: the clamp now engages when the
+         SPAN leaves the margin, so "the clamp contributed nothing" is "the span was inside", and
+         asking it about the centre measures a trigger the rig no longer has (§442). */
+      const ends = [0, CT.height].map((h) => {
+        const p = new THREE.Vector3(s.px, s.py + h, s.pz);
+        const front = p.clone().sub(cam.position).dot(_fwd) > cam.near;
+        const n = p.project(cam);
+        return { front, y: n.y, x: n.x };
+      });
+      out.push({ state: s.state, boom: rig.boom, inFront, ndcY: ndc.y, ndcX: ndc.x, ends,
         clamp: rig._clampPitch, moved: rig._clampMoved, slide: rig._clampSlide,
         shakeAmp: rig._shakeAmp * rig._shakeEnv(),
         pos: cam.position.clone(), quat: cam.quaternion.clone() });
@@ -142,6 +155,11 @@ const samePose = (a, b) => a.pos.x === b.pos.x && a.pos.y === b.pos.y && a.pos.z
 
 /** In frame means BOTH axes — the T1 debt take is what forced ndcX into this predicate. */
 const contained = (f) => f.inFront && Math.abs(f.ndcY) < 1.0 && Math.abs(f.ndcX) < 1.0;
+
+/** The clamp's own trigger, and therefore the ZERO-COST control's predicate (§581): the whole
+ *  body span inside the margin. Asking the centre instead measures a trigger the rig does not
+ *  have any more, which is how three arms went red on a regime change rather than on a defect. */
+const spanInside = (f) => f.ends.every((e) => e.front && Math.abs(e.y) <= 0.88 && Math.abs(e.x) <= 0.88);
 
 /** The ruling as a predicate over a frame range: in front and inside the frame, EVERY frame. */
 function assertContained(arm, from, to, label) {
@@ -304,7 +322,7 @@ test('camclamp: the ring arrival — the behind-plane case — is contained, and
      move and are counted, not equated. */
   let climbSame = 0, climbInside = 0;
   for (const i of climbIdx) {
-    if (off[i].inFront && Math.abs(off[i].ndcY) <= 0.88) {
+    if (spanInside(off[i])) {
       climbInside++;
       if (samePose(on[i], off[i])) climbSame++;
     }
@@ -392,7 +410,7 @@ test('camclamp: the hook-ring debt sequence — the harshest pose on record — 
   let composedSame = 0, composedAll = 0;
   for (let i = ropeAfter; i < samples.length; i++) {
     if (samples[i].state !== 'poleClimb') continue;
-    if (off[i].inFront && Math.abs(off[i].ndcY) <= 0.88 && Math.abs(off[i].ndcX) <= 0.88 && on[i].clamp === 0) {
+    if (spanInside(off[i]) && on[i].clamp === 0) {
       composedAll++;
       if (samePose(on[i], off[i])) composedSame++;
     }
@@ -449,7 +467,7 @@ test('camclamp: the routes the decline protected pay nothing they were not alrea
     const off = replay(tr.samples, tr.shakes, collision, 0);
     let engaged = 0, maxNeed = 0;
     for (let i = 0; i < on.length; i++) {
-      const offInside = off[i].inFront && Math.abs(off[i].ndcY) <= 0.88 && Math.abs(off[i].ndcX) <= 0.88;
+      const offInside = spanInside(off[i]);
       if (offInside) {
         assert.ok(samePose(on[i], off[i]),
           `${name} frame ${i}: an inside-margin frame moved under the clamp — the zero-cost guarantee broke`);

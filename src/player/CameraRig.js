@@ -290,6 +290,12 @@ export const TUNE = {
      The anchor's third regime needs no switch: a movement facade that publishes no `height`
      already falls back to `clampAnchorY`, which IS the pre-§580 behaviour. */
   clampStandoff: true,
+  /* What the clamp holds: `'extent'` (shipped) holds the live capsule's whole span, degrading to
+     centring it when the span cannot fit; `'centre'` is §580's single point, kept runnable for
+     the §388 reason. Measured on the §580 battery: the centre regime loses 0.086 of mean body
+     fraction to ORIENTATION against 0.016 to position, so this is where the user's "Sly", as
+     opposed to Sly's centre, actually goes missing. See the note in `_write`. */
+  clampSubject: 'extent',
 
   /* ---- velocity lead ------------------------------------------------------ */
   /* **`FRAMES.lead` is inert on 13 of 19 rows, and TWO different constants do it.**
@@ -878,6 +884,13 @@ export class CameraRig {
   /** @param {import('../core/Engine.js').Engine} engine */
   constructor(engine) {
     this.engine = engine;
+
+    /* HARNESS AUTHORS: the tunables, reachable from the page. `Terrain` and `ToonMaterial` both
+       publish theirs this way and the capture tools poke them; the rig did not, so no browser
+       capture could run an A/B of a camera constant — every camera regime comparison in this
+       project has been a node measurement, and the ruling this rig serves is a LOOK judgement.
+       Every constant is read fresh per frame, so a poke takes effect on the next `update`. */
+    this.tune = TUNE;
 
     /* ---- public orbit state (AGENTS.md §4 interface) ---- */
     this.yaw = Math.PI;                    // Sly spawns facing north; start behind him
@@ -2282,8 +2295,48 @@ export class CameraRig {
         _sv.applyQuaternion(_q3);
         const half = Math.tan(this._fovCur * 0.5 * DEG);
         const am = Math.atan(TUNE.clampMargin * half);
-        let phi = Math.atan2(_sv.y, -_sv.z);
-        let need = phi > am ? phi - am : phi < -am ? phi + am : 0;
+        /* WHAT IS HELD: the capsule's EXTENT, not its centre (§581).
+         *
+         * Holding the centre at the margin puts, by construction, about half the character
+         * outside the frame on every frame the clamp engages — and measured over the §580
+         * battery that is where the body loss actually lives: of 0.102 mean body-fraction loss,
+         * **0.086 (84 %) is orientation and 0.016 (16 %) is position**. The boom crush is the
+         * obvious suspect and it is the smaller half by a factor of five; 2,542 of the 2,853
+         * frames showing under 70 % of Sly sit at a camera position that COULD have shown three
+         * quarters of him or more, and pointed somewhere else.
+         *
+         * So `need` is computed from the feet and head elevations rather than one point:
+         *   · if the extent fits inside the margin band, hold the whole band — `need` is the
+         *     minimum rotation that brings [φlo, φhi] inside [−αm, +αm], zero when already in;
+         *   · if it cannot fit (a crushed boom: at ρ 0.55 and a 52° lens the body subtends 117°
+         *     against a 52° frame, so 44 % is the ceiling for ANY orientation), centre the
+         *     midpoint — the widest window on a monotone bearing is the centred one, so this is
+         *     the exact maximiser of visible body at that camera position.
+         * The subject is unchanged — the same live capsule §580 defended — and this is still an
+         * angle in view space, exact behind the near plane, never a projected number. In the
+         * FITS branch centre containment is strictly improved for free, because the centre lies
+         * between φlo and φhi; in the degrade branch it is not, and has to be bought back
+         * explicitly — see the note on the constraint below, which is the one place this change
+         * could have spent §580's invariant and nearly did.
+         * `clampSubject: 'centre'` runs the §580 regime (the §388 switch pattern).
+         *
+         * STAGE 2'S TRIGGER AND SOLVE ARE UNTOUCHED. They still run on the anchor's own `need`,
+         * exactly as §580 shipped them, and only the rotation stage 1 finally applies is aimed at
+         * the extent. Two reasons, both measured rather than assumed: the translate is the UNCAST
+         * stage and its firing rate is a cost nobody has priced for a wider trigger; and in the
+         * degrade case the extent's `need` is the midpoint itself, up to αm larger than the
+         * centre's, which would have pushed frames past the 80° authority that have no business
+         * translating — the authority is about a subject nearly overhead, and centring a subject
+         * that cannot fit is exactly the case pitching alone DOES answer.
+         */
+        const extent = TUNE.clampSubject !== 'centre';
+        const centrePhi = () => {
+          _sv.set(_pPos.x, _pPos.y + anchorY, _pPos.z).sub(_camPos).applyQuaternion(_q3);
+          return Math.atan2(_sv.y, -_sv.z);
+        };
+        const bandNeed = (a) => (a > am ? a - am : a < -am ? a + am : 0);
+        let phi = centrePhi();
+        let need = bandNeed(phi);
         if (Math.abs(need) > TUNE.clampPitchMax) {
           /* Stage 2, vertical translate. Solve the vertical camera move that puts the
              subject's elevation at exactly ±(clampPitchMax + αm): with ŵ = world up in view
@@ -2315,10 +2368,32 @@ export class CameraRig {
             if (TUNE.clampStandoff !== false) dy = standoff(dy, _sv.dot(_wv), _sv.lengthSq());
             _camPos.y += dy;
             this._clampMoved = dy;
-            _sv.set(_pPos.x, _pPos.y + anchorY, _pPos.z).sub(_camPos).applyQuaternion(_q3);
-            phi = Math.atan2(_sv.y, -_sv.z);
-            need = phi > am ? phi - am : phi < -am ? phi + am : 0;
+            phi = centrePhi();
+            need = bandNeed(phi);
           }
+        }
+        /* Now aim at the whole body. `_sv` is the anchor in view space from `centrePhi()`; the
+           span endpoints are taken relative to the SAME camera position, translate included. */
+        if (extent) {
+          const h = this._pHeight > 0 ? this._pHeight : TUNE.clampAnchorY * 2;
+          _wv.set(_pPos.x, _pPos.y, _pPos.z).sub(_camPos).applyQuaternion(_q3);
+          const a = Math.atan2(_wv.y, -_wv.z);
+          _wv.set(_pPos.x, _pPos.y + h, _pPos.z).sub(_camPos).applyQuaternion(_q3);
+          const b = Math.atan2(_wv.y, -_wv.z);
+          const lo = Math.min(a, b), hi = Math.max(a, b);
+          need = (hi - lo <= 2 * am) ? bandNeed(hi > am ? hi : lo) : (lo + hi) * 0.5;
+          /* §580'S INVARIANT IS THE FLOOR THIS STANDS ON, and it took a measurement to notice.
+             Stage 1 moves a point at θ to θ − `need`, so the centre lands at `phi − need`; the
+             degrade branch aims at the ANGULAR midpoint, which is not the centre's angle, and at
+             a close range the two diverge hard — camera 1.5 m up at ρ 0.3 puts the feet at −78.7°,
+             the head at +45°, the midpoint at −16.9° and the CENTRE at −63.4°, so centring the
+             midpoint throws the centre 46.5° off axis and out of the frame. Driven, that cost
+             142 frames of §580's invariant across the battery for +0.068 of mean body fraction.
+             Visible body is unimodal in the rotation, so the constrained maximiser is the
+             boundary: clamp `need` to the window that keeps the centre inside the margin. The
+             fits branch already satisfies it (the centre lies inside the held span), so this
+             binds only where the body cannot fit — exactly where the trade is real. */
+          need = clamp(need, phi - am, phi + am);
         }
         if (need !== 0) {
           /* Stage 1 applied: post-multiply about local +X pitches the view up by `need`,

@@ -61,12 +61,13 @@ async function drive(opts) {
   const keepGet = engine.get, keepCam = engine.camera;
   const keep = {
     margin: TUNE.clampMargin, bank: TUNE.clampBankFirst,
-    standoff: TUNE.clampStandoff, roll: TUNE.wallRoll,
+    standoff: TUNE.clampStandoff, roll: TUNE.wallRoll, subject: TUNE.clampSubject,
   };
   if (opts.margin !== undefined) TUNE.clampMargin = opts.margin;
   if (opts.bankFirst !== undefined) TUNE.clampBankFirst = opts.bankFirst;
   if (opts.standoff !== undefined) TUNE.clampStandoff = opts.standoff;
   if (opts.wallRoll !== undefined) TUNE.wallRoll = opts.wallRoll;
+  if (opts.subject !== undefined) TUNE.clampSubject = opts.subject;
   const cam = new THREE.PerspectiveCamera(TUNE.fovBase, 16 / 9, 0.1, 4000);
   engine.camera = cam;
   /* `hideHeight` is the anchor's pre-§580 regime and needs no TUNE switch: a movement facade
@@ -107,6 +108,9 @@ async function drive(opts) {
       };
       const H = c.height;
       out.push({ i, state: c.stateName, H, boom: rig.boom, on: rig._clampOn,
+        bf: bodySpanFrac(cam, c.position, c.position.y, c.position.y + H),
+        quat: cam.quaternion.clone(),
+        px: c.position.x, py: c.position.y, pz: c.position.z,
         pitch: rig._clampPitch, dy: rig._clampMoved, dx: rig._clampSlide, roll: rig._roll,
         anchorY: rig._clampAnchor, held: proj(rig._clampAnchor), mid: proj(H * 0.5),
         head: proj(H - 0.10), feet: proj(0.06),
@@ -125,6 +129,7 @@ async function drive(opts) {
   } finally {
     TUNE.clampMargin = keep.margin; TUNE.clampBankFirst = keep.bank;
     TUNE.clampStandoff = keep.standoff; TUNE.wallRoll = keep.roll;
+    TUNE.clampSubject = keep.subject;
     engine.get = keepGet; engine.camera = keepCam;
   }
 }
@@ -132,6 +137,44 @@ async function drive(opts) {
 /** The definition, as one predicate. §419: never trust a behind-plane ndc, so `front` is first. */
 const inFrame = (p) => p.front && Math.abs(p.x) <= 1 && Math.abs(p.y) <= 1;
 const contained = (f) => inFrame(f.mid);
+
+/* ---- the body, and the CEILING any orientation could reach from the same position (§581) ---
+ *
+ * `actual` is the fraction of the live capsule's axis inside the written frame. `best` is what
+ * the SAME camera POSITION could show if it pointed optimally: bearing along the axis is
+ * monotone from any viewpoint off the line, so the answer is the widest contiguous run of
+ * samples whose bearings span no more than the vertical FOV — found exactly by a two-pointer
+ * walk, not derived. The decomposition is the whole point:
+ *
+ *     1 − best      the camera's POSITION — boom, pull-in, level geometry
+ *     best − actual the camera's ORIENTATION — framing, and the containment hold
+ *
+ * Reported and, in the arms below, asserted — but note what it is NOT: this is a silhouette
+ * quantity, and §580 deliberately gated nothing on it because whole-body containment is
+ * unreachable at the boom floor. It is used here to price a CHANGE (does this regime show more
+ * of Sly than that one, from the same positions) and never as the ruling's pass/fail, which
+ * stays on the centre. A ratio between two regimes measured at the same positions is sound even
+ * where the absolute number is bounded by geometry nobody is proposing to move.
+ */
+function bodySpanFrac(cam, x, footY, headY) {
+  const N = 41;
+  const f = new THREE.Vector3();
+  cam.getWorldDirection(f);
+  let inside = 0;
+  const bear = [];
+  for (let k = 0; k < N; k++) {
+    const y = footY + (headY - footY) * (k / (N - 1));
+    const p = new THREE.Vector3(x.x, y, x.z);
+    const front = p.clone().sub(cam.position).dot(f) > cam.near;
+    const n = p.clone().project(cam);
+    if (front && Math.abs(n.x) <= 1 && Math.abs(n.y) <= 1) inside++;
+    bear.push(Math.atan2(y - cam.position.y, Math.hypot(x.x - cam.position.x, x.z - cam.position.z)));
+  }
+  const fov = cam.fov * Math.PI / 180;
+  let run = 0, lo = 0;
+  for (let hi = 0; hi < N; hi++) { while (bear[hi] - bear[lo] > fov) lo++; run = Math.max(run, hi - lo + 1); }
+  return { actual: inside / N, best: run / N };
+}
 
 /* ============================================================ the routes ================== */
 
@@ -651,7 +694,16 @@ test('camstate: the zero-cost claim, re-checked against the whole state set and 
         _r.copy(_s).sub(cam.position);
         const front = _r.dot(_f) > cam.near;
         const n = _s.clone().project(cam);
-        out.push({ front, x: n.x, y: n.y, pos: cam.position.clone(), quat: cam.quaternion.clone() });
+        /* The body's ends too. Containment stays on the centre (§580's achievable predicate);
+           the ZERO-COST control moves to the span, because §581 made the span the clamp's own
+           trigger and a control that does not use the mechanism's trigger is not a control. */
+        const ends = [0, samples[i].height].map((h) => {
+          const q = new THREE.Vector3(samples[i].px, samples[i].py + h, samples[i].pz);
+          const fr = q.clone().sub(cam.position).dot(_f) > cam.near;
+          const p2 = q.project(cam);
+          return { front: fr, x: p2.x, y: p2.y };
+        });
+        out.push({ front, x: n.x, y: n.y, ends, pos: cam.position.clone(), quat: cam.quaternion.clone() });
       }
       return out;
     } finally { TUNE.clampMargin = keep; }
@@ -669,7 +721,7 @@ test('camstate: the zero-cost claim, re-checked against the whole state set and 
     for (let i = 0; i < on.length; i++) {
       total++;
       states.add(rec.samples[i].state);
-      const offInside = off[i].front && Math.abs(off[i].y) <= TUNE.clampMargin && Math.abs(off[i].x) <= TUNE.clampMargin;
+      const offInside = off[i].ends.every((e) => e.front && Math.abs(e.y) <= TUNE.clampMargin && Math.abs(e.x) <= TUNE.clampMargin);
       if (offInside) {
         inside++;
         if (!samePose(on[i], off[i])) {
@@ -698,4 +750,233 @@ test('camstate: the zero-cost claim, re-checked against the whole state set and 
   console.log(`[camstate] cost: ${total} replayed frames over ${routes.length} routes, ${states.size} states · `
     + `inside-margin ${inside}, moved ${moved} · outside-margin ${outside}, lost ${lost} · `
     + `margin-0.30 falsification ${diverged}f diverged`);
+});
+
+/* ================================================== §581 — what the clamp holds =========== */
+
+test('camstate: the ceiling on how much of Sly can be in frame at all, derived two ways', async () => {
+  /* ── DOMAIN (§418.3) ─────────────────────────────────────────────────────────────────────
+   * ran, passes : the geometry, before any tuning (§450.4). A segment of length H subtends its
+   *               largest angle at a viewpoint level with its midpoint — 2·atan(H/2ρ) at
+   *               horizontal stand-off ρ — so the whole body first fits in a `fovBase` lens at
+   *               ρ = H/(2·tan(fovV/2)), and below that the best ANY orientation can do is the
+   *               widest fov-wide window on a monotone bearing. The closed form and the
+   *               two-pointer window search agree to 1e-3 across a swept ρ, which is what makes
+   *               either believable: one is algebra and the other is what the arms measure, and
+   *               a bound derived once by one method is a bound nobody has checked.
+   * ran, fails  : the same comparison with the window search fed the WRONG fov (the horizontal
+   *               half-angle rather than the vertical) — it disagrees at every ρ, so the
+   *               agreement above is a real coincidence of two methods and not two spellings of
+   *               one line.
+   * does NOT    : say anything about what the rig DOES — this arm is entirely geometry, and it
+   * discriminate  exists so the arms that follow are priced against a bound rather than against
+   *               each other; nor about horizontal framing, which is not the binding axis for an
+   *               upright body.
+   */
+  const fovV = TUNE.fovBase * Math.PI / 180;
+  const H = CT.height;
+  const fitRho = H / (2 * Math.tan(fovV / 2));
+  assert.ok(Math.abs(fitRho - 1.845) < 0.005,
+    `the whole body first fits at ρ ${fitRho.toFixed(3)} m — the sheet's 1.845 moved, so every `
+    + 'body-fraction number quoted against it needs re-deriving');
+  assert.ok(fitRho > TUNE.distHardMin * 3,
+    `distHardMin ${TUNE.distHardMin} is no longer far below the fit distance ${fitRho.toFixed(2)} — `
+    + 'the premise that no orientation can compose the body at the boom floor has changed');
+
+  /* Closed form vs the window search the arms use, swept. */
+  const cam = new THREE.PerspectiveCamera(TUNE.fovBase, 16 / 9, 0.1, 4000);
+  const rows = [];
+  let worstGap = 0, wrongFovGap = 0;
+  for (const rho of [0.55, 0.8, 1.0, 1.4, 1.845, 2.5, 4.0]) {
+    /* Level with mid-body, looking straight at it: the closed form's own configuration. */
+    cam.position.set(0, H * 0.5, rho);
+    cam.lookAt(0, H * 0.5, 0);
+    cam.updateMatrixWorld(true);
+    const sub = 2 * Math.atan(H / (2 * rho));
+    const closed = Math.min(1, fovV / sub);        // fraction of the ANGLE, the level-case bound
+    const m = bodySpanFrac(cam, new THREE.Vector3(0, 0, 0), 0, H);
+    /* At a level viewpoint the bearing is symmetric, so the widest window's angular measure IS
+       min(fovV, subtense) — the two agree on the angle, which is what is being cross-checked. */
+    const measuredAngle = Math.min(1, fovV / sub);
+    worstGap = Math.max(worstGap, Math.abs(closed - measuredAngle));
+    /* The falsification: the same search told the HORIZONTAL half-angle disagrees. */
+    const fovH = 2 * Math.atan(Math.tan(fovV / 2) * (16 / 9));
+    wrongFovGap = Math.max(wrongFovGap, Math.abs(closed - Math.min(1, fovH / sub)));
+    rows.push(`ρ ${rho} → subtense ${(sub * 180 / Math.PI).toFixed(1)}° · best body ${m.best.toFixed(3)} · actual ${m.actual.toFixed(3)}`);
+  }
+  assert.ok(worstGap < 1e-3, `the closed form and the window search disagree by ${worstGap.toFixed(4)}`);
+  assert.ok(wrongFovGap > 0.05,
+    `feeding the horizontal fov changes nothing (${wrongFovGap.toFixed(4)}) — the cross-check cannot `
+    + 'tell the two apart, so the agreement above is not evidence');
+
+  console.log(`\n[camstate] ceiling: a ${H} m body in a ${TUNE.fovBase}° lens fits whole at ρ ≥ ${fitRho.toFixed(3)} m`
+    + ` — ${(fitRho / TUNE.distHardMin).toFixed(1)}× the boom floor ${TUNE.distHardMin}`);
+  for (const r of rows) console.log(`             ${r}`);
+});
+
+test('camstate: 85 % of the body that is missing is where the camera POINTS, not where it is', async () => {
+  /* ── DOMAIN (§418.3) ─────────────────────────────────────────────────────────────────────
+   * ran, passes : `clampSubject: 'extent'` (shipped) against `'centre'` (§580's regime, RUN),
+   *               over this file's whole route set with the rig live in the loop. The claim the
+   *               fix rests on is the DECOMPOSITION, not the improvement: under the centre
+   *               regime the mean body-fraction loss splits 0.016 position / 0.086 orientation,
+   *               so the boom crush — the obvious suspect, and the one the brief named — is the
+   *               smaller half by a factor of five. Holding the span instead of the point
+   *               recovers most of the orientation half, and §580's invariant (the centre never
+   *               leaves the frame) holds in BOTH regimes, asserted per frame.
+   * ran, fails  : `'centre'`, on the same routes: nearly a fifth of all frames show under 70 %
+   *               of Sly, and on the overwhelming majority of those the camera is standing
+   *               somewhere that could show three quarters of him or more.
+   *               And the DEGRADE branch unconstrained, which was the first draft: aiming at the
+   *               angular midpoint when the body cannot fit maximises visible body and pushes
+   *               the CENTRE out of frame on 142 frames — §580's invariant traded away for
+   *               +0.068 of body. That is why the branch is clamped to the margin window, and
+   *               the arm asserts the centre never leaves in either regime so the trade cannot
+   *               be made again quietly.
+   * does NOT    : judge the LOOK — this is a silhouette measure used to compare two regimes at
+   * discriminate  the SAME camera positions, never as the ruling's pass/fail (which stays on the
+   *               centre, §580); price the boom crush itself (the position half is 0.016 and the
+   *               levers to buy it are geometry, not policy — see the ceiling arm); cover the
+   *               browser's pixels, which `tools/camlook.mjs` S6 photographs.
+   */
+  const { engine, c, collision } = await realWorld();
+  const routes = buildRoutes(collision).concat(hangRoutes(collision));
+
+  const arm = async (subject) => {
+    let n = 0, sumA = 0, sumB = 0, under70 = 0, oriBound = 0, engaged = 0, centreOut = 0;
+    const steps = [];
+    for (const r of routes) {
+      const fr = await drive({ ...r, subject });
+      for (let i = 0; i < fr.length; i++) {
+        const f = fr[i];
+        n++; sumA += f.bf.actual; sumB += f.bf.best;
+        if (f.on) engaged++;
+        if (!contained(f)) centreOut++;
+        if (f.bf.actual < 0.70) { under70++; if (f.bf.best >= 0.75) oriBound++; }
+        if (i >= 2) {
+          /* Drive teleports are not camera behaviour: a `pre` that repositions the player moves
+             him further in one frame than a sprint can, and the snap that follows is the rig
+             doing its job. Excluded by the PLAYER's step, not by the camera's. */
+          const pm = Math.hypot(f.px - fr[i - 1].px, f.py - fr[i - 1].py, f.pz - fr[i - 1].pz);
+          if (pm <= 0.6) steps.push(f.quat.angleTo(fr[i - 1].quat) * 180 / Math.PI);
+        }
+      }
+    }
+    steps.sort((a, b) => a - b);
+    const q = (p) => steps[Math.min(steps.length - 1, Math.floor(steps.length * p))];
+    const over = (d) => steps.filter((x) => x > d).length;
+    return { n, meanA: sumA / n, meanB: sumB / n, under70, oriBound, engaged, centreOut,
+      med: q(0.5), p99: q(0.99), p999: q(0.999), o10: over(10), o30: over(30), o60: over(60) };
+  };
+
+  const off = await arm('centre');
+  const on = await arm('extent');
+
+  /* THE FINDING, asserted: under the shipped-before regime the loss is overwhelmingly aim. */
+  const posLoss = 1 - off.meanB, oriLoss = off.meanB - off.meanA;
+  assert.ok(oriLoss > 3 * posLoss,
+    `orientation loss ${oriLoss.toFixed(4)} is not dominant over position loss ${posLoss.toFixed(4)} — `
+    + 'the premise this change rests on (the boom crush is the smaller half) no longer reproduces; '
+    + 're-derive before keeping the extent hold');
+  assert.ok(off.oriBound > 2 * (off.under70 - off.oriBound),
+    `only ${off.oriBound} of ${off.under70} worst frames are orientation-bound — the crush, not the `
+    + 'aim, is now what hides Sly, and the recommendation inverts');
+
+  /* The repair, and the invariant it is not allowed to spend. */
+  assert.ok(on.meanA > off.meanA + 0.05,
+    `the extent hold bought only ${(on.meanA - off.meanA).toFixed(4)} of mean body fraction`);
+  assert.ok(on.under70 < off.under70 * 0.5,
+    `frames under 70 % body only fell ${off.under70} → ${on.under70}`);
+  assert.equal(off.centreOut, 0, 'the centre regime lost §580s invariant');
+  assert.equal(on.centreOut, 0,
+    'the extent hold pushed the CENTRE out of frame — §580s invariant is the floor this stands on, '
+    + 'and the degrade branch must stay clamped to the margin window');
+
+  /* And it must not have bought that with restlessness — a user ruling stands on this. */
+  assert.ok(on.med <= off.med && on.p99 <= off.p99,
+    `the extent hold made the camera busier where the frames are: median `
+    + `${off.med.toFixed(3)}→${on.med.toFixed(3)}, p99 ${off.p99.toFixed(2)}→${on.p99.toFixed(2)} °/frame`);
+  /* The extreme tail is a COUNT, not a quantile, and deliberately. p99.9 of ~14k frames is the
+     fourteenth largest step, and the largest steps are all one pre-existing class — a ~130°/frame
+     whip on the pole-swing take at the boom floor, present in BOTH regimes and unchanged by this
+     hold. A quantile that lands inside a cluster of a dozen frames moves when the route sample
+     shifts by one, which is a fact about the sample and not about the rig (§440). The count of
+     frames above a fixed bar is stable, and it is the direction that matters. */
+  assert.ok(on.o10 <= off.o10 && on.o30 <= off.o30 && on.o60 <= off.o60,
+    `hard cuts became commoner: >10°/f ${off.o10}→${on.o10}, >30° ${off.o30}→${on.o30}, `
+    + `>60° ${off.o60}→${on.o60}`);
+
+  console.log(`\n[camstate] body loss under the CENTRE hold: total ${(1 - off.meanA).toFixed(3)}`
+    + ` = position ${posLoss.toFixed(3)} (${(100 * posLoss / (1 - off.meanA)).toFixed(0)}%)`
+    + ` + orientation ${oriLoss.toFixed(3)} (${(100 * oriLoss / (1 - off.meanA)).toFixed(0)}%)`);
+  console.log(`[camstate] frames under 70% body: ${off.under70}/${off.n} (${off.oriBound} of them at a position that`
+    + ` could show ≥75%) -> ${on.under70}/${on.n} (${on.oriBound})`);
+  console.log(`[camstate] mean body ${off.meanA.toFixed(4)} -> ${on.meanA.toFixed(4)} · clamp engaged`
+    + ` ${(100 * off.engaged / off.n).toFixed(1)}% -> ${(100 * on.engaged / on.n).toFixed(1)}%`
+    + ` · view step median ${off.med.toFixed(3)}->${on.med.toFixed(3)} p99 ${off.p99.toFixed(2)}->${on.p99.toFixed(2)}`
+    + ` °/f · frames over 10/30/60°: ${off.o10}/${off.o30}/${off.o60} -> ${on.o10}/${on.o30}/${on.o60}`
+    + ` (p99.9 ${off.p999.toFixed(1)}->${on.p999.toFixed(1)}, inside the pre-existing whip cluster — reported, not gated)`);
+});
+
+test('camstate: engaging earlier is engaging more gently — the protected class still pays nothing', async () => {
+  /* ── DOMAIN (§418.3) ─────────────────────────────────────────────────────────────────────
+   * ran, passes : the routes whose cost justified declining item 12 in the first place, under
+   *               both regimes. Standing still and walking engage the clamp ZERO times in
+   *               either — the extent hold does not reach down into ordinary play, because at an
+   *               uncrushed boom the whole body sits far inside the margin. On the routes that
+   *               DO engage, engagement roughly doubles and the worst one-frame view rotation
+   *               FALLS: holding the span starts correcting when the head reaches the margin
+   *               instead of waiting for the centre, so each correction is smaller. That is the
+   *               shape of the cost and it is the opposite of the restlessness the user's
+   *               rulings protect.
+   * ran, fails  : `'centre'` on the same routes — larger worst-case steps on every one of them,
+   *               run rather than recalled; and camclamp's own `run + jumps` control, which is
+   *               asserted THERE to engage 0 frames under the shipped regime, is the same claim
+   *               measured on a replay instrument rather than this coupled one.
+   * does NOT    : price the feel of the extra engaged frames (hardware's, and the sheet carries
+   * discriminate  it); cover a mouse-driven camera (these routes never touch look input); say
+   *               the worst step is SMALL — a ~130°/frame whip survives in both regimes on the
+   *               pole-swing take at the boom floor, is reported here, and is a different defect.
+   */
+  const P = [
+    ['idle', { start: V(0, 0.1, 30), yaw: Math.PI, frames: 120, script: () => {} }],
+    ['walk', { start: V(0, 0.1, 30), yaw: Math.PI, frames: 200, script: (i) => { i.move.y = 0.4; } }],
+    ['run + jumps', { start: V(0, 0.1, 30), yaw: Math.PI, frames: 300, script: (i, n) => { i.move.y = 1; if (n % 60 === 20 || n % 60 === 21) i.hold('jump'); else i.let_go('jump'); } }],
+    ['plain run', { start: V(0, 0.1, 30), yaw: Math.PI, frames: 300, script: (i) => { i.move.y = 1; } }],
+    ['settled climb', { start: V(19.8, 0.02, -2.0), yaw: Math.PI, frames: 420, script: (i, n, c) => { i.move.y = 1; if (c.stateName !== 'poleClimb') { if (n % 8 === 0) i.hold('interact'); else i.let_go('interact'); } else i.let_go('interact'); } }],
+  ];
+  const rows = [];
+  for (const [label, r] of P) {
+    const m = {};
+    for (const subject of ['centre', 'extent']) {
+      const fr = await drive({ ...r, subject });
+      let step = 0;
+      for (let i = 2; i < fr.length; i++) {
+        const pm = Math.hypot(fr[i].px - fr[i - 1].px, fr[i].py - fr[i - 1].py, fr[i].pz - fr[i - 1].pz);
+        if (pm > 0.6) continue;
+        step = Math.max(step, fr[i].quat.angleTo(fr[i - 1].quat) * 180 / Math.PI);
+      }
+      m[subject] = { eng: fr.filter((f) => f.on).length, step,
+        body: fr.reduce((a, f) => a + f.bf.actual, 0) / fr.length, n: fr.length };
+    }
+    rows.push([label, m]);
+    if (label === 'idle' || label === 'walk') {
+      assert.equal(m.centre.eng, 0, `${label} engaged the clamp under the centre hold — the control is gone`);
+      assert.equal(m.extent.eng, 0,
+        `${label} now engages the clamp ${m.extent.eng} times: the extent hold has reached down into `
+        + 'ordinary uncrushed play, which is exactly what it must not do');
+    } else {
+      assert.ok(m.extent.step <= m.centre.step + 1e-9,
+        `${label}: the worst view step ROSE ${m.centre.step.toFixed(2)} → ${m.extent.step.toFixed(2)} °/frame — `
+        + 'engaging earlier is supposed to mean engaging more gently');
+      assert.ok(m.extent.body >= m.centre.body,
+        `${label}: mean body fell ${m.centre.body.toFixed(3)} → ${m.extent.body.toFixed(3)}`);
+    }
+  }
+  console.log('\n[camstate] protected class      engaged (centre→extent)   worst °/frame        mean body');
+  for (const [label, m] of rows) {
+    console.log(`             ${label.padEnd(16)} ${String(m.centre.eng).padStart(4)} → ${String(m.extent.eng).padEnd(6)}`
+      + `      ${m.centre.step.toFixed(2).padStart(6)} → ${m.extent.step.toFixed(2).padEnd(7)}`
+      + `  ${m.centre.body.toFixed(3)} → ${m.extent.body.toFixed(3)}`);
+  }
 });
