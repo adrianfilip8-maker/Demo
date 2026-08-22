@@ -45714,6 +45714,28 @@ Recorded alongside it, because it is the same directory: `museum-of-natural-hist
 nothing plays. `tests/bundle.test.mjs` already holds it in `KNOWN_UNSHIPPED_PAYLOAD` as a decision
 rather than an oversight.
 
+**And the code said the opposite of the record. Fixed.** `Audio.js`'s header asserted twice that
+the score is *"three owner-supplied MP3 stems"* and that *"the owner supplied recorded music"* —
+a provenance claim `PROVENANCE.md` specifically declines to make. It is wrong, and the commit
+history shows exactly how it got there: **the attribution rode across a substitution.**
+
+| commit | time | what it installed | what its message says about origin |
+|---|---|---|---|
+| `9a8a06e` | 2026-08-08 01:37 | `museum-of-natural-history.mp3` | *"install the **supplied** Sly 2 soundtrack as a build asset, with provenance"* |
+| `6f03a03` | 2026-08-08 02:57 | `bc-explore/sneak/chase.mp3` | *"from 97 MB of WAV"* — source unstated |
+| `9aa0cd3` | later | neither — it **swapped** one for the other in `Audio.js` | wrote "owner-supplied" onto the stems |
+
+The supplied file is the one nothing plays; the three that play were encoded in-container eighty
+minutes later from material of unstated origin. `9aa0cd3` swapped which files the score reads and
+carried the supplied track's provenance sentence onto its replacement. That is the whole mechanism,
+and it is worth naming because a false "owner-supplied" in the file a reader opens first is the
+single sentence most likely to stop anyone from asking the question §548.1 is asking.
+
+The header now states the two commits, the substitution, and that `PROVENANCE.md` records the
+origin as unstated — and claims nothing in either direction on the stems' behalf. **Comment only:
+no file moved, no path re-pointed, no byte of audio touched.** The escalation above stands
+unchanged; this removes the sentence that contradicted it.
+
 ### §548.2 Does the demo make sound? Yes, and this is the most thoroughly tested part of it
 
 43 named sounds in the catalogue; the mixer subscribes to 26 events; **22 of them start a voice.**

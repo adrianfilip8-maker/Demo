@@ -180,14 +180,24 @@ import { ReverbRack, SPACES } from './Reverb.js';
  * the rooms; this file decides what gets heard, from where, and how loud.
  *
  * **THIS FILE USED TO SAY "everything is synthesised (AGENTS.md §1): no files, no CDN, no
- * decodeAudioData", and that is no longer true.** The owner supplied recorded music, so the score
- * is now three owner-supplied MP3 stems decoded through `decodeAudioData` (see `STEM_FILES`), and
- * §1's constraint is superseded for music only. Everything else still holds and matters: SFX remain
- * fully synthesised, nothing is fetched from a CDN, the assets are served from the app's own origin,
- * and `Music.js`'s procedural score is retained as the fallback rather than deleted — a failed fetch
- * or decode degrades to it instead of to silence. The stale sentence is quoted rather than merely
- * removed, because a reader who knows the old constraint should be able to see that it was changed
- * on purpose and not simply violated.
+ * decodeAudioData", and that is no longer true.** The score is now three MP3 stems decoded through
+ * `decodeAudioData` (see `STEM_FILES`), and §1's constraint is superseded for music only. Everything
+ * else still holds and matters: SFX remain fully synthesised, nothing is fetched from a CDN, the
+ * assets are served from the app's own origin, and `Music.js`'s procedural score is retained as the
+ * fallback rather than deleted — a failed fetch or decode degrades to it instead of to silence. The
+ * stale sentence is quoted rather than merely removed, because a reader who knows the old constraint
+ * should be able to see that it was changed on purpose and not simply violated.
+ *
+ * **These three stems are NOT the owner-supplied recording, and this comment used to say they
+ * were** (§548). The sentence was written when the single supplied track was swapped for three
+ * stems, and it carried the supplied track's provenance across the substitution. The two are
+ * different files from different commits: `9a8a06e` installed the owner-supplied
+ * `museum-of-natural-history.mp3` "with provenance"; `6f03a03`, eighty minutes later, installed
+ * `bc-explore/sneak/chase.mp3` encoded in-container "from 97 MB of WAV" whose origin its own
+ * message does not state. `public/assets/audio/PROVENANCE.md` records that origin as **unstated**
+ * and says in as many words that the owner's standing instruction names the museum track and the
+ * `Sly_Cooper` model, **not** these. Nothing is claimed here on their behalf in either direction —
+ * read that file, which is the record.
  *
  * Three constraints shape the design:
  *
