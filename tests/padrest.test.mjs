@@ -307,7 +307,8 @@ test('R1b instrument: the pinned clock agrees with one built from real sleeps', 
   const yy = r2.yaw;
   axes([0, 0, 1, 0]);
   const tt = performance.now();
-  for (let i = 0; i < 30; i++) { i2.beginFrame(DT); r2.update(DT, i * DT); i2.endFrame(); }
+  let tightDt = 0;
+  for (let i = 0; i < 30; i++) { i2.beginFrame(DT); tightDt += i2.dtReal; r2.update(DT, i * DT); i2.endFrame(); }
   const tight = Math.abs(r2.yaw - yy);
   const tightWall = (performance.now() - tt) / 1000;
   /**
@@ -325,14 +326,28 @@ test('R1b instrument: the pinned clock agrees with one built from real sleeps', 
    * fault, and cannot fail merely because the box was busy.
    */
   const allowed = expect * tightWall;                       // degrees this loop's wall time permits
+  const integrated = expect * tightDt;                      // degrees the clock it READ permits
   const got = tight * 180 / Math.PI;
+  /* Ceiling against the WALL: rotation can never exceed real elapsed time. Robust in both
+     directions — a preempted loop only ever has more wall, never less. */
   assert.ok(got <= allowed * 1.05 + 1e-9,
     `the tight loop turned ${got.toFixed(4)} deg in ${tightWall.toFixed(4)} s, which is more than `
     + `padLook allows (${allowed.toFixed(4)} deg) — dtReal is not being read from a real clock`);
-  assert.ok(got >= allowed * 0.5 - 1e-9,
-    `the tight loop turned ${got.toFixed(4)} deg against the ${allowed.toFixed(4)} its own wall `
-    + 'time allows — rotation has stopped tracking real elapsed time, so this arm can no longer '
-    + 'tell an honest clock from a frozen one (§418)');
+  /**
+   * The lower bound must be stated against the INTEGRATED clock, not the wall (§546.1).
+   *
+   * Stating it against the wall was this arm's second contention failure, in the opposite
+   * direction from the first: `beginFrame` clamps `dtReal` at 1/20 s, so one preemption inside
+   * these 30 iterations leaves the wall running while the clock the code reads does not, and
+   * rotation legitimately falls far below `padLook x wall`. Summing the `dtReal` the loop
+   * actually saw removes the clamp and the scheduler from the comparison at once, and asserts the
+   * thing the arm is really for: rotation is `padLook` times the clock the code read, whatever
+   * that clock happened to be.
+   */
+  assert.ok(Math.abs(got - integrated) <= Math.max(0.02, integrated * 0.05),
+    `the tight loop turned ${got.toFixed(4)} deg against the ${integrated.toFixed(4)} implied by the `
+    + `${tightDt.toFixed(5)} s of dtReal it read — rotation has stopped tracking the clock, so this `
+    + 'arm can no longer tell an honest clock from a frozen one (§418)');
 
   console.log(`\n[R1b] real sleeps: ${clean ? `${clean.degPerS.toFixed(2)} deg/s vs padLook ${expect.toFixed(2)} deg/s (clean window)` : 'starved, see above'}`
     + ` · tight loop (the fault): ${(tight * 180 / Math.PI).toFixed(4)} deg over ${tightWall.toFixed(4)} s`);

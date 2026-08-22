@@ -45134,9 +45134,19 @@ whatever wrote last**, which is a silent cross-lane failure with no detector.
 ### §546.8 DOMAIN for the changed arms
 
 - **R1b** — *passes on* a real-sleep window agreeing with `padLook` to 2%, and on the unpinned
-  tight loop's rotation tracking `padLook x wall` at whatever wall time it got; *fails on* a frozen
-  `dtReal`, run in-arm as a source mutation. It no longer discriminates "the box was busy", which
-  is the point of the change.
+  tight loop's rotation equalling `padLook x` the `dtReal` it actually read; *fails on* a frozen
+  `dtReal`, run in-arm as a source mutation, which the WALL ceiling catches. It no longer
+  discriminates "the box was busy", which is the point of the change.
+
+  **This took two goes, and the second failure is the more interesting one.** The first hardening
+  stated the lower bound against wall time, and that is fragile in the direction opposite to the
+  clause it replaced: `beginFrame` clamps `dtReal` at 1/20 s, so a single preemption inside the 30
+  iterations leaves the wall running while the clock the code reads does not, and rotation
+  legitimately falls far below `padLook x wall`. It went red in the very next clean-worktree suite
+  run. Summing the `dtReal` the loop actually saw removes the clamp and the scheduler from the
+  comparison together. The two clauses are now complementary rather than redundant: the wall
+  CEILING catches a frozen or inflated clock, the integrated EQUALITY catches a rotation that has
+  decoupled from whatever clock was read.
 - **F3** — *passes on* the driven loop showing no EXCESS collections over an idle baseline of the
   same length; *fails on* the deliberate churn loop through the same observer, still run as the
   positive control so a zero is only believed once the channel has been seen to report something.
