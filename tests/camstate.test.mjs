@@ -267,6 +267,64 @@ function buildRoutes(collision) {
       pre: (c) => { c.grounded = false; c.velocity.set(0, -2, 0); c.sm.set('fall'); },
       script: (i, n) => { if (n % 4 === 0) i.hold('interact'); else i.let_go('interact'); } });
   }
+  /* THE NAVE ROPE (§571 · §583) — the hall floor's only line, and the first route in this table
+     with a MID-AIR HANDOFF between two attach states. Both directions, because it converts a
+     16 m drop into a two-way route and the descent is as new as the climb. Derived from the
+     level, not written down: the rope's own collider and the cable's spline decide the numbers,
+     so a world-lane re-placement moves these routes with it instead of silently missing them. */
+  {
+    const rope = collision.recs.find((r) => r.tag === 'pole' && r.mesh?.userData
+      && Math.abs(r.mesh.position.x - 2.40) < 1.5 && Math.abs(r.mesh.position.z + 33.20) < 2.5);
+    const cable = collision.recs.find((r) => r.tag === 'rail' && r.mesh?.name === 'rail:hall-cable');
+    const spline = cable?.mesh?.userData?.spline;
+    if (rope && spline) {
+      const rx = rope.mesh.position.x, rz = rope.mesh.position.z;
+      /* where the cable passes closest to the rope axis — the handoff point */
+      let bt = 0, bd = Infinity;
+      for (let t = 0; t <= 1; t += 0.002) {
+        const q = spline.getPointAt(t);
+        const d = Math.hypot(q.x - rx, q.z - rz);
+        if (d < bd) { bd = d; bt = t; }
+      }
+      const near = spline.getPointAt(bt);
+      /* UP: walk the hall floor to the rope, E-mount, climb to the cable's height, jump and
+         reach for it with the grab button — which is what the handoff actually asks of a
+         player. A first draft held `jump` and released `interact` and produced a `wallJump` off
+         the rope every time: `RailSlide.canEnter` wants a press or an apex arrival, so a drive
+         that never presses cannot complete this line and would have reported it broken. */
+      let launched = -1, railed = -1;
+      add('nave rope, up', { start: V(rx - 2.4, 0.1, rz), yaw: Math.atan2(1, 0), frames: 700,
+        script: (i, n, c) => {
+          if (c.stateName && c.stateName.startsWith('rail')) { if (railed < 0) railed = n; i.let_go('jump'); i.let_go('interact'); return n > railed + 90; }
+          if (c.stateName === 'poleClimb') {
+            i.let_go('interact');
+            i.move.y = 1;
+            if (c.position.y >= near.y - 0.45 && launched < 0) { i.hold('jump'); launched = n; } else i.let_go('jump');
+          } else if (launched >= 0) { i.let_go('jump'); if (n % 3 === 0) i.hold('interact'); else i.let_go('interact'); }
+          else { i.move.y = 1; if (n % 8 === 0) i.hold('interact'); else i.let_go('interact'); }
+          return false;
+        } });
+      /* DOWN, from both ends of the cable: ride to the rope, crouch off, catch it, climb down. */
+      for (const [tag, t0] of [['W', Math.max(0, bt - 0.15)], ['E', Math.min(1, bt + 0.14)]]) {
+        const p0 = spline.getPointAt(t0);
+        let dropped = -1;
+        add(`nave rope, down ${tag}`, { start: V(p0.x, p0.y + 0.3, p0.z), yaw: Math.atan2(t0 < bt ? 1 : -1, 0), frames: 600,
+          pre: (c) => { c.position.set(p0.x, p0.y + 0.35, p0.z); c.velocity.set(0, -0.2, 0); c.grounded = false; c.sm.set('fall'); },
+          script: (i, n, c) => {
+            if (c.stateName === 'poleClimb') { i.let_go('interact'); i.move.y = -1; return c.position.y < 1.2; }
+            if (c.stateName && c.stateName.startsWith('rail')) {
+              const d = Math.hypot(c.position.x - near.x, c.position.z - near.z);
+              if (d < 1.0 && dropped < 0) { i.hold('crouch'); dropped = n; }
+              else { i.move.y = 1; if (n % 6 === 0) i.hold('interact'); else i.let_go('interact'); }
+              return false;
+            }
+            i.let_go('crouch');
+            if (n % 3 === 0) i.hold('interact'); else i.let_go('interact');
+            return false;
+          } });
+      }
+    }
+  }
   for (const [tag, z, jf] of [['a', 41.1, 18], ['b', 42.1, 22]]) {
     add(`pylon face ${tag}`, { start: V(10.9, 2.7, z), yaw: Math.atan2(0, -1), frames: 260,
       script: (i, n) => { i.move.y = 1; if (n >= jf && n < jf + 6) i.hold('jump'); else i.let_go('jump'); } });
@@ -381,7 +439,7 @@ test('camstate: every state the moveset registers holds the subject, on two rout
         } }))));
 
   const seen = new Map();
-  let frames = 0, worstY = 0, worstFrac = 1, worstFracAt = null, minRange = Infinity;
+  let frames = 0, worstY = 0, worstFrac = 1, worstFracAt = null, minRange = Infinity, minRangeAt = '';
   for (const r of routes) {
     const fr = await drive(r);
     frames += fr.length;
@@ -399,7 +457,9 @@ test('camstate: every state the moveset registers holds the subject, on two rout
       e.n++; e.routes.add(r.label);
       e.maxY = Math.max(e.maxY, Math.abs(f.mid.y));
       worstY = Math.max(worstY, Math.abs(f.mid.y));
-      minRange = Math.min(minRange, f.range);
+      /* WHERE the lens comes closest, not just how close: a bare minimum is a number nobody
+         can act on, and this one has twice now pointed straight at the frame worth looking at. */
+      if (f.range < minRange) { minRange = f.range; minRangeAt = `${r.label} f${f.i} ${f.state} boom ${f.boom.toFixed(2)}`; }
       /* Reported, not asserted: how much of the capsule is inside the frame. */
       const lo = Math.min(f.feet.y, f.head.y), hi = Math.max(f.feet.y, f.head.y);
       const frac = hi > lo ? Math.max(0, Math.min(hi, 1) - Math.max(lo, -1)) / (hi - lo) : 1;
@@ -419,7 +479,7 @@ test('camstate: every state the moveset registers holds the subject, on two rout
 
   const ceiling = 2 * TUNE.distHardMin * Math.tan(TUNE.fovBase * 0.5 * Math.PI / 180) / (CT.height - 0.16);
   console.log(`\n[camstate] ${routes.length} routes, ${frames} frames, ${seen.size}/${registered.length} states`
-    + ` · subject out of frame 0 · max |ndcY| ${worstY.toFixed(3)} · min lens range ${minRange.toFixed(3)} m`);
+    + ` · subject out of frame 0 · max |ndcY| ${worstY.toFixed(3)} · min lens range ${minRange.toFixed(3)} m at ${minRangeAt}`);
   console.log(`[camstate] reported, gates nothing: least of the capsule on screen ${(worstFrac * 100).toFixed(0)}%`
     + `${worstFracAt ? ` (${worstFracAt.state}, boom ${worstFracAt.boom.toFixed(2)})` : ''}`
     + ` — at distHardMin ${TUNE.distHardMin} the BEST any pose can do is ${(ceiling * 100).toFixed(0)}%`);

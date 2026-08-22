@@ -160,7 +160,7 @@ try {
       p: [+m.position.x.toFixed(2), +m.position.y.toFixed(2), +m.position.z.toFixed(2)],
       v: [+m.velocity.x.toFixed(2), +m.velocity.y.toFixed(2), +m.velocity.z.toFixed(2)],
       key: c?._frameKey, boom: +(c?.boom ?? 0).toFixed(3), fov: +(e.camera.fov).toFixed(2),
-      on: !!c?._clampOn,
+      on: !!c?._clampOn, clamp: +((c?._clampPitch ?? 0) * 180 / Math.PI).toFixed(2),
       roll: +(c?._roll ?? 0).toFixed(4),
       cam: [+e.camera.position.x.toFixed(2), +e.camera.position.y.toFixed(2), +e.camera.position.z.toFixed(2)],
       ndc, vis: ch?.root ? ch.root.visible !== false : null, span,
@@ -359,112 +359,50 @@ try {
   await sim(4);
   }
 
-  /* ---- S6: what the clamp HOLDS — the same sim frame, both regimes -------- */
-  /* §581. The containment ruling is a look judgement and every regime comparison this rig has
-     ever had was a node measurement, so this pair is the first time the two have been seen.
-     `clampSubject` is poked through `camera.tune` (the harness seam the rig grew for this), and
-     both frames are taken at the SAME sim state: `capture()` runs `renderFrame(0)`, which re-runs
-     `_write` with dt 0, and the clamp is stateless — so the only difference between the two PNGs
-     is what the clamp aimed at. Two poses, per §466.5: a real pole climb at the crushed boom, and
-     a ledge hang, whose camera position could show the whole body and, under the centre regime,
-     does not. */
-  if (seq('s6')) {
-  console.log('[S6] clampSubject A/B — same sim frame, centre vs extent');
-  const pair = async (name) => {
-    for (const mode of ['centre', 'extent']) {
-      await page.evaluate((m) => { window.__ENGINE.get('camera').tune.clampSubject = m; }, mode);
-      /* CAPTURE FIRST, THEN MEASURE. `capture()` is what runs `renderFrame(0)` and therefore what
-         re-runs `_write` with the new constant, so probing before it reads the PREVIOUS mode's
-         pose and staples it to this mode's picture. The first run of this pair did exactly that
-         and the numbers came out inverted against the images — caught only because the pictures
-         disagreed with every node measurement. A number and a frame under one label have to come
-         from the same render (§442). */
-      const uri = await page.evaluate(() => window.__GAME.capture('image/png'));
+  /* ---- S7: the φ wrap, photographed either side of the flip ---------------- */
+  /* §583. The clamp's `need` is a function of φ alone and must break somewhere on the circle of
+     φ; it breaks at the back of the lens. Node measures the break as a 125–143°/frame view
+     rotation with the subject barely moving. This pair is whether that is visible: the same
+     drive, the frame before the flip and the frame after, nothing else changed. Two sim passes
+     and two captures — the flip index is found first WITHOUT capturing (sim frames are free),
+     then the drive is re-run to that index. Capturing every frame to catch it would cost
+     minutes per frame on this rasteriser. */
+  if (seq('s7')) {
+  console.log('[S7] the φ wrap — the frame before and the frame after');
+  /* ONE code path for both passes. The locate pass and the capture pass must be the same drive
+     frame for frame or the "before" picture is not the frame before — the staging fault §581.5
+     cost four runs to. `stopAt < 0` locates and captures nothing; `stopAt >= 0` re-runs the
+     identical drive and stops there. */
+  const swingRun = async (frames, stopAt) => {
+    await tp(19.8, 0.02, -2.0, Math.PI);
+    await sim(6);
+    await page.keyboard.down('KeyW');
+    await page.keyboard.down('KeyD');
+    let flip = -1, prev = 0;
+    for (let i = 0; i < frames; i++) {
       const s = await probe();
-      const bf = await page.evaluate(() => {
-        /* Body fraction, measured in the page off the real capsule and the real camera, so the
-           number under the picture is the picture's own (§442: not a node number pasted beside a
-           browser frame). Samples the capsule axis and counts what projects inside the frame. */
-        const e = window.__ENGINE, m = e.get('movement'), cam = e.camera;
-        const H = (typeof m.height === 'number' && m.height > 0.2) ? m.height : 1.8;
-        let inside = 0; const N = 41;
-        for (let k = 0; k < N; k++) {
-          const p = m.position.clone(); p.y += (H * k) / (N - 1);
-          const f = new p.constructor(); cam.getWorldDirection(f);
-          const front = p.clone().sub(cam.position).dot(f) > cam.near;
-          const v = p.project(cam);
-          if (front && Math.abs(v.x) <= 1 && Math.abs(v.y) <= 1) inside++;
-        }
-        return { body: +(inside / N).toFixed(3), H: +H.toFixed(2) };
-      });
-      log.push({ tag: 'S6', frame: `${name}-${mode}`, mode, ...bf, ...s });
-      await writeFile(`${OUT}/${name}-${mode}.png`, Buffer.from(uri.split(',')[1], 'base64'));
-      console.log(`      -> ${name}-${mode}.png  body ${bf.body} · ${JSON.stringify(s)}`);
+      if (s.st === 'poleClimb' && i % 90 === 0) {
+        await page.mouse.down({ button: 'left' }); await sim(1); await page.mouse.up({ button: 'left' });
+      }
+      await sim(1);
+      const t = await probe();
+      if (stopAt < 0 && prev * t.clamp < 0 && Math.abs(prev) > 60 && Math.abs(t.clamp) > 60) { flip = i; break; }
+      if (stopAt >= 0 && i === stopAt) break;
+      prev = t.clamp;
     }
-    await page.evaluate(() => { window.__ENGINE.get('camera').tune.clampSubject = 'extent'; });
+    await page.keyboard.up('KeyW'); await page.keyboard.up('KeyD');
+    return flip;
   };
-
-  // A — the T3 drainpipe climb, the crushed-boom pose the ruling's own arms photograph.
-  await tp(19.8, 0.02, -2.0, Math.PI);
-  await sim(10);
-  await page.keyboard.down('KeyW');
-  for (let i = 0; i < 240; i++) {
+  const at = await swingRun(360, -1);
+  if (at < 1) {
+    console.log('      !! no φ wrap reached from the keyboard in 360 frames — pair skipped rather than shot at the wrong pose');
+  } else {
+    console.log(`      wrap at drive frame ${at}; re-running the identical drive to ${at - 1}`);
+    await swingRun(360, at - 1);
+    await snap('s7-wrap-before', 'S7');
     await sim(1);
-    if (i % 8 === 0) { await page.keyboard.down('KeyE'); await sim(1); await page.keyboard.up('KeyE'); }
-    const s = await probe();
-    if (s.st === 'poleClimb' && s.p[1] > 5.5) break;
+    await snap('s7-wrap-after', 'S7');
   }
-  await page.keyboard.up('KeyE');
-  await pair('s6-poleclimb');
-  await page.keyboard.up('KeyW');
-
-  /* B — the dune ascent (§475.5): ordinary play, W held, the boom occlusion-crushes into the
-     sand behind the runner and the subject walks off the top of frame. DRIVEN, not placed.
-     The first draft of this pose was a ledge hang set up in-page with `probeLedge` +
-     `sm.set('ledgeHang')`, and the frame it produced had Sly buried in the courtyard paving with
-     his hat poking through — the state name read `ledgeHang` and the pose was nothing a player
-     can reach. A placed pose is a picture of my model of the world (§435.4); this one is driven. */
-  /* B — the Cane Slam impact from height, one of the three failure classes the ruling was
-     written for (§467) and the pose camclamp measures at −0.86 vs −0.65 ndcY between the two
-     regimes. Staged with S2's recipe verbatim, press-check included: an instrument that stages a
-     move must verify the move began (runs 2 and 3 of this harness photographed plain falls).
-     A dune run was tried first and this harness could not reach the crush from the keyboard in
-     420 frames; it printed that and shot nothing rather than photograph the wrong pose. */
-  /* TELEPORT, not `position.set`. Pose A leaves Sly attached to the drainpipe, and assigning a
-     position under an `attach` state re-snaps him to the pole on the next update — the first run
-     of this pair staged a 16 m slam and photographed a `poleSwing` at the same spot as pose A,
-     which the press-check caught and which would have been two pictures of one pose under two
-     labels. `teleport` clears the attachment (it ends in `sm.set('fall'); sm.set('idle')`). */
-  await page.evaluate(() => {
-    const m = window.__ENGINE.get('movement');
-    /* LEAVE THE STATE FIRST. `teleport()` and a bare `position.set` both failed here: an `attach`
-       state re-snaps the position it owns on the very next update, so Sly stayed welded to the
-       drainpipe at y 9.34 while the harness believed it had moved him to y 16. `sm.set('fall')`
-       runs `PoleClimb.exit`, which is what actually releases him. */
-    m.sm.set('fall');
-    m.attached = null;
-    m.position.set(0, 16, 40); m.velocity.set(0, 0, 0);
-    m.grounded = false; m._needSpawnSnap = false;
-  });
-  await sim(14);
-  {
-    const s = await probe();
-    if (s.gr || s.p[1] < 8) console.log(`      staging failed: st ${s.st} y ${s.p[1]} — not airborne`);
-  }
-  await page.mouse.down({ button: 'left' }); await sim(2); await page.mouse.up({ button: 'left' });
-  {
-    const s = await probe();
-    if (s.st !== 'dive') console.log(`      ATTACK DID NOT REGISTER (st ${s.st}) — the slam pair is not a slam`);
-  }
-  let hit = -1;
-  for (let i = 0; i < 90; i++) {
-    await sim(1);
-    const s = await probe();
-    if (s.gr && s.st !== 'dive') { hit = i; break; }
-  }
-  if (hit >= 0) await pair('s6-slam');
-  else console.log('      !! the slam never impacted — pair skipped rather than shot at the wrong pose');
-  await page.keyboard.up('KeyW');
   }
 } finally {
   await writeFile(`${OUT}/telemetry.json`, JSON.stringify({ sha, dirty, W, H, Q, errs, log }, null, 2));
