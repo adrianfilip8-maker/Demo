@@ -46680,3 +46680,52 @@ volume"*) is the seal that catches this if it ever stops being true.
 
 Sited 0.4 m off the shaft toward the walked line rather than wrapped around it, so a climber
 standing at the foot does not stand inside it, with the `tail` running out toward the route.
+
+## §588 — The containment clamp under a HELD stick: report only, measured because the pad makes the held case normal
+
+Report only. **Nothing was changed.** Written before a pad session because every route in the
+containment battery — all 73 of them, across §580–§583 — drives with `look` at zero, i.e. a mouse
+player who never touches the mouse. A pad player holds the right stick. That is a different input
+distribution against a stage whose documented behaviour is to absorb look input, and it had never
+been measured.
+
+**Method.** The courtyard run-with-jumps route, 300 frames, driven with a constant `input.look`
+instead of none, under both hold regimes. `mean |clamp|` is the average rotation the containment
+stage applied — i.e. how much of the player's commanded aim it took back.
+
+```
+                          engaged        mean |clamp|      worst view step   subject out
+  no stick     centre      52/300  17 %      3.82°            15.17°/f            0
+               extent     123/300  41 %      7.99°             8.38°/f            0
+  stick UP     centre     189/300  63 %     41.41°            43.32°/f            0
+               extent     257/300  86 %     57.39°            26.61°/f            0
+  stick UP ×2.5 centre    201/300  67 %     41.95°            43.32°/f            0
+               extent     283/300  94 %     62.55°            26.61°/f            0
+```
+
+**Containment holds in every arm — 0 frames out of frame under every stick input tried.** The
+ruling is not at risk.
+
+**The trade is real and it points both ways.** §581's extent hold makes the camera markedly
+smoother (worst one-frame step 43.32° → 26.61° with the stick held, 15.17° → 8.38° without) and
+makes it argue with a held stick markedly more (41.41° → 57.39° of commanded aim absorbed, on 63 %
+of frames → 86 %). Pushed hard it absorbs **62.55° on 94 % of frames**.
+
+**This is the ruling working, not a defect.** §475's own docblock states the rule-1 caveat — while
+the clamp is engaged, look input that would push Sly further out of frame is absorbed — and the
+user's ruling is "Sly should always remain in frame". If the player pushes the stick to look away
+from him, something has to give, and the ruling says which. What is new here is only the
+*magnitude* under a held stick, and that the pad makes holding the normal case rather than the
+rare one.
+
+**Why nothing was changed.** How much "always in frame" should override the player's own stick is
+a user judgement, not a lane one, and it is exactly the sort of call that should be made after
+someone has felt it rather than before. The lever if one is wanted is `clampMargin` (0.88): a wider
+margin engages later and absorbs less, at the cost of letting Sly nearer the edge. It is one
+constant, and both regimes are already runnable.
+
+**Two things this does NOT discriminate.** Whether 62° of absorption reads as "the camera is
+helping" or "the stick is broken" — that is the pad session's question and the reason this is
+report-only. And it samples one route and one stick direction family; a stick held DOWN engages
+*less* than no stick at all (33 % against 41 %), because looking down at Sly from above frames him
+without help, so this is not a uniform tax on all aiming.
