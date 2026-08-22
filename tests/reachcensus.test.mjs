@@ -13,7 +13,8 @@ import { TUNE } from '../src/player/Controller.js';
  * standable neighbour is decorative, not interactable. The set under test is not the three that
  * were added — it is everything COLLISION actually offers after the §514.3 thin-pole gate:
  *
- *     pole   3    (obelisk rope r 0.15, SE drainpipe r 0.18, east mast r 0.40). The NORTH mast
+ *     pole   4    (obelisk rope r 0.15, SE drainpipe r 0.18, east mast r 0.40, and §571's nave
+ *                 rope r 0.14, which fills §570's worst route gap). The NORTH mast
  *                 was a fourth until §568: `poleProxy` gave it a `pole` affordance 0.40 m tall,
  *                 a climb that arrives where it started. It is still solid, it is no longer an
  *                 offer, and dropping it is why this count is 3 and not 4.
@@ -66,6 +67,7 @@ const SPOTS = [
      the from-above catch window and the walker tiptoes along the shelf instead (measured). */
   ['rail colossi-rope (§495.B)', [-7.90, 4.72, 27.00], [9.00, 4.95, 27.00], 'rail', 'sneak'],
   ['pole SE drainpipe (§495.C)', [21.95, 0.00, -2.00], [21.35, 4.80, -2.00], 'pole', 'walk'],
+  ['pole nave rope (§571)', [0.00, 0.00, -33.20], [2.40, 8.00, -33.20], 'pole', 'walkE'],
   ['pole east mast', [22.40, 9.00, 27.50], [20.60, 12.45, 27.50], 'pole', 'walk'],
   ['hook main-0', [20.42, 15.90, 27.42], [20.00, 14.90, 27.00], 'hook', 'walk'],
   ['hook main-3', [4.20, 9.00, 6.90], [4.20, 14.80, 4.50], 'hook', 'walkE'],
@@ -155,7 +157,7 @@ test('reachcensus A: every offered affordance is entered from a settled standabl
     offered.set(t, (offered.get(t) || 0) + 1);
   }
   assert.deepEqual(Object.fromEntries([...offered].sort()),
-    { hook: 11, pole: 3, rail: 7, spire: 5, vent: 4 },
+    { hook: 11, pole: 4, rail: 7, spire: 5, vent: 4 },
     'the offered-affordance census moved. Either the level gained/lost a thief spot or §514.3\'s '
     + 'thin-pole gate changed which poles are climbable — re-run the stance search before editing '
     + 'the table in this file');

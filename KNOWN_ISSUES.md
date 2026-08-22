@@ -44639,3 +44639,102 @@ asked at the same time. B is closed.
 and that has needed hands every previous time it has come up. The rate measurement is one clip
 (`cane_combo_1`) in the shipped regime, and the reach measure reads one hand, as everything in this
 family does.
+
+---
+
+## §571 — The nave rope: the hall floor's only line, and the placement is a band with the moveset's numbers at both edges
+
+`src/world/EgyptLevel.js` · `tests/naverope.test.mjs` (new) · `tests/basketvary.test.mjs` (282 → 283)
+
+§570 measured the route and left one gap worth building for: **35.5 m** of hypostyle hall floor
+with branch factor 0. The cause is the columns ruling working exactly as intended — all 12
+papyrus columns register as `pole` and all 12 are refused by §514.3 at r 1.62 — plus §569's
+finding that the two circuits §8.1 offered instead are not there.
+
+**The rope.** (2.40, 0.10…16.10, −33.20), r 0.14, `cloth`. Both ends authored: the floor is the
+route, the top is the nave ceiling (deck underside 16.15) so it is tied to something, and the
+EXIT is the hall cable, which passes **0.62 m** from the axis at y 13.00 — inside
+`railMount × 1.6` = 2.16.
+
+**The placement is a band, and both edges are the moveset's own numbers.** `PoleClimb.canEnter`
+auto-mounts at `poleMount` **1.90** on a held stick pointed at the shaft and E-mounts at
+`poleMount × 1.5` = **2.85**. The route walks x 0, so anything closer than 1.90 m is a trapdoor —
+§495.A's own scar, where `spawn2eye` walked the §489 retrace into the obelisk rope, climbed it,
+and spire-landed instead of continuing — and anything past 2.85 m never enters the player's
+options at all. The whole design space is that 0.95 m band; **x 2.40 is the middle of it.**
+
+That band also decided the destination. A rope inside one of `api.roofSlots`' four openings would
+have to be within their x ±1.3 half-extent, i.e. inside the auto-mount radius — and a climber's
+own orbit (`hold` 0.412 + capsule 0.34 = 0.752 m) clips the slab besides: **1.00–1.38 m of
+depenetration on the east quadrant at y 16**, measured when x 1.15 was tried. So the rope hangs
+under solid ceiling and the cable is the way off it.
+
+**It is also a safety fix.** §489 priced the hall's only downward entries as a 15.29 m doorway
+drop arriving at 27.5 m/s against `landHard` 15, and the clerestory slots as worse. Driven
+descent by the rope: **0.0 m/s**.
+
+**Driven, both directions** (`naverope`): floor → `poleClimb` → y 12.60 → jump off → `railSlide`
+on the cable; and cable height → crouch-slide → hall floor at (1.95, 0.00, −33.20). The handoff
+is a JUMP and not an E, because `RailSlide.canEnter` refuses while `sm.group === 'attach'` — you
+cannot step from a pole onto a rail, you leave the pole and catch the cable in the air.
+`spawn2eye`, the acceptance drive, still completes with the rope in.
+
+**Effect on the route**: worst gap **35.5 → 20.0 m**, gap total 68 % → 65 %. `routeplay` R1's bar
+is inverted with it — it was a floor recording an unfilled gap, it is now a **ceiling** protecting
+the fill.
+
+**The `basketvary` bump, by the file's own protocol.** 282 → **283**, histogram measured both ways
+rather than derived: **pole 18 → 19**, all else byte-identical, and `decals` 46 / `fx` 24 /
+`lights` 24 re-measured unchanged. (`pole` reads 18 and not 19 before this because §568 retagged
+the north mast at constant total.) The block is written in the same voice as the three
+precedents, above the assertion, and the assertion is the only line in that test that moved.
+
+**DOMAIN (§418.3)** — U *passes on* the driven climb reaching the cable; D *passes on* the driven
+descent at 0.0 m/s. X *fails on* the trapdoor case, run in-arm: a walk up the route line at x 0
+past the rope, which must NOT mount it. Its **control** is the same detector on a walk aimed AT
+the rope, which MUST mount — without it, "the route walk is safe" is indistinguishable from "this
+detector never fires". *Does not discriminate*: art, difficulty, or the cable's own tuning, which
+is MOVEMENT's and untouched. **A first draft of X asserted that a no-E approach must not mount
+and was simply wrong about poles** — the auto clause fires on a held stick pointed at the shaft,
+which is correct behaviour and is precisely why the placement is a band and not a minimum.
+
+## §572 — §8.1 audited against the built level: one false claim, three overstated, the rest true
+
+The hall section was not an isolated slip (§569), so every concrete reachability claim in the
+route header was checked by settling a capsule at it.
+
+**FALSE, corrected:**
+- Step 7, *"cheek balustrades `rail`"* on the tomb flights. There are none and there never were:
+  the level owns seven `rail` recs — colossi-rope, approach, pylon-drop, roof-w, roof-e,
+  hall-cable, pylon-summit — and **zero** lie within the stairwell (z −53…−60, y < −2).
+  `stairFlight`'s `cheek: 0.9` draws a solid parapet, which is art, not a rail.
+
+**NEARLY TRUE — said so rather than moving the number silently:**
+- Step 3, *"5.8 m above the lintel"*. The ring is there (0.00 m from the claimed point) and the
+  lintel settles at **8.89**, not 9.00, so the gain is **5.91 m**. Corrected in place.
+- Step 3's own §482 correction, *"the nearest cell that takes a capsule with full headroom"* at
+  (−9.5, 15.29, −16.0). It takes a capsule — settling at y 15.36 — with **0.08 m** of spare rise.
+  It fits; "full headroom" oversells 8 cm. Corrected in place.
+- Step 1, *"the terrace south stair at (0, 0, 19.6)"*. The surface at that XZ is the flight-1 ramp
+  at y **1.92**, so the y 0 in the coordinate is the approach, not a stance. Left as written —
+  it reads as a destination to walk toward and is not misleading in context.
+
+**TRUE, verified by settled capsule:** kiosk lintel (8.89), hall front cornice (15.36), west and
+east aisle roofs (13.50), the y 9.0 ledge ring at both ends (9.00), east peristyle architrave
+(9.00, against a claimed 9.2), descent landing (0.00), vault floor (−12.08), nave deck between
+slots (17.00), and both spire tips the rooftop run names (0.60 m from their claimed points, which
+is the tip-versus-base offset). Step 6's inner pylon gate is open at x 0 from y 0 to 7 and closed
+at 8.2, matching the claimed 0…7.6. Step 8's vault doorway is open y −11.5…−9 and closed at −8,
+matching §490's x ±2.6, y −12…−8.2.
+
+**Two instrument corrections worth recording, because I made the same class of error twice in
+one sitting.** Settling a capsule 0.8 m above a claimed point lands it INSIDE any surface higher
+than the claim; settling it 4 m above lands it ON one. Neither is a probe, both were run, and
+both produced confident nonsense (a "NOT STANDABLE" nave deck that is standable 10 m away, a
+stage-1 deck reported 3.25 m off). The instrument that works picks the surface **nearest the
+claimed y** out of the column's floor stack and settles onto that. Separately: `clear()` returns
+how far a settled capsule can RISE — spare headroom, not total clearance — and reading it as
+total is what briefly made the cornice look unusable.
+
+**No construction was done to make the doc true**, per the ruling. Where §8.1 promises something
+good the level lacks, that is §570's business and is a recommendation there.

@@ -420,8 +420,40 @@ test('P-A1: a rope coil is set dress and carries no gameplay volume', () => {
      from both watchdogs by design (grounded, wiggling). One fill per side, ledge-to-above-crouch
      (x ±6.75..8.45, y 4.5..5.8, z 25.9..26.6), so the slot admits nothing; the exposed north
      face is a plain wall on the open shelf (§436-driven: every escape leaves, including a
-     ledgeClimb UP it onto the colossus). Histogram: ground 60 → 62, all else byte-identical. */
-  assert.equal(REG.length, 282, 'collider registrations unchanged by this seal');
+     ledgeClimb UP it onto the colossus). Histogram: ground 60 → 62, all else byte-identical.
+
+     ── 282 → 283: §571 hangs the nave rope, the hall floor's only line (pole +1) ─────────────
+     §570 measured the ROUTE rather than the map: over 170 samples of walked line, the branch
+     factor — distinct affordances inside the moveset's own `canEnter` gates — is **0 on every
+     one of them**, and 58.0 m of the 85.0 m walked is a run with nothing to do. The worst
+     single run is **35.5 m**, the hypostyle hall floor (z −20 → −54.6), and the cause is the
+     user's columns ruling working exactly as intended: all 12 papyrus columns register as
+     `pole` and all 12 are refused by §514.3's thin gate at r 1.62. §569 then found that the two
+     circuits §8.1 offered instead are not there — no surface within 1.6 m of the claimed y 10
+     cornice, and the y 13.5 architrave clears 0.80 m against a 1.80 m capsule.
+
+     A rope is the ruling's own escape hatch and the level already has the shape twice (§495.A
+     r 0.15, §495.C r 0.18). Both ends of this one are authored and neither is invented: the
+     floor is the route, and the exit is the HALL CABLE, which passes 0.62 m from the axis at
+     y 13.00 — inside `railMount × 1.6` = 2.16. Its top at 16.10 is the nave ceiling, so it is
+     tied to something. It is also a SAFETY fix: §489 priced the hall's only downward entries at
+     15.29 m arriving at 27.5 m/s against `landHard` 15, and the rope makes one of them soft
+     (measured descent arrival: 0.0 m/s).
+
+     The placement is a BAND, not a point, and both edges are the moveset's numbers.
+     `PoleClimb.canEnter` auto-mounts at `poleMount` 1.90 on a held stick pointed at the shaft
+     and E-mounts at 2.85. The route walks x 0, so anything closer than 1.90 is a trapdoor —
+     §495.A's own scar, where `spawn2eye` mounted the obelisk rope by accident and climbed it —
+     and anything past 2.85 never appears in the player's options at all. x **2.40** is the
+     middle of that 0.95 m band. Driven both directions in `tests/naverope.test.mjs`, with the
+     route walk past it asserted NOT to mount and a control walk aimed at it asserted to mount;
+     re-driven end to end by `spawn2eye`, which is the arm an accidental mount would stop.
+
+     Histogram measured both ways rather than derived: **pole 18 → 19**, all else byte-identical.
+     (`pole` reads 18 and not 19 before this because §568 retagged the north hook mast — a
+     `poleProxy` 0.40 m tall, publishing a climb that arrives where it started — to `misc` at
+     constant total.) */
+  assert.equal(REG.length, 283, 'collider registrations unchanged by this seal');
   assert.equal(P.stats.decals, 46, 'contact decals unchanged by this seal');
   assert.equal(P._fx.length, 24, 'fx emitters unchanged');
   assert.equal(P._lights.length, 24, 'lights unchanged');

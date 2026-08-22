@@ -162,16 +162,17 @@ test('routeplay R1: the walked route\'s gap distribution, as a seal', async () =
   const gaps = gapsOf(samples);
   const worst = gaps[0];
   const totalGap = gaps.reduce((s, g) => s + g.n, 0);
-  assert.ok(worst && worst.n * 0.5 >= 25,
-    `the worst gap is now ${(worst ? worst.n * 0.5 : 0).toFixed(1)} m, measured at 35.5 m in the hall. If a `
-    + 'line has been added there, this seal has done its job — replace the bar with the new number and '
-    + 'record what filled it');
-  assert.ok(totalGap / samples.length < 0.85,
-    `${(100 * totalGap / samples.length).toFixed(0)}% of the walked route is now gap, measured at 68%. `
-    + 'Something has removed affordances from beside the route');
-  assert.ok(worst.key.startsWith('hall-floor'),
-    `the worst gap has moved to "${worst.key}" — it was the hall floor, and the §570 write-up is about `
-    + 'the hall specifically');
+  /* The bar is now a CEILING, not a floor. It was `>= 25` when it recorded a 35.5 m gap nobody
+     had filled; §571's nave rope split that run to 20.0 m, so the useful thing to protect is the
+     fill. If the rope is removed or moved out of the walked line's reach this goes straight back
+     to ~35.5 and reddens here. */
+  assert.ok(worst && worst.n * 0.5 <= 25,
+    `the worst gap is now ${(worst ? worst.n * 0.5 : 0).toFixed(1)} m, measured at 20.0 m after §571 hung `
+    + 'the nave rope (35.5 m before it). A gap back near 35 m means the rope has moved outside '
+    + `poleMount*1.5 = ${(TUNE.poleMount * 1.5).toFixed(2)} m of the walked line, or gone`);
+  assert.ok(totalGap / samples.length < 0.75,
+    `${(100 * totalGap / samples.length).toFixed(0)}% of the walked route is gap, measured at 68% before `
+    + '§571 and lower after. Something has removed affordances from beside the route');
 
   /* the failing input: widen the gates and the gaps must collapse */
   const WIDE = GATES.map(([t, e]) => [t, e, 40]);
@@ -221,9 +222,9 @@ test('routeplay R2: affordance offset from the route, and the hall floor has not
     else if (e.box) pts.push(e.box.getCenter(new THREE.Vector3()));
     affs.push({ tag: e.rec.tag, pts });
   }
-  assert.equal(affs.length, 30,
-    `${affs.length} offered affordances, expected 30 (§568 retagged the 0.4 m north mast out of the `
-    + 'pole count). If this moved, re-run the offset census before trusting the bands below');
+  assert.equal(affs.length, 31,
+    `${affs.length} offered affordances, expected 31 (§568 retagged the 0.4 m north mast out of the pole `
+    + 'count, §571 added the nave rope). If this moved, re-run the offset census before the bands below');
   const near = affs.filter((a) => Math.min(...a.pts.map((p) => distTo(p, R))) <= 9).length;
   assert.ok(near >= 10,
     `only ${near} of ${affs.length} affordances are within 9 m of the route. The level's content has `
@@ -236,17 +237,26 @@ test('routeplay R2: affordance offset from the route, and the hall floor has not
     + `${near} for the whole route. The metric is supposed to respond to the ROUTE; if a single point `
     + 'scores nearly as well, it is measuring level density and not route adjacency');
 
-  /* and the fact §570 turns on: nothing above the hall floor is reachable from it */
-  for (const z of [-25, -32, -40, -47]) {
-    const opts = new Set();
+  /* The hall floor, station by station: §571's rope must be inside the walked line's own gate
+     where it was hung, and the rest of the floor is still bare — which is what keeps the 20.0 m
+     residual gap in R1 honest rather than an artefact. */
+  const optsAt = (z) => {
+    const o = new Set();
     for (const [tag, eye, range] of GATES) {
-      for (const h of collision.query(V(0, 0.02 + eye, z), range, [tag]) || []) if (h.rec) opts.add(h.rec);
+      for (const h of collision.query(V(0, 0.02 + eye, z), range, [tag]) || []) if (h.rec) o.add(h.rec);
     }
-    assert.equal(opts.size, 0,
-      `the hall floor at (0, 0, ${z}) now offers ${opts.size} affordance(s). If a line was added, update `
-      + '§570 and R1\'s bar together — this assertion is the one that says the hall floor is bare');
+    return o.size;
+  };
+  assert.ok(optsAt(-33) >= 1,
+    'the hall floor at (0, 0, -33) offers nothing. §571 hung the nave rope 2.40 m off the walked line '
+    + `specifically so it lands inside poleMount*1.5 = ${(TUNE.poleMount * 1.5).toFixed(2)} m from it; if `
+    + 'this is 0 the rope is out of reach of the route it was hung for');
+  for (const z of [-25, -47]) {
+    assert.equal(optsAt(z), 0,
+      `the hall floor at (0, 0, ${z}) now offers ${optsAt(z)} affordance(s) — if a second line went in, `
+      + "update §570's numbers and R1's ceiling with it");
   }
-  console.log(`[routeplay R2] ${near}/${affs.length} affordances within 9 m of the route (spawn-only control: ${nearSpawn}) · hall floor offers 0 at four stations`);
+  console.log(`[routeplay R2] ${near}/${affs.length} affordances within 9 m of the route (spawn-only control: ${nearSpawn}) · hall floor offers ${optsAt(-33)} at the rope station and 0 at z -25/-47`);
 });
 
 /* ====================================================================================== */

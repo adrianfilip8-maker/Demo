@@ -28,15 +28,20 @@ import * as K from './Kit.js';
  *     tuner reads before touching `jumpV0`, `doubleJumpV0` or `applyJumpCut`. Corrected here
  *     rather than in the ledger because a route document that asserts headroom nobody has will
  *     license the next author to tighten a beat already at 8 cm (§481).
- *  3. CANE HOOK the ring at (4.2, 14.8, 4.5) — 5.8 m above the lintel, inside jump+hook
- *     reach — and SWING the chain north-west: rings at y 14.8 -> 14.0 across z 4.5 -> -13.
+ *  3. CANE HOOK the ring at (4.2, 14.8, 4.5) — the ring is there, and it is **5.91 m** above
+ *     the lintel, not the 5.8 this line used to say (the lintel settles at 8.89, not 9.00);
+ *     still inside jump+hook reach — and SWING the chain north-west: rings at y 14.8 -> 14.0
+ *     across z 4.5 -> -13.
  *     Release onto the hall front cornice ledge at (-9.5, 15.29, -16.0). TWO corrections here:
  *     it used to read (-9.5, 13.6, -15.2), which §369.7 flagged as stale — a downward probe
  *     there falls the full 15 m to paving. And the cornice is only STANDABLE where the aisle
  *     roof does not overhang it: the roof slab runs z -19.13..-16.73 with its underside at
  *     y 16.15, leaving 0.79 m over a cornice topping at 15.36 — less than `CAPSULE_H` 1.80, so
  *     the band z -18.2..-16.73 is a soffit, not a ledge. The nearest cell that takes a capsule
- *     with full headroom is (-9.5, 15.29, -16.0), 3.00 m from the last ring (§482).
+ *     is (-9.5, 15.29, -16.0), 3.00 m from the last ring (§482). "Full headroom" overstated it
+ *     and is corrected here rather than quietly: measured by settling a capsule, it stands at
+ *     y 15.36 and can rise a further **0.08 m** — it fits, with 8 cm to spare, which is a
+ *     landing cell and not a comfortable one (§572).
  *  4. WALK the hall front cornice west to the west aisle roof (y 13.5). NOTE, measured
  *     (§489): the hall interior is ENCLOSED — its only entries are the two grade-level
  *     doorways and seven clerestory slots on the nave centre line (x 0, z −47…−25), which
@@ -68,8 +73,12 @@ import * as K from './Kit.js';
  *  6. NORTH END: walk out of the hall through the inner pylon gate (x ±3, y 0..7.6) at
  *     z -52 onto the descent landing (0, 0, -57).
  *  7. TOMB DESCENT: flight A drops west 0 -> -5.6, landing, flight B drops east -5.6 -> -12,
- *     arriving on the vault floor at (0.4, -12, -57.6). Both flights `ground`, cheek
- *     balustrades `rail`.
+ *     arriving on the vault floor at (0.4, -12, -57.6) — verified, a capsule settles there.
+ *     Both flights are `ground`. **There are no `rail` cheek balustrades and there never
+ *     were (§572)**: the level owns seven `rail` recs — colossi-rope, approach, pylon-drop,
+ *     roof-w, roof-e, hall-cable, pylon-summit — and none of them is within the stairwell
+ *     (z -53…-60, y < -2). `stairFlight`'s `cheek: 0.9` draws a solid parapet, which is art.
+ *     Walking the flights is covered by §561; the lane that works is 1.2 m north of centre.
  *  8. Through the vault gate doorway at (0, -12, -59.2) into the pillared crypt and north
  *     to the SARCOPHAGUS at (0, -12, -72).
  *
@@ -2547,6 +2556,61 @@ function hypostyleHall(A) {
    * "ridden like a rope" means and the ceiling is theirs. Caught by their test, not by me. */
   rail(A, 'hall-cable', catenary([-8.0, 13.33, -16.4], [11.3, 13.53, -45.5], 0.45, 32),
     'rope_fibre', 0.085, 'hall', { mountSpeed: 0, rope: true });
+
+  /**
+   * ── §571: the nave rope — the hall floor's only line, hung through a roof slot ────────────
+   * §570 measured the route: 68 % of the walked line has no affordance within its own entry
+   * gate, and the worst single run is **35.5 m** — this floor, z −20 → −54.6. The cause is the
+   * user's columns ruling working correctly: all 12 papyrus columns register as `pole` and all
+   * 12 are refused by §514.3's thin gate at r 1.62, so nothing in here is climbable. §569's
+   * audit then found that the two circuits §8.1 offered instead do not exist (no surface within
+   * 1.6 m of y 10) or cannot take a standing capsule (the y 13.5 architrave clears 0.80 m).
+   *
+   * A rope is the ruling's own escape hatch and this level already has the shape twice (§495.A
+   * r 0.15, §495.C r 0.18). Both ends are authored and neither is invented: the floor is the
+   * route, and the top is the NAVE DECK at y 17.00 — measured standable, 14.3 m of walk at 80 %
+   * grounded with 6 m of headroom, carrying the two roof rails at y 17.42. `api.roofSlots`
+   * already publishes four 2.6 × 2.3 m openings on the nave centre line, so the shaft is open
+   * and needs no cutting: a capsule rises the full height at x 0 with nothing in the way.
+   *
+   * It is also a SAFETY fix. §489 priced the hall's only downward entries as a 15.29 m doorway
+   * drop arriving at 27.5 m/s — nearly twice `landHard` 15 — and the clerestory slots as worse.
+   * A rope in the slot turns the worst of those into a two-way line.
+   *
+   * ── The slot is chosen, not defaulted, and the reason is the obelisk rope's own scar ──────
+   * §495.A records that its first hang at bottom 6.4 was mounted BY ACCIDENT: `spawn2eye`'s
+   * §489 retrace walked within `poleMount` 1.9 of the axis with the mount cone open, climbed,
+   * and spire-landed instead of continuing. The identical hazard applies here and worse, because
+   * the route walks x 0 the length of this room. `PoleClimb.canEnter` mounts on
+   * `distance <= 1.9 && wishMag >= 0.4 && dot(wishDir, toPole) > 0.4`, so a rope ON the walked
+   * line is not a branch, it is a trapdoor.
+   *
+   * ── The placement is a BAND, and both of its edges are the moveset's own numbers ─────────
+   * `PoleClimb.canEnter` has two clauses: an E-press that reaches `poleMount * 1.5` = **2.85 m**
+   * and an automatic one that fires at `poleMount` = **1.90 m** on any held stick pointed at the
+   * shaft. So a rope closer than 1.90 m to the walked line is a trapdoor, and one further than
+   * 2.85 m is not a branch at all — it never appears in the player's options. The whole design
+   * space is the 0.95 m band between them, and this rope sits in the middle of it at
+   * **x 2.40**, with the route walking x 0.
+   *
+   * That band also decides the DESTINATION, because it puts the rope outside `api.roofSlots`'
+   * x ±1.3 openings — a rope in a slot would have to be within 1.3 m of the line, i.e. inside
+   * the auto-mount radius, and a climber's own orbit (`hold` 0.412 + capsule 0.34 = 0.752 m)
+   * would clip the slab besides: measured 1.00–1.38 m of depenetration on the east quadrant at
+   * y 16 when it was tried at x 1.15. So the rope tops out on the nave ceiling and the exit it
+   * exists for is the HALL CABLE, which passes 0.81 m from the axis at y 13.03 here — inside
+   * `railMount * 1.6` = 2.16, so a climber can take it with E and traverse instead of walking.
+   *
+   * Driven both directions in `tests/naverope.test.mjs`, and re-driven end to end by
+   * `spawn2eye`, which is the arm that would catch an accidental mount on the walk north.
+   *
+   * RNG-NEUTRAL: no `A.rng` draw here, and nothing downstream re-rolls.
+   */
+  const NR = { x: 2.40, z: -33.20, y0: 0.10, y1: 16.10, r: 0.14 };
+  A.add('hall', 'rope_fibre', K.place(K.boxProjectUVs(
+    new THREE.CylinderGeometry(0.055, 0.07, NR.y1 - NR.y0, 6, 1)),
+  { x: NR.x, y: (NR.y0 + NR.y1) / 2, z: NR.z, rz: D(0.8) }));
+  poleProxy(A, NR.x, NR.z, NR.y0, NR.y1, NR.r, { material: 'cloth' });
 
   /* Pinnacles on the aisle roof: the §8.1 spire tips at (±16, 21, −50). */
   for (const sx of [-1, 1]) {
