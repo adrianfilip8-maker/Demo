@@ -47111,3 +47111,86 @@ channel its own subject can write into — and this lane has now hit it twice: �
 read `fr[i].clamp` where the field is `pitch`, so every comparison went false and the arm reported a
 confident "0 wraps". Both are instruments that cannot fail loudly. A gate or a probe wants an
 assertion that it *can* see the thing at all, run against a case where the thing is known present.
+## §531 — "Too tucked in": the ruling that overturned §479.6, and the measurement that aimed it
+
+The user, from the live build: *"The arms and legs are too tucked in. They should be spread out
+more."* §479.6 had measured the elbow fold as the repo's own authored style and shipped it
+faithfully with a lever at zero, on the stated reasoning that the repo's look is the user's
+chosen look. They have now seen it move and ruled against it, which is the outcome that
+reasoning was built to allow: the lever existed precisely so this ruling costs one constant.
+
+### §531.1 What "tucked" is — measured before anything was chosen
+
+`tools/armcross.mjs --limbs` extends the §470/§479.5 instrument to the legs and reports both
+quantities a limb can be tucked by, in the pose's own body frame, three ways (source GLB /
+delivered on the shipped rig / the procedural set the project shipped before the swap). Means
+across run, walk, ledge_hang and idle, every sampled phase:
+
+```
+    elbow fold     delivered 113.4°   proc 128.0°    Δ −14.7   ← folded TIGHTER
+    knee  fold     delivered 122.2°   proc 144.1°    Δ −21.8   ← folded much tighter
+    elbow spread   delivered  0.96    proc  0.56     Δ  +0.40  ← carried WIDER already
+    knee  spread   delivered  0.82    proc  0.75     Δ  +0.07
+```
+
+The ruling's word is "spread", and the obvious fix was abduction — carry the limbs further from
+the body. **The measurement refuses it**: laterally the swapped set is already wider than
+anything this project has shipped. What is wrong is the FOLD — limbs held wide but bent up
+tight, which brings hands and feet in against the torso and reads as tucked. Opening the fold is
+what pushes the extremities out, and it is one mechanism for both limb pairs.
+
+### §531.2 The lever, its scope, and the two things it must not touch
+
+`LIMB_OPEN = { elbow: 0.45, knee: 0.35 }` in `Animation.js` — the distal joint's rotation
+slerped toward bind, so a fold shrinks along its own axis and no limb acquires a direction the
+animator never gave it. Chosen off the `--sweep` ladder rather than snapped to the old set (the
+ruling asks for more spread, not for the old rig): delivered elbow 143°, past the 132° the
+project shipped pre-swap; knee 133°, approaching proc's 139°.
+
+**Scope is the godot REGIME, not the swapped rows** — and that is the half §479.6 would have
+missed. The most folded pose in the entire set is a procedural one no alias row ever touched:
+the standing idle, elbow 104°, lateral carry 0.51, the pose a player looks at while standing
+still. So the lever runs over every clip the regime shows. Two guarantees, both structural
+rather than lucky, both asserted in `anim.test`:
+
+- **`?anim=proc` is bit-exact.** The proc regime returns before the lever runs; all 52 clips
+  come back as the same objects, by identity.
+- **§470 cannot regress.** That repair moved upperArm phase and head pitch; this lever only ever
+  writes lowerArm/lowerLeg. The sneak family's own channels are asserted bit-exact under the
+  lever, and the scope guard in the fall-through arm is re-derived onto provenance + those
+  channels instead of object identity.
+
+One exemption, found by an arm rather than chosen: **the combat chain**. §479.8 aligned
+`cane_hit` to the swing's measured contact moment, and opening the elbow slides that contact
+0.100 s → 0.121 s — 21 ms, past the 20 ms bar that arm holds. A strike's timing is a gameplay
+contract and the combo work is parked besides, so `cane_combo_1/2/3` keep the repo's fold
+through `GODOT_LIMB_OPEN`.
+
+### §531.3 The correction I built, measured, and then refused to ship
+
+`stride` is derived offline from planted-foot travel and the tree rate-matches against it, so
+moving the feet risks skate — the §479.2 failure mode through a new door. Three estimators:
+
+```
+    planted-contact regression (in-module)   walk ×1.19   run ×0.92   rail ×5.11   ← rejected
+    foot fore-aft sweep                      walk ×1.12   run ×0.99   rail ×1.08
+    effective stance leg length              walk ×1.07   run ×1.04   rail ×0.99
+```
+
+The first is unstable by construction (a sprint stance is 2–3 samples; the slope fit is noise)
+and its first version was wrong in a way worth recording: it seeded the leg chain at identity
+and ignored the hips rotation the legs hang from, reading run's stride 1.9× off. The two stable
+estimators agree the effect is small and **disagree with each other by ~5%, which is the size of
+the correction itself**. So no automatic correction ships: a wrong one is far worse than none —
+the rejected estimator would have stretched run's stride by 92%. The residual is at most a
+7–12% walk stride, below what §479.2's blend arithmetic already moves, and it is recorded as a
+limit with the live-drive skate column named as the instrument that would show it.
+
+### §531.4 Also on the record: a fabricated number, caught by its own sweep
+
+The lever's first header asserted that straightening a stance leg "lifts the whole body off its
+own planted foot — at knee 0.5 the gait's lowest foot rises 3.4 cm and the walk starts to
+stilt". That was written from the mechanism before the sweep was run, and the sweep says the
+opposite: opening the knee DROPS the foot (lowest foot 0.115 m at k=0 → 0.078 m shipped, against
+0.056 m for the procedural set). The claim was corrected in place with the measurement beside
+it. §435.4 — a probe from the model tests the model, and this one failed.

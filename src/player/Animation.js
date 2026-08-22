@@ -249,29 +249,109 @@ const GODOT_ALIAS = {
  * fraction: 0 = the source's fold, 1 = forearms at rest (fully open). 0.3–0.4 lands the Walk
  * mid-swing elbow within ~10° of the old procedural look (predicted from the angle scaling,
  * verified by the anim.test arm through the real FK; on-camera pair in shots/elb1-*).
- * A capture/hardware A-B can override per boot via `globalThis.__ELBOW_OPEN = {walk: 0.35}` —
- * the same pre-module seam as `__ANIM_AB`. The hardware-review sheet carries the tuning row.
+ * SUPERSEDED by §531 below: the user has now seen it in motion and ruled against the fold,
+ * so the lever ships OFF zero and covers the knees as well. This paragraph is kept because the
+ * measurement in it still stands and still explains where the fold came from.
  */
-export const GODOT_ELBOW_OPEN = {};
+/**
+ * §531 — THE RULING SUPERSEDES §479.6, AND IT NAMES THE LEGS TOO. The user, from a live
+ * playtest of the shipped build: *"The arms and legs are too tucked in. They should be spread
+ * out more."* §479.6 had measured the elbow fold as the repo's own authored style and shipped
+ * it faithfully with this lever at zero — the right call while nobody had seen it move, and
+ * overruled now that somebody has.
+ *
+ * WHAT "TUCKED" IS, measured before anything was chosen (`tools/armcross.mjs --limbs`,
+ * three-way per clip over run / walk / ledge_hang / idle, means across every sampled phase):
+ *
+ *     elbow fold     delivered 113.4°   proc 128.0°    Δ −14.7   ← folded TIGHTER
+ *     knee  fold     delivered 122.2°   proc 144.1°    Δ −21.8   ← folded much tighter
+ *     elbow spread   delivered  0.96    proc  0.56     Δ  +0.40  ← already carried WIDER
+ *     knee  spread   delivered  0.82    proc  0.75     Δ  +0.07
+ *
+ * So the ruling's word "spread" is about the FOLD, not the lateral carry: the repo's limbs are
+ * held wide of the torso but bent up tight, which brings hands and feet in against the body and
+ * reads as tucked. Adding abduction would have been the obvious fix and the wrong one — the
+ * lateral numbers say it is already wider than the set the project shipped for its whole life.
+ * Opening the fold is what pushes the extremities out, and it is one mechanism for both limb
+ * pairs: the distal joint's rotation scaled toward bind, elbow and knee alike.
+ *
+ * The values are chosen against that table rather than snapped to it (the ruling asks for more
+ * spread, not for the old rig): `elbow 0.45` / `knee 0.35` take the delivered elbow fold to
+ * 143° — past the 132° the project shipped before the swap — and the knee to 133°, while
+ * keeping every clip's own timing, swing and silhouette (`--sweep` in the instrument prints the
+ * whole ladder). The knee runs the smaller number for a measured reason, and NOT the one an
+ * earlier draft of this paragraph asserted: straightening a stance leg does not lift the body,
+ * it drops the foot — the gait's lowest foot sits 0.115 m at k=0 and 0.078 m here, against
+ * 0.056 m for the procedural set — so the knee is the joint that closes the gap to the floor
+ * and it is held back to keep that approach gentle. (The draft claimed a 3.4 cm rise and a
+ * stilt; it was written from the mechanism rather than from the sweep, which had not been run
+ * yet. §435.4: the probe tests the model, and this one failed.)
+ * Zero on both is bit-exact identity, so the repo-faithful pose stays one boot override away
+ * (`globalThis.__LIMB_OPEN = { elbow: 0, knee: 0 }`, the same pre-module seam as `__ANIM_AB`);
+ * `?anim=proc` is unaffected either way, since the lever only ever touches swapped clips.
+ *
+ * WHAT THIS DOES NOT CORRECT, measured and left alone deliberately. `stride` is derived offline
+ * from each source clip's planted-foot travel and the tree rate-matches against it, so moving
+ * the feet could skate them. Three estimators were built to size that: a planted-contact
+ * regression inside this module (walk ×1.19, run ×0.92, rail ×5.11 — rejected as unstable, a
+ * sprint stance is 2–3 samples and the slope fit is noise), foot fore-aft sweep (×1.12, ×0.99,
+ * ×1.08) and effective stance leg length (×1.07, ×1.04, ×0.99). The two stable ones agree that
+ * the effect is small and disagree with each other by ~5% — which is the same size as the
+ * correction — so NO automatic correction ships: a wrong one is far worse than none (the
+ * rejected estimator would have stretched run's stride by 92%). The residual is at most a ~7-12%
+ * walk stride, below what the blend arithmetic in §479.2 already moves, and the live-drive skate
+ * column is the instrument that would show it. Recorded as a limit, not silently absorbed.
+ */
+export const LIMB_OPEN = { elbow: 0.45, knee: 0.35 };
 
-function elbowOpenFor(game) {
+/**
+ * Per-clip overrides, `{ clip: { elbow, knee } }`. The ruling is set-wide, with ONE exemption
+ * and it was found by an arm rather than chosen: the combat chain. §479.8 aligned `cane_hit`
+ * to the swing's measured contact moment (max forward reach of the swinging hand, calibrated
+ * against our own procedural set), and opening the elbow moves that geometry — measured, the
+ * contact slides 0.100 s → 0.121 s, 21 ms late, past the 20 ms bar that arm holds. The strike's
+ * timing is a gameplay contract and the combo work is parked on the user's ears besides, so the
+ * three chain slots keep the repo's fold and the ruling takes the rest of the set. Recorded
+ * here rather than in a comment on the test, because the exemption is the shipped behaviour.
+ */
+export const GODOT_LIMB_OPEN = {
+  cane_combo_1: { elbow: 0, knee: 0 },
+  cane_combo_2: { elbow: 0, knee: 0 },
+  cane_combo_3: { elbow: 0, knee: 0 },
+};
+
+function limbOpenFor(game) {
   let over = null;
-  try { over = globalThis.__ELBOW_OPEN || null; } catch { /* plain hosts */ }
-  const k = { ...GODOT_ELBOW_OPEN, ...(over || {}) }[game] || 0;
-  return k > 0 ? Math.min(k, 1) : 0;
+  try { over = globalThis.__LIMB_OPEN || null; } catch { /* plain hosts have no globalThis knob */ }
+  const base = { ...LIMB_OPEN, ...(over || {}) };
+  const per = GODOT_LIMB_OPEN[game] || {};
+  const clamp = (v) => (v > 0 ? Math.min(v, 1) : 0);
+  return { elbow: clamp(per.elbow ?? base.elbow), knee: clamp(per.knee ?? base.knee) };
 }
 
-/** lowerArm tracks scaled toward bind by k — the one transform behind the lever above. */
-function openElbows(clip, k) {
-  if (!k) return clip;
+const OPEN_JOINTS = {
+  lowerArmL: 'elbow', lowerArmR: 'elbow',
+  lowerLegL: 'knee', lowerLegR: 'knee',
+};
+
+/**
+ * Distal-joint tracks scaled toward bind — the one transform behind the lever above. Slerping
+ * toward identity shrinks the fold along the joint's OWN axis, so a bent elbow straightens
+ * without acquiring a direction the animator never gave it; k = 0 returns the clip untouched
+ * by object identity, which is what makes the faithful arm bit-exact rather than nearly so.
+ */
+function openLimbs(clip, k) {
+  if (!k.elbow && !k.knee) return clip;
   const I = new THREE.Quaternion();
   const q = new THREE.Quaternion();
   const bones = clip.bones.map((tr) => {
-    if (tr.name !== 'lowerArmL' && tr.name !== 'lowerArmR') return tr;
+    const joint = OPEN_JOINTS[tr.name];
+    const kk = joint ? k[joint] : 0;
+    if (!kk) return tr;
     const out = new Float32Array(tr.q.length);
     for (let i = 0; i < tr.q.length; i += 4) {
       q.set(tr.q[i], tr.q[i + 1], tr.q[i + 2], tr.q[i + 3]);
-      q.slerp(I, k);                       // shrink the fold toward bind by k, same axis
+      q.slerp(I, kk);                      // shrink the fold toward bind by k, same axis
       out[i] = q.x; out[i + 1] = q.y; out[i + 2] = q.z; out[i + 3] = q.w;
     }
     return { ...tr, q: out };
@@ -412,6 +492,14 @@ export function buildClipSet(raw) {
   const origin = Object.create(null);
   for (const n in CLIPS) { table[n] = CLIPS[n]; origin[n] = 'proc'; }
   if (regime === 'proc') return { table, origin, regime, unused: [] };
+  /* §531 — the ruling is about the SHIPPED look, and half of what the player stands still and
+     looks at is a procedural pose the swap never reached: the idle carries the most folded
+     elbow in the whole set (104°) and the tightest lateral carry (0.51). So the lever's scope
+     is the godot REGIME, not just the swapped rows. `proc` returned above untouched, so
+     `?anim=proc` stays bit-exact whatever the lever does. Safe against §470 by construction,
+     not by luck: that repair moved upperArm phase and head pitch, and this lever only ever
+     writes lowerArm/lowerLeg — the sneak gait's own channels are asserted untouched in
+     anim.test. */
   const fill = !regime.endsWith('-pure');
   const godot = regime.startsWith('godot');
   const SRC = godot ? GODOT_CLIPS : MIXAMO_CLIPS;
@@ -433,7 +521,7 @@ export function buildClipSet(raw) {
     else if (o && o.rate) timed = retimeRaw(timed, +(timed.dur / o.rate).toFixed(4));
     if (o && o.events) timed = { ...timed, events: o.events };
     let built = spliceClip(game, timed, CLIPS[game], fill);
-    if (godot) built = openElbows(built, elbowOpenFor(game));   // §479.6 — ships at 0, see above
+    if (godot) built = openLimbs(built, limbOpenFor(game));     // §531 — the spread ruling
     /* SOURCE IDENTITY, carried on the clip itself rather than looked up in a side table (§525).
        Two game clips with the same `source` are the SAME authored motion under two names — which
        is the normal case for an imported set with fewer clips than we have verbs (their tree has
@@ -458,6 +546,16 @@ export function buildClipSet(raw) {
     table[game] = built;
     origin[game] = `${tag}:${src}`;
     used.add(src);
+  }
+  /* §531: every clip the godot regime shows, including the ones no alias row swapped */
+  if (godot) {
+    for (const n in table) {
+      if (origin[n] !== 'proc') continue;                      // swapped rows already opened
+      /* `origin` names PROVENANCE — which source the motion came from — and the lever is a
+         transform, not a source, so it deliberately does not retag. The arms that derive the
+         swapped set from CLIP_ORIGIN stay correct. */
+      table[n] = openLimbs(table[n], limbOpenFor(n));
+    }
   }
   return { table, origin, regime, unused: Object.keys(SRC).filter((n) => !used.has(n)) };
 }

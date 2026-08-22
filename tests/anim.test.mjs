@@ -5,7 +5,7 @@ import { RIG3 } from '../src/player/SlyModel3.js';
 import { CLIPS, REQUIRED, sampleInto } from '../src/player/Clips.js';
 import { PoseBuffer } from '../src/player/Rig.js';
 import { MIXAMO_CLIPS } from '../src/player/MixamoClips.js';
-import { buildClipSet, ACTIVE, CLIP_REGIME, CLIP_ORIGIN } from '../src/player/Animation.js';
+import { buildClipSet, ACTIVE, CLIP_REGIME, CLIP_ORIGIN, LIMB_OPEN } from '../src/player/Animation.js';
 import { GODOT_CLIPS } from '../src/player/GodotClips.js';
 import { TUNE } from '../src/player/Controller.js';
 
@@ -49,18 +49,35 @@ const NO_SOURCE = ['tailA', 'tailB', 'tailC', 'tailD', 'capBrim', 'jaw', 'browL'
 
 test('regime: the shipped default is `godot` — the audited swaps ride on Clips.js itself', () => {
   /* Since the FrontFlip commit the DEFAULT regime is `godot`, by the user's instruction (use the
-     repo's movement animations). Its table is Clips.js BY IDENTITY except for exactly the names
-     the audit swapped, each of which must be a real substitution sourced from GodotClips.js.
-     DOMAIN — passes on: the shipped build (swapped set ⊇ double_jump, everything else the same
-     objects every past KNOWN_ISSUES measurement was taken against); fails on: the pre-FrontFlip
-     build, RUN here as buildClipSet('proc') — its double_jump has no godot origin (asserted
-     below, the same check inverted); cannot discriminate: whether a swap LOOKS right — that is
-     the on-camera audit's job, frames in shots/, not an object-identity test's. */
+     repo's movement animations). Its table draws every swapped name from GodotClips.js.
+     THE IDENTITY HALF OF THIS CLAIM IS RE-DERIVED FOR §531, not patched around: until the
+     spread ruling, an unswapped clip in this regime was `CLIPS[n]` by object identity. The
+     ruling ("the arms and legs are too tucked in") applies to the shipped look as a whole, and
+     the most folded pose in the set is a procedural one the swap never reached, so the limb
+     lever now runs over the whole godot REGIME. An unswapped clip is therefore the procedural
+     clip with its DISTAL tracks opened and everything else bit-exact — asserted below, which is
+     a stronger statement than the identity it replaces. `?anim=proc` keeps the identity claim
+     verbatim, and that is the arm the §474-era measurements re-run against.
+     DOMAIN — passes on: the shipped build (swapped set ⊇ double_jump; unswapped clips differ
+     from CLIPS only at lowerArm/lowerLeg); fails on: the pre-FrontFlip build, RUN here as
+     buildClipSet('proc') — its double_jump has no godot origin (asserted below, the same check
+     inverted), and a lever that leaked into a non-distal channel, RUN here as the per-bone
+     comparison; cannot discriminate: whether a swap LOOKS right — that is the on-camera
+     audit's job, frames in shots/, not an object-identity test's. */
   assert.equal(CLIP_REGIME, 'godot', 'a plain `node` import must resolve to the default regime');
   let swapped = 0, kept = 0;
   for (const n of Object.keys(CLIPS)) {
     if (CLIP_ORIGIN[n] === 'proc') {
-      assert.equal(ACTIVE[n], CLIPS[n], `unswapped "${n}" is not the procedural clip by identity`);
+      /* §531: same motion, distal joints opened — every other channel bit-exact */
+      const OPENED = new Set(['lowerArmL', 'lowerArmR', 'lowerLegL', 'lowerLegR']);
+      assert.equal(ACTIVE[n].dur, CLIPS[n].dur, `unswapped "${n}" changed duration`);
+      assert.equal(ACTIVE[n].bones.length, CLIPS[n].bones.length, `unswapped "${n}" gained or lost a track`);
+      for (const tr of ACTIVE[n].bones) {
+        const was = CLIPS[n].bones.find((x) => x.name === tr.name);
+        assert.ok(was, `unswapped "${n}" grew a track "${tr.name}"`);
+        if (OPENED.has(tr.name)) continue;
+        assert.equal(tr, was, `unswapped "${n}" changed a NON-distal track "${tr.name}" — the §531 lever leaked`);
+      }
       kept++;
     } else {
       const m = /^godot:(.+)$/.exec(CLIP_ORIGIN[n]);
@@ -95,9 +112,19 @@ test('regime: an unknown, empty or misspelled token falls through to `godot`', (
     assert.equal(s.regime, 'godot', `token ${JSON.stringify(t)} did not fall through to godot`);
     /* The default's substitutions must be IN FORCE under a junk token (double_jump swapped) while
        the scope-guarded gaits stay procedural — sneak_walk carries the §470 wrong-leg fix and the
-       repo has no sneak, so its identity doubles as the scope guard. */
+       repo has no sneak, so its SOURCE doubles as the scope guard. Since §531 the guard is
+       stated on provenance and on the §470 channels rather than on object identity: the limb
+       lever opens distal joints across the whole godot regime, so sneak_walk is no longer the
+       same object — but it must still be the same MOTION, from no source, with the wrong-leg
+       repair's own channels untouched. */
     assert.notEqual(s.table.double_jump, CLIPS.double_jump, `token ${JSON.stringify(t)} lost the default's swaps`);
-    assert.equal(s.table.sneak_walk, CLIPS.sneak_walk, `token ${JSON.stringify(t)} swapped the §470 sneak gait`);
+    assert.equal(s.origin.sneak_walk, 'proc', `token ${JSON.stringify(t)} swapped the §470 sneak gait`);
+    for (const bone of ['upperArmL', 'upperArmR', 'head']) {
+      assert.deepEqual(
+        Array.from(s.table.sneak_walk.bones.find((x) => x.name === bone).q),
+        Array.from(CLIPS.sneak_walk.bones.find((x) => x.name === bone).q),
+        `token ${JSON.stringify(t)} moved the §470 sneak repair's ${bone}`);
+    }
   }
   for (const t of ['proc', 'mixamo', 'mixamo-pure', 'godot-pure']) {
     assert.equal(buildClipSet(t).regime, t, `explicit token ${JSON.stringify(t)} was swallowed by the fall-through`);
@@ -456,20 +483,20 @@ test('seam chirality: proc partners of godot states hold uncrossed wrists, and t
     'if the §479.5 census backlog was just uncrossed, re-derive this line from the census');
 });
 
-test('elbow lever (§479.6): ships at 0 bit-exact, and a boot override opens the fold through the real FK', () => {
-  /* The user reads the swapped set's elbows as "too tucked in". Measured three ways
-     (tools/armcross.mjs): the fold is the SOURCE's authored creep (Walk elbows 69–129° vs our
-     proc 142–153°), and the retarget already opens it ~15–19° (rest-direction delta between the
-     rigs) — so the knob is taste, not repair, and it SHIPS AT ZERO: the delivered set stays
-     faithful to the repo until the user turns it. `GODOT_ELBOW_OPEN` (or the `__ELBOW_OPEN`
-     boot override, the same pre-module seam as `__ANIM_AB`) scales lowerArm rotations toward
-     bind by the given fraction.
-     DOMAIN (§418.3) — passes on: __ELBOW_OPEN {walk:0.5} opening the mid-swing elbow by ≥ 20°
-     (RUN below: 87.5° → ~134°); fails on: the same override leaving the tracks identical — the
-     identity claim inverted, RUN below as the k=0 arm (a broken lever that ignored k would fail
-     the ≥20° bar; a lever that fired at k=0 would fail the bit-exact bar). Cannot discriminate:
-     whether 0.35 is the right taste — that is the hardware sheet's row (item 19) and the
-     shots/elb1 pair, not a unit bar. */
+test('limb lever (§531): ships OPEN on both joints, and zero is still bit-exact identity', () => {
+  /* RE-DERIVED FROM THE INVERTED CLAIM, not patched: §479.6 shipped this lever at zero because
+     the fold measured as the repo's own authored style, and the user has now seen it in motion
+     and ruled — "The arms and legs are too tucked in. They should be spread out more." So the
+     shipped claim inverts (the set opens by default) and the arm inverts with it, keeping the
+     old claim reachable as the faithful A/B rather than deleting it. The lever now covers the
+     KNEE as well, which is the half §479.6 had no constant for, and the ruling named.
+     DOMAIN (§418.3) — passes on: the shipped build, whose delivered walk elbow AND knee both
+     open past the faithful pose by ≥ 10° (RUN below); fails on: __LIMB_OPEN {elbow:0,knee:0},
+     RUN below as the faithful arm — bit-exact with the untouched clip, which is the same
+     identity claim §479.6 asserted, now carried as the control instead of the default (a lever
+     that ignored k fails the ≥10° bar; one that fired at zero fails the bit-exact bar).
+     Cannot discriminate: whether 0.45/0.35 is the right amount of spread — that is the user's
+     call on the live build, with shots/spread1-* as the evidence pair. */
   const abs = Object.create(null);
   for (const [n, , p] of RIG3.SKELETON) abs[n] = p;
   const rig = (() => {
@@ -485,7 +512,8 @@ test('elbow lever (§479.6): ships at 0 bit-exact, and a boot override opens the
   })();
   const pb = new PoseBuffer(RIG3.BONE_ORDER);
   const wp = (n) => new THREE.Vector3().setFromMatrixPosition(rig.bones[n].matrixWorld);
-  const elbow = (clip, t) => {
+  /* interior angle at any joint, through the real compile+sample path */
+  const joint = (clip, t, a3, b3, c3) => {
     pb.clear();
     sampleInto(clip, t, pb, 1);
     for (const n of RIG3.BONE_ORDER) {
@@ -493,24 +521,71 @@ test('elbow lever (§479.6): ships at 0 bit-exact, and a boot override opens the
       if (pb.w[n] > 0) b.quaternion.copy(pb.q[n]); else b.quaternion.identity();
     }
     rig.rt.updateMatrixWorld(true);
-    const a = wp('upperArmL'), e = wp('lowerArmL'), h = wp('handL');
+    const a = wp(a3), e = wp(b3), h = wp(c3);
     const u = a.sub(e.clone()).normalize(), w = h.sub(e).normalize();
     return Math.acos(THREE.MathUtils.clamp(u.dot(w), -1, 1)) * 180 / Math.PI;
   };
+  const elbow = (clip, t) => joint(clip, t, 'upperArmL', 'lowerArmL', 'handL');
+  const knee = (clip, t) => joint(clip, t, 'upperLegL', 'lowerLegL', 'footL');
+
   const shipped = buildClipSet('godot').table;
-  globalThis.__ELBOW_OPEN = { walk: 0.5 };
-  const opened = buildClipSet('godot').table;
-  globalThis.__ELBOW_OPEN = { walk: 0 };
-  const zeroed = buildClipSet('godot').table;
-  delete globalThis.__ELBOW_OPEN;
+  globalThis.__LIMB_OPEN = { elbow: 0, knee: 0 };
+  const faithful = buildClipSet('godot').table;
+  delete globalThis.__LIMB_OPEN;
+
+  /* the ruling: BOTH joints must be carried more open than the repo-faithful pose */
   const t = 0.45 * shipped.walk.dur;
-  const base = elbow(shipped.walk, t), open = elbow(opened.walk, t);
-  assert.ok(open - base >= 20, `k=0.5 opens the walk mid-swing elbow by ${(open - base).toFixed(1)}° — expected ≥ 20`);
-  /* k=0 must be BIT-EXACT with the shipped build, not merely similar */
-  const trOf = (tbl) => tbl.walk.bones.find((x) => x.name === 'lowerArmL').q;
-  assert.deepEqual(Array.from(trOf(zeroed)), Array.from(trOf(shipped)), 'k=0 override must not touch a single float');
-  /* and the opened build must differ — the inverted identity, so this arm can say no both ways */
-  assert.notDeepEqual(Array.from(trOf(opened)), Array.from(trOf(shipped)), 'k=0.5 left the lowerArm track untouched — the lever is dead');
+  const dElbow = elbow(shipped.walk, t) - elbow(faithful.walk, t);
+  const dKnee = knee(shipped.walk, t) - knee(faithful.walk, t);
+  assert.ok(dElbow >= 10, `the shipped walk elbow opens only ${dElbow.toFixed(1)}° past faithful — expected ≥ 10`);
+  assert.ok(dKnee >= 10, `the shipped walk knee opens only ${dKnee.toFixed(1)}° past faithful — expected ≥ 10`);
+  assert.ok(LIMB_OPEN.elbow > 0 && LIMB_OPEN.knee > 0, 'the §531 ruling ships the lever OFF zero on both joints');
+
+  /* zero is still bit-exact — the faithful pose stays reachable, which is what keeps the A/B honest */
+  const trOf = (tbl, n) => tbl.walk.bones.find((x) => x.name === n).q;
+  for (const n of ['lowerArmL', 'lowerLegL']) {
+    assert.notDeepEqual(Array.from(trOf(shipped, n)), Array.from(trOf(faithful, n)),
+      `${n} is identical shipped-vs-faithful — the lever is dead on that joint`);
+  }
+  globalThis.__LIMB_OPEN = { elbow: 0, knee: 0 };
+  const again = buildClipSet('godot').table;
+  delete globalThis.__LIMB_OPEN;
+  for (const n of ['lowerArmL', 'lowerLegL', 'upperArmL', 'upperLegL']) {
+    assert.deepEqual(Array.from(trOf(again, n)), Array.from(trOf(faithful, n)),
+      `${n}: the faithful build is not reproducible bit-for-bit`);
+  }
+  /* and the lever must not touch the joints it does not name (the swing stays the animator's) */
+  assert.deepEqual(Array.from(trOf(shipped, 'upperArmL')), Array.from(trOf(faithful, 'upperArmL')),
+    'the lever moved upperArm — it may only open the distal joints');
+  assert.deepEqual(Array.from(trOf(shipped, 'upperLegL')), Array.from(trOf(faithful, 'upperLegL')),
+    'the lever moved upperLeg — it may only open the distal joints');
+
+  /* SCOPE: the lever reaches the procedural clips the swap never touched (the idle is the most
+     folded pose in the set), and it must still leave `?anim=proc` and §470 alone. Both are
+     structural rather than lucky — proc returns before the lever runs, and §470 repaired
+     upperArm phase and head pitch, which this lever never writes. */
+  const procT = buildClipSet('proc').table;
+  for (const n of Object.keys(CLIPS)) {
+    assert.equal(procT[n], CLIPS[n], `?anim=proc no longer returns Clips.js by identity for ${n}`);
+  }
+  const idleOpen = elbow(shipped.idle_confident, 0.5 * shipped.idle_confident.dur)
+    - elbow(procT.idle_confident, 0.5 * procT.idle_confident.dur);
+  assert.ok(idleOpen >= 10, `the idle opens only ${idleOpen.toFixed(1)}° — the regime-wide scope is not reaching proc-sourced clips`);
+  for (const n of ['sneak_walk', 'sneak_idle', 'crouch_walk', 'crawl']) {
+    for (const bone of ['upperArmL', 'upperArmR', 'head', 'neck', 'hips', 'chest']) {
+      const a = shipped[n].bones.find((x) => x.name === bone);
+      const b = procT[n].bones.find((x) => x.name === bone);
+      if (!a || !b) continue;
+      assert.deepEqual(Array.from(a.q), Array.from(b.q),
+        `§470 regression risk: ${n}/${bone} moved under the §531 lever`);
+    }
+  }
+  /* the combat chain is exempt by GODOT_LIMB_OPEN — §479.8's contact calibration outranks it */
+  for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3']) {
+    const a = shipped[n].bones.find((x) => x.name === 'lowerArmR');
+    const b = faithful[n].bones.find((x) => x.name === 'lowerArmR');
+    assert.deepEqual(Array.from(a.q), Array.from(b.q), `${n} was opened — the combat exemption is gone`);
+  }
 });
 
 test('launch pace (§479.7): jump_rise delivers the reference tree\'s own 0.75x, and Falling stays natural', () => {

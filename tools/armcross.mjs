@@ -55,6 +55,9 @@ const S = {
   hips: 'spine.001', chest: 'spine.004',
   shL: 'shoulder.L', uaL: 'upper_arm.L', elL: 'forearm.L', haL: 'hand.L',
   shR: 'shoulder.R', uaR: 'upper_arm.R', elR: 'forearm.R', haR: 'hand.R',
+  /* legs, for the §531 spread ruling — same three-way question as the elbows */
+  hlL: 'thigh.L', knL: 'shin.L', ftL: 'foot.L',
+  hlR: 'thigh.R', knR: 'shin.R', ftR: 'foot.R',
 };
 
 const mixer = new THREE.AnimationMixer(root);
@@ -82,6 +85,8 @@ const D = {
   hips: 'hips', chest: 'chest',
   shL: 'shoulderL', uaL: 'upperArmL', elL: 'lowerArmL', haL: 'handL',
   shR: 'shoulderR', uaR: 'upperArmR', elR: 'lowerArmR', haR: 'handR',
+  hlL: 'upperLegL', knL: 'lowerLegL', ftL: 'footL',
+  hlR: 'upperLegR', knR: 'lowerLegR', ftR: 'footR',
 };
 
 function dlvSample(clip, t) {
@@ -229,3 +234,117 @@ for (const pair of pairs.length ? pairs : ['LedgeGrab Idle:ledge_hang', 'SpireJu
   act.stop();
 }
 if (warnings.length) console.log('\nwarnings:', warnings.join(' | '));
+
+/* ───────────────── §531: the spread ruling — arms AND legs, three-way ─────────────────────
+ * The user, on the live build: "The arms and legs are too tucked in. They should be spread
+ * out more." §479.6 answered the elbow half by measurement and shipped the repo's fold
+ * faithfully with a lever at zero; the ruling now says the delivered pose itself is wrong, and
+ * names the legs too. This mode measures what "tucked" IS, so the lever is aimed rather than
+ * guessed — two quantities per limb pair, both in the pose's own body frame:
+ *
+ *   FOLD    interior angle at elbow / knee (180 = straight, small = folded)
+ *   SPREAD  lateral offset of the mid-joint (elbow / knee) from the body midline, normalised
+ *           by that rig's own shoulder / hip width — how far the limb is carried from the torso
+ *
+ * A limb can be tucked either way: folded tight (fold low) or held close (spread low). The
+ * ruling's words name the second, the §479.6 measurement found the first; both are printed so
+ * the fix can be aimed at whichever the delivered column actually shows.
+ */
+function limbRow(tag, o, shoulderW, hipW) {
+  const lat = o.uaL.clone().sub(o.uaR); lat.y = 0; lat.normalize();
+  const mid = o.hips;
+  const latOf = (p) => p.clone().sub(mid).dot(lat);
+  const elb = (a, b, c) => ang(a, b, c);
+  const eL = elb(o.uaL, o.elL, o.haL), eR = elb(o.uaR, o.elR, o.haR);
+  const kL = elb(o.hlL, o.knL, o.ftL), kR = elb(o.hlR, o.knR, o.ftR);
+  const esL = latOf(o.elL) / shoulderW, esR = -latOf(o.elR) / shoulderW;
+  const ksL = latOf(o.knL) / hipW, ksR = -latOf(o.knR) / hipW;
+  console.log(`    ${tag}  elbow ${eL.toFixed(0).padStart(4)}/${eR.toFixed(0).padStart(3)}°`
+    + `  knee ${kL.toFixed(0).padStart(4)}/${kR.toFixed(0).padStart(3)}°`
+    + `   elbow-spread ${esL.toFixed(2).padStart(5)}/${esR.toFixed(2).padStart(5)}`
+    + `   knee-spread ${ksL.toFixed(2).padStart(5)}/${ksR.toFixed(2).padStart(5)}`);
+  return { eL, eR, kL, kR, esL, esR, ksL, ksR };
+}
+
+if (process.argv.includes('--limbs')) {
+  const procT = buildClipSet('proc').table;
+  const srcHipW = Math.abs(restSrc.hlL.x - restSrc.hlR.x);
+  const dlvHipW = Math.abs(restDlv.hlL.x - restDlv.hlR.x);
+  console.log(`hip width  source ${srcHipW.toFixed(3)}  rig3 ${dlvHipW.toFixed(3)}`);
+  const PAIRS = process.argv.slice(2).filter((a) => a.includes(':'));
+  const acc = [];
+  for (const pair of PAIRS.length ? PAIRS
+    : ['Run:run', 'Walk:walk', 'LedgeGrab Idle:ledge_hang', 'Standupright:idle_confident']) {
+    const [srcName, gameName] = pair.split(':');
+    const clip = gltf.animations.find((a) => a.name.trim() === srcName.trim());
+    const dlv = table[gameName], prc = procT[gameName];
+    if (!dlv) { console.log(`!! ${pair}: no such game clip`); continue; }
+    console.log(`\n=== ${srcName} → ${gameName}   (origin ${origin[gameName]})`);
+    const act = clip ? mixer.clipAction(clip) : null;
+    if (act) { act.reset(); act.play(); }
+    for (const f of [0.25, 0.5, 0.75]) {
+      console.log(`  phase ${(f * 100).toFixed(0)}%`);
+      if (clip) limbRow('SOURCE   ', srcSample(clip, f * clip.duration), srcShoulderW, srcHipW);
+      const d = limbRow('DELIVERED', dlvSample(dlv, f * dlv.dur), dlvShoulderW, dlvHipW);
+      const p = limbRow('PROC-BASE', dlvSample(prc, f * prc.dur), dlvShoulderW, dlvHipW);
+      acc.push({ gameName, f, d, p });
+    }
+    if (act) act.stop();
+  }
+  /* the summary the ruling actually needs: delivered vs the set the project shipped before */
+  const mean = (rows, k) => rows.reduce((s, r) => s + r[k], 0) / rows.length;
+  const D2 = acc.map((r) => r.d), P2 = acc.map((r) => r.p);
+  console.log('\n── delivered vs proc, means over every sampled phase ─────────────────');
+  for (const [label, kL, kR] of [['elbow fold  ', 'eL', 'eR'], ['knee fold   ', 'kL', 'kR'],
+    ['elbow spread', 'esL', 'esR'], ['knee spread ', 'ksL', 'ksR']]) {
+    const d = (mean(D2, kL) + mean(D2, kR)) / 2, p = (mean(P2, kL) + mean(P2, kR)) / 2;
+    console.log(`  ${label}  delivered ${d.toFixed(2).padStart(7)}   proc ${p.toFixed(2).padStart(7)}   Δ ${(d - p).toFixed(2).padStart(7)}`);
+  }
+  process.exit(0);
+}
+
+/* ───────────────── §531: the k sweep that chose the lever's values ───────────────────────
+ * Prints, for each candidate (elbow, knee) pair, the delivered fold and the EXTREMITY spread
+ * the eye actually reads (hand and foot lateral offset from the body midline), against the
+ * procedural reference the project shipped before the swap — plus the constraint that bounds
+ * the knee: straightening a stance leg lifts the body off its own planted foot, so the lowest
+ * foot's rise is printed per candidate and is what keeps `knee` under `elbow`.
+ *   node tools/armcross.mjs --sweep
+ */
+if (process.argv.includes('--sweep')) {
+  const procT = buildClipSet('proc').table;
+  const CLIPS_ = ['run', 'walk', 'ledge_hang'];
+  const PH = [0.25, 0.5, 0.75];
+  const measure = (tbl) => {
+    const acc = { fold: 0, kfold: 0, hand: 0, foot: 0, n: 0, minFootY: Infinity };
+    for (const name of CLIPS_) {
+      const c = tbl[name]; if (!c) continue;
+      for (const f of PH) {
+        const o = dlvSample(c, f * c.dur);
+        const lat = o.uaL.clone().sub(o.uaR); lat.y = 0; lat.normalize();
+        const latOf = (p) => p.clone().sub(o.hips).dot(lat);
+        acc.fold += (ang(o.uaL, o.elL, o.haL) + ang(o.uaR, o.elR, o.haR)) / 2;
+        acc.kfold += (ang(o.hlL, o.knL, o.ftL) + ang(o.hlR, o.knR, o.ftR)) / 2;
+        acc.hand += (latOf(o.haL) - latOf(o.haR)) / 2 / dlvShoulderW;
+        acc.foot += (latOf(o.ftL) - latOf(o.ftR)) / 2 / Math.abs(restDlv.hlL.x - restDlv.hlR.x);
+        if (name !== 'ledge_hang') acc.minFootY = Math.min(acc.minFootY, o.ftL.y, o.ftR.y);
+        acc.n++;
+      }
+    }
+    return { fold: acc.fold / acc.n, kfold: acc.kfold / acc.n, hand: acc.hand / acc.n, foot: acc.foot / acc.n, minFootY: acc.minFootY };
+  };
+  const p = measure(procT);
+  console.log('candidate          elbow°   knee°   hand-spread  foot-spread   lowest foot y');
+  console.log(`  PROC (reference) ${p.fold.toFixed(1).padStart(6)} ${p.kfold.toFixed(1).padStart(7)} ${p.hand.toFixed(2).padStart(12)} ${p.foot.toFixed(2).padStart(12)} ${p.minFootY.toFixed(3).padStart(15)}`);
+  const base = measure(buildClipSet('godot').table);
+  for (const [e, k] of [[0, 0], [0.25, 0.2], [0.35, 0.25], [0.45, 0.35], [0.55, 0.45], [0.5, 0.5], [0.7, 0.6]]) {
+    globalThis.__LIMB_OPEN = { elbow: e, knee: k };
+    const m = measure(buildClipSet('godot').table);
+    delete globalThis.__LIMB_OPEN;
+    const lift = m.minFootY - base.minFootY;
+    console.log(`  elbow ${e.toFixed(2)} knee ${k.toFixed(2)} ${m.fold.toFixed(1).padStart(6)} ${m.kfold.toFixed(1).padStart(7)}`
+      + ` ${m.hand.toFixed(2).padStart(12)} ${m.foot.toFixed(2).padStart(12)} ${m.minFootY.toFixed(3).padStart(15)}`
+      + `   footLift ${(lift * 100).toFixed(1)} cm${e === 0 && k === 0 ? '   ← faithful (ships at §479.6)' : ''}`);
+  }
+  process.exit(0);
+}
