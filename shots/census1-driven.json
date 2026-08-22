@@ -1,0 +1,230 @@
+{
+ "bounce": [
+  "dive",
+  "fall"
+ ],
+ "combatStrafe": [
+  "fall",
+  "idle",
+  "move"
+ ],
+ "combo": [
+  "idle",
+  "jump",
+  "move"
+ ],
+ "crawl": [
+  "fall",
+  "idle"
+ ],
+ "crouch": [
+  "fall",
+  "idle",
+  "move",
+  "tiptoe"
+ ],
+ "dive": [
+  "idle"
+ ],
+ "doubleJump": [
+  "dive",
+  "fall",
+  "hookSwing",
+  "poleClimb",
+  "toTarget"
+ ],
+ "fall": [
+  "crawl",
+  "dive",
+  "doubleJump",
+  "hookSwing",
+  "hurt",
+  "idle",
+  "jump",
+  "land",
+  "ledgeHang",
+  "move",
+  "paraglide",
+  "poleClimb",
+  "railSlide",
+  "spireLand",
+  "toTarget",
+  "wallClimb",
+  "wallCling",
+  "wallRun"
+ ],
+ "hookSwing": [
+  "fall",
+  "hurt"
+ ],
+ "hurt": [
+  "idle"
+ ],
+ "idle": [
+  "bounce",
+  "combatStrafe",
+  "combo",
+  "crawl",
+  "crouch",
+  "fall",
+  "hookSwing",
+  "hurt",
+  "jump",
+  "land",
+  "move",
+  "pickpocket",
+  "poleClimb",
+  "railSlide",
+  "roll",
+  "skid",
+  "sneak",
+  "tiptoe"
+ ],
+ "jump": [
+  "dive",
+  "doubleJump",
+  "fall",
+  "hookSwing",
+  "move",
+  "railSlide",
+  "spireLand",
+  "toTarget",
+  "wallCling",
+  "wallRun"
+ ],
+ "land": [
+  "combo",
+  "fall",
+  "idle",
+  "jump",
+  "move",
+  "poleClimb"
+ ],
+ "ledgeClimb": [
+  "idle",
+  "move"
+ ],
+ "ledgeHang": [
+  "fall",
+  "ledgeClimb"
+ ],
+ "move": [
+  "bounce",
+  "combatStrafe",
+  "combo",
+  "crawl",
+  "crouch",
+  "fall",
+  "hookSwing",
+  "hurt",
+  "idle",
+  "jump",
+  "pickpocket",
+  "poleClimb",
+  "railSlide",
+  "roll",
+  "skid",
+  "sneak",
+  "tiptoe"
+ ],
+ "paraglide": [
+  "fall",
+  "idle",
+  "move",
+  "poleClimb",
+  "toTarget"
+ ],
+ "pickpocket": [
+  "combo",
+  "idle",
+  "jump",
+  "move"
+ ],
+ "poleClimb": [
+  "idle",
+  "jump",
+  "poleSwing"
+ ],
+ "poleSwing": [
+  "jump"
+ ],
+ "railSlide": [
+  "fall",
+  "jump",
+  "railWalk"
+ ],
+ "railWalk": [
+  "fall",
+  "jump",
+  "railSlide"
+ ],
+ "roll": [
+  "fall",
+  "idle",
+  "jump",
+  "move"
+ ],
+ "skid": [
+  "combo",
+  "hookSwing",
+  "idle",
+  "jump",
+  "move",
+  "roll"
+ ],
+ "sneak": [
+  "fall",
+  "idle",
+  "move",
+  "tiptoe"
+ ],
+ "spireLand": [
+  "fall",
+  "jump"
+ ],
+ "tiptoe": [
+  "combo",
+  "fall",
+  "hookSwing",
+  "jump",
+  "move",
+  "pickpocket",
+  "railSlide",
+  "roll"
+ ],
+ "toTarget": [
+  "fall",
+  "hookSwing",
+  "ledgeHang",
+  "wallClimb"
+ ],
+ "wallClimb": [
+  "dive",
+  "fall",
+  "ledgeHang",
+  "toTarget"
+ ],
+ "wallCling": [
+  "dive",
+  "fall",
+  "idle",
+  "ledgeHang",
+  "toTarget",
+  "wallClimb",
+  "wallJump"
+ ],
+ "wallJump": [
+  "dive",
+  "doubleJump",
+  "fall",
+  "ledgeHang",
+  "wallRun"
+ ],
+ "wallRun": [
+  "dive",
+  "fall",
+  "ledgeHang",
+  "wallCling",
+  "wallJump"
+ ]
+}

@@ -1,0 +1,341 @@
+{
+ "bounce": {
+  "one": [
+   "dive_attack"
+  ],
+  "base": []
+ },
+ "combatStrafe": {
+  "one": [],
+  "base": [
+   "idle_confident",
+   "run",
+   "walk"
+  ]
+ },
+ "combo": {
+  "one": [
+   "cane_combo_2",
+   "cane_combo_3",
+   "jump_rise"
+  ],
+  "base": []
+ },
+ "crawl": {
+  "one": [],
+  "base": [
+   "crawl"
+  ]
+ },
+ "crouch": {
+  "one": [],
+  "base": [
+   "crouch_idle",
+   "crouch_walk"
+  ]
+ },
+ "dive": {
+  "one": [
+   "dive_impact"
+  ],
+  "base": [
+   "dive_attack"
+  ]
+ },
+ "doubleJump": {
+  "one": [
+   "dive_attack",
+   "hook_grab",
+   "pole_climb"
+  ],
+  "base": [
+   "double_jump"
+  ]
+ },
+ "fall": {
+  "one": [
+   "dive_attack",
+   "double_jump",
+   "hook_grab",
+   "hurt",
+   "jump_rise",
+   "land_hard",
+   "land_roll",
+   "land_soft",
+   "ledge_hang",
+   "paraglide",
+   "pole_climb",
+   "rail_slide",
+   "spire_land",
+   "wall_cling",
+   "wall_run_l",
+   "wall_run_r"
+  ],
+  "base": [
+   "jump_apex",
+   "jump_fall"
+  ]
+ },
+ "hookSwing": {
+  "one": [
+   "hook_release",
+   "hurt"
+  ],
+  "base": [
+   "hook_swing"
+  ]
+ },
+ "idle": {
+  "one": [
+   "cane_combo_1",
+   "cane_combo_2",
+   "cane_combo_3",
+   "dive_attack",
+   "dive_impact",
+   "double_jump",
+   "hook_grab",
+   "hurt",
+   "jump_rise",
+   "land_roll",
+   "land_soft",
+   "ledge_climb",
+   "ledge_hang",
+   "paraglide",
+   "pickpocket",
+   "pole_climb",
+   "pole_swing",
+   "rail_slide",
+   "rail_walk",
+   "roll",
+   "skid_stop",
+   "spire_land",
+   "wall_cling",
+   "wall_jump",
+   "wall_run_l",
+   "wall_run_r"
+  ],
+  "base": [
+   "crouch_walk",
+   "double_jump",
+   "hook_swing",
+   "idle_bored",
+   "idle_confident",
+   "idle_look",
+   "jump_rise",
+   "pole_swing",
+   "run",
+   "sneak_walk",
+   "spire_land",
+   "wall_jump"
+  ]
+ },
+ "jump": {
+  "one": [
+   "dive_attack",
+   "double_jump",
+   "hook_grab",
+   "rail_slide",
+   "spire_land",
+   "wall_cling",
+   "wall_run_l",
+   "wall_run_r"
+  ],
+  "base": [
+   "jump_rise"
+  ]
+ },
+ "land": {
+  "one": [
+   "cane_combo_1",
+   "jump_rise",
+   "pole_climb"
+  ],
+  "base": []
+ },
+ "ledgeHang": {
+  "one": [
+   "ledge_climb"
+  ],
+  "base": [
+   "ledge_hang",
+   "ledge_shimmy_l",
+   "ledge_shimmy_r"
+  ]
+ },
+ "move": {
+  "one": [
+   "cane_combo_1",
+   "double_jump",
+   "hook_grab",
+   "hurt",
+   "jump_rise",
+   "pole_climb",
+   "rail_slide",
+   "roll",
+   "skid_stop"
+  ],
+  "base": [
+   "run",
+   "run_fast",
+   "sneak_walk",
+   "walk"
+  ]
+ },
+ "paraglide": {
+  "one": [
+   "pole_climb"
+  ],
+  "base": [
+   "paraglide"
+  ]
+ },
+ "pickpocket": {
+  "one": [
+   "cane_combo_1",
+   "jump_rise",
+   "pickpocket"
+  ],
+  "base": [
+   "sneak_walk"
+  ]
+ },
+ "poleClimb": {
+  "one": [
+   "jump_rise",
+   "pole_swing"
+  ],
+  "base": [
+   "pole_climb",
+   "pole_slide"
+  ]
+ },
+ "poleSwing": {
+  "one": [
+   "jump_rise"
+  ],
+  "base": [
+   "pole_swing"
+  ]
+ },
+ "railSlide": {
+  "one": [
+   "jump_rise",
+   "rail_walk"
+  ],
+  "base": [
+   "rail_slide"
+  ]
+ },
+ "railWalk": {
+  "one": [
+   "jump_rise",
+   "rail_slide"
+  ],
+  "base": [
+   "balance_idle",
+   "rail_walk"
+  ]
+ },
+ "roll": {
+  "one": [
+   "jump_rise"
+  ],
+  "base": []
+ },
+ "skid": {
+  "one": [
+   "cane_combo_1",
+   "hook_grab",
+   "jump_rise",
+   "roll"
+  ],
+  "base": []
+ },
+ "sneak": {
+  "one": [],
+  "base": [
+   "sneak_idle",
+   "sneak_walk"
+  ]
+ },
+ "spireLand": {
+  "one": [
+   "jump_rise"
+  ],
+  "base": [
+   "spire_balance",
+   "spire_land"
+  ]
+ },
+ "tiptoe": {
+  "one": [
+   "cane_combo_1",
+   "hook_grab",
+   "jump_rise",
+   "rail_slide",
+   "roll"
+  ],
+  "base": [
+   "balance_idle",
+   "sneak_walk"
+  ]
+ },
+ "toTarget": {
+  "one": [
+   "hook_grab",
+   "jump_rise",
+   "ledge_hang",
+   "wall_cling"
+  ],
+  "base": [
+   "jump_fall",
+   "jump_rise",
+   "ledge_hang",
+   "wall_cling"
+  ]
+ },
+ "wallClimb": {
+  "one": [
+   "dive_attack",
+   "ledge_hang"
+  ],
+  "base": [
+   "wall_cling"
+  ]
+ },
+ "wallCling": {
+  "one": [
+   "dive_attack",
+   "ledge_hang",
+   "wall_cling",
+   "wall_jump"
+  ],
+  "base": [
+   "wall_cling"
+  ]
+ },
+ "wallJump": {
+  "one": [
+   "dive_attack",
+   "double_jump",
+   "ledge_hang",
+   "wall_run_l",
+   "wall_run_r"
+  ],
+  "base": [
+   "wall_jump"
+  ]
+ },
+ "wallRun": {
+  "one": [
+   "dive_attack",
+   "ledge_hang",
+   "wall_cling",
+   "wall_jump"
+  ],
+  "base": [
+   "wall_run_l",
+   "wall_run_r"
+  ]
+ }
+}

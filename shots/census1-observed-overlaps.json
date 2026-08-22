@@ -1,0 +1,22 @@
+{
+ "cane_combo_1|cane_combo_2": {
+  "n": 20,
+  "maxW": 2
+ },
+ "cane_combo_1|cane_combo_2|cane_combo_3": {
+  "n": 33,
+  "maxW": 3
+ },
+ "cane_combo_2|cane_combo_3": {
+  "n": 18,
+  "maxW": 2
+ },
+ "double_jump|jump_rise": {
+  "n": 20,
+  "maxW": 1.167
+ },
+ "jump_fall|land_soft": {
+  "n": 6,
+  "maxW": 1.208
+ }
+}

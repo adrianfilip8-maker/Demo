@@ -44446,3 +44446,126 @@ cures them. §580 bounded the camera's POSITION at that pose; the rotation is st
 to frame. The obvious repair is a rate limit, and §475.3 already rejected one on the grounds that
 it breaks the statelessness the zero-cost guarantee rests on. Priced here, not shipped, and named
 so it is not rediscovered as new.
+
+## §527 — The seam census: the ceiling, the predicate that actually separates safe from exposed, and two instruments that lied before they told the truth
+
+§525 found one seam by looking at one seam; §526 found the same defect in the other clip set. The
+mechanism is a class, so this enumerates the whole transition space rather than sampling it.
+`tools/seamcensus.mjs` and the recorder `tools/_clipprobe.mjs` are the instruments;
+`shots/census1-*.json` are their outputs.
+
+### 1. The ceiling, derived before anything was driven (§450.4)
+
+Three reads settle the worst case without a measurement:
+
+- `_demoteOthers` ends a track only `if (tr.loop)` — a new clip never ends a live ONE-SHOT.
+- `play()` calls `_demoteOthers` only `if (loop)` — a new one-shot demotes nothing at all.
+- `_advance` ends a one-shot only when `tr.time >= tr.clip.dur`.
+
+**Nothing in the mixer demotes a one-shot.** It ends on its own duration, on the §525/§526 coalesce
+rule, or on an explicit stop. So any two overlapping one-shots both hold target weight for the
+whole overlap, and `addQuat` — a normalised mean — averages them 50/50 on every bone both animate.
+That is the ceiling: an overlap is a *sustained average*, never a cross-fade.
+
+| | |
+|---|---|
+| states | 32 |
+| ordered state pairs | 992 |
+| transitions reachable in play (DRIVEN, from `_smtrace` across the suite) | **164** |
+| states firing a one-shot on enter | 22 |
+| clip pairs a reachable transition can co-fire | **40** |
+| of those, sustaining summed weight > 1 at worst-case dwell | **28** |
+
+Reachability is measured, not assumed: "driven" means the machine chose the transition inside
+`update()`, as opposed to a test reaching in with `sm.set()`.
+
+### 2. The predicate — and it is the general form of §525's defect
+
+Most air and attach states are **self-cleaning**, and the reason is a detail nobody wrote down.
+`Jump` fires `oneShot('jump_rise')` on enter and then calls `baseClip('jump_rise')` every frame.
+That second call takes `play()`'s retarget path, which sets `tr.loop = true` on the track already
+running. The clip is now a LOOP — so when the next state asserts its own base clip,
+`_demoteOthers` ends it properly, one weight falling as the other rises. Thirteen states work this
+way and cannot leave anything behind.
+
+A state that fires a one-shot and never re-asserts it as a base clip has no such exit. Nothing
+demotes a one-shot, so the track holds full weight underneath whatever the next state plays until
+its own duration expires.
+
+**EXPOSED, all 8:** `hurt` (hurt), `ledgeClimb` (ledge_climb), `hookSwing` (hook_grab), `bounce`
+(double_jump), `roll` (roll), `pickpocket` (pickpocket), `land` (land_soft), `skid` (skid_stop) —
+plus `combo`, which is the same predicate and is the one already fixed. **`Combo` asserts no base
+clip, and that is exactly why its slots piled.** §525's defect was never really about the imported
+set having one attack clip; that only made it degenerate enough to see. This is the general form.
+
+A second, independent exit exists for ground states: `play()`'s blend-tree branch ends EVERY
+non-locked track, so a base clip named among the ten tree clips (`idle_*`, `walk`, `run`,
+`run_fast`, `sneak_*`, `crouch_*`) terminates any live one-shot outright. That is probed
+behaviourally rather than read off the private table, so it stays true if the branch is replaced.
+
+### 3. What the worst case is, and what was actually observed
+
+The 28 flagged pairs are driven at **dwell → 0** — the incoming state entered on the frame after
+the outgoing one-shot started, which is the bound, not the common case. Worst offenders run to
+2.9 s of summed weight 2.00–3.00 on 31 shared bones (`railWalk → jump`, `wallRun → wallCling`,
+`ledgeHang → ledgeClimb`), and the sharpest small ones are the ones a player hits constantly:
+`land → jump` and `skid → jump`, where a landing absorb is averaged with a launch it should have
+interrupted.
+
+Against that, what 926 arms actually produced, recorded by `_clipprobe`:
+
+```
+cane_combo_1|2|3   33 frames  maxW 3.00     <- anim.test.mjs's deliberate pre-fix CONTROLS
+cane_combo_1|2     20 frames  maxW 2.00     <- ditto
+cane_combo_2|3     18 frames  maxW 2.00     <- ditto
+jump_fall|land_soft 6 frames  maxW 1.21
+double_jump|jump_rise 20 frames maxW 1.17
+```
+
+The only severe piles the suite produced are the combo controls reproducing the fixed defect on
+purpose. The two real ones are mild — 1.17 and 1.21, brief transients where the weights very
+nearly sum to 1. **So the 28 are reachable candidates and not demonstrated on-screen defects**, and
+that distinction is the honest state of this census. The suite is not a player; its arms do not
+generally re-press at the worst moment. What it does establish is that nothing catastrophic is
+happening in the paths the suite exercises today.
+
+**Nothing is fixed here beyond §526.** Eight exposed states is a recommendation, not a change: each
+needs the same judgement §525 applied to the combo — is this a motion that should have INTERRUPTED
+the other, or two different motions that a blend is right for — and that judgement wants frames per
+case. `land → jump` and `skid → jump` are the two I would take first: a landing and a launch are
+not simultaneously true of a body, they share all 31 bones, and both are on the commonest path in
+the game.
+
+### 4. Two instruments that lied first, both caught by the same tell
+
+Both are the §439 shape — an arm that agrees with itself is a broken instrument, not a null result
+— and both would have shipped a wrong census.
+
+**The offline `update()` probe.** State one-shots can be read by calling `enter()` against a
+recording stand-in; the calibration (jump→jump_rise, land→land_soft, hurt→hurt) proves it reads the
+real moveset. `update()` cannot be read that way, and it fails in the direction that flatters:
+every state's `update` opens with guards (`this.landed(c)`, `if (c.velocity.y <= 0) return 'fall'`),
+a Proxy answers them as "grounded, not rising", and the state returns a transition BEFORE reaching
+its `baseClip` call. The probe reported "no base clip" for nearly every state, which reads like a
+finding. A census built on it said **44 defective pairs**, all of them on that fiction. Base clips
+are now OBSERVED from the running machine and the tool refuses to run without them.
+
+**My own overlap counter skipped loops.** `_clipprobe` first counted only `!tr.loop` tracks, on the
+reasoning that the question was whether two ONE-SHOTS average. But a state's base clip promotes its
+own one-shot to a loop one frame in — so the filter discarded precisely the case being hunted
+(`land_soft`, a true one-shot, sitting under a promoted `jump_rise`) and left only the combo, whose
+slots are never promoted because `Combo` asserts no base clip. It printed "no overlaps outside the
+combo", which reads as an all-clear and was an artefact of its own filter. Summed weight over ALL
+live tracks is the invariant, and re-running found the two real transients above.
+
+A third, smaller one: driving each pair with the FIRST of a state's observed base clips picks
+arbitrarily — `railWalk` asserts either `rail_walk` or `balance_idle` and only the former promotes
+— so every combination is now driven and the worst reported. Including a "no base clip at all" case
+for states that always assert one inflated the count to 40; that fiction is removed too.
+
+**Limits.** The census over-reports by construction — worst-case dwell, worst-case base clip — so a
+flagged pair is a candidate, not a bug. It counts shared BONES, so a pair it exonerates on disjoint
+bones can still fight over the cane socket or the root offset. `_clipprobe` sees only what the
+suite drives, so its silence about a transition is a statement about coverage, not about the game.
+And neither instrument says whether an averaged pose looks wrong; that is what frames are for, and
+no frames were taken for these 28.
