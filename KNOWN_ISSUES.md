@@ -46248,3 +46248,155 @@ no gameplay volume"*) reddens, which is exactly the seal that would catch it goi
 What it does NOT do, said plainly: it cannot be measured from here. Whether a coil at the foot
 makes a player look up a 16 m rope is a playtest question, and every number above is about geometry
 and frusta rather than attention. It is brought as a recommendation for that reason, not shipped.
+
+## §549 — The HUD audit: the Thief-o-Vision bracket pointed at the wrong hold for every frame but the first
+
+Owned files only (`src/ui/*`). `progress/records/ui/NOTE-ui-audit.md` is a real prior audit and this
+does not restate it; §585 is the world half of question 3 and this is the HUD half. Telegraphing was
+**measured and not touched** — items 4 and 10 are open with the user.
+
+### §549.1 What the HUD shows, and the one element that was lying
+
+The census was taken by booting the real `HUD` on `_hudshim` and diffing a **four-channel**
+serialisation of the whole tree. That number matters: a HUD element changes through attributes,
+classes, text **and style**, and `outerHTML` carries the first three. `_hudshim`'s `Style` keeps
+`setProperty()` values in a private Map and takes direct `.style.opacity =` writes as own
+properties, and `HUD.js` uses both style paths (17 direct assignments plus `setProperty`). A reader
+built on `outerHTML` would have called the vignette, the shake, every projected marker and the
+suspicion lash dead. The instrument is mutation-checked against all four channels before any verdict
+is read off it.
+
+**The defect: the Thief-o-Vision lock-on brackets pointed at whatever the HUD's own affordance poll
+last found.**
+
+`Collision.js:25` states the contract in the module's own header: *"Pooled results stay valid for the
+next few calls only — copy anything you intend to keep past the current frame."* `Controller._thiefVision`
+emits the return of `col.query()` **directly**, and `HUD._onTargets` pushed `t.point` **by reference**.
+Those points are `_queryPool` slots whose `THREE.Vector3` the next query mutates in place — and the
+module that issues the next query is the HUD itself: `_tickAffordancePrompt` runs `col.query()` at
+~10 Hz with no Thief-o-Vision gate.
+
+Driven against the **real** `Collision` (three colliders, two hooks and a pole, all on screen, Sly
+standing at the pole):
+
+```
+  moment 0   targets (-4,3,0) (-3,3,0)     correct, straight off the event
+  frame 1    mark 0 drawn at x = 442.4 px  correct — marks draw at HUD.js:1219 …
+  frame 1    the affordance poll re-queries … and it re-queries at HUD.js:1222, after
+             -> target 0 becomes (4,3,0), the POLE
+  frame 2    mark 0 drawn at x = 837.6 px  395 px away, on a hold the player did not lock
+  frames 3+  stays there
+```
+
+So the bracket was honest for **one frame at 60 Hz** and wrong for the rest of the hold. Fixed in
+`_onTargets` by copying into a reused `_tgtPool` slot rather than retaining the pool's vector.
+
+**This is a slip in one path, not a house style, and the surrounding code is what proves it.**
+`Controller._telegraph` emits `best.point.clone()`. `Pickups` clones both treasure payloads.
+`HUD._onGuardAlert` deliberately does NOT copy, and its comment says why — that vector is the
+guard's own live position and keeping it is how the badge follows him. Three of four sites had the
+rule right.
+
+**Reported, not fixed — the combat reticle.** `Moveset.js:1707` emits `{ pos: m.point }` where
+`m` is `Controller.lock`, a single permanent memo object (`Controller.js:709`) whose one `Vector3`
+is refilled every frame by `mark()`. `HUD.setLockOn` retains it. Unlike the ToV case this may be
+*intended* — a reticle that follows the live memo tracks the body it locked — but it is undecided
+rather than decided, and `mark()` can return a different body without a fresh `lockOn`. The
+publisher is in `src/player/`, which this lane does not own.
+
+### §549.2 The §357.1 sweep, with §548's third check
+
+`eventbus` proves the wire exists; a no-throw arm proves the handler survives; **neither proves the
+handler does anything**. The third check: emit each subscribed event with a payload of the shape its
+handler reads, advance frames, and require the screen to change.
+
+**Result: 21 subscribed events, all 21 move the screen. No dead element, no dead subscription.**
+
+That clean sheet is only worth reading because the sweep is licensed by an idle control — a HUD that
+receives nothing produces a byte-identical snapshot across the same four frames, so "it moved" cannot
+mean "it was moving anyway". Without that arm the whole sweep passes vacuously.
+
+**Four events first reported as dead and none of them were** — the §435.4/A1 lesson for the third
+time in two sittings, so it is worth naming the shapes:
+
+| event | why it looked dead | what it actually needs |
+|---|---|---|
+| `hideHud` | the handler ignores its argument and re-reads `engine.debug.hideHud` | the flag flipped as the ACT, not in the setup — my baseline was already hidden |
+| `playerState` | handed `'poleClimb'` | it drives the stealth mark; `sneak`/`tiptoe`/`crawl`/`crouch` all move, and the others correctly do not |
+| `thiefTargets` | handed `{ pos }` | `_onTargets` reads `point`/`position`, never `pos` |
+| `treasureBanked` | banking clears a carry | a `treasurePickup` first, or there is nothing to clear |
+
+Two more instrument faults of my own, recorded because each would have been reported as a defect:
+a per-line regex over `AFF_VERB` saw **3** verbs where the block holds **5** (the entries share
+source lines), and a raw check of the card's pad glyphs called `stick`/`stickR` missing art when
+`_keysHtml` aliases them to `LS`/`RS` before rendering.
+
+### §549.3 Discoverability, measured
+
+```
+  the control card documents            24 rows
+  verbs that can appear DURING PLAY      6   hook, rail, pole, spire, vent, pickpocket
+  rows a player only ever sees on the card  18
+  anything on screen naming Esc / Options / "controls"   NONE
+```
+
+**All three routes to the card open, driven rather than assumed:** Escape keydown, pointer-lock loss
+(the route a playing keyboard user actually takes, because the browser eats Escape while locked), and
+**pad Options** — which reaches it only because §543 wired it, and which also releases the pointer.
+The card renders 23 pad glyph images to a pad player and none to a keyboard player.
+
+**The two "what can I grab" channels disagree about which kinds exist, in both directions:**
+
+```
+  hook, rail            marked by the telegraph AND named by the HUD prompt
+  pole, spire, vent     named by the HUD prompt, never marked
+  ledge                 marked, never named
+```
+
+`TELEGRAPH_KINDS` is `['hook','rail','ledge']` (read at `Controller.js:539`); `AFF_VERB` is
+`hook/rail/pole/spire/vent`. **This qualifies §585's "the rope is seen and never announced"**: that
+is exactly right about the telegraph, and the nave rope is registered through `poleProxy`
+(`EgyptLevel.js:2748`), so the HUD's own poll DOES announce it — as *"E — Climb pole"*, at
+`AFF_RANGE` 4.4 m instead of a mark at distance. Driven: all five traversal tags produce their verb
+at 1.8 m. Different channel, much shorter range, and not silence.
+
+### The cheap honest fix, priced and NOT built
+
+The gap is not that the moveset is undocumented — 24 rows document it — but that **nothing on screen
+says the card exists**, and 18 rows live only there. Inside the shipped idiom that is one line in
+`init()` reusing the existing toast: `this.toast('Esc / Options — controls', { icon: 'sparkle' })`.
+No new element, no new CSS, no menu, no scope change. Cost: one toast slot of three for 2.6 s at
+boot, once.
+
+Two things it does not solve, stated rather than glossed: the toast cannot follow the device the way
+the card's columns do (it is text, and `lastDevice` at boot is whatever was touched last), so it has
+to name both controls; and whether a player reads a 2.6 s toast is a playtest question this box
+cannot answer. Brought as a recommendation.
+
+### §549.4 The control card's own accuracy
+
+Every pad glyph the card names resolves to shipped art **and** to a button `PAD_BINDINGS` actually
+binds — 12 distinct glyphs, 10 of them buttons, all bound. §516 already checked the file; this checks
+the binding, which is the half that can lie to the player it was written for.
+
+**One row was corrected.** `{ k: ['P'], d: 'Freeze the simulation' }` carried no pad column and
+described a control the card also lists separately as Options. `P` and `Options` are **one action**
+(`KEY_BINDINGS.pause = ['KeyP']`, `PAD_BINDINGS.pause = [9]`), `Debug.js:328` toggles
+`engine.debug.paused` off it, and since §543 `HUD.update` mirrors that into this same card — so the
+two rows describe one binding as two different things, and only one of them showed the button. That
+row now carries `OPT` and says so. Card text only; no behaviour changed.
+
+### §549.5 DOMAIN
+
+- **U1** — *passes on* the shipped tree; *fails on* the pre-fix `_onTargets` restored as a real
+  source mutation, with the message naming the moved target (`target 0 moved from -4,3,0 to 4,3,0`).
+  Its premise is a separate arm: if `Collision` ever stops pooling, that arm reddens and says the fix
+  became unnecessary rather than leaving a test that passes for an evaporated reason.
+- **U2** — *passes on* all 21 handlers; *fails on* a handler that draws nothing, and is licensed by
+  the idle control above. It cannot discriminate **legibility**: a class toggled on an invisible
+  element counts as movement here. What is on screen and readable is `hud.test.mjs`'s M6.
+- **U3/U4** — the row and verb counts are a RECORD with loose floors, not a target: they exist so a
+  change is re-argued rather than absorbed. The card-opening arms are hard.
+- **What none of this reaches.** `_hudshim` is not a browser: no layout, no paint, no z-order. That
+  an element which changed is an element the player can *see* is a floor this cannot raise, exactly
+  as the container cannot raise a frame rate.

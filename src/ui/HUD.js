@@ -130,7 +130,13 @@ const CONTROLS = [
     rows: [
       { k: ['Tab'], d: 'Binocucom', s: 'Scout ahead · call the gang' },
       { k: ['Esc'], p: [P('OPT')], d: 'Pause / release the pointer' },
-      { k: ['P'], d: 'Freeze the simulation' },
+      /* §549: this row used to read "P — Freeze the simulation" with no pad column, which stopped
+         being true the moment §543 wired `pause` to the cel. `P` and `Options` are ONE action —
+         `KEY_BINDINGS.pause = ['KeyP']`, `PAD_BINDINGS.pause = [9]` — and `Debug.js:328` toggles
+         `engine.debug.paused` off it, which `HUD.update` then mirrors into this card. So the two
+         controls are indistinguishable to a player, and printing them as separate rows with
+         different descriptions and only one pad glyph said otherwise. */
+      { k: ['P'], p: [P('OPT')], d: 'Freeze the simulation', s: 'The same binding as Options — it opens this card too' },
       { k: ['F1'], d: 'Free camera', s: 'Debug' },
     ],
   },
@@ -300,6 +306,7 @@ export class HUD {
     this._alerts = new Map();
     this._marks = [];
     this._targets = [];
+    this._tgtPool = [];         // §549: reusable copies — the query's own points are pooled
     this._promptKey = '';
     this._promptText = '';
     this._promptKind = '';
@@ -1564,6 +1571,36 @@ export class HUD {
     return { ok: onScreen || clamp, onScreen, x: sx, y: sy, s };
   }
 
+  /**
+   * The Thief-o-Vision lock-on list.
+   *
+   * **COPY the point, never retain it (§549).** `Controller._thiefVision` emits the return of
+   * `col.query()` DIRECTLY, and `Collision.js:25` states what that array is in its own header:
+   * *"Pooled results stay valid for the next few calls only — copy anything you intend to keep
+   * past the current frame."* The hits are slots out of `_queryPool` whose `point` is a persistent
+   * `THREE.Vector3` that the next query mutates in place.
+   *
+   * This used to push `point` by reference, and the HUD is the module that overwrites it: within
+   * the same `update()` the marks are drawn (`_tickWorldMarks`) and then `_tickAffordancePrompt`
+   * runs its own `col.query()` at ~10 Hz. Driven against the REAL `Collision` with two hooks and a
+   * pole on screen, Sly standing at the pole:
+   *
+   *     moment 0  targets (-4,3,0) (-3,3,0)      — correct, straight off the event
+   *     frame 1   mark 0 drawn at x=442.4 px     — correct, drawn BEFORE the poll
+   *     frame 1   the poll re-queries            — target 0 becomes (4,3,0), the POLE
+   *     frame 2   mark 0 drawn at x=837.6 px     — 395 px away, on the wrong object, and it stays
+   *
+   * So the bracket was honest for exactly one frame and then sat on something the player had not
+   * locked. Copying is also right in principle: this list is a SNAPSHOT taken on the rising edge
+   * of `focus` and never refreshed while Thief-o-Vision is held, so every other property of it is
+   * already a snapshot and the point was the one field pretending otherwise.
+   *
+   * Not every retained reference here is a bug and the difference is intent, which is why this is
+   * a copy and `_onGuardAlert`'s is not: that one keeps `Guard._alertPayload.pos` deliberately,
+   * because it is the guard's own live vector and keeping it is how the badge follows him.
+   * `Controller._telegraph` and `Pickups` both `clone()` before emitting for the same reason this
+   * copies — the rule is understood project-wide, and this was the one path that missed it.
+   */
   _onTargets(list) {
     this._targets.length = 0;
     if (!Array.isArray(list)) return;
@@ -1573,7 +1610,14 @@ export class HUD {
       if (!point || typeof point.x !== 'number') continue;
       const tag = t?.rec?.tag ?? t?.tag ?? '';
       const gold = !!(t?.loot || t?.pickpocket || t?.rec?.loot || tag === 'loot' || tag === 'guard');
-      this._targets.push({ point, gold, label: String(tag || '').toUpperCase() });
+      /* Reused out of `_tgtPool` rather than cloned: this fires on a button edge, but it fires on
+         every Thief-o-Vision press for as long as the game runs, and `markMax` is 16. */
+      const i = this._targets.length;
+      const slot = this._tgtPool[i] || (this._tgtPool[i] = { point: new THREE.Vector3(), gold: false, label: '' });
+      slot.point.copy(point);
+      slot.gold = gold;
+      slot.label = String(tag || '').toUpperCase();
+      this._targets.push(slot);
     }
     this._ensureMarks(this._targets.length);
   }
