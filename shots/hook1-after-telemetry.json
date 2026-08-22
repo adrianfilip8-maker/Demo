@@ -1,0 +1,2304 @@
+{
+ "q": "low",
+ "takes": {
+  "chain": [
+   {
+    "f": 1,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 0,
+    "tracks": []
+   },
+   {
+    "f": 2,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 0.301,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 0.208,
+      "t": 0.017,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.093,
+      "t": 0.017,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 3,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 0.602,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 0.417,
+      "t": 0.033,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.185,
+      "t": 0.033,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 4,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 0.903,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 0.625,
+      "t": 0.05,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.278,
+      "t": 0.05,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 5,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 1.203,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 0.833,
+      "t": 0.067,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.37,
+      "t": 0.067,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 6,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 1.463,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.083,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.463,
+      "t": 0.083,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 7,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 1.556,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.1,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.556,
+      "t": 0.1,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 8,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 1.648,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.117,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.648,
+      "t": 0.117,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 9,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 1.741,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.133,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.741,
+      "t": 0.133,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 10,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 1.833,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.15,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.833,
+      "t": 0.15,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 11,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 1.926,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.167,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.926,
+      "t": 0.167,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 12,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.183,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 1,
+      "t": 0.183,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 13,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.2,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 1,
+      "t": 0.2,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 14,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.217,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 1,
+      "t": 0.217,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 15,
+    "st": "hookSwing",
+    "ring": 0,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.233,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 1,
+      "t": 0.233,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 16,
+    "st": "fall",
+    "ring": 0,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.25,
+      "end": 1,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 1,
+      "t": 0.25,
+      "end": 1,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 17,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 1.62,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 0.375,
+      "t": 0.3,
+      "end": 1,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.643,
+      "t": 0.3,
+      "end": 1,
+      "lp": 1
+     },
+     {
+      "n": "hook_grab",
+      "w": 0.417,
+      "t": 0.033,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.185,
+      "t": 0.033,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 18,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 1.594,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 0.167,
+      "t": 0.317,
+      "end": 1,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.524,
+      "t": 0.317,
+      "end": 1,
+      "lp": 1
+     },
+     {
+      "n": "hook_grab",
+      "w": 0.625,
+      "t": 0.05,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.278,
+      "t": 0.05,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 19,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 1.608,
+    "tracks": [
+     {
+      "n": "hook_swing",
+      "w": 0.405,
+      "t": 0.333,
+      "end": 1,
+      "lp": 1
+     },
+     {
+      "n": "hook_grab",
+      "w": 0.833,
+      "t": 0.067,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.37,
+      "t": 0.067,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 20,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 1.749,
+    "tracks": [
+     {
+      "n": "hook_swing",
+      "w": 0.286,
+      "t": 0.35,
+      "end": 1,
+      "lp": 1
+     },
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.083,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.463,
+      "t": 0.083,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 21,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 1.723,
+    "tracks": [
+     {
+      "n": "hook_swing",
+      "w": 0.167,
+      "t": 0.367,
+      "end": 1,
+      "lp": 1
+     },
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.1,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.556,
+      "t": 0.1,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 22,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 1.696,
+    "tracks": [
+     {
+      "n": "hook_swing",
+      "w": 0.048,
+      "t": 0.383,
+      "end": 1,
+      "lp": 1
+     },
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.117,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.648,
+      "t": 0.117,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 23,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 1.741,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.133,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.741,
+      "t": 0.133,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 24,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 1.833,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.15,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.833,
+      "t": 0.15,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 25,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 1.926,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.167,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.926,
+      "t": 0.167,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 26,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.183,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 1,
+      "t": 0.183,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 27,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.2,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 1,
+      "t": 0.2,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 28,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.217,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 1,
+      "t": 0.217,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 29,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.233,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 1,
+      "t": 0.233,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 30,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.25,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 1,
+      "t": 0.25,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 31,
+    "st": "hookSwing",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.267,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 1,
+      "t": 0.267,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 32,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.283,
+      "end": 1,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 1,
+      "t": 0.283,
+      "end": 1,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 33,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 0.208,
+      "t": 0.017,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 0.119,
+      "t": 0.017,
+      "end": 0,
+      "lp": 1
+     },
+     {
+      "n": "hook_grab",
+      "w": 0.792,
+      "t": 0.3,
+      "end": 1,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.881,
+      "t": 0.3,
+      "end": 1,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 34,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 0.417,
+      "t": 0.033,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 0.238,
+      "t": 0.033,
+      "end": 0,
+      "lp": 1
+     },
+     {
+      "n": "hook_grab",
+      "w": 0.583,
+      "t": 0.317,
+      "end": 1,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.762,
+      "t": 0.317,
+      "end": 1,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 35,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 0.625,
+      "t": 0.05,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 0.357,
+      "t": 0.05,
+      "end": 0,
+      "lp": 1
+     },
+     {
+      "n": "hook_grab",
+      "w": 0.375,
+      "t": 0.333,
+      "end": 1,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.643,
+      "t": 0.333,
+      "end": 1,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 36,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 0.833,
+      "t": 0.067,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 0.476,
+      "t": 0.067,
+      "end": 0,
+      "lp": 1
+     },
+     {
+      "n": "hook_grab",
+      "w": 0.167,
+      "t": 0.35,
+      "end": 1,
+      "lp": 0
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.524,
+      "t": 0.35,
+      "end": 1,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 37,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 1,
+      "t": 0.083,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 0.595,
+      "t": 0.083,
+      "end": 0,
+      "lp": 1
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.405,
+      "t": 0.367,
+      "end": 1,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 38,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 1,
+      "t": 0.1,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 0.714,
+      "t": 0.1,
+      "end": 0,
+      "lp": 1
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.286,
+      "t": 0.383,
+      "end": 1,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 39,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 1,
+      "t": 0.117,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 0.833,
+      "t": 0.117,
+      "end": 0,
+      "lp": 1
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.167,
+      "t": 0.4,
+      "end": 1,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 40,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 1,
+      "t": 0.133,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 0.952,
+      "t": 0.133,
+      "end": 0,
+      "lp": 1
+     },
+     {
+      "n": "hook_swing",
+      "w": 0.048,
+      "t": 0.417,
+      "end": 1,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 41,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 1,
+      "t": 0.15,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 1,
+      "t": 0.15,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 42,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 1,
+      "t": 0.167,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 1,
+      "t": 0.167,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 43,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 1,
+      "t": 0.183,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 1,
+      "t": 0.183,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 44,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 1,
+      "t": 0.2,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 1,
+      "t": 0.2,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 45,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 1,
+      "t": 0.217,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 1,
+      "t": 0.217,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 46,
+    "st": "fall",
+    "ring": 1,
+    "sum": 2,
+    "tracks": [
+     {
+      "n": "hook_release",
+      "w": 1,
+      "t": 0.233,
+      "end": 0,
+      "lp": 0
+     },
+     {
+      "n": "jump_fall",
+      "w": 1,
+      "t": 0.233,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   }
+  ],
+  "roll": [
+   {
+    "f": 1,
+    "st": "jump",
+    "gr": false,
+    "vy": 4.37,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.83,
+     0.27,
+     23.21
+    ],
+    "yaw": 2.889,
+    "sum": 1.041,
+    "tracks": [
+     {
+      "n": "roll",
+      "w": 0.833,
+      "t": 0.167,
+      "end": 1,
+      "lp": 0
+     },
+     {
+      "n": "jump_rise",
+      "w": 0.208,
+      "t": 0.017,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 2,
+    "st": "jump",
+    "gr": false,
+    "vy": 3.97,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.86,
+     0.34,
+     23.1
+    ],
+    "yaw": 2.887,
+    "sum": 1.084,
+    "tracks": [
+     {
+      "n": "roll",
+      "w": 0.667,
+      "t": 0.183,
+      "end": 1,
+      "lp": 0
+     },
+     {
+      "n": "jump_rise",
+      "w": 0.417,
+      "t": 0.033,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 3,
+    "st": "jump",
+    "gr": false,
+    "vy": 3.57,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.89,
+     0.4,
+     22.98
+    ],
+    "yaw": 2.885,
+    "sum": 1.125,
+    "tracks": [
+     {
+      "n": "roll",
+      "w": 0.5,
+      "t": 0.2,
+      "end": 1,
+      "lp": 0
+     },
+     {
+      "n": "jump_rise",
+      "w": 0.625,
+      "t": 0.05,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 4,
+    "st": "jump",
+    "gr": false,
+    "vy": 3.17,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.92,
+     0.45,
+     22.86
+    ],
+    "yaw": 2.884,
+    "sum": 1.166,
+    "tracks": [
+     {
+      "n": "roll",
+      "w": 0.333,
+      "t": 0.217,
+      "end": 1,
+      "lp": 0
+     },
+     {
+      "n": "jump_rise",
+      "w": 0.833,
+      "t": 0.067,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 5,
+    "st": "jump",
+    "gr": false,
+    "vy": 2.77,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.95,
+     0.49,
+     22.75
+    ],
+    "yaw": 2.882,
+    "sum": 1.167,
+    "tracks": [
+     {
+      "n": "roll",
+      "w": 0.167,
+      "t": 0.233,
+      "end": 1,
+      "lp": 0
+     },
+     {
+      "n": "jump_rise",
+      "w": 1,
+      "t": 0.083,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 6,
+    "st": "jump",
+    "gr": false,
+    "vy": 2.37,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.99,
+     0.53,
+     22.64
+    ],
+    "yaw": 2.749,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "jump_rise",
+      "w": 1,
+      "t": 0.1,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 7,
+    "st": "jump",
+    "gr": false,
+    "vy": 1.42,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     1.03,
+     0.56,
+     22.53
+    ],
+    "yaw": 2.749,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "jump_rise",
+      "w": 1,
+      "t": 0.117,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 8,
+    "st": "jump",
+    "gr": false,
+    "vy": 0.73,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     1.07,
+     0.57,
+     22.42
+    ],
+    "yaw": 2.749,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "jump_rise",
+      "w": 1,
+      "t": 0.133,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 9,
+    "st": "jump",
+    "gr": false,
+    "vy": 0.24,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     1.12,
+     0.57,
+     22.3
+    ],
+    "yaw": 2.749,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "jump_rise",
+      "w": 1,
+      "t": 0.15,
+      "end": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 10,
+    "st": "fall",
+    "gr": false,
+    "vy": -0.56,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     1.22,
+     0.56,
+     22.1
+    ],
+    "yaw": 2.482,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "jump_rise",
+      "w": 1,
+      "t": 0.167,
+      "end": 1,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 11,
+    "st": "fall",
+    "gr": false,
+    "vy": -0.96,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     1.27,
+     0.55,
+     22
+    ],
+    "yaw": 2.482,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "jump_apex",
+      "w": 0.119,
+      "t": 0.017,
+      "end": 0,
+      "lp": 1
+     },
+     {
+      "n": "jump_rise",
+      "w": 0.881,
+      "t": 0.183,
+      "end": 1,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "f": 12,
+    "st": "fall",
+    "gr": false,
+    "vy": -1.36,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     1.33,
+     0.52,
+     21.9
+    ],
+    "yaw": 2.484,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "jump_apex",
+      "w": 0.238,
+      "t": 0.033,
+      "end": 0,
+      "lp": 1
+     },
+     {
+      "n": "jump_rise",
+      "w": 0.762,
+      "t": 0.2,
+      "end": 1,
+      "lp": 1
+     }
+    ]
+   }
+  ],
+  "bounce": [
+   {
+    "f": 1,
+    "st": "bounce",
+    "gr": false,
+    "vy": 8.66,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0,
+     1.01,
+     29.47
+    ],
+    "yaw": 3.138,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "jump_rise",
+      "w": 0.792,
+      "t": 0.183,
+      "end": 1,
+      "lp": 1
+     },
+     {
+      "n": "double_jump",
+      "w": 0.208,
+      "t": 0.017,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   },
+   {
+    "f": 2,
+    "st": "bounce",
+    "gr": false,
+    "vy": 8.26,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0,
+     1.15,
+     29.39
+    ],
+    "yaw": 3.137,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "jump_rise",
+      "w": 0.583,
+      "t": 0.2,
+      "end": 1,
+      "lp": 1
+     },
+     {
+      "n": "double_jump",
+      "w": 0.417,
+      "t": 0.033,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   },
+   {
+    "f": 3,
+    "st": "bounce",
+    "gr": false,
+    "vy": 7.86,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0,
+     1.28,
+     29.3
+    ],
+    "yaw": 3.135,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "jump_rise",
+      "w": 0.375,
+      "t": 0.217,
+      "end": 1,
+      "lp": 1
+     },
+     {
+      "n": "double_jump",
+      "w": 0.625,
+      "t": 0.05,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   },
+   {
+    "f": 4,
+    "st": "bounce",
+    "gr": false,
+    "vy": 7.46,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0,
+     1.4,
+     29.21
+    ],
+    "yaw": 3.135,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "jump_rise",
+      "w": 0.167,
+      "t": 0.233,
+      "end": 1,
+      "lp": 1
+     },
+     {
+      "n": "double_jump",
+      "w": 0.833,
+      "t": 0.067,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   },
+   {
+    "f": 5,
+    "st": "bounce",
+    "gr": false,
+    "vy": 7.06,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.01,
+     1.52,
+     29.12
+    ],
+    "yaw": 3.001,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "double_jump",
+      "w": 1,
+      "t": 0.083,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   },
+   {
+    "f": 6,
+    "st": "bounce",
+    "gr": false,
+    "vy": 6.66,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.01,
+     1.63,
+     29.03
+    ],
+    "yaw": 3.001,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "double_jump",
+      "w": 1,
+      "t": 0.1,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   },
+   {
+    "f": 7,
+    "st": "bounce",
+    "gr": false,
+    "vy": 6.26,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.02,
+     1.73,
+     28.93
+    ],
+    "yaw": 3.001,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "double_jump",
+      "w": 1,
+      "t": 0.117,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   },
+   {
+    "f": 8,
+    "st": "bounce",
+    "gr": false,
+    "vy": 5.86,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.03,
+     1.83,
+     28.82
+    ],
+    "yaw": 3.001,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "double_jump",
+      "w": 1,
+      "t": 0.133,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   },
+   {
+    "f": 9,
+    "st": "bounce",
+    "gr": false,
+    "vy": 5.46,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.05,
+     1.92,
+     28.72
+    ],
+    "yaw": 2.868,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "double_jump",
+      "w": 1,
+      "t": 0.15,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   },
+   {
+    "f": 10,
+    "st": "bounce",
+    "gr": false,
+    "vy": 5.06,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.07,
+     2.01,
+     28.61
+    ],
+    "yaw": 2.868,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "double_jump",
+      "w": 1,
+      "t": 0.167,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   },
+   {
+    "f": 11,
+    "st": "bounce",
+    "gr": false,
+    "vy": 4.66,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.09,
+     2.09,
+     28.51
+    ],
+    "yaw": 2.869,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "double_jump",
+      "w": 1,
+      "t": 0.183,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   },
+   {
+    "f": 12,
+    "st": "bounce",
+    "gr": false,
+    "vy": 4.26,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0.12,
+     2.16,
+     28.39
+    ],
+    "yaw": 2.869,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "double_jump",
+      "w": 1,
+      "t": 0.2,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   }
+  ],
+  "solo": [
+   {
+    "clip": "hook_grab",
+    "f": 3,
+    "st": "idle",
+    "gr": true,
+    "vy": 0,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0,
+     0,
+     30
+    ],
+    "yaw": 3.142,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "hook_grab",
+      "w": 1,
+      "t": 0.05,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   },
+   {
+    "clip": "roll",
+    "f": 5,
+    "st": "idle",
+    "gr": true,
+    "vy": 0,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0,
+     0,
+     30
+    ],
+    "yaw": 3.142,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "roll",
+      "w": 1,
+      "t": 0.083,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   },
+   {
+    "clip": "double_jump",
+    "f": 4,
+    "st": "idle",
+    "gr": true,
+    "vy": 0,
+    "aj": 1,
+    "anchor": [
+     -4,
+     6.7,
+     -33.7
+    ],
+    "pos": [
+     0,
+     0,
+     30
+    ],
+    "yaw": 3.142,
+    "sum": 1,
+    "tracks": [
+     {
+      "n": "double_jump",
+      "w": 1,
+      "t": 0.067,
+      "end": 0,
+      "lp": 0
+     }
+    ]
+   }
+  ]
+ },
+ "tag": "after",
+ "rings": [
+  [
+   0,
+   6.75,
+   -21
+  ],
+  [
+   -3.4,
+   6.65,
+   -27
+  ],
+  [
+   -4,
+   6.7,
+   -33.7
+  ],
+  [
+   -2,
+   6.6,
+   -40.8
+  ],
+  [
+   0.6,
+   6.7,
+   -47.6
+  ]
+ ],
+ "shots": [
+  {
+   "shot": "hook1-after-chain-c1",
+   "az": 90,
+   "pos": [
+    -2.37,
+    5.96,
+    -25.18
+   ],
+   "yaw": -2.725,
+   "st": "hookSwing",
+   "sum": 1.62,
+   "tracks": [
+    {
+     "n": "hook_grab",
+     "w": 0.375,
+     "t": 0.3,
+     "end": 1,
+     "lp": 0
+    },
+    {
+     "n": "hook_swing",
+     "w": 0.643,
+     "t": 0.3,
+     "end": 1,
+     "lp": 1
+    },
+    {
+     "n": "hook_grab",
+     "w": 0.417,
+     "t": 0.033,
+     "end": 0,
+     "lp": 0
+    },
+    {
+     "n": "hook_swing",
+     "w": 0.185,
+     "t": 0.033,
+     "end": 0,
+     "lp": 1
+    }
+   ]
+  },
+  {
+   "shot": "hook1-after-chain-c1-opp",
+   "az": 270,
+   "pos": [
+    -2.37,
+    5.96,
+    -25.18
+   ],
+   "yaw": -2.725,
+   "st": "hookSwing",
+   "sum": 1.62,
+   "tracks": [
+    {
+     "n": "hook_grab",
+     "w": 0.375,
+     "t": 0.3,
+     "end": 1,
+     "lp": 0
+    },
+    {
+     "n": "hook_swing",
+     "w": 0.643,
+     "t": 0.3,
+     "end": 1,
+     "lp": 1
+    },
+    {
+     "n": "hook_grab",
+     "w": 0.417,
+     "t": 0.033,
+     "end": 0,
+     "lp": 0
+    },
+    {
+     "n": "hook_swing",
+     "w": 0.185,
+     "t": 0.033,
+     "end": 0,
+     "lp": 1
+    }
+   ]
+  },
+  {
+   "shot": "hook1-after-chain-c2",
+   "az": 90,
+   "pos": [
+    -3.76,
+    5.17,
+    -32.13
+   ],
+   "yaw": -2.99,
+   "st": "hookSwing",
+   "sum": 2,
+   "tracks": [
+    {
+     "n": "hook_release",
+     "w": 0.583,
+     "t": 0.283,
+     "end": 1,
+     "lp": 0
+    },
+    {
+     "n": "jump_fall",
+     "w": 0.815,
+     "t": 0.283,
+     "end": 1,
+     "lp": 1
+    },
+    {
+     "n": "hook_grab",
+     "w": 0.417,
+     "t": 0.033,
+     "end": 0,
+     "lp": 0
+    },
+    {
+     "n": "hook_swing",
+     "w": 0.185,
+     "t": 0.033,
+     "end": 0,
+     "lp": 1
+    }
+   ]
+  },
+  {
+   "shot": "hook1-after-roll-f5",
+   "az": 90,
+   "pos": [
+    0.95,
+    0.49,
+    22.75
+   ],
+   "yaw": 2.882,
+   "st": "jump",
+   "sum": 1.167,
+   "tracks": [
+    {
+     "n": "roll",
+     "w": 0.167,
+     "t": 0.233,
+     "end": 1,
+     "lp": 0
+    },
+    {
+     "n": "jump_rise",
+     "w": 1,
+     "t": 0.083,
+     "end": 0,
+     "lp": 1
+    }
+   ]
+  },
+  {
+   "shot": "hook1-after-roll-f9",
+   "az": 90,
+   "pos": [
+    1.12,
+    0.57,
+    22.3
+   ],
+   "yaw": 2.749,
+   "st": "jump",
+   "sum": 1,
+   "tracks": [
+    {
+     "n": "jump_rise",
+     "w": 1,
+     "t": 0.15,
+     "end": 0,
+     "lp": 1
+    }
+   ]
+  },
+  {
+   "shot": "hook1-after-bounce-f4",
+   "az": 90,
+   "pos": [
+    0,
+    1.4,
+    29.21
+   ],
+   "yaw": 3.135,
+   "st": "bounce",
+   "sum": 1,
+   "tracks": [
+    {
+     "n": "jump_rise",
+     "w": 0.167,
+     "t": 0.233,
+     "end": 1,
+     "lp": 1
+    },
+    {
+     "n": "double_jump",
+     "w": 0.833,
+     "t": 0.067,
+     "end": 0,
+     "lp": 0
+    }
+   ]
+  },
+  {
+   "shot": "hook1-after-bounce-f8",
+   "az": 90,
+   "pos": [
+    0.03,
+    1.83,
+    28.82
+   ],
+   "yaw": 3.001,
+   "st": "bounce",
+   "sum": 1,
+   "tracks": [
+    {
+     "n": "double_jump",
+     "w": 1,
+     "t": 0.133,
+     "end": 0,
+     "lp": 0
+    }
+   ]
+  },
+  {
+   "shot": "hook1-after-solo-grab",
+   "az": 90,
+   "pos": [
+    0,
+    0,
+    30
+   ],
+   "yaw": 3.142,
+   "st": "idle",
+   "sum": 1,
+   "tracks": [
+    {
+     "n": "hook_grab",
+     "w": 1,
+     "t": 0.05,
+     "end": 0,
+     "lp": 0
+    }
+   ]
+  },
+  {
+   "shot": "hook1-after-solo-roll",
+   "az": 90,
+   "pos": [
+    0,
+    0,
+    30
+   ],
+   "yaw": 3.142,
+   "st": "idle",
+   "sum": 1,
+   "tracks": [
+    {
+     "n": "roll",
+     "w": 1,
+     "t": 0.083,
+     "end": 0,
+     "lp": 0
+    }
+   ]
+  },
+  {
+   "shot": "hook1-after-solo-djump",
+   "az": 90,
+   "pos": [
+    0,
+    0,
+    30
+   ],
+   "yaw": 3.142,
+   "st": "idle",
+   "sum": 1,
+   "tracks": [
+    {
+     "n": "double_jump",
+     "w": 1,
+     "t": 0.067,
+     "end": 0,
+     "lp": 0
+    }
+   ]
+  }
+ ],
+ "errors": []
+}

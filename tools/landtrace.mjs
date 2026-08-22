@@ -350,20 +350,26 @@ try {
        flag and clear the tracks. That mutates the real table, so what follows is genuinely the
        pre-§529 mixer rather than a parallel code path that could drift from it. */
     const a = window.__ENGINE.get('animation');
-    const names = ['land_soft', 'land_hard', 'land_roll', 'skid_stop'];
+    /* Every clip carrying `posture`, not the four §529 shipped. §530 added `double_jump` and
+       `roll` on the same mechanism, and `double_jump` is live in the LAND take (the residual
+       §529 §5 recorded) — so a control that strips only the original four leaves part of the
+       shipped rule standing in the "before" arm and understates the difference it is there to
+       show. The count is asserted against this list's own length below rather than against a
+       written-down 4, so the next clip to gain the flag cannot silently fall out of the control. */
+    const names = ['land_soft', 'land_hard', 'land_roll', 'skid_stop', 'double_jump', 'roll'];
     let n = 0;
     for (const nm of names) {
       const tr = a.play(nm, { fade: 0.001, loop: false });
       if (tr?.clip?.posture) { delete tr.clip.posture; n++; }
     }
     for (const tr of a.tracks) if (tr.clip) { tr.clip = null; tr.w = 0; tr.ending = false; tr.lock = false; }
-    return n;
+    return { n, want: names.length };
   });
-  if (stripped !== 4) {
-    throw new Error(`landtrace: the control stripped \`posture\` from ${stripped} clips, expected 4 — `
+  if (stripped.n !== stripped.want) {
+    throw new Error(`landtrace: the control stripped \`posture\` from ${stripped.n} clips, expected ${stripped.want} — `
       + 'an inert control arm silently duplicates the treatment arm and reads as "no difference found" (§525.7).');
   }
-  console.log(`[landtrace] control: posture stripped from ${stripped} clips — the PRE-§529 mixer`);
+  console.log(`[landtrace] control: posture stripped from ${stripped.n} clips — the PRE-§529 mixer`);
   await runArm('before');
 
   if (errs.length) console.log('  page errors:', errs.slice(0, 5));
