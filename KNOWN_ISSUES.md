@@ -45868,9 +45868,20 @@ The finding that outlasts this round, and it constrains every fork anyone builds
 **`afford` resolves the E press by TAG PRIORITY, not by aim.** At the fork stance,
 `afford('hook')` reports 7.63 m and `afford('pole')` 2.41 m, and **E takes the hook every time —
 including with the camera pointed straight at the rope, and including standing 0.5 m from the
-shaft.** `TUNE.hookCone` is 1.75 rad (≈100°) and does not discriminate: a ring 4 m *behind* the
-player still wins. So a stance with a hook and a pole in gate scores **2 on the branch-factor
-metric and plays as 1** — and worse, the pole's E entry is *deleted* anywhere within 9 m of a ring.
+shaft.** So a stance with a hook and a pole in gate scores **2 on the branch-factor metric and
+plays as 1** — and worse, the pole's E entry is *deleted* anywhere within 9 m of a ring.
+
+> **CORRECTION (§578), and it is a correction to the MECHANISM, not the symptom.** This section
+> originally said `TUNE.hookCone` "is 1.75 rad (≈100°) and does not discriminate". That is false
+> and it was inferred from behaviour rather than read. The cone discriminates exactly as designed:
+> `Collision.nearest` applies it through `_facingPenalty` as a **weight, never a filter** — its own
+> docblock says so, and gives the reason ("a hard cone cutoff reads as the game ignoring you").
+> Measured directly on `afford('hook')` from the fork stance, facing changes WHICH ring wins:
+> facing the ring returns ring 2 at **6.88 m / 54° off camera**, while facing the rope re-ranks and
+> returns ring 1 at **8.82 m / 116°** — the nearer ring is penalised out of first place. The weight
+> works. What does not exist anywhere is any comparison ACROSS tags: `afford` is per-tag by
+> construction, and cross-tag arbitration is an emergent property of state poll order in
+> `Moveset.js`. The symptom in this section stands unchanged; its cause is poll order, not the cone.
 
 **This fork survives only because the pole has a second, non-E entry.** `PoleClimb.canEnter`
 auto-mounts at `poleMount` 1.90 on a held stick, so the two branches are chosen with two different
@@ -45925,3 +45936,74 @@ as a ceiling 44 cm above the walkway — and would have condemned the circuit as
 was the walker crawling down a single vertical face and reporting it once per step. A settled
 capsule plus an upward capsule sweep (§435.4 — the probe must occupy space like the agent) gives
 the true answer, 0.65 m of clearance above a standing capsule, and the opposite conclusion.
+
+## §578 — The E-resolution fix, scoped and measured: the radius is wider than E, so it is reported rather than shipped
+
+Authorised to edit `afford()` in `src/player/Controller.js` and its immediate call sites, on the
+condition that the blast radius be measured first and the work stopped if it reaches the telegraph
+or the auto-grab. **It reaches both, and it does not reach the defect.** Nothing in
+`src/player/` was changed.
+
+### The structural finding: the defect is not in `afford()`
+
+`afford(tag)` is **per-tag by construction** — it asks `Collision.nearest` for the best affordance
+carrying one tag and returns it. It already applies aim, and applies it correctly:
+
+- `Collision.nearest` weights candidates by `_facingPenalty(…)`, and its docblock states the design
+  outright: *"`opts.facing` + `opts.maxAngle` bias the choice toward what is in front of the player.
+  The bias is a weight, never a filter: a hard cone cutoff reads as the game ignoring you."*
+- Measured, the weight does its job. From the fork stance, `afford('hook')` returns **ring 2 at
+  6.88 m / 54° off camera** when the camera is on the ring, and re-ranks to **ring 1 at 8.82 m /
+  116°** when the camera is on the rope. Facing changes which ring wins; the nearer one is
+  penalised out of first place.
+
+So aim already resolves *within* a tag. **There is no cross-tag comparison anywhere in the
+codebase.** Which affordance E takes is decided by the order states are polled in `Moveset.js` —
+an emergent consequence, never an authored ranking. That file is outside the granted scope, and
+the fix cannot be expressed inside `afford()` at all: a function that receives one tag cannot
+prefer another.
+
+### The four readers, and what each would see differently
+
+| reader | site | what it uses `afford` for | effect of making `afford` aim-*filtering* |
+|---|---|---|---|
+| traversal entry | `Moveset.js` ×11 (`canEnter`/`update` for hook, rail, pole, spire) | the thing to fix | intended |
+| **telegraph** | `Controller.js:1274` | **ranked by KIND, first non-null wins** (`TELEGRAPH_KINDS = ['hook','rail','ledge']`) | **changes which hold is marked**: a kind that returns null drops out and the mark falls through to the next kind — the precise failure §507 fixed |
+| **auto-grab / fly-through** | `Moveset.js:920` (`!grounded && distance <= hookAuto`) | shares the same per-frame `afford('hook')` result | **changes fly-through catching.** `Controller.js:1417` exists *only* to protect this: *"A cone miss shouldn't hide a hook Sly is flying straight into."* Filtering by aim re-breaks what that line was written to prevent |
+| pickpocket veto | `Moveset.js:1689–1693` | `if (c.afford('hook'/'rail'/'pole')) return false` — *"E is overloaded; traversal wins it"* | changes when a pocket can be picked |
+
+Two of those four are the ones I was told to stop at, so this stops here. The telegraph is on the
+user's review sheet (items 4 and 10) with judgement outstanding, and changing which hold it marks
+underneath an open question is exactly what was ruled out.
+
+### A side effect §575 has ALREADY shipped, which belongs on the review sheet
+
+The telegraph marks by kind with `hook` first, and **`pole` is not in `TELEGRAPH_KINDS` at all.**
+Consequences, measured on the built level:
+
+- Before §575 the hypostyle hall contained no hooks, so nothing in it was hook-telegraphed. Now the
+  mark names a nave ring at **every** station down the hall floor: z −25 → ring 1 (6.49 m), z −33 →
+  ring 2 (6.60 m), z −40 → ring 3 (5.54 m), z −47 → ring 4 (5.28 m).
+- At the fork station **with the camera on the rope**, the telegraph marks **ring 1, 8.61 m away**.
+- §571's rope was never telegraphed and still is not — poles are not a telegraphed kind.
+
+That is not a defect I introduced so much as one I made visible: the hall previously had nothing to
+mark. It is reported rather than fixed, because `TELEGRAPH_KINDS` is the telegraph's, and the
+telegraph is under review.
+
+### What a real fix looks like, for whoever owns it
+
+Not a change to `afford`, but a **cross-tag chooser** the E-press paths alone consult — score every
+tag's best candidate by distance *and* `_facingPenalty`, pick the winner, and let each `canEnter`
+ask "am I the winner?" instead of "is there one of mine?". That keeps the telegraph, the auto-grab
+and the pickpocket veto on today's per-tag `afford` untouched, because they would not call it. It
+lives in `Moveset.js`, it is movement-lane work, and the ranked-affordance design the review sheet
+already names is its larger cousin — explicitly out of scope here.
+
+### The fallback stays on file
+
+If E-resolution is not fixed, the alternative from §576 is unchanged and costed: move every ring
+more than ~12 m from the rope, which restores §571's designed E entry and gives up the only fork
+the gates allow. Branch factor would fall from 54 of 170 back toward 6, and the honest fork count
+from 1 to 0. The chain itself — worst gap 35.5 → 12.0 m, gap total 68 % → 26 % — survives either
+way, because it does not depend on the overlap.
