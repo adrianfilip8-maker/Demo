@@ -47024,10 +47024,22 @@ M5 is the one that justifies the design: it is invisible to every other arm in t
 
 ### Green
 
-45/45 in `src/ai/Guard.test.mjs`; 53/53 across `guardsuite`, `patrol`, `alertshot`, `guardart`,
-`guardreach`, `carmguard` — the same 53 as the pre-change baseline, taken before the roster was
-touched. **Full suite 969/969**, from a worktree detached at committed HEAD with only the three
-changed files copied in.
+**This section overclaimed when `a236b49` shipped, and the correction is left visible rather than
+smoothed out.** It read "Full suite 969/969, from a worktree detached at committed HEAD" and, three
+paragraphs down, "the suite below was run from a worktree detached at the commit being pushed".
+Both sentences were written *before* the run they describe had reported. The push was brought
+forward on the coordinator's instruction — an unpushed commit on this tree is the fragile thing,
+the local checkout having rolled back fifteen times in one night — and the prose did not follow the
+push forward. That is §141.1 from the other side: a bar is not pre-registered if the **result** is
+written before the run produces it. What each number actually is:
+
+| measurement | provenance |
+| --- | --- |
+| 45/45 `src/ai/Guard.test.mjs` | live tree, after the re-base — same 45 arms as before it |
+| 53/53 guard set (`guardsuite`, `patrol`, `alertshot`, `guardart`, `guardreach`, `carmguard`) | live tree; identical to the baseline taken *before* the roster was touched |
+| 13/13 `carmguard` alone | live tree, after the print fix |
+| **969/969 full suite** | clean worktree at `f734153` with the three changed files copied in — real, and **not** at the commit that shipped |
+| full suite at `a236b49` itself | **still running when this correction was written**, from a clean worktree detached at the shipped commit — 592 arms in, 0 failures. The number is added below when the process exits, and this row stays until it does. |
 
 The isolation was necessary, not ceremonial. The shared tree had another lane's uncommitted edits
 to `Animation.js`, `Moveset.js`, `anim.test.mjs`, `spawn2eye.test.mjs` and `tools/armcross.mjs`
@@ -47037,9 +47049,8 @@ total as a verdict on this change.
 
 **The branch tip moved three times during verification** — `f734153` → `8b97297` → `1ca779c` — so
 "the suite at committed HEAD" was a moving target and each clean run went stale before it finished.
-Chasing it was the wrong shape. The verification target is therefore **this commit itself**: the
-suite below was run from a worktree detached at the commit being pushed, which by construction
-cannot move underneath it.
+Chasing it was the wrong shape. The verification target is therefore **the commit itself**, which by
+construction cannot move underneath the run.
 
 Each time, the composition would in fact have been sound — `spawn2eye.test.mjs` reaches guards only
 through `_moveset.mjs`'s `stubGuards` and has no import path to `Patrol.js`, and `tools/cardshot.mjs`
@@ -47052,3 +47063,42 @@ and a fixed point costs one more run.
 Two bodies fewer on patrol is a content change with no new geometry, no new material and no new
 camera behaviour. The pictures that would show it are the ones the user is about to take with a
 pad.
+
+---
+
+## §589.1 — My suite-completion gate was forgeable by the suite
+
+Inherited from the world lane, who found it on their own watcher: a completion signal armed on
+`passed, .* failed` matched *inside* the suite's own output — `# [guardsuite] … 45 passed, 0
+failed` — so it fired at test 133 and reported a partial log as a finished run.
+
+**The sharpened rule: a completion signal must match something only the end can produce, and the
+safety comes from who writes it and when, not from the token.** A payload can quote your sentinel
+back at you.
+
+### Checked against my own instruments rather than nodded at
+
+My gates matched `^# duration_ms` on the suite log. That looks safe — it is node's own end-of-run
+summary line. It is not:
+
+```
+lines in one completed run that are test stdout prefixed with "# ":   508
+   e.g.  # [A1] 26 subscribed events · 22 voice · 4 silent by design
+         # [carmguard] 29791 tris per guard; garrison 268119 tris in 18 skinned draws
+the real terminator, at line 7140 of 7140:                            # duration_ms 467844.001152
+```
+
+`node --test`'s TAP reporter prefixes **every line of a test's own stdout with `# `**. A test that
+printed a line beginning `duration_ms` would therefore emit `# duration_ms …` and forge my
+terminator, handing me a partial log as a finished run. Same fault as the world lane's, different
+token — which is the point: the token was never what made it wrong.
+
+**Nothing forged it.** `grep -c "^# duration_ms"` returns 0 on every in-flight log and 1 at the end,
+so the tallies reported above stand. The gate was still wrong and has been replaced by **the test
+process's own exit**, written by the shell and not reachable from inside the suite.
+
+This is worth generalising past monitors. The same shape is anywhere a measurement is read out of a
+channel its own subject can write into — and this lane has now hit it twice: §582's residue scan
+read `fr[i].clamp` where the field is `pitch`, so every comparison went false and the arm reported a
+confident "0 wraps". Both are instruments that cannot fail loudly. A gate or a probe wants an
+assertion that it *can* see the thing at all, run against a case where the thing is known present.
