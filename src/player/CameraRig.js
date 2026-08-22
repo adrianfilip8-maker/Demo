@@ -296,6 +296,10 @@ export const TUNE = {
      fraction to ORIENTATION against 0.016 to position, so this is where the user's "Sly", as
      opposed to Sly's centre, actually goes missing. See the note in `_write`. */
   clampSubject: 'extent',
+  /* Sanity checks on stage 2's closed-form root — a reach bound and a side-flip rejection. See
+     the note in `_write`; `false` runs the pre-§582 solve, which throws the lens 562 m and whips
+     the view 131° in a frame. */
+  clampSolveGuard: true,
 
   /* ---- velocity lead ------------------------------------------------------ */
   /* **`FRAMES.lead` is inert on 13 of 19 rows, and TWO different constants do it.**
@@ -965,6 +969,16 @@ export class CameraRig {
        so a tool asking `_clampPitch` alone reports an untouched pose that was in fact moved. */
     this._clampOn = false;
 
+    /* ---- what shortened the boom, and whether Sly is holding it (§582.2) --------------------
+       Two scalars, no allocation, written only when a cast binds. "What is crushing my camera"
+       is a question this project has now asked in §471, §475, §580 and §582, and every time it
+       was answered by re-deriving the casts in a probe — an instrument built from the same
+       assumption as the thing it measures (§439). The rig knows the answer; it just never said
+       it. `_boomHeld` is the §471 shape generalised: the collider Sly is ATTACHED to is the
+       thing he is climbing, not an occluder, and the gate only ever covered poles. */
+    this._boomTag = null;      // tag of the collider that bound the boom last frame, or null
+    this._boomHeld = false;    // …and was it the very rec MOVEMENT reports as attached?
+
     /* ---- wall side probe ---- */
     this._wallSide = 0;
     this._wallProbeT = 0;
@@ -1198,6 +1212,7 @@ export class CameraRig {
          a movement facade without the field (older tests, stubs) reads as not-attached and the
          rig behaves exactly as before this gate existed. */
       this._attachedPole = !!(mv.attached && mv.attached.tag === 'pole');
+      this._attachedRec = mv.attached || null;
       /* The SUBJECT'S OWN HEIGHT, because it is not a constant: `Controller` reassigns
          `this.height` on every state change (`next.capsule > 0 ? next.capsule : TUNE.height`)
          — 1.80 standing, `crouchHeight` 1.06 in crouch/roll, `crawlHeight` 0.64 in a vent. The
@@ -1215,6 +1230,7 @@ export class CameraRig {
       this._stateName = '';
       this._playerYaw = null;
       this._attachedPole = false;
+      this._attachedRec = null;
       this._pHeight = 0;
     }
   }
@@ -2031,6 +2047,7 @@ export class CameraRig {
     const col = this._solidCollision();
     if (!col) return want;
     let allowed = want;
+    this._boomTag = null; this._boomHeld = false;
     for (let i = 0; i < WHISKERS.length; i++) {
       const w = WHISKERS[i];
       _from.copy(this.pivot);
@@ -2040,7 +2057,11 @@ export class CameraRig {
       const d = this._sweep(_from, _to, want);
       if (d >= want) continue;
       const claim = want - (want - d) * w[2];
-      if (claim < allowed) allowed = claim;
+      if (claim < allowed) {
+        allowed = claim;
+        this._boomTag = this._hitTag;
+        this._boomHeld = !!(this._hitRec && this._attachedRec && this._hitRec === this._attachedRec);
+      }
     }
 
     /* Belt and braces: if the resulting point is still inside something (a cast can miss a
@@ -2081,7 +2102,11 @@ export class CameraRig {
       if (typeof col.capsuleSweep === 'function') {
         // Height 0 makes the capsule a sphere, which is what a camera boom wants.
         const r = col.capsuleSweep(from, to, TUNE.camRadius, 0, opts);
-        if (r && r.hit) return Math.max(TUNE.distHardMin, (r.distance ?? want) - TUNE.camPad);
+        if (r && r.hit) {
+          this._hitTag = r.tag ?? r.rec?.tag ?? null;
+          this._hitRec = r.rec ?? null;
+          return Math.max(TUNE.distHardMin, (r.distance ?? want) - TUNE.camPad);
+        }
       } else if (typeof col.raycast === 'function') {
         _off.copy(to).sub(from);
         const len = _off.length();
@@ -2366,11 +2391,46 @@ export class CameraRig {
                rotation the bounded translate leaves undone falls through to stage 1, which is
                uncapped and lands the anchor on the margin regardless — so bounding this costs
                containment nothing and only ever costs composition. */
+            /* THE SOLVE'S OWN SANITY, and §580's stand-off was only one third of it (§582.1).
+               Two more ways the same tangent equation returns a root that is arithmetically
+               correct and physically nonsense, both DRIVEN on the pole-swing take:
+
+                 · RUNAWAY REACH. `den` can be small without tripping the 1e-4 guard, and the
+                   root then goes to infinity. Measured on the shipped rig: **dy = 562.93 m in a
+                   single frame** — the lens thrown half a kilometre and back. The stand-off
+                   never saw it, because it only forbids getting CLOSER. The bound is the
+                   camera's own range to the subject: a translate meant to bring a rotation back
+                   inside the pitch authority cannot rationally move the lens further than it
+                   already stands from what it is looking at, and beyond that the root is noise.
+                 · SIDE FLIP. The root can land the camera on the far side of the subject —
+                   measured, camera at y 6.111 with the anchor at 5.500, solved to 5.461 — and φ
+                   flips with it, −107.8° → +75.4°, so the rotation stage 1 then applies flips
+                   too: **131° of view rotation in one frame.** The stand-off bounds the DISTANCE
+                   to the subject and this crosses it at a distance, so it never bound.
+
+               Both are checked on the RESULT rather than predicted from the inputs, which is the
+               same shape as the overlap bisection `_castBoom` runs after its whiskers: when a
+               closed form can return a wrong branch, verify the branch you got. A rejected
+               translate leaves stage 1 to rotate uncapped, which still lands the anchor on the
+               margin — so this costs composition and never containment.
+               `clampSolveGuard: false` runs the pre-§582 solve. */
+            if (TUNE.clampSolveGuard !== false) {
+              const reach = Math.sqrt(_sv.lengthSq());
+              dy = clamp(dy, -reach, reach);
+            }
             if (TUNE.clampStandoff !== false) dy = standoff(dy, _sv.dot(_wv), _sv.lengthSq());
+            const phiBefore = phi;
             _camPos.y += dy;
             this._clampMoved = dy;
             _sv.set(_pPos.x, _pPos.y + anchorY, _pPos.z).sub(_camPos).applyQuaternion(_q3);
             phi = Math.atan2(_sv.y, -_sv.z);
+            if (TUNE.clampSolveGuard !== false && phi * phiBefore < 0) {
+              /* The root crossed the subject. Undo it and let stage 1 do the whole job. */
+              _camPos.y -= dy;
+              this._clampMoved = 0;
+              _sv.set(_pPos.x, _pPos.y + anchorY, _pPos.z).sub(_camPos).applyQuaternion(_q3);
+              phi = Math.atan2(_sv.y, -_sv.z);
+            }
             need = phi > am ? phi - am : phi < -am ? phi + am : 0;
           }
         }

@@ -62,10 +62,12 @@ async function drive(opts) {
   const keep = {
     margin: TUNE.clampMargin, bank: TUNE.clampBankFirst,
     standoff: TUNE.clampStandoff, roll: TUNE.wallRoll, subject: TUNE.clampSubject,
+    guard: TUNE.clampSolveGuard,
   };
   if (opts.margin !== undefined) TUNE.clampMargin = opts.margin;
   if (opts.bankFirst !== undefined) TUNE.clampBankFirst = opts.bankFirst;
   if (opts.standoff !== undefined) TUNE.clampStandoff = opts.standoff;
+  if (opts.guard !== undefined) TUNE.clampSolveGuard = opts.guard;
   if (opts.wallRoll !== undefined) TUNE.wallRoll = opts.wallRoll;
   if (opts.subject !== undefined) TUNE.clampSubject = opts.subject;
   const cam = new THREE.PerspectiveCamera(TUNE.fovBase, 16 / 9, 0.1, 4000);
@@ -109,7 +111,8 @@ async function drive(opts) {
       const H = c.height;
       out.push({ i, state: c.stateName, H, boom: rig.boom, on: rig._clampOn,
         bf: bodySpanFrac(cam, c.position, c.position.y, c.position.y + H),
-        quat: cam.quaternion.clone(),
+        boomTag: rig._boomTag, boomHeld: rig._boomHeld, want: rig._boomWant,
+        quat: cam.quaternion.clone(), cpos: cam.position.clone(),
         px: c.position.x, py: c.position.y, pz: c.position.z,
         pitch: rig._clampPitch, dy: rig._clampMoved, dx: rig._clampSlide, roll: rig._roll,
         anchorY: rig._clampAnchor, held: proj(rig._clampAnchor), mid: proj(H * 0.5),
@@ -129,7 +132,7 @@ async function drive(opts) {
   } finally {
     TUNE.clampMargin = keep.margin; TUNE.clampBankFirst = keep.bank;
     TUNE.clampStandoff = keep.standoff; TUNE.wallRoll = keep.roll;
-    TUNE.clampSubject = keep.subject;
+    TUNE.clampSubject = keep.subject; TUNE.clampSolveGuard = keep.guard;
     engine.get = keepGet; engine.camera = keepCam;
   }
 }
@@ -451,8 +454,14 @@ test('camstate: the containment translates cannot put the lens inside Sly', asyn
       else { i.let_go('interact'); if (n % 60 === 0) i.hold('attack'); else i.let_go('attack'); }
     } };
 
-  const off = await drive({ ...route, standoff: false });
-  const on = await drive({ ...route, standoff: true });
+  /* The pre-§580 regime is BOTH switches off, and that is not bookkeeping: §582's solve guard
+     independently prevents most of what the stand-off was catching here (a root that lands the
+     lens inside the subject is usually also a root that flipped sides or ran away), so leaving
+     the guard on while turning the stand-off off no longer reproduces the historical defect —
+     measured, it falls from 8 frames inside the capsule to 2. A failing input has to be the
+     regime it claims to be. */
+  const off = await drive({ ...route, standoff: false, guard: false });
+  const on = await drive({ ...route, standoff: true, guard: true });
   assert.ok(off.some((f) => f.state === 'poleSwing'), 'the drive never swung — the take is not the one measured');
 
   const offInside = off.filter((f) => f.range < CT.radius);
@@ -979,4 +988,308 @@ test('camstate: engaging earlier is engaging more gently — the protected class
       + `      ${m.centre.step.toFixed(2).padStart(6)} → ${m.extent.step.toFixed(2).padEnd(7)}`
       + `  ${m.centre.body.toFixed(3)} → ${m.extent.body.toFixed(3)}`);
   }
+});
+
+/* ============================================ §582 — the boom floor's own behaviour ======== */
+
+/** The pole-swing take: the only route in this file's set that has ever produced a view step
+ *  over 60°/frame, and the pose where both translate stages fire together. */
+const SWING = { start: V(19.8, 0.02, -2.0), yaw: Math.PI, frames: 400, script: (i, n, c) => {
+  i.move.y = 1; i.move.x = 0.8;
+  if (c.stateName !== 'poleClimb') { if (n % 8 === 0) i.hold('interact'); else i.let_go('interact'); i.let_go('attack'); }
+  else { i.let_go('interact'); if (n % 60 === 0) i.hold('attack'); else i.let_go('attack'); } } };
+
+/** Largest one-frame view rotation, excluding frames where the DRIVE teleported the player. */
+function stepStats(fr) {
+  const steps = [];
+  let maxDy = 0;
+  for (let i = 2; i < fr.length; i++) {
+    maxDy = Math.max(maxDy, Math.abs(fr[i].dy));
+    const pm = Math.hypot(fr[i].px - fr[i - 1].px, fr[i].py - fr[i - 1].py, fr[i].pz - fr[i - 1].pz);
+    if (pm > 0.6) continue;
+    steps.push(fr[i].quat.angleTo(fr[i - 1].quat) * 180 / Math.PI);
+  }
+  steps.sort((a, b) => a - b);
+  return { maxDy, worst: steps[steps.length - 1] || 0, over60: steps.filter((d) => d > 60).length,
+    over30: steps.filter((d) => d > 30).length,
+    p99: steps[Math.min(steps.length - 1, Math.floor(steps.length * 0.99))] || 0 };
+}
+
+test('camstate: stage 2 solved a tangent and got nonsense back — 562 m of camera, and a 131° whip', async () => {
+  /* ── DOMAIN (§418.3) ─────────────────────────────────────────────────────────────────────
+   * ran, passes : `clampSolveGuard` true (shipped) on the pole-swing take. Stage 2's closed form
+   *               is a TANGENT equation, and §580 bounded only one of the three ways its root
+   *               can be arithmetically right and physically nonsense. The other two, both
+   *               driven: the root runs away when `den` is small but above the 1e-4 guard, and
+   *               the root lands the camera on the far side of the subject so φ — and with it
+   *               the rotation stage 1 applies — flips sign. With both checked on the RESULT,
+   *               the translate stays inside the camera's own range to the subject and never
+   *               crosses it, and the take's worst one-frame view rotation falls by more than
+   *               half.
+   * ran, fails  : `clampSolveGuard` false — the pre-§582 solve, RUN, not recalled: **dy reaches
+   *               562 m in a single frame** (the lens thrown half a kilometre and back) and the
+   *               view whips 131°. Both are asserted to reproduce, so a quiet re-route of the
+   *               drive cannot hollow this arm out.
+   *               Worth recording: the 562 m figure was VISIBLE in §581's restlessness table as
+   *               a 562.828 m/frame camera move, and I called it "clearly a teleport, not a
+   *               camera behaviour" and filtered it out by the player's motion. The filter was
+   *               right for its purpose and it hid this for a whole round.
+   * does NOT    : remove every large step — the π-wrap below is what remains and it is not this;
+   * discriminate  price the feel of a rejected translate (hardware's); cover the boom's own
+   *               pull-in, which is the arm after next.
+   */
+  const off = stepStats(await drive({ ...SWING, guard: false }));
+  const on = stepStats(await drive({ ...SWING, guard: true }));
+
+  assert.ok(off.maxDy > 100,
+    `the unguarded solve's largest vertical translate was only ${off.maxDy.toFixed(2)} m — the `
+    + 'runaway did not reproduce, so the bound below is unpriced');
+  assert.ok(off.worst > 120,
+    `the unguarded solve's worst view step was only ${off.worst.toFixed(1)}°/frame — the side flip `
+    + 'did not reproduce');
+
+  assert.ok(on.maxDy <= 8,
+    `a guarded translate still moved the lens ${on.maxDy.toFixed(2)} m in one frame — the reach `
+    + 'bound is not binding');
+  assert.ok(on.over60 < off.over60,
+    `guarded still has ${on.over60} steps over 60°/frame against ${off.over60} unguarded`);
+  assert.ok(on.worst < off.worst * 0.75,
+    `the worst step only fell ${off.worst.toFixed(1)} → ${on.worst.toFixed(1)}°/frame`);
+
+  console.log(`\n[camstate] stage-2 solve: unguarded max |dy| ${off.maxDy.toFixed(2)} m, worst step `
+    + `${off.worst.toFixed(1)}°/f, ${off.over60} over 60° -> guarded ${on.maxDy.toFixed(2)} m, `
+    + `${on.worst.toFixed(1)}°/f, ${on.over60} over 60° (p99 ${off.p99.toFixed(2)} -> ${on.p99.toFixed(2)})`);
+});
+
+test('camstate: what is left is a π-wrap — a different mechanism from the solve bugs, and stateless rules cannot remove it', async () => {
+  /* ── DOMAIN (§418.3) ─────────────────────────────────────────────────────────────────────
+   * ran, passes : the RULE first (§439). `need` is a function of φ alone — `φ − sign(φ)·αm`
+   *               outside the band, 0 inside — and on the circle of φ such a function must break
+   *               somewhere. It breaks at the back of the lens, and the break's size is exactly
+   *               2π − 2·αm, asserted against the closed form rather than a bar picked by eye.
+   *               Driven with the solve guarded, EVERY residual view step over 60°/frame is the
+   *               applied rotation reversing sign as the subject passes behind — that is the
+   *               wrap and nothing else is left.
+   * ran, fails  : `clampSolveGuard` false, on the same routes: there are then large steps that
+   *               are NOT sign reversals — the runaway root and the side flip, which are a
+   *               different mechanism with a different signature. That is what makes "the
+   *               residue is the wrap" a measurement rather than a story: the two are
+   *               distinguishable, and the guard removed one class and not the other.
+   * does NOT    : BOUND the wrap's size. A first draft asserted it could not exceed 2·αm ≈ 46°,
+   * discriminate  reasoning that a 2π − 2·αm jump in `need` is a 2·αm rotation the other way.
+   *               Driven, the debt route steps 143.4° (applied rotation +96.1° → −119.9°),
+   *               because the extent hold's degrade branch clamps `need` into a window around φ
+   *               and φ itself is what wraps — so the jump is not the rule's own jump. The bound
+   *               was wrong and is retracted rather than widened.
+   *               Nor does it decide whether to spend statelessness: removing the wrap needs
+   *               hysteresis on the turn direction — remember which way you turned and keep
+   *               turning that way while the subject is behind — which is state, and §475.3's
+   *               question. Handed back, with the measurement attached.
+   */
+  const DEGR = 180 / Math.PI;
+  const am = Math.atan(TUNE.clampMargin * Math.tan(TUNE.fovBase * 0.5 / DEGR));
+  const needOf = (phi) => (phi > am ? phi - am : phi < -am ? phi + am : 0);
+  const d0 = 0.01;
+  const near = Math.abs(needOf(Math.PI - d0) - needOf(-Math.PI + d0));
+  const predicted = 2 * Math.PI - 2 * am - 2 * d0;
+  assert.ok(Math.abs(near - predicted) < 1e-6,
+    `the gap 0.01 rad either side of the cut is ${near.toFixed(4)} rad against the predicted `
+    + `${predicted.toFixed(4)} — the rule is not the one this arm describes. (A bar of "> 6.0" was `
+    + 'tried first and failed at 5.452: the true jump is 2π − 2·αm = 5.472, and a threshold picked '
+    + 'by eye rather than derived is exactly the §141.1 mistake.)');
+
+  const { engine, c, collision } = await realWorld();
+  const routes = buildRoutes(collision).concat(hangRoutes(collision));
+  /* How much the AIM had to change because the subject moved, holding the camera still: the
+     angle between where the subject was and where it went, both seen from the previous frame's
+     camera. At a 0.55 m boom a few centimetres of Sly is tens of degrees of aim, so this is a
+     third legitimate class of hard cut and it is neither a wrap nor a bug — the camera correctly
+     following a subject that genuinely traversed a large angle. Isolating it needs the previous
+     camera position, or camera motion and subject motion are inseparable (§442). */
+  const aimChange = (a, b) => {
+    const p0 = new THREE.Vector3(a.px, a.py + a.H * 0.5, a.pz).sub(a.cpos);
+    const p1 = new THREE.Vector3(b.px, b.py + b.H * 0.5, b.pz).sub(a.cpos);
+    if (p0.lengthSq() < 1e-9 || p1.lengthSq() < 1e-9) return 0;
+    return p0.angleTo(p1) * DEGR;
+  };
+  const scan = async (guard) => {
+    let wraps = 0, idle = 0, others = 0, worst = 0, where = null;
+    for (const r of routes) {
+      const fr = await drive({ ...r, guard });
+      for (let i = 2; i < fr.length; i++) {
+        const pm = Math.hypot(fr[i].px - fr[i - 1].px, fr[i].py - fr[i - 1].py, fr[i].pz - fr[i - 1].pz);
+        if (pm > 0.6) continue;
+        const d = fr[i].quat.angleTo(fr[i - 1].quat) * DEGR;
+        if (d <= 60) continue;
+        /* The field is `pitch`. Reading `clamp` here gave `undefined`, every comparison went
+           false, and the arm reported a confident "0 wraps" — a zero manufactured by an
+           instrument that could not see. Asserted finite so it can never do that quietly again. */
+        assert.ok(Number.isFinite(fr[i].pitch) && Number.isFinite(fr[i - 1].pitch),
+          `the clamp rotation is not a number at ${r.label} f${fr[i].i} — this scan is blind`);
+        /* The claim this arm needs is narrow and it is about the stage that was repaired: no
+           residual cut is stage 2 misbehaving. A cut is accounted for if the applied rotation
+           reversed sign (the π-wrap) or if stage 2 did not fire on that frame at all. Anything
+           else is a translate that moved the camera and produced a hard cut, which is the
+           §582.1 defect returning.
+           An earlier draft tried to explain every cut by a three-way taxonomy including "the
+           subject genuinely moved fast" — true (at a 0.55 m boom a pole swing traverses tens of
+           degrees a frame) but it turned into fitting a story to each frame rather than testing
+           the mechanism. Reported, not gated. */
+        const reversed = fr[i].pitch * fr[i - 1].pitch < 0 && Math.abs(fr[i - 1].pitch) > 1.5;
+        const stage2Idle = fr[i].dy === 0;
+        const moved = aimChange(fr[i - 1], fr[i]);
+        const kind = reversed ? 'wrap' : stage2Idle ? 'no translate' : 'STAGE 2';
+        if (reversed) wraps++; else if (stage2Idle) idle++; else others++;
+        if (d > worst) { worst = d; where = `${r.label} f${fr[i].i} (${fr[i].state}, ${kind}, aim moved ${moved.toFixed(0)}°)`; }
+      }
+    }
+    return { wraps, idle, others, worst, where };
+  };
+  const on = await scan(true);
+  const off = await scan(false);
+
+  assert.ok(on.wraps > 0,
+    'no residual hard cut at all with the solve guarded — then this arm asserts nothing about the '
+    + 'wrap and should be retired rather than left green');
+  assert.equal(on.others, 0,
+    `${on.others} view step(s) over 60°/frame with the solve guarded came from a stage-2 translate `
+    + `that was not a π-wrap (worst overall: ${on.where}) — the §582.1 defect is back`);
+  assert.ok(off.others > 0,
+    'with the solve unguarded no hard cut came from a stage-2 translate either — then this signature '
+    + 'cannot tell the repaired mechanism from the residue, and the guarded pass proves nothing');
+
+  console.log(`[camstate] π-wrap: the rule breaks at the back of the lens by exactly 2π − 2·αm `
+    + `(${(predicted * DEGR).toFixed(1)}°). Cuts over 60°/frame across ${routes.length} routes — guarded: `
+    + `${on.wraps} wrap · ${on.idle} with stage 2 idle · ${on.others} from a stage-2 translate · worst `
+    + `${on.worst.toFixed(1)}°/f at ${on.where}. Unguarded: ${off.wraps} wrap · ${off.idle} stage-2 idle · `
+    + `${off.others} FROM STAGE 2 · worst ${off.worst.toFixed(1)}°/f. The wrap is NOT bounded `
+    + 'by 2·αm — that draft was wrong — and is irreducible without state (§475.3, handed back).');
+});
+
+test('camstate: the occlusion pull-in is not spurious — every occluder is visible architecture', async () => {
+  /* ── DOMAIN (§418.3) ─────────────────────────────────────────────────────────────────────
+   * ran, passes : the pull-in fires below the requested boom on a large minority of frames, and
+   *               the question is whether a player would call any of it an occlusion. Three
+   *               measurements, all against the shipped level:
+   *                 · WHAT IS HIT. Every `ledge` and `pole` collider in the level — the two
+   *                   affordance tags the camera still treats as solid — overlaps a VISIBLE mesh.
+   *                   None is a bare affordance volume. So the camera is never pulled in by
+   *                   something with nothing on screen behind it.
+   *                 · HOW HARD. The shortfall (`want` − `allowed`) has a median in METRES, not
+   *                   centimetres, so this is not a fan of whiskers grazing corners and latching
+   *                   `_recovering` on a millimetre.
+   *                 · WHOSE. On a ledge hang the boom is bound by a `ledge` collider on
+   *                   essentially every frame and NEVER by the one Sly is holding — so §471's
+   *                   held-pole defect has no second instance here.
+   *               An ablation was run and rejected on this evidence: ignoring `ledge` and `pole`
+   *               for the camera drops frames at the boom floor from 20.2 % to 5.4 %, which is
+   *               the position sixth §581 priced — and it buys that by putting the lens through
+   *               visible stone, which is why it is recorded and not taken.
+   * ran, fails  : the visible-geometry check, RUN against a synthetic volume placed in open air
+   *               above the courtyard — it must report BARE. Without that the "all 109 are
+   *               covered" result is equally consistent with a check that says covered about
+   *               everything.
+   * does NOT    : discriminate whether the held-affordance register could fire at all. Every
+   * discriminate  other attachable tag is already invisible to the camera — `rail`, `hook` and
+   *               `spire` sit in `CAM_SWEEP_OPTS.ignoreTags`, and `pole` is gated by §471 while
+   *               held — so `ledge` is the only tag on which `_boomHeld` could ever be true, and
+   *               it measures false. That is a real result about the level and a weak one about
+   *               the register; it is reported as such rather than dressed up.
+   *               Nor does it price the pull-in's FEEL, or say the 20.2 % floor rate is good —
+   *               only that it is honestly earned.
+   */
+  const { engine, c, collision } = await realWorld();
+
+  /* 1 — what is hit, and whether anything is drawn there. */
+  const vis = [];
+  engine.scene.traverse((o) => {
+    if (!o.isMesh || !o.geometry || o.userData?.collisionProxy) return;
+    let p = o, hidden = false;
+    while (p) { if (p.visible === false) { hidden = true; break; } p = p.parent; }
+    if (hidden) return;
+    o.updateMatrixWorld(true);
+    o.geometry.computeBoundingBox();
+    vis.push(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));
+  });
+  assert.ok(vis.length > 20, `only ${vis.length} visible meshes found — the scan lost the level`);
+  const covers = (box) => vis.some((v) => v.intersectsBox(box));
+  const bb = new THREE.Box3();
+  let checked = 0, bare = 0;
+  for (const tag of ['ledge', 'pole']) {
+    for (const r of collision.recs.filter((x) => x.tag === tag && x.mesh?.geometry)) {
+      r.mesh.updateMatrixWorld(true);
+      r.mesh.geometry.computeBoundingBox();
+      bb.copy(r.mesh.geometry.boundingBox).applyMatrix4(r.mesh.matrixWorld);
+      const shrunk = bb.clone().expandByScalar(-0.06);
+      if (shrunk.isEmpty()) continue;
+      checked++;
+      if (!covers(shrunk)) bare++;
+    }
+  }
+  assert.ok(checked > 80, `only ${checked} ledge/pole colliders checked — the level lost its affordances`);
+  assert.equal(bare, 0,
+    `${bare} of ${checked} ledge/pole colliders are BARE affordance volumes with nothing visible in `
+    + 'them — those are spurious occluders and the pull-in they cause is unearned');
+  /* …and the check can say no. */
+  const air = new THREE.Box3(new THREE.Vector3(0, 60, 30), new THREE.Vector3(1, 61, 31));
+  assert.equal(covers(air), false,
+    'a 1 m box 60 m above the courtyard reports as covered by visible geometry — the check says '
+    + 'yes to everything, so the zero above is not evidence');
+
+  /* 2 — how hard the pull-in pulls, and 3 — whether it is ever the held collider. */
+  const spots = [];
+  for (const r of collision.recs.filter((x) => x.tag === 'ledge' && x.mesh?.geometry)) {
+    r.mesh.geometry.computeBoundingBox();
+    const box = r.mesh.geometry.boundingBox.clone().applyMatrix4(r.mesh.matrixWorld);
+    for (const [ux, uz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      if (spots.length >= 4) break;
+      const px = ux !== 0 ? (box.min.x + box.max.x) / 2 + ux * ((box.max.x - box.min.x) / 2 + 0.45) : (box.min.x + box.max.x) / 2;
+      const pz = uz !== 0 ? (box.min.z + box.max.z) / 2 + uz * ((box.max.z - box.min.z) / 2 + 0.45) : (box.min.z + box.max.z) / 2;
+      spots.push({ px, pz, ux, uz, top: box.max.y });
+    }
+    if (spots.length >= 4) break;
+  }
+  /* The shortfall distribution needs a BROAD sample: the hang routes alone put every frame in a
+     narrow band (~2.56 m), so asking them whether the instrument resolves small shortfalls is
+     asking the wrong sample — a first draft did exactly that and failed on a property of the
+     route rather than of the measurement (§440). */
+  const short = [];
+  for (const r of buildRoutes(collision)) {
+    const fr = await drive(r);
+    for (const f of fr) if (f.want - f.boom > 1e-3) short.push(f.want - f.boom);
+  }
+  let hangFrames = 0, boundByLedge = 0, boundByHeld = 0;
+  for (const s of spots) {
+    const y = s.top - CT.hangReach + 0.4;
+    const fr = await drive({ start: V(s.px, y, s.pz), yaw: Math.atan2(-s.ux, -s.uz), frames: 150,
+      pre: (cc) => { cc.position.set(s.px, y, s.pz); cc.grounded = false; cc._needSpawnSnap = false; cc._frame++;
+        cc.probeLedge(V(-s.ux, 0, -s.uz)); cc.sm.set('ledgeHang'); },
+      script: (i, n) => { i.move.x = n > 40 ? 1 : 0; } });
+    for (const f of fr) {
+      if (f.state !== 'ledgeHang') continue;
+      hangFrames++;
+      if (f.boomTag === 'ledge') boundByLedge++;
+      if (f.boomHeld) boundByHeld++;
+    }
+  }
+  assert.ok(hangFrames > 200, `only ${hangFrames} ledgeHang frames driven`);
+  assert.ok(boundByLedge > hangFrames * 0.5,
+    `the boom was bound by a ledge collider on only ${boundByLedge}/${hangFrames} hang frames — the `
+    + 'scan is not seeing the binder it is about to make a claim on');
+  assert.equal(boundByHeld, 0,
+    `the boom was crushed by the very ledge Sly is holding on ${boundByHeld} frames — §471's `
+    + 'held-collider defect has a second instance and the gate needs to cover ledges too');
+  short.sort((a, b) => a - b);
+  const med = short[Math.floor(short.length / 2)];
+  assert.ok(med > 1.0,
+    `median shortfall is ${med.toFixed(3)} m — the pull-in is firing on grazes, not on geometry, and `
+    + '"37.8 % of frames occluded" is then a statement about a 1e-3 threshold rather than about the level');
+  assert.ok(short[0] < med * 0.5,
+    `the smallest shortfall seen is ${short[0].toFixed(3)} m against a median of ${med.toFixed(3)} — the `
+    + 'instrument is not resolving small shortfalls, so "the median is large" may be its own floor');
+
+  console.log(`\n[camstate] pull-in: ${checked} ledge/pole colliders, ${bare} bare (a box in open air reads bare: `
+    + `${covers(air) ? 'NO — check is broken' : 'yes'}) · ledge hang ${hangFrames} frames, bound by a ledge on `
+    + `${boundByLedge}, by the HELD ledge on ${boundByHeld} · shortfall min ${short[0].toFixed(2)} median `
+    + `${med.toFixed(2)} max ${short[short.length - 1].toFixed(2)} m — the pull-in is earned`);
 });
