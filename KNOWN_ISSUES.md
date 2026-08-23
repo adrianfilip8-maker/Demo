@@ -51944,3 +51944,39 @@ RNG-neutral by the same table: `jitter(amount)` draws three times whatever its a
   claim hold; but the keyed translation/rotation split is only sound for uniquely-keyed rows.
 - `hookRing`'s `rng` parameter is still accepted and still never read. It stays for call-site
   compatibility and is not evidence of anything.
+
+---
+
+## §696 — The rings in motion: the bound §605 flagged, closed by the only instrument that could
+
+§605 shipped the vertical rings and ended with an unusually honest caveat, which is quoted here
+because the caveat is the point:
+
+> Nothing here measures the rings in motion. The swing is unchanged by *construction* — the
+> collider and magnetism columns — rather than by observation of a moving camera.
+
+That was exactly right, and it was not a gap more local testing could close. The digest can prove
+16 hook collider rows are byte-identical and 15 magnetism records unchanged; `spawn2eye` can walk
+every leg; `telegraph` can close 4/4. None of those is a hand on a stick. "The geometry the swing
+reads from did not change" and "the swing feels the same to grab" are two different claims, and
+only the first was ever in reach from here.
+
+**User confirmation: "The rings work too."** Played, not rendered.
+
+**Why this is filed rather than merely noted.** It is the same shape as §693 and §691. In §693 the
+audio chain was measured all the way to the producer and the fault was one link past it, at a
+device we did not own. Here the swing was measured all the way to the data and the question was one
+link past it, in the hands. Both closed on the user's machine. The pattern across all three:
+
+> The last link of a chain is routinely the one no instrument in the repo can reach, and it is
+> disproportionately where the answer lives. Naming that link is not a hedge — it is the part of
+> the report that tells you who can actually settle it.
+
+A verification that stops at the boundary and **says so** sends the right question to the right
+place. One that stops at the boundary and reports "verified" sends nobody anywhere, and the two are
+textually indistinguishable unless the bound is written down.
+
+**Domain (§418.3).** Passes on: this confirmation, and §693's. Fails on: any claim of the form
+"the swing is unchanged" offered *before* it was played — which is why §605 declined to make one.
+Does not discriminate: a swing that is subtly worse in a way the player has not yet provoked, since
+one session of play is a sample, not a proof. Left open deliberately.
