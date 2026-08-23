@@ -17,6 +17,7 @@
  */
 import { chromium } from 'playwright';
 import { acquire } from './lock.mjs';
+import { camDot } from './camdot.mjs';
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -123,6 +124,31 @@ const FRAMES = {
 const argv = process.argv.slice(2);
 const want = argv.length ? argv : Object.keys(FRAMES);
 
+/**
+ * §604 — the pre-flight. Two frames in this project have been shot from cameras that could not
+ * see their subject, and a browser boot plus a software render is 2-8 minutes to find that out.
+ * `camDot` builds the level in Node WITH props and answers it in seconds, so a bad camera never
+ * reaches the queue. `CAMDOT=0` skips it for the case where a frame INTENDS to be inside
+ * something — nothing here does, but a guard with no override gets deleted rather than argued with.
+ */
+async function preflight(names) {
+  if (process.env.CAMDOT === '0') { process.stdout.write('· camDot skipped (CAMDOT=0)\n'); return names; }
+  const ok = [];
+  for (const n of names) {
+    const f = FRAMES[n];
+    if (!f) { ok.push(n); continue; }
+    const r = await camDot(f.pos, f.look);
+    if (r.ok) {
+      process.stdout.write(`· camDot ${n.padEnd(13)} ok    nearest ${r.nearest} m, subject ${r.targetLen} m, first hit ${r.forward} m\n`);
+      ok.push(n);
+    } else {
+      process.stdout.write(`· camDot ${n.padEnd(13)} REFUSE\n    - ${r.reasons.join('\n    - ')}\n`);
+    }
+  }
+  if (!ok.length) { process.stdout.write('\nEvery requested camera was refused; nothing to shoot.\n'); process.exit(1); }
+  return ok;
+}
+
 async function freePort(start = 5400) {
   for (let p = start; p < start + 200; p++) {
     const ok = await new Promise((res) => {
@@ -167,6 +193,7 @@ async function startServer(port) {
 
 async function main() {
   await mkdir(OUTDIR, { recursive: true });
+  const shoot = await preflight(want);
   const release = await acquire({
     onWait: (ms, pid) => process.stdout.write(`· waiting for capture lock (${(ms / 1000) | 0}s, pid ${pid})\n`),
   });
@@ -203,7 +230,7 @@ async function main() {
        three after it) and the three settle steps below are not enough to pay for it. */
     await page.evaluate(async () => { await window.__GAME.step(12, 1 / 60); window.__GAME.capture(); });
 
-    for (const name of want) {
+    for (const name of shoot) {
       const f = FRAMES[name];
       if (!f) { process.stdout.write(`  ? unknown frame ${name}\n`); continue; }
       const t0 = Date.now();

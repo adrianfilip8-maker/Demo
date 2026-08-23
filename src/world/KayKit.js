@@ -108,7 +108,29 @@ const PLACEMENTS = [
   ['crates_stacked',           19.8, 0, -29.4,  0.80],
   ['barrel_small',             20.5, 0, -35.2,  2.60],
   ['rubble_half',              19.2, 0, -43.0,  1.40],
-  ['rubble_half',             -19.6, 0, -45.5, -0.60],
+  /* §604 — moved 9.0 m SOUTH, from z -45.5. Same line, same neighbours, same rotation, same
+     model: only the corner changes.
+     It stood at (-19.6, -45.5), the hall's north-west corner, and §600-§603 put the vent mouth in
+     that corner. Photographed from the two stances a player walks it — eye 1.60 m, gameplay fov,
+     looking north — this ONE prop filled the right two thirds of both frames at 2.36 m and 2.48 m
+     from the eye, and 21 of 41 rays in a +-40 deg fan from the bore axis hit it before anything
+     else. The mudbrick frame §603 built to mark the entrance was not visible on the approach at
+     all, behind it.
+     It also carries no collider within 14 m of the mouth (§602), so a player walks straight
+     THROUGH the thing hiding the way in: it occludes like a wall and does not read as one.
+     Not deleted — it is the west aisle's northernmost store and the counterpart to the
+     `rubble_half` at (19.2, -43.0) on the east, which are deliberately not a mirrored pair, and
+     -36.5 keeps them unmirrored. It sits 3.5 m north of `barrel_small_stack` at (-19.8, -33.0),
+     the next store down the same line, which is inside the 2.7-5.5 m spacing the rest of the line
+     already runs at.
+
+     -36.5 rather than -39.5, and that was measured rather than judged. Both clear the approach
+     completely — frame 9/9 and 0 of 41 prop rays from either camera — but over the whole hall
+     -39.5 COST 11 stances their only cue (149 -> 138), because at that z the prop moves into the
+     sightline fan converging on the mouth from the south. -36.5 is far enough down the aisle to
+     fall out of that fan: 150/384, a hair above where it was before this move, while direct sight
+     of the aperture goes 104 -> 131. Strictly better on every row, so there was no trade to make. */
+  ['rubble_half',             -19.6, 0, -36.5, -0.60],
 
   /* ---- the tomb: the hoard, around the sarcophagus at (0, −12, −72) ----
    *
@@ -153,7 +175,7 @@ const PLACEMENTS = [
    *
    * The first capture of this set showed the tomb hoard reading beautifully and the courtyard and
    * hall showing nothing at all. `tools/shotsee.mjs` says why: of the thirty above, `interior` is
-   * far and away the nearest shot, at 8.09 m. `temple` has ONE in its cone, at 35.2 m, because it
+   * far and away the nearest shot, at 8.09 m. `temple` has ONE in its cone, at 28.99 m, because it
    * looks down the nave while the stores are against the aisle walls; `courtyard` has all thirty
    * in its cone, behind the colossi.
    *
@@ -167,7 +189,7 @@ const PLACEMENTS = [
    *   "all thirty ... at 35-51 m"       all thirty ARE in courtyard's cone — that half is exact —
    *                                     but at 34.6–116.8 m. 35–51 m is the range of the ELEVEN
    *                                     colonnade props alone (34.6–50.9 m); the hypostyle stores
-   *                                     reach 88.7 m and the tomb hoard 107.5–116.8 m. One
+   *                                     reach 87.27 m and the tomb hoard 107.5–116.8 m. One
    *                                     sentence, and its count and its range described different
    *                                     sets.
    *   "`interior` is the only shot      THREE shots are inside it, over the eighteen canonical
@@ -193,6 +215,13 @@ const PLACEMENTS = [
    *                                     Kept as a measured gap rather than restored to the old
    *                                     number: this arm caught a camera move within minutes of
    *                                     it landing, which is what it is for.
+   *
+   * ── §604 moved one prop, and TWO numbers in this banner moved with it ───────────────────────
+   * `rubble_half` went from (-19.6, -45.5) to (-19.6, -36.5) to clear the vent approach, and it
+   * happened to be both of the props these sentences are about: `temple`'s single in-cone prop,
+   * 35.2 -> 28.99 m, and the hypostyle's farthest from `courtyard`, 88.7 -> 87.27 m. `kaykit`
+   * C2 and C3 caught both within a minute of the move, which is what they are for — the numbers
+   * are re-measured rather than the tolerances widened.
    *
    * Both aims are legitimate — a follow camera passes within a couple of metres of the colonnade
    * stores — but only one of them had been considered. `Props.js` already settled the precedent in
