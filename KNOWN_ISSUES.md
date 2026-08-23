@@ -48469,3 +48469,138 @@ Brought for a ruling.
 - **What none of this reaches.** Whether the user hears anything. `OfflineCtx` is not a sound card
   and this container is not a browser with an audio device — which is precisely why the design does
   not depend on the answer.
+
+## §602 — "Still not accessible": the affordance was wider than the hole, and it was widest exactly where the old vent had been
+
+§600 built the passage, §601 photographed it, R1–R7 were green, run 22 deployed `870c8e5`, and the
+player's verdict on the live build was unchanged: *"The vent crawl space still is not accessible."*
+
+The bound §600.12 stated is where it lived: *"the crawl is driven at one stick and one jump phase,
+never swept. Every arm here says reachable, none says forgiving."* R1 does not walk into the mouth.
+It **steers to (−21.85, −52)** — the bore's own axis — and converges into the hole from wherever it
+starts. A person holds forward at the place they think the vent is.
+
+### §602.1 Three widths where there should have been one
+
+| what | x range | width |
+|---|---|---|
+| the DRAWN doorway (`VENT.door`) | −23.05 … −20.65 | **2.40 m** |
+| where `inVent()` fires, driven | −22.70 … −20.70 | **2.00 m** |
+| where the player gets through, driven | −22.70 … −21.40 | **1.30 m** |
+
+Driven column by column at 0.1 m — settle a capsule in the trench, hold forward due north 6 s:
+
+```
+-22.7O -22.6O -22.5O -22.4c -22.3O -22.2O -22.1O -22.0O -21.9O -21.8O -21.7O -21.6O -21.5O
+-21.4O -21.3c -21.2c -21.1c -21.0c -20.9c -20.8c -20.7c -20.6. -20.5. -20.4. -20.3. -20.2.
+        O = through      c = ENTERED `crawl` AND STOPPED      . = stopped, no crawl
+```
+
+**0.70 m of wall where the game drops Sly into `crawl`, lights the HUD's CRAWL badge, and then
+stops him at z −49.56.** That is §563's own coordinate — the wall face −49.90 plus the 0.34 capsule
+radius — so a player standing there got **behaviour identical to before §600 was written**. Nothing
+about the fix had reached them.
+
+The mechanism is arithmetic, not art. `inVent()` is `col.overlap(position, radius + 0.05, ['vent'])`,
+so a vent box `[x0, x1]` fires for a capsule centre in `[x0 − 0.39, x1 + 0.39]` and admits one only
+in `[x0 + 0.34, x1 − 0.34]`. §600 set the vent proxies to exactly the bore, which over-promises by
+0.73 m at each end **by construction**.
+
+### §602.2 Why it landed on the player's address rather than somewhere harmless
+
+The pre-§600 vent was not a hole in a floor. It was a framed, bricked-up opening at **standing
+height**, and §600's own sink replay still carries its three draws verbatim:
+
+```
+vol 'mudbrick' x -22.3..-19.7  y  0.00..1.55  z -50.4..-49.9    the panel
+vol 'mudbrick' x -22.3..-21.9  y -0.10..1.55  z -50.4..-48.6    west jamb
+vol 'mudbrick' x -19.9..-19.6  y -0.10..1.55  z -50.4..-48.6    east jamb
+proxy tag:vent 2.2 x 0.6 x 1.9 at (-21.0, -0.2, -49.4)
+```
+
+Centre **x −21.0**. §600 deleted that frame and cut its bore at x −22.70…−21.00, centred **−21.85**
+— 0.85 m west of the cue the player already had — and x −21.0 fell squarely in the crawl-and-stop
+band. The only thing left at the old address was the crawl animation and a wall.
+
+### §602.3 The fix: one width, and it contains the old address
+
+`VENT.x1` −21.00 → **−20.30** (bore 2.40 m, which is what §600 had already *drawn* the doorway at),
+and a new `VENT.ventInset` pulls the two hall-reachable `vent` markers in so the affordance matches.
+`mouthHole`, `door` and TERRAIN's `vent-mouth` cut follow.
+
+|  | before | after |
+|---|---|---|
+| `inVent()` fires | −22.70 … −20.70 (2.00 m) | −22.30 … −20.70 (**1.60 m**) |
+| player gets through | −22.70 … −21.40 (1.30 m) | −22.30 … −20.70 (**1.60 m**) |
+| crawl-and-stop band | **0.70 m** | **0.00 m** |
+| x −21.0, the old vent's centre | crawls, stopped | **through** |
+
+Walking due north and holding forward, the passable window goes from 6 of 27 columns to 8 of 27,
+1.40 m → 1.60 m, and the old centre moves from outside it to inside.
+
+**`ventInset` is 0.77 and not the algebraic 0.73**, which is the part worth keeping. The algebra
+assumes the overlap sphere sits at the capsule's centre; it sits at `position`, which is the FEET.
+Driven, `crawl` first engages at (x, 0.00, −48.28) — standing on the paving, 0.42 m *south* of the
+ramp head, outside the trench entirely — reaching the marker's top at y 0.38 from above. At 0.73 the
+census still left a crawl-and-stop column at each extreme edge; 0.77 clears it with the passable
+window unchanged. Insetting further is not free either: it opens a sliver where the player fits but
+does not crawl, and that is stuck too — they walk the ramp standing and the lintel stops them. So
+this is the *narrowest* inset that clears the census, not the largest.
+
+### §602.4 What was ruled out, and by what
+
+- **The browser.** Driven in Chromium on the shipped build with a real held `KeyboardEvent`, real
+  `Input.js`, props and terrain loaded: `crawl` engaged, and at frame 1200 the player was at
+  (−15.8, −5.40, −62.9) running east along the run at the gallery's own height. The browser matches
+  the Node harness; there is no headless-only passage.
+- **Props.** `realWorld()` does not boot KAYKIT, so no arm in `ventroute` has ever seen a crate.
+  Booted through `_kaykitboot`: **0 KayKit colliders within 14 m of the mouth**.
+- **A precision approach, once you are aimed at the hole.** Steering to the bore axis: 8/11 across
+  start x, **6/6** from as far back as 28 m, 11/13 against a ±1.2 m error on the aim point, running
+  works. The defect was never the steering; it was where the affordance fired.
+- **Distance.** Visibility does not fall off with range — 8/12 aperture targets at 5.7 m, 6/12 at
+  10.5 m along the bore axis. It falls off with **lateral offset**: from x −21.0, 2 m back gives
+  8/12 and 4 m back gives 0/12.
+- **A stale vent elsewhere.** Exactly four `vent`-tagged volumes exist and all four are §600's.
+
+### §602.5 RNG-neutrality
+
+301 colliders and 286 affordances before and after, every tag identical. **292 of 301 collider rows
+byte-identical; 9 changed in place; 0 added, 0 removed.** All nine are the widening itself — the
+structure's `x1` moving −21.000 → −20.300 and the three `vent` markers re-sized.
+
+**82 of 88 art meshes byte-identical.** All six that changed keep their **exact vertex count** —
+`arch:hall:hieroglyph_wall` holds 158952 across the change — except `sand_collision`, 8278 → 8359,
+which is the terrain cut that was deliberately widened. That distinction is the whole proof: a
+reseed changes counts (§600 measured `hieroglyph_wall` *losing 48 vertices* when the stream moved),
+and geometry moving under a fixed stream does not. The paving is untouched: the hole grew from
+1.70 m to 2.40 m and still drops exactly one slab, because slab centres sit 2.3 m apart at
+−24.15/−21.85/−19.55 and only −21.85 is inside it.
+
+### §602.6 Three probes that were wrong first
+
+- The first approach sweep aimed at a fixed point 4 m ahead at z −50.5. All 39 runs "stopped" at
+  z −50.54 and three arms read **0/13 through**. That was the walker *arriving at its aim point* —
+  with the target behind it the steering reverses. A uniform failure at a coordinate matching the
+  instrument's own parameter is the instrument.
+- `_north.mjs` walked all 27 columns to the hall's **south** end and reported 0 of 27 through, which
+  reads as a sealed wall. `hardReset`'s PLAYER yaw for north is π; the CAMERA yaw R1's `aim()`
+  computes for the same heading is 0. Two conventions, opposite signs, one fed to the wrong consumer.
+- **`collision.overlap` returns a POOLED array.** Asked which marker fired, the probe held the
+  returned array and then called `overlap` twice more before reading it — and read `length` 0 while
+  a fresh call at the identical radius returned 1. The hits must be consumed before the next call.
+  Believed, that reading said `crawl` was firing through `inVent()`'s `groundTag === 'vent'` branch,
+  and the fix would have been aimed at the ground check instead of at the marker's width.
+
+### §602.7 Bounds, stated
+
+- The exit portal's affordance-versus-bore has the same shape by construction and is **not**
+  measured here. Only the mouth was driven.
+- That the player walked to x −21.0 is a hypothesis about a person. What is measured is that the
+  band existed, that its behaviour was identical to the pre-§600 wall, and that the deleted cue's
+  centre lay inside it.
+- The census is driven on a 0.1 m grid, so "0.00 m of band" means no column at that resolution, not
+  a proof that no stance anywhere fails.
+- Nothing here makes the mouth easier to **find**. From more than ~2 m off the bore axis it is still
+  a hole in a floor in the hall's far north-west corner with nothing marking it, and 29.4% of
+  sampled hall stances can see any part of it. That is a separate question and is not addressed.
