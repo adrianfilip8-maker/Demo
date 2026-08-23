@@ -51609,13 +51609,18 @@ Audio)"*, which must come back `controllerLike: []` and must not name a controll
 hint hard-coded to the most dramatic cause would pass, which is the failure this whole thread has
 been made of.
 
-## §693 — Five fixes shipped for a cause that may be external, and the record should say so
+## §693 — CONFIRMED EXTERNAL: the cause was the controller's own audio output device
 
-**Nothing further is being shipped on the assumption the fault is ours.** The device question is
-with the user; this block is the state as it stands, written now so it is not written later with
-hindsight.
+**Resolved.** The user reports the sound now works: **the DualShock 4 registers itself as an audio
+output device, and the OS had made it the default.** The game had been playing perfectly, into the
+controller, for the whole of this thread.
 
-### §693.1 The hypothesis that fits every fact
+The paragraph below was written *before* that confirmation and is left exactly as it stood, because
+the difference between a hypothesis that fits every fact and a hypothesis that has been checked is
+the distinction this whole thread was burned by four times. It fit every fact **and** it was still
+unconfirmed at the moment of writing; it was confirmed on the user's machine, not from here.
+
+### §693.1 The hypothesis that fitted every fact — and then was confirmed
 
 A DualShock 4 registers itself as an audio **output** device — it carries a headphone jack and a
 speaker — and Windows and macOS can switch the default output to it on connection. That accounts
@@ -51656,8 +51661,26 @@ else.**
 - **§689.1** — the logger shipped dead for twenty minutes, its emptiness indistinguishable from a
   quiet game, in the instrument written to escape exactly that.
 
-**Five fixes, three retractions, and the cause quite possibly outside the repository.** If the user
-confirms the controller is their default output, this thread closes there — and the honest summary
-is that four real defects were removed along the way, one real bug was found *because* of the hunt,
-and the instrument this thread most needed was the one that asks where the sound is going rather
-than whether it exists.
+**Five fixes, three retractions, and a cause outside the repository.** The honest summary, now that
+it is settled: four real defects were removed along the way and are worth having regardless; one
+real bug — §688's Nyquist clamp — was found *only* because of the hunt; and the instrument this
+thread most needed was the one that asks **where the sound is going** rather than whether it exists.
+
+### §693.4 What this cost, and the one thing that would have cut it short
+
+Seven rounds, five shipped fixes, three retractions, and roughly a dozen instruments built. Every
+one of those rounds measured something real and none of them could have found the cause, because
+the cause was one hop past the last thing any of them looked at (§691).
+
+**The single cheapest thing that would have ended it on round one** is the field added last:
+`selfTest().output` — the identity of the audio endpoint. Not the rms, not the listener, not the
+stem state. *Which device.* That is the lesson worth carrying, and it is why §691 is written as a
+general rule rather than an audio note.
+
+**A note on the four refuted hypotheses.** The listener, the reverb rack's routing, NaN poisoning
+and R2/Thief-o-Vision were each proposed with good reason and each refuted by measurement rather
+than by argument — the listener by reading `ctx.listener` itself and finding it exactly on the
+camera, the rack by its constructor signature (`preMaster` is its *destination*, not its input),
+NaN by `ax[i] || 0` coalescing it, and R2 by the user's own bundle hash showing they were already
+on the build where R2 does nothing. Refuting a hypothesis cheaply is worth more than implementing
+it expensively, and three of those four took under ten minutes each.
