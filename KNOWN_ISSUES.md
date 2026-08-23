@@ -48664,3 +48664,247 @@ Held by `anim.test`'s §479.11 arm — all three variants play, the tree's node 
 (the literal node name is still `idle_confident`, so an arm asserting the literal would pass on
 the broken build), and the mid-fade blend is asserted live rather than cut. Suite **990/990,
 EXIT=0**, run before this commit.
+
+## §640 — "The forced camera transitions are too sudden": the clamp owns the whole tail, and `distHardMin` was flooring the distance to the wrong thing
+
+The user's ruling from a pad playtest of the deployed build: *"Smooth out the forced camera
+transitions so that they are not so sudden."* Every coupled number below is from a clean worktree
+at a committed sha; where a figure comes from an exploratory probe rather than a shipped arm, it
+says so.
+
+### §640.0 The instrument, and the falsifier it carries
+
+`tools/camforce.mjs`. `_write` builds the pose as a fixed chain of post-multiplied rotations,
+
+```
+  q_final = q_base(pivot, boom, pitchEff, yaw) · Rz(bank) · Rx(need) · S(shake)
+```
+
+and pre- or post-multiplying by a fixed rotation preserves the angle between two rotations. So
+freezing ONE factor at its previous-frame value and re-forming the product gives that factor's
+**exact** contribution to this frame's view step — `|Δneed|` for the containment clamp, `|Δbank|`
+for the wall bank, `ang(q_base[i−1], q_base[i])` for everything upstream, and `q_base` splits the
+same way by freezing pivot / boom / pitch / yaw one at a time. Not a model, and not a regression:
+an identity.
+
+`q_base` is REBUILT in the tool rather than read out of the rig, which is exactly §439's trap. So
+every frame asserts the rebuild reproduces the shipped pose and the shipped position. **Worst
+residual over 52,760 checked frames: 4.5e-6° and 1.8e-15 m.** If the tool's model of the chain is
+wrong it says so instead of reporting.
+
+**§440, applied to this lane's own instrument.** Every route in §580–§583's 73-route battery — all
+73, across four sections — drives with `look` at ZERO. That is a mouse player who never touches the
+mouse. The user plays on a PS4 pad and holds the right stick, and `Input._padLook` turns full
+deflection into `padLook` 2.6 rad/s on the real clock, i.e. 0.0433 rad of `look` per 60 Hz frame.
+Nine stick regimes here, including RELEASE (letting go is what arms `_yawAssist` after `autoDelay`
+1.2 s) and a worked stick. It is not a formality:
+
+```
+  same routes, steps over 30°/frame     stick at rest  2      stick held down-left  11
+  whole battery, steps over 60°/frame   upright 1 · up 2 · none 8 · down 14 · downleft 26
+```
+
+A single-direction battery would have reported any of those as "the" answer.
+
+### §640.1 Enumerated from source, then measured: fourteen mechanisms, one of them matters
+
+Everything that can move the camera with no look input: the follow spring (H/V, the softness
+degrade, the leash), `_pivotGoal`'s lead / fallLead / climbLift, `_blendFrame`'s per-state `tau`
+blend, `_effectivePitch`'s fallPitch, climbPitch, routePitch and ceiling flatten, `_boomLength`'s
+occlusion pull-in and recovery and speed dolly, `_ceilSettle`, the route telegraph's four channels
+and its yaw bias, `_yawAssist`, `_focusBlend`, the R recentre, the wall bank, the shake, `snap`,
+and the containment clamp's three stages.
+
+19 routes × 9 stick regimes, **52,976 frames**:
+
+```
+  per-frame VIEW ROTATION, °/frame       median    p99   p99.9     max   >10°  >30°  >60°
+  total                                   1.759   9.25   64.86  179.51    481   152    60
+  containment clamp  (|Δneed|)            0.000   9.74   69.22  304.35    515   195    68
+  boom               (occlusion)          0.002   0.86   14.74   17.45     76     0     0
+  pitch chain        (fallPitch etc.)     0.027   2.22    8.72   12.16     32     0     0
+  wall bank                               0.000   0.16    0.37    0.77      0     0     0
+  follow spring                           0.000   0.00    0.00    0.00      0     0     0
+```
+
+**471 of the 481 steps over 10°/frame, and ALL 152 over 30°, are the containment clamp.** Nothing
+else is close. The remaining ten are four occlusion pull-ins (a 0.5 m instantaneous boom cut at a
+short boom rotates the view, because the look-at is `pivot + headroom·ŷ` and the lens is
+`pivot + boom·d̂`) and six fallPitch unwinds at touchdown, the 10°/frame cut §475.3 pre-registered.
+
+**The follow spring contributes exactly 0°, and that is structural rather than a null result.**
+The look-at is `pivot + headroom·ŷ` and the lens is `pivot + boom·d̂`, so translating the pivot
+moves BOTH by the same vector and the view direction is invariant. The spring, the leash, the
+velocity lead and `FRAMES.height` therefore cannot rotate the view at all — they only ever move
+the camera. Computed anyway on every frame, because a term asserted to be zero and never evaluated
+is a claim nobody checked; it reads 3.8e-6°, which is `acos`'s own floor and the same figure as
+the instrument's pose residual.
+
+### §640.2 The mechanism: `distHardMin` floors the boom, and the boom is not the distance to Sly
+
+`distHardMin: 0.55, // absolute floor; below this we're inside Sly`. That comment has been read as
+a promise about the lens and the character for the life of this file, and **it is only true while
+the pivot is on the character.** The pivot is a smoothed, led, offset point: the follow spring's
+trail (τ 0.16 s horizontal, so 0.16 × v metres), the velocity lead up to `leadMax` 1.75 m,
+`FRAMES.height` and `FRAMES.side`, `headroom`, and up to `followLeashV` 2.6 m of vertical slack.
+
+```
+  on frames with the boom at its floor:   pivot→capsule-centre offset   median 0.899 m   p99 2.627 m
+  the discriminator, pivot offset in BOOM LENGTHS:  at the hard cuts 2.06   ·   on calm frames 0.291
+```
+
+Subtract a 0.55 m boom from a 0.7 m pivot offset and the lens is 0.10 m from Sly's chest. Then
+φ — the subject's elevation off the view axis — runs past ±π, `need` jumps by 2π − 2·αm, and the
+clamp answers with a somersault. **1,438 frames of 52,976 had |need| past a right angle**, i.e.
+the clamp bringing a subject from behind the lens by pitching over the top. That is §582.2's wrap
+and §583's photograph — 125–143° of camera for 9 cm of Sly — and it is not the knife-edge curiosity
+those sections took it for. It is what a crushed boom under a trailing pivot does routinely.
+
+Two independent sightings of the same pose: §583's battery closest lens-to-subject approach
+**0.184 m**, and the movement lane's §597 stress case at **range 0.104 m with the ruling violated**.
+
+`followLeashV`'s own docblock named this in 2 lines and nobody built it: *"The leash above bounds
+the PIVOT in metres and the frame is angular, which is §467's second bound: at a cut boom 2.6 m of
+slack is three half-frame-heights and the subject is gone."* §580 answered it with a clamp that
+holds the angle by rotating without limit. This is the other answer.
+
+### §640.3 The repair, the ceiling, and the two currencies (§450.4)
+
+**Derive the ceiling before chasing the mechanism.** Write `u = pivot − subject` and split it along
+the boom direction: `u = u∥d̂ + u⊥`. Then the subject's depth in front of the lens is `u∥ + boom`
+and its angle off the view axis is `atan(|u⊥| / (u∥ + boom))`. The wrap is exactly `u∥ + boom < 0`.
+Both terms of that depth can only be increased by moving the LENS BACKWARDS, and `|u⊥|` can only be
+reduced by moving the LOOK-AT toward Sly — which drags the lens toward him too. So:
+
+> **At a crushed boom you can have Sly centred or Sly far away, and not both.** There are exactly
+> two currencies and no third. Moving the lens back costs geometry; moving the look-at in costs
+> composition.
+
+Priced, both, over 23,749 frames × 4 stick regimes:
+
+```
+                              lens inside solid geometry   body fraction   sprint boom
+  pre-§640                             5.44 %                 0.7503          2.643
+  lens back, stand-off 0.90 m         23.57 %                 0.7782          2.695
+  lens back, stand-off 1.30 m         25.66 %                 0.9426          2.970
+  look-at in, pivotLeashK 0.80         5.08 %                 0.7113          2.653
+  look-at in, pivotLeashK 0.45         6.91 %                 0.6921          2.524
+```
+
+A 1.30 m stand-off buys near-perfect composition — frames under 70 % of Sly fall from 9,262 to
+666 — and puts the lens inside visible geometry on a quarter of all frames. That is §581.4's
+"raise `distHardMin`" lever priced from the other end and refused for the same reason.
+
+**What ships is neither of those. It is the floor computed from the subject.** `_subjectBoomFloor`
+solves two quadratics in the boom length `t`, with `a = subject − pivot` and `b = headroom·ŷ`:
+
+```
+  RANGE  |a − t·d̂| ≥ s                 →  t² − 2(a·d̂)t + (|a|² − s²) ≥ 0
+  FRONT  (a − t·d̂)·(b − t·d̂) ≥ pad     →  t² − (a·d̂ + b·d̂)t + (a·b − pad) ≥ 0
+```
+
+Both are upward parabolas; the floor is the upper root of whichever binds, and `distHardMin` when
+neither does. Stateless — no memory of which way the camera turned — so §475.3's statelessness is
+not spent and the clamp's zero-cost guarantee is untouched. `pad` is `distHardMin × camRadius`, a
+product of two shipped constants: the left side is the subject's depth times the distance to the
+look-at, so at the boom floor this asks for the subject to sit one sphere-cast radius in front of
+the lens.
+
+**The subject the bound is written about is what decides whether it is free, and that was not
+obvious.** Solved at feet, centre and head it removes every wrap pose — and fires on 35.7 % of
+ground-route frames and puts the lens in stone on 24.02 %, because at a crushed boom the FEET are
+near the lens plane constantly and harmlessly. Solved at the capsule CENTRE:
+
+```
+  regime          wrap poses   >30°/f   >60°/f    worst   lens in stone   body frac   ground bind
+  pre-§640            1438       152       60    179.5°       5.44 %        0.7503        0.0 %
+  'front'  SHIPPED      44        87       28    115.3°       5.56 %        0.7658        4.1 %
+  'frontspan'            0        62       18    115.3°      24.02 %        0.8367       35.7 %
+  true (range only)    614       155       58    177.6°       5.43 %        0.7567        3.4 %
+```
+
+Two instruments' worth of difference between "free" and "unshippable", from the choice of which
+point on a 1.8 m body the bound is written about (§442). And the `true` row is what proves the
+FORWARD arm is the active half: the range arm alone fixes containment and smooths nothing.
+
+**Composition and the sprint ruling both improve rather than pay.** Mean body fraction 0.7503 →
+0.7658, frames under 70 % of Sly 9,262 → 8,980, and the ground-route mean boom at sprint speed
+2.643 → 2.662 m (+0.7 %), well inside "the camera must not open up much at a sprint".
+
+`pivotLeashK` — the other currency, bounding the pivot in boom lengths — is shipped at 0 and kept
+runnable. It works, and it pays for the wrap out of §581's position half: `camstate`'s own
+decomposition arm goes red on it (position loss 0.016 → 0.057, so "the boom crush is the smaller
+half by a factor of five" stops reproducing). That arm is right and the constant is why it is at 0.
+
+### §640.4 On §580–§583's own battery, the residual closes
+
+```
+  73 routes · 17,370 frames · 32/32 states     subject out of frame 0        (unchanged)
+  minimum lens-to-subject range                0.184 m  ->  0.550 m          (= distHardMin, exactly)
+  frames with the subject past the back of the lens        121  ->  0
+  view steps over 60°/frame                    2 wrap + 1 stage-2-idle  ->  0
+  worst step                                   143.4°/f  ->  0.0°/f
+  stage 2 (the vertical translate) firing      ->  never; |need| no longer reaches the 80° authority
+```
+
+**The 143.4°/frame §583 characterised and left unfixed is gone, and it went without state.**
+
+### §640.5 Three camstate controls stopped reproducing their own defects
+
+The floor removes the pose stage 2 fires in, so §580.1's stand-off arm, §582.1's runaway-root arm
+and the π-wrap arm all reported some version of *"the defect did not reproduce, so the pass below
+proves nothing"* — the arms refusing to pass by vacuum, which is the discipline working. **Repaired
+by giving each control the new switch, never by re-basing.** A control that cannot reach the defect
+is not a control. The π-wrap arm was rewritten rather than patched, because its headline claim —
+*"stateless rules cannot remove it"* — is now false; what survives is the closed-form assertion
+that `need(φ)` still breaks by 2π − 2·αm, kept deliberately: the break is unreachable rather than
+removed, and an arm that deleted it would lose the reason the floor has to exist.
+
+### §640.6 The movement lane's §597 blocker, cleared
+
+Reproduced first (`camstate` 7/11 with their repair applied, 11/11 without), then fixed:
+`hook-ring debt frame 585 (railSlide): boom 0.67, range 0.104, clamp 80.0°` — the pivot 0.712 m
+from the subject with a 0.55 m boom, so the lens sat 0.104 m from Sly's chest and the subject went
+behind the plane. **With their repair applied and the floor live: camstate 11/11, camclamp 4/4.**
+The guard repair is theirs to land; the camera no longer refuses it.
+
+Their `traversal` arm 24 (*"hook: one release leaves, and leaves for good"*) still fails **with**
+their repair and passes without it. That is on their side of the line and is reported, not touched.
+
+### §640.7 Four instrument faults, all caught by a check rather than by luck
+
+- **A route chosen for looking ordinary rather than for reaching nothing.** The zero-cost arm's
+  first route was a courtyard run with jumps; the floor binds on 35 of its 300 frames. Replaced by
+  the nave sprint, which binds zero times under `none`, `work` and `downleft` alike — chosen by
+  measurement. "Ordinary-looking" and "does not reach the mechanism" are different properties and
+  only one of them is checkable.
+- **The harness's own noise, nearly attributed to the mechanism.** The zero-cost arm then asserted
+  a bit-identical pose and failed at 3.42e-6°. **Two drives with IDENTICAL tune diverge by
+  3.415e-6° on that route**, first differing at frame 5, with boom, pivot and the floor's own value
+  bit-identical there. The number is this harness's, not the floor's — a shared cached world driven
+  twice in one process does not reproduce to the last bit. The bar is now the same-tune
+  repeatability, and the arm reports both.
+- **Telemetry that could not answer the question it was asked.** `_subjFloorOn` was epsilon'd at
+  1e-9 and the floor binds by TWO paths — the pull-in and the final clamp under the recovery
+  spring. An A/B whose regimes visibly diverged read "bound on 0 frames" from it. The flag is now
+  exact and covers both paths.
+- **A bound written about the wrong point on the body.** The first `'frontspan'` pass was chosen
+  because §581's extent hold aims at the feet and head, so those are the bearings that wrap. True,
+  and it costs 4.3× the geometry penetration. The centre is the shipped subject and the span
+  variant is kept runnable so the number that decided it can be re-run.
+
+### §640.8 What this does NOT fix, stated plainly
+
+**28 steps over 60°/frame remain across the 9-stick battery, worst 115.3°/f.** They are pole-route
+frames where the subject genuinely traverses a large angle — at a 0.55 m boom a swing does — and
+`camwrappose` separates them by their signature: a wrap is a large camera step for a small subject
+move, and these are not. The largest, f232 on the slow-cadence swing, is 179.2°/f with the player
+moving **0.92 m** in one frame through a `fall → poleClimb` handoff; the floor leaves it at 152.8°.
+That is a subject problem, not a camera one, and photographing it as a wrap would be §442.
+
+**And the honest limit of this whole result:** what the user feels is a look question. The census
+says the clamp owns the tail and the tail is now half what it was, but a 0.7 %-of-frames event and
+a continuous 2°/frame drift are not comparable by count. Only frames decide, and §640.9 is two.
+
+Verification: `camstate` 11/11, `camclamp` 4/4, `camfloor` 4/4 (new), `camdrive`, `climbcam`,
+`camlead`, `camspeed`, `camera` unchanged. Full suite **995/995 from a clean worktree**.
