@@ -106,7 +106,7 @@ const CONTROLS = [
       { k: ['Ctrl'], p: [P('L2')], d: 'Crouch', s: 'Tap while running — roll · a vent crawls you by itself, just walk in' },
       { k: ['Space'], p: [P('cross')], d: 'Jump', s: 'Again in the air — double jump (cane twirl)' },
       { k: ['Q'], p: [P('R1')], note: 'hold', d: 'Paraglide', s: 'Sly 2\u2019s own X + R1' },
-      { k: ['R'], p: [P('R3')], d: 'Recentre camera' },
+      { k: ['R'], p: [P('L3')], d: 'Recentre camera' },
     ],
   },
   {
@@ -128,8 +128,10 @@ const CONTROLS = [
       { k: [M('left'), 'F'], p: [P('triangle')], note: 'in the air', d: 'Dive attack', s: 'The Cane Slam — 1.2 m shockwave' },
       { k: ['Space'], p: [P('cross')], note: 'onto a guard', d: 'Enemy bounce' },
       { k: ['E'], p: [P('circle')], note: 'near a guard', d: 'Pickpocket', s: 'From a few paces back he creeps in on his own — follow the sparkle' },
-      { k: [M('right')], p: [P('R2')], note: 'hold', d: 'Thief-o-Vision', s: 'Highlights every affordance · hook lock-on · slow-mo' },
-      { k: [M('right'), 'A', 'D'], p: [P('R2'), P('stick')], note: 'near a guard', d: 'Circle-strafe', s: 'Hold the lock and orbit him · W / S tighten or open it' },
+      /* §682: R3, not R2. The right trigger is where every controller game trains a finger to
+         rest, and holding this one quiets the score — so it moved to a deliberate stick click. */
+      { k: [M('right')], p: [P('R3')], note: 'hold', d: 'Thief-o-Vision', s: 'Highlights every affordance · hook lock-on · slow-mo · muffles the score' },
+      { k: [M('right'), 'A', 'D'], p: [P('R3'), P('stick')], note: 'near a guard', d: 'Circle-strafe', s: 'Hold the lock and orbit him · W / S tighten or open it' },
     ],
   },
   {
@@ -285,7 +287,7 @@ const KEY_ALIAS = {
  */
 const PAD_KEY = {
   E: 'circle', Space: 'cross', F: 'square', Q: 'R1', R: 'R3',
-  Shift: 'L1', Ctrl: 'L2', 'mouse:left': 'square', 'mouse:right': 'R2',
+  Shift: 'L1', Ctrl: 'L2', 'mouse:left': 'square', 'mouse:right': 'R3',   // §682: focus moved off R2
 };
 
 export class HUD {

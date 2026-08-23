@@ -158,7 +158,8 @@ export const MOUSE_BINDINGS = {
  *                  that does nothing at all; the repair belongs to whoever owns `HUD.js`.
  *   recentre [11] R3        OURS. Sly 2 puts the Binocucom here; it is cut, so the slot carries
  *                  our camera recentre rather than nothing.
- *   sneak    [4] L1 · crouch [6] L2 · focus [7] R2 — OURS, in Sly 2's GADGET slots. This demo
+ *   sneak    [4] L1 · crouch [6] L2 · focus [11] R3 (§682, was R2) — OURS, in Sly 2's GADGET
+ *                  slots. This demo
  *                  has no gadget system (out of scope), so the three slots carry our three
  *                  modifiers; `focus` (Thief-o-Vision) sits on an analog trigger because it is
  *                  hold-to-use, through the existing hysteresis. Documented as the gap: a Sly 2
@@ -194,7 +195,7 @@ export const MOUSE_BINDINGS = {
  *     between 1.93 and 7.20 m/s, where a key is pinned at 7.20. That is the analog axis being
  *     analog rather than a missing verb — `Move.update`'s own comment says so — and Sly 2's
  *     answer to it (`hold R1 = run`) is the thing `glide`'s row above declines on purpose.
- *   · `focus` is the only gameplay verb with **no keycap at all** — RMB and R2, nothing else.
+ *   · `focus` is the only gameplay verb with **no keycap at all** — RMB and R3, nothing else.
  *     Checked rather than assumed, because §514 is exactly the shape of hazard that would make
  *     that fatal: on a machine where the pointer-lock grant never lands, four LMB clicks are all
  *     swallowed and four RMB clicks all press, because the swallow in `_onMouseDown` is
@@ -213,8 +214,35 @@ export const PAD_BINDINGS = {
   glide:    [5],        // R1 — X+R1 paraglide
   sneak:    [4],        // L1 — ours (gadget slot, no gadgets in scope)
   crouch:   [6],        // L2 — ours (gadget slot)
-  focus:    [7],        // R2 — ours (gadget slot), analog hold via hysteresis
-  recentre: [11],       // R3 — ours (Sly 2: Binocucom, which is cut)
+  /**
+   * §682 — MOVED OFF R2, and R2 is now bound to nothing at all.
+   *
+   * `focus` holds Thief-o-Vision, which ducks the score and puts a 620 Hz lid on it. It sat on
+   * **R2** — the trigger almost every controller game trains a player to rest a finger on, because
+   * in almost every controller game it is run, accelerate or aim. Sly 2's own answer to "run" is
+   * `hold R1`. A verb that quiets the music does not belong under a resting finger, and this is
+   * the only binding in the table where a *rest* rather than a *press* changes what the game
+   * sounds like.
+   *
+   * Sly 2 has no opinion to take here: L1/L2/R2 are its GADGET slots and gadgets are cut (see the
+   * row above), so these three indices were always ours to choose.
+   *
+   * **R3 (11)**, and it swaps with `recentre`, which takes L3 (10). Three reasons, and the third
+   * only turned up by checking:
+   *   · a stick *click* is a deliberate downward press, not a resting position;
+   *   · it is the CAMERA stick. The left stick is pushed continuously to move, so a click there is
+   *     far easier to trip while walking — which is the exact failure being removed. The right
+   *     stick is nudged, not leant on;
+   *   · `playstation_button_r3.svg` exists in the prompts pack and there is no `l3`, so R3 renders
+   *     as a real glyph on the control card while L3 falls back to a text label. The verb that
+   *     matters gets the picture; `recentre`, which is minor and self-correcting when tripped by
+   *     accident, takes the label.
+   *
+   * **R2 is deliberately left UNBOUND.** Giving it another verb would move the problem rather than
+   * remove it; a finger resting there should now do nothing whatsoever.
+   */
+  focus:    [11],       // R3 — ours. Was R2; see above (§682)
+  recentre: [10],       // L3 — ours. Swapped off R3 to make room for `focus` (§682)
   pause:    [9],        // Options
 };
 
@@ -257,6 +285,27 @@ export const INPUT_TUNE = {
   moveFloor:  0.25,
   triggerOn:  0.55,    // analog trigger press threshold …
   triggerOff: 0.35,    // … and its release threshold. Hysteresis, so a resting finger can't buzz.
+  /**
+   * §683 — how long a trigger may sit in the DEAD BAND before we stop calling it held.
+   *
+   * Hysteresis exists to stop chatter at the threshold, and chatter lives on a millisecond
+   * timescale. But `_padButtons` keeps an action held for as long as the value is anything above
+   * `triggerOff`, which means a trigger that springs back only to, say, 0.45 **never releases at
+   * all** — measured in `tests/padreport.test.mjs` P2. §542 wrote that case down (*"a rest of 0.5
+   * … is above `triggerOff`, so the FIRST real press latches the action on for the rest of the
+   * session"*) and its trust gate does not close it, because trust is granted the moment a control
+   * is seen at rest ONCE, which happens long before it wears or a finger comes to rest on it.
+   *
+   * A player who is holding a trigger holds it *past* `triggerOn` — that is what pressing feels
+   * like. A value parked between `triggerOff` and `triggerOn` for a whole second is not a hold; it
+   * is a control failing to return. Every pad action is BINARY, so there is no analogue reading of
+   * a half-pulled trigger to preserve. One second is far longer than any chatter and far shorter
+   * than a player would notice.
+   *
+   * Digital buttons are untouched: held they read 1.0, which is above `triggerOn`, so they never
+   * enter the band.
+   */
+  triggerDeadRelease: 1.0,
   padLook:    2.6,     // rad/s at full right-stick deflection (~149°/s)
   padLookExp: 2.0,     // response exponent: fine near centre, quick at the rim
   padLookDead: 0.14,
@@ -422,6 +471,8 @@ export class Input {
      * that has never once read below `triggerOff` is treated as 0 — see `_padValue`.
      */
     this._padTrust = new Set();
+    /** §683: action -> seconds its control has sat in the dead band while still counted as held. */
+    this._padDead = new Map();
     /** The pad index polled last frame, or -1. A change means holds belong to a pad that is gone. */
     this._padLast = -1;
     this._lockClick = false;          // the click that grabbed pointer lock must not also swing
@@ -759,6 +810,7 @@ export class Input {
        `_press`, because a button that never went up did not go down again either — `_adopt`. */
     if (src === 'pad') {
       this._padHeld.clear();
+      this._padDead.clear();          // §683: no hold survives, so no dead-band timer should
       this._padResync = true;
       /* `_padTrust` is deliberately NOT cleared here. A blur or a rebind comes through this path
          too, and the pad on the other side of an alt-tab is the same physical device with the same
@@ -930,7 +982,16 @@ export class Input {
         if (b > v) v = b;
       }
       const was = this._padHeld.has(action);
-      const now = was ? v > off : v >= on;
+      let now = was ? v > off : v >= on;
+      /* §683: held, but the control is parked in the dead band rather than pressed. Time it, and
+         let go once it has been there longer than any chatter could last. Reset the moment the
+         value is a real press (>= on) or a real release (<= off), so a genuine hold never expires
+         and this can only ever *shorten* a hold that the player already stopped asking for. */
+      if (was && v > off && v < on) {
+        const t = (this._padDead.get(action) || 0) + this._step;
+        this._padDead.set(action, t);
+        if (t >= this.settings.triggerDeadRelease) { now = false; this._padDead.delete(action); }
+      } else if (this._padDead.size) this._padDead.delete(action);
       if (now === was) continue;
       if (now) {
         this._padHeld.add(action);
@@ -1201,7 +1262,7 @@ export class Input {
    *
    * `held` is the field that usually answers the question on its own: it is what the game currently
    * believes you are holding. A `focus` in that list means Thief-o-Vision is engaged (music ducked
-   * to `TUNE.thiefMusic` and low-passed to `TUNE.thiefFilter`), and `focus` is **R2 on a pad but the
+   * to `TUNE.thiefMusic` and low-passed to `TUNE.thiefFilter`), and `focus` is **L3 on a pad but the
    * RIGHT MOUSE BUTTON on keyboard** — so a player resting a finger on R2, as most controller games
    * train you to, silences most of the music in a way a keyboard player can never reproduce.
    *

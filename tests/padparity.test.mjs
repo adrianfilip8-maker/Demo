@@ -173,7 +173,9 @@ const VERBS = [
   ['crouch (tap at speed)', 'roll', { place: running() }, [K('ControlLeft')], [P(6)], P(4)],
   ['sneak', 'sneak', { place: ground() }, [K('ShiftLeft')], [P(4)], P(6)],
   ['glide', 'paraglide', { place: air(30), warm: 20, hold: 20 }, [K('KeyQ')], [P(5)], P(0)],
-  ['focus', 'combatStrafe', { col: { guards: null }, place: ground() }, [Mo(2)], [P(7)], P(4)],
+  /* §682: focus moved off R2 (7) to R3 (11) — a verb that quiets the music must not sit under
+     the finger every controller game rests on the right trigger. */
+  ['focus', 'combatStrafe', { col: { guards: null }, place: ground() }, [Mo(2)], [P(11)], P(4)],
 ];
 
 test('P1 verbs: every moveset verb produces the same transition on keyboard and on pad', async () => {

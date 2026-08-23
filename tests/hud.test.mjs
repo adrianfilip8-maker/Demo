@@ -555,7 +555,8 @@ test('§516: prompts follow the device, and every pad glyph they can name is a c
   /* ---- static: the three name tables and the directory agree in every direction ---- */
   const onDisk = readdirSync(PROMPTS).filter((f) => f.endsWith('.svg')).sort();
   const shipped = [...new Set(Object.values(PAD_GLYPH_FILES))].sort();
-  assert.equal(shipped.length, 12, 'PAD_GLYPH_FILES gained or lost a glyph — re-pin this count deliberately');
+  assert.equal(shipped.length, 11, 'PAD_GLYPH_FILES gained or lost a glyph — re-pin this count deliberately');
+  /* 12 -> 11 at §682: `focus` moved off R2, R2 is bound to nothing, and its glyph went with it. */
   assert.deepEqual(onDisk, shipped,
     'public/assets/prompts/ and Icons.PAD_GLYPH_FILES disagree — a glyph is either committed with '
     + 'no consumer (dead import) or named with no file (broken <image> at runtime)');
@@ -592,13 +593,14 @@ test('§516: prompts follow the device, and every pad glyph they can name is a c
     'the device flip closed the open pause cel — the in-place re-render regressed to replacement');
   const cols = hud.el.pause.querySelector('.sly-cols').innerHTML;
   const used = new Set([...cols.matchAll(/href="assets\/prompts\/([^"]+)"/g)].map((m) => m[1]));
-  assert.equal(used.size, 12,
-    `the pad cel should render all 12 imported glyphs, rendered ${used.size} — a row lost its pad column`);
+  assert.equal(used.size, 11,
+    `the pad cel should render all 11 imported glyphs, rendered ${used.size} — a row lost its pad column`);
   for (const f of used) {
     assert.ok(existsSync(new URL(f, PROMPTS)), `the cel names ${f} and the file is not committed`);
   }
   hud.prompt('Thief-o-Vision', 'RMB');
-  assert.ok(hud.el.promptKey.innerHTML.includes(PAD_GLYPH_FILES.R2),
+  /* §682: RMB's pad twin is R3 now, not R2. */
+  assert.ok(hud.el.promptKey.innerHTML.includes(PAD_GLYPH_FILES.R3),
     'a mouse-bound prompt (RMB) must map to its pad verb (R2) while the pad is live');
   hud.prompt('Open', undefined);
   assert.ok(hud.el.promptKey.innerHTML.includes(PAD_GLYPH_FILES.circle),

@@ -245,7 +245,26 @@ export const TUNE = {
      track's own loudness rather than to taste: the supplied file is a 64 kbps master that already
      sits hot, and matching the synthesised score's perceived level put it over the limiter. */
   trackLevel: 0.62,
-  thiefFilter: 620,       // ...and the lowpass that puts it behind glass
+  /**
+   * §684 — the lowpass that puts the score behind glass, raised from 620 Hz.
+   *
+   * 620 Hz removes essentially all of a mix's musical information: melody, percussion transients
+   * and every harmonic that carries a tune live above it, so what is left is a rumble. Combined
+   * with the level duck below that is not "behind glass", it is gone. 1400 Hz keeps the mode's
+   * character — plainly muffled, plainly a mode — while leaving the score recognisable as music.
+   */
+  thiefFilter: 1400,      // ...and the lowpass that puts it behind glass
+  /**
+   * §684 — the floor NO combination of ducks, modes and filters may take the score below.
+   *
+   * `duckMusic` multiplies `_musicBase` by up to 0.1, and Thief-o-Vision sets `_musicBase` to
+   * `thiefMusic`. Those stack: 0.34 x 0.1 = **0.034**, which is -29 dB and inaudible against any
+   * ambience. Nothing in the game intends that; it is what two independently reasonable
+   * reductions do when they meet. A score that can reach silence by accident is wrong however it
+   * got there, so the product is floored here rather than at either of the two call sites, which
+   * is the only place a *combination* can be bounded.
+   */
+  musicFloor: 0.25,
   coinStreakWindow: 1.9,
   coinStreakMax: 11,
   listenerSmooth: 0.02,
@@ -621,16 +640,17 @@ export class Audio {
        * currently believes they are holding.
        *
        * `thief` is here beside them because it is the one audio state a pad reaches far more
-       * easily than a keyboard: `focus` is **R2** on a pad and the **right mouse button** on
+       * easily than a keyboard: `focus` is **R3** on a pad (§682 moved it off R2) and the **right mouse button** on
        * keyboard, and holding it ducks the music to `TUNE.thiefMusic` and low-passes it to
        * `TUNE.thiefFilter` Hz.
        *
-       * And it does so with NO other cue a player would connect to it: nothing in the current
-       * build sets `timeScale` (§542's `timeScale 0.35` is a historical symptom, not present
-       * behaviour — the only assignment left is the default 1), so Thief-o-Vision takes most of
-       * the music away without the slow motion that would make a player suspect a mode is on.
-       * `paused` and `timeScale` are reported anyway: `pause` IS a pad button (Options), and a
-       * value either of them should never hold is worth seeing rather than assuming.
+       * RETRACTED (§686): an earlier version of this comment claimed nothing sets `timeScale` any
+       * more. That was wrong, and it was wrong because the grep that "established" it carried a
+       * `grep -v ...=.*1` filter which excluded the one line that assigns it —
+       * `Controller.js:965`, `this.engine.timeScale = want ? TUNE.visionScale : 1`. Thief-o-Vision
+       * DOES slow the game to 0.35, on top of a full-screen desaturation and a THIEF-O-VISION tag.
+       * That is three loud tells, which is why `thief` is reported here as a fact to read rather
+       * than a theory to lean on.
        */
       input: (() => { try { return this.engine.input.report(); } catch { return null; } })(),
       thief: this._thief,
@@ -652,10 +672,10 @@ export class Audio {
     const held = out.input?.held || [];
     const badMap = (out.input?.pads || []).some((p) => p.connected && !p.mappingTrusted);
     const named = held.includes('focus')
-      ? 'THIEF-O-VISION IS ENGAGED — the game thinks you are holding `focus`, which is R2 on a '
-        + `controller. That ducks the music to ${TUNE.thiefMusic} and low-passes it to `
-        + `${TUNE.thiefFilter} Hz, which sounds like the music stopping. Let go of R2 (a trigger `
-        + 'that does not spring all the way back can latch it on).'
+      ? 'THIEF-O-VISION IS ENGAGED — the game thinks you are holding `focus`, which is the LEFT '
+        + `STICK CLICK (R3) on a controller and the right mouse button otherwise. It muffles the `
+        + `score to ${TUNE.thiefFilter} Hz while it is up. The screen is also desaturated with a `
+        + 'THIEF-O-VISION tag across it, so this should be visible as well as audible.'
       : out.paused
         ? 'THE GAME IS PAUSED — a pad Options press toggles it, and a paused engine runs at dt 0.'
         : badMap
@@ -1189,7 +1209,8 @@ export class Audio {
     if (!this.ready) return;
     const t = this.ctx.currentTime;
     const g = this.musicDuck.gain;
-    const target = this._musicBase * (1 - Math.max(0, Math.min(0.9, amount)));
+    /* §684: floored, so a duck stacked on a mode can never reach silence. */
+    const target = Math.max(TUNE.musicFloor, this._musicBase * (1 - Math.max(0, Math.min(0.9, amount))));
     try {
       g.cancelScheduledValues(t);
       g.setValueAtTime(g.value, t);
@@ -1912,7 +1933,7 @@ export class Audio {
     if (!this.ready) return;
     const t = this.ctx.currentTime;
     this.play(on ? 'thief_on' : 'thief_off');
-    this._musicBase = on ? TUNE.thiefMusic : 1;
+    this._musicBase = on ? Math.max(TUNE.musicFloor, TUNE.thiefMusic) : 1;   // §684
     try {
       this.musicDuck.gain.cancelScheduledValues(t);
       this.musicDuck.gain.setValueAtTime(this.musicDuck.gain.value, t);

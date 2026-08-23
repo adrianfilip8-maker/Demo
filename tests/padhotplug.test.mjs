@@ -142,9 +142,9 @@ test('H1 removal: a pad that vanishes mid-play does not leave Sly running foreve
     const { c, input } = await sim();
     slots[0] = mkPad(0);
     step(c, input, 5);
-    slots[0].buttons[7] = { pressed: true, value: 1 };          // R2 = focus
+    slots[0].buttons[11] = { pressed: true, value: 1 };         // R3 = focus (§682, was R2)
     step(c, input, 10);
-    assert.equal(c.engine.timeScale, TUNE.visionScale, 'R2 never engaged Thief-o-Vision; premise is stale');
+    assert.equal(c.engine.timeScale, TUNE.visionScale, 'R3 never engaged Thief-o-Vision; premise is stale');
     slots[0] = null;
     step(c, input, 120);
     assert.equal(input.down('focus'), false, 'focus stayed held after the pad was removed');
@@ -409,6 +409,8 @@ test('H4 triggers: a control is not believed until it has been seen at rest', as
     slots[0] = mkPad(0, { restTrigger: rest });
     step(c, input, 10);
     const atRest = { crouch: input.down('crouch'), focus: input.down('focus'), st: c.stateName, ts: c.engine.timeScale };
+    /* §682: `focus` no longer sits on a trigger at all, so every `focus` reading in this arm is
+       now a check that it CANNOT be reached from one — which is the stronger claim. */
     assert.equal(atRest.crouch, false,
       `triggers resting at ${rest} pressed 'crouch' with nobody touching the pad — Sly is crouched `
       + 'from the first frame');
@@ -427,16 +429,21 @@ test('H4 triggers: a control is not believed until it has been seen at rest', as
     const released = { crouch: input.down('crouch'), focus: input.down('focus') };
 
     if (believable) {
-      assert.ok(pulled.crouch && pulled.focus,
+      assert.ok(pulled.crouch,
         `a conforming trigger resting at ${rest} did not press when pulled — the trust rule has `
-        + 'disabled L2/R2 instead of protecting them, which is worse than the bug it fixes');
-      assert.ok(!released.crouch && !released.focus,
+        + 'disabled L2 instead of protecting it, which is worse than the bug it fixes');
+      assert.ok(!released.crouch,
         `a conforming trigger resting at ${rest} stayed held after release`);
     } else {
-      assert.ok(!released.crouch && !released.focus,
+      assert.ok(!released.crouch,
         `a trigger resting at ${rest} stayed held after the player let go — above triggerOff `
         + `${INPUT_TUNE.triggerOff}, the hysteresis latches it on for the rest of the session`);
     }
+    /* §682, pinned where it matters most: pulling BOTH triggers to full must never reach
+       Thief-o-Vision, because no trigger is bound to it any more. */
+    assert.equal(pulled.focus, false,
+      `pulling the triggers at rest ${rest} reached 'focus' — §682 moved it off R2 precisely so a `
+      + 'finger resting on a trigger cannot quiet the score');
     rows.push({ name, rest, atRest, pulled, released });
   }
 
@@ -452,8 +459,12 @@ test('H4 triggers: a control is not believed until it has been seen at rest', as
     assert.equal(input.down('crouch'), true,
       'the pre-fix path did NOT read a +1 rest as a press, so this arm is not reproducing the '
       + 'defect it guards against (§418)');
-    assert.equal(c.engine.timeScale, TUNE.visionScale,
-      'the pre-fix path did not stick the game in slow-mo — the symptom being guarded is not this one');
+    /* §682: the slow-mo half of this symptom is gone, and NOT because the trust rule closed it —
+       `focus` no longer sits on a trigger, so no trigger rest can reach Thief-o-Vision. Asserted
+       as the new invariant rather than deleted, so re-binding it onto a trigger reddens here. The
+       `crouch` clause above still reproduces the defect, which is what keeps this arm honest. */
+    assert.equal(c.engine.timeScale, 1,
+      'a +1 trigger rest reached Thief-o-Vision — focus is back on a trigger and §682 is undone');
     console.log(`\n[H4] ablation — pre-fix with triggers resting at +1: crouch ${input.down('crouch')} `
       + `· focus ${input.down('focus')} · state '${c.stateName}' · timeScale ${c.engine.timeScale}`);
   }

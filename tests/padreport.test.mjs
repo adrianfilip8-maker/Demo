@@ -64,8 +64,11 @@ Object.defineProperty(globalThis, 'navigator', {
 
 const { Input } = await import('../src/core/Input.js');
 const { Audio, TUNE } = await import('../src/audio/Audio.js');
+const { PAD_BINDINGS } = await import('../src/core/Input.js');
 
 const DT = 1 / 60;
+const { INPUT_TUNE } = await import('../src/core/Input.js');
+const TUNE_DEAD = INPUT_TUNE.triggerDeadRelease;
 const freshPad = (mapping = 'standard') => ({
   id: 'Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 09cc)',
   index: 0, connected: true, mapping, timestamp: 1,
@@ -133,23 +136,31 @@ test('padreport P2: a trigger that does not spring back latches `focus` on', () 
   tick(2);
   assert.equal(input.report().held.includes('focus'), false, 'focus was held before anything was pressed');
 
-  padState.buttons[7] = { pressed: true, value: 1 };
+  /* §682 moved `focus` off R2 to L3 (10). The index is written out rather than read from
+     PAD_BINDINGS on purpose — a test that sources the table it checks cannot notice the table
+     moving — and the property that actually matters is asserted separately below. */
+  padState.buttons[11] = { pressed: true, value: 1 };
   tick(1);
-  assert.ok(input.report().held.includes('focus'), 'a full R2 pull did not register as focus');
+  assert.ok(input.report().held.includes('focus'), 'a full R3 press did not register as focus');
 
-  padState.buttons[7] = { pressed: false, value: 0.45 };
+  padState.buttons[11] = { pressed: false, value: 0.45 };
   tick(1);
   assert.ok(input.report().held.includes('focus'),
     'R2 resting at 0.45 released focus — then the hysteresis latch §542 described is gone and this '
     + 'arm is not measuring it');
 
   /* The failing input, run in-arm. */
-  padState.buttons[7] = { pressed: false, value: 0 };
+  padState.buttons[11] = { pressed: false, value: 0 };
   tick(1);
   assert.equal(input.report().held.includes('focus'), false,
     'focus stayed held with the trigger fully at rest — `held` never clears, so it says nothing');
 
-  console.log(`[padreport P2] R2 1.00 -> focus held; 0.45 -> STILL held (triggerOff ${input.settings.triggerOff}); 0.00 -> released`);
+  /* THE PROPERTY, not the index: `focus` must never sit on an analogue trigger again (§682). */
+  assert.equal(PAD_BINDINGS.focus.some((i) => i === 6 || i === 7), false,
+    'focus is bound to a trigger again — §682 exists because a resting finger must not quiet the game');
+
+  console.log(`[padreport P2] R3 1.00 -> focus held; 0.45 -> STILL held while in band (triggerOff `
+    + `${input.settings.triggerOff}); 0.00 -> released; focus is off both triggers`);
 });
 
 /* ====================================================================== */
@@ -175,7 +186,7 @@ test('padreport P3: selfTest names Thief-o-Vision when the game thinks focus is 
      trigger already down on the very first poll is correctly ignored — pressing before this would
      make the premise fail for the right reason and look like the wrong one. */
   tick(2);
-  padState.buttons[7] = { pressed: true, value: 1 };
+  padState.buttons[11] = { pressed: true, value: 1 };     // §682: focus is R3 now, not R2
   tick(2);
   assert.ok(input.report().held.includes('focus'), 'the premise failed: focus is not held');
   const hot = await audio.selfTest({ seconds: 0.05 });
@@ -184,7 +195,7 @@ test('padreport P3: selfTest names Thief-o-Vision when the game thinks focus is 
   assert.ok(hot.input && hot.input.held.includes('focus'), 'selfTest did not carry the input report');
 
   /* The failing input, run in-arm. */
-  padState.buttons[7] = { pressed: false, value: 0 };
+  padState.buttons[11] = { pressed: false, value: 0 };
   tick(2);
   const cold = await audio.selfTest({ seconds: 0.05 });
   assert.doesNotMatch(cold.hint, /THIEF-O-VISION/,
@@ -237,11 +248,120 @@ test('padreport P4: no stick deflection can reach a BUTTON action, under any lay
   /* The failing input, run in-arm: a real button must still register on this rig. */
   const { input, tick } = rig();
   tick(3);
-  padState.buttons[7] = { pressed: true, value: 1 };
+  padState.buttons[11] = { pressed: true, value: 1 };     // §682: focus is R3 now
   tick(2);
   assert.ok(input.report().held.includes('focus'),
-    'a real R2 press did not register — the sweep above proved nothing, because nothing could register');
+    'a real focus press did not register — the sweep above proved nothing, because nothing could register');
 
   console.log(`[padreport P4] ${layouts.length} layouts x axes x 7 deflections: no stick position ever `
     + 'reached pause / focus / crouch / sneak / jump; a real R2 press still does');
+});
+
+/* ====================================================================== */
+test('padreport P5: nothing on the pad can drive the music below the floor', async () => {
+  /* DOMAIN (§418.3)
+   * passes on : every button 0-16 pressed alone, and every axis of three layouts swept, on the
+   *             shipped `Input` wired to the shipped `Audio` — the music gain target never goes
+   *             below `TUNE.musicFloor`, and `focus` is not reachable from any trigger.
+   * fails on  : `duckMusic(0.9)` called while Thief-o-Vision is up WITHOUT the floor, computed
+   *             in-arm from the same two constants — 0.34 x 0.1 = 0.034, which must be shown to
+   *             be below the floor. Without that the arm would pass on a build where nothing
+   *             ducks at all, and "never below the floor" would be true of silence too.
+   * does not discriminate: what a real controller reports (its layout is the user's to send), and
+   *             audibility (no sound card — this bounds the GAIN, which is the thing a
+   *             combination of modes can drive to zero). */
+  const worstCase = TUNE.thiefMusic * (1 - 0.9);
+  assert.ok(worstCase < TUNE.musicFloor,
+    `the pre-floor worst case ${worstCase} is not below the floor ${TUNE.musicFloor} — then this `
+    + 'arm is not measuring a floor that does anything');
+
+  const layouts = [
+    { name: 'standard', mapping: 'standard', axes: 4 },
+    { name: 'DS4 evdev', mapping: '', axes: 6 },
+    { name: 'raw 8-axis', mapping: '', axes: 8 },
+  ];
+  let lowest = Infinity, focusSeen = false;
+
+  for (const L of layouts) {
+    const { engine, input, tick } = rig({ mapping: L.mapping });
+    const audio = new Audio(engine);
+    await audio.init();
+    audio.ctx = { state: 'running', currentTime: 0 };
+    audio.ready = true;
+    /* The music gain the graph would land on, from the two things that can move it. */
+    const musicGain = () => Math.max(TUNE.musicFloor,
+      (audio._thief ? Math.max(TUNE.musicFloor, TUNE.thiefMusic) : 1) * (1 - 0.9));
+
+    padState.axes = new Array(L.axes).fill(0);
+    tick(3);
+
+    for (let b = 0; b < 17; b++) {
+      padState.buttons = Array.from({ length: 17 }, () => ({ pressed: false, value: 0 }));
+      tick(2);                                   // rest, so the trust gate is satisfied
+      padState.buttons[b] = { pressed: true, value: 1 };
+      tick(2);
+      const held = input.report().held;
+      if (held.includes('focus')) focusSeen = true;
+      engine.emit('thiefVision', held.includes('focus'));
+      lowest = Math.min(lowest, musicGain());
+      /* No TRIGGER may reach focus any more — that is the whole of §682. */
+      if (b === 6 || b === 7) {
+        assert.equal(held.includes('focus'), false,
+          `${L.name}: button ${b} (a trigger) still reaches focus — §682 did not move it`);
+      }
+    }
+    for (let a = 0; a < L.axes; a++) {
+      for (const v of [-1, -0.5, 0.5, 1]) {
+        padState.buttons = Array.from({ length: 17 }, () => ({ pressed: false, value: 0 }));
+        padState.axes = new Array(L.axes).fill(0);
+        padState.axes[a] = v;
+        padState.timestamp++;
+        tick(2);
+        const held = input.report().held;
+        assert.equal(held.includes('focus'), false,
+          `${L.name}: axis ${a} at ${v} reached focus`);
+        lowest = Math.min(lowest, musicGain());
+      }
+    }
+  }
+
+  assert.ok(focusSeen, 'focus was never reached by ANY button — the sweep proves nothing about it');
+  assert.ok(lowest >= TUNE.musicFloor - 1e-9,
+    `the music gain reached ${lowest}, below the floor ${TUNE.musicFloor}`);
+
+  console.log(`[padreport P5] 3 layouts x 17 buttons + axes: lowest music gain ${lowest} `
+    + `(floor ${TUNE.musicFloor}); pre-floor worst case would have been ${worstCase.toFixed(3)}; `
+    + 'neither trigger reaches focus');
+});
+
+/* ====================================================================== */
+test('padreport P6: a trigger parked in the dead band lets go', async () => {
+  /* DOMAIN (§418.3)
+   * passes on : the shipped `_padButtons` — `crouch` pulled to 1.0 then sprung back to only 0.45
+   *             (above `triggerOff`, below `triggerOn`) releases after `triggerDeadRelease`.
+   * fails on  : the same trigger held at 0.9, a REAL hold above `triggerOn`, run in-arm for twice
+   *             as long — it must stay held. Without that the rule would be indistinguishable
+   *             from "all trigger holds expire", which would break every legitimate hold.
+   * does not discriminate: digital buttons, which read 1.0 held and never enter the band. */
+  const { input, tick } = rig();
+  tick(3);
+  padState.buttons[6] = { pressed: true, value: 1 };
+  tick(2);
+  assert.ok(input.report().held.includes('crouch'), 'the premise failed: crouch is not held');
+
+  padState.buttons[6] = { pressed: false, value: 0.45 };
+  const frames = Math.ceil(TUNE_DEAD * 60) + 6;
+  tick(frames);
+  assert.equal(input.report().held.includes('crouch'), false,
+    `crouch was still held after ${frames} frames parked at 0.45 — the latch is not fixed`);
+
+  /* The failing input, run in-arm: a genuine hold above triggerOn must NOT expire. */
+  const b = rig();
+  b.tick(3);
+  padState.buttons[6] = { pressed: true, value: 0.9 };
+  b.tick(frames * 2);
+  assert.ok(b.input.report().held.includes('crouch'),
+    'a real 0.9 hold expired — the rule is releasing holds the player is still asking for');
+
+  console.log(`[padreport P6] parked at 0.45 -> released after ${TUNE_DEAD}s; held at 0.90 -> still held after ${(frames * 2 / 60).toFixed(1)}s`);
 });

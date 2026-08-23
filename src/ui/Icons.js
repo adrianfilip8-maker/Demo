@@ -205,8 +205,16 @@ export const PAD_GLYPH_FILES = {
   L1:       'playstation_trigger_l1.svg',
   L2:       'playstation_trigger_l2.svg',
   R1:       'playstation_trigger_r1.svg',
-  R2:       'playstation_trigger_r2.svg',
   R3:       'playstation_button_r3.svg',
+  /* §682: `recentre` moved to L3 when `focus` took R3. The pack ships no `l3` glyph, so the left
+     STICK art carries it — L3 is that stick, clicked. Same file as `LS`, which is fine: the
+     §516 arm requires every named glyph to resolve to a committed file and every committed file
+     to be consumed, not that the mapping be injective. The row's own label disambiguates.
+
+     And `R2` is GONE from this table, with its Kenney file, because §682 left that button bound
+     to nothing at all. §516's rule is that a glyph is committed WITH a mapping or neither, and a
+     button the game does not read should not appear on a card telling the player what to press. */
+  L3:       'playstation_stick_l.svg',
   OPT:      'playstation4_button_options.svg',
   LS:       'playstation_stick_l.svg',
   RS:       'playstation_stick_r.svg',
