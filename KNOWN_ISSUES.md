@@ -49229,9 +49229,14 @@ option 4: located, priced, not executed.
 touching, not lapped; and §479.10 established that this pose authors *the left hand ON THE HIP*,
 which is also why §479.10's own rule — *do not straighten a limb whose hand is resting on
 something* — forbids the spread lever there. The predicate cannot tell a crossing from a hand at
-rest, its own header says so, and eight of the ten clips it flags across the whole table
-(`wall_run_l/r`, `rail_slide`, `victory`, `land_hard`, `land_roll`, `ledge_climb`) are poses whose
-arms MEET on purpose, negative on BOTH characters.
+rest, its own header says so. Swept over the whole 52-clip table on the control skin, **8 clips
+read negative**, and 7 of the 8 (`wall_run_l/r`, `rail_slide`, `victory`, `land_hard`,
+`land_roll`, `ledge_climb`) are poses whose arms MEET on purpose — negative on BOTH characters.
+The 8th is `sneak_idle`, which §479.10 already recorded as suspected authored intent and
+deliberately did not fix blind; it stays that way here, now with its control-arm number
+(dlrig −12.3, model3 −4.1). (Corrected in place: this paragraph first read "eight of the ten
+clips ... are poses whose arms MEET on purpose" while naming seven — §478.1's rule, the
+measurement wins and the sentence is fixed rather than left to be re-read as a count.)
 
 **The instrument grew three things, and one of them caught me.**
 - A **bind baseline** on every `idlecross` run, so the comparison is self-calibrating.
