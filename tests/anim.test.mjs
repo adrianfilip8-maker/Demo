@@ -1473,3 +1473,102 @@ test('idle variants (§479.11): the boredom timer reaches the tree, and both lat
   assert.ok(a.idleBlend > 0.05 && a.idleBlend < 0.95, `mid-fade blend is ${a.idleBlend} — the variant swap cut instead of blending`);
   assert.equal(a.idlePrev, 'idle_confident', 'the outgoing variant is not being held under the incoming one');
 });
+
+test('idle arm spread (§479.16): the standing idle carries both arms OUT to the side, toward Sly 2\'s own Standupright', async () => {
+  /* The user's ruling, after seeing §479.15's hand-on-hip: *"the default pose seems to be worse.
+     For the pose, have arms spread further out to the side to be more similar to the default
+     pose of the character in Sly 2."*
+
+     THE BAR IS THE REFERENCE'S, MEASURED, not a number anyone picked. `tools/idleref.mjs` reads
+     their default standing idle — `Standupright`, resolved off their own graph (`floor_state`
+     input 3 "idle stand"; both crouch inputs take `Crouching stand` instead) — and it carries
+     each hand ~10 cm outboard of its own shoulder with the hands 47.7 cm apart. Ours delivered
+     43.6 cm, and the RIGHT hand sat 3.6 cm *inboard* of its own shoulder: the cane arm was
+     behind the torso, which is why the pose read narrow from the front however wide the left
+     arm went. The assertion is therefore per-arm and signed — "outboard of your own shoulder" is
+     the thing that was false — plus the spread itself.
+
+     Measured on the DELIVERED table (`buildClipSet('godot')`), because the shipped idles are
+     procedural clips that STILL pass through §531's limb lever (Animation.js), so `CLIPS.idle_*`
+     is not what the player sees — the raw clip reads 14.1 cm where the delivered pose reads 24.8.
+
+     DOMAIN (§418.3) — passes on: the shipped `idle_confident` / `idle_look` (RUN below, both
+     hands outboard, spread ≥ the reference's 47.7); fails on: the pre-§479.16 chain, RUN below
+     by restoring its three left/right triples into the same pose and re-measuring — the right
+     hand comes back at −3.6 cm and the spread collapses to 43.6. Cannot discriminate: whether
+     the pose READS as "spread out to the side" — the user has reported this pose three times
+     with every instrument passing, so the frames (shots/idle16-*, front-verified through the
+     §479.14 camDot guard) are the acceptance evidence and this arm is only the tripwire. */
+  const { SlyModel } = await import('../src/player/SlyModel.js');
+  const engine = {
+    quality: 'high', scene: new THREE.Scene(), debug: {}, stats: {}, warnings: [],
+    warn: () => {}, get: () => null, has: () => false, on: () => () => {}, emit: () => {},
+  };
+  const sly = new SlyModel(engine);
+  await sly.init();
+  const pb = new PoseBuffer(sly.boneNames);
+  const at = (n) => new THREE.Vector3().setFromMatrixPosition(sly.bones[n].matrixWorld);
+
+  /** hand-outboard per arm (cm, + = outboard of its OWN shoulder) and hand-to-hand spread. */
+  const carry = (clip, t) => {
+    pb.clear();
+    sampleInto(clip, t, pb, 1);
+    for (const n of sly.boneNames) {
+      const b = sly.bones[n]; if (!b) continue;
+      if (pb.w[n] > 0) b.quaternion.copy(pb.q[n]); else b.quaternion.identity();
+      if (pb.sw[n] > 0) b.scale.copy(pb.s[n]); else b.scale.set(1, 1, 1);
+    }
+    const base = sly.bp('hips');
+    sly.bones.hips.position.set(base.x + pb.pos.x, base.y + pb.pos.y, base.z + pb.pos.z);
+    sly.root.updateMatrixWorld(true);
+    const lat = at('upperArmL').sub(at('upperArmR')); lat.y = 0; lat.normalize();
+    const out = (S) => (S === 'L' ? 1 : -1)
+      * at(`hand${S}`).sub(at(`upperArm${S}`)).dot(lat) * 100;
+    return { L: out('L'), R: out('R'), sep: at('handL').sub(at('handR')).dot(lat) * 100 };
+  };
+
+  const REF_SEP = 47.7;                       // Standupright, measured — the anchor
+  const shipped = buildClipSet('godot').table;
+  const bad = [];
+  for (const name of ['idle_confident', 'idle_look']) {
+    const c = shipped[name];
+    const m = carry(c, c.hold);
+    if (m.L <= 2) bad.push(`${name}: left hand ${m.L.toFixed(1)} cm — not outboard of its shoulder`);
+    if (m.R <= 2) bad.push(`${name}: right (cane) hand ${m.R.toFixed(1)} cm — tucked behind the torso, the §479.16 defect`);
+    if (m.sep < REF_SEP) bad.push(`${name}: hands ${m.sep.toFixed(1)} cm apart — narrower than Sly 2's own ${REF_SEP}`);
+  }
+  assert.deepEqual(bad, [], 'the standing idle stopped carrying its arms out to the side');
+
+  /* CONTRAST, RUN: the pre-§479.16 arm chain, spliced into the REAL idle_confident so the body
+     — and therefore the shoulder-line frame the measurement uses — is the shipped one. Building
+     the old arms on a bare skeleton instead measures a different pose in a different frame and
+     reads +12.8 cm, which is how this contrast failed on its first draft. */
+  const OLD = {
+    shoulderL: [24, -13, -5], upperArmL: [8, 3, -26], lowerArmL: [-58, -23, -50], handL: [22, -28, -14],
+    shoulderR: [-4, -7, 11], upperArmR: [-4, -12, 20], lowerArmR: [-52, 18, 12], handR: [-6, 16, 10],
+  };
+  const oldArms = compile('oldarms', {
+    dur: 1, loop: true, hold: 0.5,
+    keys: [{ t: 0, e: 'soft', P: { ...OLD } }, { t: 1, e: 'soft', P: { ...OLD } }],
+  });
+  const I = new THREE.Quaternion(), q = new THREE.Quaternion();
+  const openTrack = (tr) => {
+    if (tr.name !== 'lowerArmL' && tr.name !== 'lowerArmR') return tr;
+    const o = new Float32Array(tr.q.length);
+    for (let i = 0; i < tr.q.length; i += 4) {
+      q.set(tr.q[i], tr.q[i + 1], tr.q[i + 2], tr.q[i + 3]); q.slerp(I, LIMB_OPEN.elbow);
+      o[i] = q.x; o[i + 1] = q.y; o[i + 2] = q.z; o[i + 3] = q.w;
+    }
+    return { ...tr, q: o };
+  };
+  const OLD_NAMES = new Set(Object.keys(OLD));
+  const base = shipped.idle_confident;
+  const spliced = { ...base, bones: [
+    ...base.bones.filter((tr) => !OLD_NAMES.has(tr.name)),
+    ...oldArms.bones.filter((tr) => OLD_NAMES.has(tr.name)).map(openTrack),
+  ] };
+  const before = carry(spliced, base.hold);
+  console.log(`    [contrast] pre-§479.16 cane arm ${before.R.toFixed(1)} cm outboard, spread ${before.sep.toFixed(1)} cm`);
+  assert.ok(before.R < 2, `contrast arm: the pre-§479.16 cane arm reads ${before.R.toFixed(1)} cm outboard — `
+    + 'expected it INBOARD (about -3.6), proving this predicate discriminates the two poses');
+});

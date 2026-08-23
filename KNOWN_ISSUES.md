@@ -50329,3 +50329,81 @@ and steering into it.
   user reloading and reading §667.1's build stamp**, and there is no way around that from here.
   This is the §666 lesson recursing one level: the last link in any deployment chain is only
   checkable from the far end of it.
+### §479.16 The idle pose, ruled again — and this time the target was measured off Sly 2's own idle rather than chosen
+
+The user, superseding §479.15's target: *"the default pose seems to be worse. For the pose, have
+arms spread further out to the side to be more similar to the default pose of the character in
+Sly 2."* §479.15 was right that the keys disagreed with their own comment — the left glove really
+did sit 33 cm forward of the hip, in front of the belly — and it still moved the pose away from
+what the user wanted, because it took the COMMENT ("left hand on the hip") as the specification.
+The ruling is the specification. The hand-on-hip is gone, and the comment went with it.
+
+**The reference was read, not remembered.** `tools/idleref.mjs` (new) measures their standing
+idle out of `public/assets/sly-godot/sly-godot-moves.glb`. WHICH clip is resolved off their own
+graph rather than picked by name: `floor_state` input 3 is `"idle stand"` →
+`AnimationNodeAnimation_y3bsy` → `Library_Sly_19/Standupright`, while both crouch inputs
+(`idle crouch`, `idle crouch low`) resolve to `Crouching stand   `
+(`Scenes/Character Mesh/sly_cooper_anims_4.tscn:47912-47919, 48103-48108, 48139`). Every quantity
+is a POSE property off joint POSITIONS in a frame the pose defines (`lat` = shoulder line,
+`up` = chest−hips, `fwd` = lat×up), because two rigs' Euler triples are not comparable (§479.6).
+
+```
+                              L abduction  L fold   L hand out   R hand out   hands apart
+  REFERENCE  Standupright         +3.0°    137.1°      10.7 cm       9.0 cm      47.7 cm
+  BEFORE     ours, delivered     +49.6°    157.5°      21.8 cm      -3.6 cm      43.6 cm
+  AFTER      ours, delivered     +43.3°    159.4°      24.8 cm      +9.7 cm      61.7 cm
+```
+
+**The defect the numbers had been hiding is in the RIGHT arm, and the front frame is what showed
+it.** The cane hand sat **3.6 cm inboard of its own shoulder** — the whole arm behind the torso,
+invisible from the front — so the pose read narrow no matter what the left arm did. That is why
+"further out to the side" and "more similar to Sly 2" are the same instruction here: their idle
+carries BOTH hands ~10 cm outboard and reads wide and even; ours carried one arm out and hid the
+other. The right arm is now on the reference's own number to within a centimetre (9.7 vs 9.0).
+
+**Where their pose and the user's words disagree, the words won, as instructed.** Their left arm
+hangs almost flat (abduction +3.0°, hand 10.7 cm out); ours already had it 21.8 cm out. "Further
+out" is unambiguous about direction, so the left arm was NOT pulled in to match them — it was
+held wide (24.8 cm) and its 35.6° of backward flexion was taken out (now −8.0°, the reference's
+own), which converts "flung back behind the hip" into "out to the side" where a front camera can
+see it. Net spread 43.6 → 61.7 cm, wider than the reference's 47.7 by design.
+
+**Solved against all three rungs, because a delivered-only solve is a trap.** The shipped idles
+are PROCEDURAL clips that still pass through §531's limb lever (`Animation.js` — every clip the
+godot regime shows, aliased or not), so `CLIPS.idle_confident` is not what the player sees: raw
+14.1 cm vs delivered 24.8. The first solve constrained only the delivered rung and sent the RAW
+pose (`?anim=proc`, a shipped control) up like a scarecrow — hands at y 1.20. The shipped chain is
+solved against k=0.75 (delivered), k=0.45 (`idle_look`'s §479.10 cap) and k=0 (`?anim=proc`)
+together, with a regularizer toward the authored triples so the pose stays the one the animator
+wrote rather than a numerically equivalent stranger.
+
+**`idle_bored` did not move, and that is a correction to §479.10's wording.** It reads 56.6 cm
+before and after: it overrides IDLE_A's arm channels with its own keys, so "the three standing
+idles share IDLE_A's arms" is true of `idle_confident` and `idle_look` only. It was already the
+widest of the three, which is consistent with the user never complaining about it.
+
+**THE FRAMES ARE THE CLAIM, and this is the third report on this pose.** Every previous round
+measured clean and the user still saw it — two predicates were provably wrong (one could not see
+arm volume at all; one scored the defective pose at +10.3 cm of daylight while the rig
+photographed zero). So the acceptance evidence is pictures, through `tools/idlecross.mjs` on the
+shipped `SlyModelDLRig`, front views verified by the §479.14 `camDot` guard that throws when a
+frame named "front" was not shot from the front (az 35 ⇒ cam·facing +0.82). Two samples:
+`shots/idle16-{before,after}-idle1-confident-front34.png` and
+`-idle3-look-front34.png`, plus a profile pair. **What the pictures show, plainly:** before, the
+cane arm is hidden behind the torso and the cane barely reads at the lower edge, while the left
+arm hangs back by the hip — a narrow, lopsided silhouette. After, both gloves stand clear of the
+body against the background, the cane swings out where it can be read, and the stance is even.
+The profile pair confirms the arms hang naturally rather than reaching forward.
+
+Held by anim.test's new spread arm: both delivered standing idles must carry each hand outboard
+of its OWN shoulder and spread at least the reference's 47.7 cm, with the pre-§479.16 chain
+spliced into the real idle as the RUN contrast — it reproduces −3.6 cm / 43.6 cm exactly,
+matching `idleref.mjs`'s independent read of the shipped-before pose. The §479.10 clearance arm
+(frame-free `near` ≥ 4 cm, five phases, three idles) still passes untouched.
+
+HONEST LIMITS: the arm is a tripwire, not the judgement — it cannot tell whether the pose READS
+as "spread out to the side", which is a look call the user makes with their eyes, and this pose
+has now been reported three times with every instrument passing. The `idle16-after` capture's
+whole-table surface sweep did not finish inside the capture window (the container renders at
+well under 1 fps); the idle frames it exists for were on disk and are committed, and the
+regression cover for the rest of the table is anim.test's clearance arm rather than that sweep.

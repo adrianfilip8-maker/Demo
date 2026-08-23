@@ -232,28 +232,35 @@ const IDLE_A = P({
   browL: [0, 0, 9],
   browR: [0, 0, -6],
 
-  /* Left hand on the hip. Two jobs: it closes a triangle of open sky between the arm and the
-     ribs, which is worth more in silhouette than any amount of surface detail, and it stops
-     the arm outline melting into the torso outline the way a hanging arm does. */
-  /* Reverted an attempt to open the elbow further (upperArmL Z -52 -> -34) after measuring it:
-     at `sly-closeup`'s 13 degree azimuth the tail sits exactly where that triangle of sky would
-     be, so the silhouette was bit-for-bit unchanged and the hand ended up more hidden, not
-     less. The gap this comment wants is not available from this camera at this tail aim. */
-  /* §479.15 — THE COMMENT ABOVE WAS NEVER WHAT THE NUMBERS DID. The old chain
-     (shoulderL [3,7,-16], upperArmL [-14,16,-52], lowerArmL [-74,-36,-26]) delivers the glove
-     to (0.124, 1.101, 0.301): waist height and roughly the right lateral, but **33 cm forward
-     of the hip joint** — in front of the belly, where it meets the cane hand. Not a transform
-     and not a blend: pure FK off these very keys, no layers, no carry, no IK, puts it there,
-     and all six Euler orders agree (closest, ZXY, is still 26.8 cm off the hip). The pose has
-     delivered a hands-together-in-front silhouette for its whole life while its comment
-     described a hand on the hip, and that is the "arms crossed in the idle" the user has now
-     reported three times. Re-solved against the shipped FK for the placement the comment
-     always asked for — glove 5 mm off the iliac crest, elbow flared 25 cm out and slightly
-     back (the triangle of sky), elbow fold held at 104.1° against the old 102.8° so the §531
-     tuck lever's ladder still measures what it measured. */
-  shoulderL: [24, -13, -5],
-  upperArmL: [8, 3, -26],
-  lowerArmL: [-58, -23, -50],
+  /* §479.16 — ARMS OUT TO THE SIDE, measured against Sly 2's own standing idle.
+     The user's ruling, after seeing §479.15's hand-on-hip: *"the default pose seems to be
+     worse. For the pose, have arms spread further out to the side to be more similar to the
+     default pose of the character in Sly 2."* So the hip placement is GONE, and with it the
+     comment this block carried for its whole life — the reference has no hand on any hip.
+
+     THE REFERENCE IS MEASURED, NOT REMEMBERED (`tools/idleref.mjs`). Their default standing
+     idle is `Standupright`, read off their own graph rather than picked by name: `floor_state`
+     input 3 is `"idle stand"` → `Library_Sly_19/Standupright` (both crouch inputs resolve to
+     `Crouching stand`). Its arms hang nearly straight and slightly out — abduction L +3.0° /
+     R −1.7°, elbow fold 137/139°, each hand ~10 cm outboard of its own shoulder, hands 47.7 cm
+     apart (1.70 shoulder-widths).
+
+     WHAT OURS WAS DOING, and it is worse than the old comment ever suggested: delivered (i.e.
+     through §531's limb lever, which is what the player sees) the LEFT hand sat 21.8 cm out but
+     flung 35.6° BEHIND the torso plane, and the RIGHT hand — the cane hand — sat 3.6 cm
+     *inboard of its own shoulder*, tucked across behind the ribs. Hands 43.6 cm apart, narrower
+     than the reference, and lopsided. The front frame shows it plainly: one arm hanging back by
+     the hip, the cane arm hidden behind the torso.
+
+     AFTER, solved against the real compile → lever → FK (all three rungs, because `?anim=proc`
+     and `idle_look`'s capped 0.45 are both shipped and a delivered-only solve sent the raw pose
+     up like a scarecrow): hands 61.7 cm apart, left 24.8 cm out and square to the body plane
+     (flex −8°), right 9.7 cm out — the reference's own 9.0, within a centimetre. Nothing moves
+     inboard of where it already was; the user's words are unambiguous about direction, so where
+     their pose is NARROWER than ours (the left arm) ours stays wide. */
+  shoulderL: [10, -12, 4],
+  upperArmL: [-7, 2, -33],
+  lowerArmL: [-61, -22, -37],
   handL: [22, -28, -14],
 
   /* **Right arm down, cane planted, not slung.** It was `CANE.shoulder` with the forearm
@@ -267,9 +274,16 @@ const IDLE_A = P({
      torso is left clear between them, and the crook sits out at head height with open sky
      inside its C. That is the Sly pose, and it is also the only arrangement in which §7.3's
      silhouette test can pass on all four cues at once. */
-  shoulderR: [-4, -7, 11],
-  upperArmR: [-4, -12, 20],
-  lowerArmR: [-52, 18, 12],
+  /* §479.16 — and THIS arm is where the "spread" the user asked for actually came from. The
+     old triple delivered the cane hand 3.6 cm INBOARD of its own shoulder: the whole arm was
+     behind the torso from the front, which is why the pose read narrow no matter what the left
+     arm did. Re-solved to carry it out to the reference's own 9.0 cm (delivered 9.7), which
+     also swings the planted cane clear of the leg instead of hiding it against the body. The
+     silhouette argument above is unchanged and better served — the cane still owns its half of
+     the frame; it is simply no longer tucked behind the ribs. */
+  shoulderR: [-12, 5, -29],
+  upperArmR: [9, -9, 41],
+  lowerArmR: [-81, 14, 45],
   handR: [-6, 16, 10],
 
   /* Weight right. The leg Z angles look large because they are measured against the *hips*,
