@@ -1,0 +1,269 @@
+{
+  "sha": "d398e3b",
+  "dirty": "",
+  "W": 1600,
+  "H": 900,
+  "ARM": "model3",
+  "errs": [],
+  "log": [
+    {
+      "frame": "model3-idle1-confident-profile",
+      "az": 90,
+      "st": "idle",
+      "clip": "",
+      "bone": {
+        "handL": 0.54,
+        "handR": -0.3,
+        "lowerArmL": 0.57,
+        "lowerArmR": -0.47
+      },
+      "mesh": {
+        "handL": {
+          "lat": 0.44,
+          "y": 0.86
+        },
+        "handR": {
+          "lat": -1.06,
+          "y": 0.87
+        },
+        "lowerArmL": {
+          "lat": 0.55,
+          "y": 0.98
+        },
+        "lowerArmR": {
+          "lat": -0.38,
+          "y": 0.85
+        }
+      },
+      "gapCm": 6.9,
+      "idleVariant": "idle_confident",
+      "idleBlend": 1,
+      "bored": 2.9,
+      "boneSep": 0.84,
+      "meshSep": 1.5,
+      "meshSepFore": 0.93
+    },
+    {
+      "frame": "model3-idle1-confident-front34",
+      "az": 145,
+      "st": "idle",
+      "clip": "",
+      "bone": {
+        "handL": 0.54,
+        "handR": -0.3,
+        "lowerArmL": 0.57,
+        "lowerArmR": -0.47
+      },
+      "mesh": {
+        "handL": {
+          "lat": 0.44,
+          "y": 0.86
+        },
+        "handR": {
+          "lat": -1.06,
+          "y": 0.87
+        },
+        "lowerArmL": {
+          "lat": 0.55,
+          "y": 0.98
+        },
+        "lowerArmR": {
+          "lat": -0.38,
+          "y": 0.85
+        }
+      },
+      "gapCm": 6.9,
+      "idleVariant": "idle_confident",
+      "idleBlend": 1,
+      "bored": 2.9,
+      "boneSep": 0.84,
+      "meshSep": 1.5,
+      "meshSepFore": 0.93
+    },
+    {
+      "frame": "model3-idle2-bored-profile",
+      "az": 90,
+      "st": "idle",
+      "clip": "",
+      "bone": {
+        "handL": 1.33,
+        "handR": -0.71,
+        "lowerArmL": 1.08,
+        "lowerArmR": -0.73
+      },
+      "mesh": {
+        "handL": {
+          "lat": 1.27,
+          "y": 0.81
+        },
+        "handR": {
+          "lat": -1.26,
+          "y": 0.94
+        },
+        "lowerArmL": {
+          "lat": 1.22,
+          "y": 0.95
+        },
+        "lowerArmR": {
+          "lat": -0.72,
+          "y": 0.91
+        }
+      },
+      "gapCm": 23.6,
+      "idleVariant": "idle_bored",
+      "idleBlend": 1,
+      "bored": 7.4,
+      "boneSep": 2.04,
+      "meshSep": 2.53,
+      "meshSepFore": 1.94
+    },
+    {
+      "frame": "model3-idle2-bored-front34",
+      "az": 145,
+      "st": "idle",
+      "clip": "",
+      "bone": {
+        "handL": 1.33,
+        "handR": -0.71,
+        "lowerArmL": 1.08,
+        "lowerArmR": -0.73
+      },
+      "mesh": {
+        "handL": {
+          "lat": 1.27,
+          "y": 0.81
+        },
+        "handR": {
+          "lat": -1.26,
+          "y": 0.94
+        },
+        "lowerArmL": {
+          "lat": 1.22,
+          "y": 0.95
+        },
+        "lowerArmR": {
+          "lat": -0.72,
+          "y": 0.91
+        }
+      },
+      "gapCm": 23.6,
+      "idleVariant": "idle_bored",
+      "idleBlend": 1,
+      "bored": 7.4,
+      "boneSep": 2.04,
+      "meshSep": 2.53,
+      "meshSepFore": 1.94
+    },
+    {
+      "frame": "model3-idle3-look-profile",
+      "az": 90,
+      "st": "idle",
+      "clip": "",
+      "bone": {
+        "handL": 0.74,
+        "handR": -0.42,
+        "lowerArmL": 0.6,
+        "lowerArmR": -0.45
+      },
+      "mesh": {
+        "handL": {
+          "lat": 0.66,
+          "y": 0.95
+        },
+        "handR": {
+          "lat": -1.07,
+          "y": 0.91
+        },
+        "lowerArmL": {
+          "lat": 0.68,
+          "y": 1.03
+        },
+        "lowerArmR": {
+          "lat": -0.43,
+          "y": 0.87
+        }
+      },
+      "gapCm": 15.3,
+      "idleVariant": "idle_look",
+      "idleBlend": 1,
+      "bored": 14.4,
+      "boneSep": 1.16,
+      "meshSep": 1.73,
+      "meshSepFore": 1.11
+    },
+    {
+      "frame": "model3-idle3-look-front34",
+      "az": 145,
+      "st": "idle",
+      "clip": "",
+      "bone": {
+        "handL": 0.74,
+        "handR": -0.42,
+        "lowerArmL": 0.6,
+        "lowerArmR": -0.45
+      },
+      "mesh": {
+        "handL": {
+          "lat": 0.66,
+          "y": 0.95
+        },
+        "handR": {
+          "lat": -1.07,
+          "y": 0.91
+        },
+        "lowerArmL": {
+          "lat": 0.68,
+          "y": 1.03
+        },
+        "lowerArmR": {
+          "lat": -0.43,
+          "y": 0.87
+        }
+      },
+      "gapCm": 15.3,
+      "idleVariant": "idle_look",
+      "idleBlend": 1,
+      "bored": 14.4,
+      "boneSep": 1.16,
+      "meshSep": 1.73,
+      "meshSepFore": 1.11
+    },
+    {
+      "frame": "model3-idle3-look-b-profile",
+      "az": 90,
+      "st": "idle",
+      "clip": "",
+      "bone": {
+        "handL": 0.42,
+        "handR": -0.88,
+        "lowerArmL": 0.45,
+        "lowerArmR": -0.67
+      },
+      "mesh": {
+        "handL": {
+          "lat": 0.33,
+          "y": 0.94
+        },
+        "handR": {
+          "lat": -1.36,
+          "y": 1.04
+        },
+        "lowerArmL": {
+          "lat": 0.43,
+          "y": 1
+        },
+        "lowerArmR": {
+          "lat": -0.79,
+          "y": 0.95
+        }
+      },
+      "gapCm": 10.8,
+      "idleVariant": "idle_look",
+      "idleBlend": 1,
+      "bored": 15.2,
+      "boneSep": 1.3,
+      "meshSep": 1.69,
+      "meshSepFore": 1.22
+    }
+  ]
+}

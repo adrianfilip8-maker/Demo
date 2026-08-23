@@ -48945,3 +48945,51 @@ priced the lever that would fix it and refused it.
 
 Verification: `camstate` 11/11, `camclamp` 4/4, `camfloor` 4/4 (new), `camdrive`, `climbcam`,
 `camlead`, `camspeed`, `camera` unchanged. Full suite **995/995 from a clean worktree**.
+
+### §479.12 The control arm answers it: the idle overlap is the CARRY, and no clip edit can reach it
+
+With §479.11's fix in, all three standing idles can be photographed for the first time, and the
+§470 discriminator finally has something to discriminate. Both arms, clean commit, same clips,
+same beats, attribution stamped on every frame (`showing …` + the live `_bored`):
+
+```
+    pose             BONE dlrig/model3   dlrig MESH gap   model3 MESH gap   carry cost
+    idle_confident      0.84 / 0.84          −1.2 cm          +6.9 cm         8.1 cm
+    idle_bored          2.04 / 2.04         +21.3 cm         +23.6 cm         2.3 cm
+    idle_look           1.16 / 1.16         +10.0 cm         +15.3 cm         5.3 cm
+    idle_look (beat b)  1.30 / 1.30          +4.9 cm         +10.8 cm         5.9 cm
+```
+
+**BONE separation is identical to the last digit on every row.** The animation data reaching the
+two rigs is the same data; the only difference is `SlyModelDLRig`'s per-bone geometry carry, and
+it costs **2.3–8.1 cm of visible daylight** between the arms. On exactly one pose —
+`idle_confident`, the one a player sees for the first six seconds and the one every historical
+capture photographed — that cost is enough to push the gap negative. This is the term
+`idlecross.mjs`'s own header predicted, now measured rather than predicted:
+
+> *a defect only on dlrig is the CARRY, and no amount of re-authoring `Clips.js` would ever have
+> reached it.*
+
+**So the coordinator's ask 2 — re-derive the lever exemption against the MESH column — is the
+wrong lever for this defect, and that is a finding rather than a refusal.** The spread lever
+edits clip data. Clip data is bit-identical across the two arms. Tuning it to cancel a geometry
+rotation would bend the animation to hide a rig defect on one model while breaking the same pose
+on the other, which is §470.1's lesson exactly (the −12° chin-up lived in the skull GEOMETRY and
+no bone telemetry could see it; the repair was `rot.head = identity`, not re-authored head keys).
+The repair belongs in the same place: the forearm/hand carry rotations in `SlyModelDLRig`, or an
+arm-specific correction beside `rot.head`'s. NOT attempted this round and deliberately not
+attempted blind — the carry exists to align FBX bind axes with ours, so a wrong correction
+silently mis-skins every clip in the game, and the right one needs the axis measurement
+`tools/dlaxes.mjs` already knows how to take. Recorded with its instrument, its number and its
+next step.
+
+§479.10's exemption survives this: `idle_look` now actually reaches the screen and reads
+**+10.0 cm** on the shipped rig, clear at both photographed beats (+4.9 at the tighter one). Its
+diagnosis was right about the lever-on-a-placed-hand rule; it was aimed at a clip the renderer
+never sampled, and the clip it should have been aimed at is `idle_confident`.
+
+Frames committed: `shots/idle1-*` (dlrig and model3, profile, per-frame telemetry beside them).
+HONEST LIMITS: the gap is a lateral test in the shoulder-line body frame, so an arm lapping
+another in DEPTH only is invisible to it; two beats of `idle_look` are sampled, not its whole
+cycle; and the carry cost is measured on the idle family only — the other nine clips the volume
+predicate flags have not been re-measured against their control arm.
