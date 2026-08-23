@@ -49093,6 +49093,30 @@ confident improvement.
 - Nothing here was driven. R8 is re-run and unchanged — crawl fires −22.30…−20.70, the passage
   admits −22.30…−20.70, zero crawl-and-stop columns — so the cues cost nothing at the door, but no
   new traversal claim is made.
+### §603.6 What the walking-line frames showed, which the census could not
+
+§603.3's +33 stances is a ray census over the whole hall. Photographed from the two stances a
+player actually walks — eye 1.60 m, gameplay fov, looking north — the dominant fact in both frames
+is **neither the frame nor the hole**. It is KayKit props: a pale prop stack filling the right two
+thirds of each, measured at **2.51 m** from the eye on the x −21.0 line and **3.60 m** on the bore
+axis, hiding the wall behind it. The only cue that survives to the walking line is the brazier's
+flame, a small orange rectangle in the gap between the props and the hall's west wall.
+
+On the approach, then, **A is doing the work and B is not visible at all.** That does not retract
+the census — the frame reads from stances these two cameras do not stand at — but it does bound it:
+a ray census to the mouth's own aperture cannot see an occluder that sits between the player and
+the whole corner, and §602 already established those props carry **no collider within 14 m**, so
+the player walks straight through the thing blocking their view of the way in.
+
+The measured next lever is therefore not more cue at the mouth. It is the prop stack at
+x −21.4…−19.0, z −47.3…−44.5, which is set dress and is not §603's to move.
+
+And one more camera sited without reading the measurement already taken: `eye-address` was first
+put 3 m back, which §603's own falloff table marks **"eye INSIDE the KayKit crate pile"** in the
+row above it. The frame came back as a flat blue-grey field — the inside of a crate. Four probes
+and a camera in one section, all of them wrong in the same direction: measuring something other
+than the thing named.
+
 ## §598 — The guard is repaired and SHIPS; the capped teleport fix stops the chain one leg short
 
 The camera lane's `74cdc4b` cleared §597's blocker — reproduced here rather than taken on trust:
