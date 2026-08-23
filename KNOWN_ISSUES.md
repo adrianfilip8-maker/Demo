@@ -49117,6 +49117,121 @@ row above it. The frame came back as a flat blue-grey field — the inside of a 
 and a camera in one section, all of them wrong in the same direction: measuring something other
 than the thing named.
 
+## §604 — One prop was the whole occluder, and a pre-flight so a blind camera never reaches the queue
+
+§603.6 photographed the walking line and found the mudbrick frame §603 had just built invisible
+there. **One placement was responsible**: `rubble_half` at (−19.6, −45.5), the west aisle's
+northernmost store, standing in the hall's north-west corner where §600–§603 put the vent mouth.
+
+From the two stances a player actually walks it filled the right two thirds of both frames, at
+**2.36 m and 2.48 m from the eye**, and **21 of 41 rays** in a ±40° fan from the bore axis hit it
+before anything else. §602 had already measured that it carries **no collider within 14 m** of the
+mouth, so a player walks straight *through* the thing hiding the way in: it occludes like a wall
+and does not read as one.
+
+### §604.1 Where it went, and why there
+
+Moved **9.0 m south, to (−19.6, −36.5)**. Same line, same neighbours, same rotation, same model,
+and still the counterpart to the `rubble_half` at (19.2, −43.0) that the two sides are deliberately
+not mirrored against. It sits 3.5 m north of `barrel_small_stack` at (−19.8, −33.0), inside the
+2.7–5.5 m spacing the rest of that line already runs at.
+
+**−36.5 rather than −39.5 was measured, not judged.** Both clear the approach completely — frame
+9/9 and zero prop rays from either camera — but over the whole hall −39.5 **cost 11 stances their
+only cue** (149 → 138), because at that z the prop moves into the sightline fan converging on the
+mouth from the south. −36.5 falls out of that fan and is strictly better on every row, so there was
+no trade to make. The first destination that clears the acceptance test is not necessarily the one
+to ship.
+
+### §604.2 The A/B, in §602's units
+
+Eye 1.60 m, §602's exact 384 hall stances, §602's exact twelve aperture coordinates:
+
+| | rubble −45.5 | rubble −36.5 |
+|---|---|---|
+| sees any part of the aperture | 104/384 · 27.1% | **131/384 · 34.1%** |
+| sees half the aperture or more | 30/384 · 7.8% | **65/384 · 16.9%** |
+| sees ANY cue | 149/384 · 38.8% | **150/384 · 39.1%** |
+
+And the acceptance test §603 failed:
+
+| | before | after |
+|---|---|---|
+| eye-approach — aperture / frame / flame | 6/12 · 4/9 · 0/3 | **8/12 · 9/9 · 3/3** |
+| eye-approach — prop rays blocking | **21/41**, nearest 2.48 m | **0/41** |
+| eye-address — aperture / frame / flame | 4/12 · 4/9 · 0/3 | **8/12 · 9/9 · 3/3** |
+| eye-address — prop rays blocking | **25/41**, nearest 2.36 m | **0/41** |
+
+The frame is fully visible from both approaches, so B finally does the job it was authorised for —
+and the aperture rows went up as well, rather than being traded against it.
+
+### §604.3 Neutrality proved by hash, because counts do not prove it
+
+§603 established that §600's *"a reseed changes counts"* is true of `chip` and **false of
+`jitter`**, which moves vertices without adding any. So both sides are compared by hash.
+
+- **Level:** 301 of 301 collider rows byte-identical, 0 added, 0 removed, and **88 of 88 art meshes
+  byte-identical by hash** — because `realWorld()` does not boot props at all, so the level is not
+  merely unchanged, it is untouchable from here.
+- **Props:** 36 placements, 11 models, **93,192 prop vertices**, 29 colliders, 0 failed — every one
+  identical, with only the merged geometry hash differing, which it must, because one prop moved.
+- **KayKit reads no rng anywhere.** Placements are a literal table transformed deterministically,
+  so nothing can re-dice by construction — a stronger guarantee than the digest, and the reason
+  the digest is allowed to be this quiet.
+
+### §604.4 `tools/camdot.mjs` — the pre-flight
+
+Two frames in this project have now been shot from cameras that could not see their subject, and in
+both cases **the measurement that would have caught it already existed**. §601 re-aimed west to
+escape a prop pile, re-ran only the prop census, and got the hall's west wall 0.48 m off the lens.
+§603 sited `eye-address` 3 m back on a line its own falloff table marked *"eye INSIDE the KayKit
+crate pile"* one row above.
+
+So it is a pre-flight rather than a post-mortem. It boots the level **with props** — `realWorld()`
+does not, which is the hole §601 fell through — and asks four things before a browser launches:
+
+| | |
+|---|---|
+| **ENCLOSED** | of 26 axis and diagonal rays, how many hit inside 0.6 m — catches "inside a crate" |
+| **NEAREST** | closest surface in any direction — catches §601's 0.48 m lens |
+| **FORWARD** | first hit along the look direction — catches a camera facing a wall |
+| **SUBJECT** | whether that hit is nearer than the look target itself |
+
+The fourth is the one that earns the file. §603's `eye-approach` stood **7.05 m from its subject
+with `kaykit:props` at 3.61 m** and passed the other three cleanly — nearest 1.48 m, enclosed 0/26,
+no wall in the lens. A clean near field says nothing about whether the frame will contain what it
+was aimed at.
+
+**DOMAIN (§418.3)** — *passes on* both shipping cameras on this tree: nearest 1.48/1.62 m, subject
+7.05/7.11 m, first hit 9.20/9.14 m, enclosed 0/26. *Fails on* the same two cameras on the pre-move
+tree, `SUBJECT OCCLUDED at 3.61 m`, and on §603's 3 m `eye-address`, `BURIED 0.12 m` +
+`FACING A WALL 0.15 m` + enclosed 11/26 — the camera that produced a photograph of the inside of a
+crate. *Does not discriminate*: whether a frame is well composed or lit, which is still settled by
+looking at it.
+
+`ventshot` runs it before taking the capture lock, so a bad camera costs seconds instead of the
+2–8 minutes a boot and a software render cost. `CAMDOT=0` overrides — a guard with no override gets
+deleted rather than argued with.
+
+### §604.5 Two banner numbers moved with the prop
+
+`kaykit` C2 and C3 went red within a minute of the move, because the prop that moved happened to be
+both of the ones those sentences are about: `temple`'s single in-cone prop, **35.2 → 28.99 m**, and
+the hypostyle's farthest from `courtyard`, **88.7 → 87.27 m**. Both re-measured in the banner rather
+than the tolerances widened.
+
+### §604.6 Bounds, stated
+
+- 39.1% is a ray census, not attention. It says a cue is reachable by a sightline from that many
+  stances; whether a player notices it is not measured here and cannot be.
+- The move is judged against the mouth. What the prop was doing at (−19.6, −45.5) for *other*
+  cameras is covered only by `kaykit` C1–C5, which is what caught the two numbers above; no frame
+  was shot of the aisle it left.
+- `camDot` reasons about geometry, not about lighting or composition. A camera can pass every check
+  and still return a black frame, which is exactly what §601's mouth camera did before the lamp
+  moved in §603.
+- Nothing here was driven. R8 is unchanged and no traversal claim is touched: this is set dress.
+
 ## §598 — The guard is repaired and SHIPS; the capped teleport fix stops the chain one leg short
 
 The camera lane's `74cdc4b` cleared §597's blocker — reproduced here rather than taken on trust:
