@@ -623,7 +623,14 @@ export class Audio {
        * `thief` is here beside them because it is the one audio state a pad reaches far more
        * easily than a keyboard: `focus` is **R2** on a pad and the **right mouse button** on
        * keyboard, and holding it ducks the music to `TUNE.thiefMusic` and low-passes it to
-       * `TUNE.thiefFilter` Hz. `paused` and `timeScale` are the other two a pad button can move.
+       * `TUNE.thiefFilter` Hz.
+       *
+       * And it does so with NO other cue a player would connect to it: nothing in the current
+       * build sets `timeScale` (§542's `timeScale 0.35` is a historical symptom, not present
+       * behaviour — the only assignment left is the default 1), so Thief-o-Vision takes most of
+       * the music away without the slow motion that would make a player suspect a mode is on.
+       * `paused` and `timeScale` are reported anyway: `pause` IS a pad button (Options), and a
+       * value either of them should never hold is worth seeing rather than assuming.
        */
       input: (() => { try { return this.engine.input.report(); } catch { return null; } })(),
       thief: this._thief,
