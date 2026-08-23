@@ -49603,8 +49603,15 @@ in one frame**: on the chain's entry catch the capsule moves 4.646 m, the camera
 passes 1.801 m of that, and the drawn body takes the whole 4.646 m through
 `root.position.copy(this.position)` — an undamped copy, the only hard cut of the pair and the
 larger one by 2.6x on the entry and better than ten-to-one on the ordinary catches. This ships the
-larger half. The camera's 1.801 m is `CameraRig._readPlayer` reading the capsule, in another lane's
-file, and is routed separately.
+larger half.
+
+**The camera's 1.801 m is NOT being fixed, and that is a decision rather than an omission.** It is
+`CameraRig._readPlayer`:1315 reading the capsule instead of the drawn root, in a file this lane
+does not own. After this shipped it was weighed and left: the drawn step is down from 4.646 m to
+1.232 m, the camera's share is the smaller one, its follow spring already absorbs 61-92% of it, and
+opening `CameraRig.js` for the remainder is not worth the risk on a build the user is playing.
+Recorded here as the remaining half, with the one-line location, so that if the report comes back a
+third time nobody has to re-derive where it lives.
 
 `Controller._easeDraw` holds back the part of a frame's displacement that velocity does not
 explain and pays it off in `TUNE.drawEaseFrames` equal steps. `_pushCharacter` became
@@ -49700,7 +49707,7 @@ defeats the feature. 0.70 sits 13% under the smallest catch; 0.45 sits 79% under
 | `src/player/Rig.js`:474 — `footIK` reads `rootY` | **yes, correctly** | the foot bones are children of the same root, so root and feet stay consistent and the feet plant on real ground under the VISIBLE body, which is what they should do. Weight is driven to zero while airborne (`Animation.js`:1503) and every measured capture is an airborne placement, so in practice it barely sees the offset at all. |
 | `src/fx/Particles.js`:2740 — the cane trail | **yes, correctly** | parented to `cane.object` under the root. The swipe should follow the visible cane; if it did not, the trail would detach from the cane drawing it. |
 | everything else under the root — cane socket, hands, head | **yes, correctly** | same reason. This is the majority of the seam and it wants the offset. |
-| `src/audio/Audio.js`:1475 — `_playerPos` prefers `character.root.position` | **yes — and this one is a judgement call, not mine** | it is defensible: sound should agree with the picture. But it is the AUDIO lane's file and their ruling. The exposure is bounded and small: **≤3.41 m for ≤3 frames (50 ms), on 3.5% of chain frames and 0% of running frames.** Its own fallback is `movement.position`, so pinning it to the capsule is a one-line change in their file if they want it. |
+| `src/audio/Audio.js`:1475 — `_playerPos` prefers `character.root.position` | **yes — and RULED: leave it** | it is defensible on its own terms: sound should agree with the picture. Raised as not this lane's call, and the ruling came back to leave it as it is. The exposure is bounded and small: **≤3.41 m for ≤3 frames (50 ms), on 3.5% of chain frames and 0% of running frames.** Its own fallback is already `movement.position`, so pinning it to the capsule is a one-line change in the audio lane's file if the user ever reports it. Recorded, not built. |
 
 Two readers were added to §599's list of four by re-grepping `get('character')` rather than
 trusting the earlier count: `Particles.js` and, indirectly, everything parented under the root.
