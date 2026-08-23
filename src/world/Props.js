@@ -4,7 +4,7 @@ import {
   Bag, mergeAll, place, matrixOf,
   brazier, wallTorch, vessel, canopicJar, basket, ropeCoil, ropeSpan,
   offeringTable, incenseStand, scaffold, banner, bannerMast,
-  coin, clueBottle, ingot, scarab, sootStain, flameCard, chunk,
+  coin, clueBottle, CLUE_ATTRS, ingot, scarab, sootStain, flameCard, chunk,
 } from './PropKit.js';
 import {
   seatedColossus, sphinx, anubis, falconRa, coffinLid, fallenHead, brokenStatue,
@@ -49,8 +49,21 @@ const MATERIALS = {
   dark:      { tex: null,                 color: 0x241a16, rough: 0.9,  outline: 0.9 },
   lapis:     { tex: 'lapis_inlay',        color: 0x1f4f96, rough: 0.35, outline: 0.9, noShadow: true },
   carnelian: { tex: 'carnelian_inlay',    color: 0xb8452c, rough: 0.4,  outline: 0.9, noShadow: true },
-  glass:     { tex: null,                 color: 0x8fd8ff, rough: 0.15, outline: 0, transparent: true, opacity: 0.55 },
+  /* The clue bottle, and the ONLY key it draws in. `PropKit.clueBottle()` folds the imported
+     mesh's three source materials into one geometry with a vertex-colour stream, so this recipe
+     is white-with-`vertexColors` rather than a colour: `color` multiplies the attribute, and any
+     tint here would be a second, invisible grade on top of the factors the asset authored.
+     Opaque because the source authors alpha 1 on all three factors and declares no `alphaMode`
+     — it was `transparent: true, opacity: 0.55` while the bottle was a pale-blue lathe, and at
+     0.55 over a near-black glass the mesh reads as smoke. `outline: 0` is unchanged and still a
+     topology refusal: the imported groups are open shells (38/54/16 boundary edges), which is
+     also why `side` is DoubleSide — the source declares `doubleSided: true` and the open seams
+     are visible through a back-face cull. */
+  glass:     { tex: null,                 color: 0xffffff, rough: 0.15, outline: 0, vertexColors: true, side: THREE.DoubleSide },
+  /* Not drawn. `clueBottle()` keys its parts by the source's own material names so a reader can
+     line them up against the `.glb`; these two exist so that key never falls back to `stone`. */
   cork:      { tex: 'wood_old',           color: 0x8a6a42, rough: 0.95, outline: 0.7 },
+  label:     { tex: null,                 color: 0xe7b600, rough: 0.6,  outline: 0.7 },
   // Emissive — fire and embers must not take an ink outline or they read as stickers.
   ember:     { tex: null,                 color: 0xff7a2a, rough: 1.0,  outline: 0, emissive: 0xff6a20, emissiveIntensity: 2.4 },
   flame:     { tex: 'torch_flame',        color: 0xffc06a, rough: 1.0,  outline: 0, emissive: 0xffa040, emissiveIntensity: 3.0, transparent: true, side: THREE.DoubleSide },
@@ -751,12 +764,16 @@ export class Props {
     ];
     const parts = [];
     clueBottle({ h: 0.42, rng: R }).drain((_key, geo) => parts.push(geo));
-    const geo = mergeAll(parts);
+    /* `CLUE_ATTRS` is not optional. The bottle's three source materials survive as a vertex
+       colour stream, and `normaliseAttrs` deletes every attribute outside `position/normal/uv`
+       unless it is named here — a bare `mergeAll(parts)` merges cleanly and draws flat white. */
+    const geo = mergeAll(parts, CLUE_ATTRS);
     if (!geo) return;
     this._geoms.push(geo);
-    /* One instanced mesh in the `glass` material. The cork merges into it: at 0.42 m tall and
-       read from metres away a second draw call for 5 cm of stopper is not a trade worth making,
-       and `glass` is the colour that says "pickup" in this project's palette. */
+    /* One instanced mesh in the `glass` material — and still one draw call after the import,
+       which is the whole reason the cork and label are vertex colours rather than materials.
+       The source ships three; at twelve bottles, three materials would have been three draws of
+       a set that already ships twelve times over. */
     const mesh = new THREE.InstancedMesh(geo, this._mat('glass'), spots.length);
     mesh.name = 'clue_bottles';
     mesh.frustumCulled = false;
@@ -891,6 +908,10 @@ export class Props {
       transparent: !!spec.transparent,
       opacity: spec.opacity ?? 1,
       side: spec.side ?? THREE.FrontSide,
+      /* Forwarded because `glass` is now a vertex-coloured recipe. Without this the toon path
+         builds a program with no colour attribute bound and the clue bottle draws flat white —
+         the same unbound-attribute class `Guard.js:1474` records for the garrison. */
+      vertexColors: !!spec.vertexColors,
     };
 
     let m = null;
@@ -905,6 +926,7 @@ export class Props {
         roughness: spec.rough ?? 0.8, metalness: spec.metal ? 0.9 : 0,
         emissive: opts.emissive, emissiveIntensity: opts.emissiveIntensity,
         transparent: opts.transparent, opacity: opts.opacity, side: opts.side,
+        vertexColors: opts.vertexColors,
       });
     }
     this._materials.push(m);

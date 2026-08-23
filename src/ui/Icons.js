@@ -11,7 +11,21 @@
  *   · a dark "thickness" shape offset downward so the icon sits on the screen like a sticker
  */
 
-/** The only colours anything in the UI is allowed to use (AGENTS.md §2.2). */
+import { BOTTLE_PALETTE } from '../world/BottleMesh.js';
+
+/**
+ * The only colours anything in the UI is allowed to use (AGENTS.md §2.2).
+ *
+ * The three `bottle*` entries are the exception that proves the rule, and they are **imported,
+ * not chosen**. `clueBottle()` below and the object in the world are required to be one thing
+ * (see that function's header); the world bottle is now the reference project's own mesh, whose
+ * three `baseColorFactor`s are its entire surface authoring. Typing those three hexes here by
+ * hand is precisely how the toast and the world drift apart, so they are pulled from the same
+ * generated module the mesh's vertex colours come from — one source, converted to sRGB once, at
+ * bake time. Everything in the UI still draws out of `C`; three of its entries just have a
+ * provenance. `bottleLabel` #e7b600 landing a hair off `gold` #e8b942 is the asset's doing and
+ * a piece of luck: the feature that carries the bottle at distance was already our colour.
+ */
 export const C = {
   ink:     '#1a1210',
   inkCool: '#161022',
@@ -27,6 +41,9 @@ export const C = {
   carn:    '#b8452c',
   mala:    '#2f8f5a',
   turq:    '#2fa8a0',
+  bottleGlass: BOTTLE_PALETTE.glass,
+  bottleCork:  BOTTLE_PALETTE.cork,
+  bottleLabel: BOTTLE_PALETTE.label,
 };
 
 /** SVG text needs a real family name; this container only ships DejaVu / Liberation. */
@@ -526,21 +543,39 @@ export function sparkle(cls = '', color = C.spark) {
 /**
  * Sly's clue bottle — the corked glass the twelve-bottle set is made of.
  *
- * `C.spark` #8fd8ff is the same §2.1.6 pickup blue `Props.MATERIALS.glass` and
- * `Pickups._clueMat` both draw the bottle in, so the toast and the object in the world are one
- * colour rather than two. House rules as the header states them: the dark thickness shape
- * offset downward, the ink silhouette, one hard specular notch and no gradient.
+ * **This icon and the object in the world are deliberately ONE thing**, and that constraint is
+ * older than the art in it: the toast has to be recognisable as the thing you just picked up, so
+ * whatever the bottle is made of, this is drawn in the same colours. It used to be one colour —
+ * `C.spark` #8fd8ff, §2.1.6's pickup blue — because the world bottle was a hand-authored lathe
+ * that had no surface of its own to agree with.
+ *
+ * The world bottle is now the reference project's `BOTTLE.glb`, which carries no textures and
+ * three flat `baseColorFactor`s: dark green glass, a deep red neck, a gold label band. So this
+ * is redrawn in those three, and its proportions are the mesh's measured ones rather than an
+ * impression of them — body 0–71% of the height, neck 71–100%, the label band across the belly
+ * at 28–46%. The colours come from `C.bottle*`, which is the same generated module the mesh's
+ * vertex stream reads, so neither side of the coupling can be edited without the other.
+ *
+ * **The pickup-blue signal is not lost, it moved**: `Pickups._clueMat` keeps `rimColor #8fd8ff`
+ * and the sparkle field around every pickup is untouched, so "collectable" is still said in blue
+ * — on the rim, where it carries at the distance a bottle is actually spotted from.
+ *
+ * House rules as the header states them: the dark thickness shape offset downward, the ink
+ * silhouette, one hard specular notch and no gradient.
  */
 export function clueBottle(cls = '') {
+  /* One body outline, drawn twice — once offset down as the thickness, once as the glass. */
+  const body = 'M18.6 13.5c0 4.6-3.9 5.6-3.9 10.5V38.9a3.6 3.6 0 0 0 3.6 3.6h9.4a3.6 3.6 0 0 0 3.6-3.6' +
+               'V24c0-4.9-3.9-5.9-3.9-10.5z';
   return wrap('0 0 46 46', `
-    <path d="M15.4 21.4c0-3.4 2.2-4.6 2.2-7.4V12h10.8v2c0 2.8 2.2 4 2.2 7.4v17.4a3.4 3.4 0 0 1-3.4 3.4H18.8a3.4 3.4 0 0 1-3.4-3.4z"
-          fill="${C.inkSoft}" stroke="${C.ink}" stroke-width="3.4" stroke-linejoin="round"/>
-    <path d="M15.4 17.4c0-3.4 2.2-4.6 2.2-7.4V8h10.8v2c0 2.8 2.2 4 2.2 7.4v17.4a3.4 3.4 0 0 1-3.4 3.4H18.8a3.4 3.4 0 0 1-3.4-3.4z"
-          fill="${C.spark}" stroke="${C.ink}" stroke-width="3.4" stroke-linejoin="round" opacity=".95"/>
-    <rect x="16.4" y="4.2" width="13.2" height="6.2" rx="2" fill="${C.goldD}"
+    <g transform="translate(0 3.4)">
+      <path d="${body}" fill="${C.inkSoft}" stroke="${C.ink}" stroke-width="3.4" stroke-linejoin="round"/>
+    </g>
+    <rect x="18.5" y="3" width="9" height="13" rx="2.6" fill="${C.bottleCork}"
           stroke="${C.ink}" stroke-width="3.2"/>
-    <path d="M19.6 22.6h6.8v9.4h-6.8z" fill="${C.paint}" stroke="${C.ink}" stroke-width="2.4"/>
-    <path d="M18.9 14.4a9 9 0 0 0-.7 4.2v10.2" stroke="${C.goldSpec}" stroke-width="2.8"
+    <path d="${body}" fill="${C.bottleGlass}" stroke="${C.ink}" stroke-width="3.4" stroke-linejoin="round"/>
+    <path d="M14.7 24.8h16.6v7.2H14.7z" fill="${C.bottleLabel}" stroke="${C.ink}" stroke-width="2.4"/>
+    <path d="M19.2 20.4a7 7 0 0 0-1.1 4.1v9.2" stroke="${C.goldSpec}" stroke-width="2.8"
           stroke-linecap="round" opacity=".85"/>
   `, cls);
 }

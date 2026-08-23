@@ -932,16 +932,32 @@ test('V13 the clue toast draws a bottle, not the unknown-icon fallback', async (
    * nothing broke, nothing warned — which is why it survived: the fallback is indistinguishable
    * from a deliberate choice unless you go looking for the case that is not there.
    *
+   * ── The colour arm, RE-DERIVED rather than re-pinned (§697) ──────────────────────────────
+   * This arm used to read `glyph('clue').includes('#8fd8ff')`, and its own failure message said
+   * what it was really for: *"the toast and the bottle in the world disagree"*. The literal was
+   * never the claim — it was the claim's value on the day, while the world bottle was a lathe
+   * drawn in one flat pickup blue. The bottle is now the reference project's imported mesh and
+   * is drawn in the three `baseColorFactor`s that mesh carries, so re-pinning this to a new
+   * literal would encode the same fragility one colour along.
+   *
+   * So the arm now asserts the COUPLING: every colour the world mesh is built from must appear
+   * in the glyph. `BOTTLE_PALETTE` is the single generated source both sides read, which is what
+   * makes that checkable at all — and it inverts correctly, because an icon redrawn in any
+   * colour the mesh does not use, or a mesh regenerated to colours the icon was not updated for,
+   * both fail it. The old literal could only ever catch the first.
+   *
    * DOMAIN (§418.3 / §418.9)
-   * PASSES ON: the shipped tree — `glyph('clue')` differs from the fallback and carries §2.1.6's
-   *            pickup blue #8fd8ff, the same colour `Props.MATERIALS.glass` and
-   *            `Pickups._clueMat` draw the bottle in.
+   * PASSES ON: the shipped tree — `glyph('clue')` differs from the fallback and paints all three
+   *            of the world bottle's colours.
    * FAILS ON:  RUN in-arm — two genuinely unknown names produce byte-identical output, which is
    *            what `glyph('clue')` did before this case existed. That equality is asserted
    *            below, so if the fallback ever stops being deterministic this arm says so instead
-   *            of quietly passing on a comparison that can no longer fail.
+   *            of quietly passing on a comparison that can no longer fail. And in-arm below, a
+   *            colour the mesh does not carry is shown absent from the glyph, so "contains the
+   *            palette" is not passing on a string that contains everything.
    */
   const Ico = await import('../src/ui/Icons.js');
+  const { BOTTLE_PALETTE } = await import('../src/world/BottleMesh.js');
 
   /* The fallback really is one shape, byte for byte — otherwise the comparison below is noise. */
   assert.equal(Ico.glyph('no-such-icon-a'), Ico.glyph('no-such-icon-b'),
@@ -950,8 +966,22 @@ test('V13 the clue toast draws a bottle, not the unknown-icon fallback', async (
 
   assert.notEqual(Ico.glyph('clue'), Ico.glyph('no-such-icon-a'),
     'the clue toast is still drawing the generic sparkle');
-  assert.ok(Ico.glyph('clue').includes('#8fd8ff'),
-    'the clue glyph is not §2.1.6 pickup blue — the toast and the bottle in the world disagree');
+
+  const svg = Ico.glyph('clue');
+  const palette = Object.entries(BOTTLE_PALETTE);
+  assert.equal(palette.length, 3,
+    `the imported bottle now has ${palette.length} colour groups, not 3 — re-read the glyph ` +
+    'against the mesh rather than trusting this arm');
+  for (const [group, hex] of palette) {
+    assert.ok(svg.includes(hex),
+      `the clue glyph does not paint the world bottle's "${group}" colour ${hex} — the toast ` +
+      'and the bottle in the world disagree');
+  }
+  /* The discriminator: "contains the palette" must be able to fail. A colour no group carries
+     is absent, so the loop above is reading the glyph rather than passing on any long string. */
+  assert.ok(!svg.includes('#8fd8ff'),
+    'the glyph still carries the pre-import pickup blue, so the containment check above cannot ' +
+    'distinguish the bottle it draws from the one it used to draw');
 
   /* And the icon the module actually asks for is the one that now exists. */
   assert.ok(/icon: 'clue'/.test(stripComments(PICKUPS_SRC)),

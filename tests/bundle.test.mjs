@@ -207,6 +207,12 @@ const KAYKIT_UNUSED = packFiles('kaykit')
  *                            default regime plays — the runtime loads the baked GodotClips.js,
  *                            never this file). Same class and same reasoning as the three build
  *                            inputs above; the tool writes and re-reads this exact path.
+ *   bottle.glb               BUILD-TIME input to `tools/godot2bottle.mjs` — the reference
+ *                            project's clue-bottle mesh. The runtime loads the baked
+ *                            `src/world/BottleMesh.js` and never fetches this file; it is
+ *                            committed so the provenance beside it can be checked against the
+ *                            bytes rather than believed, and so the bake can be re-run. Exactly
+ *                            the `sly-godot-moves.glb` case, one line up.
  *   kaykit/*                 40 models nobody chose to include (§265.2) — see `packFiles` above.
  *   museum-…mp3              6.94 MB, the largest single unreferenced file left, and it stays on
  *                            purpose. The **owner instructed that it be used** as the game's
@@ -226,6 +232,7 @@ const KNOWN_UNSHIPPED_PAYLOAD = [
   'audio/museum-of-natural-history.mp3',
   'sly-anim/carmelita-anims.glb',
   'sly-anim/sly-anims.glb',
+  'sly-godot/bottle.glb',
   'sly-godot/sly-godot-anims.glb',
   'sly-godot/sly-godot-moves.glb',
   ...KAYKIT_UNUSED,

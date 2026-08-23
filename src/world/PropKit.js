@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { chamferBox } from './Kit.js';
+import { BOTTLE_MESH } from './BottleMesh.js';
 
 /**
  * PropKit — parametric builders for everything smaller than a building.
@@ -1140,15 +1141,69 @@ export function hoardMound(opts = {}) {
   return g;
 }
 
-/** Sly's clue bottle: dumpy glass body, cork, wax seal. */
+/**
+ * Extra vertex streams a clue bottle carries. **Every caller that merges `clueBottle()`'s parts
+ * must pass this to `mergeAll`** — `normaliseAttrs` strips anything outside `KEEP`, so a plain
+ * `mergeAll(parts)` silently deletes the colour attribute and the bottle comes out flat white.
+ */
+export const CLUE_ATTRS = ['color'];
+
+/**
+ * `clueBottle({ h })` delivers this multiple of `h` in total height.
+ *
+ * The procedural bottle it replaced was a lathe from y 0 to `h * 0.95` with a cork placed at
+ * `h * 0.93` reaching `h * 1.03`, so its real height was never `h` — measured, `h = 0.42` gave
+ * **0.43260 m**. That ratio is pinned here rather than rounded away because `TUNE.clueHeight`,
+ * `TUNE.clueCollect` and `cluevault`'s R2 magnet were all tuned against the delivered silhouette,
+ * not against `h`. Substituting the mesh must not move any of them.
+ */
+export const CLUE_HEIGHT_RATIO = 1.03;
+
+/**
+ * Sly's clue bottle — the reference project's own pickup mesh.
+ *
+ * ── What this is, and what it replaced ──────────────────────────────────────────────────────
+ * `Assets/Models/Pickups/BOTTLE.glb` from NoahChase/Sly-Cooper--A-Thief-in-Godot, identified by
+ * reading `Scenes/Design Tools/bottle.tscn`'s instance chain rather than by filename (the repo
+ * also holds `Detail Items/ParisWineBottle.glb`, which is scenery and is not this). Baked to a
+ * unit-height, base-origin module by `tools/godot2bottle.mjs`; provenance and licence status in
+ * `public/assets/sly-godot/PROVENANCE.md`. It replaces a hand-authored lathe — "dumpy glass body,
+ * cork, wax seal" — which was 147 verts / 198 tris against this mesh's 190 / 272.
+ *
+ * ── One geometry, one material, one draw call ───────────────────────────────────────────────
+ * The source carries three materials (Glass, Cork, label) and **no images at all**: three flat
+ * `baseColorFactor`s are the entire surface authoring. Shipping them as three materials would
+ * have tripled a draw call that ships twelve times over. They are folded into a single geometry
+ * with a `color` attribute instead, which reproduces the flat factors exactly — the same trick
+ * the garrison and the terrain already use — so the set still costs ONE draw call and the label
+ * survives. The factors go in verbatim because glTF authors them linear and three treats a
+ * vertex-colour attribute as linear working space; sRGB-converting them here would wash them out.
+ *
+ * `rng` is accepted and unused. The old lathe jittered its profile so a thrown pot would not read
+ * as a lathe demo; an imported mesh has its own authored asymmetry and wobbling it would only
+ * damage it. The parameter stays so the two call sites keep their signature.
+ */
 export function clueBottle(opts = {}) {
-  const { h = 0.42, rng } = opts;
+  const { h = 0.42 } = opts;
+  const s = (h * CLUE_HEIGHT_RATIO) / 1.0;    // the module is normalised to unit height
   const bag = new Bag();
-  bag.add('glass', lathe([
-    [h * 0.22, 0], [h * 0.30, h * 0.08], [h * 0.32, h * 0.36], [h * 0.26, h * 0.55],
-    [h * 0.13, h * 0.68], [h * 0.12, h * 0.86], [h * 0.15, h * 0.92], [h * 0.13, h * 0.95],
-  ], { seg: 10, rng, wobble: 0.015, capTop: false }));
-  bag.add('cork', place(lathe([[h * 0.12, 0], [h * 0.13, h * 0.06], [h * 0.11, h * 0.10]], { seg: 8, rng }), { y: h * 0.93 }));
+  for (const grp of BOTTLE_MESH.groups) {
+    const n = grp.position.length / 3;
+    const pos = new Float32Array(grp.position.length);
+    for (let i = 0; i < pos.length; i++) pos[i] = grp.position[i] * s;
+    const col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { col[i * 3] = grp.colour[0]; col[i * 3 + 1] = grp.colour[1]; col[i * 3 + 2] = grp.colour[2]; }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(Float32Array.from(grp.normal), 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(Float32Array.from(grp.uv), 2));
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    g.setIndex(new THREE.BufferAttribute(Uint16Array.from(grp.index), 1));
+    /* Keys are the source's own material names, so a reader can line a part up against the
+       `.glb`. `Props.MATERIALS` carries all three; nothing here routes through `_push`, but a
+       key with no entry would fall back to `stone` if anything ever did. */
+    bag.add(grp.name.toLowerCase(), g);
+  }
   return bag;
 }
 

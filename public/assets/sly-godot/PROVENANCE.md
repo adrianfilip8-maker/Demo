@@ -1,4 +1,8 @@
-# Godot Sly character mesh — provenance
+# Godot Sly imports — provenance
+
+*(This file began as the character mesh's record and now covers everything taken from that one
+repository: the rig, its animation sets, and the clue-bottle pickup. The licence paragraph below
+governs all of it.)*
 
 **Source:** <https://github.com/NoahChase/Sly-Cooper--A-Thief-in-Godot>, a fan-made Godot project,
 imported at the project owner's explicit instruction ("be sure to use the character model from
@@ -45,6 +49,7 @@ Two things this resolved that a filename search cannot:
 | `sly-godot-moves.glb` | 23 clips (18 movement + 5 combat/pickpocket/hook) from `Assets/Models/Characters/SlyCooper_Anims27.gltf` — see below |
 | `sly-body.png` | 2048² 8-bit albedo, the material override's target |
 | `sly-head.png` | 2048² 8-bit albedo (RGBA) |
+| `bottle.glb` | the clue-bottle pickup: 190 verts, 272 tris, 3 materials, 0 images, 0 animations — see below |
 
 Rebuild either of the first two `.glb`s with:
 
@@ -141,3 +146,94 @@ the targets cannot be stripped without changing the character's shape into somet
 game never displays. The first import emitted them with dangling accessor indices and produced a
 file three's `GLTFLoader` throws on; `tests/godot.test.mjs` guards against both that and the
 subtler wrong-but-in-range variant.
+
+---
+
+# The clue bottle (`bottle.glb`)
+
+Imported on the same owner-instruction basis as everything above — the standing instruction is
+that copyright is not a legal obstacle here, **licence: none stated**, and the paragraph at the
+top of this file governs this file too. Instruction for this one: *"substitute in the bottle asset
+from the repo instead of the current one"*. It replaces a hand-authored lathe in
+`src/world/PropKit.js` (`clueBottle()` — "dumpy glass body, cork, wax seal"), which was 147 verts
+/ 198 tris. Nothing else about the twelve-bottle set changed.
+
+**Repo HEAD taken from:** `a312a99` *("The REAL Godot 4.7 Update")*, shallow anonymous clone.
+
+## Which file, and how that was established
+
+By reading the scene graph, not by matching a filename — the same discipline that resolved the two
+different `Sly_Body.png` above, and it mattered again here for the same reason:
+
+```
+Scenes/Design Tools/bottle.tscn
+  ├─ ExtResource("1_q8b3u")  =  res://Assets/Models/Pickups/BOTTLE.glb      ← THE PICKUP
+  ├─ ExtResource("1_2e5h4")  =  res://Scripts/bottle.gd                     (NOT taken — see below)
+  ├─ Area3D/CollisionShape3D    SphereShape3D radius 0.625 at y 0.666
+  └─ BOTTLE ROT / BOTTLE        Transform3D(scale 0.875, translate y 0.125)
+       └─ AnimationPlayer       autoplay "idle" — where the motion actually lives
+```
+
+`Assets/Models/Detail Items/ParisWineBottle.glb` is a **scenery prop and is not this**; a filename
+search returns both and there is nothing in the names to separate them. Nothing else in the
+repository instances `BOTTLE.glb` — this is the pickup, singular.
+
+## What the file actually contains, measured rather than described
+
+`node tools/godot2bottle.mjs` re-prints all of this from the committed bytes:
+
+```
+10,700 bytes   glTF 2.0   Khronos glTF Blender I/O v5.0.21
+1 mesh (Cube.001), 3 primitives, 190 verts / 272 tris
+0 images        0 animations        0 skins
+source bounds  y 0.000167 .. 0.999983   =>  height 0.999816 — a UNIT bottle, base at origin
+
+  Glass   94 verts  152 tris   y 0.000..0.709   linear [0.00372, 0.09565, 0]        sRGB #0c5700
+  Cork    80 verts  104 tris   y 0.709..1.000   linear [0.24449, 0,       0.00042]  sRGB #880001
+  label   16 verts   16 tris   y 0.278..0.460   linear [0.80001, 0.46756, 0]        sRGB #e7b600
+```
+
+**Zero images is the fact that decided how this is used.** With no textures, those three
+`baseColorFactor`s *are* the entire surface authoring — so importing the shape and repainting it
+in our old pickup blue would have been importing half the asset. They are carried in verbatim as a
+vertex-colour stream (they are linear, and three treats a colour attribute as linear working
+space; converting them to sRGB on the way in would wash them out), which also keeps the twelve
+bottles at **one draw call** instead of the three that three materials would have cost.
+
+## How it is consumed
+
+The runtime never fetches this file. `tools/godot2bottle.mjs --import` copies it here and bakes it
+to `src/world/BottleMesh.js`, normalised to unit height with the base at y = 0; `PropKit.
+clueBottle()` scales that to the height the level was tuned around and stays synchronous, which it
+has to be because `Props` and `Pickups` both build from it. A baked module also has no asset URL,
+which is the whole class of production-only fault recorded as §666. The `.glb` is committed so
+these numbers can be checked against the bytes rather than believed, and so the bake is re-runnable
+— the same arrangement as `sly-godot-moves.glb`, and it is registered in
+`tests/bundle.test.mjs`'s unshipped-payload list for the same reason.
+
+```
+node tools/godot2bottle.mjs --import --src <checkout root>   # checkout → glb + baked module
+node tools/godot2bottle.mjs                                  # measure the committed asset
+```
+
+**Scale is not inherited.** Their scene instances the mesh at `scale 0.875`, so their bottle stands
+0.875 m. Ours delivers **0.43260 m** — measured off the procedural bottle it replaces, to five
+decimals, so that `TUNE.clueHeight`, `TUNE.clueCollect` and `tests/cluevault.test.mjs`'s R2 magnet
+all keep meaning what they meant. Both meshes are base-origin, so the pickup point does not move.
+Matched on height, the imported bottle is the slimmer silhouette (±0.084 m against ±0.134 m) —
+that is their design and it is the visible part of the substitution.
+
+## What was NOT taken
+
+- **`Scripts/bottle.gd`.** Design references and adapted mechanics only, for code. The pickup
+  logic here was already ours.
+- **The motion, as data.** The `.glb` has no animations; `bottle.tscn`'s AnimationPlayer holds
+  them. Its numbers were read and **re-implemented** in our own loop (`Pickups.TUNE.clueRock`): a
+  1.5 s cycle, `BOTTLE ROT` swinging ±0.349066 rad (±20°) about Z, the child swaying x ±0.125 and
+  dipping y 0.25 → 0.20. The sway crossed over by proportion, not by copying — theirs is 1/7 of
+  their bottle's height, so ours is 1/7 of 0.4326 m.
+- **`Assets/Models/Detail Items/ParisWineBottle.glb`** — the scenery bottle. Named here so the
+  next person does not have to re-establish that it was considered and rejected.
+- **Anything under `Assets/Music/` or `Assets/Effects/`.** Untouchable, per this project's absolute
+  rule; nothing in the import tool reads, decodes or references either directory. `Assets/Models/`
+  is a different category and is the only one this took from.

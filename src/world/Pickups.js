@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { rng, WORLD_SEED } from '../core/Rand.js';
-import { coin as coinGeo, clueBottle, ingot, scarab, collar, place, mergeAll } from './PropKit.js';
+import { coin as coinGeo, clueBottle, CLUE_ATTRS, ingot, scarab, collar, place, mergeAll } from './PropKit.js';
 
 /**
  * Pickups — the collect loop. Coins, clue bottles, treasure, and the fence they are carried to.
@@ -121,6 +121,29 @@ export const TUNE = {
   clueBob:       0.11,
   clueRate:      1.7,
   clueSpin:      1.1,
+  /**
+   * The rock, ADAPTED from the reference project's own bottle — numbers, not code.
+   *
+   * `Scenes/Design Tools/bottle.tscn` carries the motion in an AnimationPlayer, not in the
+   * `.glb` (which has zero animations): a **1.5 s loop** in which `BOTTLE ROT:rotation` swings
+   * **±0.349066 rad — ±20°** about Z while the child's position sways `x ±0.125` and dips
+   * `y 0.25 → 0.20`. That side-to-side rock is the franchise's read of a floating bottle and
+   * our continuous Y-spin alone did not have it.
+   *
+   * `clueRockRate` is `2π / 1.5` so the loop is theirs to the digit. `clueSway` is their 0.125
+   * carried across by PROPORTION rather than copied: their bottle stands 0.875 m (a unit mesh at
+   * `scale 0.875`), so the sway is 1/7 of its height, and 1/7 of ours (0.4326 m) is 0.0618 m.
+   * Copying 0.125 would have been a sway 29% of our bottle's height — the same class of mistake
+   * as assuming their `scale 0.875` transfers.
+   *
+   * The Y-spin STAYS, which is a departure from the reference and a deliberate one: their bottle
+   * does not spin, but theirs is placed to be seen from one side and ours sit on a route walked
+   * from every angle. The imported mesh's most legible feature is a gold label band around one
+   * belly; without the spin it faces one direction forever and half the level never sees it.
+   */
+  clueRockRate:  Math.PI * 2 / 1.5,
+  clueRock:      0.349066,
+  clueSway:      0.0618,
 
   /* ---- economy ---- */
   milestone:     100,    // coins between purse toasts — "something reacts when it changes"
@@ -490,13 +513,15 @@ export class Pickups {
     if (!this.coins.length && !this.treasures.length && !this.clues.length) return;
 
     if (this.clues.length) {
-      /* `clueBottle()` hands back a Bag whose parts are `glass` and `cork`. Merged into one
-         geometry and instanced against the gold material would be wrong — a clue bottle is
-         glass and its whole job is to read as the §2.1.6 blue that means "pickup" — so this
-         gets its own material rather than sharing `_mat('gold')`. */
+      /* `clueBottle()` hands back a Bag whose parts are the imported mesh's own three groups —
+         `glass`, `cork`, `label`. They merge into ONE geometry carrying a vertex-colour stream,
+         so the set is a single instanced draw and the label still reads; `CLUE_ATTRS` is what
+         keeps that stream alive through `normaliseAttrs`, and without it the bottle draws white.
+         Instancing it against the gold material would still be wrong — a clue bottle is its own
+         object — so this keeps its own material rather than sharing `_mat('gold')`. */
       const parts = [];
       clueBottle({ h: TUNE.clueHeight, rng: this.rng }).drain((_k, g) => parts.push(g));
-      const geo = mergeAll(parts);
+      const geo = mergeAll(parts, CLUE_ATTRS);
       if (geo) {
         this._geoms.push(geo);
         const mesh = new THREE.InstancedMesh(geo, this._clueMat(), this.clues.length);
@@ -693,11 +718,19 @@ export class Pickups {
         const c = this.clues[i];
         if (c.taken) { _m.makeScale(0, 0, 0); cm.setMatrixAt(i, _m); continue; }
         const y = c.magnet ? c.pos.y : c.home + Math.sin(t * TUNE.clueRate + c.phase) * TUNE.clueBob;
-        _v.set(c.pos.x, y, c.pos.z);
-        /* Upright and spinning about its own axis — a bottle laid flat like a coin reads as
-           litter. Same argument as `Props.update`'s `upright` branch, which draws the
-           decorative twin this one replaces. */
-        _m.compose(_v, _q.setFromEuler(_e.set(0, t * TUNE.clueSpin + c.phase, 0)), _one);
+        /* Upright, spinning about its own axis, and rocking side to side on the reference's own
+           1.5 s loop (see `TUNE.clueRock`). A bottle laid flat like a coin reads as litter; a
+           bottle that only spins reads as a turntable. The sway is dropped the instant the
+           magnet has it, because from then on the bottle is being pulled to a point and a
+           lateral offset would only fight the integrator — the rock is pure rotation and costs
+           the magnet nothing, so it rides all the way in. */
+        const swing = Math.sin(t * TUNE.clueRockRate + c.phase);
+        _v.set(c.pos.x + (c.magnet ? 0 : swing * TUNE.clueSway), y, c.pos.z);
+        /* 'ZYX' so the rock is the OUTER rotation — the bottle yaws inside a frame that leans,
+           which is the parenting `bottle.tscn` uses (`BOTTLE ROT` is the rocking node and the
+           mesh is its child). Under the default 'XYZ' the lean would be applied inside the spin
+           and the bottle would wobble like a gimbal instead of swinging like a pendulum. */
+        _m.compose(_v, _q.setFromEuler(_eRock.set(0, t * TUNE.clueSpin + c.phase, swing * TUNE.clueRock)), _one);
         cm.setMatrixAt(i, _m);
       }
       cm.instanceMatrix.needsUpdate = true;
@@ -852,17 +885,31 @@ export class Pickups {
    * blues is the class of drift this file already refuses once. `0x8fd8ff` is §2.1.6's pickup
    * colour and was put in that table for this object, which had no consumer until now.
    */
+  /**
+   * The clue bottle's material — one recipe for all three of the imported mesh's groups.
+   *
+   * `color` is white and `vertexColors` is on: the geometry carries the source's own
+   * `baseColorFactor`s per vertex, and a tint here would multiply a second grade over them. What
+   * used to be here was `color: 0x8fd8ff` at `opacity 0.55` — §2.1.6's pickup blue — because the
+   * bottle was a pale lathe with no surface of its own to lose.
+   *
+   * **The pickup-blue signal did not go away; it moved to the rim.** `rimColor 0x8fd8ff` is
+   * unchanged, and a rim is what actually carries "collectable" at the distance these are read
+   * from — the body colour was doing that job only by accident of having no other one. `PAL.
+   * sparkCore` and the sparkle field around each pickup are untouched. Opaque, because the
+   * source authors alpha 1 on every factor and a near-black glass at 0.55 is smoke.
+   */
   _clueMat() {
     const shading = this.engine.get?.('shading');
     const opts = {
       name: 'pickups:glass',
-      color: 0x8fd8ff, rough: 0.15, roughness: 0.15,
+      color: 0xffffff, rough: 0.15, roughness: 0.15, vertexColors: true,
       bands: 3, rim: 0.7, rimColor: 0x8fd8ff, spec: 0.8, gloss: 72,
-      transparent: true, opacity: 0.55,
+      side: THREE.DoubleSide,
     };
     let m = null;
     try { m = shading?.make ? shading.make(opts) : null; } catch { m = null; }
-    if (!m) m = new THREE.MeshStandardMaterial({ color: opts.color, roughness: 0.15, transparent: true, opacity: 0.55 });
+    if (!m) m = new THREE.MeshStandardMaterial({ color: opts.color, roughness: 0.15, vertexColors: true, side: THREE.DoubleSide });
     this._materials.push(m);
     return m;
   }
@@ -959,6 +1006,16 @@ const _v = new THREE.Vector3();
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
 const _e = new THREE.Euler();
+/**
+ * The clue bottle's rock needs order 'ZYX' and gets its OWN Euler rather than borrowing `_e`.
+ *
+ * `Euler.set(x, y, z, order)` leaves the order alone when the argument is omitted, so a single
+ * `_e.set(…, 'ZYX')` in the clue loop would persist into the coin loop's
+ * `_e.set(Math.PI / 2, 0, spin)` on every subsequent frame — and a coin composed 'ZYX' is spun
+ * about world Z after being laid flat, which tumbles it instead of turning it on the spot. One
+ * extra module-scope object, and the two loops cannot reach each other.
+ */
+const _eRock = new THREE.Euler(0, 0, 0, 'ZYX');
 const _one = new THREE.Vector3(1, 1, 1);
 
 export default Pickups;
