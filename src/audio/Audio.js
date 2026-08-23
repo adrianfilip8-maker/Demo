@@ -1052,12 +1052,40 @@ export class Audio {
       /* Frames are running but nobody has touched the page yet: the one window in which the
          stem's bytes can be fetched for free. Guarded and idempotent — see `_prefetchStem`. */
       this._prefetchStem();
-      /* The same claim as the `inputDevice` subscription, made without depending on emit
-         semantics: if the player is already on a pad and we have no context, take it. One
-         property read per frame while locked, and nothing at all afterwards. */
-      if (!this.ctx && this.engine.input?.lastDevice === 'pad') { try { this.unlock(); } catch {} }
+      /**
+       * ── The second path, and why the first one was not a second path at all (§664) ──────────
+       *
+       * This line used to read `input?.lastDevice === 'pad'`, and it was written as the
+       * belt-and-braces for the `inputDevice` subscription in `_wireEngine`. It was not:
+       * `inputDevice` is *emitted by* `_setDevice`, and `_setDevice` is what sets `lastDevice`.
+       * Two readings of one variable are one path wearing two hats — §439, exactly: an instrument
+       * built from the same assumption as the thing it measures cannot falsify it.
+       *
+       * Measured on the shipped `Input` (`tests/padclaim.test.mjs`), `lastDevice` stays `'kbm'`
+       * through a real Cross press in three states a player reaches immediately: after any focus
+       * loss (`_adopt` deliberately sets no device — a re-discovered hold is not an event), with
+       * the button already down on the first poll (§542's trust gate withholds it), and with the
+       * pad first appearing on the same frame as the press — **which is the only order real
+       * Chrome allows, because it exposes no gamepad to a page until one is used.** In all three
+       * the button worked or was about to, and audio got nothing.
+       *
+       * `padTouched` is raw button state read straight off the device each frame. It shares no
+       * mechanism with `_press`, `_adopt`, `_padValue` or `_setDevice`, so it can still be true
+       * when every one of them has said nothing.
+       */
+      const inp = this.engine.input;
+      if (!this.ctx && (inp?.lastDevice === 'pad' || inp?.padTouched)) { try { this.unlock(); } catch {} }
       return;
     }
+
+    /**
+     * §664 — a context that exists but is SUSPENDED is the state §552 designed for and nothing
+     * ever retried. `unlock()` retries `resume()`, but the only things that call it again are the
+     * DOM gesture listeners and the `inputDevice` edge; a pad-only player who never clicks and
+     * never changes device calls neither. One cheap retry every half second costs a no-op promise
+     * and turns "silent for the life of the page" into "silent until the platform relents".
+     */
+    if (!this.audible && ((this._resumeTick = (this._resumeTick | 0) + 1) & 31) === 0) this._tryResume();
 
     /* Deferred from `unlock()` when the gesture arrived mid-boot (§551); a no-op afterwards. */
     this._kickTrack();

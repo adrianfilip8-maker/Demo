@@ -222,6 +222,13 @@ export const PAD_BINDINGS = {
 export const PAD_AXES = { moveX: 0, moveY: 1, lookX: 2, lookY: 3 };
 
 /**
+ * The two buttons the W3C standard mapping defines as ANALOGUE (L2 / R2), and therefore the only
+ * two whose raw value cannot be read as "a thumb is on this". A driver that maps a trigger from a
+ * signed axis without a remap rests them at ±1 — the whole of §542 — so `_padTouch` skips them.
+ */
+const TRIGGER_BUTTONS = [6, 7];
+
+/**
  * Feel constants for the input layer itself. Everything here is a number a player would notice.
  *
  * `deadzone` 0.18 — the reference's own **non-movement** default (`project.godot` writes
@@ -358,6 +365,31 @@ export class Input {
        keycaps or shapes. Set on every press by source and on stick deflection past deadzone;
        emitted as 'inputDevice' only on change. */
     this.lastDevice = 'kbm';
+    /**
+     * ── Raw evidence that a hand is on the pad, this frame (§664) ────────────────────────────
+     *
+     * `lastDevice` is an EDGE product: it changes inside `_press`, and `_press` is not reached
+     * when `_padButtons` routes through `_adopt` (a re-discovered hold) or when `_padValue`'s
+     * trust gate is still withholding a control. Both are correct for input semantics and both
+     * make `lastDevice` a bad witness for the one question `src/audio/Audio.js` has to ask:
+     * *is a human touching this pad at all* — because a gamepad button fires no DOM event, so
+     * that question is the whole of the pad's route to an AudioContext (§552).
+     *
+     * Measured on the shipped class (`tools/padclaim.mjs`, now `tests/padclaim.test.mjs`), a real
+     * Cross press produced **zero** `inputDevice` emits and **zero** `unlock()` calls in three
+     * states a player reaches in the first ten seconds: after any focus loss, with the button
+     * already held on the first poll, and with the pad appearing in the same frame as the press —
+     * which is the ONLY order real Chrome permits, because it exposes no gamepad until one is
+     * used.
+     *
+     * So this is the weak claim, made directly and independently: raw button state, no trust gate,
+     * no hysteresis, no press/adopt distinction. Buttons 6 and 7 are excluded because they are the
+     * two the W3C standard mapping defines as ANALOGUE, and a driver whose triggers rest at +1 is
+     * exactly what §542 exists for — including them would claim `pad` at boot with nobody in the
+     * room. Sticks are excluded for §541's reason: position cannot tell a pushed stick from a worn
+     * one, and `_padDevice` owns that question with travel.
+     */
+    this.padTouched = false;
     this.enabled = true;
     this.padEnabled = true;
     /** Live copy of INPUT_TUNE so a settings screen can nudge one number without a rebuild. */
@@ -842,6 +874,25 @@ export class Input {
   }
 
   /**
+   * Is a hand on this pad RIGHT NOW — the weak claim, deliberately made without any of the
+   * machinery the strong one needs. See `padTouched` in the constructor for why it exists and
+   * for the three measured states in which `lastDevice` cannot answer it.
+   *
+   * Raw `_buttonValue`, not `_padValue`: the trust gate is about whether a control's RESTING
+   * convention can be believed, and a control that has never been seen at rest still tells you
+   * a thumb is on the device. Indices 6 and 7 are skipped — see the constructor note.
+   */
+  _padTouch(gp) {
+    const b = gp.buttons;
+    if (!b) return false;
+    for (let i = 0; i < b.length; i++) {
+      if (i === TRIGGER_BUTTONS[0] || i === TRIGGER_BUTTONS[1]) continue;
+      if (Input._buttonValue(b[i]) >= 0.5) return true;
+    }
+    return false;
+  }
+
+  /**
    * ── The sampling floor, which is a BOUND and not a bug (§543) ───────────────────────────────
    *
    * This runs once per rAF frame, so the pad is a sampled device and the keyboard is an evented
@@ -1106,6 +1157,10 @@ export class Input {
       this._padLast = idx;
     }
     if (gp) { this._padButtons(gp); this._padDevice(gp); }
+    /* §664: set from RAW state every frame, after the poll and independently of it. Not folded
+       into `_padButtons` on purpose — the whole value of this flag is that it shares no mechanism
+       with the thing it is a witness for (§439). */
+    this.padTouched = gp ? this._padTouch(gp) : false;
 
     let x = 0, y = 0;
     if (this.down('left')) x -= 1;

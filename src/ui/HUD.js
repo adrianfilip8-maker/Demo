@@ -96,7 +96,14 @@ const CONTROLS = [
       { k: ['W', 'A', 'S', 'D'], p: [P('stick')], d: 'Move', s: 'Camera-relative · stick pressure walks → runs' },
       { k: [M('wheel')], p: [P('stickR')], d: 'Look', s: 'Scroll to zoom' },
       { k: ['Shift'], p: [P('L1')], note: 'hold', d: 'Sneak', s: 'On a narrow ledge — tiptoe' },
-      { k: ['Ctrl'], p: [P('L2')], d: 'Crouch', s: 'Tap while running — roll · in a vent — crawl' },
+      /* §665: this used to read "in a vent — crawl", on the Crouch row, which reads as *press this
+         to crawl in a vent* and is false. `Moveset.Crawl.canEnter` is `c.inVent()` and nothing
+         else — measured by driving the shipped route with L2 pinned at +1 so `crouch` could never
+         fire (`tests/padreach.test.mjs`): the walker still entered `crawl` and arrived at the
+         same coordinate as the keyboard. The user has reported the vent inaccessible three times;
+         a control list that tells them to hold a button which does nothing there is the one part
+         of that report this lane could be causing. */
+      { k: ['Ctrl'], p: [P('L2')], d: 'Crouch', s: 'Tap while running — roll · a vent crawls you by itself, just walk in' },
       { k: ['Space'], p: [P('cross')], d: 'Jump', s: 'Again in the air — double jump (cane twirl)' },
       { k: ['Q'], p: [P('R1')], note: 'hold', d: 'Paraglide', s: 'Sly 2\u2019s own X + R1' },
       { k: ['R'], p: [P('R3')], d: 'Recentre camera' },
