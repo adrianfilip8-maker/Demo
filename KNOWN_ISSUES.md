@@ -51684,3 +51684,47 @@ camera, the rack by its constructor signature (`preMaster` is its *destination*,
 NaN by `ax[i] || 0` coalescing it, and R2 by the user's own bundle hash showing they were already
 on the build where R2 does nothing. Refuting a hypothesis cheaply is worth more than implementing
 it expensively, and three of those four took under ten minutes each.
+
+---
+
+## §694 — A deleted cwd makes `spawn` accuse the binary
+
+Ran the suite at committed HEAD in `/tmp/clean-wt` for an independent read on `c33cff0`. Result:
+**286 pass / 80 fail**, and every one of the 80 failed identically:
+
+```
+error: 'spawn /opt/node22/bin/node ENOENT'
+```
+
+That message names the interpreter. The interpreter was never missing — `/opt/node22/bin/node`
+resolves, `node -v` prints `v22.22.2`, and it is the same binary that ran the 286 passes in the
+same process. What had gone missing was the **working directory**: the audio lane finished and
+removed `/tmp/clean-wt`, its own worktree, while this run was inside it. `child_process.spawn`
+reports a missing `cwd` as `ENOENT` **against the `file` argument**, because the syscall that
+fails is the `chdir` before the `exec` and only one path gets quoted back — the wrong one.
+
+The tell was one line further down, after the summary rather than in it:
+
+```
+pwd: error retrieving current directory: getcwd: cannot access parent directories
+```
+
+The run is VOID. Not "80 regressions to triage", not "flaky under load" — the subject was
+deleted mid-measurement, which is §442's wrong subject arrived at by a new route: not a wrong
+subject *chosen*, but the right one *removed* while the instrument kept reporting. An instrument
+that cannot tell "the code is broken" from "the tree is gone" will file the second as the first
+every time, and the fabricated failure is specific, plausible and points at infrastructure.
+
+Standing figure for `c33cff0` is therefore the audio lane's: **1024 / 1024, zero failures**,
+clean worktree, nothing competing. Not because it is the better-looking number — because it is
+the one whose subject still existed when it finished.
+
+**Shared-tree rule this earns:** a worktree under `/tmp` is owned by exactly one lane, and a lane
+that removes its own worktree is removing something another lane may be standing in. Check
+`git worktree list` before `rm -rf`, and prefer `git worktree remove` — it refuses when the tree
+is dirty, which is a weak but real proxy for "someone is using this."
+
+**Domain (§418.3).** Passes on: a run whose worktree survives it (the 1024/1024 at the same SHA).
+Fails on: this run. Does not discriminate: a genuinely missing interpreter, which produces the
+identical string — so the `getcwd` line, not the `spawn` line, is the load-bearing evidence, and
+a summary that scrolls the tail away destroys the only distinguishing signal.
