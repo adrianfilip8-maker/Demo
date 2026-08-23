@@ -50993,3 +50993,180 @@ hypothesis lives inside it. Loosening an arm whose mechanism I have not establis
 a check becomes true by accident — the failure mode this whole session has been about. So it is
 reported at its measured rate with one hypothesis refuted and one open, and the suite figure is
 stated as **1014 / 1015, one pre-existing flake**, rather than rounded up to green.
+
+## §676 — "Only on the controller" is the sharpest fact we have had, and it kills a whole class at once
+
+User: *"`selfTest()` says sound IS playing, I typically cannot hear it, and if it does start playing
+it immediately stops when the character starts moving."* Then the correction that matters most:
+**it only stops on the CONTROLLER, not the keyboard.**
+
+That single clause retires every device-independent explanation, and it should be stated plainly
+because two of them were live suspects an hour ago:
+
+- **the reverb space crossing** — `_autoSpace` runs off the listener, and a listener crosses a
+  boundary identically whichever device moved it. Dropped.
+- **distance culling, the voice pool, the limiter, mute, `_animHooked`** — all device-blind.
+
+Anything that survives has to be something a pad produces and a keyboard does not.
+
+### §676.1 A correction to the brief, because the routing matters
+
+The suspicion put to me was that *"`this.reverb = new ReverbRack(ctx, this.preMaster, …)` means the
+entire pre-master signal goes through that rack"*, so a bad crossfade would silence everything.
+It does not. That second argument is the rack's **destination**, not its input:
+`ReverbRack` builds its own `this.input`, and `output.connect(destination)`. It is a **send/return**
+— voices reach it through their `send` gains and `musicSend`, while the dry path runs
+`sfxBus`/`musicBus` → `preMaster` directly. A crossfade that collapsed would drop the wet component
+and leave the dry. Recorded because the hypothesis was reasonable and the routing is the reason it
+could not have been right, independently of the device evidence that also killed it.
+
+## §677 — The asymmetry: `focus` is R2 on a pad and the RIGHT MOUSE BUTTON on a keyboard
+
+`PAD_BINDINGS.focus = [7]` — R2. `MOUSE_BINDINGS.focus = 2` — right mouse. **There is no keyboard
+key for it at all** (`KEY_BINDINGS` has no `focus` row).
+
+Holding it engages Thief-o-Vision, and `Audio._onThiefVision(true)` answers with two things at once:
+
+```js
+this._musicBase = TUNE.thiefMusic;                       // 0.34
+this.musicDuck.gain.linearRampToValueAtTime(0.34, …);    // music down ~9.4 dB
+this.musicFilter.frequency.exponentialRampToValueAtTime(TUNE.thiefFilter, …);   // 620 Hz lowpass
+```
+
+Music at a third of its level with everything above 620 Hz removed is, to a listener, the music
+stopping.
+
+**And there is no other cue that would make a player suspect a mode.** §542's docblock records
+`timeScale 0.35` as a Thief-o-Vision symptom; that is historical. Checked in the current build:
+**nothing assigns `timeScale` at all** beyond its default of 1, so there is no slow motion to
+notice. The music simply goes away. Had the game also crawled, the user would have described a
+mode rather than a sound fault — so the absence of that symptom is part of why this looked like
+an audio bug for four rounds. **A controller player rests a finger on the right trigger because almost every controller
+game trains them to — it is run, or accelerate, or aim.** Here it is Thief-o-Vision, and a keyboard
+player cannot reach it by accident because it lives on a mouse button they are not holding while
+they walk.
+
+### §677.1 And the trigger can latch it ON
+
+Measured on the shipped `_padButtons` (`tests/padreport.test.mjs` **P2**):
+
+| R2 value | `held` contains `focus` |
+|---|---|
+| 0.00 (rest) | no |
+| 1.00 (pulled) | **yes** |
+| **0.45 (sprung back, but not fully)** | **yes — still held** |
+| 0.00 | no |
+
+The release threshold is `triggerOff` 0.35, so a trigger that returns only to 0.45 keeps the action
+latched. **§542 wrote this exact case down** — *"a rest of 0.5 … is above `triggerOff`, so the FIRST
+real press latches the action on for the rest of the session"* — and its trust gate does **not**
+close it, because trust is granted the moment a control is seen at rest once, which happens long
+before the trigger wears or the player's finger comes to rest against it.
+
+### §677.2 The guard that never existed
+
+`PAD_BINDINGS` indexes buttons 0-15 and `PAD_AXES` indexes axes 0-3 **by position**, and both are
+correct only under the W3C **standard mapping**. Nothing has ever checked that a connected pad
+reports one. Over Bluetooth, through some drivers, and in non-Chromium browsers, `mapping` is `''`
+and the raw HID layout applies — different axis order, the d-pad as a hat rather than buttons
+12-15.
+
+And the deeper problem: **every pad measurement in this repository drives a synthetic gamepad this
+lane wrote, in the layout this lane assumed.** Six rounds of pad work, all conditional on a shape
+nobody has verified against the user's hardware. That is this session's dominant defect — a table
+true by accident of what you tested with — sitting in the input layer.
+
+`Input.report()` now returns `mapping` and `mappingTrusted` alongside the id, the axis and button
+counts, the live axes, every control actually on, and **`held`** — what the game believes you are
+holding. `selfTest()` carries it, and leads with a **named cause** (focus held / paused / untrusted
+mapping) decided *before* the measurement, so a specific answer survives a context where the tap
+itself fails.
+
+## §678 — A stick cannot reach a button action, under any layout — measured, not argued
+
+The remaining way movement itself could do this was a shifted layout letting stick motion land on
+button indices, firing `pause` or `focus` from the stick. `tests/padreport.test.mjs` **P4** sweeps
+every axis of three layouts — standard, DS4 evdev `(LX, LY, L2, RX, RY, R2)`, and an 8-axis raw
+layout with a hat — through seven deflections each, and `held` never acquires `pause`, `focus`,
+`crouch`, `sneak`, `jump`, `interact`, `attack`, `glide` or `recentre`.
+
+It cannot, and the reason is structural rather than numerical: `_padStick` and `_padLook` write only
+`move` and `look`; `_padButtons` reads only `buttons`. **No index shift can bridge two code paths
+that never meet.** A real R2 press on the same rig is asserted in-arm, so the empty result is
+isolation and not a dead poll.
+
+That leaves the plain reading: **R2 held *while* moving**, not movement causing R2.
+
+## §679 — NaN, swept and refuted rather than left as a worry
+
+The brief asked for every `AudioParam` write fed from the player or camera to be proved incapable
+of NaN, on the grounds that one poisoned param silences the graph permanently. Swept and **refuted**,
+measured:
+
+- `_padStick` and `_padLook` both read `const x = ax[i] || 0`. **`NaN || 0` is `0`** — NaN is falsy,
+  so the coalescing already sanitises it. Driven with `axes: [NaN, NaN, 0, 0]` and `[0, 0, NaN, NaN]`
+  through the shipped `Input`: `move` and `look` both come out `(0, 0)`, and the listener stays at
+  `(0, 2, 0)` rather than going NaN.
+- `_padValue`/`_padButtons` fail **closed** on NaN: `raw <= triggerOff` is false for NaN so trust is
+  withheld and 0 is returned, and `b > v` is false so the max stays 0.
+
+Worth recording precisely because the guard is **accidental**: nothing in `_padStick` says "reject
+non-finite input", and `if (len <= dz) return` does fail *open* for NaN — it is only the earlier
+`|| 0` that saves it. The behaviour is correct today and rests on a coincidence, which is the exact
+shape this session keeps punishing. Not changed, because a speculative rewrite of a hot input path
+with no measured defect behind it is churn; recorded so the next reader knows the safety is one
+`||` deep.
+
+## §680 — What this container established, and the one question it cannot answer
+
+**Measured here:**
+- `focus` is R2 on a pad and right-mouse on kbm, with no keyboard binding at all.
+- Thief-o-Vision ducks music to 0.34 and low-passes it to 620 Hz.
+- A trigger resting at 0.45 latches `focus` on; 0.00 releases it.
+- No stick deflection, on three layouts, reaches any button action.
+- A NaN axis cannot poison the listener or any param on the pad path.
+- Nothing outside `Audio.js` can mute; `pause` freezes `dt` but the music scheduler runs on
+  `ctx.currentTime`, so a paused engine does **not** stop the score or the recorded stem.
+
+**Not established, and it is the whole remaining question:** whether the user is holding R2. Every
+pad in this repository is a synthetic object this lane wrote. The answer is one field on their
+machine — `selfTest().input.held` — and if it contains `focus`, this is solved.
+
+## §681 — The questions, in the order that resolves them fastest
+
+### §681.1 One call, and it now answers most of this by itself
+
+```js
+await __ENGINE.get('audio').selfTest()
+```
+
+The `hint` now leads with a named cause. If it says **THIEF-O-VISION IS ENGAGED**, that is the
+answer and the fix is to let go of R2. Otherwise, the three fields that matter are new:
+
+- **`input.pads[0].id` and `.mapping`** — the identity of the controller. Every pad conclusion in
+  this project is conditional on a layout nobody has checked against real hardware, and
+  `mappingTrusted: false` means the binding table is pointing at controls we did not intend.
+- **`input.held`** — what the game thinks you are holding *right now*. Run it while you are moving,
+  and again while standing still.
+- **`input.pads[0].active`** — every control currently non-zero, with its analogue value. A trigger
+  sitting at 0.4 shows up here and is invisible to any other reading.
+
+### §681.2 Run it twice, and the difference is the measurement
+
+Once **standing still**, once **while walking with the controller** (a second person can press
+Enter, or use a `setTimeout` to delay the call). If `held` gains `focus` between the two, we have it.
+
+### §681.3 The plain question, which may be faster than any of it
+
+> **Are you resting a finger on R2 — the right trigger — while you move?**
+
+Most controller games make that trigger run or accelerate. In this one it is Thief-o-Vision, and it
+takes most of the music away.
+
+### §681.4 What this environment still cannot tell us
+
+- **Your controller's real layout.** Everything here drove a synthetic pad. `id` and `mapping` are
+  the missing quantity, and no probe in this container can produce them.
+- **Whether anything is audible.** Still no sound card; `selfTest()` measures signal at
+  `destination`, which is the closest reachable proxy.
+- **Whether R2 is held.** Only `input.held` on your machine says.
