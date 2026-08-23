@@ -428,6 +428,48 @@ export const TUNE = {
      that would justify it does not exist. A person can flip this on hardware; nothing has. */
   telegraphNextHold: false,
   safePoll:     0.30,    // seconds between supported-stance samples
+
+  /* ---- the drawn root's easing (§604) --------------------------------------------------------
+     §599 measured the rope "teleport" the user reported twice and found it is TWO cuts in the same
+     frame, not one. On the chain's entry catch the capsule moves 4.646 m; the camera's follow
+     spring passes 1.801 m of that (and only 8-17% of the ordinary catches), while the drawn body
+     moves the whole 4.646 m because `_pushCharacter` was `root.position.copy(this.position)` — an
+     undamped copy, the only hard cut of the pair and the larger one. This eases that copy. The
+     camera's share is a separate matter in a file this lane does not own.
+
+     WHAT IS EASED IS ONLY WHAT VELOCITY DOES NOT EXPLAIN. Ordinary motion travels |v|·dt; a
+     placement does not. So the drawn root always moves the honest, explained part immediately and
+     holds back the rest. That is what keeps a dive at 47 m/s untouched while a 4.6 m catch at a
+     standstill is spread — the two are not told apart by SPEED, which cannot separate them, but by
+     whether the simulation travelled the distance or was put there.
+
+     `drawSnapMin` — DERIVED, not picked (§450.4). `tools/drawnease.mjs --census` walks 5,685
+     frames over seven regimes (the four-ring chain plus six ground sweeps with run and jump), and
+     the unexplained displacement splits like this:
+
+         continuous locomotion   move 0.192 · land 0.19 · fall 0.26 · wallJump 0.342   <- ceiling
+         placements              ring4 0.807 · ring3 0.826 · ring2 1.007 · ring1 4.552
+                                 ledgeClimb mount 0.653 · poleClimb mount 1.47
+
+     0.45 sits above every continuous-locomotion frame in the census and below the smallest catch
+     by 1.8x. Two of 5,383 locomotion frames cross it and BOTH are themselves snaps (a push-out
+     during a fall and a ledge mount), so easing them is right rather than an error. The asymmetry
+     matters when choosing inside that band: easing something that did not need it costs a 67 ms
+     softening nobody can see, while missing a catch defeats the feature entirely.
+
+     `drawEaseFrames` — the offset is paid off in this many EQUAL steps, so the largest drawn step
+     is the snap over this number and the worst case sets the count. 4.646 / 4 = 1.162 m per frame
+     and 66.7 ms of total divergence; three would be 1.549 m and five would hold the body 3.7 m off
+     its capsule for 83 ms, which is long enough to draw him through stone the capsule has already
+     cleared. Set to 0 to disable the easing entirely, which is how `tests/draweased.test.mjs`
+     proves the capsule trace does not depend on it. */
+  drawSnapMin:    0.45,
+  drawEaseFrames: 4,
+  /* A bound, not a knob: no single placement can move Sly further than the longest affordance
+     reach in the game, and `Moveset.TUNE.hookGrab` is 9.0. Lag is clamped here so that a
+     pathological frame — a chain of captures, a state that places twice — cannot park the drawn
+     body an unbounded distance from the capsule. Nothing measured has ever reached it. */
+  drawLagMax:     9.0,
 };
 
 /**
@@ -455,6 +497,7 @@ const _to = new THREE.Vector3();
 const _n = new THREE.Vector3();
 const _sfrom = new THREE.Vector3();
 const _sto = new THREE.Vector3();
+const _dv = new THREE.Vector3();      // this frame's capsule displacement, for `_easeDraw` (§604)
 const _saveP = new THREE.Vector3();
 const _p2 = new THREE.Vector3();
 const _p3 = new THREE.Vector3();
@@ -556,6 +599,13 @@ export class Controller {
     this.yaw = SPAWN_YAW;
     this.stateName = 'idle';
     this.grounded = true;
+
+    /* ---- the drawn root's easing (§604). Presentation only: nothing below is read by the
+           simulation, and `_easeDraw` is the only writer. See TUNE.drawSnapMin. ---- */
+    this._drawLag = new THREE.Vector3();   // how far BEHIND its capsule the drawn body is
+    this._drawEaseN = 0;                   // frames of payoff still owed
+    this._drawP0 = SPAWN.clone();          // the capsule at the top of this frame
+    this._drawV0 = 0;                      // its speed there, which is what "explained" means
 
     /* ---- extras peers may find useful; all optional to consume ---- */
     this.speed = 0;
@@ -772,10 +822,24 @@ export class Controller {
       this._resetVision();
       // A look-at left standing would cock Sly's head at a guard the harness has posed him away from.
       if (this._lookAt) { this._lookAt = false; try { this.anim?.setLookAt?.(null); } catch { /* pose-only path */ } }
+      /* Shot mode: Debug has placed Sly exactly where the recipe says and `Debug.js`:184 reads the
+         root back to record where he was staged. An easing offset left standing from before the
+         freeze would put the drawn body somewhere the recipe did not ask for and the report would
+         record that as the staged position. A pose is not motion; there is nothing to ease. */
+      this._drawLag.set(0, 0, 0); this._drawEaseN = 0;
       this._pushCharacter();
       this._pushLocomotion(dt);
       return;
     }
+
+    /* Where the capsule stood and how fast it was going BEFORE anything moved it. `_easeDraw`
+       needs both, and it needs them from here: the state machine mutates `velocity` as it runs, so
+       a reading taken afterwards describes the frame's outcome rather than its budget. Sampling it
+       after the update is exactly the fault that made the first census score every landing as an
+       unexplained jump — contact zeroes the vertical component, so |v|·dt reads ~0 for a frame the
+       capsule genuinely travelled. */
+    this._drawP0.copy(this.position);
+    this._drawV0 = this.velocity.length();
 
     if (dt > 0) {
       this._thiefVision();
@@ -798,6 +862,7 @@ export class Controller {
 
     this.stateName = this.sm.name;
     this.speed = Math.hypot(this.velocity.x, this.velocity.z);
+    if (dt > 0) this._easeDraw(dt);
     this._pushCharacter();
     this._pushLocomotion(dt);
     // After the machine has run, so both read the state Sly is actually in this frame.
@@ -1086,6 +1151,12 @@ export class Controller {
     if (this._needSpawnSnap && !this.col.fallback) {
       this._needSpawnSnap = false;
       this._snapToGroundBelow(8);
+      /* §604 — re-anchor the drawn easing on the far side of the drop. This is the one place the
+         capsule moves a long way inside a frame without going through `teleport()`, and the note
+         above records it reaching 17.5 m. It is the same kind of statement a teleport is — the
+         floor telling us where Sly actually stands — so there is nothing to ease, and easing it
+         would draw him sinking in from mid-air over the first frames of every session. */
+      this._drawP0.copy(this.position);
     }
     this._probeGround(this.grounded ? TUNE.groundSnap : 0.06);
   }
@@ -2126,14 +2197,58 @@ export class Controller {
     if (a?.setLocomotion) { try { a.setLocomotion(LOCO); } catch (e) { this.softFail('setLocomotion', 'animation', e); } }
   }
 
+  /**
+   * §604 — hold back the part of this frame's displacement that velocity does not explain, and pay
+   * it off in `drawEaseFrames` equal steps. PRESENTATION ONLY: this reads `position` and
+   * `velocity` and writes `_drawLag`, which nothing but `_pushCharacter` consumes. There is no
+   * path from the offset back into the simulation, so chain order, `spawn2eye`, `telegraph` and
+   * every other drive are unaffected BY CONSTRUCTION rather than by luck — which is the whole
+   * reason this succeeds where four simulation-side attempts (§593-§598) did not.
+   *
+   * Why "unexplained" and not "large": speed cannot separate the two populations. A dive reaches
+   * 0.785 m per frame honestly and a catch covers 4.646 m from a standstill; a bound on the step
+   * would either rate-limit the dive or miss the catch. Velocity separates them cleanly — the dive
+   * travelled its distance, the catch did not.
+   */
+  _easeDraw(dt) {
+    const N = TUNE.drawEaseFrames | 0;
+    if (N <= 0) { if (this._drawEaseN) { this._drawLag.set(0, 0, 0); this._drawEaseN = 0; } return; }
+
+    _dv.subVectors(this.position, this._drawP0);
+    const moved = _dv.length();
+    /* `_drawV0` is the speed at the TOP of the frame, so `explained` is the distance the capsule
+       had the budget to travel. Clamped at `moved` because a frame that decelerates (a landing, a
+       wall) travels less than its budget, and a shortfall is not something to ease. */
+    const unexplained = moved - Math.min(moved, this._drawV0 * dt);
+    if (unexplained > TUNE.drawSnapMin && moved > 1e-6) {
+      /* Hold back only the unexplained fraction, along the displacement the frame actually made.
+         The drawn body still travels `explained` this frame, so it keeps moving at the speed it
+         was moving; what it does not do is jump the rest. */
+      this._drawLag.addScaledVector(_dv, unexplained / moved);
+      if (this._drawLag.lengthSq() > TUNE.drawLagMax * TUNE.drawLagMax) {
+        this._drawLag.setLength(TUNE.drawLagMax);
+      }
+      this._drawEaseN = N;
+    }
+    /* Linear payoff. Scaling by (n-1)/n and counting down spends the lag in exactly n equal steps
+       — the largest drawn step is the snap over N, and it is the same size on every one of them.
+       An exponential decay would not do: it pays most of the snap on the first frame, which is the
+       frame the cut is on. */
+    if (this._drawEaseN > 0) {
+      this._drawLag.multiplyScalar((this._drawEaseN - 1) / this._drawEaseN);
+      if (--this._drawEaseN === 0) this._drawLag.set(0, 0, 0);
+    }
+  }
+
   _pushCharacter() {
     const root = this.character?.root;
     if (root) {
-      root.position.copy(this.position);
+      root.position.copy(this.position).sub(this._drawLag);
       root.rotation.set(0, this.yaw, 0);
       if (this._placeholder) { this._placeholder.visible = false; }
     } else if (this._placeholder) {
-      this._placeholder.position.copy(this.position);
+      // The placeholder stands in for the drawn body, so it eases with it or the two disagree.
+      this._placeholder.position.copy(this.position).sub(this._drawLag);
       this._placeholder.position.y += TUNE.height * 0.5;
       this._placeholder.rotation.set(0, this.yaw, 0);
     }
@@ -2157,6 +2272,15 @@ export class Controller {
   teleport(vec3, yaw) {
     if (vec3) this.position.set(vec3.x, vec3.y, vec3.z);
     if (typeof yaw === 'number') { this.yaw = yaw; this._prevYaw = yaw; }
+    /* §604 — and spend the drawn easing for exactly the same reason the spawn snap is spent below.
+       A teleport is somebody saying where Sly IS; easing it would drag the drawn body across the
+       level from a position that no longer exists, and `Debug.js`:141 teleports before every
+       canonical shot. `_drawP0` moves with him too, or the very next frame reads the teleport
+       itself as one enormous unexplained displacement and eases what was just declared exact. */
+    this._drawLag.set(0, 0, 0);
+    this._drawEaseN = 0;
+    this._drawP0.copy(this.position);
+    this._drawV0 = 0;
     /**
      * Spend the spawn snap. **A teleport is somebody saying exactly where Sly is**, and the
      * pending snap is an answer to a question about a position that no longer exists.

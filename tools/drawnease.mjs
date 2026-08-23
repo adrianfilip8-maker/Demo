@@ -98,6 +98,9 @@ function drive(withRig) {
   return { order, capStep, camStep, grabSteps, range, camTotal: sum(camStep), capTotal: sum(capStep) };
 }
 
+const CENSUS = process.argv.includes('--census');
+
+if (!CENSUS) {
 const A = drive(false);
 const B = drive(true);
 
@@ -134,3 +137,177 @@ console.log(`    engine.get('movement') -> ${engine.get('movement') ? 'present' 
 console.log(`    same object as c        -> ${engine.get('movement') === c}`);
 console.log(`    camera↔capsule range: min ${B.range.min.toFixed(2)} m  max ${B.range.max.toFixed(2)} m  final ${B.range.last.toFixed(2)} m`);
 console.log(`    camera travelled ${B.camTotal.toFixed(1)} m over the chain; capsule travelled ${B.capTotal.toFixed(1)} m`);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+ * --census — the derivation behind `Controller.TUNE.drawSnapMin` (§604).
+ *
+ * The easing can only hold back a displacement it can tell apart from ordinary motion, and the
+ * separator is not size. A dive reaches 0.785 m per frame honestly; the chain's entry catch covers
+ * 4.646 m from a standstill. What distinguishes them is whether velocity ACCOUNTS for the
+ * distance: ordinary motion travels |v|·dt, a placement does not. So the censused quantity is the
+ * unexplained displacement, |Δp| − |v|·dt, over regimes wide enough to contain the ceiling.
+ *
+ * The velocity must be read BEFORE the update. The first version of this read it after and scored
+ * every landing as an unexplained jump — contact zeroes the vertical component, so |v|·dt reads
+ * ~0 for a frame the capsule really did travel. Same class of fault as the blind rig above: the
+ * right idea sampled in the wrong place.
+ * ═════════════════════════════════════════════════════════════════════════════════════════════ */
+if (CENSUS) {
+  const { TUNE: CTUNE } = await import('../src/player/Controller.js');
+  const rows = [];
+
+  const census = (prev, vBefore, f) => {
+    const moved = prev.distanceTo(c.position);
+    const vdt = vBefore * dt;
+    return { f, moved, vdt, drift: moved - Math.min(moved, vdt), state: c.sm.name };
+  };
+
+  /* the chain — the population the easing exists for */
+  hardReset(engine, c, LINTEL.clone(), Math.PI);
+  engine.events.length = 0;
+  {
+    let grabs = 0, grabFrame = -1, bailing = false;
+    const prev = c.position.clone();
+    for (let f = 0; f < 2600; f++) {
+      const target = RINGS[Math.min(grabs, RINGS.length - 1)];
+      const swinging = c.sm.name === 'hookSwing';
+      if (swinging) aim(c.velocity.x, c.velocity.z);
+      else aim(target.x - c.position.x, target.z - c.position.z);
+      engine.input.beginFrame(dt);
+      engine.input.move.x = 0; engine.input.move.y = 1;
+      if (f === 1 || f === 2) engine.input.hold('jump');
+      else if (f === 3) engine.input.let_go('jump');
+      else if (!swinging && grabs === 0 && f > 3) engine.input.hold('interact');
+      if (swinging) {
+        if (grabFrame >= 0 && grabs <= WS.length && f - grabFrame === WS[grabs - 1]) {
+          engine.input.hold('jump'); bailing = true;
+        } else if (bailing) { engine.input.let_go('jump'); bailing = false; }
+      }
+      const vB = c.velocity.length();
+      engine.time = f * dt; c.update(dt, f * dt);
+      const r = census(prev, vB, f); prev.copy(c.position);
+      for (const e of engine.events) if (e.evt === 'hookGrab') { r.isCatch = true; grabs++; grabFrame = f; }
+      engine.events.length = 0;
+      rows.push(r);
+      if (grabs >= 4) break;
+      if (c.grounded && grabs > 0 && f > grabFrame + 30) break;
+    }
+  }
+
+  /* the ordinary population — run and jump across six parts of the level */
+  const SEEDS = [['courtyard', 0, 20], ['hall north', 0, -30], ['hall south', 0, -46],
+                 ['west aisle', -9, -34], ['east aisle', 9, -34], ['terrace', 4, 8]];
+  for (const [, x, z] of SEEDS) {
+    hardReset(engine, c, new THREE.Vector3(x, 2, z), 0);
+    engine.events.length = 0;
+    const prev = c.position.clone();
+    for (let f = 0; f < 900; f++) {
+      aim(Math.sin(f / 90), Math.cos(f / 90));
+      engine.input.beginFrame(dt);
+      engine.input.move.x = 0; engine.input.move.y = 1;
+      engine.input.hold('run');
+      if (f % 47 === 0) engine.input.hold('jump');
+      else if (f % 47 === 2) engine.input.let_go('jump');
+      const vB = c.velocity.length();
+      engine.time = f * dt; c.update(dt, f * dt);
+      rows.push(census(prev, vB, f)); prev.copy(c.position);
+      engine.events.length = 0;
+    }
+  }
+
+  const catches = rows.filter((r) => r.isCatch);
+  const byState = new Map();
+  for (const r of rows) {
+    const s = byState.get(r.state) || { n: 0, maxStep: 0, maxDrift: 0 };
+    s.n++;
+    if (r.moved > s.maxStep) s.maxStep = r.moved;
+    if (r.drift > s.maxDrift) s.maxDrift = r.drift;
+    byState.set(r.state, s);
+  }
+
+  console.log(`\ncensus: ${rows.length} frames over ${SEEDS.length + 1} regimes\n`);
+  console.log('  state           frames   worst step   worst UNEXPLAINED');
+  for (const [s, v] of [...byState.entries()].sort((a, b) => b[1].maxDrift - a[1].maxDrift)) {
+    console.log(`    ${s.padEnd(14)} ${String(v.n).padStart(5)}    ${v.maxStep.toFixed(3)} m      ${v.maxDrift.toFixed(3)} m`);
+  }
+
+  console.log('\n  the catches, which the easing must hold back:');
+  for (const r of catches) {
+    console.log(`    f${String(r.f).padStart(4)}  step ${r.moved.toFixed(3)}  explained ${r.vdt.toFixed(3)}  unexplained ${r.drift.toFixed(3)}`);
+  }
+
+  /* Continuous locomotion means the state was not putting him anywhere: every state that mounts or
+     catches is excluded, and what remains is the ceiling the threshold has to clear. */
+  const PLACING = new Set(['hookSwing', 'poleClimb', 'ledgeClimb', 'railSlide', 'railWalk', 'spireLand', 'poleSwing']);
+  const loco = rows.filter((r) => !PLACING.has(r.state));
+  const ceiling = loco.reduce((m, r) => (r.drift > m.drift ? r : m), { drift: -Infinity, state: '?' });
+  const smallest = catches.reduce((m, r) => (r.drift < m.drift ? r : m), { drift: Infinity });
+
+  console.log(`\n  continuous-locomotion ceiling   ${ceiling.drift.toFixed(3)} m  (${ceiling.state}, ${loco.length} frames)`);
+  console.log(`  smallest catch                  ${smallest.drift.toFixed(3)} m`);
+  console.log('\n  candidate   locomotion frames it would catch   catches it would miss');
+  for (const t of [0.30, 0.35, 0.40, 0.45, 0.50, 0.60, 0.70, 0.80, 0.90]) {
+    const bad = loco.filter((r) => r.drift > t).length;
+    const miss = catches.filter((r) => r.drift <= t).length;
+    const mark = Math.abs(t - CTUNE.drawSnapMin) < 1e-9 ? '   <- shipped' : '';
+    console.log(`    ${t.toFixed(2)} m          ${String(bad).padStart(4)} of ${loco.length}                      ${String(miss).padStart(2)} of ${catches.length}${mark}`);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+ * --frames — the staging data for `tools/drawshot.mjs` (§604 item 4).
+ *
+ * A canonical shot cannot photograph this: `setShot` turns on `freeCam`, and the freeCam branch of
+ * `Controller.update` deliberately spends the easing offset so a posed frame is drawn exactly
+ * where the recipe put it. So the frames are STAGED from measured play instead — this drives the
+ * real chain with the real rig, and at each catch writes out where the camera was, where the
+ * capsule was, and where the drawn body was with the easing in force. `drawshot.mjs` then puts the
+ * character root at each of those two positions under the same camera. What the pair shows is one
+ * simulation frame drawn both ways; the positions are measured, not composed.
+ * ═════════════════════════════════════════════════════════════════════════════════════════════ */
+if (process.argv.includes('--frames')) {
+  const rig = new CameraRig(engine); rig.init?.();
+  hardReset(engine, c, LINTEL.clone(), Math.PI);
+  engine.events.length = 0;
+  const out = [];
+  let grabs = 0, grabFrame = -1, bailing = false;
+  for (let f = 0; f < 2600; f++) {
+    const target = RINGS[Math.min(grabs, RINGS.length - 1)];
+    const swinging = c.sm.name === 'hookSwing';
+    if (swinging) aim(c.velocity.x, c.velocity.z);
+    else aim(target.x - c.position.x, target.z - c.position.z);
+    engine.input.beginFrame(dt);
+    engine.input.move.x = 0; engine.input.move.y = 1;
+    if (f === 1 || f === 2) engine.input.hold('jump');
+    else if (f === 3) engine.input.let_go('jump');
+    else if (!swinging && grabs === 0 && f > 3) engine.input.hold('interact');
+    if (swinging) {
+      if (grabFrame >= 0 && grabs <= WS.length && f - grabFrame === WS[grabs - 1]) {
+        engine.input.hold('jump'); bailing = true;
+      } else if (bailing) { engine.input.let_go('jump'); bailing = false; }
+    }
+    engine.time = f * dt; c.update(dt, f * dt);
+    try { rig.update(dt); } catch { /* rig is decoration here; the positions are the payload */ }
+    let caught = null;
+    for (const e of engine.events) if (e.evt === 'hookGrab') { caught = ringOf(e.payload.pos) + 1; grabs++; grabFrame = f; }
+    engine.events.length = 0;
+    if (caught !== null) {
+      /* The camera looks along -Z in its own frame; a point 10 m down that axis is a look-at the
+         browser side can reproduce without shipping a quaternion through JSON. */
+      const look = new THREE.Vector3(0, 0, -10).applyQuaternion(engine.camera.quaternion).add(engine.camera.position);
+      out.push({
+        ring: caught, frame: f, state: c.sm.name, yaw: c.yaw,
+        cam: engine.camera.position.toArray().map((v) => +v.toFixed(4)),
+        look: look.toArray().map((v) => +v.toFixed(4)),
+        fov: engine.camera.fov,
+        capsule: c.position.toArray().map((v) => +v.toFixed(4)),
+        drawn: c.position.clone().sub(c._drawLag).toArray().map((v) => +v.toFixed(4)),
+        lag: +c._drawLag.length().toFixed(4),
+      });
+    }
+    if (grabs >= 4) break;
+    if (c.grounded && grabs > 0 && f > grabFrame + 30) break;
+  }
+  console.log(JSON.stringify(out, null, 2));
+}

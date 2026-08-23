@@ -49437,3 +49437,138 @@ zero for all 285 frames. The camera lane's nine-regime battery showed that stick
 steps over 30°/frame from 2 to 11, so **1.801 m is a floor for the camera's share, not a typical
 value**, and the drawn model's 4.646 m is the only figure here that a player's thumbs cannot make
 worse.
+
+## §604 — The drawn root eases; the capsule does not move, and that is asserted rather than argued
+
+§599 measured the "teleportation between rings" the user reported twice and found it is **two cuts
+in one frame**: on the chain's entry catch the capsule moves 4.646 m, the camera's follow spring
+passes 1.801 m of that, and the drawn body takes the whole 4.646 m through
+`root.position.copy(this.position)` — an undamped copy, the only hard cut of the pair and the
+larger one by 2.6x on the entry and better than ten-to-one on the ordinary catches. This ships the
+larger half. The camera's 1.801 m is `CameraRig._readPlayer` reading the capsule, in another lane's
+file, and is routed separately.
+
+`Controller._easeDraw` holds back the part of a frame's displacement that velocity does not
+explain and pays it off in `TUNE.drawEaseFrames` equal steps. `_pushCharacter` became
+`root.position.copy(this.position).sub(this._drawLag)`.
+
+### 1. The simulation does not move, and there is a control before the claim
+
+```
+    [C1] control: 285 frames, two drives with the SAME tune, max component divergence 0
+    [C2] capsule bit-identical with the easing on and off; chain [1,2,3,4] both ways
+```
+
+C1 exists because a 3.4e-6 divergence between identical drives was reported elsewhere in this
+harness, and if that held here then "bit-identical" would be an unmeasurable criterion and every
+comparison below would have to be re-expressed as a tolerance. It does not hold: **two same-tune
+drives agree to the last bit over 285 frames**, so C2's zero means what it says.
+
+That is not luck, and the structure is why it could not have gone otherwise: `_easeDraw` writes
+`_drawLag`, `_pushCharacter` reads it, and there is no third party. Four simulation-side attempts
+at this same complaint (§593-§598) each moved the chain — a duplicate grab, then a leg that
+stopped — because each of them changed where the capsule went. This one cannot.
+
+### 2. The size of the cut, and the size of what is left
+
+```
+    worst single-frame step of the DRAWN body   4.646 m  ->  1.232 m      (N = 4)
+    worst divergence from its capsule                       3.414 m      (ceiling 3.485)
+    longest run off the capsule                             3 frames = 50 ms
+    frames carrying any offset at all                       10 of 285   (3.5%)
+    flat-out running frames eased                           0 of 600, at up to 0.495 m/frame
+```
+
+`drawEaseFrames` is 4 because the worst case sets it: 4.646 / 4 = 1.162 m per frame and 66.7 ms of
+total divergence. Three would be 1.549 m per frame; five would hold the body 3.7 m off its capsule
+for 83 ms, which is long enough to draw him through stone the capsule has already cleared. The
+payoff is LINEAR — scaling the lag by (n-1)/n and counting down spends it in exactly n equal steps.
+An exponential decay was rejected for the reason it always fails here: it pays most of the snap on
+the first frame, which is the frame the cut is on.
+
+### `drawSnapMin` 0.45, derived (`tools/drawnease.mjs --census`)
+
+Two classifications were tried and both failed. Catch-vs-non-catch fails because a `poleClimb`
+mount jumps 1.52 m and is not a catch. Locomotion-vs-placement fails because `ledgeClimb` produces
+both a 0.80 m mount and a 0.06 m step, so the same state sits on both sides of any line.
+
+What separates them is not size and not state — it is whether **velocity accounts for the
+distance**. Ordinary motion travels |v|·dt; a placement does not. A dive reaches 0.785 m per frame
+honestly and the entry catch covers 4.646 m from a standstill; no bound on the STEP can tell those
+apart without either rate-limiting the dive or missing the catch.
+
+Censused over 5,685 frames and seven regimes (the chain plus six ground sweeps with run and jump),
+worst unexplained displacement per state:
+
+```
+    hookSwing  4.552      fall       0.684      land        0.336      wallRun    0.152
+    poleClimb  1.397      ledgeClimb 0.653      jump        0.200      wallCling  0.116
+    tiptoe     0.493      wallJump   0.342      move        0.192
+    the four catches: 4.552 · 1.007 · 0.826 · 0.807
+```
+
+```
+    candidate   locomotion frames it would catch   catches it would miss
+      0.45 m          2 of 5383                       0 of 4      <- shipped
+      0.70 m          0 of 5383                       0 of 4
+      0.90 m          0 of 5383                       2 of 4
+```
+
+0.70 also catches nothing by mistake, and 0.45 was taken over it anyway, for two reasons. The two
+locomotion frames 0.45 catches are **themselves snaps** — a push-out during a fall and a tiptoe
+transition — so easing them is right rather than an error. And the errors are not symmetric: easing
+something that did not need it costs 50 ms of softening nobody can see, while missing a catch
+defeats the feature. 0.70 sits 13% under the smallest catch; 0.45 sits 79% under it.
+
+### 3. Every reader of the seam, and which of them is right to inherit
+
+| reader | inherits? | verdict |
+|---|---|---|
+| `src/core/Debug.js`:184 — the shot harness records the staged root | no | `Debug.js`:141 teleports before every shot and `teleport()` spends the offset; the freeCam branch clears it again before `_pushCharacter`. Both asserted in C5. |
+| `src/player/SlyModel.js`:970 — the shot recipe writes the root | no | guarded by `if (this.engine.get('movement')) return` — it runs only when `_pushCharacter` does not. Mutually exclusive by construction. |
+| `src/player/Rig.js`:474 — `footIK` reads `rootY` | **yes, correctly** | the foot bones are children of the same root, so root and feet stay consistent and the feet plant on real ground under the VISIBLE body, which is what they should do. Weight is driven to zero while airborne (`Animation.js`:1503) and every measured capture is an airborne placement, so in practice it barely sees the offset at all. |
+| `src/fx/Particles.js`:2740 — the cane trail | **yes, correctly** | parented to `cane.object` under the root. The swipe should follow the visible cane; if it did not, the trail would detach from the cane drawing it. |
+| everything else under the root — cane socket, hands, head | **yes, correctly** | same reason. This is the majority of the seam and it wants the offset. |
+| `src/audio/Audio.js`:1475 — `_playerPos` prefers `character.root.position` | **yes — and this one is a judgement call, not mine** | it is defensible: sound should agree with the picture. But it is the AUDIO lane's file and their ruling. The exposure is bounded and small: **≤3.41 m for ≤3 frames (50 ms), on 3.5% of chain frames and 0% of running frames.** Its own fallback is `movement.position`, so pinning it to the capsule is a one-line change in their file if they want it. |
+
+Two readers were added to §599's list of four by re-grepping `get('character')` rather than
+trusting the earlier count: `Particles.js` and, indirectly, everything parented under the root.
+
+### 4. Frames
+
+Staged, and the reason is a correctness property rather than a shortcut: `setShot` turns on
+`freeCam`, and the freeCam branch **deliberately spends the offset** so a posed frame is drawn
+where the recipe put it. So a canonical shot can never show this. `drawnease.mjs --frames` drives
+the real chain with the real `CameraRig` and writes out, at each catch, the camera, the capsule and
+the drawn body; `tools/drawshot.mjs` puts the root at each of those two positions under that same
+camera. One measured instant, drawn twice — `capsule` is what shipped before §604, `drawn` is what
+ships now.
+
+```
+    ring 1  f4    lag 3.414 m   capsule (3.60, 13.03,  5.66)   drawn (2.64, 10.34,  7.54)
+    ring 2  f203  lag 0.755 m   capsule (2.22, 13.20, -1.71)   drawn (2.73, 13.05, -1.17)
+```
+
+Ring 1 is the extreme — 2.69 m of that gap is VERTICAL, so the pair shows the body still climbing
+out of its flight instead of appearing at the ring. Ring 2 is the ordinary case.
+
+### The instrument was wrong first, again, and in the same shape as §599
+
+The first census sampled velocity AFTER the update and reported `fall` and `land` frames drifting
+up to 0.70 m. Contact zeroes the vertical component, so |v|·dt reads ~0 for a frame the capsule
+genuinely travelled, and the instrument scored honest falling as unexplained motion. Right idea,
+wrong sample point — the same shape as §599's rig that had never seen Sly. **Both faults were
+invisible in the quantity being measured and only showed up against a second one**: there, range;
+here, the state label on the frames the drift was accusing.
+
+### Honest limits
+
+- **§440 again.** The chain is driven with the look stick at zero. The offset is a function of the
+  capsule alone, so the drawn numbers do not depend on the camera — but the FRAMES do, and a player
+  turning while catching sees a composition these two do not show.
+- The 4-frame count is judgement inside a measured bound, not a measurement. 4.646 m fixes the
+  worst case and 1.232 m is what a quarter of it costs; whether 1.232 m still reads as a cut on
+  hardware is a thing to look at, not a thing this can prove.
+- The census covers seven regimes, not the whole route. `spawn2eye`'s 5,883 frames would be the
+  wider sample and were not censused; if a placement exists there with under 0.45 m of unexplained
+  displacement it will not be eased, and nothing here would notice.
