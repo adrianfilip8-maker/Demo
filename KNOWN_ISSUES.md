@@ -51176,3 +51176,238 @@ takes most of the music away.
 - **Whether anything is audible.** Still no sound card; `selfTest()` measures signal at
   `destination`, which is the closest reachable proxy.
 - **Whether R2 is held.** Only `input.held` on your machine says.
+
+## §682 — `focus` off R2, and R2 left bound to nothing
+
+**Shipped without the cause confirmed.** That is stated first because the rest of this block reads
+like a diagnosis and is not one; see §687.
+
+`focus` holds Thief-o-Vision, which ducks the score and puts a lid on it. It sat on **R2** — the
+trigger almost every controller game trains a player to rest a finger on, because in almost every
+controller game it is run, accelerate or aim. Sly 2's own answer to "run" is `hold R1`. It was the
+only binding in the table where a *rest* rather than a *press* changed what the game sounds like.
+
+Sly 2 had no opinion to take: L1/L2/R2 are its **gadget** slots and gadgets are cut, so all three
+were always ours to choose.
+
+### §682.1 R3, and the third reason only turned up by checking
+
+- a stick **click** is a deliberate downward press, not a resting position;
+- it is the **camera** stick. The left stick is pushed continuously to walk, so a click there is far
+  easier to trip while moving — the exact failure being removed. The right stick is nudged, not
+  leant on. This is why `focus` did **not** go to L3, which was the first choice;
+- `playstation_button_r3.svg` is in the prompts pack and there is no `l3`. So R3 renders as a real
+  glyph on the control card while L3 falls back to a text label. The verb that matters gets the
+  picture; `recentre` — minor, and self-correcting when tripped — takes L3 and the label.
+
+**R2 is now bound to nothing at all.** Giving it another verb would move the problem rather than
+remove it. Its glyph and its Kenney file are deleted with it: §516's rule is *committed with a
+mapping or neither*, and a button the game does not read should not appear on a card telling the
+player what to press. Two counts in `hud.test.mjs` were re-pinned 12 → 11, deliberately, which is
+what that assertion's own message asks for.
+
+## §683 — The latch: a control must release when the player releases it
+
+`_padButtons` kept an action held for as long as its value was anything above `triggerOff` 0.35, so
+a trigger springing back to only 0.45 **never released**. Measured in `padreport` P2 before the fix.
+§542 wrote the case down — *"a rest of 0.5 … is above `triggerOff`, so the FIRST real press latches
+the action on for the rest of the session"* — and its trust gate does not close it, because trust is
+granted the moment a control is seen at rest **once**, long before it wears or a finger settles.
+
+Hysteresis exists to stop **chatter**, which lives on a millisecond timescale. A value parked
+between `triggerOff` and `triggerOn` for a whole second is not a hold; it is a control failing to
+return. `INPUT_TUNE.triggerDeadRelease` (1.0 s) releases it.
+
+- A player who is holding a trigger holds it **past** `triggerOn` — that is what pressing feels like.
+- Every pad action is **binary**, so no analogue reading of a half-pulled trigger is lost.
+- Digital buttons read 1.0 held, above `triggerOn`, and never enter the band.
+- The timer resets on any real press or real release, so it can only ever **shorten** a hold the
+  player has already stopped asking for.
+
+`padreport` **P6** pins both directions: parked at 0.45 releases after 1 s; **held at 0.90 does not
+expire** after twice that. Without the second clause the rule would be indistinguishable from "all
+trigger holds expire", which would break every legitimate hold.
+
+## §684 — A floor under the music, put where the combination is formed
+
+`duckMusic` multiplies `_musicBase` by up to 0.1. Thief-o-Vision sets `_musicBase` to
+`thiefMusic` 0.34. Stacked: **0.034**, which is −29 dB and gone under any ambience. Nothing intends
+that — it is what two independently reasonable reductions do when they meet, and **neither call site
+can see the combination**. So `TUNE.musicFloor` 0.25 bounds the *product*, at the one place the
+product exists.
+
+`thiefFilter` also moves **620 → 1400 Hz**. 620 Hz removes essentially all of a mix's musical
+information: melody, percussion transients and every harmonic that carries a tune live above it, so
+what survives is a rumble. Combined with a level duck that is not "behind glass", it is silence.
+1400 keeps the mode plainly muffled and plainly a mode, while leaving the score recognisable as
+music.
+
+## §685 — The sweep, measured rather than asserted
+
+`padreport` **P5**: 17 buttons pressed alone and every axis of three layouts — standard, DS4 evdev
+`(LX, LY, L2, RX, RY, R2)`, raw 8-axis with a hat — swept through four deflections, on the shipped
+`Input` wired to the shipped `Audio`.
+
+- lowest music gain reached: **0.25**, the floor exactly.
+- pre-floor worst case, computed in-arm from the same two constants: **0.034**, asserted to be below
+  the floor so the arm cannot pass on a build where nothing ducks at all.
+- **neither trigger reaches `focus`** — asserted per layout, so re-binding it onto L2/R2 reddens here.
+- `focus` is asserted reachable by *some* button, so an empty sweep cannot masquerade as isolation.
+
+### §685.1 The enumeration behind "anything else pad-reachable"
+
+Everything a pad can reach that could quiet the game, and where each stands:
+
+| path | reachable by | status |
+|---|---|---|
+| `focus` → Thief-o-Vision duck + lowpass | R3 (was R2) | moved off the trigger, floored, and it already announces itself |
+| `pause` → `debug.paused` → `dt = 0` | Options | **already announced** — §543 has `HUD.update` mirror the flag into the pause cel and release the pointer |
+| `mute()` / `masterVolume()` | nothing | no caller outside `Audio.js`, no binding |
+| reverb `setSpace` crossfade | movement | send/return only; the dry path never passes through the rack (§676.1) |
+| section change → `musicFilter` cutoff | movement | a colour change, and now floored in gain |
+
+**Item 3 needed no work.** Thief-o-Vision already announces itself with a full-screen desaturation,
+a crush, a vignette, pulsing rings and a literal `THIEF-O-VISION` tag — and, per §686, slow motion.
+
+## §686 — RETRACTION: "nothing sets `timeScale`" was false, and my own grep filter hid it
+
+In the previous round I claimed, in a code comment, in a commit message and in §677, that nothing in
+the build assigns `engine.timeScale` any more — and drew the inference that Thief-o-Vision takes the
+music away with *no other cue a player would connect to it*.
+
+**It is false.** `src/player/Controller.js:965`:
+
+```js
+this.engine.timeScale = want ? TUNE.visionScale : 1;      // visionScale = 0.35
+```
+
+Thief-o-Vision slows the entire game to 35% speed.
+
+**How the error was made, because that matters more than the fact.** The grep that "established" it
+was `grep -rn "timeScale" src/ | grep -v "engine.timeScale\b.*=.*1\b"` — a filter meant to drop
+resets to 1, which excluded the one line that assigns it, because that line *ends* in `: 1;`. **The
+instrument was shaped so that the answer could not appear in it.** That is the same failure as
+§669's panner and §662's stopped frame loop, committed by me, one round after writing both up.
+
+It was caught by `padhotplug` H1, whose premise assertion reads `timeScale === visionScale` — an arm
+written by an earlier round to keep exactly this honest. The suite caught what my grep did not.
+
+**The consequence is the opposite of a footnote.** Thief-o-Vision has **three** loud tells: a
+desaturated screen, a flickering `THIEF-O-VISION` label across it, and the whole game at 35% speed.
+A player in that mode is not experiencing "the sound stopped"; they are experiencing something
+unmistakable. §677's inference is withdrawn, and the R2 hypothesis is **argued against by the
+build** rather than supported by it.
+
+## §687 — This shipped without the cause confirmed, and the record should not blur that
+
+Four rounds have ended with a fix that measured clean and a user who still could not hear the game.
+The difference between *a fix landed on a measurement* and *a fix landed on a strong hypothesis* is
+the thing that made those rounds indistinguishable from each other, so:
+
+**What is measured:** every claim in §682–§685. The bindings, the latch and its release, the duck
+arithmetic, the floor, the sweep across three layouts. Each has a counterexample run in-arm.
+
+**What is NOT established:** that any of it is what is happening to the user. They did not confirm
+the R2 finger and were not asked again. And by §686 the leading hypothesis is now **weaker**, not
+stronger: a player holding `focus` would see a desaturated, labelled screen and a game running at
+35% speed, and would have said so.
+
+**Why it shipped anyway.** Each of the four is a defect on its own terms. A verb that quiets the
+score does not belong under the resting finger; a control that does not release when the player
+releases it is a straight bug; a score that can be driven to −29 dB by two features meeting is
+wrong however it got there. If R2 was the cause, this fixes it. If it was not, the build is cleaner
+by four real defects and the search continues from a better place — and **that is the better outcome
+either way, because from here those two worlds are indistinguishable.**
+
+**What would still decide it.** `selfTest().input.held` on the user's machine, which costs them one
+line and no playtest. `Input.report()` and `selfTest()` are kept for exactly that reason. But nothing
+in this block is waiting on it.
+
+## §688 — Their context runs at 32 kHz, and the bundle hash settles something bigger
+
+The user pasted one console line from the shipped build:
+
+```
+BiquadFilter.frequency.linearRampToValueAtTime value 20000 outside nominal
+range [0, 16000]; value will be clamped.
+```
+
+### §688.1 The bundle hash: they are on the NEWEST build, and that refutes R2
+
+The file named was `Audio-CS7T6-WI.js`. Vite content-hashes each chunk, so that name identifies the
+build exactly. Built both candidates and compared:
+
+| commit | Audio chunk |
+|---|---|
+| `6844c64` (before this round's fixes) | `Audio-CFqHkRLP.js` |
+| **`db3af5e`** (focus off R2, latch, floor) | **`Audio-CS7T6-WI.js`** |
+
+Pages run 77 for `db3af5e` completed **success at 19:44:19Z**, four minutes before the console was
+read. **The user is on the build where `focus` is on R3, R2 is bound to nothing at all, the
+dead-band release is live and the music is floored at 0.25 — and they still have no sound.**
+
+**So §677's Thief-o-Vision hypothesis is refuted, by their own build rather than by an argument.**
+Holding R2 on that build does nothing whatever. §686 had already made it doubtful — three loud
+tells, one of them the whole game at 35% speed — and this closes it. §682–§685 remain worth having
+as defect removals, which is exactly why they were shipped without waiting for confirmation, but
+none of them is the cause and the ledger should not be read as saying so.
+
+### §688.2 The rate, and what it is evidence of
+
+The nominal maximum for a `BiquadFilterNode` corner is the context's **Nyquist**. Theirs is 16000,
+so their `AudioContext.sampleRate` is **32 kHz** — not the 44.1 or 48 kHz that every number, every
+render and every assertion in this project was written against.
+
+`musicFilter` is opened flat to 20000 in `_buildGraph`, by four of the six section cutoffs, and by
+the Thief-o-Vision un-duck. On their machine every one of those was out of range. `_hz()` now
+clamps to `min(v, sampleRate / 2)` at each site.
+
+**A browser picks the context rate from the OUTPUT DEVICE.** 32 kHz is not a sound-card rate; it is
+the sort of rate a Bluetooth headset reports in its hands-free/call profile rather than in A2DP
+media. That is a lead about where their audio is being routed — and it is a lead, not a finding.
+§690 keeps them apart.
+
+### §688.3 Why no test here could have caught it
+
+`tests/webaudio.mjs` implements `BiquadFilterNode` without the spec's nominal-range clamp, so an
+out-of-range corner renders in silence. And `audiosession.test.mjs` has been running at **SR 22050**
+— Nyquist **11025** — for its whole life, setting 20000 Hz corners on every render, and nothing ever
+said a word. **§669's disease in a new parameter**: the instrument cannot express the failure, so
+the failure cannot appear.
+
+`listener` **A4** closes it: the shipped graph built on a **32000 Hz** context — the user's rate,
+which nothing here had ever exercised — with every corner asserted at or below 16000, raw 20000
+asserted in-arm to exceed it, and a 48 kHz context asserted **not** to be clamped so the fix cannot
+quietly dull every other player.
+
+## §689 — Both directions of the duck, logged rather than inferred
+
+The line that revealed §688 was a ramp **to** 20000, which is the *un*-duck — so the filter was
+being restored, which argues against a duck that latches shut. An argument is not a measurement.
+
+`_logMusic` records every duck and un-duck with a context timestamp, a direction and the target,
+capped at 24 and reported by `selfTest()` as `musicLog`. If the downs ever outnumber the ups, or an
+up lands somewhere that leaves the filter low, it is visible in a single paste instead of being
+reasoned about. `selfTest()` also now reports `sampleRate` and `nyquist`, because after §688 those
+are facts about the player's hardware worth having in the same breath.
+
+## §690 — What §688 is and is not evidence for
+
+**It is a real defect**, fixed: a filter corner above Nyquist is meaningless, the browser clamps it
+anyway, and leaving it there fills the console with warnings that hide the next real one.
+
+**It is a real clue about their hardware**: a 32 kHz context means an output device this project has
+never assumed, and one that is unusual enough to be worth knowing about.
+
+**It is NOT the cause of the silence, and must not be written up as one.** A 16 kHz low-pass on
+music is very nearly transparent — it removes content most adults cannot hear. If clamping to 16000
+were the difference between silent and audible, every one of these builds would already have been
+inaudible on every 32 kHz device, and the effect would be a slight dulling rather than nothing at
+all. It is the first red line this investigation has seen from the user's own machine, and that is
+exactly why it deserves the same discipline as everything that came before it rather than less.
+
+**What it does change** is what is worth asking. The remaining shape that fits every measurement —
+signal present at `destination`, nothing audible, indifferent to every in-game change, on a device
+reporting a call-profile sample rate — is a routing question on their machine rather than a bug in
+this build. `selfTest()` now carries `sampleRate` and `nyquist` so the next paste answers it without
+another playtest.
