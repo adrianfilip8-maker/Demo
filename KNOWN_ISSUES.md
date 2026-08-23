@@ -48366,10 +48366,22 @@ phases each, measured through the real `compile → sampleInto → SlyModel` ski
 contrast arm RUN at elbow 0.75 asserting the metric can still say −6.7. HONEST LIMITS: the
 volume predicate is a lateral test in the body frame, so it cannot see an arm that laps another
 in DEPTH only; it sweeps the idle family, not the whole table, because the meet-on-purpose poses
-above would need a judgement per clip; and the offline numbers are `SlyModel`'s skin — the
-shipped `SlyModelDLRig` carries per-bone geometry rotations that no skeleton metric sees (§470.1),
-which is why the frames beside this section are captured on the shipped rig with the same
-measurement running in-page.
+above would need a judgement per clip; and and the offline numbers are `SlyModel`'s
+skin, NOT the shipped `SlyModelDLRig`, which carries per-bone geometry rotations no skeleton
+metric sees (§470.1).
+
+**The shipped-rig frames are OUTSTANDING, and saying so is the point.** `tools/idlecross.mjs`
+exists to take them — it runs the identical volume measurement in-page on the real character and
+photographs profile + front-quarter at each of the three fidget stages — and it was run three
+times this round without landing a frame: once it died on a real bug (`await import('three')`
+does not resolve as a bare specifier inside the page; fixed, and the tool now borrows the class
+off a live engine instance), and twice it was starved by container contention at load ~11, still
+inside its own boot when the round closed. So the repair below is held by measurement and by an
+arm, and is NOT yet held by a picture on the rig the player uses. What that leaves open is
+specifically the §470.1 term: if the DL carry rotates the forearm geometry differently from the
+procedural rig, the delivered gap could differ from the +3.9 cm measured here, in either
+direction. The command is one line and the next round should run it first:
+`node tools/idlecross.mjs` (and `CHAR=model3` for the control arm).
 ## §552 — The pad has no gesture: why §551 was correct and still did not reach the player
 
 User, on the deployed build: *"The music still doesn't seem to play on the controller."* §551 is live
