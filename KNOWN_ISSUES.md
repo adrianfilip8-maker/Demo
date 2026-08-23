@@ -49253,3 +49253,92 @@ new frames were taken this round**: the shared capture lock was held by a siblin
 `ventshot` for the whole window and both queued `idlecross` arms were still waiting on it, so
 item 3 of the bar is UNMET and the dlrig frames on record remain §479.12's, whose first frame
 carries the contamination described above and should be read as bind, not as `idle_confident`.
+
+## §599 — The teleport is TWO cuts, not one, and only the larger of them is mine
+
+The user has now said it twice: *"there is still some teleportation rather than smooth transitions
+between rings."* §594–§598 attacked it in the simulation and every variant either did nothing
+(§595) or stopped the chain a leg short (§598). The remaining instruction was the coordinator's
+third: **ease what is DRAWN, not what is simulated** — with the standing routing caveat that *"if
+the camera follows the capsule and cannot be changed without another lane, stop and tell me."*
+
+That is a measurement, not a judgement, so it was measured. `tools/drawnease.mjs` — committed
+rather than left in scratch, because rollback #17 ate the last probe that was not — drives
+`telegraph`'s four-ring chain twice — once bare as a control, once with a real `CameraRig`
+attached and stepped after the controller — and records the per-frame displacement of the capsule
+and of the camera over the same drive.
+
+### First, the instrument was wrong, and the check that caught it is the point
+
+The first run reported the camera stepping **0.001 m** on the frame the capsule moved 4.646 m. A
+perfect spring, apparently. It was not a spring: `realWorld()`'s engine registers no `movement`,
+and `CameraRig._readPlayer` **silently falls back to orbiting the origin** when `engine.get(
+'movement')` is missing. A static orbit also steps ~0 m per frame, so the failure is
+indistinguishable from success *by the quantity being measured*.
+
+What separated them was a quantity the hypothesis did not mention — RANGE. A rig following Sly
+sits a boom from him; a rig orbiting the origin sits wherever he happens to be from it:
+
+```
+    rig blind (as first measured)   camera↔capsule 9.79 – 19.66 m   camera travelled  0.0 m
+    rig live  (movement published)  camera↔capsule 4.11 –  8.96 m   camera travelled 42.2 m
+                                                                    capsule travelled 41.6 m
+```
+
+§439 again, and this is the sharpest instance of it yet: **the instrument's failure mode and the
+result it was built to find produce the same number.** Nothing in the step column could ever have
+told them apart. Both runs closed the chain `[1,2,3,4]`, so the rig does not perturb the drive and
+the live run's camera track is a measurement of this chain.
+
+### The measurement
+
+```
+    per-frame displacement, four-ring chain from the kiosk lintel, 285 frames
+      capsule   max 4.646 m    frames > 0.5 m: 4    > 1.5 m: 1
+      camera    max 1.801 m    frames > 0.5 m: 3    > 1.5 m: 2
+
+    at the four catches                capsule    camera    camera / capsule
+      ring 1  f4    the chain entry     4.646      1.801         0.388
+      ring 2  f203                      1.200      0.093         0.077
+      ring 3  f236                      0.962      0.167         0.174
+      ring 4  f284                      0.934      0.153         0.164
+```
+
+A single clean chain meets **one** long catch — the entry — and three ordinary ~1 m ones. §594's
+seven 4.65 m snaps are the whole `telegraph` file's 126 catches across repeated drives, not one
+player's run through the chain; the two numbers are consistent and describe different things.
+
+### The routing answer: it is not either/or
+
+The follow spring absorbs 61% of the entry snap in its first frame and 83–92% of the small ones.
+It does not absorb the entry. So on the worst catch a player sees **two cuts in the same frame**:
+
+- the MODEL jumps the full **4.646 m**. `Controller._pushCharacter` (`src/player/Controller.js`
+  :2132) is `root.position.copy(this.position)` — an undamped copy, the only hard cut in the pair,
+  and the larger one. Nothing else in the frame moves Sly's body.
+- the CAMERA jumps **1.801 m**. `CameraRig._readPlayer` (`src/player/CameraRig.js`:1315) reads
+  `engine.get('movement').position` — the CAPSULE, not the drawn root — so no amount of easing
+  applied to what is drawn changes this number by a millimetre.
+
+Easing what is drawn is therefore available **without the camera lane**, it is the bigger half,
+and it is not the whole thing. Its shape would be a decaying draw-offset rather than a lerp-follow:
+capture the displacement at the catch, add it to `root.position`, decay it to zero over a few
+frames. A lerp-follow would trail the body through the entire swing; an offset touches only the
+frames after a snap and is identically zero everywhere else, so the simulation, the collision and
+the chain's timing are untouched by construction.
+
+WHAT ELSE READS THAT SEAM, because a presentation change with four readers is not a one-liner:
+`src/core/Debug.js`:184 (the shot harness stages `character.root.position`), `src/player/
+SlyModel.js`:970 (the harness *writes* the root directly from a shot recipe, bypassing
+`_pushCharacter` — so canonical captures are probably immune, but "probably" is not a photograph),
+`src/audio/Audio.js`:1475 (the character emitter position) and `src/player/Rig.js`:474 (`rootY`).
+
+NOT SHIPPED. It changes what the player sees, so by the standing rule it ships photographed or not
+at all, and `Controller.js` was never named in this lane's ownership. The measurement is the
+deliverable; the routing is the coordinator's call.
+
+HONEST LIMIT (§440). The drive aims the camera at its target and holds it — the look stick is at
+zero for all 285 frames. The camera lane's nine-regime battery showed that stick motion takes
+steps over 30°/frame from 2 to 11, so **1.801 m is a floor for the camera's share, not a typical
+value**, and the drawn model's 4.646 m is the only figure here that a player's thumbs cannot make
+worse.
