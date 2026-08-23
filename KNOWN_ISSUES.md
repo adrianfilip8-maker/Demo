@@ -51347,6 +51347,18 @@ read. **The user is on the build where `focus` is on R3, R2 is bound to nothing 
 dead-band release is live and the music is floored at 0.25 — and they still have no sound.**
 
 **So §677's Thief-o-Vision hypothesis is refuted, by their own build rather than by an argument.**
+
+**The hash table, kept current so the next paste is answered in one step** — the chunk name in a
+console line identifies the build exactly, and this is cheaper than asking anyone to reload and
+report:
+
+| commit | Audio chunk | contains |
+|---|---|---|
+| `6844c64` | `Audio-CFqHkRLP.js` | before this round |
+| `db3af5e` | `Audio-CS7T6-WI.js` | focus off R2, latch, floor — **what the user was on** |
+| `771e739` | `Audio-HTAcDf9V.js` | + the Nyquist clamp and the duck log |
+
+A console still naming `CS7T6-WI` next time means they have not reloaded, not that the clamp failed.
 Holding R2 on that build does nothing whatever. §686 had already made it doubtful — three loud
 tells, one of them the whole game at 35% speed — and this closes it. §682–§685 remain worth having
 as defect removals, which is exactly why they were shipped without waiting for confirmation, but
