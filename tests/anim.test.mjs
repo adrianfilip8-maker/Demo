@@ -5,7 +5,7 @@ import { RIG3 } from '../src/player/SlyModel3.js';
 import { CLIPS, REQUIRED, sampleInto, compile } from '../src/player/Clips.js';
 import { PoseBuffer } from '../src/player/Rig.js';
 import { MIXAMO_CLIPS } from '../src/player/MixamoClips.js';
-import { buildClipSet, ACTIVE, CLIP_REGIME, CLIP_ORIGIN, LIMB_OPEN } from '../src/player/Animation.js';
+import { buildClipSet, ACTIVE, CLIP_REGIME, CLIP_ORIGIN, LIMB_OPEN, GODOT_LIMB_OPEN } from '../src/player/Animation.js';
 import { GODOT_CLIPS } from '../src/player/GodotClips.js';
 import { TUNE } from '../src/player/Controller.js';
 
@@ -1302,4 +1302,110 @@ test('hook chain seam (§530): a catch and a release are one slot, and a re-catc
       `${regime}: a chain hop summed ${after.maxW.toFixed(3)} of live weight. Above 2.0 means a THIRD `
       + 'motion joined the authored grab-over-hang layer, and the only candidate is the release');
   }
+});
+
+test('idle arm clearance (§479.10): the standing idles keep daylight between the arms, measured on the SKIN not the skeleton', async () => {
+  /* The user, on the shipped build carrying §531/§532's lever: "The arms are still crossed when
+     in the idle position." Every instrument this lane owns said clean — `uncross.mjs` reports 0
+     crossed clips, the §479.5 census reports none — because they all share one predicate:
+     *is the hand BONE ORIGIN past the other hand's bone origin?* An arm is not a point. Gloves
+     are ~10 cm across and a forearm is a tube, so one arm can lap the other's volume with both
+     origins politely on their own sides. That predicate is the boundary, not the clip list:
+     idle was always INSIDE the census loop and always reported clean.
+
+     This arm measures what the eye measures — the signed lateral gap between the left arm's
+     skinned geometry and the right arm's, in the pose's own shoulder-line frame. Negative means
+     the two arms occupy each other's side.
+
+     DOMAIN (§418.3) — passes on: the shipped build's three standing idles, every sampled phase
+     (RUN below); fails on: `idle_look` at elbow lever 0.75, which is what the user was looking
+     at — RUN below as the contrast, and it reads about -6.7 cm at its worst phase, so the
+     metric can say "crossed". Cannot discriminate: whether an overlap READS as crossed at game
+     framing (shots/idlecross carries that), nor whether a pose whose arms MEET on purpose —
+     wall_run, the mantle, a hard landing — is a defect; those are legitimately negative and are
+     deliberately not swept here. */
+  const { SlyModel } = await import('../src/player/SlyModel.js');
+  const engine = {
+    quality: 'high', scene: new THREE.Scene(), debug: {}, stats: {}, warnings: [],
+    warn: () => {}, get: () => null, has: () => false, on: () => () => {}, emit: () => {},
+  };
+  const sly = new SlyModel(engine);
+  await sly.init();
+  const pb = new PoseBuffer(sly.boneNames);
+  const at = (n) => new THREE.Vector3().setFromMatrixPosition(sly.bones[n].matrixWorld);
+  const ARM_L = ['shoulderL', 'upperArmL', 'lowerArmL', 'handL'];
+  const ARM_R = ['shoulderR', 'upperArmR', 'lowerArmR', 'handR'];
+  const _v = new THREE.Vector3();
+
+  /** Signed lateral gap in cm between the two arms' skinned point clouds. */
+  const gapCm = (clip, t) => {
+    pb.clear();
+    sampleInto(clip, t, pb, 1);
+    for (const n of sly.boneNames) {
+      const b = sly.bones[n]; if (!b) continue;
+      if (pb.w[n] > 0) b.quaternion.copy(pb.q[n]); else b.quaternion.identity();
+      if (pb.sw[n] > 0) b.scale.copy(pb.s[n]); else b.scale.set(1, 1, 1);
+    }
+    const base = sly.bp('hips');
+    sly.bones.hips.position.set(base.x + pb.pos.x, base.y + pb.pos.y, base.z + pb.pos.z);
+    sly.root.updateMatrixWorld(true);
+    const lat = at('upperArmL').sub(at('upperArmR')); lat.y = 0; lat.normalize();
+    const hip = at('hips');
+    const latOf = (p) => p.clone().sub(hip).dot(lat);
+    let lMin = Infinity, rMax = -Infinity;
+    sly.root.traverse((o) => {
+      if (!o.isSkinnedMesh) return;
+      const g = o.geometry, pos = g.attributes.position;
+      const sIdx = g.attributes.skinIndex, sW = g.attributes.skinWeight;
+      if (!sIdx || !sW) return;
+      const names = o.skeleton.bones.map((b) => b.name);
+      for (let v = 0; v < pos.count; v++) {
+        let wl = 0, wr = 0;
+        for (let k = 0; k < 4; k++) {
+          const w = sW.getComponent(v, k); if (w <= 0) continue;
+          const nm = names[sIdx.getComponent(v, k)];
+          if (ARM_L.includes(nm)) wl += w; else if (ARM_R.includes(nm)) wr += w;
+        }
+        if (wl < 0.6 && wr < 0.6) continue;
+        _v.fromBufferAttribute(pos, v);
+        if (o.applyBoneTransform) o.applyBoneTransform(v, _v); else o.boneTransform(v, _v);
+        _v.applyMatrix4(o.matrixWorld);
+        const x = latOf(_v);
+        if (wl >= 0.6) { if (x < lMin) lMin = x; } else if (x > rMax) rMax = x;
+      }
+    });
+    return (lMin - rMax) * 100;
+  };
+
+  const IDLES = ['idle_confident', 'idle_bored', 'idle_look'];
+  const shipped = buildClipSet('godot').table;
+  const bad = [];
+  for (const name of IDLES) {
+    const c = shipped[name];
+    for (const f of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+      const g = gapCm(c, f * c.dur);
+      if (g <= 1.0) bad.push(`${name}@${(f * 100).toFixed(0)}% ${g.toFixed(1)}cm`);
+    }
+  }
+  assert.deepEqual(bad, [], 'a standing idle has its arms inside each other — the pose the player looks at most');
+
+  /* CONTRAST, RUN: the metric can say no, and the thing it says no to is precisely the state
+     the user reported. The per-clip exemption OUTRANKS the global knob (`per.elbow ?? base`),
+     so forcing `__LIMB_OPEN` no longer reaches this clip — which is the fix working. To run the
+     failing input the exemption row itself is lifted for the length of the measurement: without
+     it, `idle_look` inherits the set-wide 0.75 and crosses deeply. This is the regression the
+     arm exists to hold, and it is stated as "remove the fix, the defect returns". */
+  const saved = GODOT_LIMB_OPEN.idle_look;
+  delete GODOT_LIMB_OPEN.idle_look;
+  let worst = Infinity;
+  try {
+    const loose = buildClipSet('godot').table.idle_look;
+    for (let i = 0; i <= 10; i++) worst = Math.min(worst, gapCm(loose, i / 10 * loose.dur));
+  } finally {
+    GODOT_LIMB_OPEN.idle_look = saved;
+  }
+  assert.ok(worst < -2, `contrast arm: idle_look WITHOUT its exemption reads ${worst.toFixed(1)} cm — expected a real `
+    + 'overlap at the set-wide 0.75; if the idle arm pose was re-authored, re-derive this line');
+  /* and the exemption must actually be the thing standing between the two, by identity */
+  assert.equal(GODOT_LIMB_OPEN.idle_look?.elbow, 0.45, 'the §479.10 exemption row is what holds the idle clear');
 });

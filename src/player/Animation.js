@@ -362,6 +362,29 @@ export const GODOT_LIMB_OPEN = {
      in its own name: mirroring copies the keys, not this table's row. */
   wall_run_l: { elbow: 0.5, knee: 0.6 },
   wall_run_r: { elbow: 0.5, knee: 0.6 },
+
+  /* §479.10's exemption, and it finally NAMES the criterion the two above were each finding
+     one case of: **the lever may open a FREE limb; it may not straighten a limb whose hand is
+     PLACED.** A placed hand is a contract with the world exactly the way `cane_hit`'s frame is
+     a contract with the gameplay — the wall run's palm is on the wall, and the standing idle's
+     left hand is on the HIP, authored there for a stated silhouette reason (see IDLE_A in
+     Clips.js: "Left hand on the hip … it closes a triangle of open sky between the arm and the
+     ribs"). Slerping that elbow toward bind takes it 104° → 160°, which no hand-on-hip pose
+     survives: the hand leaves the hip, and §532.1's coupling then drives it along the forearm's
+     own direction, which on this pose points across the belly.
+
+     Only `idle_look` breaks. The three standing idles share IDLE_A's arms but not their body
+     twist, and it is the twist that swings a straightened arm across: measured worst gap over
+     each cycle at the shipped 0.75 — `idle_bored` +12.0 cm, `idle_confident` +6.3, `idle_look`
+     −6.7, overlapping for 57% of its four seconds. It is also the one the player actually
+     stares at: `Moveset.js:141` hands the idle to `idle_look` after 13 s of standing still,
+     which is why every 2-second idle capture in this project's history — §531's pair included —
+     photographed a pose that was never the reported one.
+
+     0.45 is the largest rung that keeps real daylight (+3.9 cm) and it still delivers 138°,
+     past the 132° this project shipped pre-swap, so §531's ruling survives on the very pose it
+     was aimed at. The knee is untouched — legs are free limbs and the spread ruling stands. */
+  idle_look: { elbow: 0.45, knee: 0.60 },
 };
 
 function limbOpenFor(game) {

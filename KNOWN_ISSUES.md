@@ -48278,3 +48278,93 @@ correct underneath it.
 
 **Nothing shipped. No behaviour changed.** The repair is above in full so the next attempt starts
 from the code rather than from the diagnosis.
+
+### §479.10 "Still crossed in the idle position" — the census was never wrong about the list; it was wrong about what an arm is
+
+The user, on the deployed build carrying §531/§532's lever: *"The arms are still crossed when in
+the idle position."* Third report of crossing in this block, and the first one where every
+instrument the lane owns says the build is clean: `tools/uncross.mjs` — §532's own solver, run
+against this exact tree — reports **`total 0`** crossed clips, and re-running §479.5's census
+over the whole table at BOTH lever settings flags nothing, idle included.
+
+**The scope question, answered first, because it decides whether the pose or the census is the
+finding.** Idle was never outside the census: that loop iterates `buildClipSet('godot').table`
+entire, so all 52 clips including the three standing idles were measured every time, and
+reported clean every time. The boundary is not the clip list — **it is the predicate**:
+
+> every instrument in this block asks *"is the hand BONE ORIGIN past the other hand's bone
+> origin?"* An arm is not a point. The gloves are ~10 cm across and a forearm is a tube, so one
+> arm can lap the other's VOLUME while both origins sit politely on their own sides.
+
+Measured on the skin instead — the signed lateral gap between the left arm's skinned geometry
+and the right arm's, same shoulder-line body frame — the shipped `idle_look` reads **−6.7 cm at
+its worst phase and overlapping for 12 of 21 samples, 57% of its four-second cycle**, while its
+hand origins stay 0.85 shoulder-widths apart and every origin-based instrument calls it clean.
+That is the whole gap between "measured clean" and a user looking at crossed arms, and it has
+been sitting under §479.5, §532 and `uncross.mjs` the entire time.
+
+**Why idle_look and not the idle everyone photographed.** The idle position is three clips on a
+boredom timer (`Moveset.js:141`): `idle_confident` for 6 s, `idle_bored` past 6, **`idle_look`
+past 13**. Every idle capture this project has ever taken — §531's pair included — settles ~2 s
+and therefore only ever photographed the first of the three. A player who stands still and looks
+at his character, which is exactly what a reviewer does, is looking at the third within fifteen
+seconds.
+
+**The mechanism, and it is §531's own headline turned around.** §531.2 chose the lever's scope
+BY NAMING THIS POSE: *"the most folded pose in the entire set is a procedural one no alias row
+ever touched: the standing idle, elbow 104°, the pose a player looks at while standing still. So
+the lever runs over every clip the regime shows."* But that elbow is folded for a reason the
+file states two lines above the channel — **the left hand is authored ON THE HIP**: *"Left hand
+on the hip. Two jobs: it closes a triangle of open sky between the arm and the ribs, and it
+stops the arm outline melting into the torso outline."* The lever slerps that elbow toward bind,
+104° → **160°** at the shipped 0.75, and no hand-on-hip pose survives being straightened: the
+hand leaves the hip and, per §532.1's coupling (*opening a fold pushes the hand along the
+forearm's own direction*), that direction on this pose points **across the body**. The ladder,
+knee held at 0.60, worst gap over the cycle:
+
+```
+    elbow lever   0.00   0.15   0.25   0.35   0.45   0.55   0.65   0.75
+    idle_look     +8.1   +7.6   +6.9   +6.1   +3.9   +0.2   −3.4   −6.7   ← ships at 0.75
+    elbow angle   104°   115°   123°   130°   138°   145°   152°   160°
+    idle_confident +10.3 +10.3 +10.3 +10.3  +9.5   +8.3   +7.3   +6.3   (never at risk)
+    idle_bored    +12.0  … unchanged at every rung …               +12.0 (never at risk)
+```
+
+Faithful (`elbow 0`) never crosses at any phase. The crossing is entirely the lever's, on the
+one clip whose body twist swings an already-straightened arm across the belly.
+
+**The rule this adds, which §531's exemption list was one case short of.** That list had exactly
+one entry, the combat chain, exempted because a strike time is a gameplay contract. The missing
+criterion is the other kind of contract: **a PLACED hand. The lever may open a free limb; it may
+not straighten a limb whose hand is resting on something** — a hip, a wall, a ledge, a rail.
+`wall_run_l/r` already carry a quiet per-clip override for what is plainly this same reason.
+`idle_look` now carries one too: `{ elbow: 0.45, knee: 0.60 }` — the largest rung that keeps
+real daylight (+3.9 cm) while staying past the 132° this project shipped pre-swap, so the
+spread ruling survives on the pose it was aimed at.
+
+**The new list, and it is a different list.** Sweeping the volume predicate over the whole table
+at the shipped lever flags ten clips, and they are not all defects — the predicate cannot tell a
+crossing from arms that MEET on purpose:
+
+```
+    wall_run_l/r  −50.0   reaching across to the wall — the pose's whole point
+    rail_slide    −15.0   |  victory  −11.1  |  land_hard −7.4  |  land_roll −3.6
+    ledge_climb    −1.6   both hands on the lip — a mantle
+    sneak_idle     −9.5   crossed at BOTH levers: not the lever's, and the oldest one here
+    idle_look      −5.1   THIS defect, lever-caused
+```
+
+`sneak_idle` is the one worth the next look: it is negative at lever 0 too, so it predates
+§531 entirely and no report has ever named it. Recorded, not fixed, and deliberately not fixed
+blind — a crouched creep holding the cane across the body may well be authored intent, and
+§479.5's own lesson is that guessing at intent is how a repair ruins a verb.
+
+Held by `anim.test`'s new §479.10 arm: the three standing idles keep > 1 cm of daylight at five
+phases each, measured through the real `compile → sampleInto → SlyModel` skin, with the
+contrast arm RUN at elbow 0.75 asserting the metric can still say −6.7. HONEST LIMITS: the
+volume predicate is a lateral test in the body frame, so it cannot see an arm that laps another
+in DEPTH only; it sweeps the idle family, not the whole table, because the meet-on-purpose poses
+above would need a judgement per clip; and the offline numbers are `SlyModel`'s skin — the
+shipped `SlyModelDLRig` carries per-bone geometry rotations that no skeleton metric sees (§470.1),
+which is why the frames beside this section are captured on the shipped rig with the same
+measurement running in-page.
