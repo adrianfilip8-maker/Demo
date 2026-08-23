@@ -50407,3 +50407,589 @@ has now been reported three times with every instrument passing. The `idle16-aft
 whole-table surface sweep did not finish inside the capture window (the container renders at
 well under 1 fps); the idle frames it exists for were on disk and are committed, and the
 regression cover for the rest of the table is anim.test's clearance arm rather than that sweep.
+
+### §479.17 The idle, ruled a fourth time — the reference stops being a floor and becomes the target
+
+The user, after §479.16 widened the pose: *"Check to see if the proper climbing animation was
+ported from the godot repo. The static pose does not appear to be the same as the godot repo."*
+The second sentence supersedes §479.16's own target, and the coordinator's instruction with it:
+§479.16 read *"further out to the side"* as a DIRECTION and made `Standupright` a floor (spread
+`>= 47.7 cm`, delivered 61.7). The user has now looked at the result and says it does not match.
+A floor is the wrong predicate for a target — 14 cm wider than Sly 2 passes it and fails the
+ruling — so their pose is now the thing to hit, fold included.
+
+```
+                              L abduction  L fold   L hand out   R hand out   hands apart
+  REFERENCE  Standupright         +3.0°    137.1°      10.7 cm       9.0 cm      47.7 cm
+  §479.16    ours, delivered     +43.3°    159.4°      24.8 cm       9.7 cm      61.7 cm
+  §479.17    ours, delivered      +4.5°    135.5°      11.9 cm       9.0 cm      47.7 cm
+```
+
+**No conflict with the invariant, and it was checked before anything moved.** The coordinator's
+one carry-forward was that both hands stay outboard of their own shoulders — §479.16's real find,
+the cane arm 3.6 cm *inboard* and hidden behind the torso. Their own pose puts the right ELBOW
+0.7 cm inboard while the right HAND is 9.0 cm outboard (the forearm angles out), so matching them
+does not reproduce the defect. Delivered: L 11.9, R 9.0, both outboard, worst over the whole cycle
+L 10.4 / R 8.4.
+
+**THE §531 LEVER IS WHY NO EARLIER ROUND COULD HAVE MATCHED, and that is a measurement.** The
+standing idles pass through the limb lever at elbow 0.75, which straightens whatever raw fold is
+authored: sweeping it on the shipped chain gives fold 110.7 → 159.4 and there is NO rung at which
+the reference's 137° is reachable from a sane raw pose (hitting 137° delivered at k=0.75 needs a
+raw fold near 2°, i.e. an arm folded flat against itself). Worse, on the reference's own geometry
+the lever runs the wrong way: the forearms of a hanging pose point inward-down, so straightening
+them swings the hands to the midline — measured, the cane hand goes **+9.4 cm outboard at k=0 to
+−1.4 cm INBOARD at 0.75**, recreating exactly the defect §479.16 was ruled on. So `idle_confident`
+and `idle_look` take an elbow-0 exemption in `GODOT_LIMB_OPEN` (knees keep 0.60 — the user has
+never ruled on legs and §531's leg half stands). A side effect worth having: at 0 the raw and
+delivered poses coincide, so `?anim=proc` and the shipped build now show ONE silhouette and
+§479.16's three-rung solve trap retires for these two clips. `idle_bored` is untouched — it
+authors its own arm channels, its cane hand already delivers 8.1 cm outboard.
+
+**`idle_look` needed its own solve, and the reason generalises.** IDLE_A's arms are authored
+against its own torso (chest roll +24, hips −19); `idle_look`'s turn keys unwind both (chest +2,
+hips −6), and an arm that hangs correctly on the rolled torso reads **3.2 cm inboard** on the
+level one — inboard from t 0.5 to 1.9 of a 4 s cycle, i.e. most of the pose the player actually
+stares at (`Moveset.js:141` hands the idle to `idle_look` after 13 s). Both of its turn keys now
+carry re-solved arm channels. Worst hand-out over the full cycles, all three idles: confident
+L 10.4 / R 8.4, look L 6.7 / R 7.8, bored L 19.2 / R 7.7 — none inboard.
+
+**THE FRAMES, and the one that answers the question the tables could not.** `tools/idlevsref.mjs`
+(new) renders THEIR clip and OURS from the same camera on the shipped rig, front views guarded by
+§479.14's camDot (az 35 ⇒ cam·facing +0.82, throws otherwise): `shots/idle17-ours-front34.png`
+against `shots/idle17-refretarget-front34.png`, plus profile and the `idle_look` stage. And it
+carries a finding that matters beyond this pose: **their clip retargeted is not their pose.** The
+naive port — `GODOT_CLIPS.Standupright` played straight — delivers **70 cm** of hand separation
+live against their own rig's 47.7, because the two rigs' rest arms differ ~14.5° (§479.6) and the
+world-delta retarget composes their motion onto OUR wider bind. Ours reads 52 cm live (48 offline;
+the gap is the DLRig carry plus the breathing additive), per-arm 10.4 / 8.2 against their 10.7 /
+9.0. So "port the clip" and "match the pose" are different operations here, and only the second
+one answers the user.
+
+Arms: the §479.16 spread arm is **re-derived from the inverted claim** rather than re-pinned — the
+bar is now `|sep − 47.7| <= 2.5 cm` (a band, not a floor), which both §479.15's 43.6 cm narrow pose
+and §479.16's 61.7 cm splayed one fall outside; the per-arm outboard checks are unchanged. The
+§479.10 clearance arm stopped pinning `idle_look`'s exemption at the literal 0.45 and now asserts
+the mechanism (a row exists, capped below the set-wide rung) — that pin would have reddened
+§479.17 for a change it has no opinion about, which is the same lesson §510 teaches about file
+lists. The §531 lever arm's scope witness is now DERIVED (any proc-sourced idle with no exemption
+row) instead of hard-coded to `idle_confident`, and it gained a check that the exemption is real.
+
+HONEST LIMITS: the reference numbers are `Standupright` measured on THEIR rig, and "the same pose"
+across two rigs is a judgement about proportion that a hand-separation number only approximates —
+the frames are the claim. This pose has now been reported four times; every instrument passed each
+time, and what finally moved was measuring their pose instead of arguing about ours.
+
+### §479.18 The climb was name-correct and content-wrong: their tree plays it BACKWARDS
+
+The user's first sentence: *"Check to see if the proper climbing animation was ported from the
+godot repo."* Checked the way §479.8 checked the attack — by resolving their graph, not by
+matching a name — and the answer is that `pole_climb` was wired to the right clip played the
+wrong way round.
+
+Their path, read out of `Scenes/Character Mesh/sly_cooper_anims_4.tscn`: `state` input 4 →
+`pole_state`, whose input 0 ("pole_idle") is `Animation 8` → `Library_Sly_19/PoleClimbIdle` and
+whose input 1 ("pole_walk") is `pole_timescale` (scale **1.0** — no rate defect here, unlike
+§479.7's jump) → `Animation 9` → `Library_Sly_19/PoleClimbing`. **`Animation 9` carries
+`play_mode = 1`**, which is Godot's `PLAY_MODE_BACKWARD`. We played it forward for the whole life
+of the swap.
+
+**Exactly two nodes in their entire tree carry that flag, and both are clips we swapped** —
+`PoleClimbing` and `CaneSwing` (our `hook_swing`). Only one needed fixing, and which one is a
+measurement rather than a guess: sampling pose(t) against pose(dur−t) across the cycle over the
+mapped joints,
+
+```
+  PoleClimbing   mean 8.7°   worst 35.4° (forearm.L)   DIRECTIONAL — reversal changes the motion
+  CaneSwing      mean 0.0°   worst  0.2° (foot.L)      PALINDROMIC — its backward flag is invisible
+  Walk (control) mean 9.6°   worst 50.8° (foot.L)      DIRECTIONAL — the metric discriminates
+```
+
+So `pole_climb` is reversed and `hook_swing` is deliberately left alone: churning a clip whose
+reversal cannot be seen is motion without a reason, and now the record says why. The reversal is a
+key-list flip (`reverseRaw`), safe because every key `godot2clips` emits is `lin` — there is no
+asymmetric ease to mirror. Verified with the lever OFF so direction is isolated from §531: the
+shipped clip reproduces an independently reversed source to **0.02°** and departs from the forward
+source by **33.15°**. With the lever ON that same comparison reads 80°, all of it elbow and donor
+fill — an attribution trap this ledger is recording because the first run walked into it.
+
+Frames: `shots/pole1-{shipped-reversed,old-forward}-p{25,60}-front34.png`, two phases per arm,
+posed through the real `play()` seam with the movement module parked and shot through the camDot
+guard. HONEST LIMIT, unchanged from §479.4: these are POSED takes on flat ground — the moveset
+needs a real drainpipe to enter the state, so the climb in situ stays the hardware sheet's, and
+the frames show limb phase rather than a climb in context. What they do show is that the two
+directions are plainly different poses at the same phase, which is the claim this section makes.
+
+## §668 — "A sound played once": the discriminator, and what it rules out before anything is measured
+
+User, on the deployed build: *"The sounds still are not playing other than at one moment where I
+accidentally fell off the map."*
+
+**A sound played.** That single clause retires a whole branch of this investigation before any
+instrument is built. If one sound was audible then the `AudioContext` reached `running`, the graph
+was built, the pool was live, the limiter and master gain passed signal, and the browser honoured
+the gesture. Everything §550, §551, §552 and §664 established about *unlocking* is therefore not
+the remaining problem, and a round spent re-verifying it is a round wasted.
+
+The question is narrower and stranger: **why is almost everything inaudible while one thing was
+audible at one particular moment?**
+
+### §668.1 The shape that fits, and why it is a hypothesis rather than a conclusion
+
+`Audio.play` does not merely attenuate a distant sound — it **refuses** it:
+
+```js
+const flat = def.flat || !pos;
+if (!flat) {
+  dist = distance(pos, this._lx, this._ly, this._lz);
+  if (dist > TUNE.cull && !def.loop) return null;      // cull = 95 m
+}
+```
+
+So a listener in the wrong place produces **silence, not quiet**, for every positional one-shot
+past 95 m — and leaves the eleven `flat: true` sounds (`jump`, `double_jump`, `paraglide`, `hurt`,
+`ko`, `wind`, `binocucom`, `thief_on`, `thief_off`, `search_call`, `alert_sting`) completely
+unaffected, because `flat` skips the block entirely. That asymmetry is the right *shape* for "one
+thing was audible", and it is exactly why it must be measured rather than believed.
+
+## §669 — Three compounding reasons no audio test in this project could ever have caught this
+
+Before asking where the ear is, it is worth establishing that nothing here was ever in a position
+to notice. `tests/listener.test.mjs` measures all three, each with its counterexample run in-arm.
+
+### §669.1 The offline renderer cannot hear distance — proved, not quoted
+
+`tests/webaudio.mjs`'s header says Panner is a pass-through. A header is a claim, so **A3** renders
+the same `step_stone` through the shipped graph twice, once at the ear and once at 90 m, and
+compares:
+
+> **ratio 1.000**
+
+Not approximately — the offline `PannerNode` stores `positionX/Y/Z` and applies **no distance
+attenuation whatever**. Both renders are asserted non-silent first, so this cannot be the trivial
+equality of two silences, which is the vacuity shape this session keeps producing.
+
+### §669.2 `setListener` has never been called by any test in this project
+
+`Audio.update` reads:
+
+```js
+const cam = this.engine.camera;
+if (cam) { …; this.setListener(_p, _f, _u); }
+```
+
+`audio.test.mjs`, `audiowired.test.mjs` and `audiolatency.test.mjs` all construct their engine with
+**`camera: null`**. `audiosession.test.mjs`'s stub has **no `camera` key at all**. The guard is
+therefore false in every audio test ever written here, and the listener sits at its constructor
+value `(0, 2, 0)` for the whole life of each one.
+
+**A1** pins both halves: given a camera, the ear tracks it to the centimetre and follows it when it
+moves; given `camera: null` — *the configuration every existing audio test ships* — it never leaves
+`(0, 2, 0)`. That second assertion is the in-arm counterexample and it is also the indictment.
+
+### §669.3 Every source is fired well inside the cull radius of that pinned listener
+
+`audiosession.test.mjs` stands its player at `(0, 0, 20)` and fires every beat there. The listener
+is pinned at the origin, `TUNE.cull` is 95 m, so the whole scripted session runs at 20 m — a fifth
+of the way to the boundary that decides audibility. Nothing is ever near it.
+
+**A2** measures the boundary directly: ear at the origin, a `step_stone` at 0 m plays; the same
+sound at 135 m returns **null**; move the ear to it and it plays again. That is the mechanism by
+which a mis-placed ear yields silence, and it is plain JavaScript, so it is real offline.
+
+### §669.4 What the three add up to
+
+Any one alone would hide a spatialisation fault. Together they make the audio suite **structurally
+incapable of distinguishing a game you can hear from one you cannot**: the renderer cannot express
+distance, the listener is never exercised, and no source is ever placed where the answer would
+differ. §548's 43 sounds, 26 events and 22 voices are all real and all measured at the source —
+**§439, in the subsystem the user is complaining about.**
+
+### §669.5 The music path is NOT positional, and it works offline
+
+Checked separately, because if the score were silent for a *different* reason that would be a
+second fault and it is the one the user names most often. `Audio._buildGraph` routes both music
+sources — the synthesised `Music` score and the recorded stem's `trackGain` — into `musicDuck`,
+which reaches `preMaster` through `musicFilter` and `musicBus`. **No panner anywhere on that path**,
+so no listener position can attenuate it.
+
+Driven offline through the shipped graph for 8 s of context time (`unlock(OfflineCtx)`, the module's
+own documented entry), with a camera supplied:
+
+| tap | rms | peak |
+|---|---|---|
+| `masterGain` | 6.103e-2 | 3.534e-01 |
+| `score.output` | 4.106e-2 | 3.623e-01 |
+| `musicBus` | 3.490e-2 | 3.086e-01 |
+
+The synthesised score starts at unlock and produces healthy signal all the way to master.
+**Measured**: those numbers. **Not measured, and it is the half that matters for the user's report**:
+the *recorded* stem, because `unlock(existing)` deliberately skips the fetch and this renderer has
+no mp3 decoder. In the shipped build the first stem to land ramps `score.output` to **0** over four
+seconds and hands the music to `trackGain`. So an mp3 that decodes to a running-but-inaudible source
+would produce music for four seconds and then nothing, with `trackState` reporting `'playing'`
+throughout — which is precisely the class of fault §668 exists to catch, and it needs a browser.
+
+### §669.6 A hazard examined and DISMISSED, with the measurement that dismissed it
+
+`_takeVoice` ends with *"No slot of the right kind free: take any, rather than dropping the sound"*,
+and `_placeVoice` guards on `if (!flat && v.panner)`. A **flat** sound landing in a **positional**
+slot therefore never has its panner placed and would play from a stale world position — inaudible
+if that position is far from the ear. Real in the code.
+
+**Not reachable in practice, measured:** the pool is 32 positional and 12 flat, and flat sounds are
+concurrency-capped hard (`wind` is `max: 1` — twenty consecutive `play('wind')` calls started
+**zero** extra voices). There are eleven flat sounds in the whole catalogue against twelve flat
+slots, so the fallback cannot be reached by flat sounds at all. Recorded as examined rather than
+fixed, because a speculative change to voice allocation is churn with a regression surface and no
+measured defect behind it.
+
+*(One reading from that probe is discarded rather than reported: the offline `PannerNode` showed
+`positionZ.value === 0` after a placement at −80, which is `setValueAtTime` scheduling against a
+renderer whose `.value` does not reflect pending automation. An artefact of the instrument, not a
+fact about the game.)*
+
+## §670 — REFUTED: the ear is not stuck, and on the dev server every bus carries signal
+
+The hypothesis put first was that `ctx.listener` is pinned at or near the origin — never updated,
+or fed a camera that is not the live one — so every positional voice is attenuated or culled while
+the player is across the temple, with the fall briefly carrying them close enough to hear one thing.
+It fits the symptom exactly, which is why it needed testing rather than believing.
+
+**It is refuted, measured in a real browser on the shipped build, with the instrument calibrated
+first.**
+
+### §670.1 The controls, before any reading
+
+| control | rms | verdict |
+|---|---|---|
+| 440 Hz oscillator @ 0.25 into its own analyser | **1.771e-1** | the analyser can see signal |
+| the same oscillator @ 0.0 | **0.000e+0** | and it sees only its own input |
+
+Without the first, "silence everywhere" would be indistinguishable from a blind probe — which is
+exactly the failure §662 caught in this lane. Without the second, the first proves nothing.
+
+### §670.2 The ear tracks the camera to the centimetre
+
+| quantity | value |
+|---|---|
+| `audio._lx/_ly/_lz` (the module's cache) | `(0, 2.26, 35.49)` |
+| `ctx.listener.positionX/Y/Z` (the REAL Web Audio listener) | `(0, 2.26, 35.49)` |
+| `engine.camera` world position | `(0, 2.26, 35.49)` |
+| player position | `(0, 0, 30)` |
+
+All three agree exactly, and the camera sits 5.49 m behind the player — a third-person boom doing
+its job. Reading `ctx.listener` and not merely the module's own cached copy is the point: a cache
+that agrees with itself proves nothing.
+
+### §670.3 Every bus carries signal, and the music is fully up
+
+| tap | rms | peak |
+|---|---|---|
+| `masterGain` (what reaches `destination`) | **1.799e-1** | 5.277e-1 |
+| `preMaster` | 1.810e-1 | 5.328e-1 |
+| `musicBus` | 1.732e-1 | 4.666e-1 |
+| `musicDuck` / `trackGain` | 2.037e-1 | 5.489e-1 |
+| `sfxBus` | 6.125e-2 | 2.398e-1 |
+| `score.output` | 7.363e-2 | 1.827e-1 |
+
+with `trackGain` at **0.62** (its full `TUNE.trackLevel`), `stems: { explore: 1 }`,
+`activeStem: 'explore'`, `trackState: 'playing'`, `limiterReduction: −1.19 dB` (mild and healthy),
+and `score.output` gain at **0** — correctly faded out, because the recorded stem had taken over.
+
+Four ambience voices were live and placed sensibly: two braziers, `water` at (−70, 0, 0) — 78.5 m
+from the ear, inside the 95 m cull and audible — and the flat `wind` bed.
+
+**On the dev server, at spawn, in a real browser: the game makes a healthy, clearly audible noise.**
+The coordinator's hypothesis, `TUNE.cull`, the listener, the music routing and the limiter are all
+eliminated as the cause, by measurement rather than by reading.
+
+### §670.4 What this leaves, and it is the honest remainder
+
+Two axes still separate this measurement from the user's session, and one of them has already cost
+this project two rounds:
+
+1. **This was the DEV SERVER at `/`. The user plays a `vite build` under `/Demo/`.** That is exactly
+   the distinction §666 was written about, where two faults were correct at one root and broken at
+   the other, and where every instrument in the project had only ever loaded the former. Repeating
+   that mistake inside the audio investigation would be the same round twice, so the probe grew a
+   `--prod` mode that serves `dist/` behind a `/Demo/`-shaped prefix.
+2. **This was ~8 seconds at spawn. The user plays for minutes and moves across the level.**
+
+**Measured**: everything in §670.1–§670.3. **Inferred, and flagged as inference**: that the same
+holds in production and after minutes of play. Those are separate measurements, not corollaries.
+
+## §671 — The production build is audible too, the pool does not leak, and I cannot reproduce the silence
+
+§670.4 left two axes. Both are now closed, and neither is the fault.
+
+### §671.1 Production, under `/Demo/`, is indistinguishable from dev
+
+`tools/audible.mjs --prod` builds with the workflow's own command and serves `dist/` behind a
+`/Demo/`-shaped prefix that 404s everything outside it — the §666 apparatus, pointed at audio:
+
+| tap | dev `/` | production `/Demo/` |
+|---|---|---|
+| `masterGain` | 1.799e-1 | **1.858e-1** |
+| `preMaster` | 1.810e-1 | 2.222e-1 |
+| `musicBus` | 1.732e-1 | 2.134e-1 |
+| `musicDuck` / `trackGain` | 2.037e-1 | 2.511e-1 |
+| `sfxBus` | 6.125e-2 | 6.404e-2 |
+| `score.output` | 7.363e-2 | 7.579e-2 |
+
+with identical state on both: listener `(0, 2.26, 35.49)` exactly on the camera, `trackGain` 0.62,
+`stems { explore: 1 }`, `trackState 'playing'`, `master` 0.7, `muted` false. The axis that produced
+§666's two faults **does not produce this one.**
+
+### §671.2 The voice pool does not leak
+
+The other difference was duration — the user plays for minutes, the probe measured eight seconds.
+Driven offline through the shipped `play`/`_takeVoice`/`_release` path for **three simulated minutes
+and 515 one-shots**: `_active` stayed between 1 and 3, free slots between 41 and 43, and
+**`refused` was 0 for the whole run**. There is no leak, and `_takeVoice` never once failed to find
+a slot. Pool exhaustion is eliminated.
+
+### §671.3 Also eliminated, each by measurement rather than by reading
+
+- **Mute.** Nothing outside `Audio.js` calls `mute()`, `toggleMute()` or `masterVolume()`, and no
+  key or pad binding reaches them — so the player cannot have hit it by accident.
+- **The `shot` teardown.** `on('shot', …)` stops every loop, and it fires only under `?shot=1`.
+- **The limiter.** `limiterReduction` −1.19 dB: mild, and nowhere near the crushing that would
+  flatten everything else.
+- **The music being positional.** It is not — no panner on either music path (§669.5).
+
+### §671.4 The honest position
+
+**I cannot reproduce the user's silence.** Every quantity this container can read says the game
+emits a healthy, clearly audible signal, in dev and in production, with the ear in the right place
+and the music at full level. That is not a conclusion that the user is wrong — their report is the
+ground truth and mine is a headless container with no sound card. It is a statement about where the
+remaining information is, and it is not here.
+
+## §672 — The number only the player can produce, and it now ships
+
+The reason four rounds have not closed this is that **"I hear nothing" and "the page emits nothing"
+are the same sentence from outside the machine.** They are the session's dominant finding in its
+purest form: a null result and a positive result that render identically, needing a second quantity
+to separate them. Every previous round tried to get that quantity from this container, which does
+not have it.
+
+`src/audio/Audio.js` gains `selfTest()`. In the browser console:
+
+```js
+await __ENGINE.get('audio').selfTest()
+```
+
+It taps an `AnalyserNode` on `masterGain`, measures for ~0.75 s, fires one one-shot **at the
+listener** (so a distance cull cannot be confused with a routing fault), measures again, removes
+the tap and returns:
+
+```
+{ ok, rms, rmsWithSfx, peak, ctxState, ready, audible, muted, master,
+  trackState, activeStem, animHooked, listener, voices, hint }
+```
+
+and the reading is binary in the way that matters:
+
+| result | what it means | who owns it |
+|---|---|---|
+| `rms` well above 0, and they hear nothing | the page **is** emitting sound; the fault is after it — output device, muted tab, OS mixer, Bluetooth sink | not this repository, and no further code round should be spent |
+| `rms` at or near 0 | the fault **is** here, and the fields beside it name the link: no context, suspended context, master 0, stem never loaded, listener adrift | this lane, immediately |
+
+For calibration, the same call on a freshly built production `dist/` in this container returns:
+
+```
+ok true · rms 0.20076 · peak 0.52507 · rmsWithSfx 0.19767 · ctxState "running"
+audible true · muted false · master 0.7 · trackState "playing" · activeStem "explore"
+animHooked true · listener {0, 2.26, 35.49} · voices 13
+```
+
+**That is the number a working build produces**, so the user's own reading is directly comparable
+to it, field for field.
+
+It is a passive tap — an `AnalyserNode` with nothing connected to its output cannot alter what
+reaches `destination`, and the tap is removed in a `finally` before returning. Nothing calls it
+automatically.
+
+**Validated end to end in a real browser**, because a diagnostic that has never been executed in a
+browser is one that will fail in the single console we cannot reach. `tools/audible.mjs` runs it
+against the production build and then re-reads the master tap: **1.168e-1 afterwards**, so the tap
+did not break the output. It also caught its own first attempt — the run before this one returned
+*"selfTest is not a function"* because `--prod` had reused a `dist/` built before the method
+existed. A validation that can fail is the only kind worth running.
+
+Two degradation paths checked offline as well, since both are reachable from a console: with **no
+context** it returns a usable instruction rather than throwing (*"click the page (or press a
+controller button) and run this again"*), and under the offline renderer, which has no
+`createAnalyser`, it reports `self-test failed: this.ctx.createAnalyser is not a function` and
+leaves the graph intact — `masterGain` present, all 44 voices.
+
+## §673 — What the fall sound can have been, by elimination — and the question that settles it
+
+The coordinator's third question: *what was the sound, and whatever is different about it is the
+finding.* Worked by elimination on the shipped code.
+
+### §673.1 What can fire when a player leaves the map
+
+`Controller._voidWatchdog` emits **nothing**. It warns and teleports — to `safePoint` if there is
+one, else to `SPAWN` at `(0, 0, 30)`. There is no death sound, no damage event, no hazard cue on
+that path; `grep engine.emit src/player/Controller.js` shows `thiefVision`, `thiefTargets`,
+`damage` (hazards only), `telegraph` and `playerState`, and none of them is on the void branch.
+
+So the only sound the fall itself can produce is the one that follows the teleport: the player
+drops onto the recovery point, `Moveset`'s land state emits `landed`, and `Audio` plays
+**`land_soft` or `land_hard`** at the player's position.
+
+`wind` is the other flat candidate and it is **excluded**: it is a `loop: true, flat: true` bed
+started once in `_startBeds` at unlock, with `_windOpen` set to 0.8 in the constructor and **never
+updated anywhere** (two references in the whole file: the assignment and the read). It is therefore
+constant from unlock, which cannot produce "one moment".
+
+### §673.2 Two candidate discriminators, one refuted here and one that needs the user
+
+**Refuted, measured.** The attractive theory was that `landed` rides an ENGINE event while
+footsteps ride an ANIMATION event (`anim.onEvent('footstep')`), and that `_hookAnimation` — whose
+retry budget is `_animRetry++ < 600`, burned every frame including the long pre-click loading
+period — had given up before the player ever clicked. That would silence footsteps forever while
+engine-event sounds still played, which is exactly the right shape.
+
+It does not happen. Driven offline with 0, 100, 600, 700, 3900 and 6100 frames of loading before
+the click, `_animRetry` at click time was **0** in every case and `_animHooked` was **true** in
+every case — because `Audio.init()` hooks directly and the retry is only a fallback. `main.js`'s
+MANIFEST registers `animation` at index 10 and `audio` at 19, and **all construction precedes all
+`init()`**, so `engine.get('animation')` is always live by the time AUDIO initialises. The retry
+path is dead code in practice, and the budget can never be reached.
+
+Confirmed in a real browser on the production build rather than left as an offline result:
+`animHooked: true`, `animRetry: 0`, `animReady: true`, `footstepListeners: 2`. The offline
+refutation and the shipped build agree.
+
+**Still open, and it is the user's to settle.** The remaining candidate is range. Ambience is
+placed at world objects — braziers and water at fixed points — and `play()` culls a positional
+one-shot past `TUNE.cull` = 95 m from the ear. A player who has walked far from every ambient
+source hears none of them; falling off the map returns them to `safePoint` or to `SPAWN (0, 0, 30)`,
+which is metres from the braziers this probe measured at the origin. That would produce exactly
+"silence, then one moment of sound when I fell".
+
+**What it does not explain is footsteps**, which are fired at the player's own feet and are
+therefore never more than the boom's length from the ear. So one question separates the two
+remaining worlds, and only the player can answer it:
+
+> **When you walk, do you hear your own footsteps?**
+
+- **No footsteps either** → the fault is global and on their machine's side of the page; `selfTest()`
+  (§672) will produce the number that says which side.
+- **Footsteps yes, everything else no** → the fault is range or placement, the ambient beds are the
+  casualty, and this lane has a concrete target: `TUNE.cull`, the ambience placement, and how far
+  the authored route runs from the nearest brazier.
+
+### §673.3 DOMAIN for the two arms this section rests on
+
+- **the `_animRetry` refutation** — *passes on* six loading lengths from 0 to 6100 frames, all
+  reporting `_animRetry` 0 and `_animHooked` true; *fails on* an engine whose `get('animation')`
+  returns null at init, which is the only configuration where the retry path is reached at all.
+  *Does not discriminate*: whether clips carry footstep events — checked separately, and the
+  committed `Clips.js` gives `walk`, `run` and `run_fast` two `footstep` events each.
+- **the `wind` exclusion** — *passes on* `_windOpen` having exactly two references in `Audio.js`,
+  an assignment of 0.8 and a read; *fails on* any third reference, which would make it a variable
+  and put the bed back on the candidate list.
+
+## §674 — The sound questions, in the order that resolves them fastest
+
+Four rounds have gone into this and each ended with a fix that measured clean here. §671 is why:
+**every quantity this container can read says the game is audible**, in dev and in production, and
+the disagreement with the player cannot be resolved from this side. These are ordered so that the
+first answer that comes back kills the largest branch.
+
+### §674.1 First, the number — it decides who owns the bug
+
+In the browser console, once the game is running:
+
+```js
+await __ENGINE.get('audio').selfTest()
+```
+
+Paste the whole object back. A working build in this container returns roughly **`rms 0.19`**.
+
+- **`rms` near 0.19 (or anything well above 0) and you still hear nothing** — the page IS emitting
+  sound. The fault is downstream of it: output device, a muted tab (Chrome shows a speaker icon on
+  the tab), the OS mixer, or a Bluetooth sink that has taken the default output. **Nothing in this
+  repository can fix that**, and knowing it stops the next four rounds.
+- **`rms` at or near 0** — the fault is ours, and the fields returned beside it name the link:
+  `ctxState`, `ready`, `audible`, `muted`, `master`, `trackState`, `activeStem`, `animHooked`,
+  `listener`, `voices`.
+
+### §674.2 Second, the one gameplay question that splits the remaining worlds
+
+> **When you walk around, do you hear your own footsteps?**
+
+Footsteps are fired at Sly's own feet, so they are always within the camera boom's length of the
+ear and cannot be lost to distance. Ambience is placed at braziers and water and is culled past
+95 m. So: no footsteps either ⇒ global fault (and §674.1 says which side); footsteps but nothing
+else ⇒ range and placement, which is a concrete target in this lane (§673.2).
+
+### §674.3 Third, what the fall actually sounded like
+
+One word is enough — **a thud, a whoosh, a chime, a splash?** By elimination (§673.1) the only
+sound the void path can produce is `land_soft`/`land_hard`, a *thud*, fired after the watchdog
+teleports you back. If it was anything else, my elimination is wrong and that is worth more than
+the elimination was.
+
+### §674.4 And the standing ones
+
+- **The build stamp on the loading screen** — if it is older than the newest sha we quote, this is
+  a cached page and the answer is a hard reload, not a code change.
+- **Browser, OS, and how you are listening** (speakers, wired headphones, Bluetooth).
+- **Does the music ever start, even for a few seconds?** The synthesised score plays first and is
+  handed over to the recorded track after four seconds. "Music for a moment, then nothing" and
+  "never any music" are different faults with different owners.
+
+### §674.5 What this environment still cannot tell us
+
+- **Whether anything is audible.** No sound card. `selfTest()` is the closest reachable proxy and
+  it measures signal at `destination`, not air.
+- **The user's output routing.** Invisible from here in principle.
+- **Whether the silence reproduces at all.** It does not, here, on either root — which is the
+  single most important negative result of this round and the reason §674.1 exists.
+
+## §675 — A pre-existing flaky arm, found by this round and deliberately NOT "fixed"
+
+The full suite came back **1014 / 1015**. The one failure is `padrest.test.mjs` **R1b**, the
+calibration arm §541 built to check that `_padLook` integrates a real clock:
+
+> the tight loop turned 0.1640 deg in 0.0009 s, which is more than padLook allows (0.1274 deg)
+
+### §675.1 It is not caused by this round's work, established rather than argued
+
+`git diff 464d768..HEAD` over R1b's entire dependency set — `tests/padrest.test.mjs`,
+`tests/_hudshim.mjs`, `src/core/Input.js`, `src/player/CameraRig.js`, `src/ui/HUD.js` — is
+**empty**. This round's four commits touch `src/audio/Audio.js` (a method nothing calls),
+`tools/audible.mjs`, and one new test file. Nothing in that set is imported by `padrest`.
+
+Run **isolated on an idle box, five times: 4 pass, 1 fail.** Since the dependency set is
+byte-identical to `464d768`, that 1-in-5 is the pre-existing rate, not a rate this round created.
+What this round did was add a test file, which perturbs `node --test`'s parallel scheduling enough
+to surface it in a full run — the arm was already loaded, and the new file only pulled the trigger.
+
+### §675.2 My mechanism hypothesis was wrong, and it is recorded as wrong
+
+The attractive explanation was an off-by-one in the arm's stopwatch: `tightWall` starts at `tt`,
+while `_lastReal` was last written by the previous `beginFrame` inside `camRig()` — *before* `tt` —
+so the first iteration's `dtReal` would reach back before the stopwatch and let the integrated
+clock exceed the wall clock.
+
+**Measured, eight trials, and refuted:** the gap before the stopwatch is ~0.006–0.019 ms, and
+integrated `dtReal` tracks wall at a ratio of 0.93–1.01. That is not the mechanism.
+
+What remains unexplained is that `tight` is the **CameraRig's** yaw delta, and the loop advances
+the rig 30 × 1/60 = 0.5 s of *game* time while feeding it under a millisecond of *real* look. Any
+rig behaviour on its own clock — follow, lead, recentre — contributes yaw the arm attributes to
+`padLook`. That is a plausible second hypothesis and it is **not tested here**.
+
+### §675.3 Why it is left alone
+
+`src/player/CameraRig.js` belongs to another lane and is read-only to me, and the remaining
+hypothesis lives inside it. Loosening an arm whose mechanism I have not established is exactly how
+a check becomes true by accident — the failure mode this whole session has been about. So it is
+reported at its measured rate with one hypothesis refuted and one open, and the suite figure is
+stated as **1014 / 1015, one pre-existing flake**, rather than rounded up to green.
