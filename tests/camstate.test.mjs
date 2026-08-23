@@ -62,12 +62,19 @@ async function drive(opts) {
   const keep = {
     margin: TUNE.clampMargin, bank: TUNE.clampBankFirst,
     standoff: TUNE.clampStandoff, roll: TUNE.wallRoll, subject: TUNE.clampSubject,
-    guard: TUNE.clampSolveGuard,
+    guard: TUNE.clampSolveGuard, floor: TUNE.subjectFloor, leash: TUNE.pivotLeashK,
   };
   if (opts.margin !== undefined) TUNE.clampMargin = opts.margin;
   if (opts.bankFirst !== undefined) TUNE.clampBankFirst = opts.bankFirst;
   if (opts.standoff !== undefined) TUNE.clampStandoff = opts.standoff;
   if (opts.guard !== undefined) TUNE.clampSolveGuard = opts.guard;
+  /* §640's boom floor is a REGIME, not a tuning constant, and every defect-reproduction control
+     in this file has to be able to turn it off: it removes the pose stage 2 fires in at all, so
+     with it live the pre-§580 and pre-§582 arms below stop reproducing their own defects and
+     would pass by vacuum. Three arms went red on exactly that and were repaired here rather
+     than re-based — a control that cannot reach the defect is not a control (§442). */
+  if (opts.floor !== undefined) TUNE.subjectFloor = opts.floor;
+  if (opts.leash !== undefined) TUNE.pivotLeashK = opts.leash;
   if (opts.wallRoll !== undefined) TUNE.wallRoll = opts.wallRoll;
   if (opts.subject !== undefined) TUNE.clampSubject = opts.subject;
   const cam = new THREE.PerspectiveCamera(TUNE.fovBase, 16 / 9, 0.1, 4000);
@@ -130,6 +137,7 @@ async function drive(opts) {
     rig.dispose?.();
     return out;
   } finally {
+    TUNE.subjectFloor = keep.floor; TUNE.pivotLeashK = keep.leash;
     TUNE.clampMargin = keep.margin; TUNE.clampBankFirst = keep.bank;
     TUNE.clampStandoff = keep.standoff; TUNE.wallRoll = keep.roll;
     TUNE.clampSubject = keep.subject; TUNE.clampSolveGuard = keep.guard;
@@ -520,7 +528,11 @@ test('camstate: the containment translates cannot put the lens inside Sly', asyn
      the guard on while turning the stand-off off no longer reproduces the historical defect —
      measured, it falls from 8 frames inside the capsule to 2. A failing input has to be the
      regime it claims to be. */
-  const off = await drive({ ...route, standoff: false, guard: false });
+  /* §640: the boom floor off as well. It removes the pose stage 2 fires in, so with it live the
+     pre-§580 pair no longer reaches the limit cycle at all and this control reported "0 frames
+     inside the capsule radius" — a defect that cannot be reached is a control that proves
+     nothing, and the arm said so rather than passing. */
+  const off = await drive({ ...route, standoff: false, guard: false, floor: false });
   const on = await drive({ ...route, standoff: true, guard: true });
   assert.ok(off.some((f) => f.state === 'poleSwing'), 'the drive never swung — the take is not the one measured');
 
@@ -1122,7 +1134,11 @@ test('camstate: stage 2 solved a tangent and got nonsense back — 562 m of came
    * discriminate  price the feel of a rejected translate (hardware's); cover the boom's own
    *               pull-in, which is the arm after next.
    */
-  const off = stepStats(await drive({ ...SWING, guard: false }));
+  /* §640's floor off in the CONTROL for the same reason as arm 2: the runaway root needs stage 2
+     to fire, and the floor removes the pose it fires in. The shipped arm keeps the shipped floor,
+     so the pair is "pre-§582 solve, pre-§640 floor" against "both shipped" — the two regimes as
+     they actually existed, not a synthetic middle one. */
+  const off = stepStats(await drive({ ...SWING, guard: false, floor: false }));
   const on = stepStats(await drive({ ...SWING, guard: true }));
 
   assert.ok(off.maxDy > 100,
@@ -1145,7 +1161,7 @@ test('camstate: stage 2 solved a tangent and got nonsense back — 562 m of came
     + `${on.worst.toFixed(1)}°/f, ${on.over60} over 60° (p99 ${off.p99.toFixed(2)} -> ${on.p99.toFixed(2)})`);
 });
 
-test('camstate: what is left is a π-wrap — a different mechanism from the solve bugs, and stateless rules cannot remove it', async () => {
+test('camstate: the π-wrap needed the subject BEHIND the lens, and a stateless boom floor removes that pose', async () => {
   /* ── DOMAIN (§418.3) ─────────────────────────────────────────────────────────────────────
    * ran, passes : the RULE first (§439). `need` is a function of φ alone — `φ − sign(φ)·αm`
    *               outside the band, 0 inside — and on the circle of φ such a function must break
@@ -1159,16 +1175,22 @@ test('camstate: what is left is a π-wrap — a different mechanism from the sol
    *               different mechanism with a different signature. That is what makes "the
    *               residue is the wrap" a measurement rather than a story: the two are
    *               distinguishable, and the guard removed one class and not the other.
+   * ran, fails  : §640's boom floor OFF — the pre-§640 rig, RUN, not recalled. That is the
+   *   (the floor) regime §582.2 and §583 measured and handed back as irreducible, and it
+   *               reproduces here: hard cuts over 60°/frame with the subject past the back of
+   *               the lens, worst ~179°/frame.
    * does NOT    : BOUND the wrap's size. A first draft asserted it could not exceed 2·αm ≈ 46°,
    * discriminate  reasoning that a 2π − 2·αm jump in `need` is a 2·αm rotation the other way.
    *               Driven, the debt route steps 143.4° (applied rotation +96.1° → −119.9°),
    *               because the extent hold's degrade branch clamps `need` into a window around φ
    *               and φ itself is what wraps — so the jump is not the rule's own jump. The bound
    *               was wrong and is retracted rather than widened.
-   *               Nor does it decide whether to spend statelessness: removing the wrap needs
-   *               hysteresis on the turn direction — remember which way you turned and keep
-   *               turning that way while the subject is behind — which is state, and §475.3's
-   *               question. Handed back, with the measurement attached.
+   *               Nor does it repeal the RULE's discontinuity: `need(φ)` still breaks by
+   *               2π − 2·αm at the back of the lens and the first assertion below still holds it
+   *               there. What changed is that the rig no longer PUTS the subject in that pose, so
+   *               the break is unreachable rather than removed — which is why the closed-form
+   *               assertion is kept rather than deleted. §475.3's statelessness question is not
+   *               spent: the floor is a closed form on this frame's pose with no memory.
    */
   const DEGR = 180 / Math.PI;
   const am = Math.atan(TUNE.clampMargin * Math.tan(TUNE.fovBase * 0.5 / DEGR));
@@ -1196,11 +1218,20 @@ test('camstate: what is left is a π-wrap — a different mechanism from the sol
     if (p0.lengthSq() < 1e-9 || p1.lengthSq() < 1e-9) return 0;
     return p0.angleTo(p1) * DEGR;
   };
-  const scan = async (guard) => {
-    let wraps = 0, idle = 0, others = 0, worst = 0, where = null;
+  const scan = async (guard, floor) => {
+    let wraps = 0, idle = 0, others = 0, worst = 0, where = null, behind = 0, n = 0;
     for (const r of routes) {
-      const fr = await drive({ ...r, guard });
+      const fr = await drive({ ...r, guard, floor });
       for (let i = 2; i < fr.length; i++) {
+        n++;
+        /* THE WRAP'S OWN POSE, counted whether or not it produced a cut this frame.
+           NOT `held.front`: a first draft used it and read 0 in BOTH regimes, because the clamp's
+           own stage 1 is what puts the anchor in front — the projected pose can never show this,
+           by construction (§439: the instrument was reading the output of the mechanism it was
+           trying to characterise). The pose lives in the BASE pose, before stage 1, and the
+           applied rotation is what carries it: `need` past a right angle means the subject sat
+           past the back of the lens and the clamp somersaulted to bring it back. */
+        if (Math.abs(fr[i].pitch) > Math.PI / 2) behind++;
         const pm = Math.hypot(fr[i].px - fr[i - 1].px, fr[i].py - fr[i - 1].py, fr[i].pz - fr[i - 1].pz);
         if (pm > 0.6) continue;
         const d = fr[i].quat.angleTo(fr[i - 1].quat) * DEGR;
@@ -1227,27 +1258,44 @@ test('camstate: what is left is a π-wrap — a different mechanism from the sol
         if (d > worst) { worst = d; where = `${r.label} f${fr[i].i} (${fr[i].state}, ${kind}, aim moved ${moved.toFixed(0)}°)`; }
       }
     }
-    return { wraps, idle, others, worst, where };
+    return { wraps, idle, others, worst, where, behind, n };
   };
-  const on = await scan(true);
-  const off = await scan(false);
+  /* Three regimes, and the middle one is the point. `pre` is what §582.2 and §583 measured — the
+     solve already guarded, the boom floor not yet built. `on` is shipped. `raw` is both off, and
+     exists only so the "not a wrap" signature is shown to be reachable at all (§418.3). */
+  const pre = await scan(true, false);
+  const on = await scan(true, TUNE.subjectFloor);
+  const raw = await scan(false, false);
 
-  assert.ok(on.wraps > 0,
-    'no residual hard cut at all with the solve guarded — then this arm asserts nothing about the '
-    + 'wrap and should be retired rather than left green');
+  /* THE DEFECT REPRODUCES without the floor — otherwise everything below is vacuous. */
+  assert.ok(pre.wraps > 0 && pre.worst > 100,
+    `the pre-§640 rig produced ${pre.wraps} wrap cut(s), worst ${pre.worst.toFixed(1)}°/frame — the `
+    + 'residue §582.2 and §583 recorded did not reproduce, so the repair below is unpriced');
+
+  /* THE POSE IS WHAT THE FLOOR REMOVES, and it is the mechanism's own definition. */
+  assert.ok(on.behind * 4 < pre.behind,
+    `frames with the subject behind the camera plane only fell ${pre.behind} → ${on.behind} of `
+    + `${on.n} — the boom floor is meant to remove that pose, and the wrap is defined on it`);
+  assert.ok(on.wraps * 2 <= pre.wraps,
+    `wrap cuts over 60°/frame only fell ${pre.wraps} → ${on.wraps}`);
+  assert.ok(on.worst < pre.worst,
+    `the worst view step did not fall: ${pre.worst.toFixed(1)} → ${on.worst.toFixed(1)}°/frame`);
+
+  /* …and the stage-2 repair §582.1 shipped is still holding underneath it. */
   assert.equal(on.others, 0,
     `${on.others} view step(s) over 60°/frame with the solve guarded came from a stage-2 translate `
     + `that was not a π-wrap (worst overall: ${on.where}) — the §582.1 defect is back`);
-  assert.ok(off.others > 0,
+  assert.ok(raw.others > 0,
     'with the solve unguarded no hard cut came from a stage-2 translate either — then this signature '
     + 'cannot tell the repaired mechanism from the residue, and the guarded pass proves nothing');
 
-  console.log(`[camstate] π-wrap: the rule breaks at the back of the lens by exactly 2π − 2·αm `
-    + `(${(predicted * DEGR).toFixed(1)}°). Cuts over 60°/frame across ${routes.length} routes — guarded: `
-    + `${on.wraps} wrap · ${on.idle} with stage 2 idle · ${on.others} from a stage-2 translate · worst `
-    + `${on.worst.toFixed(1)}°/f at ${on.where}. Unguarded: ${off.wraps} wrap · ${off.idle} stage-2 idle · `
-    + `${off.others} FROM STAGE 2 · worst ${off.worst.toFixed(1)}°/f. The wrap is NOT bounded `
-    + 'by 2·αm — that draft was wrong — and is irreducible without state (§475.3, handed back).');
+  console.log(`[camstate] π-wrap: the rule still breaks at the back of the lens by exactly 2π − 2·αm `
+    + `(${(predicted * DEGR).toFixed(1)}°) — what changed is that the rig no longer puts the subject `
+    + `there. Across ${routes.length} routes, frames with the subject behind the camera plane `
+    + `${pre.behind} -> ${on.behind} of ${on.n}; cuts over 60°/frame ${pre.wraps} wrap + `
+    + `${pre.idle} stage-2-idle, worst ${pre.worst.toFixed(1)}°/f -> ${on.wraps} wrap + ${on.idle} `
+    + `idle, worst ${on.worst.toFixed(1)}°/f at ${on.where}. Stage-2 translate cuts ${on.others} `
+    + `(unguarded control ${raw.others}). The wrap is NOT bounded by 2·αm — that draft was wrong.`);
 });
 
 test('camstate: the occlusion pull-in is not spurious — every occluder is visible architecture', async () => {

@@ -230,6 +230,51 @@ export const TUNE = {
      2.6 - 1.0 + 0.15 = 1.75 m above the character exactly. Both numbers are the same constant
      seen from two ends. */
   followLeashV: 2.6,
+  /* ── THE ANGULAR LEASH (§640) — the bound `followLeashV`'s own note says is missing ────────
+     Verbatim from four lines above: *"The leash above bounds the PIVOT in metres and the frame
+     is angular, which is §467's second bound: at a cut boom 2.6 m of slack is three half-frame
+     heights and the subject is gone."* §580 answered that by adding a final-stage clamp that
+     holds the subject with an unbounded rotation. This is the other answer, and it is the one
+     that goes at the cause: bound the slack in BOOM LENGTHS, so the subject cannot leave the
+     cone the lens is looking down however hard the boom is crushed.
+
+     The pivot is not on Sly and is not meant to be — it carries the velocity lead, `FRAMES`
+     height and side, the spring's honest trail and `followLeashV`'s slack. All of that is
+     authored and all of it is fine at 5.4 m of boom. It stops being fine when occlusion crushes
+     the boom to `distHardMin` underneath it: measured over 52,976 frames of driven play, on
+     frames at the boom floor the pivot sits a **median 0.899 m** from the capsule centre and a
+     **p99 of 2.627 m**, against a 0.55 m boom — so the subject is not merely off centre, it is
+     outside the forward hemisphere, and φ (its elevation off the view axis) runs past ±π. That
+     is §582.2's wrap, and it is what the containment clamp then answers with a 100–180° pitch.
+
+     Holding the pivot within `pivotLeashK × boom` of the capsule centre bounds the subject's
+     angular offset from the view axis by about `asin(pivotLeashK)` — at 0.55 that is ~33°, so
+     the wrap's own pose (|φ| > 90°) cannot occur and there is nothing to rate-limit. Stateless,
+     costs no geometry (the pivot is the LOOK-AT, not the lens — nothing moves toward stone),
+     and inert in ordinary play: at a 5.4 m boom the bound is 2.97 m and the measured median
+     offset is 1.6 m, so it never binds until something has already gone wrong.
+
+     **MEASURED AND NOT SHIPPED — 0 is the shipped value.** It works, and the boom floor above
+     does the same job for less. Swept over 23,749 frames × 4 stick regimes, with the floor live:
+
+       k      wrap poses   >30°/f   >60°/f   lens in stone   body frac   sprint boom
+       0 (ship)      44        87       28       5.56 %       0.7658        2.662
+       0.45           1        91       20       6.91 %       0.6921        2.524
+       0.80           3       100       28       5.08 %       0.7113        2.653
+       1.20          93       117       41       5.28 %       0.7226        2.659
+
+     It buys the wrap poses the floor leaves and **pays for them out of §581's position half**:
+     body fraction 0.766 → 0.711 at k 0.80, and `camstate`'s own decomposition arm goes red on
+     it — position loss 0.016 → 0.057, so the "the boom crush is the smaller half by a factor of
+     five" premise §581 rests on stops reproducing. That arm is right and this constant is why
+     it is at 0. The cost is structural rather than a bad value: the camera sits `boom` from the
+     pivot and the pivot is the aim point, so pulling the aim onto Sly at a crushed boom pulls
+     the LENS onto him too, and every value of k trades composition for centring at some rate.
+
+     Kept runnable, at 0, because it is one of the two currencies §640.3's ceiling is written in
+     — see `subjectStandoff` for the other — and a ceiling nobody can re-run is a ceiling nobody
+     can check. */
+  pivotLeashK: 0,
 
   /* ---- subject containment (rule 6) ---------------------------------------- */
   /* The leash above bounds the PIVOT in metres and the frame is angular, which is §467's second
@@ -380,7 +425,66 @@ export const TUNE = {
   camPad: 0.12,
   whisker: 0.38,                // lateral cast offset — sees the pillar before it occludes
   whiskerUp: 0.30,              // and one overhead, for lintels and tomb ceilings
-  distHardMin: 0.55,            // absolute floor; below this we're inside Sly
+  distHardMin: 0.55,            // absolute floor; below this we're inside Sly — see `subjectFloor`
+  /* **`distHardMin` FLOORS THE BOOM, AND THE BOOM IS THE DISTANCE TO THE PIVOT — NOT TO SLY.**
+     The comment one line up has been read as a promise about the lens and the character for as
+     long as this file has existed, and it is only true while the pivot is on the character. The
+     pivot is a smoothed, led, offset point: it carries the follow spring's trail (τ 0.16 s
+     horizontal, so 0.16 × v metres), the velocity lead (up to `leadMax` 1.75 m), `FRAMES.height`
+     and `FRAMES.side`, `headroom`, and up to `followLeashV` 2.6 m of vertical slack. Measured
+     over 52,976 frames of driven play (§640): on frames where the boom is at its floor, the
+     pivot sits a **median 0.899 m** from the capsule centre and a **p99 of 2.627 m**. A 0.55 m
+     boom subtracted from a 0.7 m pivot offset is a lens 0.10 m from Sly's chest, and that pose
+     is on the record twice — §583's battery closest approach 0.184 m, and the movement lane's
+     §597 stress case at **range 0.104 m with the subject BEHIND the camera plane**.
+
+     Two consequences, and the second is the user-visible one:
+       · the ruling "Sly always remains in frame" is not enforceable at that pose. §580's clamp
+         holds an ANGLE, and every angle is degenerate when the lens is inside the subject.
+       · φ — the subject's elevation off the view axis — passes through ±π, and `need` jumps by
+         2π − 2·αm. That is §582.2's wrap, and §583 photographed it: 125–143° of camera for 9 cm
+         of Sly. Measured across the same 52,976 frames, the containment clamp owns **471 of the
+         481 steps over 10°/frame** and **all 152 over 30°/frame**; the discriminator is the
+         pivot's offset measured in boom lengths, **median 2.06 at the cuts against 0.291 on
+         calm frames**. The wrap is not a knife-edge curiosity; it is what a crushed boom under a
+         trailing pivot does routinely.
+
+     So the floor is computed from the SUBJECT, which is what the constant always claimed to be
+     about — see `_subjectBoomFloor`. Measured over 52,976 frames of driven play against the
+     pre-§640 rig, and priced on 23,749 of them for the things it could break:
+
+       regime          wrap poses   >30°/f   >60°/f   worst   lens in stone   body frac
+       pre-§640            1438       152       60    179.5°      5.44 %        0.7503
+       `'front'` (ship)      44        87       28    115.3°      5.56 %        0.7658
+       `'frontspan'`          0        62       18    115.3°     24.02 %        0.8367
+
+     Four settings, and the middle two are the §388 controls rather than decoration:
+       `'front'`      SHIPPED — range and forward half-space, solved at the capsule CENTRE.
+       `'frontspan'`  the same at feet, centre and head. Removes the last 44 wrap poses and puts
+                      the lens inside visible geometry on a quarter of all frames. Priced, not
+                      shipped; kept runnable because that number is the reason.
+       `true`         the range arm alone. Free, fixes containment, smooths nothing (>60°/f
+                      58 against 60) — which is what proves the FORWARD arm is the active half.
+       `false`        the pre-§640 rig: the lens ends up inside Sly and the view flips. */
+  subjectFloor: 'front',
+  /* The stand-off the floor above enforces, in metres; 0 means `distHardMin`, which is the
+     shipped value and the only one that is free. It is a lever rather than a constant because
+     it is how §640.3 derived the CEILING on this whole repair (§450.4), and the ceiling is the
+     most useful thing measured here: getting Sly in front of a crushed lens can be paid for in
+     exactly two currencies and there is no third. Move the LENS back (this constant) and the
+     camera ends up inside stone; move the LOOK-AT in (`pivotLeashK`) and the lens ends up nearer
+     Sly and shows less of him. Swept:
+
+       subjectStandoff   lens in stone   body fraction
+       0.55 (= floor)        6.91 %         0.6921
+       0.90                 23.57 %         0.7782
+       1.30                 25.66 %         0.9426
+
+     1.30 m buys almost perfect composition — body fraction 0.94, frames under 70 % of Sly down
+     from 9,262 to 666 — and puts the lens inside visible geometry on a quarter of all frames.
+     That is §581.4's "raise `distHardMin`" lever priced from the other end and refused for the
+     same reason. Recorded so the next reader does not re-derive it. */
+  subjectStandoff: 0,
   recoverDelay: 0.22,           // hold before creeping back out (kills corner flicker)
   recoverTime: 0.62,            // slow on purpose
   /* Raised from 2.4, because 2.4 could not keep up with the level.
@@ -807,6 +911,7 @@ const _q2 = new THREE.Quaternion();
 const _q3 = new THREE.Quaternion();   // inverse view, for the containment clamp only
 const _sv = new THREE.Vector3();      // subject in view space (rule 6)
 const _wv = new THREE.Vector3();      // world up in view space, translate branch only
+const _bf = new THREE.Vector3();      // subject relative to the pivot, boom-floor solve only
 const _eul = new THREE.Euler();
 const _UP = new THREE.Vector3(0, 1, 0);
 
@@ -978,6 +1083,9 @@ export class CameraRig {
        thing he is climbing, not an occluder, and the gate only ever covered poles. */
     this._boomTag = null;      // tag of the collider that bound the boom last frame, or null
     this._boomHeld = false;    // …and was it the very rec MOVEMENT reports as attached?
+    this._subjFloor = TUNE.distHardMin;  // the boom floor the SUBJECT asked for this frame (§640)
+    this._subjFloorOn = false;           // …and did it bind, i.e. was it above what occlusion left?
+    this._pivotLeashOn = false;          // did the angular leash hold the pivot this frame? (§640)
 
     /* ---- wall side probe ---- */
     this._wallSide = 0;
@@ -1140,6 +1248,9 @@ export class CameraRig {
     this._clampMoved = 0;
     this._clampSlide = 0;
     this._clampOn = false;
+    this._subjFloor = TUNE.distHardMin;
+    this._subjFloorOn = false;
+    this._pivotLeashOn = false;
     this._hadPlayer = true;
     this._prevPlayer.copy(_pPos);
     if (!this.engine.debug.freeCam) this._write(0);
@@ -1909,6 +2020,32 @@ export class CameraRig {
     const slack = _goal.y - p.y;
     if (slack > TUNE.followLeashV) { p.y = _goal.y - TUNE.followLeashV; v.y = 0; }
     else if (slack < -TUNE.followLeashV) { p.y = _goal.y + TUNE.followLeashV; v.y = 0; }
+
+    /* THE ANGULAR LEASH (§640) — see the constant. Radial and in three dimensions, because the
+       pathology is not vertical: the horizontal half has no bound at all today (the leash above
+       is `.y` only) and the velocity lead is horizontal, up to `leadMax` 1.75 m.
+       `this.boom` is LAST frame's — `_boomLength` runs after this — and that one-frame lag is
+       deliberate rather than overlooked: taking it forward would need the boom, whose own cast
+       starts at the pivot this line is writing, and a same-frame solve of that pair is a loop.
+       The lag is measured rather than argued: §640.4 pins boom direction reversals and the
+       pivot's own per-frame move under both regimes, which is where a feedback oscillation
+       would show up. */
+    if (TUNE.pivotLeashK > 0) {
+      const R = TUNE.pivotLeashK * this.boom;
+      const sy = _pPos.y + this._anchorY();
+      const ox = p.x - _pPos.x, oy = p.y - sy, oz = p.z - _pPos.z;
+      const d2 = ox * ox + oy * oy + oz * oz;
+      if (d2 > R * R && d2 > 1e-12) {
+        const k = R / Math.sqrt(d2);
+        p.x = _pPos.x + ox * k; p.y = sy + oy * k; p.z = _pPos.z + oz * k;
+        /* Same reasoning as the leash above: the pivot is being held, not swung, so the spring's
+           stored velocity is scaled with it rather than carried whole into the moment it lets
+           go. Scaled and not zeroed — zeroing it made the release read as a hitch on a driven
+           colonnade run, because the leash engages and lets go several times a second there. */
+        v.x *= k; v.y *= k; v.z *= k;
+        this._pivotLeashOn = true;
+      } else this._pivotLeashOn = false;
+    } else this._pivotLeashOn = false;
   }
 
   /* ------------------------------------------------------------------ boom -- */
@@ -1926,6 +2063,94 @@ export class CameraRig {
     // Ceiling: give up overhead pitch, toward level and no further. Never inverts (see `_ceilSettle`).
     if (this._ceilW > 0 && p > 0) p -= p * TUNE.ceilFlatten * this._ceilW;
     return clamp(p, TUNE.pitchMin, TUNE.pitchMax);
+  }
+
+  /**
+   * THE BOOM FLOOR THE SUBJECT ASKS FOR (§640) — closed form, stateless, zero-cost when idle.
+   *
+   * The camera slides along the ray `C(t) = pivot + t·d̂`. Write `a = subject − pivot` and
+   * `b = lookAt − pivot = headroom·ŷ`. Two conditions, each a quadratic in `t`:
+   *
+   *   RANGE  |a − t·d̂| ≥ s          →  t² − 2(a·d̂)t + (|a|² − s²) ≥ 0
+   *   FRONT  (a − t·d̂)·(b − t·d̂) ≥ pad →  t² − (a·d̂ + b·d̂)t + (a·b − pad) ≥ 0
+   *
+   * Both are upward parabolas, so each holds below its lower root and above its upper root, and
+   * the floor is the upper root of whichever binds. RANGE is `distHardMin` applied to Sly rather
+   * than to the pivot — the boom's own floor, on the thing its comment names. FRONT is the one
+   * that removes the φ wrap **by construction rather than by rate**: the wrap is defined only
+   * where the subject is past the back of the lens, and `(subject − C)·(lookAt − C) > 0` is
+   * exactly "the subject is in the forward half-space". Push the lens back until that holds and
+   * the pose the wrap lives in does not occur, so there is nothing to rate-limit — which is the
+   * answer §475.3 asked for and §582.2 and §583 both handed back as open. No state, no
+   * hysteresis, no memory of which way the camera turned last frame.
+   *
+   * `pad` is `distHardMin × camRadius`, a product of two shipped constants rather than a new
+   * one: `(subject − C)·(lookAt − C)` is the subject's depth along the view axis times the
+   * distance to the look-at, so at the boom floor this asks for the subject to sit one
+   * sphere-cast radius in front of the lens. Zero would put it exactly on the 90° plane, which
+   * is the wrap's own edge; the margin is what keeps it off. Under-determined rather than
+   * derived, and evaluated by measurement — see §640.3.
+   *
+   * WHEN NEITHER BINDS THE RETURN IS `distHardMin` AND NOTHING CHANGES. Ordinary play never
+   * reaches this: with the pivot near Sly and a boom of metres, `a·d̂` is negative and both upper
+   * roots fall below the floor. Measured, it binds on 3.4 % of frames.
+   */
+  _subjectBoomFloor(dir) {
+    if (TUNE.subjectFloor === false) return TUNE.distHardMin;
+    const s = TUNE.subjectStandoff > 0 ? TUNE.subjectStandoff : TUNE.distHardMin;
+    /* THE SUBJECT IS THE SPAN, NOT THE CENTRE — and getting that wrong once is what this comment
+       is for. A first pass solved both conditions for the capsule's CENTRE alone. It removed
+       97 % of the wrap poses and left 28 cuts over 60°/frame, every one of them a pole route
+       with `need` pinned near 96° while the floor was demonstrably binding. The cause was that
+       §581's extent hold aims at the FEET and HEAD elevations, so those are the bearings that
+       wrap — and a lens with the centre comfortably in front can still have the head behind it
+       at 1.8 m of body over a 1 m range. An instrument, or a bound, written for a different
+       subject than the mechanism uses answers a different question under the same label (§442).
+       Solved at feet, centre and head, and the floor is the largest of the three. */
+    const h = this._pHeight > 0 ? this._pHeight : TUNE.clampAnchorY * 2;
+    const bd = TUNE.headroom * dir.y;
+    const pad = s * TUNE.camRadius;
+    const front = TUNE.subjectFloor === 'front' || TUNE.subjectFloor === 'frontspan';
+    const span = TUNE.subjectFloor === 'frontspan' ? 3 : 1;
+    let t = s;
+    for (let k = 0; k < span; k++) {
+      _bf.set(_pPos.x, _pPos.y + (span === 1 ? this._anchorY() : h * k * 0.5), _pPos.z).sub(this.pivot);
+      const ad = _bf.dot(dir);
+      /* RANGE — `distHardMin` from the subject, which is what the constant's own comment claims
+         and what the boom alone cannot deliver. This is the arm that buys back the composition
+         the angular leash spends: the leash pulls the LOOK-AT toward Sly and the lens rides with
+         it, so without this the lens ends up nearer Sly than before and shows less of him. */
+      const D1 = ad * ad - (_bf.lengthSq() - s * s);
+      if (D1 > 0) {
+        const hi = ad + Math.sqrt(D1);
+        if (hi > t) t = hi;
+      }
+      /* FRONT — the subject in the lens's forward half-space with a margin, and THE ARM THAT
+         DOES THE WORK. The wrap is defined only where the subject is past the back of the lens,
+         so pushing the lens back until it is not removes the pose rather than rate-limiting the
+         consequence — which is what §475.3 asked for and §582.2 and §583 both handed back open.
+
+         **THE SUBJECT IT IS SOLVED FOR DECIDES WHETHER IT IS FREE, AND THAT WAS NOT OBVIOUS.**
+         Solved at feet, centre and head (`'frontspan'`) it removes every wrap pose — and fires
+         on 35.7 % of ground-route frames and puts the lens inside visible geometry on **24.0 %
+         of all frames against a 5.44 % baseline**, because at a crushed boom the FEET are near
+         the lens plane constantly and harmlessly. Solved at the capsule CENTRE it removes 97 %
+         of them, fires on 4.1 %, and costs **5.56 % against 5.44 %** — inside the noise. Two
+         instruments' worth of difference between "free" and "unshippable", from the choice of
+         which point on a 1.8 m body the bound is written about (§442). The centre ships. */
+      if (!front) continue;
+      const B = ad + bd;
+      const D2 = B * B - 4 * (TUNE.headroom * _bf.y - pad);
+      if (D2 > 0) {
+        const hi = (B + Math.sqrt(D2)) * 0.5;
+        if (hi > t) t = hi;
+      }
+    }
+    /* The floor may not become a dolly-out: it is bounded by the boom the rest of the rig
+       actually wants, so it can only ever give back length occlusion took, never add length
+       nobody asked for. At a 6.85 m `_boomWant` crushed to 0.55 that is all the room it needs;
+       where `want` is genuinely short (the `aim` shoulder, `sneak`) it cannot fight it. */
+    return Math.min(t, Math.max(s, this._boomWant));
   }
 
   _boomLength(dt) {
@@ -1946,7 +2171,21 @@ export class CameraRig {
     _boomDir.set(-this.forward.x * cp, sp, -this.forward.z * cp);
 
     const allowed = this._castBoom(this._boomWant, _boomDir);
-    const capped = Math.min(this._boomWant, allowed);
+    /* The subject's floor enters HERE rather than as a correction after the fact, and that is
+       the whole reason it is not itself a new suddenness: it does not push the boom out, it
+       stops the pull-in going further in. The pull-in is continuous (the whiskers see the
+       column coming), so a continuous floor under a continuous pull-in stays continuous — and
+       the arms measure exactly that (§640.4: the floor's own worst one-frame move). */
+    const floor = this._subjectBoomFloor(_boomDir);
+    this._subjFloor = floor;
+    const cappedRaw = Math.min(this._boomWant, allowed);
+    const capped = Math.max(floor, cappedRaw);
+    /* Honest telemetry costs an extra comparison and is worth it: the floor binds by TWO paths —
+       here, and at the final clamp below when the recovery spring is still under it — and an
+       arm that watched only this one would report a floor that never fired on the frames where
+       it did most of its work. Found by an A/B whose two regimes diverged with the flag reading
+       "bound on 0 frames". */
+    this._subjFloorOn = capped > cappedRaw + 1e-9;
     const occluded = allowed < this._boomWant - 1e-3;
 
     if (capped <= this.boom) {
@@ -1975,7 +2214,11 @@ export class CameraRig {
         }
       }
     }
-    this.boom = clamp(this.boom, TUNE.distHardMin, TUNE.distMax + 3);
+    /* The floor is a floor, so it binds the recovery branch's output too — otherwise a rising
+       floor would be honoured only on the frames the pull-in happened to run. */
+    const lo = Math.max(TUNE.distHardMin, floor);
+    if (this.boom < lo - 1e-9) { this._subjFloorOn = true; this._boomVel = 0; }
+    this.boom = clamp(this.boom, lo, TUNE.distMax + 3);
   }
 
   /* ──────────────────────────────────────────────────────────────────────────────────────────
