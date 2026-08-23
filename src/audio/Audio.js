@@ -357,6 +357,22 @@ export class Audio {
     this._lx = 0; this._ly = 2; this._lz = 0;
     this._listenerTime = 0;
     this._windOpen = 0.8;
+    /**
+     * §689 — every music duck and un-duck, with a context timestamp and a direction.
+     *
+     * The console line that revealed §688 was a ramp TO 20000, which is the un-duck — so the
+     * filter was being restored, which argues against a duck that latches shut. An argument is not
+     * a measurement, so both directions are recorded and `selfTest()` reports them: if the downs
+     * ever outnumber the ups, or an up lands somewhere that leaves the filter low, it is visible in
+     * one paste instead of being reasoned about.
+     *
+     * Initialised HERE and defensively again in `_logMusic`, because the first version of this was
+     * only initialised here — under an anchor that did not exist — so every push threw, the
+     * logger's own try/catch swallowed it, and `selfTest()`'s `|| []` rendered a permanently empty
+     * list that looked exactly like "nothing has ducked yet". Caught by driving it (§691). A
+     * diagnostic that cannot break playback must still not be able to fail silently.
+     */
+    this._musicLog = [];
 
     this._unsub = [];
     /* §551: stem bytes fetched BEFORE the gesture, waiting to be decoded. Keyed by stem name.
@@ -592,6 +608,7 @@ export class Audio {
   /** §689: one line per music level/colour change, newest last, capped. */
   _logMusic(ev, data) {
     try {
+      if (!this._musicLog) this._musicLog = [];      // §691: never silently dead
       this._musicLog.push({ t: +(this.ctx?.currentTime ?? 0).toFixed(2), ev, ...data });
       if (this._musicLog.length > 24) this._musicLog.shift();
     } catch { /* a diagnostic must never break playback */ }

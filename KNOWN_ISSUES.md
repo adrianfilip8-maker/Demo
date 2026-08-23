@@ -51386,7 +51386,34 @@ The line that revealed §688 was a ramp **to** 20000, which is the *un*-duck —
 being restored, which argues against a duck that latches shut. An argument is not a measurement.
 
 `_logMusic` records every duck and un-duck with a context timestamp, a direction and the target,
-capped at 24 and reported by `selfTest()` as `musicLog`. If the downs ever outnumber the ups, or an
+capped at 24 and reported by `selfTest()` as `musicLog`.
+
+**Measured, on a 32 kHz context — the user's own rate.** Three Thief-o-Vision cycles interleaved
+with ducks:
+
+```
+thief-on  base 0.34  hz 1400     duck amt 0.9 -> 0.25     thief-off base 1  hz 16000
+```
+
+x3, and: **thief-on 3, thief-off 3 — paired.** Lowest duck target **0.25**, the floor exactly.
+`_musicBase` back to 1 at the end, filter back to 16000. **The duck is not latching**, and that is
+now a reading rather than the inference the console line supported.
+
+### §691 — The logger shipped dead for twenty minutes, and only driving it noticed
+
+`this._musicLog = []` was inserted under an anchor that did not exist in the file, so the array was
+never initialised. Every `push` threw; `_logMusic`'s own try/catch — correct, because a diagnostic
+must never break playback — swallowed it; and `selfTest()`'s `|| []` rendered a permanently empty
+list that reads *exactly* like "nothing has ducked yet".
+
+A plausible-looking null, in an instrument written to escape plausible-looking nulls, twenty minutes
+after writing §669 up. It was caught only by driving the thing and reading the output. Two repairs:
+the array is initialised defensively inside `_logMusic` as well, so it cannot be dead again; and
+`listener` **A5** asserts the log is **non-empty** and that at least as many cycles were recorded as
+were driven, which is the only assertion that can separate a dead logger from a quiet game.
+
+A5 also caught its own first draft: it called `unlock()` without `init()`, so `_wireEngine` never
+subscribed and no `thief-on` was ever recorded. The `on >= 3` clause is what surfaced that. If the downs ever outnumber the ups, or an
 up lands somewhere that leaves the filter low, it is visible in a single paste instead of being
 reasoned about. `selfTest()` also now reports `sampleRate` and `nyquist`, because after §688 those
 are facts about the player's hardware worth having in the same breath.

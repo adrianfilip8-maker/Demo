@@ -233,3 +233,58 @@ test('listener A4: no filter corner is ever set above the context Nyquist', asyn
   console.log(`[listener A4] at ${RATE} Hz every corner lands <= ${ny} (raw 20000 would not); `
     + `at 48000 Hz 20000 passes through untouched`);
 });
+
+/* ====================================================================== */
+test('listener A5: every music duck is followed by an un-duck, and the log cannot be silently dead', async () => {
+  /* DOMAIN (§418.3)
+   * passes on : three Thief-o-Vision cycles interleaved with ducks, on a 32 kHz context — the
+   *             `musicLog` records equal numbers of `thief-on` and `thief-off`, no duck target
+   *             below `TUNE.musicFloor`, and the filter restored to Nyquist at the end.
+   * fails on  : an EMPTY log, asserted in-arm. The first version of `_logMusic` pushed to an
+   *             uninitialised array, the logger's own try/catch swallowed the TypeError and
+   *             `selfTest()`'s `|| []` rendered a permanently empty list that read exactly like
+   *             "nothing has ducked yet" (§691). A length assertion is the only thing that can
+   *             tell those two apart, and without it this whole arm would pass on a dead logger.
+   * does not discriminate: audibility, and whether a REAL session ducks in this pattern — this
+   *             drives the transitions directly rather than through gameplay. */
+  const { OfflineCtx: OC } = await import('./webaudio.mjs');
+  /* BOTH, in the module's own order: `init()` is where `_wireEngine` subscribes to `thiefVision`,
+     `unlock()` is where the graph is built. A rig that only unlocks builds a perfect graph nothing
+     is routed into — and the first draft of this arm did exactly that, logging the ducks it called
+     directly and none of the mode changes it emitted. */
+  const engine = engineStub({ camera: cam(0, 2, 0) });
+  const audio = new Audio(engine);
+  await audio.init();
+  audio.unlock(new OC(32000));
+
+  const DT = 1 / 60;
+  let t = 0;
+  const step = (n) => { for (let i = 0; i < n; i++) { t += DT; audio.ctx.currentTime = t; audio.update(DT, t); } };
+  step(60);
+  for (let k = 0; k < 3; k++) {
+    engine.emit('thiefVision', true);  step(45);
+    audio.duckMusic(0.9);              step(30);
+    engine.emit('thiefVision', false); step(60);
+    audio.duckMusic(0.5);              step(30);
+  }
+
+  const log = audio._musicLog;
+  assert.ok(Array.isArray(log) && log.length > 0,
+    'the music log is empty or missing — a logger that cannot record is indistinguishable from a '
+    + 'game that never ducks, which is exactly how §691 shipped broken');
+
+  const on = log.filter((e) => e.ev === 'thief-on').length;
+  const off = log.filter((e) => e.ev === 'thief-off').length;
+  assert.equal(on, off, `${on} duck-downs against ${off} ups — a mode is latching shut`);
+  assert.ok(on >= 3, `only ${on} cycles recorded of the 3 driven — the log is dropping entries`);
+
+  const targets = log.filter((e) => e.to !== undefined).map((e) => e.to);
+  assert.ok(targets.length > 0, 'no duck targets recorded');
+  assert.ok(Math.min(...targets) >= TUNE.musicFloor - 1e-9,
+    `a duck targeted ${Math.min(...targets)}, below the floor ${TUNE.musicFloor}`);
+
+  assert.equal(audio._musicBase, 1, 'the score was left ducked after the last un-duck');
+
+  console.log(`[listener A5] ${on} on / ${off} off — paired; lowest duck target `
+    + `${Math.min(...targets)} (floor ${TUNE.musicFloor}); ${log.length} entries recorded`);
+});
