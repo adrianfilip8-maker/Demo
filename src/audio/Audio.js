@@ -612,11 +612,50 @@ export class Audio {
       animHooked: !!this._animHooked,
       listener: { x: +this._lx.toFixed(2), y: +this._ly.toFixed(2), z: +this._lz.toFixed(2) },
       voices: 0,
+      /**
+       * §677 — the pad's identity and live state, and the engine flags a pad can move.
+       *
+       * The user reports the sound stopping **only on the controller**. Everything this container
+       * knows about their controller is a synthetic object this lane wrote, so the three fields
+       * that matter most are ones only their machine has: `id`, `mapping`, and what the game
+       * currently believes they are holding.
+       *
+       * `thief` is here beside them because it is the one audio state a pad reaches far more
+       * easily than a keyboard: `focus` is **R2** on a pad and the **right mouse button** on
+       * keyboard, and holding it ducks the music to `TUNE.thiefMusic` and low-passes it to
+       * `TUNE.thiefFilter` Hz. `paused` and `timeScale` are the other two a pad button can move.
+       */
+      input: (() => { try { return this.engine.input.report(); } catch { return null; } })(),
+      thief: this._thief,
+      musicDuckGain: (() => { try { return +this.musicDuck.gain.value.toFixed(4); } catch { return null; } })(),
+      musicFilterHz: (() => { try { return Math.round(this.musicFilter.frequency.value); } catch { return null; } })(),
+      paused: (() => { try { return !!(this.engine.paused || this.engine.debug?.paused); } catch { return null; } })(),
+      timeScale: (() => { try { return this.engine.timeScale; } catch { return null; } })(),
     };
     if (!this.ctx || !this.masterGain) {
       out.hint = 'No AudioContext yet — click the page (or press a controller button) and run this again.';
       return out;
     }
+    /**
+     * Named causes are decided BEFORE the measurement and never depend on it. Each is a specific,
+     * actionable answer, and none of them needs an `AnalyserNode` — so they survive a browser where
+     * the tap fails, and they are reachable by a test that has no analyser at all. "Sound is
+     * leaving the page" is only an answer when nothing more specific applies.
+     */
+    const held = out.input?.held || [];
+    const badMap = (out.input?.pads || []).some((p) => p.connected && !p.mappingTrusted);
+    const named = held.includes('focus')
+      ? 'THIEF-O-VISION IS ENGAGED — the game thinks you are holding `focus`, which is R2 on a '
+        + `controller. That ducks the music to ${TUNE.thiefMusic} and low-passes it to `
+        + `${TUNE.thiefFilter} Hz, which sounds like the music stopping. Let go of R2 (a trigger `
+        + 'that does not spring all the way back can latch it on).'
+      : out.paused
+        ? 'THE GAME IS PAUSED — a pad Options press toggles it, and a paused engine runs at dt 0.'
+        : badMap
+          ? 'YOUR CONTROLLER DOES NOT REPORT THE STANDARD MAPPING, so every button index this game '
+            + 'uses may be pointing at the wrong control. Send the `input.pads` block.'
+          : '';
+    if (named) out.hint = named;
     let an = null;
     try {
       an = this.ctx.createAnalyser();
@@ -665,14 +704,19 @@ export class Audio {
       out.peak = +out.peak.toFixed(5);
       out.rmsWithSfx = +out.rmsWithSfx.toFixed(5);
       out.ok = out.rms > 1e-4 || out.rmsWithSfx > 1e-4;
-      out.hint = out.ok
-        ? 'Sound IS leaving the page at this level. If you cannot hear it, the fault is after the '
-          + 'page: output device, a muted tab, the OS mixer, or a Bluetooth sink.'
-        : (this.ctx.state !== 'running'
-          ? `The context is "${this.ctx.state}", not running — the browser has not let audio start.`
-          : 'The page is producing no signal. The other fields say which link is down.');
+      /* A named cause always wins: it is specific and actionable, and "sound is leaving the page"
+         is not an answer when the player can hear that it is not. */
+      if (!named) {
+        out.hint = out.ok
+          ? 'Sound IS leaving the page at this level. If you cannot hear it, the fault is after the '
+            + 'page: output device, a muted tab, the OS mixer, or a Bluetooth sink.'
+          : (this.ctx.state !== 'running'
+            ? `The context is "${this.ctx.state}", not running — the browser has not let audio start.`
+            : 'The page is producing no signal. The other fields say which link is down.');
+      }
     } catch (err) {
-      out.hint = `self-test failed: ${err?.message || err}`;
+      /* A named cause is worth more than the reason the tap failed, so it is not overwritten. */
+      if (!named) out.hint = `self-test failed: ${err?.message || err}`;
     } finally {
       try { if (an) this.masterGain.disconnect(an); } catch { /* leave the graph as it was */ }
     }

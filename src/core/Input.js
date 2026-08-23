@@ -1184,6 +1184,65 @@ export class Input {
     this.zoom = 0;
   }
 
+  /**
+   * ── `report()` — the controller's identity and live state, for a console the lane cannot reach ──
+   *
+   * Six rounds of pad work have been done against a *synthesised* DS4: every probe in this repo
+   * overrides `navigator.getGamepads` with an object this lane wrote, in the layout this lane
+   * assumed. **That means every pad conclusion here is conditional on a shape nobody has verified
+   * against the user's actual hardware** — which is the session's dominant defect (true by accident
+   * of what you tested with) sitting in the input layer.
+   *
+   * The whole binding table assumes the W3C **standard mapping**: `PAD_BINDINGS` indexes buttons
+   * 0-15 and `PAD_AXES` indexes axes 0-3 by position. A pad reporting any other layout — which
+   * happens over Bluetooth, through some drivers, and in non-Chromium browsers — has every one of
+   * those indices pointing somewhere this code did not intend, and nothing checks. `mappingTrusted`
+   * is that check, made explicit at last.
+   *
+   * `held` is the field that usually answers the question on its own: it is what the game currently
+   * believes you are holding. A `focus` in that list means Thief-o-Vision is engaged (music ducked
+   * to `TUNE.thiefMusic` and low-passed to `TUNE.thiefFilter`), and `focus` is **R2 on a pad but the
+   * RIGHT MOUSE BUTTON on keyboard** — so a player resting a finger on R2, as most controller games
+   * train you to, silences most of the music in a way a keyboard player can never reproduce.
+   *
+   * Read-only and allocation-light; nothing calls it automatically.
+   */
+  report() {
+    const pads = [];
+    try {
+      const list = navigator?.getGamepads?.() || [];
+      for (const g of list) {
+        if (!g) continue;
+        pads.push({
+          index: g.index,
+          id: g.id,
+          mapping: g.mapping,
+          mappingTrusted: g.mapping === 'standard',
+          connected: !!g.connected,
+          axisCount: g.axes?.length ?? 0,
+          buttonCount: g.buttons?.length ?? 0,
+          axes: [...(g.axes || [])].map((v) => Math.round(v * 1000) / 1000),
+          /* Only what is actually ON, so the line stays readable and a stuck control is obvious. */
+          active: (g.buttons || []).map((b, i) => ({ i, p: !!b?.pressed, v: Math.round(Input._buttonValue(b) * 1000) / 1000 }))
+            .filter((b) => b.p || b.v > 0.02),
+        });
+      }
+    } catch { /* a console with no Gamepad API is a fact, not an error */ }
+    return {
+      pads,
+      padIndex: this._padIndex,
+      lastDevice: this.lastDevice,
+      padTouched: this.padTouched,
+      /** What the game thinks you are holding right now — actions, not keys. */
+      held: [...this._down],
+      /** Controls withheld by §542's trust gate because they have never been seen at rest. */
+      untrusted: [6, 7].filter((i) => !this._padTrust.has(i)),
+      triggerOn: this.settings.triggerOn,
+      triggerOff: this.settings.triggerOff,
+      deadzone: this.settings.deadzone,
+    };
+  }
+
   dispose() {
     window.removeEventListener('keydown', this._onKeyDown);
     window.removeEventListener('keyup', this._onKeyUp);
