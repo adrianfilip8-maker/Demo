@@ -181,9 +181,19 @@ try {
 
       const out = { clip: null, bone: {}, mesh: {} };
       out.gapCm = Number.isFinite(lMin) && Number.isFinite(rMax) ? +((lMin - rMax) * 100).toFixed(1) : null;
+      /* ATTRIBUTION (§479.11). The standing idles are TREE-driven, so `a.tracks` is EMPTY for
+         them and the first run of this tool wrote `clip: ""` on all seven frames — a capture
+         that cannot name what it photographed, which is the §510 trap in a capture tool. The
+         tree's own selection is the honest read: `idleVariant` is the standing idle the tree's
+         node 0 is showing, and `idleBlend < 1` means a variant crossfade is in flight. Both are
+         printed on every frame so a frame labelled `idle3-look` that is actually still showing
+         `idle_confident` refutes itself on its own telemetry. */
       const tr = (a?.tracks || []).filter((t) => t.clip && t.w > 0.01)
         .map((t) => `${t.clip.name}:${t.w.toFixed(2)}`);
       out.clip = tr.join(' ');
+      out.idleVariant = a?.idleVariant ?? null;
+      out.idleBlend = a?.idleBlend != null ? +a.idleBlend.toFixed(2) : null;
+      out.bored = (() => { const st = e.get('movement')?.sm?.current; return st && '_bored' in st ? +st._bored.toFixed(1) : null; })();
       for (const n of ['handL', 'handR', 'lowerArmL', 'lowerArmR']) {
         if (B[n]) out.bone[n] = +latOf(wp(B[n])).toFixed(2);
         if (acc[n] && acc[n].w > 0) {
@@ -216,13 +226,28 @@ try {
     await writeFile(`${OUT}/${ARM}-${name}.png`, Buffer.from(uri.split(',')[1], 'base64'));
     log.push({ frame: `${ARM}-${name}`, az, ...tel });
     console.log(`  -> ${ARM}-${name}.png  BONE sep ${tel.boneSep}  MESH sep ${tel.meshSep}`
-      + `  GAP ${tel.gapCm} cm${tel.gapCm < 0 ? ' *** ARMS OVERLAP ***' : ''}  [${tel.clip}]`);
+      + `  GAP ${tel.gapCm} cm${tel.gapCm < 0 ? ' *** ARMS OVERLAP ***' : ''}`
+      + `  showing ${tel.idleVariant}${tel.idleBlend != null && tel.idleBlend < 1 ? ` (fading ${tel.idleBlend})` : ''}`
+      + ` bored ${tel.bored}${tel.clip ? ` [${tel.clip}]` : ''}`);
     return tel;
   };
 
   await sim(40);
   await page.evaluate(() => { const m = window.__ENGINE.get('movement'); m.position.set(0, 0, 30); m.velocity.set(0, 0, 0); });
   await sim(120);                                  // settle into the real standing idle
+
+  /* The boredom timer is SIMULATED time, and 13 s of it on a loaded box is many minutes of wall
+     clock spent producing frames whose content is a pure function of one number. `Idle.update`
+     picks the clip from `this._bored` alone (Moveset.js:141), so this sets that field directly
+     and lets the real state machine do the choosing: same code path, same 0.3 s crossfade, ~800
+     fewer simulated frames. It cannot fake the result — every frame's telemetry names the track
+     actually playing, so if the jump did not take, the frame says `idle_confident` and the
+     evidence refutes itself. */
+  const boredTo = (v) => page.evaluate((n) => {
+    const st = window.__ENGINE.get('movement').sm.current;
+    if (st && '_bored' in st) { st._bored = n; return true; }
+    return false;
+  }, v);
 
   /* THE IDLE POSITION IS THREE CLIPS, and the boredom timer decides which: Moveset.js:141 gives
      `idle_confident` for the first 6 s, `idle_bored` past 6, and `idle_look` past 13. A player
@@ -232,13 +257,13 @@ try {
      three. Two samples per stage, profile + front-quarter (§466.5). */
   await snap('idle1-confident-profile', 90);
   await snap('idle1-confident-front34', 145, 2.4);
-  await sim(60 * 8);                               // past the 6 s boredom step
+  await boredTo(7);   await sim(24);               // past the 6 s step, without simulating it
   await snap('idle2-bored-profile', 90);
   await snap('idle2-bored-front34', 145, 2.4);
-  await sim(60 * 8);                               // past the 13 s step — the suspect
+  await boredTo(14);  await sim(24);               // past the 13 s step — the suspect
   await snap('idle3-look-profile', 90);
   await snap('idle3-look-front34', 145, 2.4);
-  await sim(60 * 3);
+  await sim(50);
   await snap('idle3-look-b-profile', 90);
 } finally {
   await writeFile(`${OUT}/telemetry-${ARM}.json`, JSON.stringify({ sha, dirty, W, H, ARM, errs, log }, null, 2));

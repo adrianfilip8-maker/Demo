@@ -1409,3 +1409,46 @@ test('idle arm clearance (§479.10): the standing idles keep daylight between th
   /* and the exemption must actually be the thing standing between the two, by identity */
   assert.equal(GODOT_LIMB_OPEN.idle_look?.elbow, 0.45, 'the §479.10 exemption row is what holds the idle clear');
 });
+
+test('idle variants (§479.11): the boredom timer reaches the tree, and both later idles actually play', async () => {
+  /* THE DEFECT THIS HOLDS. `Moveset.js:141` rotates three standing idles on a boredom timer
+     (confident → bored at 6 s → look at 13 s), but all three are TREE_CLIPS, and `play()`'s
+     tree branch consumed the NAME and handed the body to the tree — whose stance-0 idle node
+     is the literal string 'idle_confident'. So `idle_bored` and `idle_look` were requested
+     every frame and never once reached the screen. Two rounds of idle work were spent on a
+     pose no player could see: §479.10 measured `idle_look` crossing and exempted it from the
+     lever, and the shipped-rig capture that was supposed to prove the repair photographed
+     `idle_confident` four times under three different labels (its telemetry `clip` field came
+     back EMPTY on all seven frames — tree-driven clips are not in `tracks` — which is why the
+     mislabelling survived the review; the tool now records `idleVariant` per frame).
+     DOMAIN (§418.3) — passes on: play('idle_look') making isPlaying('idle_look') true and the
+     tree sample carry its keys (RUN below, all three variants); fails on: the pre-fix
+     resolution, RUN below as the node's literal clip — TREE's stance-0 entry is still the
+     string 'idle_confident', so asserting the node name alone would pass on the broken build
+     while the variant assertion fails. Cannot discriminate: whether the variant LOOKS right on
+     the shipped rig — shots/idlecross carries that, per-frame `idleVariant` on every capture. */
+  const { Animation } = await import('../src/player/Animation.js');
+  const a = new Animation({ warn() {}, emit() {} });
+  a.pose = new PoseBuffer(RIG3.BONE_ORDER);
+  a.setLocomotion({ speed: 0, grounded: true, maxSpeed: 7.2 });
+  for (const want of ['idle_confident', 'idle_bored', 'idle_look']) {
+    a.play(want, { fade: 0.3 });
+    for (let i = 0; i < 40; i++) { a.pose.clear(); a._advance(1 / 60, i / 60); a._sampleTree(1 / 60); }
+    assert.equal(a.idleVariant, want, `the tree kept showing ${a.idleVariant} after MOVEMENT asked for ${want}`);
+    assert.ok(a.isPlaying(want), `isPlaying('${want}') is false right after playing it — the variant never reached the tree`);
+    /* THE DISCRIMINATOR, and the pre-fix build's exact failure: the tree's stance-0 node
+       RESOLVES to the requested variant. The node's literal clip name is still
+       'idle_confident' (TREE is unchanged), so a test that asserted the literal would pass on
+       the broken build; this asserts the resolution, which is what the renderer samples. */
+    assert.equal(a._nodeClip(0)?.name, want,
+      `the tree's idle node resolved to ${a._nodeClip(0)?.name} while MOVEMENT asked for ${want}`);
+    assert.ok(a.pose.w.chest > 0, `${want} delivered no chest weight — the tree sampled nothing`);
+  }
+  /* the swap is a CROSSFADE, not a cut: mid-fade both variants are live */
+  a.play('idle_confident', { fade: 0.3 });
+  for (let i = 0; i < 40; i++) { a.pose.clear(); a._advance(1 / 60, i / 60); a._sampleTree(1 / 60); }
+  a.play('idle_look', { fade: 0.3 });
+  for (let i = 0; i < 9; i++) { a.pose.clear(); a._advance(1 / 60, i / 60); a._sampleTree(1 / 60); }
+  assert.ok(a.idleBlend > 0.05 && a.idleBlend < 0.95, `mid-fade blend is ${a.idleBlend} — the variant swap cut instead of blending`);
+  assert.equal(a.idlePrev, 'idle_confident', 'the outgoing variant is not being held under the incoming one');
+});

@@ -48604,3 +48604,63 @@ and geometry moving under a fixed stream does not. The paving is untouched: the 
 - Nothing here makes the mouth easier to **find**. From more than ~2 m off the bore axis it is still
   a hole in a floor in the hall's far north-west corner with nothing marking it, and 29.4% of
   sampled hall stances can see any part of it. That is a separate question and is not addressed.
+
+## §479.11 — Two of the three standing idles never played, so §479.10 repaired a pose no player could see
+
+The coordinator ran `tools/idlecross.mjs` on the shipped rig and reported all three idle stages
+overlapping (`−1.2 / −0.5 / +1.2 / −0.3 cm`) against §479.10's claim that only `idle_look` was at
+risk. The overlap is real. **The three stages are not.**
+
+`Moveset.js:141` rotates three standing idles on a boredom timer — `idle_confident`, then
+`idle_bored` past 6 s, then `idle_look` past 13 s. All three are `TREE_CLIPS`, and `play()`'s
+tree branch *consumes the name* and hands the body to the blend tree, whose stance-0 idle node is
+the literal string `'idle_confident'`. Proven through the real module, not read:
+
+```
+    play(idle_confident)  isPlaying(want)=true    play() returns null (handed to TREE)
+    play(idle_bored   )  isPlaying(want)=FALSE   isPlaying(idle_confident)=true
+    play(idle_look    )  isPlaying(want)=FALSE   isPlaying(idle_confident)=true
+```
+
+**`idle_bored` and `idle_look` have never reached the screen.** Every "three-stage" idle capture
+this project has taken — the coordinator's included — photographed `idle_confident` four times
+under three labels, which is exactly why its four frames read 0.84 / 0.85 / 0.89 shoulder-widths
+of bone separation and clear-then-overlap between two of them: **one cycle, four phases**, not
+three poses. §479.10's repair (`idle_look: { elbow: 0.45, knee: 0.60 }`) is real work on a clip
+the renderer never sampled, and its ladder table — `idle_confident +6.3`, `idle_bored +12.0` —
+described two poses that could not have produced the report either.
+
+**Why it survived review, and this is the reusable part.** The capture tool's own telemetry field
+for "what am I looking at" read `a.tracks`, and **tree-driven clips are not in `tracks`** — so
+`clip` came back `""` on all seven frames. A capture that cannot name what it photographed will
+agree with any label you put on it. That is §510's rule (verify content, not the file list)
+arriving in a capture tool: the frame said `idle3-look` because the *script* said so at that
+line, and nothing in the run disagreed. The tool now records `idleVariant`, `idleBlend` and the
+state's live `_bored` on every frame, so a frame labelled `look` that is still showing
+`confident` refutes itself on its own telemetry.
+
+**The fix, at the mechanism.** `Animation.idleVariant` carries the requested standing idle into
+the tree; `_nodeClip(i)` resolves the stance-0 node through it (every other node is unchanged
+and still its own literal clip); `isPlaying` and `_strideLength` read the same resolver, so no
+second account of "which clip is the idle" exists. The swap is a CROSSFADE, not a cut — the
+three are free-running cycles of different lengths (3.6 / 4.4 / 4.0 s) and a hard swap pops — run
+over the fade MOVEMENT itself passes (`baseClip(..., 0.3)`). Verified through the FULL stack
+(real Controller + Moveset + Animation, boredom timer untouched): `t=5s confident · t=7s bored ·
+t=14s look`.
+
+**What this does NOT fix, stated plainly.** The user's report stands: `idle_confident` — the pose
+they actually see for the first six seconds and the one every past capture photographed —
+measures **−1.2 cm on the shipped DL rig** while the offline `SlyModel` metric says +6.3. That
+gap is the §470.1 term the tool's own header predicted (the DL carry rotates bone GEOMETRY;
+origins never move), and it is a *separate* defect from this one. It cannot be re-derived from
+the numbers in §479.10 because those numbers describe the wrong rig AND, for two of three rows,
+a clip that never played. The control arm (`CHAR=model3`, the discriminator: a defect on both
+arms is clip data, a defect only on dlrig is the carry) was QUEUED behind another lane's capture
+when this shipped and has not returned; the exemption threshold must be re-derived against the
+MESH column once it does, on all three variants now that all three can be photographed for the
+first time. Recorded as open, not as fixed.
+
+Held by `anim.test`'s §479.11 arm — all three variants play, the tree's node RESOLVES to each
+(the literal node name is still `idle_confident`, so an arm asserting the literal would pass on
+the broken build), and the mid-fade blend is asserted live rather than cut. Suite **990/990,
+EXIT=0**, run before this commit.

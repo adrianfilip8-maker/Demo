@@ -645,6 +645,13 @@ const TREE = [
   { clip: 'crouch_walk', stance: 2, i: 1 },
 ];
 
+/**
+ * The three standing idles MOVEMENT rotates through on its boredom timer. They are TREE_CLIPS
+ * (the tree owns the standing body), but unlike the other tree names they are not tree NODES —
+ * node 0 is one clip, and which of the three it shows is `Animation.idleVariant` (§479.11).
+ */
+const IDLE_VARIANTS = new Set(['idle_confident', 'idle_bored', 'idle_look']);
+
 /** Clips MOVEMENT plays that mean "let the tree drive", not "override the body". */
 const TREE_CLIPS = {
   idle_confident: 0, idle_bored: 0, idle_look: 0,
@@ -709,6 +716,17 @@ export class Animation {
     /* ---- tree ---- */
     this.stanceW = new Float32Array([1, 0, 0]);
     this.stanceHint = 0;
+    /* §479.11 — WHICH standing idle the tree's stance-0 idle node shows. MOVEMENT names one of
+       three on a boredom timer (`Moveset.js:141`); before this field existed, every name went
+       through `play()`'s TREE_CLIPS branch, which hands the body to the tree — and the tree's
+       node 0 clip is the literal string 'idle_confident'. So `idle_bored` and `idle_look` were
+       requested and silently discarded for the life of the file. `idleFade` runs the caller's
+       own crossfade between the outgoing variant and the incoming one, because the three are
+       free-running cycles of different lengths (3.6 / 4.4 / 4.0 s) and a hard swap pops. */
+    this.idleVariant = 'idle_confident';
+    this.idlePrev = null;
+    this.idleBlend = 1;
+    this.idleFade = ANIM_TUNE.treeFade;
     this.treeW = 1;
     this.phase = 0;          // shared stride phase, 0..1
     this.treeTime = 0;       // free-running clock for the non-strided idles
@@ -849,6 +867,16 @@ export class Animation {
       // MOVEMENT is describing locomotion — hand the body to the blend tree, which knows
       // more about it (real speed, real turn rate) than a single clip name does.
       this.stanceHint = stance;
+      /* §479.11 — carry the requested standing-idle VARIANT into the tree. Without this the
+         name is consumed here and node 0 keeps playing `idle_confident` whatever MOVEMENT
+         asked for. Re-asserting the current variant is a no-op (MOVEMENT re-asserts its base
+         clip every frame), so only a real change starts a fade. */
+      if (IDLE_VARIANTS.has(name) && name !== this.idleVariant) {
+        this.idlePrev = this.idleVariant;
+        this.idleVariant = name;
+        this.idleBlend = 0;
+        this.idleFade = fade || ANIM_TUNE.treeFade;
+      }
       for (const tr of this.tracks) if (tr.clip && !tr.lock) this._end(tr, fade || ANIM_TUNE.treeFade);
       return null;
     }
@@ -958,7 +986,7 @@ export class Animation {
     // The tree is "playing" whichever locomotion clip currently carries the most weight.
     if (TREE_CLIPS[name] !== undefined && this.treeW > 0.05) {
       this._treeWeights();
-      for (let i = 0; i < TREE.length; i++) if (TREE[i].clip === name && _w[i] > 0.15) return true;
+      for (let i = 0; i < TREE.length; i++) if (this._nodeClip(i)?.name === name && _w[i] > 0.15) return true;
     }
     return false;
   }
@@ -1228,7 +1256,7 @@ export class Animation {
     this._treeWeights();
     let s = 0, w = 0;
     for (let i = 0; i < TREE.length; i++) {
-      const c = ACTIVE[TREE[i].clip];
+      const c = this._nodeClip(i);
       if (!c?.stride || _w[i] <= 0) continue;
       s += c.stride * _w[i]; w += _w[i];
     }
@@ -1272,17 +1300,40 @@ export class Animation {
     }
   }
 
+  /**
+   * The clip a tree NODE shows. Every node but one is its own literal clip; the stance-0 idle
+   * node shows whichever standing idle MOVEMENT last asked for (§479.11).
+   */
+  _nodeClip(i) {
+    const name = TREE[i].clip;
+    return ACTIVE[name === 'idle_confident' ? this.idleVariant : name] || ACTIVE[name];
+  }
+
   _sampleTree(dt) {
     if (this.treeW <= 0.001) return;
     this._treeWeights();
+    /* advance the variant crossfade (§479.11) — free-running cycles of different lengths, so
+       the swap is blended over the fade MOVEMENT asked for rather than cut */
+    if (this.idleBlend < 1) {
+      this.idleBlend = clamp01(this.idleBlend + (this.idleFade > 1e-4 ? dt / this.idleFade : 1));
+      if (this.idleBlend >= 1) this.idlePrev = null;
+    }
     let dom = null, domW = 0;
     for (let i = 0; i < TREE.length; i++) {
       const nw = _w[i];
       if (nw <= 0.002) continue;
-      const c = ACTIVE[TREE[i].clip];
+      const c = this._nodeClip(i);
       if (!c) continue;
       const time = c.stride > 0 ? this.phase * c.dur : this.treeTime;
-      sampleInto(c, time, this.pose, nw * this.treeW);
+      const isIdleNode = TREE[i].clip === 'idle_confident';
+      /* the outgoing variant, fading out under the incoming one */
+      if (isIdleNode && this.idlePrev && this.idleBlend < 1) {
+        const prev = ACTIVE[this.idlePrev];
+        if (prev) sampleInto(prev, prev.stride > 0 ? this.phase * prev.dur : this.treeTime,
+          this.pose, nw * this.treeW * (1 - this.idleBlend));
+      }
+      const w = isIdleNode ? nw * this.idleBlend : nw;
+      sampleInto(c, time, this.pose, w * this.treeW);
       if (nw > domW) { domW = nw; dom = c; }
       if (!this.caneHas && nw > 0.4) this.caneHas = sampleCane(c, time, this.caneTarget);
     }
