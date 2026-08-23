@@ -569,6 +569,40 @@ export class Audio {
   }
 
   /**
+   * §688 — clamp a filter corner to what THIS context can actually represent.
+   *
+   * From the user's own console, on the shipped build:
+   *
+   *     BiquadFilter.frequency.linearRampToValueAtTime value 20000 outside nominal
+   *     range [0, 16000]; value will be clamped.
+   *
+   * The nominal maximum is the context's Nyquist, so **their AudioContext is running at 32 kHz** —
+   * not the 44.1/48 kHz every number in this file was written against. `musicFilter` is opened to
+   * a flat 20000 Hz in `_buildGraph`, by four of the six section cutoffs, and by the
+   * Thief-o-Vision un-duck, and every one of those was out of range on their machine.
+   *
+   * Nothing here had ever asked what rate the context runs at. Worth saying plainly: the browser
+   * picks it from the OUTPUT DEVICE, so 32 kHz is a fact about their hardware, and an unusual one —
+   * it is the kind of rate a Bluetooth headset in its hands-free (call) profile reports rather than
+   * a sound card. That is a lead about routing, not a proven cause, and §690 keeps them apart.
+   *
+   * The clamp is correct regardless: a corner above Nyquist is meaningless, the browser clamps it
+   * anyway, and doing it here stops the console filling with warnings that hide real ones.
+   */
+  /** §689: one line per music level/colour change, newest last, capped. */
+  _logMusic(ev, data) {
+    try {
+      this._musicLog.push({ t: +(this.ctx?.currentTime ?? 0).toFixed(2), ev, ...data });
+      if (this._musicLog.length > 24) this._musicLog.shift();
+    } catch { /* a diagnostic must never break playback */ }
+  }
+
+  _hz(v) {
+    const ny = (this.ctx?.sampleRate || 48000) / 2;
+    return Math.max(10, Math.min(v, ny));
+  }
+
+  /**
    * Ask the context to run. Safe to call any number of times, on any path.
    *
    * Deliberately swallows: `resume()` rejects when the call did not come from a qualifying user
@@ -656,6 +690,12 @@ export class Audio {
       thief: this._thief,
       musicDuckGain: (() => { try { return +this.musicDuck.gain.value.toFixed(4); } catch { return null; } })(),
       musicFilterHz: (() => { try { return Math.round(this.musicFilter.frequency.value); } catch { return null; } })(),
+      /* §688: the browser picks this from the OUTPUT DEVICE, so it is a fact about their hardware.
+         Their console reported a nominal max of 16000, i.e. a 32 kHz context. */
+      sampleRate: (() => { try { return this.ctx.sampleRate; } catch { return null; } })(),
+      nyquist: (() => { try { return this.ctx.sampleRate / 2; } catch { return null; } })(),
+      /* §689: every duck and un-duck, so the sequence is read rather than inferred. */
+      musicLog: (this._musicLog || []).slice(-12),
       paused: (() => { try { return !!(this.engine.paused || this.engine.debug?.paused); } catch { return null; } })(),
       timeScale: (() => { try { return this.engine.timeScale; } catch { return null; } })(),
     };
@@ -890,7 +930,7 @@ export class Audio {
 
     this.musicFilter = ctx.createBiquadFilter();
     this.musicFilter.type = 'lowpass';
-    this.musicFilter.frequency.value = 20000;
+    this.musicFilter.frequency.value = this._hz(20000);       // §688
     this.musicFilter.Q.value = 0.5;
     this.musicFilter.connect(this.musicBus);
 
@@ -963,7 +1003,7 @@ export class Audio {
       g.gain.value = 0;
       const shelf = ctx.createBiquadFilter();
       shelf.type = 'highshelf';
-      shelf.frequency.value = TUNE.airShelfHz;
+      shelf.frequency.value = this._hz(TUNE.airShelfHz);      // §688
       shelf.gain.value = 0;
       const send = ctx.createGain();
       send.gain.value = 0;
@@ -1146,7 +1186,7 @@ export class Audio {
       const f = this.musicFilter.frequency;
       f.cancelScheduledValues(t);
       f.setValueAtTime(f.value, t);
-      f.linearRampToValueAtTime(s.cutoff, t + TUNE.stemFade);
+      f.linearRampToValueAtTime(this._hz(s.cutoff), t + TUNE.stemFade);   // §688
       return;
     }
     if (!this.score._started) this.score.start(this.ctx.currentTime, section);
@@ -1211,6 +1251,7 @@ export class Audio {
     const g = this.musicDuck.gain;
     /* §684: floored, so a duck stacked on a mode can never reach silence. */
     const target = Math.max(TUNE.musicFloor, this._musicBase * (1 - Math.max(0, Math.min(0.9, amount))));
+    this._logMusic('duck', { amt: +(+amount).toFixed(2), to: +target.toFixed(3), base: this._musicBase });
     try {
       g.cancelScheduledValues(t);
       g.setValueAtTime(g.value, t);
@@ -1934,13 +1975,17 @@ export class Audio {
     const t = this.ctx.currentTime;
     this.play(on ? 'thief_on' : 'thief_off');
     this._musicBase = on ? Math.max(TUNE.musicFloor, TUNE.thiefMusic) : 1;   // §684
+    this._logMusic(on ? 'thief-on' : 'thief-off', {
+      base: this._musicBase, hz: Math.round(this._hz(on ? TUNE.thiefFilter : 20000)),
+    });
     try {
       this.musicDuck.gain.cancelScheduledValues(t);
       this.musicDuck.gain.setValueAtTime(this.musicDuck.gain.value, t);
       this.musicDuck.gain.linearRampToValueAtTime(this._musicBase, t + (on ? 0.25 : 0.6));
       this.musicFilter.frequency.cancelScheduledValues(t);
       this.musicFilter.frequency.setValueAtTime(this.musicFilter.frequency.value, t);
-      this.musicFilter.frequency.exponentialRampToValueAtTime(on ? TUNE.thiefFilter : 20000, t + (on ? 0.3 : 0.5));
+      this.musicFilter.frequency.exponentialRampToValueAtTime(
+        this._hz(on ? TUNE.thiefFilter : 20000), t + (on ? 0.3 : 0.5));   // §688
     } catch {}
   }
 

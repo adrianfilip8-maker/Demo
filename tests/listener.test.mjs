@@ -174,3 +174,62 @@ test('listener A3: the offline renderer cannot hear distance — proved, not ass
   console.log(`[listener A3] same sound at the ear and at 90 m renders at ratio ${ratio.toFixed(3)} — `
     + 'the offline panner applies no distance attenuation, so no offline test can measure audibility');
 });
+
+/* ====================================================================== */
+test('listener A4: no filter corner is ever set above the context Nyquist', async () => {
+  /* DOMAIN (§418.3)
+   * passes on : the shipped graph built on a **32 kHz** context — the rate the user's own console
+   *             reported ("nominal range [0, 16000]") — with every filter corner this file can set
+   *             landing at or below 16000: the build default, all six section cutoffs, and both
+   *             directions of the Thief-o-Vision ramp.
+   * fails on  : the same corners taken RAW, run in-arm — 20000 must be shown to exceed that
+   *             Nyquist. Without it the arm would pass on a build where every corner happened to
+   *             be small, and would say nothing about the clamp.
+   * does not discriminate: audibility. A 16 kHz lid on music is very nearly transparent, so this
+   *             fixes a console warning and a correctness bug, and is NOT evidence about what the
+   *             user can hear (§690).
+   *
+   * ── Why no test caught this ────────────────────────────────────────────────────────────────
+   * `tests/webaudio.mjs` implements `BiquadFilterNode` without the spec's nominal-range clamp, so
+   * an out-of-range corner renders silently. `audiosession.test.mjs` has run at **SR 22050** —
+   * Nyquist 11025 — the whole time, setting 20000 Hz corners on every render, and nothing said a
+   * word. §669's disease in a new parameter: the instrument cannot express the failure.
+   */
+  const { OfflineCtx: OC } = await import('./webaudio.mjs');
+  const RATE = 32000;                       // the user's context, from their own console
+  const ny = RATE / 2;
+
+  const engine = engineStub({ camera: cam(0, 2, 0) });
+  const audio = new Audio(engine);
+  audio.unlock(new OC(RATE));
+  assert.equal(audio.ctx.sampleRate, RATE, 'the harness did not build at the rate under test');
+
+  /* The build default. */
+  assert.ok(audio.musicFilter.frequency.value <= ny,
+    `musicFilter opened to ${audio.musicFilter.frequency.value} on a ${RATE} Hz context (Nyquist ${ny})`);
+
+  /* Every corner the module can ask for, through the shipped clamp. */
+  const { SECTION_STEM } = await import('../src/audio/Audio.js');
+  const corners = [20000, TUNE.thiefFilter, TUNE.airShelfHz, 1800, 4600];
+  for (const c of corners) {
+    assert.ok(audio._hz(c) <= ny, `_hz(${c}) returned ${audio._hz(c)}, above Nyquist ${ny}`);
+    assert.ok(audio._hz(c) > 0, `_hz(${c}) returned ${audio._hz(c)} — an exponential ramp needs > 0`);
+  }
+
+  /* Both directions of the Thief-o-Vision ramp actually run, on this context, without throwing. */
+  engine.emit('thiefVision', true);
+  engine.emit('thiefVision', false);
+  assert.ok(audio.musicFilter.frequency.value <= ny, 'the un-duck left the corner above Nyquist');
+
+  /* The failing input, run in-arm: raw 20000 must exceed this Nyquist, or the clamp is vacuous. */
+  assert.ok(20000 > ny,
+    `20000 does not exceed Nyquist ${ny} at ${RATE} Hz — this arm cannot show the clamp doing anything`);
+
+  /* And a 48 kHz context must NOT be clamped, or the fix would be quietly dulling everyone else. */
+  const wide = new Audio(engineStub({ camera: cam(0, 2, 0) }));
+  wide.unlock(new OC(48000));
+  assert.equal(wide._hz(20000), 20000, 'a 48 kHz context had its 20 kHz corner clamped — the fix is over-reaching');
+
+  console.log(`[listener A4] at ${RATE} Hz every corner lands <= ${ny} (raw 20000 would not); `
+    + `at 48000 Hz 20000 passes through untouched`);
+});

@@ -400,7 +400,7 @@ test('U4: every pad button the control card names is a button the game actually 
      be a lie to the one player it is written for. */
   const SHAPE_INDEX = {
     cross: 0, circle: 1, square: 2, triangle: 3,
-    L1: 4, R1: 5, L2: 6, R2: 7, OPT: 9, R3: 11,
+    L1: 4, R1: 5, L2: 6, R2: 7, OPT: 9, R3: 11, L3: 10,   /* §682: recentre moved to L3 */
   };
   const bound = new Set(Object.values(PAD_BINDINGS).flat());
   const named = [...HUD_SRC.matchAll(/P\('([A-Za-z0-9]+)'\)/g)].map((m) => m[1]);
