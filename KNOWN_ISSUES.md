@@ -48906,5 +48906,42 @@ That is a subject problem, not a camera one, and photographing it as a wrap woul
 says the clamp owns the tail and the tail is now half what it was, but a 0.7 %-of-frames event and
 a continuous 2°/frame drift are not comparable by count. Only frames decide, and §640.9 is two.
 
+### §640.9 The frames: two events, four frames each, one game photographed by two cameras
+
+`shots/camlane6-s10-f{119,375}-{before,after}-{off,on}.png`. Both events are REPLAYS, and they are
+an A/B at an **identical subject pose**: `tools/camwrappose.mjs` drives once with `subjectFloor`
+off, records the player trajectory, and replays that ONE trajectory through two passive rigs that
+differ only in the floor. Two coupled drives would be two different games under one heading (§442);
+this is one game photographed by two cameras. The rig is held off while each pose is written, as
+S9 does, so nothing can re-solve a different one.
+
+```
+                  regime   boom     need     subject ndc            what the frame shows
+  f119 before        off   0.55   −154.5°   [ 20.74, −23.44 ]   terracotta floor below, cane and shoulder
+       after         off   0.55    + 12.1°   [  0.83,   0.37 ]   OPEN SKY above, birds, Sly filling the top
+       before         on   1.328  − 37.6°   [  0.86,   0.55 ]   hand and cane on the pole, floor at left
+       after          on   1.328  − 29.7°   [  0.87,   0.67 ]   the same, background slid a little
+  f375 before        off   1.882  − 20.2°   [ −0.21,   1.52 ]   sky, courtyard edge low-left, Sly off the top
+       after         off   0.55   + 80.0°   [  0.83,   0.23 ]   THE WORLD INVERTED — rooftops at the top edge
+       before         on   2.832    0°      [  0.36,   0.08 ]   Sly whole, on the pole, against sky
+       after          on   1.100  −  4.0°   [  0.96,   0.32 ]   pushed in, horizon still upright
+```
+
+**Looked at, not just measured (§466.5), and both pairs say the same thing.** At f119 the pre-§640
+pair goes from a steep look DOWN at the courtyard paving — the rope coil, Sly's cane and one
+shoulder in the lower right — to a steep look UP at open sky with birds and Sly's body across the
+top of the frame, in ONE frame of play while the player moves 0.166 m. At f375 the horizon
+*rolls past level*: the second frame has the courtyard rooftops along the TOP edge and the sun
+below them. Under the shipped floor neither pair inverts anything: the horizon stays where it was,
+the pole stays vertical, and Sly stays in the same part of the frame.
+
+**Two honest observations about the shipped frames, because a frame is not improved by being
+stable.** The f119 pair under the floor is a very tight close-up — the glove and cane fill most of
+the shot. That is the boom crush and not this repair: the pre-§640 rig was at 0.55 m at the same
+instant and this is 1.328 m, so it is *less* tight than what shipped. And f375-before-on, at
+2.832 m, is the best frame in the set — Sly whole, on the pole, against sky — which is what the
+floor is giving back when the geometry allows it. The tightness is `distHardMin`'s, and §581.4
+priced the lever that would fix it and refused it.
+
 Verification: `camstate` 11/11, `camclamp` 4/4, `camfloor` 4/4 (new), `camdrive`, `climbcam`,
 `camlead`, `camspeed`, `camera` unchanged. Full suite **995/995 from a clean worktree**.
