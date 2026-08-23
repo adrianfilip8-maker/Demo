@@ -51728,3 +51728,46 @@ is dirty, which is a weak but real proxy for "someone is using this."
 Fails on: this run. Does not discriminate: a genuinely missing interpreter, which produces the
 identical string — so the `getcwd` line, not the `spawn` line, is the load-bearing evidence, and
 a summary that scrolls the tail away destroys the only distinguishing signal.
+
+---
+
+## §695 — §691 turned on our own chain: the live host is a boundary we cannot cross from here
+
+§691 says an instrument must name the far side of any boundary it does not own. Applied to this
+project's own verification chain, the far side is **GitHub Pages itself**, and the honest answer
+is that we cannot reach it.
+
+Measured, not assumed:
+
+```
+adrianfilip8-maker.github.io      000     (proxy refuses CONNECT)
+github.com                        400     (a real answer)
+raw.githubusercontent.com         301     (a real answer)
+```
+
+Two of three GitHub hosts answer, so this is an allowlist that omits `*.github.io`, not a network
+outage — the discriminating pair (§418.3) is right there in the table.
+
+**What this means for every "verified" claim about the demo.** `tools/prodboot.mjs` builds `dist/`
+and serves it under a `/Demo/`-shaped prefix, 404ing anything outside it. That covers both faults
+it was written for — the leading-slash `textures.bin` and the FBX sidecar emits — because both are
+properties of *the bytes*, and the bytes it serves are the same bytes the workflow uploads. What it
+does **not** cover is Pages' own serving: redirect behaviour, MIME types, caching of the un-hashed
+`index.html`, and the trailing-slash canonicalisation of the project prefix. Those are the far side.
+
+So the chain reads: **prodboot verifies the artifact; nothing here verifies the server.** That
+residual segment closes in exactly two places — the deploy log, and the user's browser. It is not
+a gap that more local testing can shrink, and pretending otherwise is how a prefix gets reported
+as the whole.
+
+**Why no tool ships for this.** A `liveboot.mjs` that fetches the live URL was written and run; it
+returns `000` from this container unconditionally. Shipping it would put a check in the tree that
+fails for a reason unrelated to the build — the §694 failure mode exactly, manufactured on purpose.
+A check that cannot distinguish "the deploy is broken" from "this container cannot see the deploy"
+is worse than no check, because it will be read as the first. It stays in scratch.
+
+**Standing consequence.** When reporting a fix to the user, the claim is "verified in the artifact
+that was deployed", never "verified live", unless a deploy log or the user's own console says so.
+The build stamp in `index.html` exists for precisely this reason: it is the one signal that crosses
+the boundary in the other direction, letting the user's screen tell us which bytes they actually
+have.
