@@ -51411,7 +51411,7 @@ x3, and: **thief-on 3, thief-off 3 — paired.** Lowest duck target **0.25**, th
 `_musicBase` back to 1 at the end, filter back to 16000. **The duck is not latching**, and that is
 now a reading rather than the inference the console line supported.
 
-### §691 — The logger shipped dead for twenty minutes, and only driving it noticed
+### §689.1 — The logger shipped dead for twenty minutes, and only driving it noticed
 
 `this._musicLog = []` was inserted under an anchor that did not exist in the file, so the array was
 never initialised. Every `push` threw; `_logMusic`'s own try/catch — correct, because a diagnostic
@@ -51554,3 +51554,110 @@ by design — the sheet shows both tiers so a misfiling costs nothing. The sheet
 each clip's mid phase, not the breathing over its full cycle. And the sheet is deliberately NOT a
 measurement: every previous round measured clean and was rejected, so the deliverable puts the
 judgement where it belongs.
+
+## §691 — THE SHAPE: every measurement was of the producer, and none of the destination
+
+Six rounds of audio work. `tools/audible.mjs` taps analysers on the real graph and reads rms at
+`masterGain`. `selfTest()` does the same on the player's own machine. Both are **correct**:
+`masterGain.connect(ctx.destination)` and nothing else reaches `destination`, so that tap sits
+downstream of the limiter, the sub-cut, `preMaster` and the reverb return. I checked that routing
+twice and asserted it in `movesound.mjs` precisely because it mattered.
+
+**And it is blind to the last link.** Which *physical device* `ctx.destination` is wired to is
+outside the graph entirely, and nothing in this project ever asked.
+
+> **An instrument that verifies the whole chain up to the final hop, and never checks the final hop,
+> reads healthy through exactly the failure that lives there.**
+
+That is the same family as two earlier findings in this thread, one step further out each time:
+
+| § | the instrument | the link it could not see |
+|---|---|---|
+| §669 | `webaudio.mjs`'s `PannerNode` | distance — a pass-through, so 90 m renders like 0 m (ratio 1.000) |
+| §669 | every audio test's engine stub | the camera — `camera: null`, so `setListener` had never once been called |
+| §688 | every offline render | the context's **rate** — no nominal-range clamp, and `audiosession` ran at SR 22050 setting 20 kHz corners in silence for its whole life |
+| **§691** | **`selfTest` / `audible`** | **the output device — rms proves signal exists, never where it is bound** |
+
+Each was an instrument that shared an assumption with the thing it measured (§439), and each time
+the assumption was one link further from the code. The generalisation worth carrying out of this
+thread is not about audio: **when a chain ends at a boundary you do not own — a device, a network,
+a filesystem, another process — the instrument must name the far side of that boundary, or it is
+measuring a prefix of the thing you care about.**
+
+## §692 — The instrument that was missing, and the honest size of what it can do
+
+`selfTest()` now returns an `output` block: `sinkId`, whether the browser exposes it at all, every
+`audiooutput` device with its label where permission allows, and `controllerLike` — outputs whose
+label names a controller. When one is present the hint **leads** with it, ahead of the "sound IS
+leaving the page" wording six rounds ended on.
+
+It is computed **before** the measurement, like the other named causes, so it survives a context
+where the analyser tap fails.
+
+### §692.1 What it cannot do, asserted rather than caveated
+
+`sinkId` is `''` when the context follows the **system default** — which is exactly the case under
+suspicion. So an empty `sinkId` does **not** clear the hypothesis; it says "whatever the OS calls
+default", and naming that requires **labels**. `enumerateDevices()` returns labels only once the
+page holds microphone permission, which this game never requests.
+
+So the honest bound is: **this can put the question in front of someone in one line; it cannot
+answer it.** `listener` **A6** asserts the report says so — that the `''` note names the system
+default — because a report that stayed silent there would imply it had ruled the device out when it
+had not. Its in-arm counterexample is a machine listing only *"Speakers (Realtek High Definition
+Audio)"*, which must come back `controllerLike: []` and must not name a controller; without it, a
+hint hard-coded to the most dramatic cause would pass, which is the failure this whole thread has
+been made of.
+
+## §693 — Five fixes shipped for a cause that may be external, and the record should say so
+
+**Nothing further is being shipped on the assumption the fault is ours.** The device question is
+with the user; this block is the state as it stands, written now so it is not written later with
+hindsight.
+
+### §693.1 The hypothesis that fits every fact
+
+A DualShock 4 registers itself as an audio **output** device — it carries a headphone jack and a
+speaker — and Windows and macOS can switch the default output to it on connection. That accounts
+for all of it:
+
+| fact | accounted for |
+|---|---|
+| keyboard fine, controller silent | connecting the pad switches the output device; nothing the pad does in our code matters |
+| `selfTest()` non-zero while inaudible | the graph is healthy and the signal is real — it is going somewhere they are not listening |
+| a **32 kHz** context (§688) | a controller's audio endpoint is exactly that class of device, not a sound card |
+| "it stops when the character starts moving" | they pick the controller up, and the OS switches |
+| five shipped fixes changing nothing | nothing in the code was ever the cause |
+
+### §693.2 What was shipped anyway, and what it was worth
+
+Four of the five were removed on the principle that a defect is a defect whichever one is *the*
+one, and that stands whatever the answer turns out to be:
+
+- **§682** `focus` off R2 — a verb that quiets the score does not belong under the finger every
+  controller game trains you to rest there.
+- **§683** the dead-band release — a control that does not let go when the player lets go is a
+  straight bug, and §542 had already written the case down.
+- **§684** the music floor — two independently reasonable reductions met at 0.034, and neither call
+  site could see the combination.
+- **§685** the sweep that proves no pad state can drive the music below the floor.
+
+The fifth, **§688's Nyquist clamp**, is the one that would never have been found otherwise: it took
+a real console line from a real machine at a rate this project had never assumed, and it exposed
+that no offline test could have caught it. **The hunt paid for itself there even if it paid nowhere
+else.**
+
+### §693.3 The retractions, kept together so the record is not read as a straight line
+
+- **§686** — I claimed nothing sets `timeScale`; false, and my own `grep -v` filter excluded the one
+  line that assigns it. `padhotplug` H1 caught what the grep did not.
+- **§688.1** — the R2/Thief-o-Vision hypothesis, refuted by the user's own bundle hash: they were on
+  the build where R2 does nothing and still had silence.
+- **§689.1** — the logger shipped dead for twenty minutes, its emptiness indistinguishable from a
+  quiet game, in the instrument written to escape exactly that.
+
+**Five fixes, three retractions, and the cause quite possibly outside the repository.** If the user
+confirms the controller is their default output, this thread closes there — and the honest summary
+is that four real defects were removed along the way, one real bug was found *because* of the hunt,
+and the instrument this thread most needed was the one that asks where the sound is going rather
+than whether it exists.

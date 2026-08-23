@@ -243,7 +243,7 @@ test('listener A5: every music duck is followed by an un-duck, and the log canno
    * fails on  : an EMPTY log, asserted in-arm. The first version of `_logMusic` pushed to an
    *             uninitialised array, the logger's own try/catch swallowed the TypeError and
    *             `selfTest()`'s `|| []` rendered a permanently empty list that read exactly like
-   *             "nothing has ducked yet" (§691). A length assertion is the only thing that can
+   *             "nothing has ducked yet" (§689.1). A length assertion is the only thing that can
    *             tell those two apart, and without it this whole arm would pass on a dead logger.
    * does not discriminate: audibility, and whether a REAL session ducks in this pattern — this
    *             drives the transitions directly rather than through gameplay. */
@@ -271,7 +271,7 @@ test('listener A5: every music duck is followed by an un-duck, and the log canno
   const log = audio._musicLog;
   assert.ok(Array.isArray(log) && log.length > 0,
     'the music log is empty or missing — a logger that cannot record is indistinguishable from a '
-    + 'game that never ducks, which is exactly how §691 shipped broken');
+    + 'game that never ducks, which is exactly how §689.1 shipped broken');
 
   const on = log.filter((e) => e.ev === 'thief-on').length;
   const off = log.filter((e) => e.ev === 'thief-off').length;

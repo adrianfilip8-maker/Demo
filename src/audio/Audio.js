@@ -369,7 +369,7 @@ export class Audio {
      * Initialised HERE and defensively again in `_logMusic`, because the first version of this was
      * only initialised here — under an anchor that did not exist — so every push threw, the
      * logger's own try/catch swallowed it, and `selfTest()`'s `|| []` rendered a permanently empty
-     * list that looked exactly like "nothing has ducked yet". Caught by driving it (§691). A
+     * list that looked exactly like "nothing has ducked yet". Caught by driving it (§689.1). A
      * diagnostic that cannot break playback must still not be able to fail silently.
      */
     this._musicLog = [];
@@ -641,7 +641,7 @@ export class Audio {
   /** §689: one line per music level/colour change, newest last, capped. */
   _logMusic(ev, data) {
     try {
-      if (!this._musicLog) this._musicLog = [];      // §691: never silently dead
+      if (!this._musicLog) this._musicLog = [];      // §689.1: never silently dead
       this._musicLog.push({ t: +(this.ctx?.currentTime ?? 0).toFixed(2), ev, ...data });
       if (this._musicLog.length > 24) this._musicLog.shift();
     } catch { /* a diagnostic must never break playback */ }
