@@ -50320,3 +50320,12 @@ and steering into it.
 - **rAF scheduling in a real browser.** §662: this container's headless Chromium barely produces
   frames for an unclicked page, so every timing claim here is made on hand-stepped frames.
 - **Whether the mouth is findable.** No instrument can answer that. Only §667.3 can.
+- **The live site itself.** This container's egress proxy answers 403 to `CONNECT` for
+  `adrianfilip8-maker.github.io`, so nothing here can fetch the deployed page or its assets. What
+  *is* established: the Pages workflow succeeded for both fix commits, and `pages.yml` runs
+  `npx vite build --sourcemap false` — the same command `tools/prodboot.mjs` runs — over the same
+  tree, served from the same prefix shape. So the deployed artefact is the one measured in
+  §666.4a/§666.4b, by construction rather than by observation. **The final confirmation is the
+  user reloading and reading §667.1's build stamp**, and there is no way around that from here.
+  This is the §666 lesson recursing one level: the last link in any deployment chain is only
+  checkable from the far end of it.
