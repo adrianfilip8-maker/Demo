@@ -235,16 +235,23 @@ function deriveStride(keys, loop) {
 
 /* ───────────────────────────── extract: checkout → committed GLB ───────────────────────────── */
 
-function doExtract(srcDir) {
-  const gp = path.join(srcDir, SRC_GLTF);
+/**
+ * One source .gltf + .bin → a mesh-free GLB carrying `keep` (or EVERY clip when keep is null),
+ * dead channels dropped and counted. Exported because `idlecensus.mjs` has to do exactly this
+ * to four different source files (§479.19) and a second reader of their buffer layout would be
+ * a second account of it (§212). `doExtract` is now this plus a write and the printed counts.
+ */
+export function extractGLB(gltfPath, keepClips = null) {
+  const gp = gltfPath;
   if (!existsSync(gp)) throw new Error(`godot2clips: missing ${gp} — --src must be a checkout root`);
   const src = JSON.parse(readFileSync(gp, 'utf8'));
   const bin = readFileSync(gp.replace(/\.gltf$/, '.bin'));
 
   const names = src.animations.map((a) => a.name);
-  for (const want of KEEP_CLIPS) {
+  for (const want of (keepClips || [])) {
     if (!names.includes(want)) throw new Error(`godot2clips: source has no clip "${want}" (has: ${names.join(' | ')})`);
   }
+  const wanted = (n) => !keepClips || keepClips.includes(n);
 
   /* Rest TRS per node, for the constant-track trim. */
   const restT = src.nodes.map((n) => n.translation || [0, 0, 0]);
@@ -258,7 +265,7 @@ function doExtract(srcDir) {
 
   const dropped = { weights: 0, constScale: 0, constPos: 0, kept: 0 };
   const anims = [];
-  for (const a of src.animations.filter((x) => KEEP_CLIPS.includes(x.name))) {
+  for (const a of src.animations.filter((x) => wanted(x.name))) {
     const channels = [];
     for (const c of a.channels) {
       const s = a.samplers[c.sampler];
@@ -296,8 +303,12 @@ function doExtract(srcDir) {
   for (const a of json.animations) for (const s of a.samplers) { s.input = accMap.get(s.input); s.output = accMap.get(s.output); }
   delete json.meshes; delete json.skins; delete json.materials; delete json.images; delete json.textures; delete json.samplers;
   for (const n of json.nodes) { delete n.mesh; delete n.skin; }
-  assertAccessorsResolved(json, 'sly-godot-moves.glb');
-  const out = toGLB(json, outBin);
+  assertAccessorsResolved(json, path.basename(gp));
+  return { buf: toGLB(json, outBin), json, dropped };
+}
+
+function doExtract(srcDir) {
+  const { buf: out, json, dropped } = extractGLB(path.join(srcDir, SRC_GLTF), KEEP_CLIPS);
   writeFileSync(ASSET, out);
   console.log(`wrote ${ASSET}  ${(out.length / 1024).toFixed(0)} KB`);
   console.log(`  ${json.animations.length} clips: ${json.animations.map((a) => a.name.trim()).join(', ')}`);
@@ -314,8 +325,18 @@ async function loadAsset() {
   return gltf;
 }
 
-async function doRetarget(writePath) {
-  const gltf = await loadAsset();
+/**
+ * The retarget core, exported so a second consumer cannot become a second ACCOUNT of it
+ * (§212 — `idlecensus.mjs` retargets the same rigs from four different source files, and a
+ * near-copy of this sampler is exactly the drift that costs a round). Returns everything a
+ * caller needs to turn one source clip into RIG3-space samples: the mixer the clip plays on,
+ * a `sample(t)` that yields `{ P, pos, world }` in emit units, and the derived constants
+ * (facing conjugation, hips scale K) with their measurements already printed.
+ *
+ * @param gltf a parsed glTF whose scene carries the reference skeleton
+ * @param log  set false to keep the derivation quiet (the census prints its own table)
+ */
+export function buildRetarget(gltf, log = true) {
   const root = gltf.scene;
   root.updateMatrixWorld(true);
 
@@ -334,8 +355,8 @@ async function doRetarget(writePath) {
   const missing = Object.keys(MAP).filter((m) => !resolve(m));
   const restWorld = new Map();
   for (const [nm] of Object.entries(MAP)) { const n = resolve(nm); if (n) restWorld.set(nm, worldQuat(n)); }
-  console.log(`source nodes: ${nodes.size}   mapped: ${restWorld.size}/${Object.keys(MAP).length}`);
-  if (missing.length) console.log(`  !! absent from the GLB: ${missing.join(', ')}`);
+  if (log) console.log(`source nodes: ${nodes.size}   mapped: ${restWorld.size}/${Object.keys(MAP).length}`);
+  if (log && missing.length) console.log(`  !! absent from the GLB: ${missing.join(', ')}`);
   if (restWorld.size < 20) throw new Error('godot2clips: mapping collapsed — name sanitisation changed?');
 
   /* ---- facing. RIG3 faces +Z (its tail roots at z −0.150). Measured on the source's own rest
@@ -345,16 +366,51 @@ async function doRetarget(writePath) {
     - new THREE.Vector3().setFromMatrixPosition(resolve('foot.L').matrixWorld).z;
   const FLIP = toeZ < 0;
   const YAW180 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
-  console.log(`facing: source toes point ${toeZ >= 0 ? '+Z' : '-Z'} (Δz ${toeZ.toFixed(4)}) — `
+  if (log) console.log(`facing: source toes point ${toeZ >= 0 ? '+Z' : '-Z'} (Δz ${toeZ.toFixed(4)}) — `
     + (FLIP ? 'conjugating by yaw 180°' : 'no conjugation'));
 
   /* ---- hips scale K, derived from the two rigs' own hip heights (mixamo2clips' rule). */
   const HIPS_ABS_Y = (RIG3.SKELETON.find(([n]) => n === 'hips') || [, , [0, 1, 0]])[2][1];
   const restHips = new THREE.Vector3().setFromMatrixPosition(resolve('spine.001').matrixWorld);
   const K = HIPS_ABS_Y / restHips.y;
-  console.log(`hips scale K = ${HIPS_ABS_Y.toFixed(4)} / ${restHips.y.toFixed(4)} = ${K.toFixed(4)}×  (offsets referenced to REST)`);
+  if (log) console.log(`hips scale K = ${HIPS_ABS_Y.toFixed(4)} / ${restHips.y.toFixed(4)} = ${K.toFixed(4)}×  (offsets referenced to REST)`);
+
+  /** One retarget sample at absolute time t → { P, pos } in emit units. */
+  const sample = (t) => {
+    mixer.setTime(t);
+    root.updateMatrixWorld(true);
+    const worldTarget = new Map();
+    for (const [nm, ours] of Object.entries(MAP)) {
+      if (!restWorld.has(nm)) continue;
+      let d = worldQuat(resolve(nm)).multiply(restWorld.get(nm).clone().invert());
+      if (FLIP) d = YAW180.clone().multiply(d).multiply(YAW180.clone().invert());
+      worldTarget.set(ours, d);
+    }
+    const P = {};
+    const localW = new Map();
+    for (const b of ORDER) {
+      const w = worldTarget.get(b);
+      if (!w) continue;
+      const par = PARENT[b];
+      const pw = par ? (localW.get(par) || new THREE.Quaternion()) : new THREE.Quaternion();
+      localW.set(b, w.clone());
+      const q = pw.clone().invert().multiply(w);
+      const e = new THREE.Euler().setFromQuaternion(q, 'XYZ');
+      P[b] = [e.x * DEG, e.y * DEG, e.z * DEG].map((v) => +v.toFixed(1));
+    }
+    const hp = new THREE.Vector3().setFromMatrixPosition(resolve('spine.001').matrixWorld);
+    const off = hp.sub(restHips).multiplyScalar(K);
+    if (FLIP) { off.x = -off.x; off.z = -off.z; }
+    return { P, pos: [+off.x.toFixed(4), +off.y.toFixed(4), +off.z.toFixed(4)], world: worldTarget };
+  };
 
   const mixer = new THREE.AnimationMixer(root);
+  return { mixer, sample, resolve, root, K, FLIP, restHips };
+}
+
+async function doRetarget(writePath) {
+  const gltf = await loadAsset();
+  const { mixer, sample } = buildRetarget(gltf);
   const out = {};
   const table = [];
 
@@ -365,34 +421,6 @@ async function doRetarget(writePath) {
     act.reset();
     act.play();
 
-    /** One retarget sample at absolute time t → { P, pos } in emit units. */
-    const sample = (t) => {
-      mixer.setTime(t);
-      root.updateMatrixWorld(true);
-      const worldTarget = new Map();
-      for (const [nm, ours] of Object.entries(MAP)) {
-        if (!restWorld.has(nm)) continue;
-        let d = worldQuat(resolve(nm)).multiply(restWorld.get(nm).clone().invert());
-        if (FLIP) d = YAW180.clone().multiply(d).multiply(YAW180.clone().invert());
-        worldTarget.set(ours, d);
-      }
-      const P = {};
-      const localW = new Map();
-      for (const b of ORDER) {
-        const w = worldTarget.get(b);
-        if (!w) continue;
-        const par = PARENT[b];
-        const pw = par ? (localW.get(par) || new THREE.Quaternion()) : new THREE.Quaternion();
-        localW.set(b, w.clone());
-        const q = pw.clone().invert().multiply(w);
-        const e = new THREE.Euler().setFromQuaternion(q, 'XYZ');
-        P[b] = [e.x * DEG, e.y * DEG, e.z * DEG].map((v) => +v.toFixed(1));
-      }
-      const hp = new THREE.Vector3().setFromMatrixPosition(resolve('spine.001').matrixWorld);
-      const off = hp.sub(restHips).multiplyScalar(K);
-      if (FLIP) { off.x = -off.x; off.z = -off.z; }
-      return { P, pos: [+off.x.toFixed(4), +off.y.toFixed(4), +off.z.toFixed(4)], world: worldTarget };
-    };
 
     /* ---- ONE ascending sampling pass at the source's own bake rate. One pass is load-bearing:
        `clampWhenFinished` pauses the action the moment a sample lands on t == duration, and a

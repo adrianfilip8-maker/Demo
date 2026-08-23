@@ -51450,3 +51450,107 @@ signal present at `destination`, nothing audible, indifferent to every in-game c
 reporting a call-profile sample rate — is a routing question on their machine rather than a bug in
 this build. `selfTest()` now carries `sampleRate` and `nyquist` so the next paste answers it without
 another playtest.
+
+## §479.19 — "Does the static pose exist in the godot repo?" — YES, exactly one, and it is the pose we already matched
+
+The user, verbatim: *"For the static pose, first check to see if it exists in the godot repo."*
+Answered first and plainly, because four rounds (§479.15–§479.18) have each ended in a confident
+match the user rejected, and the thing that was never established is the thing they just asked
+for. **A genuine sustained static standing pose exists. There is exactly one. It is
+`Standupright` — the same clip §479.17 matched to within a centimetre.**
+
+### §479.19.1 The evidence, and why "their graph calls it the idle" was never enough
+
+§479.16 established that their `floor_state` input 3 (`"idle stand"`) resolves to
+`Library_Sly_19/Standupright`. That is a claim about ROUTING. Whether the clip *is* a static
+resting pose — rather than a transition, a cycle, or a one-frame pose the graph blends out of —
+is a claim about CONTENT, and nobody had checked it. `tools/idlecensus.mjs --probe` watches every
+clip over its own duration and reports each tracked joint's maximum excursion from its own mean:
+
+```
+  clip                     dur  keys    handL±    hips±   footL±   what it is
+  Standupright            4.0 s  241   0.55 cm  0.49 cm   0.00 cm  SUSTAINED STATIC POSE
+  UprightStand (Anims14)  4.0 s  241   0.55 cm  0.50 cm   0.00 cm  identical numbers
+  UprightStand (Anims4)   5.0 s  121   0.55 cm  0.50 cm   0.00 cm  identical pose, longer bake
+  KeyAction.001           0.0 s    —   0.00 cm  0.00 cm   0.00 cm  ZERO-LENGTH rest/bind pose
+```
+
+241 keyframes over 4 seconds with the left hand moving **5.5 mm** and the hips **4.9 mm** across
+the entire clip: it is a held pose, deliberately baked, not a transient and not a one-frame stub.
+Hips sit at **99%** of their own rest hip height and the torso is **4°** off vertical, so it is
+standing rather than crouched or hanging. That is a yes on every part of the question.
+
+### §479.19.2 It is the ONLY one, and that is the load-bearing half
+
+The census reads **all four Sly glTFs** (`SlyCooper_Anims27` 24 clips, `Anims19` 21, `Anims14` 13,
+`Anims4` 9 — 67 clips) and classifies by CONTENT, never by name. Name filtering would have failed
+outright: Anims27's `Standupright` is `UprightStand` in Anims14 AND Anims4, Anims14 carries a
+`CrouchingstandStand` that exists nowhere else, and Anims4 has four `[Action Stash]` clips whose
+names say nothing. Of 67 clips, seven are sustained static poses and **only one of them is
+standing**:
+
+```
+  SUSTAINED STATIC, STANDING   Standupright / UprightStand        ← the answer, 4 files, one pose
+  SUSTAINED STATIC, NOT STANDING
+      CaneSwing Idle    hanging off the cane, feet split 15 cm
+      Falling           airborne, hips 61% of rest height
+      PoleClimbIdle     clamped to a pole, hands 15 cm apart
+      SpireJumpIdle     perched crouch, hips 32%
+  HELD-WITH-MOTION, CROUCHED   Crouching stand · CrouchingstandStand · CrouchingStand · RailrunStand
+```
+
+So the repository contains one standing idle. **The user has already seen it**: §479.17 matched
+our idle to it at 47.7 cm hand separation against their 47.6, per-arm 10.7/9.0 against 10.8/9.0,
+and the user's next words were that the pose is still not right. Both facts are now established
+together, and they are what makes this round different from the previous four: *the thing they are
+asking for exists in the repo, we are already delivering it to the centimetre, and it is still not
+the look they want.* The remaining possibilities are that they mean one of the non-standing static
+poses above (the contact sheet exists so they can point), or that they mean the actual Sly 2/Sly 3
+resting idle, which **is not in this repository** — the fan project baked its own standing pose,
+and no amount of matching inside the corpus can produce a pose the corpus does not contain. That
+is a decision for the user, not a gap to paper over with a fifth match.
+
+### §479.19.3 Both readings, because a port is not a pose (§479.18 carried forward)
+
+Every candidate is rendered twice, since the two differ by ~19 cm and the user may be pointing at
+a look only one of them produces:
+
+```
+  Standupright        THEIR rig      sep 47.6 cm   hand out L 10.8  R  9.0   fold 140.6/140.2
+                      raw port       sep 66.3 cm   hand out L 21.3  R 18.4   fold 154.2/153.8
+                      matched port   sep 46.4 cm   hand out L 10.7  R  9.0   fold 154.2/153.8
+```
+
+The raw port is a FAITHFUL retarget that does not reproduce the pose: RIG3's rest arms sit ~14.5°
+wider (§479.6), and the world-delta method composes their motion onto our rest, so their 47.6 cm
+pose arrives 66–70 cm wide. Live on the shipped rig the raw port measures **70.0 cm** and the
+matched port **47.7 cm** — the raw figure reproducing §479.17's independently measured 70 cm from
+a different tool, which is the cross-check that says the sheet shows what the table says it shows.
+The `matched` reading removes exactly one thing: a per-arm rest-abduction delta (−14.4°/−13.3° for
+`Standupright`, solved by bisection against THEIR measured hand-out in the upperArm raise channel).
+Nothing else is touched — it is the rest-pose difference removed, not a re-authoring of their pose.
+
+### §479.19.4 Apparatus, and the one refactor it needed
+
+- `tools/idlecensus.mjs` — the corpus census (content classifier + `--probe` existence mode +
+  the two readings per pose, emitted as RIG3 authoring-format poses).
+- `tools/idlesheet.mjs` — renders each pose on the SHIPPED rig through the real
+  `compile()` → `animation.play()` seam, front and profile, §479.14 camDot-guarded, with a live
+  hand measurement cross-checked against the census's offline number on every frame.
+- `tools/sheetgrid.mjs` — dependency-free labelled contact sheet (box downscale + 5x7 bitmap
+  font + the minimal PNG encoder `sbs.mjs` already uses).
+- `tools/_posecarry.mjs` — the pose-geometry metric (`carry`), extracted from `idleref.mjs` so
+  the census and the reference reader cannot drift into two accounts of numbers that two rounds
+  of user rulings are quoted against (§212). `idleref.mjs`'s output is byte-identical after.
+- `tools/godot2clips.mjs` grew two exports — `extractGLB(gltfPath, keepClips)` and
+  `buildRetarget(gltf, log)` — so the census retargets four source files through the SAME
+  sampler that emits the shipped clips rather than a near-copy of it. Both §478.1 seams were
+  re-verified after the refactor: the committed GLB and `GodotClips.js` reproduce **byte-identical**
+  (md5 unchanged), and the tool's report diffs clean.
+
+HONEST LIMITS: the classifier's thresholds are stated constants with reasons, not tuned fits, and
+a pose that is static but framed oddly (feet split by a prop, say) lands in the "not standing" tier
+by design — the sheet shows both tiers so a misfiling costs nothing. The sheet photographs POSE at
+each clip's mid phase, not the breathing over its full cycle. And the sheet is deliberately NOT a
+measurement: every previous round measured clean and was rejected, so the deliverable puts the
+judgement where it belongs.
