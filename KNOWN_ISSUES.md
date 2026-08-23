@@ -48216,3 +48216,65 @@ it, and nothing in it is closer than 1.71 m.
 - The prop census depends on `_kaykitboot` booting the placements the browser boots. It reads the
   `PLACEMENTS` literal out of source; if that table ever gains a code path, the census goes stale
   silently and the first symptom is another frame with a crate in it.
+
+## §597 — The re-grab guard, repaired: the chain and the route both pass, and the camera does not
+
+§596 recorded the guard unfixed. The user has now asked for the teleport a second time, so it was
+repaired deliberately. **The repair works for the chain. It is not shippable, and the reason moved.**
+
+### The repair, recorded here rather than only as a patch
+
+Scratch does not survive the checkout rollbacks — the seventeenth took `spent-fix.patch`,
+`capped-variant.patch` and the `reel-in-18c9b3d` tag together. §594–§596 survived because they were
+pushed. So the code goes in the ledger:
+
+```js
+  spent(a, c) {
+    if (!this._spent) return false;
+    if (c && c.position.distanceTo(this._left) > TUNE.hookAuto) { this._spent = false; return false; }
+    return a.point.distanceTo(this._left) <= TUNE.hookL;
+  }
+```
+
+with `this.spent(a)` becoming `this.spent(a, c)` at both call sites (`canEnter` and
+`ePressEligible`). The flag now lifts on one condition only — the CAPSULE having carried itself
+clear of the anchor it released — and until then refuses that anchor and nothing else, so a
+neighbouring ring stays catchable and a chain still flows.
+
+**One correction inside the repair, and it is the interesting half.** Keying the clearance on
+`hookL` 2.2 looked natural and broke the chain's EXIT: released at 2.2 m the ring is still inside
+its own `hookAuto` 2.9 m fly-through radius, so it simply catches Sly again and there is no way
+off. Driven, the route could not leave ring 6 at all and sat in `hookSwing` 2.2 m from it. The
+clearance must OUTLAST the grab radius. `hookAuto` was the right distance in the original code all
+along; what was wrong was never the distance, only that a glance at a neighbouring ring could
+disarm the flag before Sly had gone anywhere.
+
+### Measured
+
+```
+    telegraph    PASS — the four-ring chain closes [1,2,3,4], not [1,1,2,3]
+    spawn2eye    PASS — the authored route completes end to end
+    camstate     7 of 11, ablated: 11 of 11 at baseline, 7 of 11 with the repair
+```
+
+**The chain is fixed and the route is fine. The camera is not**, and this is not the numeric drift
+a hard-cut census was expected to show:
+
+> `hook-ring debt frame 585 (railSlide, capsule 1.8 m): the subject's centre is BEHIND the camera
+> plane — boom 0.67, range 0.104, clamp 80.0° dy −0.04 dx 0.00. The ruling is violated.`
+
+That is §475's containment ruling failing, not a threshold moving. **Re-basing it would enshrine a
+camera that loses the subject**, which is the same call as refusing to re-base `telegraph`'s
+`[1,1,2,3]`: a defect is not a new baseline. So the repair is held again — for a different reason
+than §596's, and one lane further along.
+
+### What it is now blocked on
+
+The correct guard changes the hook-ring debt sequence enough that the rig cannot hold Sly through
+it at frame 585. That is `CameraRig.js`, another lane's file, and a routing question rather than a
+fifth variant. The teleport work is still downstream of it: §594's histogram means only a fix that
+eases the chain's own 4.65 m snaps will satisfy the report, and every such fix needs this guard
+correct underneath it.
+
+**Nothing shipped. No behaviour changed.** The repair is above in full so the next attempt starts
+from the code rather than from the diagnosis.
