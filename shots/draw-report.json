@@ -1,0 +1,81 @@
+{
+  "at": "2026-08-23T08:55:07.916Z",
+  "width": 1280,
+  "height": 720,
+  "quality": "high",
+  "frames": {
+    "draw-ring1-before": {
+      "file": "shots/draw-ring1-before.png",
+      "ms": 212323,
+      "asked": [
+        3.6033,
+        13.0308,
+        5.6636
+      ],
+      "drawnAt": [
+        3.6033,
+        13.0308,
+        5.6636
+      ],
+      "offBy": 0,
+      "visible": true,
+      "placed": true,
+      "lag": 3.4143
+    },
+    "draw-ring1-after": {
+      "file": "shots/draw-ring1-after.png",
+      "ms": 110411,
+      "asked": [
+        2.6432,
+        10.3418,
+        7.5357
+      ],
+      "drawnAt": [
+        2.6432,
+        10.3418,
+        7.5357
+      ],
+      "offBy": 0,
+      "visible": true,
+      "placed": true,
+      "lag": 3.4143
+    },
+    "draw-ring2-before": {
+      "file": "shots/draw-ring2-before.png",
+      "ms": 136213,
+      "asked": [
+        2.2192,
+        13.2018,
+        -1.7084
+      ],
+      "drawnAt": [
+        2.2192,
+        13.2018,
+        -1.7084
+      ],
+      "offBy": 0,
+      "visible": true,
+      "placed": true,
+      "lag": 0.7554
+    },
+    "draw-ring2-after": {
+      "file": "shots/draw-ring2-after.png",
+      "ms": 131008,
+      "asked": [
+        2.7272,
+        13.0503,
+        -1.1703
+      ],
+      "drawnAt": [
+        2.7272,
+        13.0503,
+        -1.1703
+      ],
+      "offBy": 0,
+      "visible": true,
+      "placed": true,
+      "lag": 0.7554
+    }
+  },
+  "errors": []
+}

@@ -140,7 +140,7 @@ console.log(`    camera travelled ${B.camTotal.toFixed(1)} m over the chain; cap
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════════════════════
- * --census — the derivation behind `Controller.TUNE.drawSnapMin` (§604).
+ * --census — the derivation behind `Controller.TUNE.drawSnapMin` (§610).
  *
  * The easing can only hold back a displacement it can tell apart from ordinary motion, and the
  * separator is not size. A dive reaches 0.785 m per frame honestly; the chain's entry catch covers
@@ -256,7 +256,7 @@ if (CENSUS) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════════════════════
- * --frames — the staging data for `tools/drawshot.mjs` (§604 item 4).
+ * --frames — the staging data for `tools/drawshot.mjs` (§610 item 4).
  *
  * A canonical shot cannot photograph this: `setShot` turns on `freeCam`, and the freeCam branch of
  * `Controller.update` deliberately spends the easing offset so a posed frame is drawn exactly

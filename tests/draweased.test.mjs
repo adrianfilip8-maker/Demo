@@ -1,5 +1,5 @@
 /**
- * §604 — the drawn root eases; the capsule does not move.
+ * §610 — the drawn root eases; the capsule does not move.
  *
  * §599 measured the rope "teleport" the user reported twice and found TWO cuts in one frame: the
  * camera passes 1.801 m of the chain's 4.646 m entry catch through its follow spring, and the

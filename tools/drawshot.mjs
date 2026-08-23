@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * drawshot.mjs — photograph the drawn-root easing (§604 item 4).
+ * drawshot.mjs — photograph the drawn-root easing (§610 item 4).
  *
  *   node tools/drawnease.mjs --frames > /tmp/f.json   # measure the staging first
  *   node tools/drawshot.mjs /tmp/f.json               # then photograph it
@@ -16,7 +16,7 @@
  * real chain with the real `CameraRig` and writes out, at each catch, where the camera was, where
  * the capsule was, and where the drawn body was with the easing in force. This puts the character
  * root at each of those two positions under that same camera. The positions are measured; only the
- * shutter is staged. `capsule` is what shipped before §604 — the undamped copy — and `drawn` is
+ * shutter is staged. `capsule` is what shipped before §610 — the undamped copy — and `drawn` is
  * what ships now, so the pair is a genuine before/after of the same instant.
  *
  * Takes the same FIFO capture lock as `shot.mjs`; each frame is minutes of software rasterising.

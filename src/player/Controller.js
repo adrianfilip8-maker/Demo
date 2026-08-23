@@ -429,7 +429,7 @@ export const TUNE = {
   telegraphNextHold: false,
   safePoll:     0.30,    // seconds between supported-stance samples
 
-  /* ---- the drawn root's easing (§604) --------------------------------------------------------
+  /* ---- the drawn root's easing (§610) --------------------------------------------------------
      §599 measured the rope "teleport" the user reported twice and found it is TWO cuts in the same
      frame, not one. On the chain's entry catch the capsule moves 4.646 m; the camera's follow
      spring passes 1.801 m of that (and only 8-17% of the ordinary catches), while the drawn body
@@ -497,7 +497,7 @@ const _to = new THREE.Vector3();
 const _n = new THREE.Vector3();
 const _sfrom = new THREE.Vector3();
 const _sto = new THREE.Vector3();
-const _dv = new THREE.Vector3();      // this frame's capsule displacement, for `_easeDraw` (§604)
+const _dv = new THREE.Vector3();      // this frame's capsule displacement, for `_easeDraw` (§610)
 const _saveP = new THREE.Vector3();
 const _p2 = new THREE.Vector3();
 const _p3 = new THREE.Vector3();
@@ -600,7 +600,7 @@ export class Controller {
     this.stateName = 'idle';
     this.grounded = true;
 
-    /* ---- the drawn root's easing (§604). Presentation only: nothing below is read by the
+    /* ---- the drawn root's easing (§610). Presentation only: nothing below is read by the
            simulation, and `_easeDraw` is the only writer. See TUNE.drawSnapMin. ---- */
     this._drawLag = new THREE.Vector3();   // how far BEHIND its capsule the drawn body is
     this._drawEaseN = 0;                   // frames of payoff still owed
@@ -1151,7 +1151,7 @@ export class Controller {
     if (this._needSpawnSnap && !this.col.fallback) {
       this._needSpawnSnap = false;
       this._snapToGroundBelow(8);
-      /* §604 — re-anchor the drawn easing on the far side of the drop. This is the one place the
+      /* §610 — re-anchor the drawn easing on the far side of the drop. This is the one place the
          capsule moves a long way inside a frame without going through `teleport()`, and the note
          above records it reaching 17.5 m. It is the same kind of statement a teleport is — the
          floor telling us where Sly actually stands — so there is nothing to ease, and easing it
@@ -2198,7 +2198,7 @@ export class Controller {
   }
 
   /**
-   * §604 — hold back the part of this frame's displacement that velocity does not explain, and pay
+   * §610 — hold back the part of this frame's displacement that velocity does not explain, and pay
    * it off in `drawEaseFrames` equal steps. PRESENTATION ONLY: this reads `position` and
    * `velocity` and writes `_drawLag`, which nothing but `_pushCharacter` consumes. There is no
    * path from the offset back into the simulation, so chain order, `spawn2eye`, `telegraph` and
@@ -2272,7 +2272,7 @@ export class Controller {
   teleport(vec3, yaw) {
     if (vec3) this.position.set(vec3.x, vec3.y, vec3.z);
     if (typeof yaw === 'number') { this.yaw = yaw; this._prevYaw = yaw; }
-    /* §604 — and spend the drawn easing for exactly the same reason the spawn snap is spent below.
+    /* §610 — and spend the drawn easing for exactly the same reason the spawn snap is spent below.
        A teleport is somebody saying where Sly IS; easing it would drag the drawn body across the
        level from a position that no longer exists, and `Debug.js`:141 teleports before every
        canonical shot. `_drawP0` moves with him too, or the very next frame reads the teleport

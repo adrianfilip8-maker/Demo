@@ -49590,13 +49590,13 @@ steps over 30°/frame from 2 to 11, so **1.801 m is a floor for the camera's sha
 value**, and the drawn model's 4.646 m is the only figure here that a player's thumbs cannot make
 worse.
 
-## §604 — The drawn root eases; the capsule does not move, and that is asserted rather than argued
+## §610 — The drawn root eases; the capsule does not move, and that is asserted rather than argued
 
-> **NUMBER COLLISION, recorded rather than repaired.** A second §604 exists above (*"One prop was
-> the whole occluder…"*, the camera lane's, with §604.1–§604.7 beneath it). Two lanes reached for
+> **NUMBER COLLISION, recorded rather than repaired.** A second §610 exists above (*"One prop was
+> the whole occluder…"*, the camera lane's, with §610.1–§610.7 beneath it). Two lanes reached for
 > the same free number in the same window and both pushed; the ledger is append-only and other
 > commits already cite both, so neither is renumbered. Cite this one by its title, or by the
-> `drawEaseFrames` constant it owns — the camera lane's §604.x subsections are all theirs.
+> `drawEaseFrames` constant it owns — the camera lane's §610.x subsections are all theirs.
 
 §599 measured the "teleportation between rings" the user reported twice and found it is **two cuts
 in one frame**: on the chain's entry catch the capsule moves 4.646 m, the camera's follow spring
@@ -49712,7 +49712,7 @@ Staged, and the reason is a correctness property rather than a shortcut: `setSho
 where the recipe put it. So a canonical shot can never show this. `drawnease.mjs --frames` drives
 the real chain with the real `CameraRig` and writes out, at each catch, the camera, the capsule and
 the drawn body; `tools/drawshot.mjs` puts the root at each of those two positions under that same
-camera. One measured instant, drawn twice — `capsule` is what shipped before §604, `drawn` is what
+camera. One measured instant, drawn twice — `capsule` is what shipped before §610, `drawn` is what
 ships now.
 
 ```
@@ -49722,6 +49722,16 @@ ships now.
 
 Ring 1 is the extreme — 2.69 m of that gap is VERTICAL, so the pair shows the body still climbing
 out of its flight instead of appearing at the ring. Ring 2 is the ordinary case.
+
+`shots/draw-ring1-before.png` has Sly up at the ring with the cane out: that is what the build drew
+on that frame before §610, the whole 4.646 m taken in one step. `shots/draw-ring1-after.png` is the
+same instant with the easing in force — he is 3.41 m short of the ring and below it, still on his
+way, and he arrives over the next three frames.
+
+**Only the POSITION is measured.** The pose is whatever the canonical shot has frozen, because
+`setShot` freezes one; it is not the swing pose the player would see, and nothing should be read
+off the limbs. The frames answer "where is the body drawn", which is the question §610 is about,
+and no other.
 
 ### The first four frames were of nothing, and looked fine
 
