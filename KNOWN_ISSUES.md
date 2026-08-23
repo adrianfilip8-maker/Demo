@@ -49232,6 +49232,43 @@ than the tolerances widened.
   moved in §603.
 - Nothing here was driven. R8 is unchanged and no traversal claim is touched: this is set dress.
 
+### §604.7 Which other capture tools can adopt `camDot`, and which cannot
+
+Named because the class it repairs has now cost three separate rounds: §601's camera measured clean
+and photographed wrong, §603's camera stood inside a crate, and the animation lane's reading of a
+rear-view frame labelled `front34`. Every one of those is one ray away from being caught before it
+costs a browser boot.
+
+**Direct adopters — a static world camera table, which is exactly `camDot`'s input shape:**
+
+- **`tools/shot.mjs`** is the one worth doing first. It renders `src/core/Shots.js`, whose entries
+  already carry `pos:` and `target:` in world space; `camDot(shot.pos, shot.target)` is a drop-in
+  over all 12 canonical shots, and §601's failure was one of those cameras being re-aimed.
+- **`tools/shotsee.mjs`** already reasons about what each shot can see, so it shares the machinery
+  rather than adding any.
+- **`tools/alertframe.mjs`** and **`tools/impactframe.mjs`** place 10 and 8 world cameras in the
+  level between them — the largest hand-placed sets after `ventshot`.
+- **`tools/cryptgate.mjs`**, **`tools/avenueshot.mjs`**, **`tools/avenuerender.mjs`** each place
+  level cameras from fixed coordinates.
+
+**Adoptable with one change:** the character-framing tools — `armframe`, `bodyhue*`, `heroread`,
+`drawshot` — position the lens relative to a staged rig rather than at a fixed world point. They
+can call `camDot` too, but they must pass the SUBJECT (the rig's world position) as the look
+target, because the fourth check is the whole value and it is meaningless against a look target
+that is just a direction.
+
+**What `camDot` does NOT cover, stated so it is not over-claimed:**
+
+- **A mislabelled view.** `front34` shot from behind is a camera pointed the wrong way at an
+  unoccluded subject: every one of the four checks passes. That class needs the view measured per
+  frame and compared against the frame's own name, which is what the animation lane built, and the
+  two instruments are complements rather than substitutes.
+- **Lighting and composition.** A camera can pass every check and return a black frame — which is
+  precisely what §601's mouth camera did until §603 moved a lamp.
+- **Anything the Node build does not have.** `camDot` boots the level with KayKit; it does not boot
+  FX, decal spawn, or anything a running browser adds, so an occluder that only exists at runtime
+  is invisible to it.
+
 ## §598 — The guard is repaired and SHIPS; the capped teleport fix stops the chain one leg short
 
 The camera lane's `74cdc4b` cleared §597's blocker — reproduced here rather than taken on trust:
