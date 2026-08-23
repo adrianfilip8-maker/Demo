@@ -252,15 +252,28 @@ const IDLE_A = P({
      than the reference, and lopsided. The front frame shows it plainly: one arm hanging back by
      the hip, the cane arm hidden behind the torso.
 
-     AFTER, solved against the real compile → lever → FK (all three rungs, because `?anim=proc`
-     and `idle_look`'s capped 0.45 are both shipped and a delivered-only solve sent the raw pose
-     up like a scarecrow): hands 61.7 cm apart, left 24.8 cm out and square to the body plane
-     (flex −8°), right 9.7 cm out — the reference's own 9.0, within a centimetre. Nothing moves
-     inboard of where it already was; the user's words are unambiguous about direction, so where
-     their pose is NARROWER than ours (the left arm) ours stays wide. */
-  shoulderL: [10, -12, 4],
-  upperArmL: [-7, 2, -33],
-  lowerArmL: [-61, -22, -37],
+     §479.17 SUPERSEDES §479.16's TARGET. §479.16 held the left arm wider than the reference
+     (24.8 cm out, hands 61.7 apart against their 47.7) because "further out to the side" reads
+     as a direction and their left arm hangs nearly flat. The user then looked at it: *"The
+     static pose does not appear to be the same as the godot repo."* So their pose stops being a
+     floor and becomes the TARGET, fold included. Solved against the real compile → lever → FK
+     to their own numbers, and it lands within 1.6° of fold and 0.6 cm of spread:
+
+         L abduction +3.3° (ref +3.0)   flex −8.3 (−8.3)   fold 135.5° (137.1)   hand out 11.0 cm (10.7)
+         R abduction −1.1° (ref −1.7)   flex −8.2 (−8.2)   fold 137.7° (139.5)   hand out  9.4 cm ( 9.0)
+         hands 47.1 cm apart (ref 47.7) — and BOTH still outboard of their own shoulders,
+         which is §479.16's real find and the one thing carried forward unchanged.
+
+     The reference's own right ELBOW sits 0.7 cm inboard while its HAND is 9.0 cm outboard —
+     the forearm angles out — so matching them does NOT reproduce the hidden-cane-arm defect,
+     and there is no conflict to take back to the user. Note the elbow lever is exempted to 0
+     on this clip (`GODOT_LIMB_OPEN`, Animation.js): at the shipped 0.75 this geometry drives
+     the cane hand back to −1.4 cm, INBOARD, recreating exactly what §479.16 fixed — measured,
+     not feared. With the exemption the raw and delivered poses are the same pose, so
+     `?anim=proc` and the shipped build now show one silhouette instead of three. */
+  shoulderL: [20, -32, -10],
+  upperArmL: [-30, 23, -43],
+  lowerArmL: [-67, -3, 6],
   handL: [22, -28, -14],
 
   /* **Right arm down, cane planted, not slung.** It was `CANE.shoulder` with the forearm
@@ -280,10 +293,11 @@ const IDLE_A = P({
      arm did. Re-solved to carry it out to the reference's own 9.0 cm (delivered 9.7), which
      also swings the planted cane clear of the leg instead of hiding it against the body. The
      silhouette argument above is unchanged and better served — the cane still owns its half of
-     the frame; it is simply no longer tucked behind the ribs. */
-  shoulderR: [-12, 5, -29],
-  upperArmR: [9, -9, 41],
-  lowerArmR: [-81, 14, 45],
+     the frame; it is simply no longer tucked behind the ribs. §479.17 keeps that fix and puts
+     the arm on the reference's number rather than near it: 9.4 cm out against their 9.0. */
+  shoulderR: [-26, -10, -18],
+  upperArmR: [18, -9, 44],
+  lowerArmR: [-65, 3, -8],
   handR: [-6, 16, 10],
 
   /* Weight right. The leg Z angles look large because they are measured against the *hips*,
@@ -445,12 +459,26 @@ def('idle_look', {
     { t: 0, e: 'soft', P: IDLE_A, pos: [-0.078, -0.018, 0], cane: CANE.plant },
     // anticipation: a small counter-turn before the head whips the other way
     { t: 0.55, e: 'in', P: { head: [-4, 4, -4], neck: [-6, 1, -1], chest: [3, -8, 5] } },
+    /* §479.17 — the arm channels are re-solved AT THIS KEY, not inherited. IDLE_A's arms are
+       authored against its own torso (chest roll +24, hips roll −19); this key unwinds both
+       (chest +2, hips −6) to turn the head, and an arm that hangs correctly on the rolled
+       torso reads 3.2 cm INBOARD of its own shoulder on the level one — measured over the
+       cycle, inboard from t 0.5 to 1.9, which is most of the pose the player stares at
+       (`Moveset.js` hands the idle to `idle_look` after 13 s). Solved to the reference's own
+       geometry on THIS body: hands 11.0 / 9.3 cm out, 47.3 apart, fold 137/140. */
     { t: 0.95, e: 'out', P: { head: [-12, 54, -16], neck: [-8, 22, -6], chest: [2, 6, 2], spine: [-3, 4, 2],
-      earL: [-20, 10, -24], earR: [-2, -8, 26], hips: [1, 6, -6] }, pos: [-0.01, -0.01, 0.008], cane: [-108, -30, 6] },
+      earL: [-20, 10, -24], earR: [-2, -8, 26], hips: [1, 6, -6],
+      shoulderL: [-6, -18, -3], upperArmL: [11, 13, -43], lowerArmL: [-65, -3, 7],
+      shoulderR: [-34, -34, -7], upperArmR: [36, -9, 41], lowerArmR: [-62, 3, -9] },
+      pos: [-0.01, -0.01, 0.008], cane: [-108, -30, 6] },
     { t: 1.4, e: 'soft', P: { head: [-10, 48, -14], earL: [-9, 5, -12], earR: [-6, -5, 14] } },
     { t: 2.1, e: 'in', P: { head: [-11, 52, -15] } },
+    /* same re-solve on the opposite turn (§479.17) — this key rolls the chest the other way */
     { t: 2.7, e: 'out', P: { head: [-2, -34, 6], neck: [-4, -16, 4], chest: [5, -22, 8], spine: [-2, -10, 6],
-      hips: [1, 18, -10], earL: [-6, 4, -8], earR: [-14, -8, 24] }, pos: [0.012, -0.016, -0.006], cane: [-124, -8, 6] },
+      hips: [1, 18, -10], earL: [-6, 4, -8], earR: [-14, -8, 24],
+      shoulderL: [1, -17, -6], upperArmL: [-1, 11, -43], lowerArmL: [-65, -3, 6],
+      shoulderR: [-34, -30, -12], upperArmR: [30, -2, 43], lowerArmR: [-63, 3, -11] },
+      pos: [0.012, -0.016, -0.006], cane: [-124, -8, 6] },
     { t: 3.3, e: 'soft', P: { head: [-4, -28, 4] } },
     { t: 4.0, e: 'soft', P: IDLE_A, pos: [-0.078, -0.018, 0], cane: CANE.plant },
   ],

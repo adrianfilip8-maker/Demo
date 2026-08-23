@@ -1,0 +1,44 @@
+{
+  "sha": "f494a58",
+  "W": 1600,
+  "H": 900,
+  "errs": [],
+  "log": [
+    {
+      "frame": "pole-shipped-reversed-p25-front34",
+      "az": 35,
+      "camDot": 0.82,
+      "view": "front",
+      "sepCm": 79.6,
+      "outL": 34.9,
+      "outR": 12.1
+    },
+    {
+      "frame": "pole-shipped-reversed-p60-front34",
+      "az": 35,
+      "camDot": 0.82,
+      "view": "front",
+      "sepCm": 70.1,
+      "outL": 15.6,
+      "outR": 21.8
+    },
+    {
+      "frame": "pole-old-forward-p25-front34",
+      "az": 35,
+      "camDot": 0.82,
+      "view": "front",
+      "sepCm": 52.4,
+      "outL": 1.8,
+      "outR": 18
+    },
+    {
+      "frame": "pole-old-forward-p60-front34",
+      "az": 35,
+      "camDot": 0.82,
+      "view": "front",
+      "sepCm": 51.8,
+      "outL": 10.7,
+      "outR": 8.5
+    }
+  ]
+}

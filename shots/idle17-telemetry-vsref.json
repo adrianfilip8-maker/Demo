@@ -1,0 +1,44 @@
+{
+  "sha": "d1d1305",
+  "W": 1600,
+  "H": 900,
+  "errs": [],
+  "log": [
+    {
+      "frame": "ours-front34",
+      "az": 35,
+      "camDot": 0.82,
+      "view": "front",
+      "sepCm": 52,
+      "outL": 10.4,
+      "outR": 8.2
+    },
+    {
+      "frame": "ours-profile",
+      "az": 90,
+      "camDot": 0,
+      "view": "profile",
+      "sepCm": 52,
+      "outL": 10.4,
+      "outR": 8.2
+    },
+    {
+      "frame": "refretarget-front34",
+      "az": 35,
+      "camDot": 0.82,
+      "view": "front",
+      "sepCm": 70,
+      "outL": 20.2,
+      "outR": 17.3
+    },
+    {
+      "frame": "refretarget-profile",
+      "az": 90,
+      "camDot": 0,
+      "view": "profile",
+      "sepCm": 70,
+      "outL": 20.2,
+      "outR": 17.3
+    }
+  ]
+}

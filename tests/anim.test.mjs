@@ -592,9 +592,22 @@ test('limb lever (§531): ships OPEN on both joints, and zero is still bit-exact
   for (const n of Object.keys(CLIPS)) {
     assert.equal(procT[n], CLIPS[n], `?anim=proc no longer returns Clips.js by identity for ${n}`);
   }
-  const idleOpen = elbow(shipped.idle_confident, 0.5 * shipped.idle_confident.dur)
-    - elbow(procT.idle_confident, 0.5 * procT.idle_confident.dur);
-  assert.ok(idleOpen >= 10, `the idle opens only ${idleOpen.toFixed(1)}° — the regime-wide scope is not reaching proc-sourced clips`);
+  /* The witness is DERIVED, not named: §479.17 exempted both IDLE_A idles to elbow 0 (the user
+     ruled the standing pose must match the reference, whose elbow folds to 137°), so a hard
+     `idle_confident` here would fail for a reason that has nothing to do with scope. Take any
+     standing idle that is proc-sourced AND carries no `GODOT_LIMB_OPEN` row — `idle_bored`
+     authors its own arm channels and is exempt from nothing, which is why §479.17 left it. */
+  const scopeWitness = ['idle_bored', 'idle_confident', 'idle_look', 'perch_idle']
+    .find((n) => CLIPS[n] && !CLIP_ORIGIN[n]?.startsWith('godot') && !(GODOT_LIMB_OPEN[n]?.elbow === 0));
+  assert.ok(scopeWitness, 'every proc-sourced idle is elbow-exempt — the scope claim has no witness left');
+  const idleOpen = elbow(shipped[scopeWitness], 0.5 * shipped[scopeWitness].dur)
+    - elbow(procT[scopeWitness], 0.5 * procT[scopeWitness].dur);
+  assert.ok(idleOpen >= 10, `${scopeWitness} opens only ${idleOpen.toFixed(1)}° — the regime-wide scope is not reaching proc-sourced clips`);
+  /* and the exemption itself is real: the named idles must come through UNOPENED */
+  for (const n of ['idle_confident', 'idle_look']) {
+    assert.equal(elbow(shipped[n], 0.5 * shipped[n].dur).toFixed(2), elbow(procT[n], 0.5 * procT[n].dur).toFixed(2),
+      `${n} was opened by the lever — §479.17 exempts it so the pose can match the reference`);
+  }
   for (const n of ['sneak_walk', 'sneak_idle', 'crouch_walk', 'crawl']) {
     for (const bone of ['upperArmL', 'upperArmR', 'head', 'neck', 'hips', 'chest']) {
       const a = shipped[n].bones.find((x) => x.name === bone);
@@ -1427,8 +1440,16 @@ test('idle arm clearance (§479.10): the standing idles keep daylight between th
   assert.ok(hurtNear < 4.0, `contrast arm: ledge_climb's mantle reads ${hurtNear.toFixed(1)} cm — expected the arms to close `
     + 'inside the bar, proving the predicate discriminates; re-derive if the mantle was re-authored');
 
-  /* and the exemption row is still pinned, because it governs the §531 elbow fold */
-  assert.equal(GODOT_LIMB_OPEN.idle_look?.elbow, 0.45, 'the §479.10 exemption row is what holds the idle clear');
+  /* and the exemption row still EXISTS and still caps — asserted by mechanism rather than by
+     its number, which is the §479.17 lesson: that round took the row 0.45 → 0 for a different
+     reason (the pose must match the reference, whose elbow folds to 137°), and a blind pin on
+     0.45 would have reddened a change it has no opinion about. What this arm actually needs is
+     that `idle_look` is held BELOW the set-wide rung, so the lever cannot straighten the arm
+     across the body — any such rung satisfies it, and the clearance measurements above are the
+     real bar. */
+  const cap = GODOT_LIMB_OPEN.idle_look?.elbow;
+  assert.ok(cap !== undefined && cap < LIMB_OPEN.elbow,
+    `the §479.10 exemption row is what holds the idle clear — idle_look elbow ${cap} must sit below the set-wide ${LIMB_OPEN.elbow}`);
 });
 
 test('idle variants (§479.11): the boredom timer reaches the tree, and both later idles actually play', async () => {
@@ -1493,7 +1514,8 @@ test('idle arm spread (§479.16): the standing idle carries both arms OUT to the
      is not what the player sees — the raw clip reads 14.1 cm where the delivered pose reads 24.8.
 
      DOMAIN (§418.3) — passes on: the shipped `idle_confident` / `idle_look` (RUN below, both
-     hands outboard, spread ≥ the reference's 47.7); fails on: the pre-§479.16 chain, RUN below
+     hands outboard, spread within 2.5 cm of the reference's 47.7 — §479.17 made the reference
+     the target rather than the floor, see the band note below); fails on: the pre-§479.16 chain, RUN below
      by restoring its three left/right triples into the same pose and re-measuring — the right
      hand comes back at −3.6 cm and the spread collapses to 43.6. Cannot discriminate: whether
      the pose READS as "spread out to the side" — the user has reported this pose three times
@@ -1528,6 +1550,18 @@ test('idle arm spread (§479.16): the standing idle carries both arms OUT to the
   };
 
   const REF_SEP = 47.7;                       // Standupright, measured — the anchor
+  /* §479.17 CHANGES THE SHAPE OF THIS BAR, and the change is the user's, not a loosening.
+     §479.16 read "further out to the side" as a direction and made the reference a FLOOR
+     (`sep >= 47.7`, delivered 61.7). The user then looked at the result: "The static pose does
+     not appear to be the same as the godot repo." So the reference is now the TARGET, and a
+     floor is the wrong predicate for a target — being 14 cm wider than Sly 2 passes a floor and
+     fails the ruling. The band is ±2.5 cm (~5%), which is wider than the solve's residual
+     (47.1–47.7 across both idles' cycles) and far tighter than either failure it must catch:
+     §479.15's 43.6 cm narrow pose and §479.16's 61.7 cm splayed one both sit outside it.
+     The per-arm "outboard of your own shoulder" checks are UNCHANGED — that is §479.16's real
+     find, it survives the retarget of the goalposts, and it is the one thing the coordinator
+     asked be kept whatever the reference says. */
+  const BAND = 2.5;
   const shipped = buildClipSet('godot').table;
   const bad = [];
   for (const name of ['idle_confident', 'idle_look']) {
@@ -1535,9 +1569,11 @@ test('idle arm spread (§479.16): the standing idle carries both arms OUT to the
     const m = carry(c, c.hold);
     if (m.L <= 2) bad.push(`${name}: left hand ${m.L.toFixed(1)} cm — not outboard of its shoulder`);
     if (m.R <= 2) bad.push(`${name}: right (cane) hand ${m.R.toFixed(1)} cm — tucked behind the torso, the §479.16 defect`);
-    if (m.sep < REF_SEP) bad.push(`${name}: hands ${m.sep.toFixed(1)} cm apart — narrower than Sly 2's own ${REF_SEP}`);
+    if (Math.abs(m.sep - REF_SEP) > BAND) {
+      bad.push(`${name}: hands ${m.sep.toFixed(1)} cm apart — off Sly 2's own ${REF_SEP} by more than ${BAND} cm`);
+    }
   }
-  assert.deepEqual(bad, [], 'the standing idle stopped carrying its arms out to the side');
+  assert.deepEqual(bad, [], 'the standing idle no longer matches the reference’s spread');
 
   /* CONTRAST, RUN: the pre-§479.16 arm chain, spliced into the REAL idle_confident so the body
      — and therefore the shoulder-line frame the measurement uses — is the shipped one. Building
@@ -1571,4 +1607,93 @@ test('idle arm spread (§479.16): the standing idle carries both arms OUT to the
   console.log(`    [contrast] pre-§479.16 cane arm ${before.R.toFixed(1)} cm outboard, spread ${before.sep.toFixed(1)} cm`);
   assert.ok(before.R < 2, `contrast arm: the pre-§479.16 cane arm reads ${before.R.toFixed(1)} cm outboard — `
     + 'expected it INBOARD (about -3.6), proving this predicate discriminates the two poses');
+});
+
+test('play direction (§479.18): pole_climb runs BACKWARDS, the way their tree plays it', () => {
+  /* THE DEFECT THIS HOLDS, and it is the §479.8 class one layer deeper. `pole_climb` was
+     name-correct and content-wrong: their `pole_state` input 1 ("pole_walk") reaches
+     `Library_Sly_19/PoleClimbing` through a node carrying `play_mode = 1`, which is Godot's
+     PLAY_MODE_BACKWARD (`Scenes/Character Mesh/sly_cooper_anims_4.tscn`). We played it forward.
+     Exactly two nodes in their whole tree carry that flag and BOTH are clips we swapped —
+     PoleClimbing and CaneSwing — but only one of them needs reversing, and that is a
+     measurement rather than a guess: sampling pose(t) against pose(dur−t) over the cycle,
+     PoleClimbing differs by 35.4° worst / 8.7° mean (DIRECTIONAL) while CaneSwing differs by
+     0.2° (PALINDROMIC — its backward flag is invisible, so `hook_swing` is deliberately NOT
+     reversed; churning it would be motion without a reason).
+     DOMAIN (§418.3) — passes on: the shipped table, whose pole_climb reproduces the reversed
+     source to < 1° and departs from the FORWARD source by > 8° (both RUN below, lever off so
+     the comparison isolates direction from §531); fails on: the pre-§479.18 wiring, RUN below
+     as the forward build — it matches forward and not reversed, the same claim inverted.
+     Cannot discriminate: whether the climb READS right in situ on a real drainpipe — that is
+     the hardware sheet's, and shots/pole1-* carries the on-camera half. */
+  const abs = Object.create(null);
+  for (const [n, , p] of RIG3.SKELETON) abs[n] = p;
+  const rig = (() => {
+    const rt = new THREE.Group(), bones = Object.create(null);
+    for (const [name, parent, p] of RIG3.SKELETON) {
+      const b = new THREE.Object3D();
+      const pa = parent === 'root' ? [0, 0, 0] : abs[parent];
+      b.position.set(p[0] - pa[0], p[1] - pa[1], p[2] - pa[2]);
+      (parent === 'root' ? rt : bones[parent]).add(b);
+      bones[name] = b;
+    }
+    return { rt, bones };
+  })();
+  const pb = new PoseBuffer(RIG3.BONE_ORDER);
+  const JOINTS = ['lowerArmL', 'lowerArmR', 'upperArmL', 'upperArmR', 'lowerLegL', 'lowerLegR'];
+  const wq = (n) => {
+    const q = new THREE.Quaternion();
+    rig.bones[n].matrixWorld.decompose(new THREE.Vector3(), q, new THREE.Vector3());
+    return q;
+  };
+  const pose = (clip, t) => {
+    pb.clear();
+    sampleInto(clip, t, pb, 1);
+    for (const n of RIG3.BONE_ORDER) {
+      const b = rig.bones[n]; if (!b) continue;
+      if (pb.w[n] > 0) b.quaternion.copy(pb.q[n]); else b.quaternion.identity();
+    }
+    rig.rt.updateMatrixWorld(true);
+    return Object.fromEntries(JOINTS.map((j) => [j, wq(j)]));
+  };
+  const worstBetween = (A, B, dur) => {
+    let w = 0;
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20 * dur, a = pose(A, t), b = pose(B, t);
+      for (const j of JOINTS) {
+        const d = a[j].clone().invert().multiply(b[j]);
+        w = Math.max(w, 2 * Math.acos(Math.min(1, Math.abs(d.w))) * 180 / Math.PI);
+      }
+    }
+    return w;
+  };
+  /* lever OFF so this arm measures DIRECTION, not §531's elbow — with it on, the donor fill and
+     the open elbow put 80° between the shipped clip and any bare-source comparison and the
+     direction signal is unreadable. That confusion is why this note exists. */
+  globalThis.__LIMB_OPEN = { elbow: 0, knee: 0 };
+  const shipped = buildClipSet('godot').table.pole_climb;
+  delete globalThis.__LIMB_OPEN;
+  const src = GODOT_CLIPS.PoleClimbing;
+  const fwd = compile('fwd', src);
+  const rev = compile('rev', { ...src, keys: src.keys.map((k) => ({ ...k, t: +(src.dur - k.t).toFixed(4) })).reverse() });
+
+  assert.ok(worstBetween(shipped, rev, shipped.dur) < 1.0,
+    `shipped pole_climb is not the reversed source (worst ${worstBetween(shipped, rev, shipped.dur).toFixed(2)}°)`);
+  assert.ok(worstBetween(shipped, fwd, shipped.dur) > 8.0,
+    'shipped pole_climb still matches the FORWARD source — the reverse flag is dead');
+  /* the clip really is directional, and its sibling really is not — the reason only one moved */
+  const selfRev = (clip) => {
+    let w = 0;
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20 * clip.dur, a = pose(clip, t), b = pose(clip, clip.dur - t);
+      for (const j of JOINTS) {
+        const d = a[j].clone().invert().multiply(b[j]);
+        w = Math.max(w, 2 * Math.acos(Math.min(1, Math.abs(d.w))) * 180 / Math.PI);
+      }
+    }
+    return w;
+  };
+  assert.ok(selfRev(fwd) > 8, 'PoleClimbing reads as palindromic — re-derive, the reversal would be pointless');
+  assert.ok(selfRev(compile('cs', GODOT_CLIPS.CaneSwing)) < 5,
+    'CaneSwing is no longer palindromic — its play_mode=1 now matters and hook_swing needs the same reversal');
 });

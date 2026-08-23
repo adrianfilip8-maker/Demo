@@ -174,7 +174,12 @@ const GODOT_ALIAS = {
   jump_fall:     'Falling',
   land_soft:     'Landing',
   ledge_hang:    'LedgeGrab Idle',
-  pole_climb:    'PoleClimbing',
+  /* §479.18 — BACKWARDS, because that is how their game plays it. `pole_state` input 1
+     ("pole_walk") → `pole_timescale` (scale 1.0, so natural rate) → `Animation 9`, and that
+     node carries `play_mode = 1` = PLAY_MODE_BACKWARD. Resolved through their graph, not by
+     name; the clip is directional (35.4° worst forward-vs-reversed), so forward was a visibly
+     different climb. Their pole IDLE is `PoleClimbIdle` on input 0, forward — ours already is. */
+  pole_climb:    { src: 'PoleClimbing', reverse: true },
   rail_walk:     'railrun',
   spire_balance: 'SpireJumpIdle',
   spire_land:    'SpireJumplanding',
@@ -383,8 +388,25 @@ export const GODOT_LIMB_OPEN = {
 
      0.45 is the largest rung that keeps real daylight (+3.9 cm) and it still delivers 138°,
      past the 132° this project shipped pre-swap, so §531's ruling survives on the very pose it
-     was aimed at. The knee is untouched — legs are free limbs and the spread ruling stands. */
-  idle_look: { elbow: 0.45, knee: 0.60 },
+     was aimed at. The knee is untouched — legs are free limbs and the spread ruling stands.
+
+     §479.17 TAKES BOTH STANDING IDLES TO ELBOW 0, and the reason is a measurement rather than
+     a preference. The user, after §479.16: *"The static pose does not appear to be the same as
+     the godot repo."* Their `Standupright` folds the elbow to 137/139° — so once the reference
+     is the target rather than a floor, the ruling's open elbow and the user's newer ruling
+     collide ON THIS POSE, and the newer one wins on the clip it names. It is not merely a
+     matter of taste either: with the arms on the reference's geometry, sweeping the lever
+     (tools/idleref.mjs + the solver's rung dump) drives the CANE HAND from +9.4 cm outboard at
+     k=0 to −1.4 cm INBOARD at the shipped 0.75 — the exact defect §479.16 was ruled on. The
+     forearms of a hanging pose point inward-down, so straightening them swings the hands to
+     the midline; the lever narrows this pose instead of spreading it. At 0 the raw and
+     delivered poses coincide, so `?anim=proc` and the shipped build show ONE silhouette —
+     which also retires §479.16's three-rung solve trap for these two clips. Knees keep 0.60:
+     the user has never ruled on the legs and §531's leg half stands. `idle_bored` is NOT
+     listed — it overrides IDLE_A's arm channels with its own keys, its cane hand already
+     delivers 8.1 cm outboard, and the user's complaint names the default standing pose. */
+  idle_confident: { elbow: 0, knee: 0.60 },
+  idle_look: { elbow: 0, knee: 0.60 },
 };
 
 function limbOpenFor(game) {
@@ -447,6 +469,26 @@ function trimRaw(raw, from = 0, until = raw.dur) {
     ...raw, dur: +(until - from).toFixed(4), keys,
     events: raw.events ? raw.events.filter((e) => e.t >= from && e.t <= until)
       .map((e) => ({ ...e, t: e.t - from })) : raw.events,
+  };
+}
+
+/**
+ * §479.18 — a raw clip played BACKWARDS, because their tree plays two of these backwards and a
+ * name match cannot see it. Godot's `AnimationNodeAnimation.play_mode = 1` is PLAY_MODE_BACKWARD,
+ * and exactly two nodes in `sly_cooper_anims_4.tscn` carry it — both of them clips we swapped:
+ * `Library_Sly_19/PoleClimbing` (their `pole_state`/"pole_walk") and `Library_Sly_19/CaneSwing`.
+ * Only the first one needs this: measured pose-against-pose over the whole cycle, PoleClimbing
+ * is DIRECTIONAL (forward-vs-reversed differs by 35.4° worst at the forearm, mean 8.7°) while
+ * CaneSwing is PALINDROMIC (worst 0.2° — its reversal is invisible, so `hook_swing` is left
+ * alone rather than churned). Safe as a key-list flip because every key godot2clips emits is
+ * `lin` — there is no asymmetric ease to mirror.
+ */
+function reverseRaw(raw) {
+  const dur = raw.dur;
+  const keys = raw.keys.map((k) => ({ ...k, t: +(dur - k.t).toFixed(4) })).reverse();
+  return {
+    ...raw, keys,
+    events: raw.events ? raw.events.map((e) => ({ ...e, t: +(dur - e.t).toFixed(4) })).reverse() : raw.events,
   };
 }
 
@@ -584,6 +626,7 @@ export function buildClipSet(raw) {
        donor-inherit rule would mis-scale (a trimmed strike is not a scaled donor thud). */
     const o = typeof spec === 'object' ? spec : null;
     let timed = o && (o.trim || o.until) ? trimRaw(srcRaw, o.trim || 0, o.until ?? srcRaw.dur) : srcRaw;
+    if (o && o.reverse) timed = reverseRaw(timed);            // §479.18 — their play_mode = 1
     if (o && o.dur) timed = retimeRaw(timed, o.dur);
     else if (o && o.rate) timed = retimeRaw(timed, +(timed.dur / o.rate).toFixed(4));
     if (o && o.events) timed = { ...timed, events: o.events };
