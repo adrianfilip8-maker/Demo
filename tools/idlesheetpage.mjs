@@ -91,7 +91,7 @@ const card = (c, featured = false) => `
   <figcaption>
     <h3>${esc(c.name)}</h3>
     <p class="src">${esc(c.file.replace('SlyCooper_', '').replace('.gltf', ''))} · ${c.dur}s${c.alsoIn && c.alsoIn.length ? ` · also in ${c.alsoIn.length} more file${c.alsoIn.length > 1 ? 's' : ''}` : ''}</p>
-    <p class="tier tier--${c.tier === 'stand' ? 'stand' : 'other'}">${esc(c.why)}</p>
+    <p class="tier tier--${c.tier === 'stand' ? 'stand' : 'other'}">${esc(c.why)}</p>${c.name === 'Standupright' ? '\n    <p class="tier tier--ruled">shipped &middot; raw</p>' : ''}
     <dl class="nums">
       <div><dt>their rig</dt><dd>${c.ref.sepCm} cm</dd></div>
       <div data-reading="raw"><dt>raw port</dt><dd>${c.raw.sepCm} cm</dd></div>
@@ -171,6 +171,8 @@ figcaption h3{font-size:15px;font-weight:600;letter-spacing:-.01em}
   font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
 .tier--stand{background:var(--stand-soft);color:var(--stand)}
 .tier--other{background:var(--other-soft);color:var(--other)}
+.tier--ruled{background:var(--accent);color:#fff;margin-left:6px}
+.ruled{border-left:3px solid var(--accent);padding-left:14px;margin:14px 0 0 !important}
 .nums{margin:11px 0 0;display:grid;gap:3px}
 .nums > div{display:flex;justify-content:space-between;gap:8px;font-size:12.5px}
 .nums > div[hidden]{display:none}
@@ -191,6 +193,10 @@ footer{margin-top:52px;padding-top:18px;border-top:1px solid var(--line);
 <div class="verdict">
   <div class="answer"><span class="yes">Yes</span>
     <span>— a real static standing pose exists in the repo. There is exactly one.</span></div>
+  <p class="ruled"><strong>Ruled, and shipped:</strong> &ldquo;I like the raw standupright more.&rdquo;
+  The standing idle now plays <strong>Standupright</strong> as a raw retarget, in both slots a standing
+  player reaches. The <em>matched</em> reading below is kept only as the comparison that produced the
+  decision &mdash; it is no longer what the game shows.</p>
   <p>It is <strong>Standupright</strong> (the same pose is called <strong>UprightStand</strong> in two of the
   four files). Their animation graph routes it as the default standing idle, and — checked this time
   rather than assumed — it really is a held resting pose: four seconds, 241 keyframes, and across the
@@ -214,8 +220,8 @@ footer{margin-top:52px;padding-top:18px;border-top:1px solid var(--line);
 <div class="controls">
   <span class="seg-label">Reading</span>
   <div class="seg" role="group" aria-label="Which port to show">
-    <button type="button" data-set="reading" data-val="matched" aria-pressed="true">Matched to their pose</button>
-    <button type="button" data-set="reading" data-val="raw" aria-pressed="false">Raw retarget</button>
+    <button type="button" data-set="reading" data-val="raw" aria-pressed="true">Raw retarget &mdash; shipped</button>
+    <button type="button" data-set="reading" data-val="matched" aria-pressed="false">Matched (superseded)</button>
   </div>
   <span class="seg-label">View</span>
   <div class="seg" role="group" aria-label="Camera">
@@ -263,7 +269,7 @@ footer{margin-top:52px;padding-top:18px;border-top:1px solid var(--line);
 </div>
 <script>
 (function(){
-  var state = { reading: 'matched', view: 'front' };
+  var state = { reading: 'raw', view: 'front' };
   function apply(){
     document.querySelectorAll('.shot').forEach(function(el){
       el.hidden = !(el.dataset.reading === state.reading && el.dataset.view === state.view);
