@@ -1605,3 +1605,55 @@ you play), the knockback tumble's arms come within 0.8 cm of each other, because
 the idle's arm mid-tumble. I tried two repairs, measured both, neither worked, so I reverted them
 rather than ship a change that claims something it does not do. In the build you play it reads
 10.6 cm and is unaffected.
+
+## 26. Correction to item 25: you didn't want the hand on the hip — and the real culprit was the cane arm hiding behind his back
+
+**Commit** this round · **Files** `src/player/Clips.js` (`IDLE_A`'s left AND right arm chains),
+`tests/anim.test.mjs` (a spread arm), `tools/idleref.mjs` (new) · **Ledger** §479.16
+
+Your words: *"the default pose seems to be worse. For the pose, have arms spread further out to
+the side to be more similar to the default pose of the character in Sly 2."*
+
+Item 25 fixed a real defect and still made the pose worse for you, because it took the pose's own
+old comment ("left hand on the hip") as the goal. Your ruling is the goal. The hand is off the hip
+and the comment is deleted.
+
+**This time the target was measured off Sly 2's own idle rather than picked.** The Godot reference
+project in this repo carries that animation set, so I read their standing pose out of it — and I
+resolved WHICH clip from their own animation graph rather than by guessing at a name: their
+`floor_state` blend's "idle stand" input is `Standupright` (their two crouch inputs point at a
+different clip). Their idle holds each hand about **10 cm out from the shoulder**, hands **47.7 cm
+apart**.
+
+**What ours was doing — and this is the bit worth knowing.** Your left arm was already out wide.
+The problem was the **right** arm: the cane hand sat **3.6 cm INSIDE its own shoulder**, i.e. the
+whole cane arm was tucked behind his torso and essentially invisible from the front. That is why
+the pose read narrow no matter what the left arm did, and it is exactly what the front-view
+photograph shows: one arm hanging back by the hip, the cane arm gone.
+
+```
+                          left hand out    right hand out    hands apart
+   Sly 2's Standupright       10.7 cm           9.0 cm          47.7 cm
+   ours, before               21.8 cm          -3.6 cm          43.6 cm     <- right arm behind him
+   ours, now                  24.8 cm          +9.7 cm          61.7 cm
+```
+
+The right arm is now on their number almost exactly. The left arm I did **not** pull in to match
+them — theirs is narrower than ours and you asked for further out, so it stayed wide and instead I
+took out the 36° of backwards lean that had it hiding behind his hip. Net: he stands wider than
+the Sly 2 pose, which is the direction you asked for.
+
+**What to look at.** Stand still, front view. Two things:
+
+1. **Can you see both arms and the cane?** That is the whole change. Before, the cane arm was
+   behind him. If it now reads as "arms out, cane out", it landed; if it reads as *too* splayed —
+   scarecrow rather than swagger — say so, because I deliberately went wider than the Sly 2
+   reference on your instruction and pulling it back toward 48 cm is one number.
+2. **The later idles.** He rotates three standing poses (immediately, after ~6 s, after ~13 s).
+   The first and third moved; the middle one already had its own wider arms and did not. If one of
+   the three looks out of family with the others, that is the one to name.
+
+**Straight about the limits:** I can measure this pose but I cannot judge it — you have reported
+it three times and every instrument I owned said it was fine each time. So the evidence here is
+photographs from a verified front angle, not numbers, and the numbers above are only there to say
+what moved.
