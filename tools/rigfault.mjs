@@ -176,6 +176,9 @@ try {
   if (seq('idle')) {
   console.log('[idle]');
   await snap('idle-profile', 90);
+  /* §479.14 WARNING: az 155 is cam·facing −0.91 — this is a REAR three-quarter. The name
+     lies, and the committed frames under it show his back. Kept as-is so the paths §470.3
+     cites still resolve; a real front-quarter is az ≈ 35. */
   await snap('idle-front34', 155, 2.4);
   }
 
@@ -229,6 +232,8 @@ try {
   await snap('sneakidle-profile', 90);
   await page.keyboard.up('ShiftLeft');
   await sim(30);
+  /* §479.14: and this one is inverted the other way — az 35 is cam·facing +0.82, a FRONT
+     quarter under the name `rear34`. The two names in this file are swapped. */
   await snap('idle2-rear34', 35, 2.6);
   }
 

@@ -135,6 +135,8 @@ try {
   await page.evaluate(() => { window.__MOVEMAG = 0.45; });
   await sim(SETTLE);
   await atPhase(0.25); await snap('walk-a-profile', 90);
+  /* §479.14 WARNING: az 145 is cam·facing −0.82 — a REAR three-quarter, not a front one.
+     The §479.6 elbow pair was judged on the PROFILE frames, which are correctly named. */
   await snap('walk-a-front34', 145, 2.3);
   await atPhase(0.75); await snap('walk-b-profile', 90);
   await page.evaluate(() => { window.__MOVEMAG = 0.75; });
