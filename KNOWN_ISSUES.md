@@ -48299,7 +48299,9 @@ reported clean every time. The boundary is not the clip list — **it is the pre
 Measured on the skin instead — the signed lateral gap between the left arm's skinned geometry
 and the right arm's, same shoulder-line body frame — the shipped `idle_look` reads **−6.7 cm at
 its worst phase and overlapping for 12 of 21 samples, 57% of its four-second cycle**, while its
-hand origins stay 0.85 shoulder-widths apart and every origin-based instrument calls it clean.
+hand origins stay 0.87 shoulder-widths apart and every origin-based instrument calls it clean.
+(0.85 in the first draft of this paragraph: that was `idle_confident`'s figure read off the
+census table next to it. Corrected in place with the measurement, §478.1's rule.)
 That is the whole gap between "measured clean" and a user looking at crossed arms, and it has
 been sitting under §479.5, §532 and `uncross.mjs` the entire time.
 
