@@ -58,6 +58,12 @@
     }
     .hint { margin-top: 16px; font-size: 12.5px; letter-spacing: .16em;
             text-transform: uppercase; color: #7e8ba8; }
+    /* The build stamp answers "which build am I looking at?" at a glance. index.html is NOT
+       content-hashed the way the bundles are, so a browser can serve a cached page indefinitely
+       while the deploy has moved on — and a stale page is indistinguishable from a fix that did
+       not work. It cost three rounds of playtest to find that out once. */
+    .build { margin-top: 10px; font-size: 10.5px; letter-spacing: .08em; color: #4c5878;
+             font-family: ui-monospace, monospace; }
     .click { margin-top: 26px; font-size: 14px; color: #f4e2b8; opacity: 0; transition: opacity .4s; }
     .click.on { opacity: 1; animation: pulse 1.9s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:.55} 50%{opacity:1} }
@@ -78,6 +84,7 @@
       <h1 class="title">SLY COOPER<em>SANDS OF RA</em></h1>
       <div class="bar"><i id="bootBar"></i></div>
       <div class="hint" id="bootHint">Loading</div>
+      <div class="build" id="bootBuild">dev build</div>
       <div class="click" id="bootClick">Click to play &nbsp;·&nbsp; <b>controller: click once first</b> &nbsp;·&nbsp; WASD / stick move &nbsp;·&nbsp; Mouse / right stick look &nbsp;·&nbsp; Space / Cross jump</div>
     </div>
   </div>

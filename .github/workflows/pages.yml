@@ -46,6 +46,16 @@ jobs:
       - name: Build
         run: npx vite build --sourcemap false
 
+      # Stamp the served page with the commit it was built from. index.html is not
+      # content-hashed the way the bundles are, so a browser can serve a cached copy long after
+      # the deploy has moved on — and a stale page looks exactly like a fix that did not work.
+      # With this, "which build am I on" is answerable by looking at the loading screen.
+      - name: Stamp the build
+        run: |
+          STAMP="${GITHUB_SHA:0:7} · $(date -u '+%Y-%m-%d %H:%M UTC')"
+          sed -i "s|>dev build<|>build ${STAMP}<|" dist/index.html
+          grep -o 'build [0-9a-f]\{7\} · [^<]*' dist/index.html
+
       # NOTE: Pages must be switched on once by hand — Settings → Pages → Build and deployment →
       # Source: "GitHub Actions". `enablement: true` was tried and cannot work here: the workflow's
       # GITHUB_TOKEN may publish to a Pages site but may not create one ("Resource not accessible by
