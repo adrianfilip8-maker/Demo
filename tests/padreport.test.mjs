@@ -193,3 +193,55 @@ test('padreport P3: selfTest names Thief-o-Vision when the game thinks focus is 
   console.log(`[padreport P3] focus held -> "${hot.hint.slice(0, 58)}…"; released -> "${cold.hint.slice(0, 58)}…"`);
   console.log(`[padreport P3] TUNE.thiefMusic ${TUNE.thiefMusic}, TUNE.thiefFilter ${TUNE.thiefFilter} Hz`);
 });
+
+/* ====================================================================== */
+test('padreport P4: no stick deflection can reach a BUTTON action, under any layout', () => {
+  /* DOMAIN (§418.3)
+   * passes on : the shipped `Input` driven through the full stick range — every axis swept
+   *             -1..1, on a standard pad and on two plausible non-standard DS4 layouts — with
+   *             `held` never acquiring `pause`, `focus`, `crouch`, `sneak`, `jump` or `interact`.
+   *             `_padStick`/`_padLook` write only `move`/`look`; `_padButtons` reads only
+   *             `buttons`. The separation is STRUCTURAL, so no index shift can bridge it.
+   * fails on  : a real button press, run in-arm on the same rig, which must put `focus` in `held`.
+   *             Without it a `held` that stayed empty for an unrelated reason — a dead poll, a
+   *             withheld trust gate — would pass and read as proof of isolation.
+   * does not discriminate: whether the indices are RIGHT under a non-standard mapping. They may
+   *             well be wrong; the claim here is only that a stick cannot fire a button action,
+   *             which is what rules stick-triggered pause/Thief-o-Vision out as the mechanism. */
+  const BUTTON_ACTIONS = ['pause', 'focus', 'crouch', 'sneak', 'jump', 'interact', 'attack', 'glide', 'recentre'];
+  const layouts = [
+    { name: 'standard', mapping: 'standard', axes: 4 },
+    { name: 'DS4 evdev (LX,LY,L2,RX,RY,R2)', mapping: '', axes: 6 },
+    { name: 'DS4 raw, 8 axes with hat', mapping: '', axes: 8 },
+  ];
+
+  for (const L of layouts) {
+    const { input, tick } = rig({ mapping: L.mapping });
+    padState.axes = new Array(L.axes).fill(0);
+    tick(3);                                   // rest first, so the trust gate is satisfied
+    for (let a = 0; a < L.axes; a++) {
+      for (const v of [-1, -0.7, -0.3, 0, 0.3, 0.7, 1]) {
+        padState.axes = new Array(L.axes).fill(0);
+        padState.axes[a] = v;
+        padState.timestamp++;
+        tick(2);
+        const held = input.report().held;
+        const bad = held.filter((h) => BUTTON_ACTIONS.includes(h));
+        assert.deepEqual(bad, [],
+          `${L.name}: axis ${a} at ${v} produced button action(s) ${bad.join(', ')} — a stick reached `
+          + 'a button, and the pause / Thief-o-Vision path IS stick-reachable after all');
+      }
+    }
+  }
+
+  /* The failing input, run in-arm: a real button must still register on this rig. */
+  const { input, tick } = rig();
+  tick(3);
+  padState.buttons[7] = { pressed: true, value: 1 };
+  tick(2);
+  assert.ok(input.report().held.includes('focus'),
+    'a real R2 press did not register — the sweep above proved nothing, because nothing could register');
+
+  console.log(`[padreport P4] ${layouts.length} layouts x axes x 7 deflections: no stick position ever `
+    + 'reached pause / focus / crouch / sneak / jump; a real R2 press still does');
+});
