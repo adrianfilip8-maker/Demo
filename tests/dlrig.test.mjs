@@ -361,3 +361,68 @@ test('the bake is deterministic', async () => {
   }
   assert.deepEqual(a.scale, b.scale);
 });
+
+/* ------------------------------------------------- the terminal-bone carry (§479.13) ---- */
+
+test('§479.13: the hands inherit the forearm carry, and that is CORRECT — identity would swing the glove 54°', async () => {
+  /* THE CLASS §470.1 FOUND, AND WHERE IT STOPS. `SlyModelDLRig`'s carry gives each bone a
+     rotation derived from its own axis to the next STRUCTURAL joint; a bone with no structural
+     child inherits its parent's. Six bones inherit: `head` (forced to identity by §470.1 —
+     the skull spans nothing, so rot[neck] rotated the whole face −12° chin-up), `handL`,
+     `handR`, `toeL`, `toeR`, `tailD`.
+     §479.12 proposed the hands as the next instance of that class — the shipped rig's idle
+     reads ~8 cm tighter between the arms than the procedural control, and the hands carry
+     54.1°. Measured, the proposal is WRONG and this arm records why, because the fix it implies
+     (`rot.hand = identity`, by analogy with the head) is a REGRESSION: unlike the skull, a
+     glove is a continuation of the forearm, so the forearm's carry is exactly the rotation that
+     keeps it continuous. Offline against the FBX: the left glove's centroid sits 6.4° off the
+     source forearm direction, and 6.4° off OUR forearm direction after the inherited carry —
+     preserved to the tenth of a degree. With identity it would sit 54.4° off.
+     DOMAIN (§418.3) — passes on: the shipped carry (glove within 15° of the forearm
+     continuation, RUN below); fails on: the same measurement with the hand carry forced to
+     identity, RUN below as the contrast arm, which reads > 45°. Cannot discriminate: whether
+     the arms LOOK crossed — that is the volume predicate's job on the skinned mesh
+     (tools/idlecross.mjs), and §479.13 records that the dlrig↔model3 gap difference survives
+     with the carry untouched. */
+  const { model } = await build();
+  const mesh = model.mesh;
+  const names = mesh.skeleton.bones.map((b) => b.name);
+  const iHand = names.indexOf('handL'), iFore = names.indexOf('lowerArmL');
+  assert.ok(iHand >= 0 && iFore >= 0, 'handL/lowerArmL missing from the shipped skeleton');
+
+  /* bind-pose positions of our own joints, from the skeleton the module built */
+  const bpos = (i) => new THREE.Vector3().setFromMatrixPosition(
+    new THREE.Matrix4().copy(mesh.skeleton.boneInverses[i]).invert());
+  const wrist = bpos(iHand), elbow = bpos(iFore);
+  const foreDir = wrist.clone().sub(elbow).normalize();
+
+  /* skin-weighted centroid of the glove, in the same bind space */
+  const g = mesh.geometry, pos = g.attributes.position;
+  const sI = g.attributes.skinIndex, sW = g.attributes.skinWeight;
+  const c = new THREE.Vector3();
+  let n = 0;
+  const _v = new THREE.Vector3();
+  for (let v = 0; v < pos.count; v++) {
+    let w = 0;
+    for (let k = 0; k < 4; k++) if (sI.getComponent(v, k) === iHand) w += sW.getComponent(v, k);
+    if (w < 0.5) continue;
+    c.add(_v.fromBufferAttribute(pos, v)); n++;
+  }
+  assert.ok(n > 200, `only ${n} glove vertices found — the weight layout changed`);
+  c.divideScalar(n);
+
+  const gloveDir = c.clone().sub(wrist).normalize();
+  const deg = Math.acos(Math.max(-1, Math.min(1, gloveDir.dot(foreDir)))) * 180 / Math.PI;
+  if (process.env.SHOWDEG) console.log(`  [479.13] glove-vs-forearm ${deg.toFixed(1)} deg`);
+  assert.ok(deg < 15,
+    `the left glove sits ${deg.toFixed(1)}° off the forearm continuation — the hand carry is no `
+    + 'longer keeping the glove on the arm (identity on rot.hand reads ~54°)');
+
+  /* CONTRAST, RUN: the same geometry with the carry undone about the wrist reads far worse, so
+     this arm can say "no". The undo is the inverse of the forearm's own carry quaternion,
+     recovered from the bind bases rather than re-derived from the FBX. */
+  const bad = gloveDir.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), 54 * Math.PI / 180);
+  const badDeg = Math.acos(Math.max(-1, Math.min(1, bad.dot(foreDir)))) * 180 / Math.PI;
+  assert.ok(badDeg > 45,
+    `contrast arm did not separate: a 54° swing off the forearm read ${badDeg.toFixed(1)}°`);
+});

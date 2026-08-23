@@ -49152,3 +49152,104 @@ duplicate and with the camera no longer in the way.
 - **"Bit-identical" needs a same-tune control.** Two drives with identical tune diverge by 3.4e-6°
   in the node harness. The claim above that short catches keep the original path is structural —
   the same source line runs — not numeric, and should stay that way.
+
+### §479.13 Authorised to fix the carry — measured it first, and the carry is not the defect
+
+The coordinator authorised the repair §479.12 pointed at, with a strict bar: the control arm is
+the acceptance test, nothing else may move, frames on the shipped rig, and *"if the carry cannot
+be corrected without breaking something else, stop and report."* This is that report, and the
+reason it is a report is that **the fix §479.12 proposed is refuted by its own mechanism.**
+
+**The class, and where it stops.** `SlyModelDLRig`'s carry gives every bone a rotation from its
+own axis to the next STRUCTURAL joint; a bone with no structural child inherits its parent's.
+Six bones inherit, and the audit prints all six rather than the one that was suspected:
+
+```
+    head    8.7°  <- forced to identity by §470.1 (the skull spans nothing)
+    handL/R 54.1° <- the §479.12 suspect
+    toeL/R  14.8°
+    tailD   42.1°
+```
+
+54.1° is four and a half times the 12° §470.1 already ruled intolerable, which is exactly why it
+looked like the next instance. **It is not one.** §470.1's argument was that a skull is a
+terminal mass whose orientation the artist authored against gravity, so rot[neck] rotated a face
+for no reason. A glove is the opposite: it is a *continuation of the forearm*, so the forearm's
+carry is precisely the rotation that keeps it attached. Measured against the FBX — the source,
+not the other model — the left glove's centroid sits **6.4° off the source forearm direction and
+6.4° off ours after the inherited carry**, preserved to the tenth of a degree; on the built model
+it reads **2.9°**. With `rot.hand = identity` it would sit **54.4° off**. The proposed repair is
+a fifty-four-degree regression on every clip in the game, which is the exact risk the bar named.
+Held by a new arm in `dlrig.test.mjs` (glove within 15° of the forearm continuation, contrast arm
+RUN at 54°), so this cannot be re-proposed blind.
+
+**Then where do the 8.1 cm come from?** `tools/carrycost.mjs` (new) loads BOTH characters in one
+process through one predicate — the shipped rig via `dlrig.test.mjs`'s three transport rewrites,
+the control via `SlyModel3` — so a difference in the output is a difference in the models rather
+than in two browser runs. The load-bearing addition is the **BIND row**: with every bone at
+identity, no clip and no posed rotation is involved, so whatever the two differ by there is the
+constant that must come off every posed row before any of it is called a defect.
+
+```
+                     dlrig    model3   diff    excess over bind
+    BIND (no clip)    23.9      26.8   -2.9         —
+    bone sep          3.68      3.68    0.00   <- same skeleton: the rig and the data are shared
+    idle_confident    -0.4       7.7   -8.1       -5.2
+    idle_bored        20.9      23.1   -2.2       +0.7
+    idle_look          4.2       9.9   -5.7       -2.8
+    sneak_idle       -12.3      -4.1   -8.2       -5.3
+    wall_run_l       -61.3     -35.2  -26.1      -23.2
+    rail_slide       -27.6     -12.0  -15.6      -12.7
+    ledge_climb       -2.3      12.1  -14.4      -11.5
+    victory          -13.6      -3.7   -9.9       -7.0
+    land_hard         -7.7      -0.3   -7.4       -4.5
+    land_roll         -6.2      -0.1   -6.1       -3.2
+```
+
+**§479.12's 8.1 cm is two terms, and neither is a rotation error.** 2.9 cm of it exists at BIND,
+where no carry rotation of a posed bone has happened at all — that is bulk. The remainder grows
+with how far the arms rotate away from bind, and its source is measurable: at bind the shipped
+rig's arm geometry sits **1.7–2.0 cm off its own bone axes**, while the control's sits at
+**0.000** — because `SlyModel3` generates its limbs as tubes concentric with the bones and an
+authored character's sleeve and glove are not. A constant off-axis offset is invisible at bind
+and projects further onto the lateral axis the more the bone turns, which is precisely the shape
+of the "excess" column. A second, smaller contributor is priced and named rather than fixed: the
+carry's per-bone uniform scale (shoulder 0.013, upperArm 0.010, lowerArm 0.012, hand 0.012)
+exists to make limb LENGTHS conform, and inflating a segment's length inflates its girth with it,
+so the DL forearm carries ~20% more girth than the asset's own proportions imply.
+
+**So the acceptance test cannot be met by a carry correction, and that is the finding.** It asks
+one character's arm *surfaces* to sit where a different character's arm surfaces sit; the two
+meshes are not the same shape, the control's limbs are concentric tubes and the shipped one's are
+not, and `gapCm` is a surface clearance. There is no single rotation whose correction closes that
+column — and the one rotation that was proposed closes nothing and breaks 54°. Per the bar's
+option 4: located, priced, not executed.
+
+**What the shipped rig actually reads, judged against itself.** `idle_confident` is **−0.4 cm** —
+touching, not lapped; and §479.10 established that this pose authors *the left hand ON THE HIP*,
+which is also why §479.10's own rule — *do not straighten a limb whose hand is resting on
+something* — forbids the spread lever there. The predicate cannot tell a crossing from a hand at
+rest, its own header says so, and eight of the ten clips it flags across the whole table
+(`wall_run_l/r`, `rail_slide`, `victory`, `land_hard`, `land_roll`, `ledge_climb`) are poses whose
+arms MEET on purpose, negative on BOTH characters.
+
+**The instrument grew three things, and one of them caught me.**
+- A **bind baseline** on every `idlecross` run, so the comparison is self-calibrating.
+- A **surface sweep** (`SWEEP=`) that runs the volume predicate over any clip list on whichever
+  character `CHAR=` selected, and REFUSES tree-driven clips by name instead of measuring whatever
+  the tree happens to be showing — §479.11's trap, declined rather than repeated.
+- The baseline's own first run wrote identity onto every bone and did not step the sim, so the
+  next capture photographed and measured BIND under the label `idle1-confident`: gap 23.9 and
+  boneSep 3.68, **bit-identical to the bind row above it**, which is what gave it away. Fixed by
+  stepping before anything is labelled, plus an assertion that refuses to continue if the
+  skeleton is still in bind. Recorded because it is this session's dominant shape appearing in my
+  own hands one section after I was credited with catching it: *an instrument that can be
+  mistaken for the probe before it will be.*
+
+HONEST LIMITS. The volume predicate is lateral in the body frame, so an arm lapping another in
+DEPTH only is still invisible to it. `tools/carrycost.mjs` compares two models offline through
+the real skinning path, but it is not the renderer — it measures geometry, not pixels. And **no
+new frames were taken this round**: the shared capture lock was held by a sibling lane's
+`ventshot` for the whole window and both queued `idlecross` arms were still waiting on it, so
+item 3 of the bar is UNMET and the dlrig frames on record remain §479.12's, whose first frame
+carries the contamination described above and should be read as bind, not as `idle_confident`.

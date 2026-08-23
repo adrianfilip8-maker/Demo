@@ -236,6 +236,48 @@ try {
   await page.evaluate(() => { const m = window.__ENGINE.get('movement'); m.position.set(0, 0, 30); m.velocity.set(0, 0, 0); });
   await sim(120);                                  // settle into the real standing idle
 
+  /* THE BIND BASELINE (§479.13) — the calibration every earlier run of this tool was missing.
+   *
+   * `gapCm` is a SURFACE clearance: innermost left-arm vertex minus innermost right-arm vertex.
+   * It therefore reads limb BULK as well as limb placement, and the two arms of this experiment
+   * are two entirely different meshes — an FBX-authored character carried onto RIG3 versus a
+   * procedural rebuild. Comparing their gaps at a pose conflates "the carry rotated a forearm"
+   * with "this model simply has chunkier gloves", and §479.12 read the sum of both as carry cost.
+   *
+   * With every bone forced to identity and the hips at bind, NO clip and NO carry rotation of a
+   * POSED bone is involved: what remains is each model's own geometry. The difference between
+   * the two arms here is the constant that must be subtracted from every posed comparison before
+   * any of it can be called a defect. Probed without stepping the sim, so ANIMATION overwrites
+   * it again on the next frame and nothing downstream sees a bind-posed character. */
+  const bindTel = await page.evaluate(() => {
+    const ch = window.__ENGINE.get('character');
+    for (const n of ch.boneNames || Object.keys(ch.bones || {})) {
+      const b = ch.bones[n]; if (!b) continue;
+      b.quaternion.identity(); b.scale.set(1, 1, 1);
+    }
+    if (ch.bones.hips && ch.bp) ch.bones.hips.position.copy(ch.bp('hips'));
+    ch.root.updateMatrixWorld(true);
+    const t = window.__armProbe();
+    t.clip = 'BIND (all bones identity)';
+    return t;
+  });
+  log.push({ frame: `${ARM}-idle0-bind`, az: null, ...bindTel });
+  console.log(`  [bind baseline] BONE sep ${bindTel.boneSep}  MESH sep ${bindTel.meshSep}`
+    + `  GAP ${bindTel.gapCm} cm   <- geometry only, no clip, no posed carry`);
+  /* HAND THE BODY BACK. The probe above wrote identity onto every bone and did NOT step the
+     sim, so ANIMATION had not yet re-posed the skeleton when the next capture ran: the first
+     run of this baseline photographed and measured BIND under the label `idle1-confident`
+     (gap 23.9 and boneSep 3.68 — bit-identical to the bind row that preceded it, which is what
+     gave it away). A capture that cannot be told apart from the probe before it is the §479.11
+     trap wearing a new hat. Stepping here restores the real standing idle before anything is
+     labelled, and the assertion below refuses to continue if it has not. */
+  await sim(30);
+  const restored = await page.evaluate(() => window.__armProbe());
+  if (Math.abs(restored.boneSep - bindTel.boneSep) < 1e-6) {
+    throw new Error(`idlecross: the skeleton is still in BIND after the baseline `
+      + `(boneSep ${restored.boneSep}) — every idle capture below would be mislabelled bind`);
+  }
+
   /* The boredom timer is SIMULATED time, and 13 s of it on a loaded box is many minutes of wall
      clock spent producing frames whose content is a pure function of one number. `Idle.update`
      picks the clip from `this._bored` alone (Moveset.js:141), so this sets that field directly
@@ -265,6 +307,69 @@ try {
   await snap('idle3-look-front34', 145, 2.4);
   await sim(50);
   await snap('idle3-look-b-profile', 90);
+
+  /* THE SURFACE SWEEP (§479.13) — the volume predicate over the WHOLE table, on the real rig.
+   *
+   * §479.10 swept the predicate offline through `SlyModel`'s skin and flagged ten clips; its own
+   * honest limit was that those numbers are NOT the shipped `SlyModelDLRig`. Run here, the same
+   * measurement lands on whichever character `CHAR=` selected, so the pair of runs prices the
+   * carry across the animation surface instead of the idle family alone. Posed through the real
+   * `animation.play()` seam with the movement module parked — §479's pose-take precedent: clip
+   * table, splice, donor fill, skinning and renderer all shipped, only the state machine that
+   * would immediately re-base the clip is stopped. No frames: this is the numeric arm, and the
+   * frames the eye needs are the idle captures above. */
+  const SWEEP = (process.env.SWEEP || '').trim();
+  if (SWEEP) {
+    await page.evaluate(() => { window.__SKIPMOVE = true; });
+    await sim(4);
+    for (const name of SWEEP.split(',').map((s) => s.trim()).filter(Boolean)) {
+      const row = await page.evaluate(async (n) => {
+        const { ACTIVE } = await import('/src/player/Animation.js');
+        const c = ACTIVE[n];
+        if (!c) return { clip: n, missing: true };
+        window.__ENGINE.get('animation').play(n, { fade: 0, loop: c.loop, speed: 1 });
+        return { clip: n, dur: c.dur, loop: !!c.loop };
+      }, name);
+      if (row.missing) { console.log(`  [sweep] ${name}: NOT IN TABLE`); continue; }
+      await sim(8);                                  // let the track reach full weight
+      /* worst (most negative) gap over the clip's own phases — a crossing that exists for
+         three frames is still a crossing the eye catches */
+      let worst = Infinity, worstPh = null, probed = 0;
+      for (const ph of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+        const t = await page.evaluate(async ([n, p]) => {
+          const { ACTIVE } = await import('/src/player/Animation.js');
+          const a = window.__ENGINE.get('animation');
+          const tr = a.tracks.find((x) => x.clip && x.clip.name === n);
+          /* §479.11's trap, refused rather than repeated: a TREE-driven clip (the standing
+             idles, sneak_idle) never appears in `tracks`, so a silent miss here would measure
+             whatever the tree happens to be showing and report it under this clip's name. No
+             track, no number. */
+          if (!tr) return { noTrack: true };
+          tr.time = p * ACTIVE[n].dur; tr.w = 1; tr.target = 1;
+          a.update(1 / 600, window.__ENGINE.time);   // resample at the forced playhead
+          const out = window.__armProbe();
+          const live = a.tracks.find((x) => x.clip && x.clip.name === n);
+          out.trackW = live ? +live.w.toFixed(2) : 0;
+          return out;
+        }, [name, ph]);
+        if (t && t.noTrack) { worst = NaN; break; }
+        if (t && t.gapCm != null && t.trackW >= 0.9) {
+          probed++;
+          if (t.gapCm < worst) { worst = t.gapCm; worstPh = ph; }
+        }
+      }
+      const treeDriven = Number.isNaN(worst);
+      const rec = { frame: `${ARM}-sweep-${name}`, sweep: true, clip: name,
+        worstGapCm: Number.isFinite(worst) ? worst : null, worstPhase: worstPh, phases: probed,
+        treeDriven };
+      log.push(rec);
+      console.log(`  [sweep] ${name.padEnd(16)} `
+        + (treeDriven
+          ? 'TREE-DRIVEN — no track, not measurable this way (§479.11)'
+          : `worst gap ${String(rec.worstGapCm).padStart(7)} cm @ph ${worstPh} (${probed}/5 phases)`
+            + `${rec.worstGapCm < 0 ? '   *** OVERLAP ***' : ''}`));
+    }
+  }
 } finally {
   await writeFile(`${OUT}/telemetry-${ARM}.json`, JSON.stringify({ sha, dirty, W, H, ARM, errs, log }, null, 2));
   await browser.close().catch(() => {});
