@@ -574,6 +574,111 @@ export class Audio {
     return st === undefined || st === 'running';
   }
 
+  /**
+   * ── `selfTest()` — the number only the player can read (§671) ────────────────────────────────
+   *
+   * The user has reported near-silence four times. Everything this project can measure says the
+   * audio works: `tools/audible.mjs` taps analysers onto the real graph and reads **rms 0.186 at
+   * `masterGain`** on the production build under `/Demo/`, with the listener exactly on the
+   * camera, `trackGain` at its full 0.62 and the stem at 1. That is a healthy, clearly audible
+   * level, and it is measured, not inferred.
+   *
+   * So this container and the player disagree, and the reason no round has closed that gap is
+   * that **"I hear nothing" and "the page emits nothing" are the same sentence from the outside.**
+   * They need a second quantity to tell them apart, and there is exactly one machine that can
+   * produce it: the player's own.
+   *
+   * `__ENGINE.get('audio').selfTest()` measures the signal actually reaching `destination` on
+   * THEIR machine and hands back a number:
+   *
+   *   · `rms` well above zero and they hear nothing  ->  the page is emitting sound and the fault
+   *     is downstream of it: output device, tab muted, OS mixer, Bluetooth sink. Nothing in this
+   *     repository can fix that and no further code round should be spent looking.
+   *   · `rms` at or near zero  ->  the fault IS here, and every field returned alongside says
+   *     which link: no context, a suspended context, master at 0, the stem never loaded, the
+   *     listener somewhere the camera is not.
+   *
+   * It is a passive tap. An `AnalyserNode` with nothing connected to its output cannot alter what
+   * reaches the destination, and the tap is removed before returning, so calling this can neither
+   * change nor damage playback. Nothing calls it automatically; it costs nothing until asked.
+   */
+  async selfTest({ seconds = 1.5, sound = 'coin' } = {}) {
+    const out = {
+      ok: false, hint: '', rms: 0, peak: 0, rmsWithSfx: 0,
+      ctxState: this.ctx ? this.ctx.state : null,
+      ready: this.ready, audible: this.audible, muted: this.muted,
+      master: this.master,
+      trackState: this._trackState, activeStem: this._activeStem,
+      animHooked: !!this._animHooked,
+      listener: { x: +this._lx.toFixed(2), y: +this._ly.toFixed(2), z: +this._lz.toFixed(2) },
+      voices: 0,
+    };
+    if (!this.ctx || !this.masterGain) {
+      out.hint = 'No AudioContext yet — click the page (or press a controller button) and run this again.';
+      return out;
+    }
+    let an = null;
+    try {
+      an = this.ctx.createAnalyser();
+      an.fftSize = 2048;
+      an.smoothingTimeConstant = 0;
+      this.masterGain.connect(an);
+      const buf = new Float32Array(an.fftSize);
+      const sample = () => {
+        an.getFloatTimeDomainData(buf);
+        let s = 0, pk = 0;
+        for (let i = 0; i < buf.length; i++) {
+          const v = buf[i];
+          s += v * v;
+          const av = v < 0 ? -v : v;
+          if (av > pk) pk = av;
+        }
+        return { r: Math.sqrt(s / buf.length), pk };
+      };
+      const nap = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      /* Pass 1: whatever is already running — ambience and music. */
+      const half = Math.max(200, (seconds * 1000) / 2);
+      let t0 = Date.now();
+      while (Date.now() - t0 < half) {
+        const { r, pk } = sample();
+        if (r > out.rms) out.rms = r;
+        if (pk > out.peak) out.peak = pk;
+        await nap(25);
+      }
+
+      /* Pass 2: fire one one-shot AT the listener, so a player can tell "music plays but effects
+         do not" from "nothing plays". Fired at the ear on purpose — `play()` culls a positional
+         sound past TUNE.cull metres, so anywhere else would confound a routing fault with a
+         distance one. */
+      try { this.play(sound, { position: { x: this._lx, y: this._ly, z: this._lz } }); } catch {}
+      t0 = Date.now();
+      while (Date.now() - t0 < half) {
+        const { r, pk } = sample();
+        if (r > out.rmsWithSfx) out.rmsWithSfx = r;
+        if (pk > out.peak) out.peak = pk;
+        await nap(25);
+      }
+
+      out.voices = this._voices.filter((v) => v.active).length;
+      out.rms = +out.rms.toFixed(5);
+      out.peak = +out.peak.toFixed(5);
+      out.rmsWithSfx = +out.rmsWithSfx.toFixed(5);
+      out.ok = out.rms > 1e-4 || out.rmsWithSfx > 1e-4;
+      out.hint = out.ok
+        ? 'Sound IS leaving the page at this level. If you cannot hear it, the fault is after the '
+          + 'page: output device, a muted tab, the OS mixer, or a Bluetooth sink.'
+        : (this.ctx.state !== 'running'
+          ? `The context is "${this.ctx.state}", not running — the browser has not let audio start.`
+          : 'The page is producing no signal. The other fields say which link is down.');
+    } catch (err) {
+      out.hint = `self-test failed: ${err?.message || err}`;
+    } finally {
+      try { if (an) this.masterGain.disconnect(an); } catch { /* leave the graph as it was */ }
+    }
+    return out;
+  }
+
   /** Start the first stem load exactly once, and never under the offline/capture harness. */
   _kickTrack() {
     if (this._trackKicked || this._offline || !this.ready) return;

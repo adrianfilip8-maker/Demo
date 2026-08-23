@@ -180,6 +180,14 @@ const STATE = `
     playerPos: mv && mv.position ? { x:+mv.position.x.toFixed(2), y:+mv.position.y.toFixed(2), z:+mv.position.z.toFixed(2) } : null,
     activeVoices: (() => { try { return a._voices.filter(v => v.active).map(v => ({ name: v.name, pos: v.positional, x:+v.x.toFixed(1), y:+v.y.toFixed(1), z:+v.z.toFixed(1), g:+v.gain.gain.value.toFixed(4) })); } catch { return null; } })(),
     limiterReduction: (() => { try { return +a.limiter.reduction.toFixed(2); } catch { return null; } })(),
+    /* The OTHER event source. Only three sounds ride animation events - footstep, cane_hit and
+       land - and _hookAnimation gives up after ~600 frames of retries. If animHooked is false the
+       most constant sound in the game (footsteps) is silent while ambience plays on, which is a
+       very good match for "the sounds are not playing". (No backticks in here: this whole probe
+       is a template literal and one would end the string.) */
+    animHooked: a._animHooked, animRetry: a._animRetry,
+    animReady: (() => { try { return e.get('animation').ready; } catch { return null; } })(),
+    footstepListeners: (() => { try { return e.get('animation')._listeners.get('footstep').size; } catch { return null; } })(),
   };
 })()`;
 
@@ -310,6 +318,20 @@ try {
 
   console.log(`\n── STATE ──`);
   console.log(JSON.stringify(st, null, 2));
+
+  /* Validate the shipped diagnostic itself, end to end, on the real graph — the thing §667/§671
+     ask the user to run. A helper that has never been executed in a browser is a helper that
+     will fail in the one console we cannot reach. */
+  const self1 = await page.evaluate(async () => {
+    try { return await window.__ENGINE.get('audio').selfTest({ seconds: 1.0 }); }
+    catch (e) { return { threw: String(e && e.message || e) }; }
+  });
+  console.log(`\n── selfTest() — the diagnostic the user will run ──`);
+  console.log(JSON.stringify(self1, null, 2));
+  /* And that it left the graph exactly as it found it. */
+  const after = await page.evaluate(READ);
+  console.log(`   master rms after selfTest: ${(after.master ? after.master.rms : 0).toExponential(3)} `
+    + '(non-zero means the passive tap did not break the output)');
 
   console.log(`\n── VERDICT ──`);
   const m = maxOf('master', 'rms');
