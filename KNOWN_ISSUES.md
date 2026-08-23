@@ -49524,7 +49524,7 @@ defeats the feature. 0.70 sits 13% under the smallest catch; 0.45 sits 79% under
 
 | reader | inherits? | verdict |
 |---|---|---|
-| `src/core/Debug.js`:184 — the shot harness records the staged root | no | `Debug.js`:141 teleports before every shot and `teleport()` spends the offset; the freeCam branch clears it again before `_pushCharacter`. Both asserted in C5. |
+| `src/core/Debug.js`:184 — the shot harness records the staged root | no | two independent guards, and it needs both. `Debug.js`:141 teleports for any shot that stages a player, and `teleport()` spends the offset — but that clause is `if (shot.player && ...)`, so a shot with no staged player never reaches it. The freeCam branch clears the offset every frame regardless, which is the one that covers those. Both asserted in C5. |
 | `src/player/SlyModel.js`:970 — the shot recipe writes the root | no | guarded by `if (this.engine.get('movement')) return` — it runs only when `_pushCharacter` does not. Mutually exclusive by construction. |
 | `src/player/Rig.js`:474 — `footIK` reads `rootY` | **yes, correctly** | the foot bones are children of the same root, so root and feet stay consistent and the feet plant on real ground under the VISIBLE body, which is what they should do. Weight is driven to zero while airborne (`Animation.js`:1503) and every measured capture is an airborne placement, so in practice it barely sees the offset at all. |
 | `src/fx/Particles.js`:2740 — the cane trail | **yes, correctly** | parented to `cane.object` under the root. The swipe should follow the visible cane; if it did not, the trail would detach from the cane drawing it. |
@@ -49572,3 +49572,78 @@ here, the state label on the frames the drift was accusing.
 - The census covers seven regimes, not the whole route. `spawn2eye`'s 5,883 frames would be the
   wider sample and were not censused; if a placement exists there with under 0.45 m of unexplained
   displacement it will not be eased, and nothing here would notice.
+
+### §479.15 The idle's intent and its delivery disagreed in the KEYS — the hand was never sent to the hip
+
+The coordinator's front-view reshoot settled what the pose looks like (§479.14: both gloves at the
+midline in front of the belly, **zero clearance at the centreline** on the shipped rig, against
+20.8 cm for `idle_bored`), and authorised closing the gap between `IDLE_A`'s stated intent —
+*"Left hand on the hip"*, in the pose's own comment — and what it delivers. The bar was: find out
+WHY they disagree before touching a keyframe, because an authored hip placement arriving at the
+midline is a transform or a blend problem, and re-authoring over a mechanism is §470.1's lesson
+one level up.
+
+**It is neither. It is the keys, and that is established rather than assumed.** Pure FK off
+`IDLE_A`'s own Euler triples — one clip, one key, weight 1, no additive layers, no springs, no
+IK, no carry, nothing to blend with — puts the left glove at **(0.124, 1.101, 0.301)**: waist
+height and roughly the right lateral, but **33 cm forward of the hip joint**, out where the cane
+hand is. The hip joint is at (−0.008, 0.827, −0.028); the glove is 44.8 cm from it. And the
+transform hypothesis is dead on its own terms — the same chain evaluated in **all six Euler
+orders** puts the hand 26.8–46.8 cm from the hip (closest ZXY, still 13.5 cm forward). There is
+no interpretation of these numbers that is a hand on a hip. The pose has delivered
+hands-together-in-front for its whole life while its comment described something else, and that
+is the "arms crossed in the idle" the user has now reported three times.
+
+**Re-solved, not re-typed.** Coordinate descent over `shoulderL`/`upperArmL`/`lowerArmL` against
+the real `compile → sampleInto → SlyModel` FK, with the elbow FOLD held so the §531 tuck lever's
+ladder keeps measuring what it measured, and an explicit elbow-flare term — the first solve hit
+the hand target with the elbow tucked *behind* the hip at x 0.044, a chicken-wing, because a hand
+target alone does not imply the "triangle of open sky between the arm and the ribs" the comment
+asks for. Delivered: glove **5 mm** off the iliac crest, elbow flared **25 cm** out and slightly
+back, elbow fold **104.1°** against the old 102.8°.
+
+```
+                      handL (m)                 dist to hip   elbow fold
+    before      0.124, 1.101,  0.301               0.448          102.8
+    after       0.153, 0.960, -0.011               0.168          104.1
+```
+
+**The sweep caught an incomplete edit, twice, which is what it is for.** First solve (hand at
+crest + 10.5 cm) restored the placement but cost lateral daylight — `idle_confident` 10.3 → 4.6
+cm, `idle_look` +8.7 → **−9.2** — so the hand was re-solved 6 cm further outboard, onto the hip
+surface rather than just inboard of it, and `idle_confident` returned to **10.3 → 10.4 cm**, its
+own baseline, with the hand now at the hip instead of in front of the belly.
+
+**`idle_look` still projects negative (−3.1 cm at 30% of its cycle), and that is the INSTRUMENT,
+measured.** `lat` projects both arms onto the SHOULDER line — the right frame while every arm
+hangs off the chest (§479.5), and the wrong one the moment a hand is pinned to the PELVIS, because
+a torso twist (this clip yaws the chest 22° and whips the head 54°) rotates the measuring frame
+out from under a hand that does not follow it. The arms do not move: the frame-free nearest
+distance between the two arms' skinned point clouds reads **11.9 cm before and 12.1 cm after**.
+The same projection scored the OLD, defective pose at **+10.3 cm of "daylight"** while the shipped
+rig photographed zero — so on this pose `lat` is not merely blind, it is anti-correlated with the
+truth. The §479.10 arm's bar is therefore the frame-free `near` (≥ 4 cm at five phases on all
+three standing idles); `lat` is still computed and reported so the projection stays on the record.
+Its contrast input is re-derived and RUN: `ledge_climb`'s mantle closes both gloves to **0.7 cm**
+(they belong together on a lip — a contrast input, not a defect). **Retired with its measurement:**
+the old contrast lifted `GODOT_LIMB_OPEN.idle_look` and watched the arms cross; with the hand on
+the hip that is unreachable (12.2 cm), so the exemption is no longer what holds this pose clear —
+the pose is. The row stays pinned because it still governs the §531 elbow fold.
+
+**Nothing else moved, and the exception is named.** Frame-free sweep over all 52 clips, before vs
+after: **50 unchanged** within 0.5 cm. `pickpocket` 11.0 → 10.0 (it ends on `IDLE_A`, by design —
+twelve one-shots settle onto this pose, which is why it is the most-seen pose in the game). The
+one real side effect is **`hurt` 4.0 → 0.8 cm on the PROCEDURAL table** — its knockback tumble
+leaves `shoulder*`/`hand*` unkeyed, so those channels interpolate from the entry pose to the t 0.66
+recovery key and the tumble borrowed the idle's arm. Two local repairs were tried (completing the
+tuck's mirror pair at t 0.10; holding the tuck through t 0.40) and **neither restored it —
+measured, so both were reverted rather than shipped with a comment that overclaims.** On the
+SHIPPED (`godot`) table, which is what the player gets, `hurt` reads **10.6 cm** and is not
+affected; the 0.8 cm is a procedural-arm (`?anim=proc`) number and is recorded as an open item
+with its instrument rather than left implied.
+
+HONEST LIMITS: the offline instruments are `SlyModel`'s skin, and they never saw this defect —
+they scored the broken pose at 11.9 cm 3D and +10.3 cm lateral while the shipped `SlyModelDLRig`
+photographed zero clearance (§479.13's carry/bulk delta). Only the in-page shipped-rig measurement
+can see it, so the frames from `tools/idlecross.mjs` are the acceptance evidence, on both rigs,
+through the §479.14 view guard.

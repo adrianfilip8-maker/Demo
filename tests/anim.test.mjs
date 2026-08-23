@@ -1352,7 +1352,7 @@ test('idle arm clearance (§479.10): the standing idles keep daylight between th
     const lat = at('upperArmL').sub(at('upperArmR')); lat.y = 0; lat.normalize();
     const hip = at('hips');
     const latOf = (p) => p.clone().sub(hip).dot(lat);
-    let lMin = Infinity, rMax = -Infinity;
+    let lMin = Infinity, rMax = -Infinity; const L = [], Rr = [];
     sly.root.traverse((o) => {
       if (!o.isSkinnedMesh) return;
       const g = o.geometry, pos = g.attributes.position;
@@ -1371,12 +1371,27 @@ test('idle arm clearance (§479.10): the standing idles keep daylight between th
         if (o.applyBoneTransform) o.applyBoneTransform(v, _v); else o.boneTransform(v, _v);
         _v.applyMatrix4(o.matrixWorld);
         const x = latOf(_v);
-        if (wl >= 0.6) { if (x < lMin) lMin = x; } else if (x > rMax) rMax = x;
+        if (wl >= 0.6) { if (x < lMin) lMin = x; L.push(_v.clone()); } else { if (x > rMax) rMax = x; Rr.push(_v.clone()); }
       }
     });
-    return (lMin - rMax) * 100;
+    let d3 = Infinity;
+    const sL = Math.max(1, Math.floor(L.length / 400)), sR = Math.max(1, Math.floor(Rr.length / 400));
+    for (let i = 0; i < L.length; i += sL) for (let j = 0; j < Rr.length; j += sR) {
+      const d = L[i].distanceToSquared(Rr[j]); if (d < d3) d3 = d;
+    }
+    return { lat: (lMin - rMax) * 100, near: Math.sqrt(d3) * 100 };
   };
 
+  /* §479.15 — THE BAR IS THE FRAME-FREE ONE. `lat` projects both arms onto the SHOULDER line,
+     which was the right frame while every arm hung off the chest (§479.5) and is the wrong one
+     the moment a hand is pinned to the PELVIS: a torso twist then rotates the measuring frame
+     out from under the hand and the projection collapses while the arms stay put. It is also
+     provably blind to the defect the user reported three times — it scored the old
+     hands-meet-in-front idle at +10.3 cm of "daylight" while the shipped rig photographed ZERO
+     clearance (§479.14). `near` is the nearest distance between the two arms' skinned point
+     clouds in 3D: no frame, no projection, and it still discriminates (RUN below, and `hurt`
+     reads 0.8 cm / `pole_climb` 0.2 cm under it). `lat` stays MEASURED and reported so the
+     projection is on the record, but the assertion is `near`. */
   const IDLES = ['idle_confident', 'idle_bored', 'idle_look'];
   const shipped = buildClipSet('godot').table;
   const bad = [];
@@ -1384,29 +1399,35 @@ test('idle arm clearance (§479.10): the standing idles keep daylight between th
     const c = shipped[name];
     for (const f of [0.1, 0.3, 0.5, 0.7, 0.9]) {
       const g = gapCm(c, f * c.dur);
-      if (g <= 1.0) bad.push(`${name}@${(f * 100).toFixed(0)}% ${g.toFixed(1)}cm`);
+      if (g.near <= 4.0) bad.push(`${name}@${(f * 100).toFixed(0)}% ${g.near.toFixed(1)}cm (lat ${g.lat.toFixed(1)})`);
     }
   }
   assert.deepEqual(bad, [], 'a standing idle has its arms inside each other — the pose the player looks at most');
 
-  /* CONTRAST, RUN: the metric can say no, and the thing it says no to is precisely the state
-     the user reported. The per-clip exemption OUTRANKS the global knob (`per.elbow ?? base`),
-     so forcing `__LIMB_OPEN` no longer reaches this clip — which is the fix working. To run the
-     failing input the exemption row itself is lifted for the length of the measurement: without
-     it, `idle_look` inherits the set-wide 0.75 and crosses deeply. This is the regression the
-     arm exists to hold, and it is stated as "remove the fix, the defect returns". */
-  const saved = GODOT_LIMB_OPEN.idle_look;
-  delete GODOT_LIMB_OPEN.idle_look;
-  let worst = Infinity;
-  try {
-    const loose = buildClipSet('godot').table.idle_look;
-    for (let i = 0; i <= 10; i++) worst = Math.min(worst, gapCm(loose, i / 10 * loose.dur));
-  } finally {
-    GODOT_LIMB_OPEN.idle_look = saved;
-  }
-  assert.ok(worst < -2, `contrast arm: idle_look WITHOUT its exemption reads ${worst.toFixed(1)} cm — expected a real `
-    + 'overlap at the set-wide 0.75; if the idle arm pose was re-authored, re-derive this line');
-  /* and the exemption must actually be the thing standing between the two, by identity */
+  /* CONTRAST, RUN (§418.3's fails-on, re-derived for the frame-free bar): the predicate can say
+     no, and the input it says no to is a real shipped clip rather than a synthetic one —
+     `ledge_climb`'s mantle presses both gloves onto the lip and closes them to 0.7 cm. (It is a
+     mantle: the hands BELONG together there, which is why this is a contrast input and not a
+     defect report.) If a future edit opens that mantle, this line is the one to re-derive.
+
+     WHAT THIS ARM NO LONGER CLAIMS, stated rather than quietly dropped: until §479.15 the
+     contrast lifted `GODOT_LIMB_OPEN.idle_look` and watched the arms cross, because the idle's
+     left hand hung in FRONT of the belly where an elbow-fold lever could drive it into the right
+     arm. With the hand re-solved onto the hip (§479.15) that is no longer reachable — lifting the
+     exemption now leaves 12.2 cm — so the exemption is no longer what holds this pose clear; the
+     pose is. The row is still pinned below, because it still governs the elbow FOLD the user
+     asked about in §531, but the "it is the only thing standing between them" claim is retired
+     with its measurement. */
+  const hurtNear = (() => {
+    const c = shipped.ledge_climb;
+    let w = Infinity;
+    for (let i = 0; i <= 10; i++) w = Math.min(w, gapCm(c, i / 10 * c.dur).near);
+    return w;
+  })();
+  assert.ok(hurtNear < 4.0, `contrast arm: ledge_climb's mantle reads ${hurtNear.toFixed(1)} cm — expected the arms to close `
+    + 'inside the bar, proving the predicate discriminates; re-derive if the mantle was re-authored');
+
+  /* and the exemption row is still pinned, because it governs the §531 elbow fold */
   assert.equal(GODOT_LIMB_OPEN.idle_look?.elbow, 0.45, 'the §479.10 exemption row is what holds the idle clear');
 });
 

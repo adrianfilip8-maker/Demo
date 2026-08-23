@@ -239,9 +239,21 @@ const IDLE_A = P({
      at `sly-closeup`'s 13 degree azimuth the tail sits exactly where that triangle of sky would
      be, so the silhouette was bit-for-bit unchanged and the hand ended up more hidden, not
      less. The gap this comment wants is not available from this camera at this tail aim. */
-  shoulderL: [3, 7, -16],
-  upperArmL: [-14, 16, -52],
-  lowerArmL: [-74, -36, -26],
+  /* §479.15 — THE COMMENT ABOVE WAS NEVER WHAT THE NUMBERS DID. The old chain
+     (shoulderL [3,7,-16], upperArmL [-14,16,-52], lowerArmL [-74,-36,-26]) delivers the glove
+     to (0.124, 1.101, 0.301): waist height and roughly the right lateral, but **33 cm forward
+     of the hip joint** — in front of the belly, where it meets the cane hand. Not a transform
+     and not a blend: pure FK off these very keys, no layers, no carry, no IK, puts it there,
+     and all six Euler orders agree (closest, ZXY, is still 26.8 cm off the hip). The pose has
+     delivered a hands-together-in-front silhouette for its whole life while its comment
+     described a hand on the hip, and that is the "arms crossed in the idle" the user has now
+     reported three times. Re-solved against the shipped FK for the placement the comment
+     always asked for — glove 5 mm off the iliac crest, elbow flared 25 cm out and slightly
+     back (the triangle of sky), elbow fold held at 104.1° against the old 102.8° so the §531
+     tuck lever's ladder still measures what it measured. */
+  shoulderL: [24, -13, -5],
+  upperArmL: [8, 3, -26],
+  lowerArmL: [-58, -23, -50],
   handL: [22, -28, -14],
 
   /* **Right arm down, cane planted, not slung.** It was `CANE.shoulder` with the forearm
