@@ -48128,8 +48128,91 @@ the camera lane as a finding, not a repair: a hard tail bar needs a drive that i
   none says *forgiving*.
 - The gallery's sightline is searched, not swept: R4 finds one clear eye position, which says the
   vantage exists and not that it is good from everywhere along the ledge.
-- Nothing here measures the passage under a moving camera. The four frames are staged with the rig
-  off, as every capture in this project is, and §600.10 is the only thing measured about the rig —
-  and it is about the instrument, not the tunnel.
+- Nothing here measures the passage under a moving camera. The six frames (§601 adds the two at the
+  mouth) are staged with the rig off, as every capture in this project is, and §600.10 is the only
+  thing measured about the rig — and it is about the instrument, not the tunnel.
 - The 2.4 m distance saving is reported and asserted by nothing, and should stay that way unless the
   crypt gains a second reason to be entered from above.
+
+## §601 — The mouth frame: a camera that measured clean and photographed wrong, then a probe that said the entrance could not be photographed at all
+
+§600 shipped four frames and withheld a fifth. The withheld one was the one that mattered — the
+entrance, from the hall, the only part of the passage a player sees before committing to it — and
+getting it cost two instrument faults, both already named in this ledger under other numbers.
+
+### §601.1 One occluder fixed, only that occluder re-measured
+
+The obvious camera stands in the hall's middle looking north-west. It is blocked: KayKit's
+north-west crate pile at x −21.4..−19.0, z −47.3..−44.5 fills 29 of 45 view rays.
+`tests/_moveset.mjs`'s `realWorld()` does not boot KAYKIT, so a node-side ray census of the drawn
+scene calls that camera **clear**. Booting props through `tests/_kaykitboot.mjs` shows them.
+
+The camera was therefore re-aimed west, the **prop** census was re-run there — 1 ray of 45, clean —
+and the frame was shot. Half of it came back a flat pale slab: the hall's own west wall at x −24,
+0.48 m from a lens that had been moved to x −23.20.
+
+The fault is not that a wall went unnoticed. It is that **one occluder was fixed and only that
+occluder was re-measured**. A prop census answers "are the crates in the way" and goes on answering
+it faithfully at a camera whose problem is now something else entirely — the ledger's own detector,
+*a check that is true by accident looks exactly like one true by construction*, where the accident
+is that the new position still satisfied the only question being asked.
+
+The replacement probe scores two populations separately, against the drawn scene with props booted:
+**floor** (20 points spread over the ramp inside the mouth, reachable by an unobstructed ray) and
+**near** (of 45 frustum rays, how many hit inside 2 m, and how close the nearest is).
+
+| camera | floor | rays inside 2 m | nearest | through the mouth |
+|---|---|---|---|---|
+| hall middle (blocked by crates) | 0/20 | 12/45 | 1.78 m | 2/45 |
+| re-aimed west (shot, unusable) | 6/20 | 24/45 | **0.48 m** | 6/45 |
+| `mouthback`, known good | 19/20 | 31/45 | 1.15 m | 45/45 |
+| **chosen**, x −21.85 y 2.60 z −47.40 fov 55 | **20/20** | 5/45 | **1.71 m** | 12/45 |
+
+Each bad camera fails a **different** column. That is what makes the pair worth keeping: a probe
+carrying only the floor column would have passed the west camera, and one carrying only the near
+column would have passed the middle camera. Verdict: the pair discriminates; neither column alone
+does.
+
+`mouthback`'s 31 rays inside 2 m is not a fault — it stands inside a 1.70 m bore where every surface
+is inside 2 m by construction. A near-field threshold is only evidence where the geometry is not
+supposed to be close, which is why the ranking sorts on floor first and uses near only as a floor.
+
+### §601.2 The probe then reported the entrance unphotographable, and the probe was wrong
+
+First run of that probe over 128 candidate cameras: **0 admissible**, and 0 again after relaxing the
+bar to 18/20. Read literally: the entrance cannot be photographed from the hall.
+
+It was the target grid. The mouth's floor is the 31.2° ramp — head (z −48.70, y 0.00) to knee
+(z −52.00, y −2.00) — and the grid sampled a **flat plane at y −0.30 across a sloped floor**. At
+z −48.9 the ramp surface is at y −0.12, so that target sat 0.18 m *inside the ramp slab*, where no
+ray reaches it by construction. Nine of the twenty floor targets were underground. The probe was
+reporting the ramp's own solidity as an obstruction.
+
+Sampling `y = 0.606·(z + 48.70) + 0.25` — the ramp surface plus a fixed clearance, in the bore the
+player actually crawls through — takes the sweep from 0 of 128 to **21 of 160** admissible. The
+check that this fixed the instrument and not the threshold: it moves the known-good camera from
+13/20 to 19/20 and leaves **both** known-bad cameras exactly where they were, 6/20 and 0/20. A
+correction that had merely loosened the bar would have lifted all three.
+
+This is §442.3 inside a probe rather than inside the level. The first explanation for the zero —
+"the corner is too cluttered to shoot" — would have been the next wrong thing, and acting on it
+meant moving architecture to satisfy a broken ruler.
+
+### §601.3 What the chosen frame is made of
+
+20/45 hieroglyph wall, 13/45 paving, 12/45 sandstone block. **0 props, 0 sky** — no crate appears in
+it, and nothing in it is closer than 1.71 m.
+
+### §601.4 Bounds, stated
+
+- The probe measures occlusion and distance. It says nothing about whether a frame is composed, lit
+  or legible; that is still settled by looking, and all six frames were looked at.
+- `fill` is low — 12/45 at best — for every admissible hall-side camera, because the subject is a
+  1.70 × 2.50 m hole in a floor. That is a fact about the entrance, not a defect in the camera, and
+  no threshold is asserted on it.
+- Nothing here is a test. Which camera to photograph from is not a level invariant, and the
+  invariant this frame illustrates — the doorway open in art *and* in collision — is asserted by
+  `ventroute` R5, which was already green before any of these frames existed.
+- The prop census depends on `_kaykitboot` booting the placements the browser boots. It reads the
+  `PLACEMENTS` literal out of source; if that table ever gains a code path, the census goes stale
+  silently and the first symptom is another frame with a crate in it.
