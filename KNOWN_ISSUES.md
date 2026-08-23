@@ -50994,6 +50994,12 @@ a check becomes true by accident — the failure mode this whole session has bee
 reported at its measured rate with one hypothesis refuted and one open, and the suite figure is
 stated as **1014 / 1015, one pre-existing flake**, rather than rounded up to green.
 
+**Follow-up (§681 round):** the next full run, with four more arms added, came back
+**1019 / 1019, zero failures** — R1b passed. That is consistent with the 1-in-5 rate measured in
+isolation and is *not* evidence the flake is gone: a check that passes four times in five passes
+most runs. It is recorded so nobody reads a single green suite as the arm having been fixed, which
+is the same mistake in the opposite direction.
+
 ## §676 — "Only on the controller" is the sharpest fact we have had, and it kills a whole class at once
 
 User: *"`selfTest()` says sound IS playing, I typically cannot hear it, and if it does start playing
