@@ -50037,6 +50037,16 @@ policy for a policy to enforce. So what is proved is that **the wiring reaches `
 that a policy-enforcing browser on the user's machine will do the same. That remains §667.2 item 4,
 and it is a question for the user, not for another probe.
 
+**And the second boundary, which matters more because it is the one a reader would get wrong.**
+That browser run pressed Cross with the pad connected and at rest from frame 0 — the **cold-boot**
+row of §664.1, *which already worked before this section's fix*. So it is evidence for the platform
+question and **not** evidence for `padTouched`. The three states where a press reached nothing are
+established by K1/K2/K3 in process, and have **not** been re-measured in a browser: this
+container's headless Chromium gives ~3 polls per hold (§662), which is enough to observe a positive
+transition and not enough to drive a blur, a hot-plug and a held-at-boot press through a real page.
+Recorded as an open gap rather than closed by assertion — the fix is the smaller claim (a raw flag
+that is true when four other mechanisms are silent), and it is the in-process arms that carry it.
+
 ### §664.5 DOMAIN
 
 - **K1** — *passes on* a real Cross press in all four arrival states; *fails on* three inputs run
