@@ -49261,13 +49261,31 @@ front views at azimuth 35 where they actually are, keeps the 145 shot under the 
 `rear34`, and **throws** if a frame whose name contains "front" was not shot from the front. A
 caption can no longer be the only thing asserting what was photographed.
 
-**So the visual half of this entry is UNSETTLED, deliberately.** The −1.2 cm number and its
-reading — a lateral metric on a hand authored onto the hip, which §479.10's own header says the
-predicate cannot tell from a crossing — stand exactly as measured, and remain a plausible and
-important finding. What does NOT stand is any claim that a picture confirmed it. That needs a
-front-shot frame of `idle_confident` on the shipped rig, which is queued behind the shared
-capture lock (a sibling lane's `ventshot` held it for this entire window) and is the first thing
-the next round should take.
+**Reshot from the front, and the picture and the number now agree — on something better than
+either of my earlier readings.** With the azimuth corrected the guard passed (cam·facing +0.82,
+a real front) and `shots/idlecross/dlrig-idle1-confident-front34.png` + its `-profile` sibling
+show (committed flat as `shots/idle1-dlrig-confident-front34.png` / `-profile.png` with
+`shots/idle1-dlrig-telemetry.json` beside them, since `shots/*/` is git-ignored by policy),
+at the same beat: **both gloves converged at the body's midline, in front of the belly,
+one nearly above the other**, cane hanging behind. The profile is the clearest of the two — the
+gloves stack rather than sit one on each side. Nothing is scissored: neither arm laps past the
+other, and my retracted claim was wrong about the frame but right that there is no crossing.
+**What there is instead is zero clearance at the centreline** — this run measured
+`idle_confident` at **GAP 0.0 cm** (bored 3.4; §479.12's beat, bored 2.9, gave −1.2), against
+20.8 cm for `idle_bored` and 11.2 cm for `idle_look` on the same pass.
+
+That is the honest answer to a report made three times: **on the pose the player stares at, the
+shipped character's two hands meet in front of him.** It is not a crossing and not the carry —
+the carry is faithful (above) and the control rig poses the same clip with 7.7 cm of daylight
+because its arms are slimmer and hang differently. It is the POSE, delivered on this body.
+
+The lever therefore points at the clip, not the rig — and note this does NOT collide with
+§479.10's *do not straighten a limb whose hand is resting on something*: `IDLE_A` authors the
+left hand ON THE HIP, and what the frame shows is both hands together in FRONT, so the authored
+intent and the delivered pose disagree and the gap between them is the next measurement rather
+than a lever setting. **Not attempted this round** — it is a clip edit on the game's most-seen
+pose, it needs both rigs re-measured after (the control must not be broken to fix the shipped
+one), and this round has already spent its evidence budget establishing what the defect is NOT.
 
 **The instrument grew three things, and one of them caught me.**
 - A **bind baseline** on every `idlecross` run, so the comparison is self-calibrating.
