@@ -1514,3 +1514,51 @@ he shifts and glances around. Judgements only you can make:
    which overlaps by about 9 cm and has done since long before any of this — it may well be
    intentional (he's holding the cane across himself while creeping), so I have left it alone
    rather than guess. If it looks wrong to you when you hold crouch, say so and it is a small fix.
+
+## 24. Correction to item 23: the third idle could not come up at all, so the thing I told you to watch for was unreachable
+
+**Commit** this round · **Files** `src/player/Animation.js` (the tree's idle resolution),
+`tests/anim.test.mjs` (the arm), `tools/idlecross.mjs` (attribution on every frame) ·
+**Ledger** §479.11
+
+Item 23 asked you to stand still for 15 seconds so the third idle would come up. **It never
+would have.** Sly has three standing idles on a boredom timer, and the code that plays them
+handed the *name* to the blend tree — which has exactly one standing-idle slot, wired to the
+first of the three. `idle_bored` and `idle_look` were requested every frame you stood still and
+silently discarded. For the whole life of the build, standing still has shown you
+`idle_confident` and nothing else.
+
+So item 23's diagnosis was aimed at the wrong pose. The overlap you reported is real and I am not
+walking that back — but it is on the **first** idle, the one you see immediately, not the third.
+The repair I described (capping the spread lever on `idle_look`) is real work on a clip the
+renderer never sampled.
+
+**Why I did not catch it, and it is the same shape as the thing itself.** My capture tool wrote
+"which clip am I looking at" from the list of one-shot tracks — and tree-driven clips are not in
+that list, so the field came back **empty** on all seven frames. The frames were labelled
+`idle1/idle2/idle3` because the *script said so at that line*, and nothing in the run disagreed.
+Four photographs of one pose, filed as three. The tool now stamps the tree's own selection and
+the live boredom timer onto every frame, so a frame that claims to be the third idle while
+showing the first contradicts itself in its own telemetry.
+
+**What ships now:** the boredom timer actually reaches the tree, crossfaded over the same 0.3 s
+the code always asked for (the three cycles are different lengths — 3.6 / 4.4 / 4.0 s — so a hard
+swap would pop). Verified through the full stack, real controller and state machine:
+`t=5s confident · t=7s bored · t=14s look`.
+
+**What is still open, plainly.** The overlap on the pose you actually see (`idle_confident`)
+measures **−1.2 cm on the rig you play** while the offline number for the same pose says +6.3.
+That gap is the shipped character's extra per-bone geometry rotations, which no skeleton
+measurement can see — and it is a *different* defect from the one fixed here. The control run
+that tells me whether it is the geometry or the animation data was queued behind another job when
+this shipped and had not returned. **Item 23's caveat therefore still stands, and now applies to
+a different clip: not yet verified by a picture on the rig you play.**
+
+**What to re-test.** Two things now, and the first is new:
+
+1. **Stand still and keep watching, 20 seconds.** You should now see him change what he is doing
+   twice — a settled confident stand, then a bored shift around 6 seconds, then a look-around
+   past 13. If he never changes, this fix did not take and that is the single most useful thing
+   you can tell me.
+2. **The arms in the FIRST idle**, the one you get immediately. That is the pose the overlap
+   report is really about, and the one I have not yet photographed on your rig.
