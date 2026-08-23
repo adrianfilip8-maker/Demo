@@ -273,10 +273,16 @@ for (const rel of SOURCES) {
     candidates.push({
       file, name: name.trim(), dur: +clip.duration.toFixed(2), verdict,
       standing: isStanding,
-      /* dedupe fingerprint: the same authored pose is re-exported under different names in
-         different files (Standupright / UprightStand), and the sheet should show it once */
-      fp: [midCarry.sepCm, midCarry.L.handOutCm, midCarry.R.handOutCm,
-        midCarry.L.fold, midCarry.R.fold, +hipAvg.toFixed(2)].join('|'),
+      /* Dedupe fingerprint: the same authored pose is re-exported under different names in
+         different files (Standupright / UprightStand / CrouchingStand), and the sheet must show
+         it ONCE. Quantised deliberately — re-exports of one pose differ by export float noise
+         (measured: CaneSwing Idle 26.7 vs 27.1 cm, Crouching stand 57.9 vs 57.8), and an exact
+         fingerprint splits them into duplicate tiles that then collide on filename and silently
+         overwrite each other's frames. 2 cm and 5° are far below the gap between DISTINCT poses
+         here (the nearest pair is 8.4 cm apart) and far above the noise. */
+      fp: [Math.round(midCarry.sepCm / 2), Math.round(midCarry.L.handOutCm / 2),
+        Math.round(midCarry.R.handOutCm / 2), Math.round(midCarry.L.fold / 5),
+        Math.round(midCarry.R.fold / 5), Math.round(hipAvg * 10)].join('|'),
       ref: { sepCm: midCarry.sepCm, outL: midCarry.L.handOutCm, outR: midCarry.R.handOutCm,
         abdL: midCarry.L.abduction, abdR: midCarry.R.abduction, foldL: midCarry.L.fold, foldR: midCarry.R.fold },
       raw: { pose: raw, sepCm: rawCarry.sepCm, outL: rawCarry.L.handOutCm, outR: rawCarry.R.handOutCm,

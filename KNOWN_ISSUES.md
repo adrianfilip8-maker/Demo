@@ -51771,3 +51771,23 @@ that was deployed", never "verified live", unless a deploy log or the user's own
 The build stamp in `index.html` exists for precisely this reason: it is the one signal that crosses
 the boundary in the other direction, letting the user's screen tell us which bytes they actually
 have.
+
+### §479.19.5 The sheet lost a third of its frames to a filename collision, and only counting them found it
+
+The first full sheet run reported success — exit 0, `[sheet] done`, no errors — and produced
+**48 PNGs where 72 were expected**. Nothing failed; frames overwrote each other. The tile filename
+was slugged from the clip name alone, and the corpus deliberately contains clips whose names
+differ only in ways a slug erases: `Crouching stand` (Anims27), `Crouching stand` (Anims19) and
+`CrouchingStand` (Anims4) all slug to `crouchingstand`, as do the two `Falling`, `PoleClimbIdle`,
+`RailrunStand` and `CaneSwing Idle` pairs. Six slugs absorbed eighteen poses, last writer wins.
+
+Two things worth keeping from it. **The detector was arithmetic, not an assertion**: 18 poses ×
+2 readings × 2 views is 72, and the only reason the mismatch surfaced is that the expected count
+was computed and compared against `ls | wc -l`. A run that reports its own success while silently
+discarding a third of its output is the §510 class exactly — verify the CONTENT, not the exit
+code. **And the root cause was upstream of the filename**: the census's dedupe fingerprint was
+exact, so re-exports of one authored pose that differ only by export float noise (CaneSwing Idle
+26.7 vs 27.1 cm; Crouching stand 57.9 vs 57.8) were emitted as separate tiles that then collided.
+Fixed at both levels — the fingerprint is quantised to 2 cm / 5° (far below the 8.4 cm gap between
+genuinely distinct poses here, far above the noise), and the slug carries its source file's Anims
+number so a future duplicate cannot silently overwrite. 25 static poses → 16 distinct tiles.

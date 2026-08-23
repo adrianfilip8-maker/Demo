@@ -158,7 +158,11 @@ try {
   await page.evaluate(() => { const m = window.__ENGINE.get('movement'); m.position.set(0, 0, 30); m.velocity.set(0, 0, 0); });
   await sim(90);
 
-  const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 22);
+  /* Slug must be COLLISION-PROOF, not merely tidy: three differently-named crouch clips slug to
+     the same string, and the first run silently overwrote 24 of 72 frames because of it. The
+     file tag makes every tile's filename unique even when the census's dedupe lets two through. */
+  const slug = (c) => `${c.name.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 20)}`
+    + `-${(c.file.match(/Anims(\d+)/) || [, 'x'])[1]}`;
   for (const c of poses) {
     for (const reading of ['raw', 'matched']) {
       const ok = await page.evaluate(async (rawPose) => {
@@ -170,7 +174,7 @@ try {
       }, c[reading].pose);
       if (!ok) throw new Error(`idlesheet: inject failed for ${c.name}/${reading}`);
       await sim(24);                                   /* let the springs and IK settle */
-      const tag = `${slug(c.name)}-${reading}`;
+      const tag = `${slug(c)}-${reading}`;
       const f = await snap(`pose-${tag}-front34`, 35);
       await snap(`pose-${tag}-profile`, 90);
       /* cross-check the live reading against the census's offline number (§435.4) */
