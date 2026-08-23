@@ -49857,3 +49857,456 @@ they scored the broken pose at 11.9 cm 3D and +10.3 cm lateral while the shipped
 photographed zero clearance (§479.13's carry/bulk delta). Only the in-page shipped-rig measurement
 can see it, so the frames from `tools/idlecross.mjs` are the acceptance evidence, on both rigs,
 through the §479.14 view guard.
+
+## §660 — The vent hypothesis is refuted by driving it, and the check that shipped it never touched `Input`
+
+The standing theory for *"the vent crawl space still is not accessible"*, stated to be tested first:
+entering the vent needs a crawl, crawl needs crouch, `PAD_BINDINGS.crouch = [6]` is **L2**, and
+§542 will not trust an analogue trigger until it has been seen at or below `triggerOff` once — so a
+DS4 whose L2 never reads that low could never crouch, the vent would be shut by construction, and
+every keyboard test would still pass.
+
+### §660.1 Refuted, and refuted by driving rather than by reading
+
+`Moveset.js`'s `Crawl.canEnter(c)` is `c.inVent()` and nothing else; its own docblock says *"vents
+only, and the vent decides, not the player"*. Reading that is not a measurement, so
+`tests/padreach.test.mjs` **V2** pins buttons 6 and 7 at +1 for the whole drive — §542's
+non-conformant pad, in which `_padValue` never grants trust and `crouch` can never fire — asserts
+`down('crouch')` was false throughout, and drives the shipped route anyway:
+
+| drive | crawl entered | arrives at | frames |
+|---|---|---|---|
+| keyboard, `keydown` on `KeyW` | yes | (−12.49, −5.40, −62.97) | 1304 |
+| left stick, full forward | yes | (−12.49, −5.40, −62.97) | 1304 |
+| left stick, **L2/R2 pinned at +1** | yes | (−12.49, −5.40, −62.97) | 1304 |
+
+The three end positions agree to under 5 cm. **Crouch is not on the vent's critical path, and a
+dead L2 cannot shut it.**
+
+### §660.2 The instrument gap that is larger than the hypothesis
+
+`tests/ventroute.test.mjs` — the check §602 shipped behind — drives the shipped `Controller` with
+`tests/_moveset.mjs`'s `StubInput`, writing `inp.move.y = 1` straight into the movement vector.
+**`src/core/Input.js` is not in that circuit at all**: no radial deadzone, no `moveFloor` remap, no
+`_padStick`, no `_padValue`, no d-pad fold, no device arbitration. The vent had never been driven
+through the class a player's hands reach, on *either* device. `padreach` is the first that does.
+
+Reproduced before quoting (§418): the 10 m-east control stops at **z −49.56**, which is §563's
+figure for the uncut wall (face −49.90 plus the 0.34 capsule radius) and the same control §602's
+R1 uses. That part reproduces exactly. What I did **not** reproduce is §602's browser drive.
+
+### §660.3 What `padreach` does NOT settle, said before anyone quotes it
+
+Both arms snap the camera at the next waypoint every frame — deliberately identical to
+`ventroute`'s `walk`, so that the only variable is which class produced `move`. That makes it a
+statement about a player **who already knows where the mouth is and walks a perfect line into it**.
+It says nothing about finding the mouth, about steering with a right stick, or about the camera.
+The affordance markers are inset to `[x0 + 0.38, x1 − 0.38]` (§602), a window about 1.64 m wide in
+x, and the user's report may be entirely about locating it. See §667.
+
+### §660.4 DOMAIN
+
+- **V1** — *passes on* the shipped level with a real `keydown` and a real full-forward stick, both
+  reaching the crypt side of the west wall in `crawl`; *fails on* the same drive 10 m east where
+  the wall was never cut, run in-arm, which must stop at §563's −49.56 and never crawl. Without
+  that arm a rig that walked through walls would pass both device rows.
+- **V2** — *passes on* a pad with both triggers pinned at +1 for the whole drive; *fails on*
+  `down('crouch')` being true at any point, asserted as the premise check — if the trust gate ever
+  let the trigger through, the arm would be driving a pad that *can* crouch and would prove nothing.
+- **Does not discriminate**: finding the mouth, steering, the camera, or the return leg.
+
+## §661 — The shipped click handler has never been executed by any instrument in this project
+
+`src/main.js:292` reads `const headless = new URLSearchParams(location.search).has('shot')`. On the
+`true` branch the veil is dismissed and **nothing is armed**. `begin()` — the only caller of
+`input.requestLock()` and `audio.unlock()` in the shipped page — is registered only on the `false`
+branch, and `Audio._prefetchStem` returns early on the same param.
+
+`tools/harness.mjs` navigates to `?shot=1&q=…`. So does `tools/shot.mjs`. Every capture, every
+critic run, every camera probe in this repository takes the branch a player never takes. The audio
+tests take a third path entirely: `OfflineAudioContext`, which has no `state`, no autoplay policy
+and no `resume()` that can refuse.
+
+`tools/padaudio.mjs` boots without `?shot`. On a real trusted click, on the dev server, the whole
+chain is sound and was measured end to end for the first time: `ctx.state` **running**, `audible`
+**true**, `trackState` **playing**, `masterGain` 0.700, `musicBus` 0.850, `GET bc-explore.mp3` →
+**200**. So there is nothing wrong with the audio graph, the mix, or the stem, for a mouse player
+on the dev server.
+
+## §662 — A null result and a positive result were numerically identical, and the second quantity was "frames"
+
+`tools/padaudio.mjs --pad` first reported, with every field real: `_padIndex` **0**, `padSeen`
+**true**, `lastDevice` still **`'kbm'`**, no AudioContext, after a Cross press held 300 ms. It read
+exactly like a broken pad path, and it was worthless.
+
+`tools/padwhy.mjs` wrapped `beginFrame`, `_press`, `_adopt`, `_setDevice` and `_padValue` on the
+live instance and counted. **`framesSinceSpy: 0`.** The rAF loop was not running, so the pad was
+never polled — and *a pad that is never polled is indistinguishable from a pad that is polled and
+ignored*. `_padTrust` held 14 indices, proving the loop had run during boot and then stopped.
+
+Measured directly afterwards: `engine.frame` reached **4** across an entire boot and advanced by
+**0** over 1.2 s, with `_looping` **true**, `document.visibilityState` **`'visible'`** and
+`document.hasFocus()` **true**. This container's headless Chromium (SwiftShader, no compositor)
+produces essentially no BeginFrames for a page nothing has clicked; a real click woke it, which is
+precisely why the mouse arm passed and the pad arm did not, and why an instrument bug wore the
+costume of a device bug.
+
+**This is a harness limitation and is NOT claimed as anything the user experiences.** `padaudio.mjs`
+now carries a calibration arm that reads `engine.frame` before and after every stage and aborts
+rather than reporting, and steps `renderFrame` by hand the way `tools/harness.mjs` always has.
+Frames are driven with mouse **moves**, not clicks, because a `mousemove` grants no user activation
+— so the pad-only claim stays honest.
+
+## §663 — RETRACTED BEFORE IT SHIPPED: "the pad never claims the device in the browser"
+
+Recorded as a retraction rather than deleted, because the reading was published to my own working
+notes and looked completely reasonable. The browser evidence for §664 is the *in-process* matrix,
+not the first browser run. The browser run's contribution is §662: the discovery that it could not
+have measured anything.
+
+## §664 — A pad press reached nothing in three states, and the fallback shared the bug it was backing up
+
+### §664.1 The measurement
+
+`tests/padclaim.test.mjs` drives the shipped `Input` with a synthetic DS4 (Chrome standard mapping,
+17 buttons, 4 axes) and registers the exact subscription `Audio._wireEngine` makes. Cross pressed,
+in each of the states a player reaches in the first ten seconds:
+
+| state | `inputDevice` emits | `unlock()` calls | `down('jump')` |
+|---|---|---|---|
+| cold boot → Cross | 1 | 1 | true |
+| **after any blur** → Cross | **0** | **0** | true |
+| **Cross already down at frame 0** | **0** | **0** | false |
+| **pad appears with the press** | **0** | **0** | false |
+| left stick, no button | 1 | 1 | false |
+| **after a blur** → left stick | **0** | **0** | false |
+
+Three mechanisms, each correct on its own terms:
+
+- `_dropAllHeld` → `_releaseSource('pad')` arms `_padResync`, so the next poll routes through
+  `_adopt`, which deliberately sets no device — §540's guarantee (3): *a re-discovered hold is not
+  an event the player caused*. Correct for input. Fatal for audio.
+- §542's trust gate withholds a control it has never seen at rest, so a button already down on the
+  first poll reads 0 until released.
+- **The pad appearing with the press is not an edge case.** Chrome exposes no gamepad to a page
+  until one is used, so it is the *only* order in which a real DS4 can arrive.
+
+Note the second column against the fourth: after a blur **the button works perfectly** and only the
+audio path is starved. That asymmetry is why this survived §552.
+
+### §664.2 The fallback was the same path wearing a second hat
+
+`Audio.update`'s not-ready branch read `input.lastDevice === 'pad'` and its comment called it *"the
+same claim as the `inputDevice` subscription, made without depending on emit semantics"*. It is not
+a second path: `inputDevice` is **emitted by** `_setDevice`, and `_setDevice` is what **writes**
+`lastDevice`. Two readings of one variable. **§439, in the file that quotes §439.**
+
+### §664.3 The correction
+
+`Input.padTouched` — raw button state, sampled each `beginFrame`, sharing no mechanism with
+`_press`, `_adopt`, `_padValue` or `_setDevice`, so it can be true when all four are silent.
+Buttons **6 and 7 are excluded**: they are the two the W3C standard mapping defines as analogue and
+the whole subject of §542, and including them would claim `pad` at boot in an empty room. Sticks
+are excluded for §541's reason — position cannot tell a pushed stick from a worn one.
+
+`Audio.update` now takes either signal. A suspended context also gets a `resume()` retry every 32
+frames, because §552's design left one reachable state with no retry at all: context created
+suspended by a polled press, player never clicks, `_armGesture`'s listeners never fire, and
+`unlock()` — the only thing that retries — is never called again.
+
+### §664.4 The platform question §551 and §552 both declared unanswerable, answered
+
+Both sections stated — correctly, at the time — that whether a browser HONOURS `resume()` when the
+only input has been a *polled* gamepad press could not be tested here, and §551's probe "voided
+itself twice rather than report a comfortable answer".
+
+With `tools/padaudio.mjs` booting **without `?shot`** and frames hand-stepped past §662's dead rAF
+loop, it can now be observed. A synthetic DS4, Cross pressed, **no click, no key, ever**, three
+polls inside the hold:
+
+| stage | `lastDevice` | `ctx` | `ctx.state` | `audible` | `trackState` |
+|---|---|---|---|---|---|
+| booted, untouched | `kbm` | none | — | false | — |
+| **after one pad press** | **`pad`** | **exists** | **`running`** | **true** | **`playing`** |
+
+**The pad-only path reaches a running context and a playing score with no gesture at all.**
+
+**The honest boundary, which is the whole of what §551 was protecting against:** this container's
+headless Chromium has no audio device, and §551 established that it therefore applies no autoplay
+policy for a policy to enforce. So what is proved is that **the wiring reaches `running` here**, not
+that a policy-enforcing browser on the user's machine will do the same. That remains §667.2 item 4,
+and it is a question for the user, not for another probe.
+
+### §664.5 DOMAIN
+
+- **K1** — *passes on* a real Cross press in all four arrival states; *fails on* three inputs run
+  in-arm, each of which must read false: no pad at all, a pad at rest, and §542's pad with L2/R2
+  resting at +1. The third is the load-bearing one — without it, "any non-zero byte on the device"
+  would pass.
+- **K2** — *passes on* the real `Audio` class routing a touched pad to `unlock()` **in the blur
+  state**, chosen deliberately because a cold-boot press would pass through the old path and prove
+  nothing; *fails on* the same branch with the pad at rest, run in-arm, where `unlock()` must not
+  be called — so the arm cannot pass by unlocking unconditionally.
+- **K3** — *passes on* the asymmetry itself (cold boot emits once, the other three emit zero);
+  *fails on* the cold-boot row, asserted in-arm — if every row emitted zero the rig would be broken
+  rather than the code, and this would read as a discovery.
+- **Does not discriminate**: whether a sound comes out. Node has no `AudioContext`, so
+  `Audio.available` is false and `unlock()` returns at its second line. These arms measure the
+  **wire**. The **sound** needs a browser and is §661's tool.
+
+## §665 — The control list told the player to press a button that has nothing to do with the vent
+
+`src/ui/HUD.js`'s Crouch row read:
+
+> `Ctrl` / `L2` — **Crouch** — *Tap while running — roll · in a vent — crawl*
+
+On the row whose binding is L2, *"in a vent — crawl"* reads as **press this to crawl in a vent**.
+It is false: `Crawl.canEnter` is `inVent()` alone, measured in §660.1 by driving the route with L2
+permanently dead. The file's own header says *the game ships 25 moves and no tutorial, so the pause
+screen* **is** *the tutorial* — which makes a wrong line there the most expensive kind.
+
+A player who reads it, walks to the mouth, presses L2, feels nothing change and concludes the vent
+is shut has been told to do that by us. Now reads *"a vent crawls you by itself, just walk in"*.
+
+**Not claimed as the cause** of the user's report — it is one line of text and they may never have
+opened the pause screen. It is the part of that report this lane could be causing, so it is fixed.
+
+## §666 — Every check this project has ever run loaded the dev server at the domain root; the demo is a production build under `/Demo/`
+
+The user supplied their browser console from the live site. Five 404s, two bugs, and **both are
+invisible in dev by construction and unconditional in production.**
+
+### §666.1 Bug 1 — the baked texture blob was anchored at the origin
+
+`src/textures/bakeassets.mjs` wrote `PUBLIC_URL = '/assets/tex/textures.bin'` into
+`src/textures/baked.json`, which `Textures.js` imports and resolves as
+`new URL(BAKED.blob, document.baseURI)`. A **leading slash** makes that absolute against the
+ORIGIN: `document.baseURI` contributes the host and nothing else. At `/` it is right by accident.
+The demo is a GitHub **project** page at `/Demo/`, where it became
+`https://<user>.github.io/assets/tex/textures.bin` → **404**.
+
+`vite.config.js` sets `base: './'`, which is why every *bundled* asset is fine. This string is JSON
+fetched at runtime and never passes through the bundler at all.
+
+**It was the only one in the tree.** A scan of 81 source files found exactly one origin-anchored
+asset URL, and the two others that matter — `Audio._loadTrack`'s `assets/audio/…` and `KayKit`'s
+`assets/kaykit/` — are already relative, already correct in both roots, and conspicuously absent
+from the user's failing-request list. The fix is the shape the rest of the build already proves.
+
+### §666.2 Bug 2 — the character FBX asks for files vite never emitted
+
+`src/player/SlyModelDLRig.js` loads `sly.fbx` via `new URL(…, import.meta.url)`, which vite emits
+hashed. The FBX names its maps internally, and three's `FBXLoader` resolves those names against the
+**FBX's own emitted path**. In dev the PNGs sit beside it in `src/assets/sly-dl/` and it resolves;
+a production build emits both under separate hashes and it cannot.
+
+`tests/prodpath.test.mjs` **P2** reads the FBX and extracts the names it embeds:
+`sly_body.png, sly_eyeball.png, sly_head.png, sly_tail.png` — **exactly the four in the user's
+console, independently derived.** Fixed with a `LoadingManager` URL modifier mapping basename → the
+URL vite actually emitted, taken from the `import.meta.glob` that was already there and already
+correct. A URL modifier rather than `setResourcePath` because vite hashes each PNG independently:
+there is no single resource path to give, and the mapping *is* the glob.
+
+### §666.3 What the general finding is
+
+`tools/harness.mjs`, `tools/shot.mjs`, every critic capture, every probe in this lane, and every
+`tests/*.test.mjs` load **the vite dev server at `/`**. Nothing in this repository has ever loaded a
+production build from a subpath. The two differences that bite — how a leading slash resolves, and
+what the bundler emits versus what sits beside a source file — are exactly the two that are
+identical-and-correct in dev and different-and-broken in production.
+
+**That is why three playtest rounds found nothing.** Each lane fixed something real, measured it in
+dev, and shipped; the fault was in a dimension no instrument had.
+
+### §666.3a The direct question — does the texture 404 stall the module chain? — answered: NO
+
+Asked because `main.js` builds 31 modules and inits them in a second pass with **audio 30th of 31**
+(§551), so a stalled init chain would starve everything late in it and would be the whole story.
+
+Baseline, `tools/prodboot.mjs` on the pre-fix build served from `/Demo/`:
+
+```
+ready             true   (102.2 s)
+audio module      present=true  available=true
+requests          118
+! textures: baked cache unreadable (HTTP 404); generating procedurally
+! textures: prewarm 23 recipes in 15.58s at size 1024 on 3 workers (125 MB, 0 baked / 23 generated)
+FAILED REQUESTS (24)
+  404  /assets/tex/textures.bin                <- no /Demo/ prefix
+  404  /Demo/assets/sly_body.png
+  404  /Demo/assets/sly_eyeball.png
+  404  /Demo/assets/sly_head.png
+  404  /Demo/assets/sly_tail.png
+```
+
+**Boot completes, and the audio module is present and available.** `Textures._loadBaked` catches
+the failure, warns, and returns null; the init chain continues. So this bug is **not** the direct
+cause of "no sound", and that cause stays open — it is §664 and §667.2.
+
+**What it does cost is the loading screen.** `0 baked / 23 generated` is the fallback path running
+in full: 15.58 s of prewarm alone, 125 MB, inside a **102.2 s** boot. The 25 MB cache exists
+precisely to skip that. A player who waits a hundred seconds and then reports that the music does
+not play is describing something real, and the recorded score cannot start before frames do:
+`_kickTrack` is gated on `this._framed`, which is only set once `engine.start()` runs — after every
+module init. **Ambience can start on a click during loading; the score cannot start until boot
+ends.** That is a coherent path from this 404 to "no music" that does not require the init chain to
+stall at all.
+
+Caveat recorded rather than buried: the software renderer in this container makes 102.2 s an upper
+bound, not the user's number. The *ratio* is the claim, and the after-fix run below is its control.
+
+### §666.3b An observation NOT claimed as a defect
+
+The same run reported ~19 `net::ERR_ABORTED` on `assets/kaykit/*.gltf|bin` and one
+`assets/sly-anim/carmelita-guard.glb`. `ERR_ABORTED` is a cancellation, not a miss, and this probe
+closes the browser in a `finally` — so requests still in flight at teardown produce exactly this.
+**I did not establish which**, and it is another lane's asset path in any case. Recorded so the
+next reader has the observation without inheriting a conclusion.
+
+### §666.4 The instrument
+
+`tools/prodboot.mjs`: runs `vite build --sourcemap false` (matching `.github/workflows/pages.yml`
+exactly), serves `dist/` behind a `/Demo/`-shaped prefix that **404s everything outside it** — the
+GitHub project-page semantics, reproduced rather than approximated — boots it in Chromium, records
+every response, and exits non-zero on any non-2xx or on a boot that never completes. `--prefix /`
+runs the same thing at the root, so both roots are proved rather than one.
+
+The suite-safe half is `tests/prodpath.test.mjs`, which cannot boot a browser but can guard the two
+*classes*: P1 scans the whole source tree for origin-anchored asset URLs, P2 checks every name
+inside the FBX against the files shipped beside it, and P3 resolves the manifest's `blob` under both
+a dev base and a project-page base with the same expression `Textures.js` uses.
+
+### §666.4a The fix, measured — same tool, same prefix, before and after
+
+| | before | after |
+|---|---|---|
+| `4xx/5xx` responses | **5** | **0** |
+| — `assets/tex/textures.bin` | 404, at the domain root | 200, under `/Demo/` |
+| — `sly_body/head/tail/eyeball.png` | 404 ×4 | gone; no request is made under a name vite did not emit |
+| texture prewarm | 15.58 s, **0 baked / 23 generated** | **1.84 s, 23 baked / 0 generated** |
+| boot to `__GAME.ready` | **102.2 s** | **65.2 s** |
+| engine warnings | 5 | 4 |
+| `net::ERR_ABORTED` (not gated, §666.3b) | 19 | 15 |
+
+**All five of the user's 404s are gone**, and the failing set the baseline produced is the user's
+console line for line — an instrument built from their report reproducing it exactly, then going
+green on the fix. The baked cache loads for the first time in production: `23 baked / 0 generated`
+against `0 baked / 23 generated`, an 8.5× cut in prewarm and 37 s off boot in this container's
+software renderer.
+
+### §666.4b Both roots, because a fix that works at one is how this started
+
+The instruction was to prove it for both, not one — the original bug was *correct at `/` and wrong
+under `/Demo/`*, so a check at a single root is exactly the check that already existed. Same build,
+same tool, `--prefix` swapped:
+
+| prefix | `4xx/5xx` | boot | prewarm | build stamp |
+|---|---|---|---|---|
+| `/Demo/` (project page) | **0** | 65.2 s | 1.84 s, 23 baked / 0 generated | `dev build` |
+| `/` (dev-shaped root) | **0** | 64.8 s | 1.77 s, 23 baked / 0 generated | `dev build` |
+
+The two agree to within noise, which is the point: the relative URL has no opinion about the root.
+`dev build` is `index.html`'s literal text; `.github/workflows/pages.yml`'s `Stamp the build` step
+rewrites `>dev build<` to `>build <sha> · <date><` on the deployed copy only. Verified that the
+`sed` will match — the string occurs exactly once in `dist/index.html` — so the stamp §667.1 asks
+the user to read really will be there.
+
+### §666.5 DOMAIN
+
+- **P1** — *passes on* the tree as it stands, all-relative; *fails on* the pre-fix text of
+  `baked.json` line 6, reconstructed and run through the **same predicate** in-arm. Without that, a
+  predicate matching nothing would pass and read as a clean tree.
+- **P2** — *passes on* all four embedded FBX names resolving to shipped files; *fails on* a name
+  that is not there, run in-arm, plus an asserted **minimum count** — because "zero names, zero
+  missing" is the vacuous shape this project keeps producing.
+- **P3** — *passes on* `blob` landing under both bases; *fails on* the pre-fix string, run in-arm,
+  which must escape the project prefix. Both bases share a host on purpose, so what is measured is
+  the path.
+- **`prodboot`** — *passes on* a build with zero non-2xx; *fails on* the pre-fix build, run as the
+  baseline before the fix, whose failing-request list is the reproduction of the user's console.
+- **Does not discriminate**: anything about the dev server, which is correct either way and is the
+  whole reason this was invisible.
+
+### §666.6 Deploy is healthy — the user is on the current build
+
+Checked before assuming, because "the fix never reached them" would explain three reports at once
+and is cheaper to test than anything else: the Pages workflow has run 57 times, and run 57 at
+`63d8c50` **succeeded**. `pages.yml` builds fresh from the branch on every push; no `dist/` is
+committed. The user has been playing the current code. The fixes were reaching them; they were
+landing on top of a build whose texture cache had never once loaded.
+
+## §667 — What only the user can tell us, and exactly how to check it
+
+Written because this container cannot answer these and pretending otherwise is how three rounds
+were spent. Each item says what to do, what a pass looks like, and what a fail would mean.
+
+### §667.1 The build stamp comes first, and answers "is this even the new build"
+
+`1cd03d7` puts the commit on the loading screen. **Before anything else: read it and tell us the
+seven characters.** If it is not the newest sha we quote, everything below is about a cached build
+and the answer is a hard refresh (Ctrl-Shift-R / Cmd-Shift-R), not a code change.
+
+### §667.1a What §666 changed for you, and what it did not
+
+The five 404s in your console are fixed and the fix is measured (§666.4a). **The most likely thing
+you will notice is that loading is much shorter** — the 25 MB texture cache had never once loaded
+on the live site, so every texture was being generated from scratch on your machine, every visit.
+
+**It is not claimed to fix the sound.** Boot completed past the audio module even with the 404
+(§666.3a), so that bug was not starving audio. What it may have been doing is making you wait long
+enough that "no music yet" and "no music" were indistinguishable — the recorded score cannot start
+until boot finishes, by design. So please re-test sound on the new build before we chase it further.
+
+### §667.2 Sound
+
+1. **Open the console (F12 → Console) and reload.** Tell us whether
+   `assets/tex/textures.bin` still 404s. It should now be requested as
+   `…/Demo/assets/tex/textures.bin` and return 200.
+2. **Click once anywhere on the loading screen, even though you are on a pad.** Then say whether
+   music starts. This is the one thing this container has proved works end to end (§661): on a
+   click, the context runs, the stem fetches and the track plays.
+3. **If you click and there is still no music**, type `__ENGINE.get('audio').audible` in the console
+   and tell us what it prints. `true` means sound is leaving the page and the problem is downstream
+   — output device, tab mute, system mixer. `false` with `__ENGINE.get('audio').ctx.state` printing
+   `'suspended'` means the browser refused, which is a platform answer we cannot get here.
+4. **Then test the pad on its own**: reload, do **not** click, press ✕ on the controller, wait five
+   seconds. Music or no music? This is the §664 path and it is the one thing no instrument here can
+   settle, because whether a browser honours `resume()` after a *polled* gamepad press — with no
+   DOM event and no user activation — is a policy decision, and this container has no audio device
+   for a policy to govern (§551, §552).
+5. **Which browser and OS**, and **how the DS4 is connected** (USB or Bluetooth). Chrome exposes no
+   gamepad until a button is pressed; Firefox and Safari differ, and §664's third state depends on
+   that behaviour.
+
+### §667.3 The vent
+
+Geometry and input are **both proved clear on both devices** (§660), so what is left is finding it
+and steering into it.
+
+1. **Where do you look for it?** The mouth is in the great hall's **north-west** corner, in the
+   north wall, at roughly x −21.9, z −48.7 — a ramp down into a hole about 1.7 m wide. §603 put a
+   frame and a flame at the lip and §604 moved a prop that was blocking the view of it. **Tell us
+   whether you can see a lit opening there at all**, and if you can, photograph it.
+2. **Walk into it holding forward and nothing else.** Do not press L2 — §665 was our error, crouch
+   has nothing to do with it. If it works, the HUD's alert band reads **CRAWLING** and the camera
+   drops.
+3. **If you stop dead at the wall**, tell us roughly where you were standing when you stopped, and
+   whether the CRAWLING banner ever appeared. Stopping *with* the banner means the tunnel; stopping
+   *without* it means you were not in the affordance window, which is only about 1.64 m wide in x.
+4. **If you cannot find it at all**, say so plainly — that is a level-design answer, not a bug, and
+   it is the one the measurements here point at hardest.
+
+### §667.4 What this environment could not tell us, listed so nobody re-runs it
+
+- **Whether any sound is audible.** No audio device. `OfflineAudioContext` is not a sound card, and
+  `AudioContext.state` is the furthest any probe here can get.
+- **Whether a browser honours `resume()` after a polled gamepad press.** §551 established that
+  headless Chromium applies no autoplay policy at all and that forcing
+  `--autoplay-policy=user-gesture-required` changes nothing with no device to govern. That probe
+  voided itself twice rather than answer; it still cannot.
+- **Anything about a real gamepad.** Every pad measurement here overrides `navigator.getGamepads`.
+  That exercises all of `src/core/Input.js` faithfully and none of the browser's own gamepad
+  exposure rules, its axis conventions, or a worn stick's true resting values.
+- **rAF scheduling in a real browser.** §662: this container's headless Chromium barely produces
+  frames for an unclicked page, so every timing claim here is made on hand-stepped frames.
+- **Whether the mouth is findable.** No instrument can answer that. Only §667.3 can.

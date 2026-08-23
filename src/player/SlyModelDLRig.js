@@ -43,6 +43,38 @@ import { loadCaneAsset } from './CaneAsset.js';
 const FBX_URL = new URL('../assets/sly-dl/sly.fbx', import.meta.url);
 const TEX_FILES = import.meta.glob('../assets/sly-dl/*.png', { eager: true, query: '?url', import: 'default' });
 
+/**
+ * ── The FBX's own texture names, pointed at the files vite actually emitted (§666) ────────────
+ *
+ * `sly.fbx` names its maps internally as `sly_body.png`, `sly_head.png`, `sly_tail.png` and
+ * `sly_eyeball.png`, and three's `FBXLoader` resolves those against the FBX's OWN path. In dev
+ * that is `src/assets/sly-dl/`, where the PNGs sit beside it, so it works and always has. A
+ * production build emits the FBX hashed into `assets/` and the PNGs under *different* hashed
+ * names, so the same four names resolve to files that were never emitted — four 404s on every
+ * load, photographed in the user's console on the live site:
+ *
+ *     GET https://<user>.github.io/Demo/assets/sly_body.png   404
+ *
+ * **This has never worked in a production build, and no instrument here could have seen it**:
+ * every test, capture and probe in this project loads the dev server (§666). `TEX_FILES` above
+ * already holds the right URLs — the loader was simply never told.
+ *
+ * A URL modifier is the fix rather than `setResourcePath`, because there is no single resource
+ * path to give: vite hashes each PNG independently, so the mapping is per-file and is exactly
+ * what the glob is. It answers the question the loader is asking — *where is this file* — which
+ * keeps working if anything ever does read the FBX's own materials. Today nothing does: the
+ * materials built below take every map from `textureUrl()`, off the same glob, so the practical
+ * effect is that four failing requests become four that hit the browser cache entry the model's
+ * real maps already populated.
+ */
+const FBX_MANAGER = new THREE.LoadingManager();
+FBX_MANAGER.setURLModifier((url) => {
+  const m = /([^/\\?#]+\.png)(?:[?#].*)?$/i.exec(String(url));
+  if (!m) return url;
+  const key = Object.keys(TEX_FILES).find((k) => k.endsWith(`/${m[1]}`));
+  return key ? TEX_FILES[key] : url;
+});
+
 /* FBX bone -> project bone. Everything absent folds into its nearest mapped ancestor at load. */
 const BONE_MAP = {
   a_body: 'hips', pelvis: 'hips',
@@ -373,7 +405,7 @@ export class SlyModel {
     const skeleton = new THREE.Skeleton(boneList);
 
     /* ---- the asset, rig and all ---- */
-    const fbx = await new FBXLoader().loadAsync(FBX_URL.href);
+    const fbx = await new FBXLoader(FBX_MANAGER).loadAsync(FBX_URL.href);
     fbx.updateMatrixWorld(true);
 
     const skinned = [];

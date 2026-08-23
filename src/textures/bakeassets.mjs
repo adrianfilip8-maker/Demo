@@ -45,7 +45,25 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../..');
 const OUT_BLOB = path.join(ROOT, 'public/assets/tex/textures.bin');
 const OUT_MANIFEST = path.join(HERE, 'baked.json');
-const PUBLIC_URL = '/assets/tex/textures.bin';
+/**
+ * RELATIVE, and the leading slash it used to carry was a boot-critical production bug (§666).
+ *
+ * This string is written verbatim into `baked.json`, which `Textures.js` *imports* and resolves
+ * with `new URL(BAKED.blob, document.baseURI)`. A leading slash makes that absolute against the
+ * ORIGIN, so `document.baseURI` contributes nothing but the host: correct by accident at `/`,
+ * and wrong on any project page. The demo is served from `https://<user>.github.io/Demo/`, where
+ * it resolved to `https://<user>.github.io/assets/tex/textures.bin` and 404'd — photographed in
+ * the user's own console.
+ *
+ * `vite.config.js` sets `base: './'`, which fixes every BUNDLED asset. This one bypasses the
+ * bundler entirely: it is a string inside a JSON file, fetched at runtime.
+ *
+ * Without the slash it resolves against the document, which is right in both roots — and that is
+ * not a guess, it is the convention the rest of this build already proves: `Audio._loadTrack`
+ * uses `assets/audio/...` and `KayKit` uses `assets/kaykit/`, both relative, and neither appears
+ * in the failing-request list from the live site. `tools/prodboot.mjs` now asserts both roots.
+ */
+const PUBLIC_URL = 'assets/tex/textures.bin';
 
 /** The quality tier the cache is built for. `Textures` falls back to procedural at any other. */
 const TEX_SIZE = 1024;
