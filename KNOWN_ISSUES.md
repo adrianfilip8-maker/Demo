@@ -47853,3 +47853,283 @@ attributed before claiming so: `spawn2eye` is the movement lane's own file, in f
 both my tree and a clean worktree at HEAD — an observed load flake on a busy box, recorded as
 that rather than as a green with an asterisk. `camstate` failed the same way in one run and
 passed in the next, same character.
+
+## §600 — The vent crawl is built: the wall was the smallest of four blockers, and cutting it was not free
+
+`src/world/EgyptLevel.js` · `src/world/Terrain.js` (`PROXY_OPENINGS`) · `tests/ventroute.test.mjs` (new) ·
+`tests/reachcensus.test.mjs` (arm V retired) · `tests/tombdoor.test.mjs` (D3 inverted) ·
+`tests/traversal.test.mjs` · `tests/vegwater.test.mjs` · `tests/kaykit.test.mjs` · `tests/camstate.test.mjs` ·
+`tests/basketvary.test.mjs` (288 → 296)
+
+**The user's ruling at playtest — *"the vent crawl space is not accessible currently"* — against §565,
+which had withdrawn the route.** §565's reasoning is the evidence this started from and most of it
+held. What it priced was one wall. What was actually in the way was four things, and the wall was the
+one that cost least.
+
+### §600.1 What reproduced, and the two numbers that did not
+
+Re-run before anything was touched. `reachcensus` arm V passes at HEAD and reproduces its own log to
+the digit: **the tunnel interior is hollow** (a crouched capsule depenetrates 0.000 m at 8 of 8
+samples from z −53 to −60.5), **the sand is 1.17 m overhead at its tightest**, the crawl **stops at
+z −49.56** — the hall north wall's face at −49.90 plus the 0.34 capsule radius — and the escapes are
+**back 31.1 m, turn-round 29.9 m, held-forward 0.00 m**. It is a cul-de-sac, exactly as §565 said.
+That stopping coordinate is now `ventroute` R1's control, driven 10 m east where the wall is still
+solid, so §563's number is asserted in the file that replaced the tripwire.
+
+Two of §565's measurements did not survive re-probing:
+
+- **"inside the shaft 0 triangles over 19 m"** is the east run, not the shaft. A centroid census of
+  the drawn scene in x −22…−20, z −51…−60 finds **34 triangles** — 21 of `arch:hall:hieroglyph_wall`
+  (the wall's buried courses) plus terrain passing through. The east run is the part that was
+  genuinely empty. The finding was right; the number was not the whole of it.
+- **"the tomb-side exit is drawn solid, 32 triangles"** is wrong, and usefully wrong.
+  `vaultOpenings` has cut a through-hole in the vault's west wall on faces 2 and 3 at **z −64…−62,
+  y −3.80…−2.10** for as long as the tomb has existed. §565 probed at the old vent volume's z −61.6 —
+  0.6 m off the hole — and found masonry. **The art was open and only the proxy was solid**, which is
+  the reverse of the seam this project usually audits, and it is why the passage looked less
+  finished than it was: the exit was drawn, and the three shelves under it are commented in
+  `EgyptLevel.js` as *"the vent's landing chain down to the floor"*.
+
+### §600.2 The third number reproduced and was incomplete: a portal cut is free in COUNT, not in RNG
+
+§565: *"substituting the hall floor slab with a four-box merged slab carrying a doorway hole leaves
+the level at 255 proxies / 287 recs — the same numbers."* True, and reproduced: `A.proxy` registers
+exactly one collider for any geometry and `K.mergeAll` is wired at `Architecture.init`.
+
+It is not the whole ledger. Adding the vent doorway to the hall's north wall as a plain `openings`
+entry, and digesting the collider layer before and after:
+
+    12 collider rows CHANGED       the aisle-roof `ledge` slabs, by up to 0.21 m
+    28 of 69 art meshes RE-DICED   including the whole courtyard and the tomb
+
+`masonryShell`'s own comment says why — *"blocks that fell wholly inside an opening are no longer
+generated-then-discarded, so shells that HAVE openings do re-shuffle downstream"* — and
+`pavingField` is the same shape: `if (skip) continue` sits **above** the four `rng.jitter` calls, so
+a dropped slab is four draws the rest of the level never sees. One opening moves every later draw.
+
+`sealedCut` fences it, and the mechanism needs no measured constant: build the piece **twice**. Once
+exactly as it was written before the cut, taping every value it draws — that pass is what advances
+the shared stream, by precisely what it always advanced — then again with the cut applied, replaying
+the same tape. The uncut geometry is thrown away. The shared stream ends where it began and the cut
+piece is diced from the identical sequence, so it is byte-identical up to the first block the hole
+removes.
+
+**Deleting a mass reseeds the build exactly as much as adding one**, and that is not obvious until it
+bites: §565's bricked-up mouth was three `mudbrick` volumes drawn from the shared stream, and
+removing them re-diced `background()` and `foreground()` while everything up to the tomb's false door
+stayed byte-identical. The retired code is now replayed verbatim into a sink that keeps nothing —
+verbatim, not an equivalent draw count, because a count is the thing that goes stale.
+
+**The seal caught a third leak on itself.** Its uncut arm has to be the original *exactly*: passing
+the new opening head to it as well as the new sill left the tape short and re-diced the crypt piers,
+the sarcophagus, the background and the foreground. All three leaks were located by printing
+`A.rng()` at eight build checkpoints and diffing — not by reading the code, which looked right each
+time.
+
+### §600.3 The RNG-neutrality digest, in the form the rule asks for
+
+Every collider's tag, material, flags, world bounds and vertex count, plus a SHA-1 over every drawn
+mesh's vertex positions, before and after (`tools/ventdigest.mjs`):
+
+    art meshes byte-identical         59 of 69   the ten that moved are the ten this change draws into
+    collider rows added                8         ground +3, wall +5
+    collider rows re-sited             7         the 3 west-wall shelves and the 4 `vent` volumes
+    collider rows changed in place     4         SAME world bounding box, higher vertex count
+    collider rows removed              0
+
+The four changed-in-place rows are the cuts themselves — the hall floor slab (24 → 72 vertices), the
+hall north wall proxy (24 → 72), the tomb west wall proxy (24 → 96) and TERRAIN's sand proxy
+(8197 → 8278). A slab with a doorway in it is one collider covering the same space with a hole in it;
+that is what a cut *should* look like in a digest, so this record names the four rather than
+pretending a portal can be opened without touching one. `basketvary`'s ledger carries the histogram
+measured both ways.
+
+**And a bounds digest cannot see everything, which is its own finding.** `mergedProxy`'s first
+version built its boxes in world space and placed the mesh at the origin. World bounds identical,
+vertex counts identical, digest clean — and `mesh.position` for the hall's north wall now reads
+(0, 0, 0), the middle of the courtyard. `camstate.test.mjs` derives wall-run approach sites from
+exactly that field. The mesh is placed at the union's centre now.
+
+### §600.4 Three blockers that were not the wall
+
+**The terrain sand proxy is a lid over the mouth.** §567 corrected §563 to *"the sand is overhead, not
+pressing"*, which is right about the old channel and wrong about a ramp that starts at the hall floor.
+`Terrain.heightAt` reads −0.053 to +0.021 from z −49 to −57, so a ramp descending from y 0 crosses the
+proxy surface at z ≈ −48.79 and does not clear it until z ≈ −51.0. Driven with the wall cut and
+nothing else: the crawl walked onto the sand at y −0.05 and **stopped at z −49.56** — §563's own
+coordinate, produced by a different surface. *A second blocker hiding behind the first one looks
+exactly like the first one not being fixed.* §480 built `PROXY_OPENINGS` for precisely this on the
+tomb descent; the vent mouth is the second entry, and it stops at z −52.00 — the wall's own far face —
+for two measured reasons: the cut's effective edge sits about **0.25 m inside its nominal one** (a
+ray at z −51.5 still found `sand_collision` with the opening nominally at −51.70, which left the
+tunnel roof **9 mm** under the desert at its tightest), and everything from −52.00 south is under the
+wall, so the cut cannot show as a trench.
+
+**The bore is sized by the STEP PROBE, not by the crawl capsule.** `Controller._moveHorizontal` lifts
+a grounded capsule by `TUNE.stepHeight` 0.42 before every horizontal sweep, in every state, so the
+ceiling a crawler needs is `0.42 + 2·radius / cos(pitch)` — **1.19 m** at the mouth ramp's 31.2°, not
+the 0.68 m the crawl ball occupies. At a 1.15 m bore the drive entered `crawl`, held forward, and
+froze at **z −49.616 with velocity exactly 0.000 for 1200 frames**, because the lifted capsule caught
+the portal head 0.28 m ahead of it. A hand `capsuleSweep` at crawl height from the same point passes
+cleanly, which is what makes this the kind of blocker a probe agrees is not there. Bore is 1.40 m;
+`ventroute` R2 asserts the step-probe margin (tightest **0.249 m**) and runs the crawl-ball bound
+in-arm as the control that accepts all 19 stations.
+
+**`rampProxy` is inside out for anything deeper than it is thick.** It shears only the vertices above
+the box mid-plane and leaves the underside flat at `hi − thick`, so the shaft floor put a flat
+`ground` plane at y −2.15 straight through the bore — which a downward probe read as the floor at
+z −54.5 and an upward probe read as the ceiling at the same point. *A quantity identical across a
+swept input*: the ceiling read exactly −2.15 at seven consecutive stations. The function is correct
+where its callers use it (the terrace and tomb flights are thicker than they are deep) and wrong
+here; the vent uses a genuinely rotated box, `rakedProxy`.
+
+### §600.5 The landing chain could not be landed on, in two independent ways
+
+The three west-wall shelves were built as *"the vent's landing chain down to the floor"* and had never
+been reachable, for reasons that have nothing to do with the vent:
+
+- They ran **x −13.4…−12.0** against a wall whose inner face is at **x −12.05**, so 1.35 m of every
+  shelf was inside the wall and 0.05 m stuck out. Measured: a standing capsule dropped on the top
+  shelf depenetrates **0.604 m** at x −12.7 and **0.294 m** at x −12.0, and at x −11.6 — the first
+  place it does not — the ground under it is the crypt floor at y −12.00, **8.8 m down**.
+- They were **stacked**: z −70…−60.5 / −72…−64 / −74…−66, so each shelf lay under the one above it
+  for six of its eight metres and every riser was a 3.0 m climb off a 2 m strip at the far end.
+  Driven, a walker made the first riser and none of the rest.
+
+Now 1.55 m proud of the face and a stair: 2.4 m treads each clear of the shelf above, risers
+**2.20 m** throughout, from the crypt floor at −12.0 through −9.80 and −7.60 to the gallery at −5.40.
+All three driven with walk+jump in `ventroute` R6, with the jump suppressed as the control (0 of 3).
+
+### §600.6 What it is for, stated as narrowly as the measurements support
+
+§8.1 offered the vent as a *stealth* ALTERNATE and §565 struck it on exactly the right ground: guards,
+cameras, searchlights and motion trackers are out of scope by the user's own ruling, so a bypass
+bypasses nothing. It is rebuilt as **traversal**, and the tempting claim does not survive measurement:
+
+    hall NW corner -> sarcophagus     vent 53.8 m     front route 56.2 m
+
+**2.4 m. It is not a short cut and nothing in the code or the tests says it is** — R4 prints the two
+lengths and asserts nothing about them. Overstating this is the failure mode §565 caught in the
+route's first life, when it was advertised for long enough that it had to be retired explicitly.
+
+What it is:
+
+- **A second entrance.** The driven path enters neither the inner pylon gate (x ±3.4 at z −52) nor the
+  stairwell (x −14.2…4.4, z −59.4…−54.4) — 0 of 344 samples in each — and the front route enters both
+  (14 and 74 of 235), which is what makes "independent" mean something rather than being a property
+  of any path that happens to miss two boxes.
+- **A vantage.** The exit is 6.6 m above the crypt floor on the west wall, and R4 finds a clear
+  sightline to the sarcophagus at 13.7 m from (−11.3, −3.9, −67.8) — searched along the gallery
+  rather than asserted at one lucky point, because the crypt has six granite piers in the way.
+- **The level's only crawl.** `Crawl` has shipped in the moveset since §6 and nothing in the level
+  used it for anything.
+
+### §600.7 The build
+
+    head  z −48.70  y  0.00   the ramp head, flush with the hall paving; a recess in the floor
+    knee  z −52.00  y −2.00   the wall's north face — 31.2 deg, set by the sand, not by taste
+    foot  z −62.15  y −5.40   18.5 deg
+    run   x −22.70 -> −12.05 at y −5.40, z −63.85…−62.15, inside the crypt's own drawn opening
+
+Bore 1.70 × 1.40 m. Both pitches are inside `slopeWalkableDeg` 50 and neither is steeper than the
+terrace flight-1 ramp (33.5°). The gallery is at −5.40 rather than at the drawn opening's old sill of
+−3.80 because the crypt's star ceiling is drawn at y −2.85…−2.00: at −3.80 a standing capsule has
+1.35 m of headroom and puts its head 0.45 m *inside* the ceiling — collision-free, because that slab
+is art, and wrong in every frame. The exit opening moves down a course and a half to match, through
+the same seal.
+
+Lit by five oil lamps down the west jamb, registered through `Lighting.addLocalLight`. LIGHTING inits
+before ARCHITECTURE in the MANIFEST and its pool promotes the nearest `localCap` handles per frame,
+so lamps buried in a tunnel cost a slot only while the player is in the tunnel.
+
+### §600.8 Driven, both directions, on the shipped capsule
+
+    hall NW (−21.85, 0.20, −46.0)   ->  crypt gallery (−12.48, −5.40, −62.97)   1372 frames, `crawl`
+    crypt gallery (−11.0, −5.30, −63.0) -> hall floor (−21.84, 0.00, −47.53)    1604 frames, stands up
+
+**DOMAIN (§418.3)** — R1 *passes on* the shipped level, the drive above; *fails on* the same drive
+translated 10 m east to x −12.0, run in-arm, where the wall is uncut and the walker stops at
+**z −49.56** — §563's coordinate, reproduced as the control. *Does not discriminate*: art (R5),
+difficulty (one held stick, no timing), or the return leg (R3's). R2 *passes on* 19 stations against
+the step-probe bound, tightest margin **0.249 m**; *fails on* the crawl-ball bound run in-arm, which
+accepts 19 of 19 including the profile that froze. R3 *passes on* the ascent; *fails on* the same
+drive sent south along the gallery, which holds at y −5.40. R5 *passes on* 17 stations × 4 sightlines,
+0 into the void, measured by RAY — a centroid census reads **zero** in the middle of a wall a ray hits
+at 0.85 m, because the tunnel's slabs put all their triangles at their ends; *fails on* the same four
+rays 6 m west at x −29, 0 of 4. R6 as above. R7 *passes on* 15 stations at a worst eight-way reach of
+**3.42 m**; *fails on* §566's under-paving void at (−18, −1.00, 22), which settles 8 of 8 and reaches
+**0.00 m** — the **west** one, deliberately: its mirror at +18 never settles grounded, and a stance
+that reads 0.00 because it never settled is not evidence about enclosure.
+
+`pincensus` re-run after the change: **P1 11,017 surfaces, 90 enclosed samples in 54 clusters, 0 real
+traps; P2 and P3 unchanged.** The passage adds no pocket.
+
+### §600.9 The hole a station census cannot see, found in a frame
+
+Every clearance number in `ventroute` R2 and R5 rays *sideways* out of the bore. Nothing rayed along
+the run's own axis at its blind end, so the elbow's west face — 1.70 × 1.40 m — was never built and
+never measured, and the first `run` capture shows it as a bright rectangle of sky at the end of the
+tunnel. **A bore with one end missing is exactly as open as one with both**, and every station in it
+still reads 0.000 m of depenetration. Closed in art and in collision, and R5 now rays the blind end
+specifically, with the message saying what it is for.
+
+Two takes of the `mouth` frame were also lost to a cause a level probe cannot see: at 3 m the staged
+character is an unlit flat slab filling two thirds of the frame, while a ray probe of the level
+reports the camera clear on 15 of 15 view rays. The subject is geometry too.
+
+### §600.10 `camstate`'s hard-cut counts are measuring BVH order, and here is the control
+
+Building the passage reddened `camstate.test.mjs`'s *"85 % of the body that is missing…"* arm on
+`>30°/f 15→17`. It is not the camera and it is not the vent: per route, the whole difference is ONE
+take — `pole swing, slow cadence`, at the SE drainpipe, **40 m from anything this change touched** —
+and it moves in the centre arm as well as the extent arm, so it is the drive that changed and not the
+hold.
+
+The control, run at committed HEAD: **24 collider proxies 300 m outside the playspace**, a
+`wallProxy` loop at x 300, z 300, touching nothing and reachable by no route in the file, reddens the
+same arm (`>30° 15→16`). Eight of them move `inside-margin` by 105 frames on their own. Adding
+colliders anywhere changes the BVH's split planes, occlusion rays at the boom floor resolve
+fractionally differently, and a 400-frame swing amplifies it.
+
+The arm's own header already concedes this class for p99.9 — *"a quantile that lands inside a cluster
+of a dozen frames moves when the route sample shifts by one"* — and argued that a COUNT above a fixed
+bar is stable instead. It is not, at this resolution. The bar is now a tolerance sized from the
+control (±3 frames at 10°, ±2 at 30° and 60°) with the control written into it; the median and p99
+assertions, which are the stable half, stay exact. Recorded by the lane that tripped it and left for
+the camera lane as a finding, not a repair: a hard tail bar needs a drive that is not chaotic over
+400 frames, which is a different instrument.
+
+### §600.11 Four arms that were tripwires on the passage being shut, and what each became
+
+- **`reachcensus` arm V** said in terms *"if this arm goes red, somebody has done that work — delete
+  the tripwire and assert the crawl instead"*. Deleted; `ventroute.test.mjs` is the crawl. Its two
+  `vent` census rows now enter the passage from **opposite ends**, which is the census-level form of
+  "not a one-way door", and the offered set is still 31.
+- **`tombdoor` D3** — *"the stealth vent is still sealed, and a terrain cut is NOT its repair"* — said
+  the same thing and gave the reason to keep: cutting the sand without a floor under it is strictly
+  worse than a sealed passage. Inverted into that invariant, on the cut's own rectangle: 54 of 54
+  columns find floor, deepest −1.76. Its probe had to be a downward RAY and not a `groundCheck` or a
+  capsule — a cast from above lands on TOP of the portal head and reports the roof as the floor
+  (the §480 lid defect in miniature), and a capsule started under the head gets depenetrated and
+  resolves 1.6 m below the ramp it should rest on.
+- **`traversal`'s crawl census** recorded that the old vent's 0.60 m aperture was 0.04 m shorter than
+  `TUNE.crawlHeight` and asserted that at least one vent stayed that tight so the finding could not
+  be lost. Inverted: it would be a defect for one to go tight again.
+- **`vegwater` T2** identified the mouth by the coordinate z −49.4. It finds the southmost of the four
+  volumes now — a coordinate is not the identity of a thing.
+- **`kaykit` A3**'s precondition was *"every `wall` proxy is convex, so `separation()` decides"*. Five
+  are not, by construction, because a wall with a doorway is one collider carrying several boxes. The
+  precondition is narrowed to the thing that actually matters — no KayKit collider is within AABB
+  reach of any non-convex wall, 0 of 29 — so no depth it reports is a bound.
+
+### §600.12 Bounds, stated
+
+- The crawl is driven at one stick and one jump phase, never swept. Every arm here says *reachable*,
+  none says *forgiving*.
+- The gallery's sightline is searched, not swept: R4 finds one clear eye position, which says the
+  vantage exists and not that it is good from everywhere along the ledge.
+- Nothing here measures the passage under a moving camera. The four frames are staged with the rig
+  off, as every capture in this project is, and §600.10 is the only thing measured about the rig —
+  and it is about the instrument, not the tunnel.
+- The 2.4 m distance saving is reported and asserted by nothing, and should stay that way unless the
+  crypt gains a second reason to be entered from above.
