@@ -49093,3 +49093,62 @@ confident improvement.
 - Nothing here was driven. R8 is re-run and unchanged — crawl fires −22.30…−20.70, the passage
   admits −22.30…−20.70, zero crawl-and-stop columns — so the cues cost nothing at the door, but no
   new traversal claim is made.
+## §598 — The guard is repaired and SHIPS; the capped teleport fix stops the chain one leg short
+
+The camera lane's `74cdc4b` cleared §597's blocker — reproduced here rather than taken on trust:
+with the repair applied, `camstate` 11/11 and `camclamp` 4/4. Their diagnosis also explains why a
+correct guard looked like it broke the camera: `distHardMin` floors the boom to the PIVOT, which
+sits a median 0.899 m from the capsule, so at the floor the lens ends up inside Sly. My repair did
+not cause that; it moved the swing into a region where an existing fragility bit.
+
+### The repair, minimised
+
+§597's version re-keyed the clearance to `c.position.distanceTo(this._left)` — feet to anchor —
+and that was over-reach. It is the same capsule either way but **not the same number**:
+`a.distance` is measured from the EYE, 1.15 m up, so with a ring overhead it is the SMALLER
+quantity, and substituting feet-to-anchor lifted the lockout EARLIER. Measured on `traversal`'s
+single-ring launch: **six grabs instead of one.** The arm the camera lane flagged as mine was real,
+and it was mine.
+
+What shipped changes one word instead. The first clause returns **without clearing** the flag:
+
+```js
+    // A different ring entirely — nothing to refuse, but the flag is not ours to drop.
+    if (a.point.distanceTo(this._left) > TUNE.hookL) return false;
+```
+
+Both distances stay exactly as they were. A different ring is still offered instantly, so a chain
+flows as before; the released ring stays refused until the launch has genuinely carried Sly off it.
+
+```
+    traversal  telegraph  spawn2eye  camstate  camclamp  epress  navefork   ->  91 / 91
+    the four-ring chain closes [1,2,3,4]
+```
+
+### The teleport fix does not ship, and the ring order is why
+
+With the guard correct, §595's capped variant was applied on top: cap the one-frame displacement at
+`HOOK_SNAP_MAX` 1.6 m, take the rope up linearly, short catches on the original path. The duplicate
+is gone — but the chain closes **`[1,2,3]`**, one leg short. *"A short list is a leg that stopped."*
+
+Raising the cap does not help and the arithmetic says why: §594's eight long catches sit at
+4.56–5.16 m of excess, so **every cap below `hookL` eases exactly the same eight**. A higher cap
+eases them more gently, not fewer of them. The hop that stops is one of those eight, and it stops
+because easing it is the entire point.
+
+So the position is now precise. The guard is fixed and shipped. The teleport is one hop away, and
+that hop is a long catch — the same 4.65 m class §594 found seven of. **Nothing ships that has not
+closed the chain end to end**, so it is held again, this time with a one-leg gap rather than a
+duplicate and with the camera no longer in the way.
+
+### Two cautions inherited from the camera lane's round, recorded because they bear on this work
+
+- **§440 sampling.** Their 73-route battery drove with the look stick at zero — a pad player who
+  never touches the stick — and re-running across nine right-stick regimes took steps over 30°/frame
+  from 2 to 11. Every chain measurement in §593–§598 aims the camera at a target and then holds it.
+  That is closer to a still camera than to a player, so these numbers describe a quieter game than
+  the one being played, and the chain figures should be re-taken under stick motion before anyone
+  tunes against them.
+- **"Bit-identical" needs a same-tune control.** Two drives with identical tune diverge by 3.4e-6°
+  in the node harness. The claim above that short catches keep the original path is structural —
+  the same source line runs — not numeric, and should stay that way.

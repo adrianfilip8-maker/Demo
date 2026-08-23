@@ -989,11 +989,35 @@ class HookSwing extends State {
    * that same still-live press satisfies `canEnter`'s own E clause out to `hookGrab` 9 m on the
    * re-poll. Letting go with E would otherwise be the most reliable way to stay put.
    */
+  /**
+   * §597 — a glance at a neighbouring ring must not disarm the lockout.
+   *
+   * `_spent` is a SINGLE flag guarding ONE anchor: the ring just released. Its first clause used
+   * to CLEAR that flag the moment `afford` offered any ring further than `hookL` away — *"a
+   * different ring entirely, nothing to refuse"* — which is right about that candidate and wrong
+   * about the flag. Disarming it left the released ring grabbable again while Sly was still
+   * hanging beside it, and whether that happened depended on which candidate `afford` returned on
+   * a given frame, i.e. on the rope's dynamics. So the guard was correct only by accident of how
+   * the rope behaves. Driven, `telegraph` saw the four-ring chain close as **[1,1,2,3]**: ring 1
+   * caught twice and the chain a leg short. A player would re-grab the ring they just let go of
+   * and stall on it.
+   *
+   * The fix is one word — that clause now returns WITHOUT clearing. A different ring is still
+   * offered instantly, so a chain flows exactly as before; the released ring stays refused until
+   * the launch has genuinely carried Sly off it.
+   *
+   * BOTH DISTANCES ARE THE ORIGINAL ONES, and that is deliberate. An earlier attempt re-keyed the
+   * clearance to `c.position.distanceTo(this._left)` — feet to anchor — reasoning that the lockout
+   * should track the capsule rather than the candidate. It is the same capsule either way, but not
+   * the same number: `a.distance` is measured from the EYE, 1.15 m up, so with a ring overhead it
+   * is the SMALLER quantity, and the substitution lifted the lockout earlier. Measured on
+   * `traversal`'s single-ring launch: six grabs instead of one.
+   */
   spent(a) {
     if (!this._spent) return false;
-    // A different ring entirely — nothing to refuse.
-    if (a.point.distanceTo(this._left) > TUNE.hookL) { this._spent = false; return false; }
-    // Same ring, but the launch has carried him clear of it: the grab is honest again.
+    // A different ring entirely — nothing to refuse, but the flag is not ours to drop.
+    if (a.point.distanceTo(this._left) > TUNE.hookL) return false;
+    // Same ring, and the launch has carried him clear of it: the grab is honest again.
     if (a.distance > TUNE.hookAuto) { this._spent = false; return false; }
     return true;
   }
