@@ -48993,3 +48993,103 @@ HONEST LIMITS: the gap is a lateral test in the shoulder-line body frame, so an 
 another in DEPTH only is invisible to it; two beats of `idle_look` are sampled, not its whole
 cycle; and the carry cost is measured on the idle family only — the other nine clips the volume
 predicate flags have not been re-measured against their control arm.
+
+## §603 — The cue, put back at the address: what a frame and a flame are worth, and four ways the measurement lied first
+
+§602 made the mouth **enterable** from x −21.0 — the centre of the framed, bricked-up opening §565
+drew at standing height and §600 deleted. It did nothing about **findable**. From the hall the
+entrance was an unmarked rectangular hole in the paving under 46 m of identical hieroglyph wall,
+and the nearest lamp sat 0.7 m inside 2.1 m of masonry behind a portal head at y 0.67, so the
+opening read black in every frame §601 shot of it.
+
+### §603.1 What was built
+
+**B — the frame.** Mudbrick pilasters on the wall's own south face at x −23.05…−22.70 and
+−20.30…−19.95, with a lintel across, 0.14 m proud, head at 2.45 m. Mudbrick because it is what
+§565 framed it in, and because it is the one material at this corner that is *not* the sandstone
+and hieroglyph around it — a cue has to differ from its background to be a cue.
+
+2.45 m is not a taste. A walking capsule needs `stepHeight + height` = 0.42 + 1.80 = 2.22 m,
+because `_moveHorizontal` lifts a grounded capsule before every horizontal sweep whatever state it
+is in — the arithmetic that sized the bore in §600 — so the head clears by 0.23 m and the frame can
+never become the thing that blocks the door it advertises.
+
+0.14 m proud and no more, because art with no collider is something a capsule can stand inside.
+The only stance that reaches it is one pressed against the wall beside the opening, where the north
+wall already stops the player at z −49.56; at 0.14 m that overlap is a sliver rather than a
+doorframe walked through. A collider at the mouth is the exact shape of the §602 defect and is not
+worth a shadow.
+
+**A — the light.** The first tunnel lamp moves z −50.6 → −50.15, and a floor brazier stands at the
+lip. The brazier is **east** of the opening, and that is forced rather than chosen: the hall's west
+wall proxy runs x −25.0…−22.8 against a bore edge at −22.70, leaving 0.10 m of floor on that side.
+
+### §603.2 Drawn last, and why that is a correction rather than a precaution
+
+Both are drawn at the **end** of `vent()`'s private rng stream. Placed where the frame belongs —
+beside the recess it frames — the same four boxes left `arch:tomb:mudbrick` and
+`arch:tomb:sandstone_block` with **identical vertex counts and changed hashes**: the east run's
+jambs, drawn later in the same private stream, re-jittered.
+
+§600's note that *"a reseed changes counts"* is true of `chip` and **false of `jitter`**, which
+moves vertices without adding any. Constant-count-different-hash is exactly what a reseed looks
+like here, and reading the §600 rule literally would have passed it.
+
+Digest against `d398e3b`: **301 of 301 collider rows byte-identical, 0 added, 0 removed**, 301
+colliders and 286 affordances with every tag unchanged. **84 of 88 art meshes byte-identical**, and
+all four that changed are exact box-count additions — `bronze_dark` +96 (bowl), `gold_leaf` +96
+(flame), `mudbrick` +288 (two pilasters and a lintel), `sandstone_block` +96 (brazier column). Six
+boxes added, nothing re-diced.
+
+### §603.3 What the cues are worth, as an A/B
+
+Eye 1.60 m, §602's exact 384 hall stances, §602's exact twelve aperture coordinates, the same probe
+run against `d398e3b` and against this build:
+
+| | d398e3b | §603 |
+|---|---|---|
+| sees any part of the aperture | 113/384 · 29.4% | 104/384 · 27.1% |
+| sees half the aperture or more | 70/384 · 18.2% | 30/384 · **7.8%** |
+| sees ANY cue (hole, frame or flame) | 116/384 · 30.2% | **149/384 · 38.8%** |
+
+**+33 stances, +8.6 points** on the question that matters, and the middle row is the price: the
+pilasters stand proud outside the bore and occlude oblique views of the hole. The player sees less
+of the hole and more of a doorway. That is the trade, stated rather than buried.
+
+On the walking line it costs nothing at all. Along §602's own axis the aperture still reads **8/12
+at 5.7 m and 6/12 at 10.5 m — identical to §602's before** — with the frame adding 5/9 at every
+range out to 10.5 m.
+
+### §603.4 Four ways this measurement lied before it told the truth
+
+1. **The grid grew a row.** §602's loop exited before z = −17, giving 16 rows and 384 stances. A
+   clean `z <= z1` gives 17 and 408, and every percentage is then over a different population.
+2. **The targets followed the bore.** §602 spread twelve points over the bore *as it then was*, and
+   §602 also widened that bore. Re-running "the same rule" moves four targets into the corner the
+   hall cannot see; the drop reads as the cue making things worse. The ruler moved, not the subject.
+3. **The brazier targets sat at its centre**, inside its own column, so every ray hit the brazier
+   just before arriving and it scored **0/3 from every stance in the level** — §601's buried-ramp
+   fault, in a different object.
+4. **The cue metric scored 137/384 on a build with no frame in it — twice.** First because asking
+   "is anything occluding this point" scores empty air as perfect visibility of a thing that does
+   not exist. Then, after requiring the ray to *land* on the cue, because a 0.35 m tolerance still
+   caught the north wall 0.16 m behind a frame that is only 0.14 m proud: **a tolerance wider than
+   the thing it measures measures whatever is behind it.** At 0.10 m the same probe reads 116/384
+   with nothing built and 149/384 with the cues, and only then is the +33 a measurement.
+
+The A/B is what caught (4), twice. A single-arm run of any of those versions would have reported a
+confident improvement.
+
+### §603.5 Bounds, stated
+
+- The flame is visible from 1–2 m on the x −21.0 line and **not beyond**: KayKit's north-west crate
+  pile (x −21.4…−19.0, z −47.3…−44.5) sits directly between the brazier and the hall on that line,
+  and at 3 m back the eye is **inside a crate** and every cue reads zero. The brazier could not be
+  put west; the wall is there.
+- 38.8% is a ray census, not attention. It says a cue is *reachable by a sightline* from that many
+  stances; whether a player notices it is not measured by anything here and cannot be.
+- The frame carries no collider. A player pressed against the wall beside the opening overlaps
+  0.14 m of it.
+- Nothing here was driven. R8 is re-run and unchanged — crawl fires −22.30…−20.70, the passage
+  admits −22.30…−20.70, zero crawl-and-stop columns — so the cues cost nothing at the door, but no
+  new traversal claim is made.
