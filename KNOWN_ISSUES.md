@@ -49592,6 +49592,12 @@ worse.
 
 ## §604 — The drawn root eases; the capsule does not move, and that is asserted rather than argued
 
+> **NUMBER COLLISION, recorded rather than repaired.** A second §604 exists above (*"One prop was
+> the whole occluder…"*, the camera lane's, with §604.1–§604.7 beneath it). Two lanes reached for
+> the same free number in the same window and both pushed; the ledger is append-only and other
+> commits already cite both, so neither is renumbered. Cite this one by its title, or by the
+> `drawEaseFrames` constant it owns — the camera lane's §604.x subsections are all theirs.
+
 §599 measured the "teleportation between rings" the user reported twice and found it is **two cuts
 in one frame**: on the chain's entry catch the capsule moves 4.646 m, the camera's follow spring
 passes 1.801 m of that, and the drawn body takes the whole 4.646 m through
@@ -49630,6 +49636,19 @@ stopped — because each of them changed where the capsule went. This one cannot
     frames carrying any offset at all                       10 of 285   (3.5%)
     flat-out running frames eased                           0 of 600, at up to 0.495 m/frame
 ```
+
+The divergence per frame, spelled out on the worst catch in the game, because that is the number
+asked for. The unexplained part of the entry catch is 4.552 m, and the linear payoff spends it as:
+
+```
+    frame   0 (the catch)   1        2        3        4
+    lag     3.414 m         2.276    1.138    0        0        <- 3.414 is measured, not derived
+    step    1.232 m         1.138    1.138    1.138    ordinary
+```
+
+So the most the drawn body is ever off its capsule is **3.414 m, on one frame**, and the most it
+ever moves in one frame is **1.232 m** against the 4.646 m it used to move. It is back on its
+capsule 50 ms later.
 
 `drawEaseFrames` is 4 because the worst case sets it: 4.646 / 4 = 1.162 m per frame and 66.7 ms of
 total divergence. Three would be 1.549 m per frame; five would hold the body 3.7 m off its capsule
@@ -49703,6 +49722,28 @@ ships now.
 
 Ring 1 is the extreme — 2.69 m of that gap is VERTICAL, so the pair shows the body still climbing
 out of its flight instead of appearing at the ring. Ring 2 is the ordinary case.
+
+### The first four frames were of nothing, and looked fine
+
+`drawshot.mjs` originally staged by writing `character.root.position`, exactly as `ventshot.mjs`
+does. It came back with four plausible temple frames in which the pair members were
+indistinguishable and Sly was nowhere. **`capture()` is not a read**: it calls
+`engine.renderFrame(0)` to guarantee the buffer holds the current frame, and that runs a whole
+frame. `Controller` skips its `dt > 0` work at dt = 0, but `_pushCharacter` sits OUTSIDE that
+guard, so it put the root straight back on the capsule — at whatever position the canonical shot
+had staged. Both frames were of the `interior` shot's own subject.
+
+Nothing in the frames said so. What said so was a projection check: the subject was predicted
+**150-200 px tall near screen centre** in all eight positions and was not there in any of them.
+This is §601's finding in a different tool — a camera that measures clean can photograph wrong —
+and the same shape as the two instrument faults above: *the failure was invisible in the artefact
+being produced and only showed up against a second quantity.*
+
+The fix moves the CAPSULE rather than the root (`movement.teleport`), so `_pushCharacter` does the
+placing and the render inside `capture()` preserves it instead of undoing it. And the tool now
+reads the root back **after** the shutter and prints how far it ended from where it was asked,
+marking the frame ✗ if it is more than 1 cm out. A tool that asserts a placement it did not make is
+the fault; a tool that checks its own placement cannot repeat it.
 
 ### The instrument was wrong first, again, and in the same shape as §599
 

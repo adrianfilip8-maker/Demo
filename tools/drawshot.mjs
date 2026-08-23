@@ -133,14 +133,21 @@ async function main() {
           const png = await Promise.race([
             page.evaluate(async (F) => {
               const g = window.__GAME, e = g.engine;
-              const place = () => {
-                const ch = e.get('character');
-                if (ch?.root) {
-                  ch.root.position.set(...F.pos);
-                  ch.root.rotation.set(0, F.yaw, 0);
-                  ch.root.visible = true;
-                  ch.root.updateMatrixWorld(true);
-                }
+              /* ── WRITING `ch.root.position` DOES NOT WORK, AND THE FIRST VERSION OF THIS TOOL
+                    DID EXACTLY THAT ─────────────────────────────────────────────────────────────
+                 `capture()` is not a read: it calls `engine.renderFrame(0)` to guarantee the
+                 buffer holds the current frame, and that runs a whole frame at dt = 0. Controller
+                 skips its `dt > 0` work but `_pushCharacter` is outside that guard, so it puts the
+                 root straight back onto the capsule — at whatever position the canonical shot
+                 staged. The result was two frames of the SAME thing, and they looked plausible:
+                 both showed the temple, neither showed Sly where he was supposed to be, and
+                 nothing in the tool complained. A projection check caught it — the subject was
+                 predicted 150-200 px tall at screen centre and was not there.
+
+                 So move the CAPSULE, not the root, and let `_pushCharacter` do the placing. That
+                 is the supported path, it survives the render inside `capture()`, and `teleport()`
+                 spends the easing offset so the root lands exactly on the position asked for. */
+              const aim = () => {
                 e.camera.fov = F.fov;
                 e.camera.up.set(0, 1, 0);
                 e.camera.position.set(...F.cam);
@@ -148,22 +155,37 @@ async function main() {
                 e.camera.updateProjectionMatrix();
                 e.camera.updateMatrixWorld(true);
               };
-              /* Placed, stepped so shadows and FX settle, then placed AGAIN: `Controller.update`
-                 runs inside `step` even in shot mode and its freeCam branch calls
-                 `_pushCharacter`, which would put the root back on the capsule and quietly turn
-                 the "after" frame into a second copy of the "before" one. The second call is what
-                 makes the pair a pair. */
-              place();
+              const mv = e.get('movement');
+              const ch = e.get('character');
+              if (ch?.root) ch.root.visible = true;
+              aim();
+              /* Settle shadows and FX FIRST: these steps run at dt > 0 and would drop a teleported
+                 capsule under gravity, so the placement has to come after them. */
               await g.step(8, 1 / 60);
-              place();
-              return g.capture();
+              if (mv?.teleport) mv.teleport({ x: F.pos[0], y: F.pos[1], z: F.pos[2] }, F.yaw);
+              if (ch?.root) ch.root.visible = true;
+              aim();
+              const png = g.capture();
+              /* Read the root back AFTER the capture and hand it out with the frame. The whole
+                 failure above was a tool asserting a placement it had not made; this is what makes
+                 the next one impossible to miss. */
+              const r = ch?.root;
+              return { png, at: r ? [r.position.x, r.position.y, r.position.z] : null, vis: !!r?.visible };
             }, spec),
             new Promise((_, rej) => setTimeout(() => rej(new Error('timed out after 600s')), 600000)),
           ]);
           const file = path.join(OUTDIR, `${name}.png`);
-          await writeFile(file, Buffer.from(png.split(',')[1], 'base64'));
-          report.frames[name] = { file: path.relative(ROOT, file), ms: Date.now() - t0, pos: spec.pos, lag: r.lag };
-          process.stdout.write(`  ✓ ${name.padEnd(16)} ${String(Date.now() - t0).padStart(6)}ms  at [${spec.pos}]\n`);
+          await writeFile(file, Buffer.from(png.png.split(',')[1], 'base64'));
+          const off = png.at ? Math.hypot(png.at[0] - spec.pos[0], png.at[1] - spec.pos[1], png.at[2] - spec.pos[2]) : Infinity;
+          const ok = png.vis && off < 0.01;
+          report.frames[name] = {
+            file: path.relative(ROOT, file), ms: Date.now() - t0, asked: spec.pos, drawnAt: png.at,
+            offBy: Number.isFinite(off) ? +off.toFixed(4) : null, visible: png.vis, placed: ok, lag: r.lag,
+          };
+          if (!ok) report.errors.push(`${name}: root ended ${off.toFixed(3)} m from where it was asked for (visible=${png.vis})`);
+          process.stdout.write(`  ${ok ? '✓' : '✗'} ${name.padEnd(18)} ${String(Date.now() - t0).padStart(6)}ms  `
+            + `asked [${spec.pos.map((v) => v.toFixed(2))}]  drawn at [${(png.at || []).map((v) => v.toFixed(2))}]  `
+            + `off ${Number.isFinite(off) ? off.toFixed(3) : '?'} m\n`);
         } catch (err) {
           report.errors.push(`${name}: ${err.message}`);
           process.stdout.write(`  ✗ ${name.padEnd(16)} ${err.message}\n`);
