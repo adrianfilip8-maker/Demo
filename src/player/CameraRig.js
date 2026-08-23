@@ -2098,15 +2098,16 @@ export class CameraRig {
   _subjectBoomFloor(dir) {
     if (TUNE.subjectFloor === false) return TUNE.distHardMin;
     const s = TUNE.subjectStandoff > 0 ? TUNE.subjectStandoff : TUNE.distHardMin;
-    /* THE SUBJECT IS THE SPAN, NOT THE CENTRE — and getting that wrong once is what this comment
-       is for. A first pass solved both conditions for the capsule's CENTRE alone. It removed
-       97 % of the wrap poses and left 28 cuts over 60°/frame, every one of them a pole route
-       with `need` pinned near 96° while the floor was demonstrably binding. The cause was that
-       §581's extent hold aims at the FEET and HEAD elevations, so those are the bearings that
-       wrap — and a lens with the centre comfortably in front can still have the head behind it
-       at 1.8 m of body over a 1 m range. An instrument, or a bound, written for a different
-       subject than the mechanism uses answers a different question under the same label (§442).
-       Solved at feet, centre and head, and the floor is the largest of the three. */
+    /* WHICH POINT ON A 1.8 m BODY THIS IS WRITTEN ABOUT IS THE WHOLE DESIGN, and it went the
+       other way first. §581's extent hold aims at the FEET and HEAD elevations, so those are the
+       bearings that wrap, and the obvious reading is that the bound must be written about them
+       too — a lens with the centre comfortably in front can still have the head behind it at
+       1.8 m of body over a 1 m range. Solved that way it does remove every wrap pose. It also
+       fires on 35.7 % of ground-route frames and puts the lens inside visible geometry on 24 %
+       of all frames, because at a crushed boom the feet sit near the lens plane constantly and
+       harmlessly. The CENTRE removes 97 % of the poses for 0.12 points of penetration.
+       So: the centre ships (`'front'`, span 1) and the span variant is `'frontspan'`, kept
+       runnable because that measurement is the reason (§388). `h` is read only by the span arm. */
     const h = this._pHeight > 0 ? this._pHeight : TUNE.clampAnchorY * 2;
     const bd = TUNE.headroom * dir.y;
     const pad = s * TUNE.camRadius;
