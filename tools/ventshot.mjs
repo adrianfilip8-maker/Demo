@@ -61,6 +61,27 @@ const FRAMES = {
        running. These frames are about the passage; the subject is R1/R3's driven capsule. */
     player: null,
   },
+  /* §603. The two cue frames, and they are deliberately NOT staged cameras.
+     Every other frame in this table is hand-aimed at a height and angle chosen to show the
+     geometry well. That is the right lens for "is the interior authored" and the wrong one for
+     "would a player notice this", which is the question §603 exists to answer — §601 is the
+     standing reminder that a camera picked to flatter a subject can measure clean and still say
+     nothing about the thing being asked.
+
+     Both sit on the WALKING LINE at EYE HEIGHT: y 1.60, the same eye the visibility census uses,
+     at the gameplay field of view (`CameraRig` drives 75), looking north the way a player walks.
+     Comparable to the census numbers by construction, and to nothing else.
+
+     `eye-approach` is the bore's own axis at 6 m. `eye-address` is x -21.0 — the centre of the
+     opening §565 framed and §600 deleted — at 3 m: the line a player who remembers a vent in this
+     wall actually walks, and the line on which §602 measured 8/12 of the aperture at 2 m and
+     0/12 at 4 m. */
+  'eye-approach': {
+    pos: [-21.50, 1.60, -42.70], look: [-21.50, 0.15, -49.60], fov: 75, tod: 0.62, player: null,
+  },
+  'eye-address': {
+    pos: [-21.00, 1.60, -45.70], look: [-21.00, 0.10, -49.70], fov: 75, tod: 0.62, player: null,
+  },
   /* 1b. The SECOND sample of the same claim, from the other side of the wall: standing inside
          the portal looking back south into the hall, so the doorway reads as a cut through
          2.1 m of masonry with the hall's own light at the end of it. */

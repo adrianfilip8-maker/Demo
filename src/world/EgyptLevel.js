@@ -3581,6 +3581,9 @@ function vent(A) {
        paving slab used to be. 3 cm proud, well under `stepHeight`, and art only. */
     vol(A, 'hall', 'granite_pink', ox0, ox1, -0.34, 0.03, -48.78, -48.60, { jitter: 0.01, c: 0.05 });
 
+    /* §603's frame belongs here, at the mouth it frames, and it is NOT drawn here — see the
+       "§603 B" block at the end of this function for the geometry and for why it sits there. */
+
     /* ---- through the wall: a level-headed portal, and the spandrel that closes it ----
        The head is FLAT through the 2.1 m of wall while the floor keeps raking away, so the
        vestibule inside the jamb is 1.40 m at the reveal and 2.67 m at the far face. The reveal
@@ -3677,8 +3680,15 @@ function vent(A) {
        material here that is metal and picks the pool up. */
     const lighting = A.engine?.get?.('lighting');
     const lampX = x0 + 0.26;
+    /* §603 A: the first lamp moves -50.6 -> -50.15, half a metre nearer the reveal.
+       §601's mouth frame showed the opening reading BLACK from the hall, and the reason is not
+       that the passage is unlit: it is that the nearest lamp sat 0.7 m INSIDE 2.1 m of masonry,
+       behind a portal head whose underside is y 0.67. A lamp a player cannot see is a lamp that
+       does nothing for the thing they are trying to find. At -50.15 its bowl is still inside the
+       reveal — it is a tunnel lamp, not a hall fitting — but its spill reaches the ramp on the
+       hall side of the wall. */
     const lamps = [
-      [lampX, yAt(-50.6) + 0.78, -50.6], [lampX, yAt(-55.2) + 0.78, -55.2],
+      [lampX, yAt(-50.15) + 0.78, -50.15], [lampX, yAt(-55.2) + 0.78, -55.2],
       [lampX, yAt(-60.4) + 0.78, -60.4], [-17.6, runY + 0.78, z0 + 0.26],
       [-13.2, runY + 0.78, z0 + 0.26],
     ];
@@ -3689,7 +3699,72 @@ function vent(A) {
         position: new THREE.Vector3(lx, ly, lz), color: 0xffb060, intensity: 2.8, radius: 6.5, flicker: 0.5,
       });
     }
-    A.api.lights = (A.api.lights || 0) + lamps.length;
+    /* ---- §603: the two cues, and why they are the LAST draws in this function --------------
+       Everything below is art. It is drawn at the end of the private stream, after every other
+       piece of the passage, so that adding it can only APPEND to the digest — no draw in `vent()`
+       follows it, so nothing downstream re-dices.
+
+       That is not a precaution, it is a correction. Drawn where the frame belongs — beside the
+       recess it frames, 100 lines up — the same four boxes left `arch:tomb:mudbrick` and
+       `arch:tomb:sandstone_block` with IDENTICAL vertex counts and different hashes: the east
+       run's jambs, drawn later in the same private stream, re-jittered. §600's note that "a
+       reseed changes counts" is true of `chip` and false of `jitter`, which moves vertices
+       without adding any, so constant-count-different-hash is exactly what a reseed looks like
+       here. Moving these draws to the end makes the digest show additions only.
+
+       ── §603 B: the frame, put back where the player's memory points ──
+       §602 established that the passage is enterable and that the player's address for "the
+       vent" is x -21.0 — the centre of the framed, bricked-up opening §565 drew at STANDING
+       height and §600 deleted. §602 widened the bore so that address is now passable; it did not
+       give the address anything to look at. From the hall the mouth is an unmarked rectangular
+       hole in the paving under 46 m of identical hieroglyph wall.
+
+       Mudbrick pilasters and a lintel on the wall's own south face. Mudbrick because that is what
+       §565 framed it in, and because it is the one material at this corner that is NOT the
+       sandstone and hieroglyph everything around it is made of — a cue has to differ from its
+       background to be a cue.
+
+       0.14 m proud of the wall face and no more. Art with no collider is something a capsule can
+       stand inside, and the only stance that reaches this is one pressed against the wall beside
+       the opening, where the north wall already stops the player at z -49.56. At 0.14 m that
+       overlap is a sliver rather than a doorframe walked through. The alternative is a collider
+       at the mouth, which is the exact shape of the §602 defect and is not worth a shadow.
+
+       The head is 2.45 m. A walking capsule needs `stepHeight + height` = 0.42 + 1.80 = 2.22 m,
+       because `_moveHorizontal` lifts a grounded capsule before every horizontal sweep whatever
+       state it is in — the arithmetic that sized the bore in §600 — so 2.45 leaves 0.23 m and the
+       frame can never become the thing that blocks the door it advertises. */
+    const frZ0 = -49.90, frZ1 = -49.76, frHead = 2.45;
+    for (const [px0, px1] of [[ox0, x0], [x1, ox1]]) {
+      vol(A, 'hall', 'mudbrick', px0, px1, 0.0, frHead, frZ0, frZ1, { jitter: 0.02, chip: 0.10 });
+    }
+    vol(A, 'hall', 'mudbrick', ox0 - 0.12, ox1 + 0.12, frHead, frHead + 0.42, frZ0, frZ1 + 0.06,
+      { jitter: 0.02, chip: 0.08 });
+
+    /* ── §603 A: a floor brazier at the lip, on the HALL side ──
+       The half of the fix a tunnel lamp cannot do. Moving lamp 1 forward lights the ramp; it
+       still lights nothing a player sees from thirty metres away, and §602 measured that only
+       29.4% of hall stances can see any part of the mouth at all. A standing flame is visible
+       where the hole is not.
+
+       EAST of the opening, and that is forced rather than chosen: the hall's west wall proxy
+       runs x -25.0..-22.8 and the bore's west edge is -22.70, so there is 0.10 m of floor on
+       that side and nothing can stand there. East is also the side the player arrives from,
+       the hall being to the east, so the flame sits between them and the door.
+
+       Art only apart from the light itself: it stands on paving the mouth cut did not remove
+       (`mouthHole` stops at x -20.30) and carries no collider, so it can neither block the
+       approach nor add a row to the census. */
+    const brz = { x: -19.72, z: -48.52 };
+    vol(A, 'hall', 'sandstone_block', brz.x - 0.17, brz.x + 0.17, 0.0, 0.92, brz.z - 0.17, brz.z + 0.17,
+      { jitter: 0.02, chip: 0.08 });
+    vol(A, 'hall', 'bronze_dark', brz.x - 0.28, brz.x + 0.28, 0.92, 1.08, brz.z - 0.28, brz.z + 0.28, { c: 0.04 });
+    vol(A, 'hall', 'gold_leaf', brz.x - 0.23, brz.x + 0.23, 1.08, 1.23, brz.z - 0.23, brz.z + 0.23, { c: 0.05 });
+    lighting?.addLocalLight?.({
+      position: new THREE.Vector3(brz.x, 1.28, brz.z), color: 0xffb060, intensity: 3.2, radius: 8.0, flicker: 0.5,
+    });
+
+    A.api.lights = (A.api.lights || 0) + lamps.length + 1;
   } finally {
     A.rng = shared;
   }
