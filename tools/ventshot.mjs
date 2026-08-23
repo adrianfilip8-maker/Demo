@@ -73,14 +73,20 @@ const FRAMES = {
      Comparable to the census numbers by construction, and to nothing else.
 
      `eye-approach` is the bore's own axis at 6 m. `eye-address` is x -21.0 — the centre of the
-     opening §565 framed and §600 deleted — at 3 m: the line a player who remembers a vent in this
-     wall actually walks, and the line on which §602 measured 8/12 of the aperture at 2 m and
-     0/12 at 4 m. */
+     opening §565 framed and §600 deleted — the line a player who remembers a vent in this wall
+     actually walks.
+
+     Both stand 6 m back, and for `eye-address` that is a correction. At 3 m it is INSIDE KayKit's
+     north-west crate pile (x -21.4..-19.0, z -47.3..-44.5) and the frame came back as a flat
+     blue-grey field filling four fifths of it: the inside of a crate. §603's own visibility census
+     marks that stance "eye INSIDE the KayKit crate pile" one row above where this camera was put,
+     so it was not unknown — a camera was sited without reading the measurement already taken of
+     that exact line. On x -21.0 only 1 m and 5 m or more are clear of the pile. */
   'eye-approach': {
     pos: [-21.50, 1.60, -42.70], look: [-21.50, 0.15, -49.60], fov: 75, tod: 0.62, player: null,
   },
   'eye-address': {
-    pos: [-21.00, 1.60, -45.70], look: [-21.00, 0.10, -49.70], fov: 75, tod: 0.62, player: null,
+    pos: [-21.00, 1.60, -42.70], look: [-21.00, 0.35, -49.70], fov: 75, tod: 0.62, player: null,
   },
   /* 1b. The SECOND sample of the same claim, from the other side of the wall: standing inside
          the portal looking back south into the hall, so the doorway reads as a cut through
