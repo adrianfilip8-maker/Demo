@@ -404,19 +404,37 @@ test('A3: no KayKit collider is inside a wall proxy except the two accepted in t
   const walls = OTHER.filter((r) => r.opts?.tag === 'wall');
   assert.ok(walls.length > 0, 'inspected 0 wall proxies — Architecture did not boot');
 
-  /* the precondition, asserted rather than assumed */
-  let nonConvex = 0, worstDev = 0;
+  /* ── the precondition, narrowed rather than dropped (§600) ────────────────────────────────
+     It used to read "every `wall` proxy is convex". That was true until the vent passage was
+     built: a wall with a doorway cut in it is ONE collider carrying several boxes (that is what
+     makes a portal cut free — see `EgyptLevel.js` `mergedProxy`), so it is non-convex by
+     construction and `separation()` can only bound it. Five walls are now in that class.
+
+     The precondition that actually matters is not "no wall is non-convex" — it is "no depth
+     reported below was decided by a bound", so the check is that no KayKit collider comes NEAR
+     a non-convex wall. Measured: 0 of 29 KayKit AABBs intersect any of the five even at AABB
+     resolution, which is the loosest test available and therefore the strongest negative. The
+     five are all §600's cuts: the hall north wall, the tomb west wall, the vent's two shaft
+     jambs and its east-run shell. */
+  let worstDev = 0;
+  const nonConvexWalls = [];
   for (const w of walls) {
     const cv = convexity(w.mesh);
-    if (!cv.convex) nonConvex++;
-    worstDev = Math.max(worstDev, cv.worst);
+    if (!cv.convex) { nonConvexWalls.push(w); continue; }
+    worstDev = Math.max(worstDev, cv.worst);   // over the CONVEX ones only — the others are metres
   }
-  console.log(`  A3: ${walls.length} wall proxies, ${nonConvex} non-convex, worst vertex-outside-plane ${worstDev.toExponential(2)} m`);
-  assert.equal(nonConvex, 0,
-    `${nonConvex} wall proxies are non-convex, so \`separation()\` no longer decides against them `
-    + 'and the depths below revert to bounds — this arm must go back to being a held finding');
-
   const kAabb = KK.map((r) => aabbOf(r.mesh));
+  const contaminated = nonConvexWalls.filter((w) => {
+    const b = aabbOf(w.mesh);
+    return kAabb.some((k) => k.intersectsBox(b));
+  });
+  console.log(`  A3: ${walls.length} wall proxies, ${nonConvexWalls.length} non-convex (cut portals), `
+    + `${contaminated.length} of those within AABB reach of any KayKit collider, `
+    + `worst vertex-outside-plane on a convex one ${worstDev.toExponential(2)} m`);
+  assert.equal(contaminated.length, 0,
+    `${contaminated.length} non-convex wall proxies are within AABB reach of a KayKit collider, so at least one `
+    + 'depth below is a BOUND from a face-normal SAT rather than a decision — this arm must go back to being '
+    + 'a held finding, or the non-convex wall must be decomposed before it is measured');
   const hits = [];
   for (let i = 0; i < KK.length; i++) {
     for (const w of walls) {

@@ -37,23 +37,30 @@ import { TUNE } from '../src/player/Controller.js';
  * that search are the constants below, so the arm runs in seconds instead of minutes; the search
  * itself is the thing that produced them and is not re-run here.
  *
- * ── The two that are not reachable, and the real boundary ─────────────────────────────────
- * Of the 31, twenty-four are entered from a settled ground stance and five more are entered from
- * a driven NEIGHBOUR of their own class (arm C) — including `hook-low-0`, which the level's own
+ * ── How the 31 are accounted for ──────────────────────────────────────────────────────────
+ * Twenty-four are entered from a settled ground stance and five more from a driven NEIGHBOUR of
+ * their own class (arm C) — including `hook-low-0`, which the level's own
  * source records as an open reachability hole because its nearest `pole` is 21.01 m away. Driven,
  * a release from `hook-low-1` catches it. *A frontier whose own neighbour passes is not a
  * frontier*, and the geometric claim that made it look like one is a distance, not a route.
  *
- * The two that remain are the buried vent segments, and arm V finds the real boundary: the
- * tunnel's interior is hollow but BOTH its portals are solid — the hall's north wall
- * (`proxy:wall` x -24..-3.4, y 0..13, z -52..-49.9) across the mouth, and the tomb's west wall
- * (x -14.05..-12.05, y -12..-2) across the exit. So the §8.1 ALTERNATE ("CRAWL the `vent`") is
- * a dead end, and it has been WITHDRAWN from the route header (§565).
+ * The two that used to be missing were the buried vent segments. Since §600 the passage under
+ * them is built, and both ends of it are in the stance list above.
  *
- * CORRECTION to this file's first version: it also named "the desert sand sheet an unbroken lid
- * over everything between" as a third blocker. That is wrong and arm V now measures it the other
- * way — the sand surface sits 1.2-4.6 m ABOVE the channel the whole way down the shaft, so it
- * is overhead, not pressing. Two blockers, not three, and both are walls.
+ * ── The tripwire that stood here, and why it is gone ───────────────────────────────────────
+ * Arm V used to live here as a TRIPWIRE on the passage being shut: the tunnel's interior was
+ * hollow but both portals were solid, so the §8.1 ALTERNATE was a dead end and §565 withdrew it.
+ * It said in terms that "if this arm goes red, somebody has done that work — delete the tripwire
+ * and assert the crawl instead". §600 did the work: the hall's north wall and the tomb's west
+ * wall are both cut, 24 m of tunnel is built and lit between them, and the passage is driven end
+ * to end in both directions in `tests/ventroute.test.mjs`. Arm V is gone; the two `vent` rows
+ * above are entered from opposite ends of it, and 31 affordances still means 31.
+ *
+ * CORRECTION kept from arm V's own history, because it is still the fact about this shaft: the
+ * first version of this file named "the desert sand sheet an unbroken lid over everything
+ * between" as a third blocker. That is wrong — the sand sits 1.2-4.6 m ABOVE the old channel.
+ * It IS a lid over the first 2.2 m of the built ramp, though, which is why TERRAIN now carries a
+ * `PROXY_OPENINGS` entry for the vent mouth beside the one §480 cut for the tomb descent.
  */
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -90,8 +97,11 @@ const SPOTS = [
   ['rail pylon-summit', [-6.99, 34.00, -51.91], [-7.59, 34.40, -51.91], 'rail', 'walkE'],
   ['spire stage W', [-5.40, 26.00, -50.00], [-6.00, 27.00, -50.00], 'spire', 'jumpE'],
   ['spire stage E', [6.60, 26.00, -50.00], [6.00, 27.00, -50.00], 'spire', 'jumpE'],
-  ['vent shaft (hall NW)', [-21.00, -0.03, -52.70], [-21.00, -1.55, -54.50], 'vent', 'walk'],
-  ['vent mouth (hall NW)', [-20.40, 0.00, -49.40], [-21.00, -0.20, -49.40], 'vent', 'walk'],
+  /* §600 re-laid all four `vent` volumes along the passage that is now built under them. These
+     two enter it from OPPOSITE ends, which is the census-level form of "not a one-way door";
+     `tests/ventroute.test.mjs` drives the whole 24 m both ways. */
+  ['vent mouth (hall NW)', [-21.85, 0.00, -47.20], [-21.85, -0.60, -50.00], 'vent', 'walk'],
+  ['vent exit (crypt gallery)', [-11.00, -5.40, -63.00], [-14.00, -5.40, -63.00], 'vent', 'walk'],
 ];
 
 const ATTACH = {
@@ -259,102 +269,3 @@ test('reachcensus C: the mid-chain hook rings are entered from their NEIGHBOUR �
   console.log(`[reachcensus C] ${legs.length}/${legs.length} chain hops catch on release; ${caught} without it`);
 });
 
-/* ====================================================================================== */
-test('reachcensus V: the vent route is a dead end, and this is where it stops (§418.5 tripwire)', async () => {
-  /* A TRIPWIRE. It records the one genuinely unreachable pair of thief spots in the level, with
-   * the boundary MEASURED rather than inferred, so nobody re-derives it and nobody claims the
-   * §8.1 ALTERNATE works without opening something.
-   *
-   * The tunnel's INTERIOR IS HOLLOW — a crouched capsule depenetrates by 0.000 m at every
-   * sample from z -53 to -60.6 and along the whole east run to x -14. *Before calling a surface
-   * a lid, look underneath it*: the lid is real and there is a room under it. What is solid is
-   * the two PORTALS, and they are ordinary walls nobody cut a door in.
-   *
-   * Driven: a walker at the hall's NW corner enters `crawl` at z -48.1 (the mouth proxy pokes
-   * above the floor there, which is the intended read), crawls 1.4 m, and stops dead at
-   * z -49.56 — the hall north wall's south face at -49.90 plus the 0.34 capsule radius, to the
-   * centimetre. It then holds there for as long as forward is held: 1290 frames measured,
-   * grounded and stationary, which both §504 watchdogs exempt by design.
-   *
-   * Opening it means cutting a doorway through the hall's north wall AND the tomb's west wall
-   * AND the terrain sand sheet above the shaft, and each is one collider that would have to
-   * become two or three. `tests/basketvary.test.mjs:424` pins ARCHITECTURE+PROPS registrations
-   * at 282. If this arm goes red, somebody has done that work — delete the tripwire and assert
-   * the crawl instead.
-   */
-  const { collision, engine, c, step, aim } = await harness();
-
-  /* the interior is hollow */
-  const free = (p) => {
-    const r = collision.capsuleSweep(p.clone(), p.clone(), TUNE.radius, TUNE.crouchHeight ?? 1.06);
-    return r.position.distanceTo(p);
-  };
-  let hollow = 0;
-  for (let z = -53; z >= -60.5; z -= 1.0) {
-    const u = (-49.3 - z) / (60.6 - 49.3);
-    if (free(V(-21, -3.5 * u, z)) < 0.01) hollow++;
-  }
-  assert.ok(hollow >= 6,
-    `only ${hollow} of 8 shaft samples are open space — the tunnel has been filled, which changes the `
-    + 'boundary this arm records');
-
-  /* the two portals are solid, and named */
-  const mouth = collision.raycast(V(-21, 0.8, -48.6), V(0, 0, -1), 6);
-  assert.ok(mouth?.hit && mouth.tag === 'wall' && Math.abs(mouth.point.z + 49.90) < 0.05,
-    `the vent mouth's blocker is ${mouth?.hit ? `${mouth.tag} at z ${mouth.point.z.toFixed(2)}` : 'gone'} — it was `
-    + 'the hall north wall at z -49.90. If it has been cut, this tripwire is obsolete');
-
-  /* and the drive stops there */
-  hardReset(engine, c, V(-21.0, 0.2, -47.5), Math.PI);
-  for (let i = 0; i < 30; i++) step(() => {});
-  let sawCrawl = false;
-  for (let i = 0; i < 400; i++) {
-    step((inp) => { aim(-21, -64); inp.move.y = 1; });
-    if (c.stateName === 'crawl') sawCrawl = true;
-  }
-  assert.ok(sawCrawl, 'the walker never entered `crawl` at the hall NW corner — the mouth affordance moved');
-  assert.ok(c.position.z > -50.2,
-    `the crawl reached z ${c.position.z.toFixed(2)}, past the wall at -49.90 — the vent route has been `
-    + 'opened, so replace this tripwire with a driven crawl to the vault');
-  assert.ok(Math.abs(c.position.z + 49.56) < 0.15,
-    `the crawl stopped at z ${c.position.z.toFixed(2)}, not the measured -49.56 (wall face -49.90 plus the `
-    + '0.34 capsule radius) — something else is stopping it now and the boundary needs re-measuring');
-  /* The sand is OVERHEAD, not a lid pressing on the channel — the correction above, measured. */
-  let minClear = 99;
-  for (let z = -53; z >= -60.5; z -= 1.0) {
-    const u = Math.min(1, Math.max(0, (-49.3 - z) / (60.6 - 49.3)));
-    const g = collision.groundCheck(V(-21, 6, z), TUNE.radius, 40);
-    if (g?.hit) minClear = Math.min(minClear, g.y - (-0.05 - 3.5 * u));
-  }
-  assert.ok(minClear > 1.0,
-    `the surface over the shaft is only ${minClear.toFixed(2)} m above the channel at its tightest — `
-    + 'the first version of this file called the sand a lid and was wrong; if it has become one, the '
-    + 'terrain moved and the boundary needs re-measuring');
-
-  /* And the half that sets the priority: this is a CUL-DE-SAC, not a soft-lock. Every input a
-     stuck player actually produces gets them out, which is why §565 withdrew the route from the
-     header rather than treating the geometry as an emergency. */
-  const escape = (script) => {
-    hardReset(engine, c, V(-21.0, 0.2, -47.5), Math.PI);
-    for (let i = 0; i < 30; i++) step(() => {});
-    for (let i = 0; i < 400; i++) step((inp) => { aim(-21, -64); inp.move.y = 1; });
-    const wedged = c.position.clone();
-    let far = 0;
-    for (let i = 0; i < 400; i++) { step((inp) => script(inp, i)); far = Math.max(far, c.position.distanceTo(wedged)); }
-    return far;
-  };
-  const back = escape((inp) => { aim(-21, -64); inp.move.y = -1; });
-  const round = escape((inp) => { aim(-21, -20); inp.move.y = 1; });
-  const held = escape((inp) => { aim(-21, -64); inp.move.y = 1; });
-  assert.ok(back > 10 && round > 10,
-    `the wedge is not escapable by ordinary input — back ${back.toFixed(2)} m, turn-round ${round.toFixed(2)} m. `
-    + 'That would make it a soft-lock rather than the cul-de-sac §565 priced, and it would need repairing '
-    + 'rather than un-advertising');
-  assert.ok(held < 0.5,
-    `holding forward at the wedge moved ${held.toFixed(2)} m — the wall no longer stops it, so the `
-    + 'boundary has moved and this tripwire is stale');
-
-  console.log(`[reachcensus V] tunnel interior open at ${hollow}/8 samples; surface ${minClear.toFixed(2)} m `
-    + `overhead at its tightest; the crawl stops at z ${c.position.z.toFixed(2)} against the hall north wall `
-    + `at -49.90 · escapes: back ${back.toFixed(1)} m, turn-round ${round.toFixed(1)} m, held-forward ${held.toFixed(2)} m`);
-});

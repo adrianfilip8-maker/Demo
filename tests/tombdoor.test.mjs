@@ -177,44 +177,77 @@ test('D2 the lid is gone read from BELOW as well as from above', async () => {
     'Anything near y 0 is the desert proxy back across the stairwell — the §480 lid, from below.');
 });
 
-test('D3 the stealth vent is still sealed, and a terrain cut is NOT its repair', async () => {
+test('D3 the vent shaft has a floor everywhere the terrain proxy is now cut (§600)', async () => {
   /**
-   * §8.1's alternate route crawls the vent at (−21, 0, −49.5) down to the vault's west shelf. It
-   * was sealed by the same slab, and the obvious move — cut it out of the proxy too — is wrong.
+   * THIS ARM IS THE ONE ITS PREDECESSOR ASKED FOR. It used to read *"the stealth vent is still
+   * sealed, and a terrain cut is NOT its repair"*, and its failure message said in terms: *"if
+   * ARCHITECTURE has built the vent floor, delete this arm and write the reachability one — the
+   * terrain opening can then be extended and the stealth route becomes real."* §600 built the
+   * floor and extended the opening; `tests/ventroute.test.mjs` is the reachability arm.
    *
-   * Measured: `vent` is not in `Collision.SOLID_TAGS`, so the four vent proxies are REGION markers
-   * for `crawl` and not floor, and **ARCHITECTURE registers no `ground` under the vent's sloping
-   * shaft at all**. From z −52 southward a probe below the sand finds nothing. Cutting the sand
-   * there would replace a sealed passage with a fall into the void, which is strictly worse.
+   * What survives, and is the half worth keeping, is the reason the old arm gave for refusing the
+   * cut: **cutting the sand without a floor under it replaces a sealed passage with a fall into
+   * the void, which is strictly worse.** That is now an invariant on the cut rather than a bar
+   * against it — everywhere `PROXY_OPENINGS` removes the desert, something has to hold a capsule
+   * up. It is checked on a grid over the vent-mouth opening's own rectangle.
    *
-   * This arm pins the reason so the next lane does not "finish the job" by widening the opening.
-   *
-   * PASSES ON:  today's tree — the vent shaft has no floor, and the opening does not reach it.
-   * FAILS ON:   somebody cutting the vent out of the proxy without building its floor first, and
-   *             also on somebody BUILDING that floor — at which point this arm should be replaced
-   *             with a reachability arm, and the message says so.
-   * does NOT discriminate: whether the vent's floor, once built, would be walkable or crawlable.
+   * PASSES ON:  today's tree — every sampled column inside the opening finds floor.
+   * FAILS ON:   the same grid taken 3 m NORTH of the opening, run in-arm, where the sand is
+   *             intact and the shaft below it has no floor at all — so a column that finds the
+   *             SAND is not evidence the vent has a floor, which is exactly how the old arm's
+   *             number could be zero while the passage was sealed.
+   * does NOT discriminate: whether that floor is walkable, crawlable, or reachable — R1..R7 of
+   *             `ventroute` are all of that.
    */
   const { collision } = await realWorld();
   assert.ok(!collision.SOLID_TAGS.includes('vent'),
-    '`vent` has become a solid tag. The vent proxies were region markers for `crawl`; if they are ' +
+    '`vent` has become a solid tag. The vent proxies are region markers for `crawl`; if they are ' +
     'floor now, D3 is measuring something else and needs re-deriving.');
 
-  let floored = 0;
-  for (let z = -53; z >= -60; z -= 1) {
-    const below = collision.groundCheck(V(-21, -0.6, z), R, 30);
-    if (below.hit) floored++;
-  }
-  assert.equal(floored, 0,
-    `the vent shaft now has ${floored} sampled stations with floor beneath the sand. If ARCHITECTURE ` +
-    'has built the vent floor, delete this arm and write the reachability one — the terrain opening ' +
-    'can then be extended to (−21, ·, −49…−60) and the stealth route becomes real.');
+  /* TERRAIN's `PROXY_OPENINGS` vent-mouth rectangle, duplicated here rather than imported: an arm
+     that reads the constant it checks cannot notice the constant moving. */
+  const CUT = { x0: -23.10, x1: -20.60, z0: -52.00, z1: -48.50 };
+  /* A downward RAY from y 0.35, and both halves of that are the measurement.
+     · from y 0.35 and not from above the temple: the portal's head is a solid slab at y 0.67..0.92
+       across the doorway, and a cast from 2.5 m lands on TOP of it and reports 0.95 — a roof read
+       as a floor, which is the §480 lid defect in miniature and would make this arm green on a
+       shaft with nothing in it.
+     · a ray and not a capsule: a 0.34 m capsule started at 0.05 grazes the head's underside, gets
+       depenetrated, and then resolves 1.6 m below the ramp it should be resting on. A ray has no
+       thickness to be pushed out of. */
+  const floored = (x0, x1, z0, z1) => {
+    let hit = 0, n = 0, lowest = 0;
+    for (let x = x0 + 0.3; x < x1; x += 0.4) {
+      for (let z = z1 - 0.3; z > z0; z -= 0.4) {
+        n++;
+        const g = collision.raycast(V(x, 0.35, z), V(0, -1, 0), 12);
+        if (g?.hit) { hit++; lowest = Math.min(lowest, g.point.y); }
+      }
+    }
+    return { hit, n, lowest };
+  };
+  const inside = floored(CUT.x0, CUT.x1, CUT.z0, CUT.z1);
+  console.log(`  D3: ${inside.hit}/${inside.n} columns inside the vent-mouth cut find floor ` +
+    `(lowest ${inside.lowest.toFixed(2)})`);
+  assert.equal(inside.hit, inside.n,
+    `${inside.n - inside.hit} of ${inside.n} columns inside TERRAIN's vent-mouth opening find NO floor. ` +
+    'The sand was cut without something underneath it, which turns a sealed passage into a hole ' +
+    'into the void — the exact trade the arm this replaced refused.');
+  assert.ok(inside.lowest < -1.5 && inside.lowest > -2.6,
+    `the deepest floor inside the cut is y ${inside.lowest.toFixed(2)}. The ramp runs from y 0 at ` +
+    'z -48.70 to -2.00 at the cut\'s north edge, so anything shallower than -1.5 means the columns ' +
+    'are finding a lid rather than the ramp, and anything deeper means they went past it.');
 
-  /* And until then the sand must still hold the crawler up rather than dropping him into it. */
-  const y = dropTo(collision, -21, -55.0);
-  assert.ok(y > -1.2,
-    `a capsule at the vent shaft falls to y ${y.toFixed(2)}. The proxy has been cut here without a ` +
-    'floor underneath, which turns a sealed passage into a hole into the void.');
+  /* The failing input, run in-arm: 3 m north, where the sand is intact and the shaft has no floor.
+     Every column there finds the SAND, so a raw "did something catch it" count cannot tell the two
+     apart — which is why the assertion above is on the CUT rectangle and not on the shaft. */
+  const north = floored(CUT.x0, CUT.x1, CUT.z0 - 3.0, CUT.z1 - 3.0);
+  const sandOnly = collision.raycast(V(-21.85, 0.35, -54.5), V(0, -1, 0), 12);
+  console.log(`  D3: 3 m north (uncut sand) ${north.hit}/${north.n} find floor at y ` +
+    `${sandOnly?.hit ? sandOnly.point.y.toFixed(2) : 'MISS'} — the sand, not the tunnel`);
+  assert.ok(sandOnly?.hit && sandOnly.point.y > -0.2,
+    'north of the opening the first thing a downward cast meets is no longer the sand at y ~0. ' +
+    'Then the control is not a control and the arm above cannot distinguish floor from lid.');
 });
 
 /**

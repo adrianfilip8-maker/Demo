@@ -774,6 +774,28 @@ const INNER_STEP = { low: 1.6, med: 0.96, high: 0.8, ultra: 0.6 };
 const PROXY_OPENINGS = [
   /* Tomb descent stairwell — bounded by `tomb()`'s own north and south wall proxies. */
   { id: 'tomb-descent', x0: -14.2, x1: 4.4, z0: -59.4, z1: -54.4 },
+  /**
+   * Vent mouth (§600) — the second place the level goes below y 0, and the same defect §480
+   * found on the first one. `EgyptLevel.js`'s `vent()` ramps from the hall paving at
+   * (z −48.70, y 0) down to (z −52.00, y −2.00), and the sand here reads −0.053 to −0.045: the
+   * ramp crosses the proxy surface at z ≈ −48.79 and does not clear it until z ≈ −51.0, so for
+   * 2.2 m the sand is a lid *inside* the bore. Measured before this entry existed, by driving:
+   * the crawl walked onto the sand at y −0.05 and stopped at z −49.56 — the same coordinate
+   * §563 recorded for the walled-up vent, which is exactly how a second blocker hides behind
+   * the first one.
+   * The bounds are the tunnel's own structure (x −23.05…−20.65 outside the jambs) with 5 cm of
+   * margin, and z runs from the hall's north wall's own far face at −52.00 back to z −48.50 in
+   * the hall. Two reasons it stops exactly there and not short of it:
+   *   · the cut's EFFECTIVE edge is about 0.25 m inside its nominal one — refined sub-cells keep
+   *     their vertices, so a ray at z −51.5 still found `sand_collision` with the opening
+   *     nominally at −51.70. Measured, not derived. At −51.70 that left the tunnel's roof 9 mm
+   *     under the desert surface at its tightest, which is luck rather than a margin; at −52.00
+   *     the surviving sand starts where the roof is 0.16 m below it.
+   *   · everything from −52.00 to −49.90 is inside the wall's own footprint, so the cut cannot
+   *     show as a trench in the desert. North of −52.00 the shaft is 0.5–4.6 m below the surface
+   *     and the lid is a ceiling it never touches, so there is nothing there to cut.
+   */
+  { id: 'vent-mouth', x0: -23.10, x1: -20.60, z0: -52.00, z1: -48.50 },
 ];
 
 /** Sub-cells per axis on a proxy quad that meets an opening: 4.0 / 8 = 0.5 m of edge accuracy. */

@@ -1836,7 +1836,7 @@ test('census: the contract prober detects a state nothing else reads (calibratio
 /* 14 — Route C: the vent column, settled by enumeration                   */
 /* ====================================================================== */
 
-test('crawl: the vent column, enumerated rather than cast — and one aperture that does not fit', async () => {
+test('crawl: the vent column, enumerated rather than cast — and the aperture that now fits', async () => {
   /* The open question from §392, and the test case for the defences in this file's header.
    * Two `groundCheck` casts of the same column disagreed (13.50 from y=20, ~0.0 from y=90) and I
    * could not say which was right. A cast cannot answer it; **a histogram can**, because it has
@@ -1865,8 +1865,10 @@ test('crawl: the vent column, enumerated rather than cast — and one aperture t
     }
     return out.sort((a, b) => b.hi - a.hi);
   };
-  const hits = column(-20.0, -49.4);
-  console.log('\n[vent] column (-20.0, ·, -49.4), every collider whose box contains it:');
+  /* §600 moved the bore to x -22.70..-21.00 when it built the passage, so the column this arm
+     was written against no longer has a vent in it. -21.85 is the new axis. */
+  const hits = column(-21.85, -49.4);
+  console.log('\n[vent] column (-21.85, ·, -49.4), every collider whose box contains it:');
   for (const h of hits) console.log(`  ${h.tag.padEnd(7)} ${h.name.padEnd(22)} y ${h.lo.toFixed(2)}..${h.hi.toFixed(2)}`);
   assert.ok(hits.length > 3, 'the column enumeration found almost nothing — check the world build');
   assert.ok(hits.some((h) => h.tag === 'vent'), 'no vent in the column this route is about');
@@ -1874,31 +1876,41 @@ test('crawl: the vent column, enumerated rather than cast — and one aperture t
   assert.ok(hits.some((h) => h.tag === 'ground' && h.hi > 12 && h.hi < 15),
     'the y~13.5 deck is gone — the cast-origin disagreement in the header no longer reproduces here');
 
-  /* THE FINDING: a stance is a capsule, not a point. The small vent's aperture is 0.60 m of
-     clear height; `TUNE.crawlHeight` is 0.64. **The crawl capsule is 0.04 m taller than the hole
-     it is meant to go through.** A ray fits, a point fits, and the state's own capsule does not.
-     Reported, not fixed — `crawlHeight` is a Controller constant and the vent is level geometry,
-     so which of the two is wrong is not this lane's call. */
+  /* THE FINDING, AND ITS RETIREMENT (§600). This arm used to record that the small vent's
+     aperture was 0.60 m of clear height against a `TUNE.crawlHeight` of 0.64 — **the crawl
+     capsule was 0.04 m taller than the hole it was meant to go through** — and asserted that at
+     least one vent stayed tighter than the capsule, so the finding could not be lost quietly.
+     The passage is built now and every aperture clears the capsule, so the assertion is inverted
+     rather than deleted: it would be a defect for one to go tight again.
+
+     And the bound is the STEP PROBE, not the capsule. `Controller._moveHorizontal` lifts a
+     grounded capsule `TUNE.stepHeight` before every horizontal sweep, so 0.68 m of clear height
+     is not enough for a crawler to move through — 1.10 m is, on the flat. That number is what
+     `tests/ventroute.test.mjs` R2 asserts along the whole bore; this arm keeps the weaker,
+     local form so the column enumeration it is built around still says something. */
   const vents = hits.filter((h) => h.tag === 'vent').map((h) => ({ ...h, aperture: h.hi - h.lo }));
   for (const v of vents) {
-    console.log(`[vent] aperture ${v.aperture.toFixed(2)} m vs crawlHeight ${TUNE.crawlHeight} -> ` +
-                `${v.aperture < TUNE.crawlHeight ? 'CAPSULE DOES NOT FIT' : 'fits'}`);
+    console.log(`[vent] aperture ${v.aperture.toFixed(2)} m vs crawlHeight ${TUNE.crawlHeight} + ` +
+                `stepHeight ${TUNE.stepHeight} -> ` +
+                `${v.aperture < TUNE.crawlHeight + TUNE.stepHeight ? 'TIGHT' : 'clears the step probe'}`);
   }
   const tight = vents.filter((v) => v.aperture < TUNE.crawlHeight);
-  assert.ok(tight.length > 0,
-    'no vent is tighter than the crawl capsule any more — the aperture finding is fixed, retire this');
+  assert.equal(tight.length, 0,
+    `${tight.length} vent volume(s) in this column are shorter than the crawl capsule itself — that is ` +
+    'the §392 aperture defect returning, and §600 built the passage on the premise that it is gone');
 
-  /* And the reachability half, stated to the same standard as everywhere else in this file:
-     standing in the vent volume, `crawl` engages. Walking in from x -19.3 along the rising floor
-     (0.73 at x -18 up to 1.01 at x -24) it does not — `inVent()` stays false for the whole
-     traverse even though the walk passes through the same x the standing probe succeeds at. I
-     cannot account for that difference and am not claiming a route from it. */
+  /* And the reachability half. It used to end here with "walking in from x -19.3 the traverse
+     never makes `inVent()` true, I cannot account for that difference and am not claiming a route
+     from it" — the walk was over the sand that §600's `PROXY_OPENINGS` entry has since cut, at an
+     x the bore no longer occupies. The route is claimed now, and driven end to end both ways, in
+     `tests/ventroute.test.mjs`. This keeps the local half: standing in the volume, `crawl`
+     engages. */
   const floorAt = (x, z, from = 5) => {
     const g = collision.groundCheck(V(x, from, z), TUNE.radius, 300);
     return g?.hit ? g.y : null;
   };
-  const y1 = floorAt(-21.0, -49.4);
-  hardReset(engine, c, V(-21.0, (y1 ?? 0) + 0.05, -49.4));
+  const y1 = floorAt(-21.85, -49.4);
+  hardReset(engine, c, V(-21.85, (y1 ?? 0) + 0.05, -49.4));
   let ventFrames = 0, sawCrawl = false;
   for (let i = 0; i < 120; i++) {
     engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
@@ -1906,7 +1918,7 @@ test('crawl: the vent column, enumerated rather than cast — and one aperture t
     if (c.inVent()) ventFrames++;
     if (c.stateName === 'crawl') sawCrawl = true;
   }
-  console.log(`[vent] standing at (-21.0, ${(y1 ?? 0).toFixed(2)}, -49.4): crawl=${sawCrawl}, inVent ${ventFrames}/120 frames`);
+  console.log(`[vent] standing at (-21.85, ${(y1 ?? 0).toFixed(2)}, -49.4): crawl=${sawCrawl}, inVent ${ventFrames}/120 frames`);
   assert.ok(sawCrawl, 'crawl no longer engages even from inside the vent volume');
 });
 

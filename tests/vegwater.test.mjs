@@ -650,8 +650,14 @@ test('T2: cutting the dune made the vent mouth live, which it was not before', (
     'NO vent segment reaches the inVent() probe from the surface above it. The crawl route is '
     + 'unreachable — nothing can make inVent() true and the whole branch is dead content');
 
-  const mouth = vents.find((v) => Math.abs(v.r.mesh.position.z + 49.4) < 0.01);
-  assert.ok(mouth, 'the vent mouth is no longer at z -49.4');
+  /* The mouth is the segment NEAREST THE HALL, found rather than named. It used to be pinned at
+     z -49.4; §600 re-laid all four volumes along the passage it built under them and the mouth is
+     at -49.20 now. A coordinate is not the identity of a thing — "the southmost of the four" is,
+     and it survives the next time the passage is re-cut. */
+  const mouth = vents.reduce((a, b) => (b.r.mesh.position.z > a.r.mesh.position.z ? b : a));
+  assert.ok(mouth.r.mesh.position.z > -50.5,
+    `the southmost vent volume is at z ${mouth.r.mesh.position.z.toFixed(2)}, which is not at the hall's ` +
+    'north wall any more — the mouth has moved out of the room this arm is about');
   const sand = T.heightAt(mouth.r.mesh.position.x, mouth.r.mesh.position.z);
   console.log(`  T2: mouth top ${mouth.b.max.y.toFixed(3)} · sand ${sand.toFixed(3)} · `
     + `threshold ${(sand - PROBE).toFixed(3)} · clearance ${(mouth.b.max.y - sand).toFixed(3)} m above sand`);

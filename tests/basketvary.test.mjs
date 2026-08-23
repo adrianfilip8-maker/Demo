@@ -490,8 +490,41 @@ test('P-A1: a rope coil is set dress and carries no gameplay volume', () => {
 
      Histogram measured both ways rather than derived: **hook 11 → 16**, all else byte-identical,
      and a digest of every collider's tag, material and world bounds shows five rows added and
-     **zero rows changed or removed** — the seeded RNG is untouched. */
-  assert.equal(REG.length, 288, 'collider registrations unchanged by this seal');
+     **zero rows changed or removed** — the seeded RNG is untouched.
+
+     ── 288 → 296: §600 builds the vent passage (ground +3, wall +5) ──────────────────────────
+     The user's ruling at playtest — *"the vent crawl space is not accessible currently"* —
+     against §565, which had withdrawn the route on the ground that opening it meant authoring
+     19 m of art for a stealth bypass in a demo with nothing to bypass. Both halves of that were
+     right; what changed is that it is now built as TRAVERSAL and driven end to end in both
+     directions (`tests/ventroute.test.mjs`).
+
+     Histogram measured both ways rather than derived:
+       ground  62 → 65   the two raked shaft floors and the flat east run
+       wall    77 → 82   two shaft jambs, the shaft's raked roof, the portal head, the east
+                         run's merged jamb-and-roof shell
+       ledge   90 → 90   the three west-wall shelves are RE-SITED, not added
+       vent     4 →  4   the four affordance volumes are RE-LAID, not added
+       every other tag byte-identical
+     Eight rows added, seven re-sited, and FOUR rows changed in place with their world bounding
+     box unchanged and only their vertex count moved — the hall floor slab (24 → 72), the hall
+     north wall proxy (24 → 72), the tomb west wall proxy (24 → 96) and TERRAIN's sand proxy
+     (8197 → 8278). Those four are the cuts themselves: a slab with a doorway in it is one
+     collider covering the same space with a hole in it, which is exactly what a digest should
+     show and is why this ledger names them instead of asserting they cannot happen.
+
+     **RNG-neutral, and that took three goes.** §565 priced a portal cut at "zero" on collider
+     COUNT and that is true; it is not free of rng. `masonryShell` and `pavingField` both skip
+     the draws for whatever an opening removes, so a plain `openings` entry on the hall's north
+     wall moved twelve existing aisle-roof `ledge` colliders by up to 0.21 m and re-diced 28 of
+     69 art meshes. `EgyptLevel.js`'s `sealedCut` fences that; a private `A.rng` fences the new
+     art; and the retired mudbrick frame's draws are replayed into a sink, because DELETING a
+     mass reseeds the build exactly as much as adding one. Verified by digesting the whole
+     collider layer and hashing every drawn mesh's vertices before and after: **59 of 69 art
+     meshes byte-identical**, and the ten that moved are exactly the ten this change draws into.
+     Two intermediate builds leaked — into `arch:court:*`, `arch:far:*` and the crypt piers —
+     and neither leak was visible in the collider count, only in the hash. */
+  assert.equal(REG.length, 296, 'collider registrations unchanged by this seal');
   assert.equal(P.stats.decals, 46, 'contact decals unchanged by this seal');
   assert.equal(P._fx.length, 24, 'fx emitters unchanged');
   assert.equal(P._lights.length, 24, 'lights unchanged');

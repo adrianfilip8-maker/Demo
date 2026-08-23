@@ -3,6 +3,10 @@ import * as K from './Kit.js';
 /* §587: the level's own rope-coil vocabulary, reused rather than re-modelled. `Props` already
    places eight of these; this is a ninth, sited deliberately instead of scattered. */
 import { ropeCoil } from './PropKit.js';
+/* §600: the vent passage draws its own art and cuts two pieces that are diced from the shared
+   level stream. Both of those shift every subsequent draw unless they are fenced — see
+   `sealedCut` and the `A.rng` swap in `vent()`. */
+import { rng } from '../core/Rand.js';
 
 /**
  * EgyptLevel — the Temple of Ra, laid out to the AGENTS.md §8.1 coordinate contract.
@@ -85,32 +89,49 @@ import { ropeCoil } from './PropKit.js';
  *  8. Through the vault gate doorway at (0, -12, -59.2) into the pillared crypt and north
  *     to the SARCOPHAGUS at (0, -12, -72).
  *
- *  ALTERNATE (stealth) — WITHDRAWN (§565). This route was written but never built, and the
- *  text above it advertised it for long enough that it has to be retired explicitly rather
- *  than quietly deleted. Measured: the tunnel's interior is genuinely hollow (a crouched
- *  capsule depenetrates 0.000 m at 8 of 8 samples from z -53 to -60.6, and the sand sheet is
- *  1.2-4.6 m OVERHEAD, not a lid pressing on it) — but **nothing is drawn inside it**, 0
- *  triangles over 19 m, and both portals are drawn *and* collided as solid: the hall north
- *  wall across the mouth (`proxy:wall` z -52..-49.9) and the tomb west wall across the exit
- *  (x -14.05..-12.05). The paving over the shaft is drawn solid too. So a player who takes
- *  it crawls 1.4 m and stops at z -49.56 — the wall face at -49.90 plus the 0.34 capsule
- *  radius, to the centimetre.
+ *  ALTERNATE (traversal) — BUILT (§600), after the user's playtest ruling *"the vent crawl
+ *  space is not accessible currently"*. §8.1 offered it as a stealth bypass and §565 withdrew
+ *  it on the right ground — guards, cameras, searchlights and motion trackers are out of scope
+ *  by the user's own ruling, so there was nothing to bypass. It is rebuilt as TRAVERSAL, and
+ *  the claim it earns its place on is narrower than "short cut":
  *
- *  The COLLIDER cost of opening it is zero and that was measured, not assumed: `A.proxy`
- *  registers exactly one collider for any geometry, `K.mergeAll` is wired, and substituting
- *  the hall floor slab with a four-box merged slab carrying a doorway hole leaves the level
- *  at 255 proxies / 287 recs — the same numbers, so `basketvary.test.mjs`'s 282 never moves.
- *  The budget was never the binding constraint. The CONTENT is: building this means authoring
- *  19 m of tunnel art, openings in two drawn walls and the paving, and lighting for a space
- *  with no camera in it — for a stealth bypass in a demo whose guards, cameras, searchlights
- *  and motion trackers are all out of scope by the user's own ruling. So there is nothing to
- *  bypass, and the route is withdrawn rather than built.
+ *    CRAWL the `vent` from the hall's north-west floor at (-21.85, 0, -48.7). The ramp drops
+ *    31.2 deg through a doorway cut in the hall north wall to (-21.85, -2.00, -52), then
+ *    18.5 deg under the desert to the elbow at (-21.85, -5.40, -62.15), then EAST 10.6 m at
+ *    z -63 and out through the tomb's west wall onto the CRYPT GALLERY at y -5.40 — 6.6 m
+ *    above the burial chamber floor, looking down on the sarcophagus. The three west-wall
+ *    shelves below it are the way back down and back up: 2.20 m risers, driven both ways.
  *
- *  It is a cul-de-sac, not a soft-lock, and that is measured too: from the wedge, holding
- *  back walks out 31.13 m, turning round 29.89 m, strafing 9.72 m, turn-and-jump 30.65 m.
- *  Only "hold forward forever" and "release everything" leave you there, which is what
- *  those inputs mean. The `vent` proxies stay where they are: the art draws a framed opening
- *  that has been walled up, which is now exactly what the level is.
+ *  It is a SECOND ENTRANCE, and that is the measured claim: the driven path enters neither the
+ *  inner pylon gate (x ±3.4 at z -52) nor the stairwell (x -14.2..4.4, z -59.4..-54.4), which
+ *  every other way into the burial chamber passes through. It is NOT a meaningful short cut and
+ *  this header does not say it is — 53.8 m against the front route's 56.2 m, reported by
+ *  `tests/ventroute.test.mjs` R4 and asserted by nothing.
+ *
+ *  What §565 measured, reproduced, and where it was incomplete. The interior WAS hollow (a
+ *  crouched capsule depenetrated 0.000 m at 8 of 8 samples) and the crawl DID stop dead at
+ *  z -49.56 — the wall face at -49.90 plus the 0.34 capsule radius, to the centimetre, which
+ *  `ventroute` R1 now reproduces 10 m east as its control. Two things did not hold up:
+ *    · "0 triangles over 19 m" is the east run. The shaft had 21 `arch:hall:hieroglyph_wall`
+ *      triangles inside z -51..-60, and the desert's own sand sheet passing through it.
+ *    · "the tomb-side exit is drawn solid" is wrong. `vaultOpenings` has cut a through-hole in
+ *      the vault's west wall at z -64..-62 ever since the tomb existed; the ART was open and
+ *      only the PROXY was solid, which is the reverse of the usual seam. §565 probed at the old
+ *      vent volume's z -61.6, 0.6 m off the hole, and found masonry.
+ *  And the pricing was right about the collider COUNT and silent about the rng: cutting an
+ *  opening into a `masonryShell` or a `pavingField` skips the draws for the blocks it removes,
+ *  so the first build of this moved twelve existing aisle-roof colliders and re-diced 28 of 69
+ *  art meshes. See `sealedCut`. The budget was never the constraint; the reseed was.
+ *
+ *  Three other things had to be repaired to make it work, none of them the wall:
+ *    · TERRAIN's sand proxy is a lid over the first 2.2 m of the ramp (the sand reads -0.05 to
+ *      +0.02 from z -52 to -57). `PROXY_OPENINGS` gets a second entry beside §480's.
+ *    · the bore is 1.40 m, sized by `_moveHorizontal`'s step probe rather than by the crawl
+ *      capsule: a grounded capsule is lifted `stepHeight` before every horizontal sweep, so
+ *      1.15 m of headroom froze the crawl dead at z -49.616 with velocity 0.000.
+ *    · the west-wall landing chain could not be landed on. It stood 5 cm proud of a wall whose
+ *      inner face is at x -12.05, and its three shelves were stacked so each was a ceiling over
+ *      the one below. Now 1.55 m proud, and a stair.
  *
  *  ROOFTOP RUN (the §8.6 payoff line, west -> east across the whole complex):
  *    east entry pylon top (14, 26.6, 34)  ->  RAIL 'pylon-drop' down to the east peristyle
@@ -148,6 +169,46 @@ export const L = {
   pyr2:    { x: 95, z: -250, base: 104, h: 72 },
 };
 
+/**
+ * §600 — the vent passage, in one table because THREE builders cut into it: `hypostyleHall`
+ * owns the mouth (a paving slab, the floor collider and the north wall), `tomb` owns the exit
+ * portal and the landing chain, and `vent()` builds everything between them. Every number here
+ * is either a measurement or is derived from one; see `vent()`'s docblock for which.
+ */
+const VENT = {
+  x0: -22.70, x1: -21.00,               // the bore in x, down the shaft (1.70 m)
+  z0: -63.85, z1: -62.15,               // the bore in z, along the east run — the crypt's own
+                                        // drawn opening is z -64..-62, so this sits inside it
+  /**
+   * `bore` is set by the STEP PROBE, not by the crawl capsule. `Controller._moveHorizontal`
+   * lifts a grounded capsule by `TUNE.stepHeight` 0.42 before every horizontal sweep, whatever
+   * state it is in, so the ceiling a crawler needs is `0.42 + 2·radius / cos(pitch)` — 1.19 m
+   * at the mouth ramp's 31.2 deg, not the 0.68 m the crawl ball occupies. Measured the hard
+   * way at 1.15: the drive entered `crawl`, held forward, and froze at z -49.616 with velocity
+   * exactly 0.000 for 1200 frames, because the lifted capsule caught the portal head 0.28 m
+   * ahead of it. A capsule sweep taken at the crawl height from the same point passes cleanly,
+   * which is what makes this the kind of blocker a hand probe agrees is not there.
+   */
+  bore: 1.40, jamb: 0.35, roof: 0.25, slab: 0.40,
+  head: { z: -48.70, y: 0.00 },         // ramp head, flush with the hall paving
+  knee: { z: -52.00, y: -2.00 },        // the hall north wall's north face — 31.2 deg
+  /**
+   * `foot` is set by the CRYPT CEILING, not by the shortest descent. The vault's star ceiling
+   * is drawn at y -2.85..-2.00, so a gallery at the drawn opening's own sill (-3.80) leaves
+   * 1.35 m of headroom and a 1.80 m capsule stands with its head 0.45 m inside the ceiling —
+   * collision-free, because that slab is art, and wrong in every frame. At -5.40 the gallery
+   * has 2.55 m over it, which is a place to stand and look rather than a shelf to duck on.
+   */
+  foot: { z: -62.15, y: -5.40 },        // the elbow; the east run's floor — 18.5 deg
+  exitX: -12.05,                        // the crypt's west wall, inner face
+  mouthHole: [-22.70, -21.00, -51.2, -48.70],       // hall floor collider + paving
+  door: { a0: -23.05, a1: -20.65, y0: -2.60, y1: 0.95 },   // the north wall's drawn doorway
+  /* The tomb west wall. `openY` is the DRAWN opening, in the vault shell's own local y (world
+     = this - 12): `vaultOpenings` has always cut one here — at local 8.2..9.9, world
+     -3.80..-2.10 — and §600 moves it down a course and a half onto the gallery it serves. */
+  exit: { y0: -5.80, y1: -3.72, z0: -64.05, z1: -61.95, openY0: 6.15, openY1: 8.25 },
+};
+
 const D = THREE.MathUtils.degToRad;
 
 /* ============================ small helpers ============================ */
@@ -171,6 +232,131 @@ function box(A, zone, mat, w, h, d, x, y, z, o = {}) {
 /** Axis-aligned volume from extents — reads closer to the §8.1 table than w/h/d does. */
 function vol(A, zone, mat, x0, x1, y0, y1, z0, z1, o = {}) {
   return box(A, zone, mat, x1 - x0, y1 - y0, z1 - z0, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, o);
+}
+
+/**
+ * Cut a hole in a piece that is diced from the shared level rng, WITHOUT reseeding the rest
+ * of the build.
+ *
+ * ── The defect this exists for, measured rather than argued (§600.2) ───────────────────────
+ * `masonryShell` and `pavingField` both draw from `rng` per emitted block/slab, and both skip
+ * the draws for whatever an opening removes — `pavingField`'s hole test is `if (skip) continue`
+ * *above* the four `rng.jitter` calls, and `masonryShell`'s own comment says it: "blocks that
+ * fell wholly inside an opening are no longer generated-then-discarded, so shells that HAVE
+ * openings do re-shuffle downstream". So one extra opening shifts every later draw in the level.
+ *
+ * Measured before this helper was written, by digesting the whole collider layer twice: adding
+ * the vent doorway to the hall's north wall as a plain `openings` entry moved **12 existing
+ * `ledge` rows** — the aisle-roof slabs, by up to 0.21 m — and re-diced **28 of 69 art meshes**,
+ * including the tomb and the courtyard. §565 priced a portal cut at "zero" and that is true of
+ * the collider COUNT; the count was not the whole ledger.
+ *
+ * So the piece is built TWICE. First exactly as it was written before the cut, taping every
+ * value it draws — that pass is what advances the shared stream, by precisely what it always
+ * advanced. Then the cut version is built by replaying the same tape, and the uncut geometry is
+ * thrown away. The shared stream ends where it began; the cut piece is diced from the identical
+ * sequence, so it is byte-identical up to the first block the hole removes. A cut can only
+ * consume FEWER draws than the uncut piece, but the replay falls through to a private stream
+ * if that is ever not true, so the fence holds either way.
+ */
+function sealedCut(R, makeUncut, makeCut) {
+  const tape = [];
+  makeUncut(rngView(() => { const v = R(); tape.push(v); return v; }));
+  let i = 0;
+  const tail = rng(0x0e27_5a1d >>> 0);
+  return makeCut(rngView(() => (i < tape.length ? tape[i++] : tail())));
+}
+
+/** The `Rand.js` surface, over an arbitrary source of uniforms. */
+function rngView(next) {
+  const f = () => next();
+  f.range = (lo, hi) => lo + f() * (hi - lo);
+  f.int = (lo, hi) => Math.floor(lo + f() * (hi - lo + 1));
+  f.sign = () => (f() < 0.5 ? -1 : 1);
+  f.jitter = (amount = 1) => (f() + f() + f() - 1.5) * (amount / 1.5);
+  f.pick = (arr) => arr[Math.floor(f() * arr.length) % arr.length];
+  f.chance = (p) => f() < p;
+  f.shuffle = (arr) => {
+    for (let k = arr.length - 1; k > 0; k--) {
+      const j = Math.floor(f() * (k + 1));
+      [arr[k], arr[j]] = [arr[j], arr[k]];
+    }
+    return arr;
+  };
+  return f;
+}
+
+/**
+ * ONE collider from several boxes — a wall or a slab with a doorway cut in it.
+ *
+ * §565 measured the thing that makes this free and it is worth keeping in one place:
+ * `Architecture.proxy()` calls `registerCollider` exactly once for any geometry, and
+ * `K.mergeAll` is wired at `Architecture.init`, so a slab in four pieces around a hole is one
+ * collider, not four. What it is NOT is free of *rows*: the row's world bounding box is
+ * unchanged and its vertex count grows, which is exactly what a cut should look like in a
+ * digest and is why §600's neutrality check names its three cut rows instead of barring them.
+ */
+/**
+ * A drawn slab whose TOP SURFACE runs from (z0, y0) to (z1, y1), `w` wide in x and `thick` deep
+ * below that surface. The vent's floors, jambs and roofs are all this shape.
+ *
+ * The endpoints are ordered internally so the rotation always lands in (-90, 90) deg: taking
+ * `atan2(dy, dz)` on a pair given north-to-south flips the local up vector, and the slab is
+ * then offset the wrong way by half its thickness — a 0.9 m error that looks exactly like a
+ * mis-typed coordinate.
+ */
+function rakedSlab(A, zone, mat, x, w, thick, za, ya, zb, yb, o = {}) {
+  const [z0, y0, z1, y1] = za <= zb ? [za, ya, zb, yb] : [zb, yb, za, ya];
+  const dz = z1 - z0, dy = y1 - y0;
+  const len = Math.hypot(dz, dy) || 0.01;
+  const th = Math.atan2(-dy, dz);                       // Rx(th)·(0,0,1) = (0, -sin th, cos th)
+  const uy = Math.cos(th), uz = Math.sin(th);           // Rx(th)·(0,1,0)
+  return box(A, zone, mat, w, thick, len, x,
+    (y0 + y1) / 2 - uy * thick / 2, (z0 + z1) / 2 - uz * thick / 2, { ...o, rx: th });
+}
+
+/**
+ * The collider for a `rakedSlab` — a genuinely rotated box, both faces parallel to the slope.
+ *
+ * `rampProxy` is the wrong tool for this and the reason is worth writing down, because it is
+ * not visible from its signature. It shears only the vertices ABOVE the box mid-plane and
+ * leaves the underside flat at `hi - thick`, so a ramp whose total drop exceeds its thickness
+ * comes out INSIDE OUT over most of its run — and the flat face is still in the BVH. Measured
+ * on the vent's first build: the shaft floor (2.05 m of drop, 0.40 m thick) put a flat `ground`
+ * plane at y -2.15 straight through the bore, which a downward probe read as the floor at
+ * z -54.5 and an upward probe read as the ceiling at the same point. That is the shape of an
+ * instrument fault and it was a real surface. `rampProxy` is correct where its callers use it —
+ * the terrace and tomb flights are thicker than they are deep — and this is not.
+ */
+function rakedProxy(A, x, w, thick, za, ya, zb, yb, opts = {}) {
+  const [z0, y0, z1, y1] = za <= zb ? [za, ya, zb, yb] : [zb, yb, za, ya];
+  const dz = z1 - z0, dy = y1 - y0;
+  const len = Math.hypot(dz, dy) || 0.01;
+  const th = Math.atan2(-dy, dz);
+  const uy = Math.cos(th), uz = Math.sin(th);
+  return A.proxy(new THREE.BoxGeometry(w, thick, len),
+    { tag: 'ground', material: 'stone', ...opts },
+    { x, y: (y0 + y1) / 2 - uy * thick / 2, z: (z0 + z1) / 2 - uz * thick / 2, rx: th });
+}
+
+function mergedProxy(A, boxes, opts) {
+  /* The mesh is PLACED at the union's centre and the boxes are built relative to it, rather than
+     built in world space and placed at the origin.
+     Not cosmetic: `mesh.position` is what several consumers read as "where this collider is", and
+     a merged proxy left at (0, 0, 0) tells them the hall's north wall is in the middle of the
+     courtyard. Found by a camera arm, not by a level one — `camstate.test.mjs` derives wall-run
+     approach sites from `w.mesh.position`, so four walls moving to the origin silently changed
+     which six sites it picked and two more frames crossed its 30 deg/frame bar. World bounds are
+     identical either way, which is exactly why a bounds digest cannot see this. */
+  let cx = 0, cy = 0, cz = 0;
+  for (const [x0, x1, y0, y1, z0, z1] of boxes) { cx += (x0 + x1) / 2; cy += (y0 + y1) / 2; cz += (z0 + z1) / 2; }
+  cx /= boxes.length; cy /= boxes.length; cz /= boxes.length;
+  const parts = boxes.map(([x0, x1, y0, y1, z0, z1]) => {
+    const g = new THREE.BoxGeometry(Math.max(0.02, x1 - x0), Math.max(0.02, y1 - y0), Math.max(0.02, z1 - z0));
+    g.translate((x0 + x1) / 2 - cx, (y0 + y1) / 2 - cy, (z0 + z1) / 2 - cz);
+    return g;
+  });
+  return A.proxy(K.mergeAll(parts), opts, { x: cx, y: cy, z: cz });
 }
 
 /**
@@ -2189,10 +2375,27 @@ function hypostyleHall(A) {
   const naveZ = [-22, -30, -38, -46], aisleZ = [-26, -38];
   for (const cz of naveZ) for (const sx of [-1, 1]) holes.push([sx * 8 - 2.5, sx * 8 + 2.5, cz - 2.5, cz + 2.5]);
   for (const cz of aisleZ) for (const sx of [-1, 1]) holes.push([sx * 16.5 - 2.3, sx * 16.5 + 2.3, cz - 2.3, cz + 2.3]);
-  A.mesh('paving_courtyard', K.pavingField({
-    x0: -23, x1: 23, z0: -51, z1: -17, y: 0, slab: 2.3, thick: 0.5, rng: R, sink: 0.045, holes,
-  }), 'paving:hall', { cast: false });
-  groundProxy(A, -23, 23, 0, -51.2, -16.8);
+  /* §600 — the vent mouth's slab. The passage's ramp head is at z -48.70 and it has to be BELOW
+     y 0 by z -52, because the desert sand over the shaft sits at y -0.05..+0.02 the whole way
+     from z -52 to z -57 (measured, `Terrain.heightAt`) and the tunnel's roof has to stay under
+     it; from the ground proxy's own north edge at z -51.2 that would be a 57 deg ramp. So one
+     paving slab goes — the one whose centre is (-21.85, -49.87) — and the passage's own floor,
+     jambs and threshold fill the hole it leaves. `sealedCut` because `pavingField` skips the
+     four `rng.jitter` draws of a slab it drops. */
+  const VENT_MOUTH_HOLE = VENT.mouthHole;
+  A.mesh('paving_courtyard', sealedCut(R,
+    (r) => K.pavingField({ x0: -23, x1: 23, z0: -51, z1: -17, y: 0, slab: 2.3, thick: 0.5, rng: r, sink: 0.045, holes }),
+    (r) => K.pavingField({
+      x0: -23, x1: 23, z0: -51, z1: -17, y: 0, slab: 2.3, thick: 0.5, rng: r, sink: 0.045,
+      holes: [...holes, VENT_MOUTH_HOLE],
+    })), 'paving:hall', { cast: false });
+  /* The hall floor is ONE collider and stays one: four boxes around the mouth, merged. The row's
+     world bounds are unchanged; only its vertex count moves (§600.3). */
+  mergedProxy(A, [
+    [-23, VENT_MOUTH_HOLE[0], -1, 0, -51.2, -16.8],
+    [VENT_MOUTH_HOLE[1], 23, -1, 0, -51.2, -16.8],
+    [VENT_MOUTH_HOLE[0], VENT_MOUTH_HOLE[1], -1, 0, VENT_MOUTH_HOLE[3], -16.8],
+  ], { tag: 'ground', material: 'stone' });
 
   /* ---- Outer walls. Battered, buried at the base, hieroglyph-faced. ---- */
   const winZ = [-21, -27, -33, -39, -45];
@@ -2250,16 +2453,33 @@ function hypostyleHall(A) {
   }
   A.api.doorways.push({ center: new THREE.Vector3(0, 4.7, h.z1 - 1), w: 8.8, h: 9.4 });
 
-  /* North wall, split by the inner pylon gate. */
-  A.add('hall', 'hieroglyph_wall', K.place(K.masonryShell({
-    w: 48, d: 2.1, h: WALL_H, batter: B, course: 0.74, thick: 1.05, rng: R,
+  /* North wall, split by the inner pylon gate — and, since §600, by the vent doorway at its
+     west end. The gate opening is unchanged; `VENT_DOOR` is the second one, cut through both
+     leaves at the ramp's own profile, and it is `sealedCut` for the reason that helper records:
+     an extra opening on this shell moved twelve aisle-roof `ledge` colliders when it was tried
+     the plain way. */
+  const VENT_DOOR = VENT.door;
+  const nWall = (openings) => K.place(K.masonryShell({
+    w: 48, d: 2.1, h: WALL_H, batter: B, course: 0.74, thick: 1.05, rng: openings.rng,
     blockLen: [1.7, 2.7], recess: A.TUNE.mortarRecess, chipChance: 0.16, gapChance: 0.03, buried: 0.4, hollow: true,
-    openings: [0, 1].flatMap((f) => [{ face: f, a0: -3.4, a1: 3.4, y0: -1, y1: 8.2 }]),
+    openings: openings.list,
     // Sheltered end of the hall: it settles the least and keeps its blocks.
     sag: 0.14, windFace: 1, drift: 0.10,
     chamfer: chamferFor(0, WALL_H * 0.5, h.z0 + 1.05),
-  }), { x: 0, y: 0, z: h.z0 + 1.05 }));
-  for (const [x0, x1] of [[-24, -3.4], [3.4, 24]]) wallProxy(A, x0, x1, 0, WALL_H, h.z0, h.z0 + 2.1);
+  }), { x: 0, y: 0, z: h.z0 + 1.05 });
+  const gateOpen = (f) => ({ face: f, a0: -3.4, a1: 3.4, y0: -1, y1: 8.2 });
+  A.add('hall', 'hieroglyph_wall', sealedCut(R,
+    (r) => nWall({ rng: r, list: [0, 1].flatMap((f) => [gateOpen(f)]) }),
+    (r) => nWall({ rng: r, list: [0, 1].flatMap((f) => [gateOpen(f), { face: f, ...VENT_DOOR }]) })));
+  /* One collider, three boxes: the wall west of the pylon gate with the vent doorway in it.
+     The doorway only has to break the proxy where the bore rises above y 0, which is the
+     2.1 m of wall thickness the ramp head runs through. */
+  mergedProxy(A, [
+    [-24, VENT.x0, 0, WALL_H, h.z0, h.z0 + 2.1],
+    [VENT.x1, -3.4, 0, WALL_H, h.z0, h.z0 + 2.1],
+    [VENT.x0, VENT.x1, VENT_DOOR.y1, WALL_H, h.z0, h.z0 + 2.1],
+  ], { tag: 'wall', material: 'stone', climbable: true });
+  wallProxy(A, 3.4, 24, 0, WALL_H, h.z0, h.z0 + 2.1);
   wallProxy(A, -3.4, 3.4, 8.2, WALL_H, h.z0, h.z0 + 2.1);
 
   /* ---- 12 papyrus columns: 8 tall in the nave rows, 4 shorter in the aisles. ----
@@ -3086,17 +3306,17 @@ function tomb(A) {
      both faces made it a window onto the void, which was 4 of the escaping sightlines. Face 2
      is +X and face 3 is -X, so which one is "inner" flips with the wall. The vent mouth is the
      exception: that is a real passage in from the hall and has to go through both faces. */
-  const vaultOpenings = (sx) => {
+  const vaultOpenings = (sx, ventY0, ventY1) => {
     const inner = sx > 0 ? 3 : 2;
     const o = nicheZ.map((nz) => ({ face: inner, a0: nz - zc - 0.8, a1: nz - zc + 0.8, y0: 3.0, y1: 4.9 }));
     if (sx < 0) {
-      for (const f of [2, 3]) o.push({ face: f, a0: -63 - zc - 1.0, a1: -63 - zc + 1.0, y0: 8.2, y1: 9.9 });
+      for (const f of [2, 3]) o.push({ face: f, a0: -63 - zc - 1.0, a1: -63 - zc + 1.0, y0: ventY0, y1: ventY1 });
     }
     return o;
   };
   for (const sx of [-1, 1]) {
-    A.add('tomb', 'hieroglyph_wall', K.place(K.masonryShell({
-      w: 1.9, d: t.z1 - t.z0, h: C - F, batter: 0.015, course: 0.7, thick: 0.95, rng: R,
+    const shell = (r, ventY0, ventY1) => K.place(K.masonryShell({
+      w: 1.9, d: t.z1 - t.z0, h: C - F, batter: 0.015, course: 0.7, thick: 0.95, rng: r,
       /* gapChance 0: the vault is sealed and solid rock lies beyond it, so a fallen block is
          not a ruin note, it is a hole through the shell.
          No skipFaces either. Dropping the buried outer row leaves the wall one block thick,
@@ -3105,10 +3325,30 @@ function tomb(A) {
          line, and those see straight through to the void. The outer row is also what a niche
          is cut *into*. */
       blockLen: [1.4, 2.4], recess: 0.07, chipChance: 0.22, gapChance: 0, hollow: true,
-      openings: vaultOpenings(sx),
-    }), { x: sx * (t.x1 - 0.95), y: F, z: zc }));
-    wallProxy(A, sx * (t.x1 - 0.95) - 1.0, sx * (t.x1 - 0.95) + 1.0, F, C, t.z0, t.z1);
-    for (const nz of nicheZ) ledgeProxy(A, sx * (t.x1 - 0.95) - 1.0, sx * (t.x1 - 0.95) + 1.0, F + 3.0, nz - 0.8, nz + 0.8, { thick: 0.35 });
+      openings: vaultOpenings(sx, ventY0, ventY1),
+    }), { x: sx * (t.x1 - 0.95), y: F, z: zc });
+    /* §600 moves the vent opening down onto the gallery it serves: local 8.2..9.9 (world
+       -3.80..-2.10) becomes 6.15..8.25 (world -5.85..-3.75). The UNCUT arm of the seal has to be
+       the opening exactly as it was, both bounds — passing the new head to it left the tape
+       short and re-diced the crypt piers, the sarcophagus, the background and the foreground.
+       Caught by probing `A.rng()` at eight build checkpoints, not by reading the code. */
+    A.add('tomb', 'hieroglyph_wall', sx < 0
+      ? sealedCut(R, (r) => shell(r, 8.2, 9.9), (r) => shell(r, VENT.exit.openY0, VENT.exit.openY1))
+      : shell(R, 8.2, 9.9));
+    const wx0 = sx * (t.x1 - 0.95) - 1.0, wx1 = sx * (t.x1 - 0.95) + 1.0;
+    if (sx < 0) {
+      /* §600 — the vent's exit portal. The drawn wall was ALWAYS cut here: `vaultOpenings`
+         puts a through-hole on faces 2 and 3 at z -64..-62, y -3.8..-2.1, which is the passage
+         the shelves below were built as a landing chain for. Only the proxy was solid. One
+         collider still, four boxes; world bounds unchanged (§600.3). */
+      mergedProxy(A, [
+        [wx0, wx1, F, VENT.exit.y0, t.z0, t.z1],
+        [wx0, wx1, VENT.exit.y1, C, t.z0, t.z1],
+        [wx0, wx1, VENT.exit.y0, VENT.exit.y1, t.z0, VENT.exit.z0],
+        [wx0, wx1, VENT.exit.y0, VENT.exit.y1, VENT.exit.z1, t.z1],
+      ], { tag: 'wall', material: 'stone', climbable: true });
+    } else wallProxy(A, wx0, wx1, F, C, t.z0, t.z1);
+    for (const nz of nicheZ) ledgeProxy(A, wx0, wx1, F + 3.0, nz - 0.8, nz + 0.8, { thick: 0.35 });
   }
   A.add('tomb', 'hieroglyph_wall', K.place(K.masonryShell({
     w: t.x1 - t.x0, d: 1.9, h: C - F, batter: 0.015, course: 0.7, thick: 0.95, rng: R,
@@ -3165,11 +3405,26 @@ function tomb(A) {
       wallProxy(A, sx * 5.5 - 1.1, sx * 5.5 + 1.1, F, C - 1.2, pz - 1.1, pz + 1.1);
     }
     A.add('tomb', 'hieroglyph_gilded', K.place(K.beam(15.6, 1.2, 2.4, { rng: R, pieces: 5, crack: 0.04, chip: 0.14, roll: 0.13 }), { x: sx * 5.5, y: C - 0.6, z: -68, ry: Math.PI / 2 }));
-    /* West-wall shelves: the vent's landing chain down to the floor. */
+    /* West-wall shelves: the vent's landing chain down to the floor.
+       ── §600: they were 5 cm of shelf ──────────────────────────────────────────────────────
+       Built at x -13.4..-12.0 against a wall whose inner face is at x -12.05, so 1.35 m of
+       every one of them was INSIDE the wall and 0.05 m stuck out. Measured before moving them:
+       a standing capsule dropped on the top shelf depenetrates 0.604 m at x -12.7 and 0.294 m
+       at x -12.0, and at x -11.6 — the first place it does not — the ground under it is the
+       crypt floor at y -12.00, 8.8 m down. A landing chain nothing could land on.
+       Now 1.55 m proud of the face, and the top one is the vent's own gallery at -5.40.
+       ── And they were stacked, which is the same defect in the other axis ─────────────────
+       -3.2 / -6.4 / -9.4 ran z -70..-60.5 / -72..-64 / -74..-66, so each shelf lay under the
+       one above it for six of its eight metres and every riser was a 3.0 m climb off a 2 m
+       strip at the far end. Driven, a walker made the first riser and none of the rest. They
+       are a STAIR now — 2.4 m treads, each one clear of the shelf above, risers 2.20 m all the
+       way from the crypt floor to the gallery. Every riser is driven in
+       `tests/ventroute.test.mjs`: a chain you can only fall down is a one-way door, and §565
+       retired one of those. */
     if (sx < 0) {
-      for (const [sy, z0, z1] of [[-3.2, -70, -60.5], [-6.4, -72, -64], [-9.4, -74, -66]]) {
-        vol(A, 'tomb', 'sandstone_block', t.x0 + 0.6, t.x0 + 2.0, sy - 0.6, sy, z0, z1, { jitter: 0.025, chip: 0.12 });
-        ledgeProxy(A, t.x0 + 0.6, t.x0 + 2.0, sy, z0, z1, { thick: 0.6 });
+      for (const [sy, z0, z1] of [[-5.4, -70.0, -60.5], [-7.6, -72.2, -69.8], [-9.8, -74.4, -72.0]]) {
+        vol(A, 'tomb', 'sandstone_block', t.x0 + 0.6, -10.5, sy - 0.6, sy, z0, z1, { jitter: 0.025, chip: 0.12 });
+        ledgeProxy(A, t.x0 + 0.6, -10.5, sy, z0, z1, { thick: 0.6 });
       }
     }
   }
@@ -3191,27 +3446,202 @@ function tomb(A) {
   vol(A, 'tomb', 'hieroglyph_gilded', -2.6, 2.6, F, F + 6.2, t.z0 + 1.7, t.z0 + 2.1, { jitter: 0.02 });
   vol(A, 'tomb', 'gold_leaf', -1.9, 1.9, F + 0.4, F + 5.4, t.z0 + 1.6, t.z0 + 1.75, { jitter: 0.01 });
 
-  /**
-   * ---- The `vent`: authored as a WALLED-UP passage, not a route (§565) ----
-   * The four volumes below are kept exactly where they are and the §8.1 ALTERNATE that used
-   * them is withdrawn — see the route header for the measurements and the pricing. In short:
-   * the tunnel is hollow but undrawn (0 triangles over 19 m), both portals are drawn and
-   * collided solid, and opening it costs 0 colliders but 19 m of art nobody can light or see.
-   * What the player meets is a framed opening that has been bricked up, which is what the art
-   * already draws; the `vent` tag on the mouth is what makes them crouch at it, and crouching
-   * at a blocked vent is the correct read. `tests/reachcensus.test.mjs` arm V pins the wall
-   * face and the stopping distance so a future cut reddens it instead of passing silently.
-   */
-  const ventMat = { material: 'sand' };
-  A.proxy(new THREE.BoxGeometry(1.35, 1.2, 10.6), { tag: 'vent', crawl: true, ...ventMat },
-    { x: -21, y: -1.55, z: -54.5, rx: -D(17.2) });
-  A.proxy(new THREE.BoxGeometry(1.35, 1.2, 2.4), { tag: 'vent', crawl: true, ...ventMat }, { x: -21, y: -3.5, z: -60.6 });
-  A.proxy(new THREE.BoxGeometry(7.6, 1.2, 1.35), { tag: 'vent', crawl: true, ...ventMat }, { x: -17.4, y: -3.55, z: -61.6 });
-  /* Portal frames so the crawl reads as built, not as a hole in the maths. */
-  vol(A, 'hall', 'mudbrick', -22.3, -19.7, 0.0, 1.55, -50.4, -49.9, { jitter: 0.02 });
-  vol(A, 'hall', 'mudbrick', -22.3, -21.9, -0.1, 1.55, -50.4, -48.6, { jitter: 0.02 });
-  vol(A, 'hall', 'mudbrick', -19.9, -19.6, -0.1, 1.55, -50.4, -48.6, { jitter: 0.02 });
-  A.proxy(new THREE.BoxGeometry(2.2, 0.6, 1.9), { tag: 'vent', crawl: true, ...ventMat }, { x: -21, y: -0.2, z: -49.4 });
+  vent(A);
+}
+
+/* ============================ the vent passage ========================== */
+
+/**
+ * VENT — the relieving channel, built (§600). Hall north-west floor → the crypt's west gallery.
+ *
+ * ── What it is for, now that there is nothing to sneak past ────────────────────────────────
+ * §8.1 offered it as a *stealth* ALTERNATE and §565 withdrew it on exactly the right ground:
+ * guards, cameras, searchlights and motion trackers are out of scope by the user's ruling, so
+ * a bypass bypasses nothing. It is rebuilt as TRAVERSAL, on the narrowest claim the
+ * measurements support (see `tests/ventroute.test.mjs`):
+ *
+ *   · it is a SECOND ENTRANCE. Driven, its path enters neither the inner pylon gate (x ±3.4 at
+ *     z -52) nor the stairwell (x -14.2..4.4, z -59.4..-54.4), and every other way into the
+ *     burial chamber passes through both. It is NOT a short cut worth the name — 53.8 m against
+ *     the front route's 56.2 m — and nothing here claims it is.
+ *   · it ARRIVES SOMEWHERE. The exit is 6.6 m above the crypt floor on the west wall, looking
+ *     down on the sarcophagus past the granite piers — the only view of the burial chamber from
+ *     above in the level, and `ventroute` R4 searches the gallery for the sightline rather than
+ *     asserting it at a lucky point. That landing was already built and had never been
+ *     reachable: the three sandstone shelves below it are commented in this file as "the vent's
+ *     landing chain down to the floor", and they stood 5 cm proud of a wall a capsule cannot
+ *     stand in.
+ *
+ * ── The two things §565 measured that did NOT reproduce ───────────────────────────────────
+ *   · "0 triangles over 19 m" is true of the east run and false of the shaft: 21 triangles of
+ *     `arch:hall:hieroglyph_wall` sit inside z -51..-60, plus terrain. The passage was emptier
+ *     than a room and less empty than the number said.
+ *   · "the tomb-side exit is drawn solid" is wrong. `vaultOpenings` has cut a through-hole in
+ *     the west wall at z -64..-62, y -3.8..-2.1 for as long as the tomb has existed. The art
+ *     was open and the proxy was not, which is the reverse of the usual art/collision seam and
+ *     is why probing at the vent proxy's z -61.6 — 0.6 m off the hole — found masonry.
+ * A third number reproduced and turned out to be incomplete rather than wrong: cutting a portal
+ * is free in COLLIDER COUNT and is not free in rng. See `sealedCut`.
+ *
+ * ── The profile, and what fixes each number ───────────────────────────────────────────────
+ *   head  z -48.70  y  0.00   flush with the hall paving; the ramp is a recess in the floor
+ *   knee  z -52.00  y -2.00   the wall's north face. The desert sand over the shaft sits at
+ *                             y -0.05..+0.02 from z -52 to z -57 (`Terrain.heightAt`), so the
+ *                             roof has to be under it by here — that is what sets this pitch
+ *                             at 31.2 deg and not something gentler. TERRAIN's proxy is still a
+ *                             lid over the 2.2 m south of it; `PROXY_OPENINGS` cuts that.
+ *   foot  z -62.15  y -5.40   18.5 deg. Both are inside `slopeWalkableDeg` 50 and neither is
+ *                             steeper than the terrace flight-1 ramp (33.5 deg).
+ *   run   x -22.70 -> -12.05 at y -5.40, z -63.85..-62.15 — inside the crypt's own drawn
+ *         opening, which §600 moves down a course and a half onto the gallery it serves.
+ * Bore 1.70 m wide, 1.40 m tall. The height is the STEP PROBE's number, not the crawl ball's:
+ * see VENT's own docblock. It is also comfortably over `crouchHeight` 1.06, so a player who
+ * leaves the `vent` volume for any reason stands up crouched instead of being depenetrated
+ * inside their own tunnel — the §566 pocket shape, designed out rather than censused after, and
+ * `ventroute` R7 censuses it anyway. The `vent` volume runs 0.45 m past the crypt reveal so the
+ * crawl is entered before the reveal rather than at it.
+ */
+function vent(A) {
+  const V = VENT;
+  /* ── Every draw below comes from a PRIVATE stream ───────────────────────────────────────
+     `box()` reads `A.rng`, and this block adds ~30 masses to a build where `background()` and
+     `foreground()` still follow. Adding them to the shared stream would re-dice both. Swapping
+     `A.rng` for the duration costs nothing and leaves the shared stream exactly where `tomb()`
+     left it — the same fence `sealedCut` puts around the two cuts, by the cheaper means that a
+     brand-new mass does not have to match anything. */
+  const shared = A.rng;
+  /* ── The retired frame's draws, replayed and thrown away ────────────────────────────────
+     §565's bricked-up mouth was three `mudbrick` masses, and they drew from the shared stream.
+     Deleting them is as much a reseed as adding one: measured on the first build of this,
+     `background()` and `foreground()` re-diced (`arch:court:hieroglyph_wall` lost 48 vertices,
+     `arch:far:sandstone_worn` re-rolled) while everything up to the false door stayed
+     byte-identical — a probe of `A.rng()` at eight build checkpoints put the divergence
+     exactly here. So the retired code is replayed verbatim into a sink that keeps nothing.
+     Verbatim, and not an equivalent count, because a count is the thing that goes stale. */
+  const sink = { rng: shared, add() {}, engine: A.engine, TUNE: A.TUNE };
+  vol(sink, 'hall', 'mudbrick', -22.3, -19.7, 0.0, 1.55, -50.4, -49.9, { jitter: 0.02 });
+  vol(sink, 'hall', 'mudbrick', -22.3, -21.9, -0.1, 1.55, -50.4, -48.6, { jitter: 0.02 });
+  vol(sink, 'hall', 'mudbrick', -19.9, -19.6, -0.1, 1.55, -50.4, -48.6, { jitter: 0.02 });
+  A.rng = rng(0x0e27_c0de >>> 0);
+  try {
+    const { x0, x1, z0, z1, bore, jamb, roof, slab } = V;
+    const ox0 = x0 - jamb, ox1 = x1 + jamb;              // outside of the tunnel structure
+    const yAt = (z) => (z >= V.knee.z
+      ? V.head.y + (z - V.head.z) * (V.knee.y - V.head.y) / (V.knee.z - V.head.z)
+      : V.knee.y + (z - V.knee.z) * (V.foot.y - V.knee.y) / (V.foot.z - V.knee.z));
+
+    /* ---- shaft floor: two rakes, one collider each ---- */
+    rakedProxy(A, (x0 + x1) / 2, x1 - x0, slab, V.head.z, V.head.y, V.knee.z, V.knee.y);
+    rakedProxy(A, (x0 + x1) / 2, x1 - x0, slab, V.knee.z, V.knee.y, V.foot.z, V.foot.y);
+    rakedSlab(A, 'hall', 'sandstone_block', (x0 + x1) / 2, ox1 - ox0, slab, V.head.z, V.head.y, V.knee.z, V.knee.y, { jitter: 0.02, chip: 0.1 });
+    rakedSlab(A, 'hall', 'sandstone_block', (x0 + x1) / 2, ox1 - ox0, slab, V.knee.z, V.knee.y, V.foot.z, V.foot.y, { jitter: 0.02, chip: 0.1 });
+
+    /* ---- the hall-floor recess: jamb tops flush with the paving, no roof, open to the hall - */
+    for (const [jx0, jx1] of [[ox0, x0], [x1, ox1]]) {
+      vol(A, 'hall', 'sandstone_block', jx0, jx1, -1.5, 0.0, -49.90, V.head.z, { jitter: 0.02, chip: 0.12 });
+    }
+    /* A kerb at the lip, so the ramp head reads as a built thing and not as a hole where a
+       paving slab used to be. 3 cm proud, well under `stepHeight`, and art only. */
+    vol(A, 'hall', 'granite_pink', ox0, ox1, -0.34, 0.03, -48.78, -48.60, { jitter: 0.01, c: 0.05 });
+
+    /* ---- through the wall: a level-headed portal, and the spandrel that closes it ----
+       The head is FLAT through the 2.1 m of wall while the floor keeps raking away, so the
+       vestibule inside the jamb is 1.40 m at the reveal and 2.67 m at the far face. The reveal
+       height is the number that matters: the step probe lifts the capsule 0.42 m at the last
+       stance south of the wall (floor -0.521, sphere centre 0.219) and the head plane sits
+       0.454 m off it against a 0.34 m radius. That is the 0.11 m of margin this whole profile
+       is sized around. */
+    const headY = yAt(-49.90) + bore, headTop = headY + roof;
+    for (const [jx0, jx1] of [[ox0, x0], [x1, ox1]]) {
+      vol(A, 'hall', 'sandstone_block', jx0, jx1, -2.60, headTop, V.knee.z, -49.90, { jitter: 0.02, chip: 0.1 });
+    }
+    vol(A, 'hall', 'sandstone_block', ox0, ox1, headY, headTop, V.knee.z, -49.90, { jitter: 0.02, chip: 0.1 });
+    /* Without this the wall's own doorway is a hole in the temple's exterior north face: the cut
+       runs to y +0.95 and the tunnel's roof leaves it at -0.35. Flush with the wall face, so
+       from the desert it is wall. */
+    vol(A, 'hall', 'sandstone_block', ox0, ox1, V.knee.y + bore, headTop, V.knee.z, V.knee.z + 0.30, { jitter: 0.02 });
+    mergedProxy(A, [[x0, x1, headY, headTop, V.knee.z, -49.90]], { tag: 'wall', material: 'stone' });
+
+    /* ---- the buried shaft: raked jambs and roof from the wall to the elbow ----
+       The jamb COLLIDER is one merged pair of boxes per side and runs the whole way back to the
+       wall's reveal, not just the buried stretch. Between z -51.2 and -52.0 the ramp is already
+       below the hall floor slab's underside at y -1.0 and below the wall proxy's base at y 0, so
+       without the second box there is 0.8 m of shaft with nothing at its sides at all. */
+    for (const [jx0, jx1] of [[ox0, x0], [x1, ox1]]) {
+      rakedSlab(A, 'hall', 'mudbrick', (jx0 + jx1) / 2, jx1 - jx0, bore + roof + slab,
+        V.knee.z, V.knee.y + bore + roof, V.foot.z, V.foot.y + bore + roof, { jitter: 0.03, chip: 0.08 });
+      mergedProxy(A, [
+        [jx0, jx1, -6.5, 1.0, V.foot.z, V.knee.z],
+        [jx0, jx1, -3.0, 0.0, V.knee.z, -49.90],
+      ], { tag: 'wall', material: 'stone', climbable: true });
+    }
+    rakedSlab(A, 'hall', 'mudbrick', (x0 + x1) / 2, ox1 - ox0, roof,
+      V.knee.z, V.knee.y + bore + roof, V.foot.z, V.foot.y + bore + roof, { jitter: 0.03 });
+    rakedProxy(A, (x0 + x1) / 2, x1 - x0, roof, V.knee.z, V.knee.y + bore + roof, V.foot.z, V.foot.y + bore + roof,
+      { tag: 'wall' });
+
+    /* ---- the east run: flat, from the elbow to the crypt's own opening ---- */
+    const runY = V.foot.y, runTop = runY + bore;
+    groundProxy(A, x0, V.exitX, runY, z0, z1, { material: 'stone', thick: slab });
+    vol(A, 'tomb', 'mudbrick', ox0, V.exitX, runY - slab, runY, z0 - jamb, z1 + jamb, { jitter: 0.03, chip: 0.08 });
+    /* North jamb runs the whole length; the south one starts east of the shaft, because the
+       shaft joins the run through its south side. */
+    vol(A, 'tomb', 'mudbrick', ox0, V.exitX, runY - slab, runTop + roof, z0 - jamb, z0, { jitter: 0.03, chip: 0.08 });
+    vol(A, 'tomb', 'mudbrick', x1, V.exitX, runY - slab, runTop + roof, z1, z1 + jamb, { jitter: 0.03, chip: 0.08 });
+    /* The elbow's WEST end. Found in a frame, not in a probe: the shaft's own jambs stop at the
+       run's south edge, so without this the run looked west onto 1.70 x 1.40 m of sky — a hole
+       every clearance measurement in this file passes straight through, because a bore with one
+       end missing is exactly as open as one with both. */
+    vol(A, 'tomb', 'mudbrick', ox0, x0, runY - slab, runTop + roof, z0 - jamb, z1 + jamb, { jitter: 0.03, chip: 0.08 });
+    mergedProxy(A, [
+      [ox0, V.exitX, runY, runTop + roof, z0 - jamb, z0],
+      [x1, V.exitX, runY, runTop + roof, z1, z1 + jamb],
+      [x0, V.exitX, runTop, runTop + roof, z0, z1],
+      [ox0, x0, runY, runTop + roof, z0, z1],
+    ], { tag: 'wall', material: 'stone' });
+    /* The run's roof top is the drawn opening's own head (-3.75), so nothing is left of the
+       wall's cut above it; the thin course over it covers `masonryShell`'s clip rounding. */
+    vol(A, 'tomb', 'mudbrick', ox0, V.exitX, runTop, runTop + roof, z0, z1, { jitter: 0.03 });
+    vol(A, 'tomb', 'sandstone_block', -14.10, -12.00, runTop + roof - 0.03, runTop + roof + 0.45, z0 - 0.2, z1 + 0.2, { jitter: 0.02 });
+
+    /* ---- the affordance, re-laid along the passage it marks (still four, still `vent`) ---- */
+    const ventOpts = { tag: 'vent', crawl: true, material: 'sand' };
+    const rake = (za, zb) => {
+      const ya = yAt(za) + bore * 0.5, yb = yAt(zb) + bore * 0.5;
+      const len = Math.hypot(zb - za, yb - ya);
+      return { len, rx: -Math.atan2(yb - ya, zb - za), y: (ya + yb) / 2, z: (za + zb) / 2 };
+    };
+    A.proxy(new THREE.BoxGeometry(x1 - x0, bore, 1.40), ventOpts, { x: (x0 + x1) / 2, y: -0.32, z: -49.20 });
+    for (const [za, zb] of [[V.head.z - 0.4, V.knee.z], [V.knee.z, V.foot.z]]) {
+      const r = rake(za, zb);
+      A.proxy(new THREE.BoxGeometry(x1 - x0, bore, r.len), ventOpts, { x: (x0 + x1) / 2, y: r.y, z: r.z, rx: r.rx });
+    }
+    A.proxy(new THREE.BoxGeometry(V.exitX + 0.45 - x0, bore, z1 - z0), ventOpts,
+      { x: (x0 + V.exitX + 0.45) / 2, y: runY + bore * 0.5, z: (z0 + z1) / 2 });
+
+    /* ---- light. Five oil lamps down the west jamb, on the local-light budget -------------
+       LIGHTING is registered and inited before ARCHITECTURE (main.js MANIFEST), and its pool
+       promotes the nearest `localCap` handles per frame, so lamps buried in a tunnel cost a
+       slot only while the player is in the tunnel. Bowls in `gold_leaf` because it is the one
+       material here that is metal and picks the pool up. */
+    const lighting = A.engine?.get?.('lighting');
+    const lampX = x0 + 0.26;
+    const lamps = [
+      [lampX, yAt(-50.6) + 0.78, -50.6], [lampX, yAt(-55.2) + 0.78, -55.2],
+      [lampX, yAt(-60.4) + 0.78, -60.4], [-17.6, runY + 0.78, z0 + 0.26],
+      [-13.2, runY + 0.78, z0 + 0.26],
+    ];
+    for (const [lx, ly, lz] of lamps) {
+      vol(A, 'hall', 'bronze_dark', lx - 0.15, lx + 0.15, ly - 0.30, ly - 0.17, lz - 0.09, lz + 0.09, { c: 0.03 });
+      vol(A, 'hall', 'gold_leaf', lx - 0.18, lx + 0.18, ly - 0.17, ly - 0.05, lz - 0.13, lz + 0.13, { c: 0.04 });
+      lighting?.addLocalLight?.({
+        position: new THREE.Vector3(lx, ly, lz), color: 0xffb060, intensity: 2.8, radius: 6.5, flicker: 0.5,
+      });
+    }
+    A.api.lights = (A.api.lights || 0) + lamps.length;
+  } finally {
+    A.rng = shared;
+  }
 }
 
 /* ========================= background mass ============================= */
