@@ -219,11 +219,24 @@ try {
       e.camera.position.set(m.position.x + Math.sin(a2) * d, m.position.y + hh, m.position.z + Math.cos(a2) * d);
       e.camera.lookAt(m.position.x, m.position.y + 0.95, m.position.z);
       e.camera.updateMatrixWorld(true);
-      return { st: m?.stateName, ...t };
+      /* §479.14: the frame records WHICH SIDE it was shot from, measured, not named. The
+         camera sits at yaw+az and looks back at the character, and RIG3 faces +Z, so
+         cam·facing = cos(az): +1 is in front of him, −1 is behind him. Stamped per frame
+         because `front34` was composed at az 145 for this tool's whole life, which is
+         cam·facing −0.82 — a REAR three-quarter under a name that says front. */
+      const camDot = Math.cos(azDeg * Math.PI / 180);
+      return { st: m?.stateName, az: azDeg,
+        camDot: +camDot.toFixed(2),
+        view: camDot > 0.3 ? 'front' : camDot < -0.3 ? 'REAR' : 'profile',
+        ...t };
     }, [az, dist, h]);
     const uri = await page.evaluate(() => window.__GAME.capture('image/png'));
     await page.evaluate(() => { window.__ENGINE.debug.freeCam = false; });
     await writeFile(`${OUT}/${ARM}-${name}.png`, Buffer.from(uri.split(',')[1], 'base64'));
+    if (/front/.test(name) && tel.view !== 'front') {
+      throw new Error(`idlecross: "${name}" was shot from ${tel.view} (cam·facing ${tel.camDot}) `
+        + '— a frame named front must BE one; §479.14');
+    }
     log.push({ frame: `${ARM}-${name}`, az, ...tel });
     console.log(`  -> ${ARM}-${name}.png  BONE sep ${tel.boneSep}  MESH sep ${tel.meshSep}`
       + `  GAP ${tel.gapCm} cm${tel.gapCm < 0 ? ' *** ARMS OVERLAP ***' : ''}`
@@ -298,13 +311,14 @@ try {
      (§531's pair included) settled ~2 s and therefore only ever photographed the first of the
      three. Two samples per stage, profile + front-quarter (§466.5). */
   await snap('idle1-confident-profile', 90);
-  await snap('idle1-confident-front34', 145, 2.4);
+  await snap('idle1-confident-front34', 35, 2.4);
+  await snap('idle1-confident-rear34', 145, 2.4);
   await boredTo(7);   await sim(24);               // past the 6 s step, without simulating it
   await snap('idle2-bored-profile', 90);
-  await snap('idle2-bored-front34', 145, 2.4);
+  await snap('idle2-bored-front34', 35, 2.4);
   await boredTo(14);  await sim(24);               // past the 13 s step — the suspect
   await snap('idle3-look-profile', 90);
-  await snap('idle3-look-front34', 145, 2.4);
+  await snap('idle3-look-front34', 35, 2.4);
   await sim(50);
   await snap('idle3-look-b-profile', 90);
 

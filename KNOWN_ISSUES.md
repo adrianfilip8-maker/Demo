@@ -49238,6 +49238,37 @@ deliberately did not fix blind; it stays that way here, now with its control-arm
 clips ... are poses whose arms MEET on purpose" while naming seven — §478.1's rule, the
 measurement wins and the sentence is fixed rather than left to be re-read as a count.)
 
+**A frame I cited could not have disagreed with me, and the coordinator caught it.** I wrote
+here that `shots/idlecross/dlrig-idle1-confident-front34.png` *"shows the left glove resting on
+the hip and the right arm hanging with the cane, each on its own side of the body. Nothing laps
+anything."* **Retracted.** That file is a REAR three-quarter: the tool composes `front34` at
+azimuth 145 from the character's own facing, and the camera sits at yaw+az looking back, so
+cam·facing = cos(145°) = **−0.82** — behind him. The image is the back of the cap, both ears
+from behind and the jacket's back panel, with both arms substantially occluded by the torso. I
+had even written "rear-quarter (145° az)" in my own working notes one step before asserting a
+front-view reading from it. **A frame that cannot show the overlap cannot show its absence**,
+and this is the same shape as `a.tracks` returning empty and agreeing with any caption: an
+honest observation of the wrong subject, under a label that says otherwise.
+
+The label was wrong for this tool's whole life, and it is not the only one: `rigfault.mjs` shoots
+`idle-front34` at 155 and `sneak-a/b-front34` at 145 (all REAR), and its `idle2-rear34` at 35 is
+a FRONT view — the two names are swapped there. `elblook.mjs`'s `walk-a-front34` at 145 is rear
+too. Every past visual claim that leaned on a `front34` frame is reading a back.
+
+Fixed at the mechanism rather than by renaming: `idlecross` now stamps **`camDot` and `view`
+(front / profile / REAR) measured per frame** into the telemetry beside the picture, shoots its
+front views at azimuth 35 where they actually are, keeps the 145 shot under the honest name
+`rear34`, and **throws** if a frame whose name contains "front" was not shot from the front. A
+caption can no longer be the only thing asserting what was photographed.
+
+**So the visual half of this entry is UNSETTLED, deliberately.** The −1.2 cm number and its
+reading — a lateral metric on a hand authored onto the hip, which §479.10's own header says the
+predicate cannot tell from a crossing — stand exactly as measured, and remain a plausible and
+important finding. What does NOT stand is any claim that a picture confirmed it. That needs a
+front-shot frame of `idle_confident` on the shipped rig, which is queued behind the shared
+capture lock (a sibling lane's `ventshot` held it for this entire window) and is the first thing
+the next round should take.
+
 **The instrument grew three things, and one of them caught me.**
 - A **bind baseline** on every `idlecross` run, so the comparison is self-calibrating.
 - A **surface sweep** (`SWEEP=`) that runs the volume predicate over any clip list on whichever
@@ -49251,9 +49282,26 @@ measurement wins and the sentence is fixed rather than left to be re-read as a c
   own hands one section after I was credited with catching it: *an instrument that can be
   mistaken for the probe before it will be.*
 
+SUITE, from a clean worktree at the committed tip: **995/996**. The single failure is
+`padrest.test.mjs`'s *"R1b instrument: the pinned clock agrees with one built from real sleeps"*
+— the pad lane's file, not this lane's, and **attributed by measurement rather than by claim**:
+run alone it passes 7/7 both at this tip AND at the parent commit `4499a61`, and it only reddens
+inside the full concurrent run. Its bar is a sub-millisecond wall-clock window (it read
+0.1426° turned in 0.0009 s against a 0.1312° allowance), and this container was running three
+lanes' captures and suites at once. Nothing in this round touches it: the commit changes
+`KNOWN_ISSUES.md`, `tests/dlrig.test.mjs`, `tools/carrycost.mjs` and `tools/idlecross.mjs` —
+**no `src/` file moved at all**, which is also the strongest possible form of the bar's
+"nothing else may move".
+
 HONEST LIMITS. The volume predicate is lateral in the body frame, so an arm lapping another in
 DEPTH only is still invisible to it. `tools/carrycost.mjs` compares two models offline through
-the real skinning path, but it is not the renderer — it measures geometry, not pixels. And **no
+the real skinning path, but it is not the renderer — it measures geometry, not pixels. **Its
+numbers are not interchangeable with the in-page ones and must not be read as contradicting
+them**: this table gives `idle_confident` on dlrig as −0.4 cm where §479.12's in-page capture
+gave −1.2 cm, because one is the worst of five phases sampled offline and the other is the one
+beat the camera caught, on two different code paths. The agreement that matters is the sign and
+the scale — both say "touching, by under a centimetre" — and no claim here rests on the
+0.8 cm between them. And **no
 new frames were taken this round**: the shared capture lock was held by a sibling lane's
 `ventshot` for the whole window and both queued `idlecross` arms were still waiting on it, so
 item 3 of the bar is UNMET and the dlrig frames on record remain §479.12's, whose first frame
