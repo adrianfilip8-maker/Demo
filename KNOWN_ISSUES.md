@@ -51818,3 +51818,129 @@ diverge by up to 16 cm on the extreme poses (`Falling`, `[Action Stash].001`), w
 carry, the breathing additive and the §531 limb lever act on raised arms much harder than on a
 hanging one. Flagged in the run log rather than smoothed over: for those tiles the picture is the
 claim and the number beside it is the offline pose, not the pixel.
+## §605 — The hook rings stand up: a flat hoop was never the intent, and the shackle had been proving it on all sixteen
+
+> *"Turn the rings that the character swings on so that their profile [is] vertical and a circle in
+> the direction of the path, not flat. See Sly 2 and 3 games as reference."*
+
+### §605.1 The reference does not settle it, and says so
+
+`public/assets/sly-godot/` carries `sly-godot.glb`, `sly-godot-anims.glb`, `sly-godot-moves.glb`
+and two textures. Per `PROVENANCE.md` these came from `Scenes/Character/player__sly.tscn` — a
+**character import**, mesh and animation only. There is no ring, hook or swing geometry in the
+directory, and no filename matching any of them. A `strings` scan of the three glTFs appears to
+match "ring" and does not: the hit is `is_rendering` inside the Blender exporter's own settings
+block. So the reference cannot arbitrate ring orientation, and this was authored from the
+description.
+
+### §605.2 What was actually wrong, and the piece that had been reporting it
+
+`Kit.hookRing` built the torus and then laid it flat:
+
+```js
+const t = new THREE.TorusGeometry(r, tube, 10, 18);
+place(t, { rx: Math.PI * 0.5 });          // <- XY plane -> XZ plane; face normal +Y
+```
+
+A three.js torus is born in the **XY plane** with its face normal along **+Z** — already standing
+up. The `rx: PI/2` turned all sixteen rings into hoops seen from above, which is exactly the
+"flat" in the request.
+
+**The shackle had been contradicting that for as long as it existed.** It is a 0.42 m cylinder
+centred at `y = r + 0.16`, so it spans y `r − 0.05` … `r + 0.37` = **0.570 … 0.990**. Measured
+against the two possible rings:
+
+| ring | crown | shackle bottom | result |
+|---|---|---|---|
+| flat (shipped) | y 0.115 | 0.570 | **0.455 m gap — a bracket bolted to thin air** |
+| vertical (now) | y 0.620 | 0.570 | 0.050 m overlap, and the top at 0.990 reaches the cable at 0.850 |
+
+Every chain draws its cable 0.85 m above the ring centre. Only the vertical ring puts the shackle
+between the two things it is supposed to join. The bracket was authored for a ring that stands up,
+and the `rx` was laying that ring down underneath it on all sixteen instances.
+
+### §605.3 Facing: per ring, from its own two neighbours
+
+`ringYaws()` gives each ring the yaw whose **+Z lands on the chord from the ring you leave to the
+ring you are heading for** — the central difference `p[i-1] → p[i+1]`. On a bend that bisects the
+corner, so a ring is never worse than half the bend off either approach. **At the ends** there is
+only one neighbour and no average to take, so the facing is that single segment: ring 0 faces the
+way it sends you, the last ring faces the way you arrived. Ring 0 of the main chain is entered
+from the east mast rather than from a neighbour, and the mast stands 0.78 m off the ring on the
+outgoing side, so the outgoing segment serves both approaches there.
+
+**Yaw only, no pitch.** The chains descend about 1.1° over 47 m; pitching to follow that would sit
+within a degree of vertical while spending the vertical profile the request is about.
+
+Per ring and not per chain, because the chains turn: the courtyard main line bends **27.6°** across
+its six legs and the hall nave **50.4°** across its four. One global facing would put a third of
+the set piece edge-on to the swing arriving at it.
+
+The **nave** chain was the worst case and not for the reason expected. Its facing was
+`D(24 * i − 48)` — a fixed fan, each ring turned a further 24° regardless of the cable. Against the
+path it did not merely ignore the route, it **ran the opposite way**: the fan sweeps −48° → +48°
+while the path's own bearing sweeps +29.5° → −20.9°. Only ring 2 was close, at 0° against the
+path's −5.8°, which is the middle of a fan crossing a bend and is luck rather than design.
+
+The courtyard chains keep a jitter so sixteen rings are not mechanically identical, but the
+amounts drop — main 30° → 6°, low 25° → 5°. **±30° of free spin is larger than the whole chain's
+27.6° of bend**: the jitter alone could turn one ring further off its own approach than the chain
+turns over its entire length, which is the flat ellipse the request is about.
+
+Measured after the change, against each ring's own tangent:
+
+- **off-path ≤ 4.3°** on all 11 courtyard rings (jittered), **0.0°** on all 5 nave rings (no draws)
+- **face tilt from vertical ≤ 0.9°** on all 16
+
+### §605.4 The anchor did not have to be separated, because it already was
+
+The brief allowed for the visual and the anchor being one object. They are not. The drawn ring is
+an **instance matrix** in an `InstancedMesh`; the anchor is `hookPoint()`'s own sphere proxy and
+`swingTarget()`'s magnetism record, both built from the raw `(x, y, z)` and never from the matrix.
+Rotating the instance cannot reach them. Nothing had to be split.
+
+### §605.5 The digest was blind to the exact thing being changed
+
+`ventdigest` hashed every drawn mesh's `geometry.attributes.position`. An `InstancedMesh` shares
+**one** position buffer across every copy, so the per-copy transform that decides which way each
+ring faces sat outside the digest entirely. Turning all sixteen rings would have come back
+**art-neutral**, and been believed.
+
+Extended with two columns it did not have: per-instance **transform** (translation, rotation and
+scale kept separate, because "turn the ring, do not move the anchor" needs the halves separately
+checkable) and the **magnetism target** records, which are not colliders and which nothing else in
+the digest could see. The magnetism column throws if it reads zero targets rather than reporting an
+empty set — an empty column and an unchanged column look identical in a diff.
+
+Before → after, whole level:
+
+| column | before | after | added | removed | changed |
+|---|---|---|---|---|---|
+| collider rows | 301 | 301 | 0 | 0 | **0** |
+| magnetism records | 15 | 15 | 0 | 0 | **0** |
+| instance transforms | 1077 | 1077 | 0 | 0 | 16 |
+| art meshes | 88 | 88 | 0 | 0 | 2 |
+
+The 16 changed instances are exactly `hooks:rings` (11) and `hooks:nave` (5). Within them,
+**translation moved on 0, scale moved on 0, rotation moved on 16**. The 2 changed art hashes are
+the two ring geometries, both 273 vertices before and after, both landing on the same new hash
+because both chains share one `hookRing`. All 16 `hook` collider rows are byte-identical, and so
+are all 15 magnetism records — the 14 in the `swing` group that the rings own, plus the one that
+is not a ring at all.
+
+RNG-neutral by the same table: `jitter(amount)` draws three times whatever its amount, so changing
+30 → 6 moves no seed step, and 86 of 88 art meshes hashing identically is what says so.
+
+### §605.6 Bounds, stated
+
+- The pair of frames is the acceptance test and it is a **look** judgement; nothing here asserts
+  that the rings read well, only that they are vertical to within 0.9° and on-path to within 4.3°.
+- Nothing measures the rings in motion. The frames are staged with the rig off, as every capture
+  here is, and the swing itself is unchanged by construction rather than by observation — which is
+  what the collider and magnetism columns above are for.
+- The instance digest keys on `name|index`, and 28 keys collide across the level because some
+  instanced meshes share a name. The ring keys do not collide (11 + 5, all unique), and the
+  set-difference comparison that found "16 rows differ" needs no keys at all, so both halves of the
+  claim hold; but the keyed translation/rotation split is only sound for uniquely-keyed rows.
+- `hookRing`'s `rng` parameter is still accepted and still never read. It stays for call-site
+  compatibility and is not evidence of anything.
