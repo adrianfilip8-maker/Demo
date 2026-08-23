@@ -1458,3 +1458,51 @@ with each other that is also worth reporting — it is the same dial.
 **What none of this can settle offline.** Weight and pose can be measured; the *feel* of an
 interruption cannot. Every previous question of this shape on this sheet has needed hands, and this
 one is narrower than most: it is one dial with two settings and I have argued for one of them.
+
+---
+
+## 23. "Still crossed in the idle position" — you were right, and every instrument I own said you weren't
+
+**Commit** this round · **Files** `src/player/Animation.js` (one exemption row), `tests/anim.test.mjs`
+(the arm), `tools/idlecross.mjs` (the instrument) · **Ledger** §479.10
+
+Your report was the third about crossed arms, and the first where the build measured clean. It
+measured clean because every instrument in this lane — the §479.5 census, §532's solver — asks
+the same question: *is the hand's BONE ORIGIN past the other hand's?* **An arm is not a point.**
+The gloves are about 10 cm across and a forearm is a tube, so one arm can lap the other's volume
+with both origins sitting politely on their own sides. Measured on the SKIN instead, the idle
+you were looking at reads **6.7 cm of overlap at its worst, for 57% of its four-second cycle**.
+
+Two things made it invisible to me for three rounds:
+
+1. **The idle is three clips, not one.** You get `idle_confident` for the first 6 seconds,
+   `idle_bored` past 6, and **`idle_look` past 13** — and the timer only resets when you move,
+   so anyone standing still *looking* at Sly is in the third one from 13 seconds onward. Every
+   idle capture in this project's history settles about 2 seconds and therefore only ever
+   photographed the first. Only the third crosses.
+2. **My own spread lever caused it.** Sly's left hand is authored resting **on his hip**. The
+   lever that answered your "too tucked in" straightens elbows toward bind — 104° to 160° at the
+   setting that shipped — and no hand-on-hip pose survives being straightened: the hand comes off
+   the hip, and a straightened forearm on that pose points across the belly.
+
+**The rule that was missing**, now written down: the lever may open a *free* limb; it may not
+straighten a limb whose hand is **placed** on something — a hip, a wall, a ledge. `idle_look` now
+caps at elbow 0.45 (delivered 138°, still wider than the 132° this game shipped before any of this
+started), which restores about 4 cm of daylight while keeping the spread you asked for. The legs
+are untouched.
+
+**What to re-test, and it needs 20 seconds of doing nothing.** Stand still, don't touch the
+stick, and watch him for at least 15 seconds so the third idle comes up. His left hand should sit
+on his hip with clear air between the arms, and the arms should never pass through each other as
+he shifts and glances around. Judgements only you can make:
+
+1. **Is the idle still spread enough?** This one pose is now slightly less open than the rest of
+   the set — that is the price of keeping the hand on the hip. If it reads tucked again, the
+   number is one constant and the whole ladder is measured (§479.10): 0.55 is the last rung
+   before it starts crossing again, and past that the hand has to leave the hip for good.
+2. **Anything else crossing?** The skin measurement flags nine other clips, but most are poses
+   where the arms *should* meet — a wall run reaching for the wall, a mantle with both hands on
+   the lip, a hard landing. The one I would not have predicted is the **crouched sneak idle**,
+   which overlaps by about 9 cm and has done since long before any of this — it may well be
+   intentional (he's holding the cane across himself while creeping), so I have left it alone
+   rather than guess. If it looks wrong to you when you hold crouch, say so and it is a small fix.
