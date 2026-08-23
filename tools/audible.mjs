@@ -29,9 +29,10 @@
  */
 import { chromium } from 'playwright';
 import { acquire } from './lock.mjs';
-import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, statSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import http from 'node:http';
 import net from 'node:net';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -43,6 +44,37 @@ const ARGS = ['--no-sandbox', '--disable-dev-shm-usage', '--use-gl=angle', '--us
   '--js-flags=--max-old-space-size=4096'];
 
 const verbose = process.argv.includes('--verbose');
+/**
+ * `--prod`: measure the build the USER plays, not the dev server.
+ *
+ * §666 found two faults that were correct at `/` on the dev server and broken under `/Demo/` in a
+ * production build, and every instrument in this project had only ever loaded the former. An
+ * audibility probe that repeated that mistake would be the same round again — so this serves
+ * `dist/` behind a `/Demo/`-shaped prefix that 404s everything outside it, exactly as
+ * `tools/prodboot.mjs` does.
+ */
+const PROD = process.argv.includes('--prod');
+const DIST = path.join(ROOT, 'dist');
+const PREFIX = '/Demo/';
+const MIME = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.json':'application/json',
+  '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp', '.svg':'image/svg+xml', '.mp3':'audio/mpeg',
+  '.bin':'application/octet-stream', '.glb':'model/gltf-binary', '.gltf':'model/gltf+json',
+  '.fbx':'application/octet-stream', '.wasm':'application/wasm', '.ktx2':'image/ktx2' };
+function serveDist(port) {
+  return new Promise((resolve) => {
+    const srv = http.createServer((req, res) => {
+      const url = decodeURIComponent((req.url || '/').split('?')[0]);
+      if (!url.startsWith(PREFIX)) { res.writeHead(404); res.end('outside prefix'); return; }
+      let rel = url.slice(PREFIX.length);
+      if (rel === '' || rel.endsWith('/')) rel += 'index.html';
+      const f = path.join(DIST, rel);
+      if (!f.startsWith(DIST) || !existsSync(f) || !statSync(f).isFile()) { res.writeHead(404); res.end('404'); return; }
+      res.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream', 'cache-control': 'no-store' });
+      res.end(readFileSync(f));
+    });
+    srv.listen(port, '127.0.0.1', () => resolve(srv));
+  });
+}
 
 async function freePort(s = 6200) {
   for (let p = s; p < s + 400; p++) {
@@ -153,7 +185,20 @@ const STATE = `
 
 const release = await acquire({ onWait: (ms) => process.stdout.write(`· waiting for capture lock (${(ms/1000)|0}s)\n`) });
 const port = await freePort();
-const server = await startServer(port);
+let server;
+if (PROD) {
+  if (!existsSync(path.join(DIST, 'index.html')) || process.argv.includes('--build')) {
+    console.log('[audible] vite build --sourcemap false  (matching .github/workflows/pages.yml)');
+    const r = spawnSync(path.join(ROOT, 'node_modules', '.bin', 'vite'), ['build', '--sourcemap', 'false'],
+      { cwd: ROOT, stdio: 'inherit', env: { ...process.env, NO_COLOR: '1' } });
+    if (r.status !== 0) { console.error('[audible] build failed'); process.exit(1); }
+  }
+  server = await serveDist(port);
+} else {
+  server = await startServer(port);
+}
+const PAGE_URL = PROD ? `http://127.0.0.1:${port}${PREFIX}` : `http://127.0.0.1:${port}/`;
+console.log(`[audible] ${PROD ? 'PRODUCTION dist/ at' : 'dev server at'} ${PAGE_URL}`);
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || CHROME.find((p) => existsSync(p)), args: ARGS });
 
 try {
@@ -161,7 +206,7 @@ try {
   page.on('pageerror', (e) => console.log('[pageerror]', e.message));
   if (verbose) page.on('console', (m) => console.log(`  [page:${m.type()}]`, m.text()));
 
-  await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+  await page.goto(PAGE_URL, { waitUntil: 'domcontentloaded', timeout: 120000 });
   await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null, { timeout: 600000, polling: 1000 });
 
   /* A real click: the user's own report proves the unlock path works, so this round does not
@@ -180,10 +225,14 @@ try {
   };
 
   /* Let the 4 s trackGain fade finish, stepping frames throughout. */
+  /* Frame steps are EXPENSIVE here — SwiftShader plus 44 HRTF panners runs a frame in seconds,
+     and a first version of this loop spent 35 minutes without reporting. The listener only needs
+     a handful of frames to reach its camera, and music plays on the audio clock rather than the
+     frame clock, so 2 steps per sample is enough for both. */
   const samples = [];
-  for (let i = 0; i < 14; i++) {
-    await step(6);
-    await page.waitForTimeout(500);
+  for (let i = 0; i < 10; i++) {
+    await step(i < 3 ? 2 : 0);
+    await page.waitForTimeout(600);
     const r = await page.evaluate(READ);
     samples.push(r);
   }
@@ -270,7 +319,6 @@ try {
   console.log(`   trackGain node value       : ${st.gains.trackGain}`);
 } finally {
   await browser.close().catch(() => {});
-  server.kill('SIGTERM');
-  setTimeout(() => server.kill('SIGKILL'), 3000);
+  if (PROD) server.close(); else { server.kill('SIGTERM'); setTimeout(() => server.kill('SIGKILL'), 3000); }
   release();
 }
