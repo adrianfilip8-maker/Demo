@@ -1562,3 +1562,46 @@ a different clip: not yet verified by a picture on the rig you play.**
    you can tell me.
 2. **The arms in the FIRST idle**, the one you get immediately. That is the pose the overlap
    report is really about, and the one I have not yet photographed on your rig.
+
+## 25. The idle overlap, found: the left hand was never being sent to the hip — three rounds of instruments were measuring the wrong thing
+
+**Commit** this round · **Files** `src/player/Clips.js` (`IDLE_A`'s left arm chain),
+`tests/anim.test.mjs` (the clearance arm's predicate) · **Ledger** §479.15
+
+You have reported this three times and been right three times. Here is what it actually was.
+
+`IDLE_A` — the standing pose you look at whenever you stop moving, and the pose twelve different
+moves settle back onto — carries a comment in its own source that says **"Left hand on the hip."**
+It never did that. Evaluated straight off its own numbers, with no blending, no breathing layer
+and no rig involved at all, the left glove lands **33 cm in front of the hip**, out at belly
+height where the cane hand already is. That is the "arms crossed in the idle": not a scissor, two
+gloves meeting in front of his stomach.
+
+**Why three rounds of measurement missed it.** Every instrument I had projected the two arms onto
+a sideways axis and measured the gap. On this pose that projection scored **+10.3 cm of daylight**
+— a clean bill of health — while a photograph from the front showed the gloves touching. Two hands
+can be side by side in that measurement and still be in the same place, if one of them is 30 cm
+further forward. The bar is now the distance between the two arms in space, which has no axis to
+be fooled about.
+
+**What changed.** The hand is solved onto the hip against the real rig: glove **5 mm** off the
+hip, elbow flared **25 cm** out — the arm makes a triangle against the ribs, which is what the
+comment wanted. The elbow FOLD is held where it was (104° vs 102°), deliberately, so this does
+not quietly re-tune the "elbows too tucked" business from earlier — those stay separate levers.
+
+**What to look at.** Stand still and look at him from the **front** (the earlier rounds' "front"
+frames were shot from behind — a real bug in my capture tool, fixed and now impossible: a frame
+that claims to be a front view and isn't throws). Two things:
+
+1. **Is the left hand on his hip, and does the arm read as an arm?** The old pose read as "both
+   hands busy in front"; this should read as a thief standing with a hand on his hip, cane in the
+   other.
+2. **Anything he settles INTO.** Twelve moves end on this pose — landing, a pickpocket, climbing a
+   ledge. If any of them now finishes with the arm snapping oddly into place, that is the settle
+   blending into the new hand position and I want to know which move.
+
+**One thing I did not fix, on the record.** In the all-procedural mode (`?anim=proc` — not what
+you play), the knockback tumble's arms come within 0.8 cm of each other, because that clip borrows
+the idle's arm mid-tumble. I tried two repairs, measured both, neither worked, so I reverted them
+rather than ship a change that claims something it does not do. In the build you play it reads
+10.6 cm and is unaffected.
