@@ -28,6 +28,8 @@
  *   S3  slam from 16 m         — the same move from height; S2 vs S3 is sheet item 3
  *   S4  cane combo, two swings — the `combat` framing, 35% -> 73%
  *   S5  same pose, two times of day — is the cold masonry a grade or a cast (§4 precedent)
+ *   S9  the φ wrap, replayed from a node trace (§583)
+ *   S10 the φ wrap A/B — the same subject pose under both `subjectFloor` regimes (§640)
  *
  * Sim frames are FREE here (module updates without the render — see the fast-step block), so
  * sequences pay only per captured frame: ~20 captures is ~10 minutes at 1080p on SwiftShader.
@@ -519,6 +521,43 @@ try {
     await writeFile(`${OUT}/s9-wrap-${P.n}.png`, Buffer.from(uri.split(',')[1], 'base64'));
     log.push({ tag: 'S9', frame: `s9-wrap-${P.n}`, ...info });
     console.log(`      -> s9-wrap-${P.n}.png  ndc ${JSON.stringify(info.ndc)} camY ${info.camY}`);
+  }
+  await page.evaluate(() => { window.__ENGINE.debug.freeCam = false; });
+  }
+
+  /* ---- S10: the wrap, A/B — the same subject pose under both regimes (§640) --------------- */
+  /* Four frames per event, two events (§466.5). Same method as S9 and for the same reason: the
+     wrap is a knife-edge the browser cannot drive to. What is new is that these are an A/B at an
+     IDENTICAL subject pose — `tools/camwrappose.mjs` drives once with `subjectFloor` off, records
+     the player trajectory, and replays that ONE trajectory through two passive rigs that differ
+     only in the floor. Two coupled drives would be two different games (§442); this is one game
+     photographed by two cameras.
+     Each event is a consecutive pair, so each regime's pair shows what one frame of play does to
+     the horizon. The rig is held off while the pose is written, exactly as S9 does. */
+  if (seq('s10')) {
+  console.log('[S10] the φ wrap A/B — replayed, rig off');
+  const { readFileSync } = await import('node:fs');
+  let POSES = null;
+  try { POSES = JSON.parse(readFileSync(`${ROOT}/shots/camlane6/poses.json`, 'utf8')).poses; }
+  catch { console.log('      !! shots/camlane6/poses.json missing — run tools/camwrappose.mjs first'); }
+  for (const P of POSES || []) {
+    const info = await page.evaluate((o) => {
+      const e = window.__ENGINE, m = e.get('movement'), cam = e.camera;
+      m.position.set(o.p[0], o.p[1], o.p[2]); m.velocity.set(0, 0, 0); m.grounded = false;
+      e.debug.freeCam = true;
+      cam.position.set(o.cam[0], o.cam[1], o.cam[2]);
+      cam.quaternion.set(o.q[0], o.q[1], o.q[2], o.q[3]);
+      cam.updateMatrixWorld(true);
+      const ch = e.get('character');
+      let ndc = null;
+      if (ch?.root) { const v = ch.root.position.clone(); v.y += 0.9; const n = v.project(cam); ndc = [+n.x.toFixed(2), +n.y.toFixed(2)]; }
+      return { ndc, camY: +cam.position.y.toFixed(3) };
+    }, P);
+    const uri = await page.evaluate(() => window.__GAME.capture('image/png'));
+    await writeFile(`${OUT}/s10-${P.n}.png`, Buffer.from(uri.split(',')[1], 'base64'));
+    log.push({ tag: 'S10', frame: `s10-${P.n}`, regime: P.regime, boom: P.boom, need: P.need,
+      floorOn: P.floorOn, state: P.state, offStep: P.step, onStep: P.onStep, ...info });
+    console.log(`      -> s10-${P.n}.png  boom ${P.boom} need ${P.need}° ndc ${JSON.stringify(info.ndc)}`);
   }
   await page.evaluate(() => { window.__ENGINE.debug.freeCam = false; });
   }
