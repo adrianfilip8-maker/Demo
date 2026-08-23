@@ -288,3 +288,74 @@ test('listener A5: every music duck is followed by an un-duck, and the log canno
   console.log(`[listener A5] ${on} on / ${off} off — paired; lowest duck target `
     + `${Math.min(...targets)} (floor ${TUNE.musicFloor}); ${log.length} entries recorded`);
 });
+
+/* ====================================================================== */
+test('listener A6: selfTest reports WHERE the sound goes, not only that it exists', async () => {
+  /* DOMAIN (§418.3)
+   * passes on : a machine whose `enumerateDevices()` lists a controller-shaped `audiooutput` —
+   *             `output.controllerLike` names it and the hint leads with it, ahead of the
+   *             "sound IS leaving the page" wording that six rounds ended on.
+   * fails on  : the SAME call on a machine listing only "Speakers (Realtek High Definition
+   *             Audio)", run in-arm — `controllerLike` must be empty and the hint must NOT name a
+   *             controller. Without that arm a hint hard-coded to the most dramatic cause would
+   *             pass, which is the failure this whole thread has been made of.
+   * does not discriminate: **which device is actually selected.** `sinkId` is `''` for "system
+   *             default", and that is precisely the failing case, so this can never prove the
+   *             fault — only put it in front of someone. Asserted below as a property of the
+   *             report rather than left as a caveat in prose.
+   *
+   * ── §691, the shape ────────────────────────────────────────────────────────────────────────
+   * `selfTest` measures rms at `masterGain`: correct, downstream of the limiter, the sub-cut and
+   * the reverb return — and blind to the last link. An instrument that verifies the whole chain up
+   * to the final hop and never checks the final hop reads healthy through exactly this failure.
+   * Same family as `webaudio.mjs`'s pass-through panner and the audio suite's missing camera, one
+   * step further out.
+   */
+  const { OfflineCtx: OC } = await import('./webaudio.mjs');
+  const realNav = globalThis.navigator;
+  const withDevices = async (outs) => {
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { mediaDevices: { enumerateDevices: async () => outs } },
+      configurable: true, writable: true,
+    });
+    const engine = engineStub({ camera: cam(0, 2, 0) });
+    const audio = new Audio(engine);
+    await audio.init();
+    audio.unlock(new OC(32000));
+    audio.ctx.sinkId = '';                       // the browser's "system default" value
+    return audio.selfTest({ seconds: 0.05 });
+  };
+
+  try {
+    const pad = await withDevices([
+      { kind: 'audiooutput', deviceId: 'default', label: 'Speakers (Realtek High Definition Audio)' },
+      { kind: 'audiooutput', deviceId: 'abc123', label: 'Wireless Controller' },
+      { kind: 'audioinput', deviceId: 'mic1', label: 'Microphone' },
+    ]);
+    assert.deepEqual(pad.output.controllerLike, ['Wireless Controller'],
+      'a controller-shaped audio output was listed and not reported');
+    assert.match(pad.hint, /CONTROLLER IS REGISTERED AS AN AUDIO OUTPUT/,
+      `the hint did not lead with the one cause a page cannot fix: "${pad.hint}"`);
+    assert.equal(pad.output.audioOutputs.length, 2, 'the input device was counted as an output');
+
+    /* The failing input, run in-arm. */
+    const plain = await withDevices([
+      { kind: 'audiooutput', deviceId: 'default', label: 'Speakers (Realtek High Definition Audio)' },
+    ]);
+    assert.deepEqual(plain.output.controllerLike, [],
+      'a machine with only speakers reported a controller — the match is not discriminating');
+    assert.doesNotMatch(plain.hint, /CONTROLLER IS REGISTERED/,
+      `no controller was present and the hint still named one: "${plain.hint}"`);
+
+    /* The limitation, asserted rather than left in prose: "" cannot clear the hypothesis. */
+    assert.match(plain.output.note, /SYSTEM DEFAULT/,
+      'an empty sinkId must say it means the system default, or the report implies it has ruled '
+      + 'the device question out when it has not');
+
+    console.log(`[listener A6] controller present -> ${JSON.stringify(pad.output.controllerLike)}, `
+      + `hint leads with it; speakers only -> [] and it does not. sinkId "" note: `
+      + `"${plain.output.note.slice(0, 46)}…"`);
+  } finally {
+    Object.defineProperty(globalThis, 'navigator', { value: realNav, configurable: true, writable: true });
+  }
+});

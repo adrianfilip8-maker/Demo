@@ -605,6 +605,39 @@ export class Audio {
    * The clamp is correct regardless: a corner above Nyquist is meaningless, the browser clamps it
    * anyway, and doing it here stops the console filling with warnings that hide real ones.
    */
+  /**
+   * §692 — the output endpoint, as far as a page is allowed to see it. Never throws.
+   */
+  async _outputInfo() {
+    const info = {
+      sinkId: null, sinkIdSupported: false,
+      audioOutputs: [], labelsAvailable: false, controllerLike: [],
+      note: '',
+    };
+    try {
+      if (this.ctx && 'sinkId' in this.ctx) {
+        info.sinkIdSupported = true;
+        info.sinkId = typeof this.ctx.sinkId === 'string' ? this.ctx.sinkId : String(this.ctx.sinkId ?? '');
+      }
+    } catch { /* older browsers do not expose it */ }
+    try {
+      const list = await navigator.mediaDevices.enumerateDevices();
+      const outs = list.filter((d) => d.kind === 'audiooutput');
+      info.audioOutputs = outs.map((d) => ({ deviceId: d.deviceId, label: d.label || '' }));
+      info.labelsAvailable = outs.some((d) => !!d.label);
+      /* A controller's audio endpoint names itself. Only visible with labels, hence the flag. */
+      info.controllerLike = outs
+        .filter((d) => /wireless controller|dualshock|dualsense|ps4|ps5|xbox|gamepad|controller/i.test(d.label || ''))
+        .map((d) => d.label);
+    } catch { /* no mediaDevices, or a non-secure context */ }
+    info.note = info.sinkId === ''
+      ? 'sinkId "" means the context follows the SYSTEM DEFAULT output. That is exactly the case '
+        + 'where a controller can have taken it, so this does not clear that — check the OS sound '
+        + 'settings for which device is default.'
+      : (info.sinkIdSupported ? 'sinkId names a specific device.' : 'This browser does not expose AudioContext.sinkId.');
+    return info;
+  }
+
   /** §689: one line per music level/colour change, newest last, capped. */
   _logMusic(ev, data) {
     try {
@@ -726,9 +759,19 @@ export class Audio {
      * the tap fails, and they are reachable by a test that has no analyser at all. "Sound is
      * leaving the page" is only an answer when nothing more specific applies.
      */
+    out.output = await this._outputInfo();
     const held = out.input?.held || [];
     const badMap = (out.input?.pads || []).some((p) => p.connected && !p.mappingTrusted);
-    const named = held.includes('focus')
+    /* §692: if a controller-shaped audio output is even PRESENT, that leads — it is the one cause
+       that makes a healthy graph inaudible and the only one this page cannot fix. Phrased as
+       "check this", not "this is it", because a page cannot see which device the OS made default. */
+    const padOut = out.output?.controllerLike || [];
+    const named = padOut.length
+      ? `A CONTROLLER IS REGISTERED AS AN AUDIO OUTPUT DEVICE on this machine (${padOut.join(', ')}). `
+        + 'A DualShock has a headphone jack and a speaker, and the OS can make it the default '
+        + 'output the moment it connects — in which case the game is playing perfectly, into the '
+        + 'controller. Check which device is default in your sound settings.'
+      : held.includes('focus')
       ? 'THIEF-O-VISION IS ENGAGED — the game thinks you are holding `focus`, which is the LEFT '
         + `STICK CLICK (R3) on a controller and the right mouse button otherwise. It muffles the `
         + `score to ${TUNE.thiefFilter} Hz while it is up. The screen is also desaturated with a `
@@ -740,6 +783,27 @@ export class Audio {
             + 'uses may be pointing at the wrong control. Send the `input.pads` block.'
           : '';
     if (named) out.hint = named;
+    /**
+     * §692 — WHERE the sound is going, which six rounds never once asked.
+     *
+     * Every instrument in this thread measured the PRODUCER: rms at `masterGain`, the listener,
+     * the buses, the stems, the duck. All correct, all downstream of everything in the graph — and
+     * all completely blind to which physical device `ctx.destination` is wired to. A DualShock 4
+     * registers itself as an audio OUTPUT device (headphone jack and speaker), and Windows and
+     * macOS can make it the default on connection. If that happened the game has been playing
+     * perfectly, into the controller, and not one reading here could have told the difference.
+     *
+     * ── The honest limit, stated because it is severe ──────────────────────────────────────────
+     * `sinkId` is `''` when the context follows the SYSTEM DEFAULT, which is exactly the failure
+     * case — so an empty `sinkId` does not clear the hypothesis, it just says "whatever the OS
+     * calls default", and naming that needs LABELS. `enumerateDevices()` gives labels only once
+     * the page has microphone permission, which this game never asks for. What is visible without
+     * it is the COUNT and the ids, and a controller appearing as an extra `audiooutput` is worth
+     * seeing on its own.
+     *
+     * Run BEFORE the named causes, for the same reason they are computed early: it must survive a
+     * context where the analyser tap fails.
+     */
     let an = null;
     try {
       an = this.ctx.createAnalyser();
@@ -784,6 +848,7 @@ export class Audio {
       }
 
       out.voices = this._voices.filter((v) => v.active).length;
+      /* (§692's output probe runs BEFORE the measurement — see above.) */
       out.rms = +out.rms.toFixed(5);
       out.peak = +out.peak.toFixed(5);
       out.rmsWithSfx = +out.rmsWithSfx.toFixed(5);
