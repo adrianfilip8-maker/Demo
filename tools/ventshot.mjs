@@ -29,30 +29,59 @@ const OUTDIR = path.join(ROOT, process.env.OUT || 'shots/vent');
 
 /** [name, camera pos, look-at, fov, time of day, staged player pos + yaw + pose] */
 const FRAMES = {
-  /* 1. The mouth, from inside the hall. The thing the player meets: a cut doorway in the north
-        wall's base with a ramp running down into it, where §565 left a bricked-up panel.
-        Shot from 8 m and not from 3: at close range the staged character is a flat unlit slab
-        filling two thirds of the frame — two takes were lost to that before the cause was
-        measured, because a ray probe of the LEVEL finds nothing near the lens and says the
-        camera is clear. The subject is geometry too. */
+  /* 1. The mouth, from inside the hall. The thing the player meets: a hole cut in the paving at
+        the north wall's base with a ramp running down under the wall, where §565 left a bricked-up
+        panel. This camera is MEASURED, and it took two wrong ones to get here (§601).
+
+        The obvious camera stands in the hall's middle and is blocked: KayKit's north-west crate
+        pile at x -21.4..-19.0, z -47.3..-44.5 fills 29 of 45 view rays. `_moveset.mjs`'s
+        `realWorld()` does not boot KAYKIT, so a ray census of the drawn scene calls that camera
+        CLEAR; `_kaykitboot.mjs` shows the crates.
+
+        The fix for that was to re-aim WEST — and then re-run only the PROP census, which came
+        back clean (1 ray of 45) at a camera standing 0.8 m off the hall's own west wall. That
+        frame shipped nothing: half of it was a flat pale slab 0.48 m from the lens. Fixing one
+        occluder and re-measuring only that occluder is how a check stays true by accident.
+
+        So this camera is chosen by a sweep over 160 candidates scoring both at once — aperture
+        reachability AND near-field distance — against the drawn scene with props booted:
+
+          floor 20/20 sample points on the ramp reachable   (west camera 6/20, middle camera 0/20)
+          nearest hit 1.71 m                                (west camera 0.48 m)
+          12 of 45 view rays pass through the mouth
+          composition: 20/45 hieroglyph wall, 13/45 paving, 12/45 sandstone — 0 props, 0 sky
+
+        `fill 12/45` is as much of the frame as the entrance can occupy from any admissible
+        camera: it is a 1.70 x 2.50 m hole in a floor. That is the subject, not a fault. */
   mouth: {
-    pos: [-18.30, 2.30, -43.6], look: [-21.85, -0.70, -50.2], fov: 52, tod: 0.62,
-    player: { pos: [-21.85, -0.30, -49.3], yaw: Math.PI, pose: 'crawl' },
+    pos: [-21.85, 2.60, -47.40], look: [-21.85, -1.20, -50.70], fov: 55, tod: 0.62,
+    /* No staged subject. The character root does not track the controller once `setShot` has
+       staged it, so whatever is written here renders at THIS camera — and at 6 m the frozen
+       `crawl` pose came out as an unlit faceted mass filling the whole frame, three takes
+       running. These frames are about the passage; the subject is R1/R3's driven capsule. */
+    player: null,
+  },
+  /* 1b. The SECOND sample of the same claim, from the other side of the wall: standing inside
+         the portal looking back south into the hall, so the doorway reads as a cut through
+         2.1 m of masonry with the hall's own light at the end of it. */
+  mouthback: {
+    pos: [-21.85, -1.35, -52.4], look: [-21.85, 0.30, -46.0], fov: 60, tod: 0.62,
+    player: null,
   },
   /* 2. Inside the shaft, looking down it — the 24 m of interior §565 priced and declined. */
   shaft: {
     pos: [-21.85, -1.15, -51.0], look: [-21.85, -4.6, -61.4], fov: 62, tod: 0.62,
-    player: { pos: [-21.85, -3.30, -56.6], yaw: Math.PI, pose: 'crawl' },
+    player: null,
   },
   /* 3. The east run, looking back west up the tunnel from just inside the crypt portal. */
   run: {
     pos: [-13.0, -4.75, -63.0], look: [-22.4, -4.90, -63.0], fov: 60, tod: 0.62,
-    player: { pos: [-17.4, -5.40, -63.0], yaw: Math.PI / 2, pose: 'crawl' },
+    player: null,
   },
   /* 4. The arrival. From the crypt floor, looking up at the gallery, the portal and the stair. */
   gallery: {
     pos: [-4.6, -8.6, -66.6], look: [-11.6, -5.6, -64.6], fov: 55, tod: 0.62,
-    player: { pos: [-11.4, -5.40, -63.4], yaw: 1.9, pose: 'crouch_idle' },
+    player: null,
   },
   /* 5. The vantage, which is the reason the arrival is worth reaching: standing ON the gallery,
         looking down the burial chamber at the sarcophagus past the granite piers. This is
@@ -60,7 +89,7 @@ const FRAMES = {
         the arm searches from. */
   vantage: {
     pos: [-11.30, -3.85, -66.8], look: [0.55, -9.40, -71.70], fov: 62, tod: 0.62,
-    player: { pos: [-11.30, -5.40, -65.6], yaw: 2.3, pose: 'sneak_idle' },
+    player: null,
   },
 };
 
@@ -156,11 +185,15 @@ async function main() {
           page.evaluate(async (F) => {
             const g = window.__GAME, e = g.engine;
             const ch = e.get('character');
-            if (ch?.root && F.player) {
-              ch.root.position.set(...F.player.pos);
-              ch.root.rotation.set(0, F.player.yaw, 0);
-              ch.root.visible = true;
-              try { e.get('animation')?.freezePose?.(F.player.pose); } catch { /* pose may not exist */ }
+            if (ch?.root) {
+              if (F.player) {
+                ch.root.position.set(...F.player.pos);
+                ch.root.rotation.set(0, F.player.yaw, 0);
+                ch.root.visible = true;
+                try { e.get('animation')?.freezePose?.(F.player.pose); } catch { /* pose may not exist */ }
+              } else {
+                ch.root.visible = false;
+              }
             }
             g.setTimeOfDay(F.tod);
             e.camera.fov = F.fov;
