@@ -2185,7 +2185,11 @@ export class CameraRig {
        arm that watched only this one would report a floor that never fired on the frames where
        it did most of its work. Found by an A/B whose two regimes diverged with the flag reading
        "bound on 0 frames". */
-    this._subjFloorOn = capped > cappedRaw + 1e-9;
+    /* EXACT, not epsilon'd. A 1e-9 tolerance here let a sub-epsilon change through unreported,
+       and over a 320-frame coupled drive it grew into 3.4e-6° of pose difference on a route the
+       flag called untouched — so `camfloor`'s zero-cost arm could not say what it meant. The
+       flag now answers exactly the question "did this stage move the boom". */
+    this._subjFloorOn = capped > cappedRaw;
     const occluded = allowed < this._boomWant - 1e-3;
 
     if (capped <= this.boom) {
@@ -2217,7 +2221,7 @@ export class CameraRig {
     /* The floor is a floor, so it binds the recovery branch's output too — otherwise a rising
        floor would be honoured only on the frames the pull-in happened to run. */
     const lo = Math.max(TUNE.distHardMin, floor);
-    if (this.boom < lo - 1e-9) { this._subjFloorOn = true; this._boomVel = 0; }
+    if (this.boom < lo) { this._subjFloorOn = true; this._boomVel = 0; }
     this.boom = clamp(this.boom, lo, TUNE.distMax + 3);
   }
 
