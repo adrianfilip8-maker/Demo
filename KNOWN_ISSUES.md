@@ -51791,3 +51791,30 @@ exact, so re-exports of one authored pose that differ only by export float noise
 Fixed at both levels — the fingerprint is quantised to 2 cm / 5° (far below the 8.4 cm gap between
 genuinely distinct poses here, far above the noise), and the slug carries its source file's Anims
 number so a future duplicate cannot silently overwrite. 25 static poses → 16 distinct tiles.
+
+### §479.19.6 The sheet itself: 16 tiles, two readings, and display tiers that are still measurements
+
+Delivered: `shots/idle19-sheet-{matched,raw}.png` (16 labelled tiles each, one per distinct static
+pose, front view, the clip's real name and hand separation burnt into the tile) plus the full
+64-frame set and `shots/idle19-candidates.json` behind them. The interactive version — the same
+16 poses with reading (raw ⇄ matched) and view (front ⇄ profile) toggled across the whole sheet —
+is built by `tools/idlesheetpage.mjs` into one self-contained page.
+
+**Frame accounting, stated because §479.19.5 happened**: 16 poses × 2 readings × 2 views = 64
+expected, 64 on disk, 32 live/offline cross-check lines printed, zero camDot violations.
+
+**The sheet's SECTIONS are measurements too, not editorial groupings.** The census's `standing`
+flag admits three things no reader would call a standing idle, and each separates on a quantity
+already in hand rather than on its name: a **zero-length** clip is a bind/rest pose
+(`KeyAction.001`, dur 0), and **abduction ≥ 60° on either arm** is a hang rather than a stance
+(`LedgeGrab Idle`, 92.2°). What survives both is a resting stance — `Standupright` and its Anims4
+re-export `UprightStand`, which is the same authored pose. Deciding those two tiers by reading the
+names would have been the exact move this round exists to stop.
+
+**The live/offline drift column is the sheet's own honesty check** (§435.4). Every frame carries a
+live hand measurement compared against the census's offline number; they agree within ~1–4 cm for
+the resting stances (`Standupright`: live 70.0 raw / 47.7 matched vs offline 66.3 / 46.4) and
+diverge by up to 16 cm on the extreme poses (`Falling`, `[Action Stash].001`), where the DLRig
+carry, the breathing additive and the §531 limb lever act on raised arms much harder than on a
+hanging one. Flagged in the run log rather than smoothed over: for those tiles the picture is the
+claim and the number beside it is the offline pose, not the pixel.

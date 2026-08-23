@@ -1,0 +1,10430 @@
+{
+ "rows": [
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "Canehit",
+   "dur": 0.5,
+   "travel": 0.105,
+   "dps": 324,
+   "footSplit": 0.01,
+   "hipFrac": 0.6,
+   "upright": 54,
+   "verdict": "—",
+   "sepCm": 61.8,
+   "outL": 22.7,
+   "outR": 12.2
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "CaneSwing",
+   "dur": 1.33,
+   "travel": 0,
+   "dps": 84,
+   "footSplit": 0.152,
+   "hipFrac": 0.88,
+   "upright": 10,
+   "verdict": "—",
+   "sepCm": 34,
+   "outL": 8.2,
+   "outR": 1.4
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "CaneSwing Grab",
+   "dur": 0.67,
+   "travel": 0.321,
+   "dps": 158,
+   "footSplit": 0.136,
+   "hipFrac": 0.78,
+   "upright": 18,
+   "verdict": "—",
+   "sepCm": 30.6,
+   "outL": 12.1,
+   "outR": -9.2
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "CaneSwing Idle",
+   "dur": 4,
+   "travel": 0.037,
+   "dps": 6,
+   "footSplit": 0.169,
+   "hipFrac": 0.88,
+   "upright": 14,
+   "verdict": "static, not standing (feet split)",
+   "sepCm": 26.7,
+   "outL": 8.1,
+   "outR": -5.7
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "Crouching stand",
+   "dur": 4,
+   "travel": 0.055,
+   "dps": 4,
+   "footSplit": 0.01,
+   "hipFrac": 0.51,
+   "upright": 54,
+   "verdict": "static, not standing (hips low)",
+   "sepCm": 57.9,
+   "outL": 15.4,
+   "outR": 14.6
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "Falling",
+   "dur": 1,
+   "travel": 0.01,
+   "dps": 10,
+   "footSplit": 0.112,
+   "hipFrac": 0.61,
+   "upright": 48,
+   "verdict": "static, not standing (hips low)",
+   "sepCm": 91.8,
+   "outL": 28,
+   "outR": 35.7
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "FrontFlip",
+   "dur": 0.75,
+   "travel": 0.479,
+   "dps": 616,
+   "footSplit": 0.096,
+   "hipFrac": 0.34,
+   "upright": 74,
+   "verdict": "—",
+   "sepCm": 54.6,
+   "outL": 13.1,
+   "outR": 13.4
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "Jump",
+   "dur": 0.5,
+   "travel": 0.059,
+   "dps": 164,
+   "footSplit": 0.125,
+   "hipFrac": 0.79,
+   "upright": 31,
+   "verdict": "—",
+   "sepCm": 78.2,
+   "outL": 24,
+   "outR": 26.1
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "Landing",
+   "dur": 0.25,
+   "travel": 0.442,
+   "dps": 265,
+   "footSplit": 0.057,
+   "hipFrac": 0.58,
+   "upright": 52,
+   "verdict": "—",
+   "sepCm": 59.1,
+   "outL": 16.4,
+   "outR": 14.8
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "LedgeGrab",
+   "dur": 0.5,
+   "travel": 0.455,
+   "dps": 291,
+   "footSplit": 0.123,
+   "hipFrac": 0.64,
+   "upright": 38,
+   "verdict": "—",
+   "sepCm": 48.1,
+   "outL": 11.7,
+   "outR": 8.4
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "LedgeGrab Idle",
+   "dur": 1,
+   "travel": 0.07,
+   "dps": 9,
+   "footSplit": 0.113,
+   "hipFrac": 0.8,
+   "upright": 4,
+   "verdict": "CANDIDATE",
+   "sepCm": 51.1,
+   "outL": 17.3,
+   "outR": 8.9
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "PickPocket",
+   "dur": 4,
+   "travel": 0.258,
+   "dps": 20,
+   "footSplit": 0.01,
+   "hipFrac": 0.54,
+   "upright": 55,
+   "verdict": "—",
+   "sepCm": 57.9,
+   "outL": 15.4,
+   "outR": 14.6
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "PoleClimbIdle",
+   "dur": 0.67,
+   "travel": 0.008,
+   "dps": 4,
+   "footSplit": 0.156,
+   "hipFrac": 0.65,
+   "upright": 1,
+   "verdict": "static, not standing (feet split)",
+   "sepCm": 15.3,
+   "outL": -5.2,
+   "outR": -7.7
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "PoleClimbing",
+   "dur": 0.5,
+   "travel": 0,
+   "dps": 164,
+   "footSplit": 0.331,
+   "hipFrac": 0.72,
+   "upright": 5,
+   "verdict": "—",
+   "sepCm": 12.3,
+   "outL": -4.6,
+   "outR": -10.1
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "PoleGrab",
+   "dur": 0.67,
+   "travel": 0.079,
+   "dps": 238,
+   "footSplit": 0.153,
+   "hipFrac": 0.66,
+   "upright": 24,
+   "verdict": "—",
+   "sepCm": 30.1,
+   "outL": -3.5,
+   "outR": 5.4
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "railrun",
+   "dur": 0.75,
+   "travel": 0.207,
+   "dps": 194,
+   "footSplit": 0.143,
+   "hipFrac": 0.69,
+   "upright": 62,
+   "verdict": "—",
+   "sepCm": 88.3,
+   "outL": 33.1,
+   "outR": 27.5
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "RailrunStand",
+   "dur": 4,
+   "travel": 0.048,
+   "dps": 3,
+   "footSplit": 0.016,
+   "hipFrac": 0.32,
+   "upright": 57,
+   "verdict": "static, not standing (hips low)",
+   "sepCm": 32.9,
+   "outL": -21.2,
+   "outR": 29.3
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "Run",
+   "dur": 0.5,
+   "travel": 0.234,
+   "dps": 545,
+   "footSplit": 0.171,
+   "hipFrac": 0.56,
+   "upright": 70,
+   "verdict": "—",
+   "sepCm": 69.1,
+   "outL": 28.8,
+   "outR": 12.7
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "SpireJump",
+   "dur": 0.5,
+   "travel": 0.572,
+   "dps": 787,
+   "footSplit": 0.008,
+   "hipFrac": 0.37,
+   "upright": 17,
+   "verdict": "—",
+   "sepCm": 76.3,
+   "outL": 19.7,
+   "outR": 28.5
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "SpireJumpIdle",
+   "dur": 4,
+   "travel": 0,
+   "dps": 2,
+   "footSplit": 0,
+   "hipFrac": 0.32,
+   "upright": 43,
+   "verdict": "static, not standing (hips low)",
+   "sepCm": 60,
+   "outL": 10.4,
+   "outR": 21.3
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "SpireJumplanding",
+   "dur": 0.17,
+   "travel": 0.442,
+   "dps": 252,
+   "footSplit": 0.003,
+   "hipFrac": 0.34,
+   "upright": 36,
+   "verdict": "—",
+   "sepCm": 67.7,
+   "outL": 16.4,
+   "outR": 23
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "Standupright",
+   "dur": 4,
+   "travel": 0.01,
+   "dps": 4,
+   "footSplit": 0.104,
+   "hipFrac": 0.99,
+   "upright": 4,
+   "verdict": "CANDIDATE",
+   "sepCm": 47.6,
+   "outL": 10.8,
+   "outR": 9
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "Walk",
+   "dur": 0.75,
+   "travel": 0.262,
+   "dps": 138,
+   "footSplit": 0.109,
+   "hipFrac": 0.72,
+   "upright": 57,
+   "verdict": "—",
+   "sepCm": 57.5,
+   "outL": 14.4,
+   "outR": 15.1
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "KeyAction.001",
+   "dur": 0,
+   "travel": 0,
+   "dps": 0,
+   "footSplit": 0,
+   "hipFrac": 1,
+   "upright": 3,
+   "verdict": "CANDIDATE",
+   "sepCm": 77.9,
+   "outL": 24.8,
+   "outR": 24.8
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "Canehit",
+   "dur": 0.5,
+   "travel": 0.105,
+   "dps": 334,
+   "footSplit": 0.013,
+   "hipFrac": 0.6,
+   "upright": 57,
+   "verdict": "—",
+   "sepCm": 60.6,
+   "outL": 23.9,
+   "outR": 9.6
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "CaneSwing",
+   "dur": 1.33,
+   "travel": 0,
+   "dps": 85,
+   "footSplit": 0.151,
+   "hipFrac": 0.88,
+   "upright": 8,
+   "verdict": "—",
+   "sepCm": 35.2,
+   "outL": 8.8,
+   "outR": 2.1
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "CaneSwing Grab",
+   "dur": 0.67,
+   "travel": 0.325,
+   "dps": 158,
+   "footSplit": 0.133,
+   "hipFrac": 0.78,
+   "upright": 18,
+   "verdict": "—",
+   "sepCm": 30.8,
+   "outL": 12.1,
+   "outR": -9.1
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "CaneSwing Idle",
+   "dur": 4,
+   "travel": 0.037,
+   "dps": 6,
+   "footSplit": 0.156,
+   "hipFrac": 0.87,
+   "upright": 12,
+   "verdict": "static, not standing (feet split)",
+   "sepCm": 27.1,
+   "outL": 7.8,
+   "outR": -5.1
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "Crouching stand",
+   "dur": 4,
+   "travel": 0.055,
+   "dps": 4,
+   "footSplit": 0.013,
+   "hipFrac": 0.5,
+   "upright": 57,
+   "verdict": "static, not standing (hips low)",
+   "sepCm": 57.8,
+   "outL": 15.5,
+   "outR": 14.4
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "Falling",
+   "dur": 1,
+   "travel": 0.01,
+   "dps": 9,
+   "footSplit": 0.115,
+   "hipFrac": 0.62,
+   "upright": 50,
+   "verdict": "static, not standing (hips low)",
+   "sepCm": 91.8,
+   "outL": 28,
+   "outR": 35.6
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "FrontFlip",
+   "dur": 0.75,
+   "travel": 0.476,
+   "dps": 616,
+   "footSplit": 0.097,
+   "hipFrac": 0.34,
+   "upright": 76,
+   "verdict": "—",
+   "sepCm": 54.6,
+   "outL": 13,
+   "outR": 13.5
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "Jump",
+   "dur": 0.5,
+   "travel": 0.06,
+   "dps": 164,
+   "footSplit": 0.124,
+   "hipFrac": 0.79,
+   "upright": 34,
+   "verdict": "—",
+   "sepCm": 78.2,
+   "outL": 23.9,
+   "outR": 26.2
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "Landing",
+   "dur": 0.25,
+   "travel": 0.441,
+   "dps": 265,
+   "footSplit": 0.055,
+   "hipFrac": 0.57,
+   "upright": 55,
+   "verdict": "—",
+   "sepCm": 59,
+   "outL": 16.4,
+   "outR": 14.6
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "PoleClimbIdle",
+   "dur": 4,
+   "travel": 0.011,
+   "dps": 3,
+   "footSplit": 0.153,
+   "hipFrac": 0.65,
+   "upright": 4,
+   "verdict": "static, not standing (feet split)",
+   "sepCm": 15.3,
+   "outL": -5.2,
+   "outR": -7.7
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "PoleClimbing",
+   "dur": 0.5,
+   "travel": 0,
+   "dps": 164,
+   "footSplit": 0.33,
+   "hipFrac": 0.73,
+   "upright": 5,
+   "verdict": "—",
+   "sepCm": 12.3,
+   "outL": -4.6,
+   "outR": -10.1
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "PoleGrab",
+   "dur": 0.67,
+   "travel": 0.08,
+   "dps": 238,
+   "footSplit": 0.125,
+   "hipFrac": 0.63,
+   "upright": 27,
+   "verdict": "—",
+   "sepCm": 30.2,
+   "outL": -3.5,
+   "outR": 5.5
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "railrun",
+   "dur": 0.75,
+   "travel": 0.207,
+   "dps": 192,
+   "footSplit": 0.173,
+   "hipFrac": 0.71,
+   "upright": 65,
+   "verdict": "—",
+   "sepCm": 88.3,
+   "outL": 33.1,
+   "outR": 27.5
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "RailrunStand",
+   "dur": 4,
+   "travel": 0.048,
+   "dps": 3,
+   "footSplit": 0.056,
+   "hipFrac": 0.36,
+   "upright": 59,
+   "verdict": "static, not standing (hips low)",
+   "sepCm": 32.9,
+   "outL": -20.5,
+   "outR": 28.3
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "Run",
+   "dur": 0.5,
+   "travel": 0.234,
+   "dps": 544,
+   "footSplit": 0.206,
+   "hipFrac": 0.57,
+   "upright": 73,
+   "verdict": "—",
+   "sepCm": 69,
+   "outL": 28.9,
+   "outR": 12.5
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "SpireJump",
+   "dur": 0.5,
+   "travel": 0.572,
+   "dps": 787,
+   "footSplit": 0.008,
+   "hipFrac": 0.37,
+   "upright": 17,
+   "verdict": "—",
+   "sepCm": 76.6,
+   "outL": 20.9,
+   "outR": 27.6
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "SpireJumpIdle",
+   "dur": 4,
+   "travel": 0,
+   "dps": 2,
+   "footSplit": 0,
+   "hipFrac": 0.32,
+   "upright": 46,
+   "verdict": "static, not standing (hips low)",
+   "sepCm": 60,
+   "outL": 10.4,
+   "outR": 21.3
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "SpireJumplanding",
+   "dur": 0.17,
+   "travel": 0.442,
+   "dps": 252,
+   "footSplit": 0.003,
+   "hipFrac": 0.33,
+   "upright": 39,
+   "verdict": "—",
+   "sepCm": 67.7,
+   "outL": 16.4,
+   "outR": 23
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "Standupright",
+   "dur": 4,
+   "travel": 0.01,
+   "dps": 3,
+   "footSplit": 0.103,
+   "hipFrac": 0.99,
+   "upright": 6,
+   "verdict": "CANDIDATE",
+   "sepCm": 47.6,
+   "outL": 10.8,
+   "outR": 9
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "Walk",
+   "dur": 0.75,
+   "travel": 0.262,
+   "dps": 138,
+   "footSplit": 0.114,
+   "hipFrac": 0.72,
+   "upright": 60,
+   "verdict": "—",
+   "sepCm": 57.3,
+   "outL": 14.4,
+   "outR": 15
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "KeyAction.001",
+   "dur": 0,
+   "travel": 0,
+   "dps": 0,
+   "footSplit": 0,
+   "hipFrac": 1,
+   "upright": 6,
+   "verdict": "CANDIDATE",
+   "sepCm": 77.9,
+   "outL": 24.8,
+   "outR": 24.8
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "Canehit",
+   "dur": 0.5,
+   "travel": 0.105,
+   "dps": 338,
+   "footSplit": 0.013,
+   "hipFrac": 0.6,
+   "upright": 57,
+   "verdict": "—",
+   "sepCm": 60.6,
+   "outL": 23.9,
+   "outR": 9.6
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "Crouching stand 2",
+   "dur": 4,
+   "travel": 0.055,
+   "dps": 4,
+   "footSplit": 0.013,
+   "hipFrac": 0.5,
+   "upright": 57,
+   "verdict": "static, not standing (hips low)",
+   "sepCm": 57.8,
+   "outL": 15.5,
+   "outR": 14.4
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "CrouchingstandStand",
+   "dur": 4,
+   "travel": 0.043,
+   "dps": 6,
+   "footSplit": 0.026,
+   "hipFrac": 0.66,
+   "upright": 54,
+   "verdict": "static, not standing (hips low)",
+   "sepCm": 66.9,
+   "outL": 17.9,
+   "outR": 21
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "Falling",
+   "dur": 1,
+   "travel": 0.01,
+   "dps": 9,
+   "footSplit": 0.115,
+   "hipFrac": 0.62,
+   "upright": 50,
+   "verdict": "static, not standing (hips low)",
+   "sepCm": 91.8,
+   "outL": 28,
+   "outR": 35.6
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "FrontFlip",
+   "dur": 0.75,
+   "travel": 0.476,
+   "dps": 616,
+   "footSplit": 0.097,
+   "hipFrac": 0.34,
+   "upright": 76,
+   "verdict": "—",
+   "sepCm": 54.6,
+   "outL": 13,
+   "outR": 13.5
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "Jump",
+   "dur": 0.5,
+   "travel": 0.06,
+   "dps": 164,
+   "footSplit": 0.124,
+   "hipFrac": 0.79,
+   "upright": 34,
+   "verdict": "—",
+   "sepCm": 78.2,
+   "outL": 23.9,
+   "outR": 26.2
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "Landing",
+   "dur": 0.25,
+   "travel": 0.338,
+   "dps": 214,
+   "footSplit": 0.074,
+   "hipFrac": 0.56,
+   "upright": 54,
+   "verdict": "—",
+   "sepCm": 70.3,
+   "outL": 24.1,
+   "outR": 18.1
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "railrun",
+   "dur": 0.75,
+   "travel": 0.207,
+   "dps": 195,
+   "footSplit": 0.173,
+   "hipFrac": 0.71,
+   "upright": 63,
+   "verdict": "—",
+   "sepCm": 88.4,
+   "outL": 33.3,
+   "outR": 27.5
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "Run",
+   "dur": 0.5,
+   "travel": 0.234,
+   "dps": 544,
+   "footSplit": 0.206,
+   "hipFrac": 0.57,
+   "upright": 73,
+   "verdict": "—",
+   "sepCm": 69,
+   "outL": 28.9,
+   "outR": 12.5
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "SpireJump",
+   "dur": 0.5,
+   "travel": 0.572,
+   "dps": 787,
+   "footSplit": 0.008,
+   "hipFrac": 0.37,
+   "upright": 17,
+   "verdict": "—",
+   "sepCm": 77.8,
+   "outL": 21.7,
+   "outR": 28.2
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "UprightStand",
+   "dur": 4,
+   "travel": 0.01,
+   "dps": 3,
+   "footSplit": 0.103,
+   "hipFrac": 0.99,
+   "upright": 6,
+   "verdict": "CANDIDATE",
+   "sepCm": 47.6,
+   "outL": 10.8,
+   "outR": 9
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "Walk",
+   "dur": 0.75,
+   "travel": 0.262,
+   "dps": 130,
+   "footSplit": 0.114,
+   "hipFrac": 0.72,
+   "upright": 67,
+   "verdict": "—",
+   "sepCm": 57.3,
+   "outL": 14.4,
+   "outR": 15
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "KeyAction.001",
+   "dur": 0,
+   "travel": 0,
+   "dps": 0,
+   "footSplit": 0,
+   "hipFrac": 1,
+   "upright": 6,
+   "verdict": "CANDIDATE",
+   "sepCm": 77.9,
+   "outL": 24.8,
+   "outR": 24.8
+  },
+  {
+   "file": "SlyCooper_Anims4.gltf",
+   "name": "[Action Stash]",
+   "dur": 1.25,
+   "travel": 0.387,
+   "dps": 41,
+   "footSplit": 0.013,
+   "hipFrac": 0.73,
+   "upright": 40,
+   "verdict": "—",
+   "sepCm": 98.2,
+   "outL": 35.6,
+   "outR": 34.4
+  },
+  {
+   "file": "SlyCooper_Anims4.gltf",
+   "name": "[Action Stash].001",
+   "dur": 1.25,
+   "travel": 0.016,
+   "dps": 9,
+   "footSplit": 0.015,
+   "hipFrac": 0.7,
+   "upright": 39,
+   "verdict": "static, not standing (hips low)",
+   "sepCm": 101.3,
+   "outL": 38.3,
+   "outR": 35.3
+  },
+  {
+   "file": "SlyCooper_Anims4.gltf",
+   "name": "[Action Stash].002",
+   "dur": 2.5,
+   "travel": 0.145,
+   "dps": 86,
+   "footSplit": 0.071,
+   "hipFrac": 0.72,
+   "upright": 70,
+   "verdict": "—",
+   "sepCm": 75.6,
+   "outL": 25.6,
+   "outR": 22.3
+  },
+  {
+   "file": "SlyCooper_Anims4.gltf",
+   "name": "[Action Stash].003",
+   "dur": 0.42,
+   "travel": 0.087,
+   "dps": 294,
+   "footSplit": 0.22,
+   "hipFrac": 0.77,
+   "upright": 65,
+   "verdict": "—",
+   "sepCm": 52.9,
+   "outL": 14.8,
+   "outR": 9.8
+  },
+  {
+   "file": "SlyCooper_Anims4.gltf",
+   "name": "Walk",
+   "dur": 2.5,
+   "travel": 0.145,
+   "dps": 86,
+   "footSplit": 0.071,
+   "hipFrac": 0.72,
+   "upright": 70,
+   "verdict": "—",
+   "sepCm": 75.6,
+   "outL": 25.6,
+   "outR": 22.3
+  },
+  {
+   "file": "SlyCooper_Anims4.gltf",
+   "name": "CrouchingStand",
+   "dur": 5,
+   "travel": 0.042,
+   "dps": 5,
+   "footSplit": 0.026,
+   "hipFrac": 0.66,
+   "upright": 60,
+   "verdict": "static, not standing (hips low)",
+   "sepCm": 67.2,
+   "outL": 17.4,
+   "outR": 21.7
+  },
+  {
+   "file": "SlyCooper_Anims4.gltf",
+   "name": "UprightStand",
+   "dur": 5,
+   "travel": 0.01,
+   "dps": 3,
+   "footSplit": 0.103,
+   "hipFrac": 0.99,
+   "upright": 6,
+   "verdict": "CANDIDATE",
+   "sepCm": 47.5,
+   "outL": 11,
+   "outR": 8.7
+  },
+  {
+   "file": "SlyCooper_Anims4.gltf",
+   "name": "Jump",
+   "dur": 1.25,
+   "travel": 0.387,
+   "dps": 41,
+   "footSplit": 0.013,
+   "hipFrac": 0.73,
+   "upright": 40,
+   "verdict": "—",
+   "sepCm": 98.2,
+   "outL": 35.6,
+   "outR": 34.4
+  },
+  {
+   "file": "SlyCooper_Anims4.gltf",
+   "name": "Run",
+   "dur": 0.63,
+   "travel": 0.09,
+   "dps": 302,
+   "footSplit": 0.204,
+   "hipFrac": 0.76,
+   "upright": 65,
+   "verdict": "—",
+   "sepCm": 51.2,
+   "outL": 17.4,
+   "outR": 5.8
+  }
+ ],
+ "sheet": [
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "CaneSwing Idle",
+   "dur": 4,
+   "verdict": "static, not standing (feet split)",
+   "standing": false,
+   "fp": "13|4|-3|29|25|9",
+   "ref": {
+    "sepCm": 26.7,
+    "outL": 8.1,
+    "outR": -5.7,
+    "abdL": 8.2,
+    "abdR": 147.6,
+    "foldL": 145.5,
+    "foldR": 124.8
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         -15.8,
+         0,
+         0
+        ],
+        "spine": [
+         23.6,
+         0,
+         0
+        ],
+        "chest": [
+         -31.2,
+         9.9,
+         -6.3
+        ],
+        "neck": [
+         -9.2,
+         -2.3,
+         5.4
+        ],
+        "head": [
+         20.7,
+         -7.8,
+         4.1
+        ],
+        "shoulderL": [
+         14.5,
+         0.5,
+         -26.1
+        ],
+        "upperArmL": [
+         25,
+         -9.9,
+         13.2
+        ],
+        "lowerArmL": [
+         -18,
+         -12.7,
+         7
+        ],
+        "handL": [
+         -22,
+         23.9,
+         -4.9
+        ],
+        "shoulderR": [
+         2.2,
+         -14.5,
+         -31.9
+        ],
+        "upperArmR": [
+         -82.2,
+         37.6,
+         5.8
+        ],
+        "lowerArmR": [
+         -33.5,
+         25,
+         -9.9
+        ],
+        "handR": [
+         0.1,
+         -81.3,
+         -0.6
+        ],
+        "upperLegL": [
+         -19.9,
+         -5.2,
+         10.6
+        ],
+        "lowerLegL": [
+         67.9,
+         -8.5,
+         -22.4
+        ],
+        "footL": [
+         40.5,
+         11,
+         3.5
+        ],
+        "toeL": [
+         -11.6,
+         0,
+         0
+        ],
+        "upperLegR": [
+         15.7,
+         9.3,
+         -0.3
+        ],
+        "lowerLegR": [
+         18.4,
+         -0.5,
+         6.8
+        ],
+        "footR": [
+         54.4,
+         -12,
+         2.6
+        ],
+        "toeR": [
+         -0.6,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0964,
+        -0.0168
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         -15.8,
+         0,
+         0
+        ],
+        "spine": [
+         23.6,
+         0,
+         0
+        ],
+        "chest": [
+         -31.2,
+         9.9,
+         -6.3
+        ],
+        "neck": [
+         -9.2,
+         -2.3,
+         5.4
+        ],
+        "head": [
+         20.7,
+         -7.8,
+         4.1
+        ],
+        "shoulderL": [
+         14.5,
+         0.5,
+         -26.1
+        ],
+        "upperArmL": [
+         25,
+         -9.9,
+         13.2
+        ],
+        "lowerArmL": [
+         -18,
+         -12.7,
+         7
+        ],
+        "handL": [
+         -22,
+         23.9,
+         -4.9
+        ],
+        "shoulderR": [
+         2.2,
+         -14.5,
+         -31.9
+        ],
+        "upperArmR": [
+         -82.2,
+         37.6,
+         5.8
+        ],
+        "lowerArmR": [
+         -33.5,
+         25,
+         -9.9
+        ],
+        "handR": [
+         0.1,
+         -81.3,
+         -0.6
+        ],
+        "upperLegL": [
+         -19.9,
+         -5.2,
+         10.6
+        ],
+        "lowerLegL": [
+         67.9,
+         -8.5,
+         -22.4
+        ],
+        "footL": [
+         40.5,
+         11,
+         3.5
+        ],
+        "toeL": [
+         -11.6,
+         0,
+         0
+        ],
+        "upperLegR": [
+         15.7,
+         9.3,
+         -0.3
+        ],
+        "lowerLegR": [
+         18.4,
+         -0.5,
+         6.8
+        ],
+        "footR": [
+         54.4,
+         -12,
+         2.6
+        ],
+        "toeR": [
+         -0.6,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0964,
+        -0.0168
+       ]
+      }
+     ]
+    },
+    "sepCm": 42.3,
+    "outL": 19.2,
+    "outR": -1.3,
+    "foldL": 158.8,
+    "foldR": 139.4
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         -15.8,
+         0,
+         0
+        ],
+        "spine": [
+         23.6,
+         0,
+         0
+        ],
+        "chest": [
+         -31.2,
+         9.9,
+         -6.3
+        ],
+        "neck": [
+         -9.2,
+         -2.3,
+         5.4
+        ],
+        "head": [
+         20.7,
+         -7.8,
+         4.1
+        ],
+        "shoulderL": [
+         14.5,
+         0.5,
+         -26.1
+        ],
+        "upperArmL": [
+         25,
+         -9.9,
+         -2.1000000000000014
+        ],
+        "lowerArmL": [
+         -18,
+         -12.7,
+         7
+        ],
+        "handL": [
+         -22,
+         23.9,
+         -4.9
+        ],
+        "shoulderR": [
+         2.2,
+         -14.5,
+         -31.9
+        ],
+        "upperArmR": [
+         -82.2,
+         37.6,
+         44.16
+        ],
+        "lowerArmR": [
+         -33.5,
+         25,
+         -9.9
+        ],
+        "handR": [
+         0.1,
+         -81.3,
+         -0.6
+        ],
+        "upperLegL": [
+         -19.9,
+         -5.2,
+         10.6
+        ],
+        "lowerLegL": [
+         67.9,
+         -8.5,
+         -22.4
+        ],
+        "footL": [
+         40.5,
+         11,
+         3.5
+        ],
+        "toeL": [
+         -11.6,
+         0,
+         0
+        ],
+        "upperLegR": [
+         15.7,
+         9.3,
+         -0.3
+        ],
+        "lowerLegR": [
+         18.4,
+         -0.5,
+         6.8
+        ],
+        "footR": [
+         54.4,
+         -12,
+         2.6
+        ],
+        "toeR": [
+         -0.6,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0964,
+        -0.0168
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         -15.8,
+         0,
+         0
+        ],
+        "spine": [
+         23.6,
+         0,
+         0
+        ],
+        "chest": [
+         -31.2,
+         9.9,
+         -6.3
+        ],
+        "neck": [
+         -9.2,
+         -2.3,
+         5.4
+        ],
+        "head": [
+         20.7,
+         -7.8,
+         4.1
+        ],
+        "shoulderL": [
+         14.5,
+         0.5,
+         -26.1
+        ],
+        "upperArmL": [
+         25,
+         -9.9,
+         -2.1000000000000014
+        ],
+        "lowerArmL": [
+         -18,
+         -12.7,
+         7
+        ],
+        "handL": [
+         -22,
+         23.9,
+         -4.9
+        ],
+        "shoulderR": [
+         2.2,
+         -14.5,
+         -31.9
+        ],
+        "upperArmR": [
+         -82.2,
+         37.6,
+         44.16
+        ],
+        "lowerArmR": [
+         -33.5,
+         25,
+         -9.9
+        ],
+        "handR": [
+         0.1,
+         -81.3,
+         -0.6
+        ],
+        "upperLegL": [
+         -19.9,
+         -5.2,
+         10.6
+        ],
+        "lowerLegL": [
+         67.9,
+         -8.5,
+         -22.4
+        ],
+        "footL": [
+         40.5,
+         11,
+         3.5
+        ],
+        "toeL": [
+         -11.6,
+         0,
+         0
+        ],
+        "upperLegR": [
+         15.7,
+         9.3,
+         -0.3
+        ],
+        "lowerLegR": [
+         18.4,
+         -0.5,
+         6.8
+        ],
+        "footR": [
+         54.4,
+         -12,
+         2.6
+        ],
+        "toeR": [
+         -0.6,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0964,
+        -0.0168
+       ]
+      }
+     ]
+    },
+    "dL": -15.3,
+    "dR": -38.36,
+    "sepCm": 26.6,
+    "outL": 8,
+    "outR": -5.7,
+    "foldL": 158.8,
+    "foldR": 139.4
+   },
+   "alsoIn": []
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "Crouching stand",
+   "dur": 4,
+   "verdict": "static, not standing (hips low)",
+   "standing": false,
+   "fp": "29|8|7|16|19|5",
+   "ref": {
+    "sepCm": 57.9,
+    "outL": 15.4,
+    "outR": 14.6,
+    "abdL": 31.6,
+    "abdR": 4.9,
+    "foldL": 81.3,
+    "foldR": 96.9
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         30.2,
+         -14.5,
+         9.9
+        ],
+        "spine": [
+         14.8,
+         -3.5,
+         -4.3
+        ],
+        "chest": [
+         28.8,
+         9.9,
+         -18.2
+        ],
+        "neck": [
+         -4.8,
+         -0.1,
+         0
+        ],
+        "head": [
+         -58.5,
+         0.6,
+         1.1
+        ],
+        "shoulderL": [
+         1.5,
+         -9.9,
+         -1
+        ],
+        "upperArmL": [
+         -31.4,
+         0.2,
+         7.9
+        ],
+        "lowerArmL": [
+         -74.2,
+         -50.4,
+         0.8
+        ],
+        "handL": [
+         -2.1,
+         -20.1,
+         20.9
+        ],
+        "shoulderR": [
+         -2.2,
+         -10.2,
+         -6.3
+        ],
+        "upperArmR": [
+         4.2,
+         0,
+         31.4
+        ],
+        "lowerArmR": [
+         -57.2,
+         42,
+         -7.2
+        ],
+        "handR": [
+         -28.2,
+         -33.9,
+         -2.7
+        ],
+        "upperLegL": [
+         -63.9,
+         2.6,
+         23.1
+        ],
+        "lowerLegL": [
+         97.2,
+         -18.8,
+         -26.5
+        ],
+        "footL": [
+         -52.3,
+         4.8,
+         8.5
+        ],
+        "toeL": [
+         -11.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -85.8,
+         24.9,
+         -2.8
+        ],
+        "lowerLegR": [
+         100.4,
+         20,
+         26.6
+        ],
+        "footR": [
+         -43.5,
+         -16,
+         -8.2
+        ],
+        "toeR": [
+         -8.5,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.1075,
+        -0.0294
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         30.2,
+         -14.5,
+         9.9
+        ],
+        "spine": [
+         14.8,
+         -3.5,
+         -4.3
+        ],
+        "chest": [
+         28.8,
+         9.9,
+         -18.2
+        ],
+        "neck": [
+         -4.8,
+         -0.1,
+         0
+        ],
+        "head": [
+         -58.5,
+         0.6,
+         1.1
+        ],
+        "shoulderL": [
+         1.5,
+         -9.9,
+         -1
+        ],
+        "upperArmL": [
+         -31.4,
+         0.2,
+         7.9
+        ],
+        "lowerArmL": [
+         -74.2,
+         -50.4,
+         0.8
+        ],
+        "handL": [
+         -2.1,
+         -20.1,
+         20.9
+        ],
+        "shoulderR": [
+         -2.2,
+         -10.2,
+         -6.3
+        ],
+        "upperArmR": [
+         4.2,
+         0,
+         31.4
+        ],
+        "lowerArmR": [
+         -57.2,
+         42,
+         -7.2
+        ],
+        "handR": [
+         -28.2,
+         -33.9,
+         -2.7
+        ],
+        "upperLegL": [
+         -63.9,
+         2.6,
+         23.1
+        ],
+        "lowerLegL": [
+         97.2,
+         -18.8,
+         -26.5
+        ],
+        "footL": [
+         -52.3,
+         4.8,
+         8.5
+        ],
+        "toeL": [
+         -11.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -85.8,
+         24.9,
+         -2.8
+        ],
+        "lowerLegR": [
+         100.4,
+         20,
+         26.6
+        ],
+        "footR": [
+         -43.5,
+         -16,
+         -8.2
+        ],
+        "toeR": [
+         -8.5,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.1075,
+        -0.0294
+       ]
+      }
+     ]
+    },
+    "sepCm": 79,
+    "outL": 26.1,
+    "outR": 25.1,
+    "foldL": 97.8,
+    "foldR": 112.6
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         30.2,
+         -14.5,
+         9.9
+        ],
+        "spine": [
+         14.8,
+         -3.5,
+         -4.3
+        ],
+        "chest": [
+         28.8,
+         9.9,
+         -18.2
+        ],
+        "neck": [
+         -4.8,
+         -0.1,
+         0
+        ],
+        "head": [
+         -58.5,
+         0.6,
+         1.1
+        ],
+        "shoulderL": [
+         1.5,
+         -9.9,
+         -1
+        ],
+        "upperArmL": [
+         -31.4,
+         0.2,
+         -29.120000000000005
+        ],
+        "lowerArmL": [
+         -74.2,
+         -50.4,
+         0.8
+        ],
+        "handL": [
+         -2.1,
+         -20.1,
+         20.9
+        ],
+        "shoulderR": [
+         -2.2,
+         -10.2,
+         -6.3
+        ],
+        "upperArmR": [
+         4.2,
+         0,
+         51.78
+        ],
+        "lowerArmR": [
+         -57.2,
+         42,
+         -7.2
+        ],
+        "handR": [
+         -28.2,
+         -33.9,
+         -2.7
+        ],
+        "upperLegL": [
+         -63.9,
+         2.6,
+         23.1
+        ],
+        "lowerLegL": [
+         97.2,
+         -18.8,
+         -26.5
+        ],
+        "footL": [
+         -52.3,
+         4.8,
+         8.5
+        ],
+        "toeL": [
+         -11.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -85.8,
+         24.9,
+         -2.8
+        ],
+        "lowerLegR": [
+         100.4,
+         20,
+         26.6
+        ],
+        "footR": [
+         -43.5,
+         -16,
+         -8.2
+        ],
+        "toeR": [
+         -8.5,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.1075,
+        -0.0294
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         30.2,
+         -14.5,
+         9.9
+        ],
+        "spine": [
+         14.8,
+         -3.5,
+         -4.3
+        ],
+        "chest": [
+         28.8,
+         9.9,
+         -18.2
+        ],
+        "neck": [
+         -4.8,
+         -0.1,
+         0
+        ],
+        "head": [
+         -58.5,
+         0.6,
+         1.1
+        ],
+        "shoulderL": [
+         1.5,
+         -9.9,
+         -1
+        ],
+        "upperArmL": [
+         -31.4,
+         0.2,
+         -29.120000000000005
+        ],
+        "lowerArmL": [
+         -74.2,
+         -50.4,
+         0.8
+        ],
+        "handL": [
+         -2.1,
+         -20.1,
+         20.9
+        ],
+        "shoulderR": [
+         -2.2,
+         -10.2,
+         -6.3
+        ],
+        "upperArmR": [
+         4.2,
+         0,
+         51.78
+        ],
+        "lowerArmR": [
+         -57.2,
+         42,
+         -7.2
+        ],
+        "handR": [
+         -28.2,
+         -33.9,
+         -2.7
+        ],
+        "upperLegL": [
+         -63.9,
+         2.6,
+         23.1
+        ],
+        "lowerLegL": [
+         97.2,
+         -18.8,
+         -26.5
+        ],
+        "footL": [
+         -52.3,
+         4.8,
+         8.5
+        ],
+        "toeL": [
+         -11.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -85.8,
+         24.9,
+         -2.8
+        ],
+        "lowerLegR": [
+         100.4,
+         20,
+         26.6
+        ],
+        "footR": [
+         -43.5,
+         -16,
+         -8.2
+        ],
+        "toeR": [
+         -8.5,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.1075,
+        -0.0294
+       ]
+      }
+     ]
+    },
+    "dL": -37.02,
+    "dR": -20.38,
+    "sepCm": 57.7,
+    "outL": 15.4,
+    "outR": 14.6,
+    "foldL": 97.8,
+    "foldR": 112.6
+   },
+   "alsoIn": [
+    "SlyCooper_Anims19.gltf/Crouching stand",
+    "SlyCooper_Anims14.gltf/Crouching stand 2"
+   ]
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "Falling",
+   "dur": 1,
+   "verdict": "static, not standing (hips low)",
+   "standing": false,
+   "fp": "46|14|18|21|23|6",
+   "ref": {
+    "sepCm": 91.8,
+    "outL": 28,
+    "outR": 35.7,
+    "abdL": 17.8,
+    "abdR": 42.6,
+    "foldL": 104.5,
+    "foldR": 114.8
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         14.4,
+         0,
+         0
+        ],
+        "spine": [
+         53.4,
+         0,
+         0
+        ],
+        "chest": [
+         4.2,
+         5.8,
+         2.7
+        ],
+        "neck": [
+         -16.8,
+         1.1,
+         -2.5
+        ],
+        "head": [
+         -35.7,
+         -1.3,
+         -7.2
+        ],
+        "shoulderL": [
+         -2.5,
+         -0.2,
+         0.4
+        ],
+        "upperArmL": [
+         -57.1,
+         69.8,
+         35.3
+        ],
+        "lowerArmL": [
+         -50.2,
+         -37.5,
+         8.9
+        ],
+        "handL": [
+         -22,
+         23.9,
+         -4.9
+        ],
+        "shoulderR": [
+         -4.3,
+         -23.1,
+         -1.8
+        ],
+        "upperArmR": [
+         -67.8,
+         -45.6,
+         -39.5
+        ],
+        "lowerArmR": [
+         -41.4,
+         31.2,
+         -9.9
+        ],
+        "handR": [
+         -5.5,
+         -35,
+         -17.6
+        ],
+        "upperLegL": [
+         -83.9,
+         -12.3,
+         16.1
+        ],
+        "lowerLegL": [
+         107.4,
+         -22.6,
+         -26.5
+        ],
+        "footL": [
+         12.2,
+         12,
+         12.9
+        ],
+        "toeL": [
+         10.9,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -80.2,
+         15.1,
+         -10.7
+        ],
+        "lowerLegR": [
+         88.9,
+         15.7,
+         25.9
+        ],
+        "footR": [
+         61.1,
+         -16.4,
+         -1.6
+        ],
+        "toeR": [
+         -13.4,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0186,
+        -0.007
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         14.4,
+         0,
+         0
+        ],
+        "spine": [
+         53.4,
+         0,
+         0
+        ],
+        "chest": [
+         4.2,
+         5.8,
+         2.7
+        ],
+        "neck": [
+         -16.8,
+         1.1,
+         -2.5
+        ],
+        "head": [
+         -35.7,
+         -1.3,
+         -7.2
+        ],
+        "shoulderL": [
+         -2.5,
+         -0.2,
+         0.4
+        ],
+        "upperArmL": [
+         -57.1,
+         69.8,
+         35.3
+        ],
+        "lowerArmL": [
+         -50.2,
+         -37.5,
+         8.9
+        ],
+        "handL": [
+         -22,
+         23.9,
+         -4.9
+        ],
+        "shoulderR": [
+         -4.3,
+         -23.1,
+         -1.8
+        ],
+        "upperArmR": [
+         -67.8,
+         -45.6,
+         -39.5
+        ],
+        "lowerArmR": [
+         -41.4,
+         31.2,
+         -9.9
+        ],
+        "handR": [
+         -5.5,
+         -35,
+         -17.6
+        ],
+        "upperLegL": [
+         -83.9,
+         -12.3,
+         16.1
+        ],
+        "lowerLegL": [
+         107.4,
+         -22.6,
+         -26.5
+        ],
+        "footL": [
+         12.2,
+         12,
+         12.9
+        ],
+        "toeL": [
+         10.9,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -80.2,
+         15.1,
+         -10.7
+        ],
+        "lowerLegR": [
+         88.9,
+         15.7,
+         25.9
+        ],
+        "footR": [
+         61.1,
+         -16.4,
+         -1.6
+        ],
+        "toeR": [
+         -13.4,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0186,
+        -0.007
+       ]
+      }
+     ]
+    },
+    "sepCm": 88.5,
+    "outL": 26.8,
+    "outR": 34.2,
+    "foldL": 119.9,
+    "foldR": 129.8
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         14.4,
+         0,
+         0
+        ],
+        "spine": [
+         53.4,
+         0,
+         0
+        ],
+        "chest": [
+         4.2,
+         5.8,
+         2.7
+        ],
+        "neck": [
+         -16.8,
+         1.1,
+         -2.5
+        ],
+        "head": [
+         -35.7,
+         -1.3,
+         -7.2
+        ],
+        "shoulderL": [
+         -2.5,
+         -0.2,
+         0.4
+        ],
+        "upperArmL": [
+         -57.1,
+         69.8,
+         -24.700000000000003
+        ],
+        "lowerArmL": [
+         -50.2,
+         -37.5,
+         8.9
+        ],
+        "handL": [
+         -22,
+         23.9,
+         -4.9
+        ],
+        "shoulderR": [
+         -4.3,
+         -23.1,
+         -1.8
+        ],
+        "upperArmR": [
+         -67.8,
+         -45.6,
+         20.5
+        ],
+        "lowerArmR": [
+         -41.4,
+         31.2,
+         -9.9
+        ],
+        "handR": [
+         -5.5,
+         -35,
+         -17.6
+        ],
+        "upperLegL": [
+         -83.9,
+         -12.3,
+         16.1
+        ],
+        "lowerLegL": [
+         107.4,
+         -22.6,
+         -26.5
+        ],
+        "footL": [
+         12.2,
+         12,
+         12.9
+        ],
+        "toeL": [
+         10.9,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -80.2,
+         15.1,
+         -10.7
+        ],
+        "lowerLegR": [
+         88.9,
+         15.7,
+         25.9
+        ],
+        "footR": [
+         61.1,
+         -16.4,
+         -1.6
+        ],
+        "toeR": [
+         -13.4,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0186,
+        -0.007
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         14.4,
+         0,
+         0
+        ],
+        "spine": [
+         53.4,
+         0,
+         0
+        ],
+        "chest": [
+         4.2,
+         5.8,
+         2.7
+        ],
+        "neck": [
+         -16.8,
+         1.1,
+         -2.5
+        ],
+        "head": [
+         -35.7,
+         -1.3,
+         -7.2
+        ],
+        "shoulderL": [
+         -2.5,
+         -0.2,
+         0.4
+        ],
+        "upperArmL": [
+         -57.1,
+         69.8,
+         -24.700000000000003
+        ],
+        "lowerArmL": [
+         -50.2,
+         -37.5,
+         8.9
+        ],
+        "handL": [
+         -22,
+         23.9,
+         -4.9
+        ],
+        "shoulderR": [
+         -4.3,
+         -23.1,
+         -1.8
+        ],
+        "upperArmR": [
+         -67.8,
+         -45.6,
+         20.5
+        ],
+        "lowerArmR": [
+         -41.4,
+         31.2,
+         -9.9
+        ],
+        "handR": [
+         -5.5,
+         -35,
+         -17.6
+        ],
+        "upperLegL": [
+         -83.9,
+         -12.3,
+         16.1
+        ],
+        "lowerLegL": [
+         107.4,
+         -22.6,
+         -26.5
+        ],
+        "footL": [
+         12.2,
+         12,
+         12.9
+        ],
+        "toeL": [
+         10.9,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -80.2,
+         15.1,
+         -10.7
+        ],
+        "lowerLegR": [
+         88.9,
+         15.7,
+         25.9
+        ],
+        "footR": [
+         61.1,
+         -16.4,
+         -1.6
+        ],
+        "toeR": [
+         -13.4,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0186,
+        -0.007
+       ]
+      }
+     ]
+    },
+    "dL": -60,
+    "dR": -60,
+    "sepCm": 89,
+    "outL": 26.1,
+    "outR": 35.3,
+    "foldL": 119.9,
+    "foldR": 129.8
+   },
+   "alsoIn": [
+    "SlyCooper_Anims19.gltf/Falling",
+    "SlyCooper_Anims14.gltf/Falling"
+   ]
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "LedgeGrab Idle",
+   "dur": 1,
+   "verdict": "CANDIDATE",
+   "standing": true,
+   "fp": "26|9|4|23|13|8",
+   "ref": {
+    "sepCm": 51.1,
+    "outL": 17.3,
+    "outR": 8.9,
+    "abdL": 92.2,
+    "abdR": 55.8,
+    "foldL": 113.7,
+    "foldR": 66.9
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         -9.4,
+         0,
+         0
+        ],
+        "spine": [
+         9,
+         0,
+         0
+        ],
+        "chest": [
+         1.9,
+         0.1,
+         -0.3
+        ],
+        "neck": [
+         -9.5,
+         -0.1,
+         0
+        ],
+        "head": [
+         -22.9,
+         -1,
+         0
+        ],
+        "shoulderL": [
+         9.4,
+         -11.4,
+         34.5
+        ],
+        "upperArmL": [
+         -56,
+         -5.2,
+         16.9
+        ],
+        "lowerArmL": [
+         -42.3,
+         -31.9,
+         9.9
+        ],
+        "handL": [
+         -8.1,
+         3.1,
+         12.1
+        ],
+        "shoulderR": [
+         7.7,
+         -15.6,
+         -36.2
+        ],
+        "upperArmR": [
+         -41.6,
+         4.5,
+         17
+        ],
+        "lowerArmR": [
+         -94.2,
+         56.5,
+         9.9
+        ],
+        "handR": [
+         77.2,
+         -57.3,
+         114.4
+        ],
+        "upperLegL": [
+         -29.7,
+         -5.6,
+         7.9
+        ],
+        "lowerLegL": [
+         48.1,
+         -3.2,
+         -17
+        ],
+        "footL": [
+         -5.2,
+         -3.1,
+         -9.1
+        ],
+        "toeL": [
+         -55.6,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -45.1,
+         5.6,
+         -15.3
+        ],
+        "lowerLegR": [
+         71.1,
+         9.5,
+         23.1
+        ],
+        "footR": [
+         -11,
+         8,
+         -6.1
+        ],
+        "toeR": [
+         -55.6,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0182,
+        -0.1344
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         -9.4,
+         0,
+         0
+        ],
+        "spine": [
+         9,
+         0,
+         0
+        ],
+        "chest": [
+         1.9,
+         0.1,
+         -0.3
+        ],
+        "neck": [
+         -9.5,
+         -0.1,
+         0
+        ],
+        "head": [
+         -22.9,
+         -1,
+         0
+        ],
+        "shoulderL": [
+         9.4,
+         -11.4,
+         34.5
+        ],
+        "upperArmL": [
+         -56,
+         -5.2,
+         16.9
+        ],
+        "lowerArmL": [
+         -42.3,
+         -31.9,
+         9.9
+        ],
+        "handL": [
+         -8.1,
+         3.1,
+         12.1
+        ],
+        "shoulderR": [
+         7.7,
+         -15.6,
+         -36.2
+        ],
+        "upperArmR": [
+         -41.6,
+         4.5,
+         17
+        ],
+        "lowerArmR": [
+         -94.2,
+         56.5,
+         9.9
+        ],
+        "handR": [
+         77.2,
+         -57.3,
+         114.4
+        ],
+        "upperLegL": [
+         -29.7,
+         -5.6,
+         7.9
+        ],
+        "lowerLegL": [
+         48.1,
+         -3.2,
+         -17
+        ],
+        "footL": [
+         -5.2,
+         -3.1,
+         -9.1
+        ],
+        "toeL": [
+         -55.6,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -45.1,
+         5.6,
+         -15.3
+        ],
+        "lowerLegR": [
+         71.1,
+         9.5,
+         23.1
+        ],
+        "footR": [
+         -11,
+         8,
+         -6.1
+        ],
+        "toeR": [
+         -55.6,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0182,
+        -0.1344
+       ]
+      }
+     ]
+    },
+    "sepCm": 67.5,
+    "outL": 23.9,
+    "outR": 17.5,
+    "foldL": 128.7,
+    "foldR": 84.3
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         -9.4,
+         0,
+         0
+        ],
+        "spine": [
+         9,
+         0,
+         0
+        ],
+        "chest": [
+         1.9,
+         0.1,
+         -0.3
+        ],
+        "neck": [
+         -9.5,
+         -0.1,
+         0
+        ],
+        "head": [
+         -22.9,
+         -1,
+         0
+        ],
+        "shoulderL": [
+         9.4,
+         -11.4,
+         34.5
+        ],
+        "upperArmL": [
+         -56,
+         -5.2,
+         -43.1
+        ],
+        "lowerArmL": [
+         -42.3,
+         -31.9,
+         9.9
+        ],
+        "handL": [
+         -8.1,
+         3.1,
+         12.1
+        ],
+        "shoulderR": [
+         7.7,
+         -15.6,
+         -36.2
+        ],
+        "upperArmR": [
+         -41.6,
+         4.5,
+         77
+        ],
+        "lowerArmR": [
+         -94.2,
+         56.5,
+         9.9
+        ],
+        "handR": [
+         77.2,
+         -57.3,
+         114.4
+        ],
+        "upperLegL": [
+         -29.7,
+         -5.6,
+         7.9
+        ],
+        "lowerLegL": [
+         48.1,
+         -3.2,
+         -17
+        ],
+        "footL": [
+         -5.2,
+         -3.1,
+         -9.1
+        ],
+        "toeL": [
+         -55.6,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -45.1,
+         5.6,
+         -15.3
+        ],
+        "lowerLegR": [
+         71.1,
+         9.5,
+         23.1
+        ],
+        "footR": [
+         -11,
+         8,
+         -6.1
+        ],
+        "toeR": [
+         -55.6,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0182,
+        -0.1344
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         -9.4,
+         0,
+         0
+        ],
+        "spine": [
+         9,
+         0,
+         0
+        ],
+        "chest": [
+         1.9,
+         0.1,
+         -0.3
+        ],
+        "neck": [
+         -9.5,
+         -0.1,
+         0
+        ],
+        "head": [
+         -22.9,
+         -1,
+         0
+        ],
+        "shoulderL": [
+         9.4,
+         -11.4,
+         34.5
+        ],
+        "upperArmL": [
+         -56,
+         -5.2,
+         -43.1
+        ],
+        "lowerArmL": [
+         -42.3,
+         -31.9,
+         9.9
+        ],
+        "handL": [
+         -8.1,
+         3.1,
+         12.1
+        ],
+        "shoulderR": [
+         7.7,
+         -15.6,
+         -36.2
+        ],
+        "upperArmR": [
+         -41.6,
+         4.5,
+         77
+        ],
+        "lowerArmR": [
+         -94.2,
+         56.5,
+         9.9
+        ],
+        "handR": [
+         77.2,
+         -57.3,
+         114.4
+        ],
+        "upperLegL": [
+         -29.7,
+         -5.6,
+         7.9
+        ],
+        "lowerLegL": [
+         48.1,
+         -3.2,
+         -17
+        ],
+        "footL": [
+         -5.2,
+         -3.1,
+         -9.1
+        ],
+        "toeL": [
+         -55.6,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -45.1,
+         5.6,
+         -15.3
+        ],
+        "lowerLegR": [
+         71.1,
+         9.5,
+         23.1
+        ],
+        "footR": [
+         -11,
+         8,
+         -6.1
+        ],
+        "toeR": [
+         -55.6,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0182,
+        -0.1344
+       ]
+      }
+     ]
+    },
+    "dL": -60,
+    "dR": -60,
+    "sepCm": 44,
+    "outL": 9.5,
+    "outR": 8.3,
+    "foldL": 128.7,
+    "foldR": 84.3
+   },
+   "alsoIn": []
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "PoleClimbIdle",
+   "dur": 0.67,
+   "verdict": "static, not standing (feet split)",
+   "standing": false,
+   "fp": "8|-3|-4|15|15|6",
+   "ref": {
+    "sepCm": 15.3,
+    "outL": -5.2,
+    "outR": -7.7,
+    "abdL": 23.8,
+    "abdR": 52.9,
+    "foldL": 74.9,
+    "foldR": 72.8
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         1.9,
+         0,
+         0
+        ],
+        "spine": [
+         -16.1,
+         0,
+         0
+        ],
+        "chest": [
+         17.9,
+         0,
+         -0.3
+        ],
+        "neck": [
+         -3.3,
+         0.6,
+         -2.3
+        ],
+        "head": [
+         -39.7,
+         -2.4,
+         1
+        ],
+        "shoulderL": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmL": [
+         6,
+         -51.6,
+         2.4
+        ],
+        "lowerArmL": [
+         -82.5,
+         -53.4,
+         -3.3
+        ],
+        "handL": [
+         -15.2,
+         47.4,
+         0.2
+        ],
+        "shoulderR": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmR": [
+         -46.9,
+         55.9,
+         2
+        ],
+        "lowerArmR": [
+         -85.5,
+         54.3,
+         4.9
+        ],
+        "handR": [
+         67.6,
+         -80.5,
+         71.5
+        ],
+        "upperLegL": [
+         -65.8,
+         0.8,
+         16.1
+        ],
+        "lowerLegL": [
+         81.9,
+         -13.2,
+         -25
+        ],
+        "footL": [
+         12.9,
+         -5.1,
+         1.8
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -94,
+         8.4,
+         -13
+        ],
+        "lowerLegR": [
+         100.6,
+         20.1,
+         26.6
+        ],
+        "footR": [
+         29.4,
+         -7.3,
+         -3.4
+        ],
+        "toeR": [
+         -0.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0069,
+        -0.0223
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         1.9,
+         0,
+         0
+        ],
+        "spine": [
+         -16.1,
+         0,
+         0
+        ],
+        "chest": [
+         17.9,
+         0,
+         -0.3
+        ],
+        "neck": [
+         -3.3,
+         0.6,
+         -2.3
+        ],
+        "head": [
+         -39.7,
+         -2.4,
+         1
+        ],
+        "shoulderL": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmL": [
+         6,
+         -51.6,
+         2.4
+        ],
+        "lowerArmL": [
+         -82.5,
+         -53.4,
+         -3.3
+        ],
+        "handL": [
+         -15.2,
+         47.4,
+         0.2
+        ],
+        "shoulderR": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmR": [
+         -46.9,
+         55.9,
+         2
+        ],
+        "lowerArmR": [
+         -85.5,
+         54.3,
+         4.9
+        ],
+        "handR": [
+         67.6,
+         -80.5,
+         71.5
+        ],
+        "upperLegL": [
+         -65.8,
+         0.8,
+         16.1
+        ],
+        "lowerLegL": [
+         81.9,
+         -13.2,
+         -25
+        ],
+        "footL": [
+         12.9,
+         -5.1,
+         1.8
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -94,
+         8.4,
+         -13
+        ],
+        "lowerLegR": [
+         100.6,
+         20.1,
+         26.6
+        ],
+        "footR": [
+         29.4,
+         -7.3,
+         -3.4
+        ],
+        "toeR": [
+         -0.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0069,
+        -0.0223
+       ]
+      }
+     ]
+    },
+    "sepCm": 30.3,
+    "outL": 2.6,
+    "outR": -0.4,
+    "foldL": 91.8,
+    "foldR": 89.8
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         1.9,
+         0,
+         0
+        ],
+        "spine": [
+         -16.1,
+         0,
+         0
+        ],
+        "chest": [
+         17.9,
+         0,
+         -0.3
+        ],
+        "neck": [
+         -3.3,
+         0.6,
+         -2.3
+        ],
+        "head": [
+         -39.7,
+         -2.4,
+         1
+        ],
+        "shoulderL": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmL": [
+         6,
+         -51.6,
+         -43.08
+        ],
+        "lowerArmL": [
+         -82.5,
+         -53.4,
+         -3.3
+        ],
+        "handL": [
+         -15.2,
+         47.4,
+         0.2
+        ],
+        "shoulderR": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmR": [
+         -46.9,
+         55.9,
+         47.06
+        ],
+        "lowerArmR": [
+         -85.5,
+         54.3,
+         4.9
+        ],
+        "handR": [
+         67.6,
+         -80.5,
+         71.5
+        ],
+        "upperLegL": [
+         -65.8,
+         0.8,
+         16.1
+        ],
+        "lowerLegL": [
+         81.9,
+         -13.2,
+         -25
+        ],
+        "footL": [
+         12.9,
+         -5.1,
+         1.8
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -94,
+         8.4,
+         -13
+        ],
+        "lowerLegR": [
+         100.6,
+         20.1,
+         26.6
+        ],
+        "footR": [
+         29.4,
+         -7.3,
+         -3.4
+        ],
+        "toeR": [
+         -0.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0069,
+        -0.0223
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         1.9,
+         0,
+         0
+        ],
+        "spine": [
+         -16.1,
+         0,
+         0
+        ],
+        "chest": [
+         17.9,
+         0,
+         -0.3
+        ],
+        "neck": [
+         -3.3,
+         0.6,
+         -2.3
+        ],
+        "head": [
+         -39.7,
+         -2.4,
+         1
+        ],
+        "shoulderL": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmL": [
+         6,
+         -51.6,
+         -43.08
+        ],
+        "lowerArmL": [
+         -82.5,
+         -53.4,
+         -3.3
+        ],
+        "handL": [
+         -15.2,
+         47.4,
+         0.2
+        ],
+        "shoulderR": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmR": [
+         -46.9,
+         55.9,
+         47.06
+        ],
+        "lowerArmR": [
+         -85.5,
+         54.3,
+         4.9
+        ],
+        "handR": [
+         67.6,
+         -80.5,
+         71.5
+        ],
+        "upperLegL": [
+         -65.8,
+         0.8,
+         16.1
+        ],
+        "lowerLegL": [
+         81.9,
+         -13.2,
+         -25
+        ],
+        "footL": [
+         12.9,
+         -5.1,
+         1.8
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -94,
+         8.4,
+         -13
+        ],
+        "lowerLegR": [
+         100.6,
+         20.1,
+         26.6
+        ],
+        "footR": [
+         29.4,
+         -7.3,
+         -3.4
+        ],
+        "toeR": [
+         -0.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0069,
+        -0.0223
+       ]
+      }
+     ]
+    },
+    "dL": -45.48,
+    "dR": -45.06,
+    "sepCm": 15,
+    "outL": -5.2,
+    "outR": -7.8,
+    "foldL": 91.8,
+    "foldR": 89.8
+   },
+   "alsoIn": []
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "RailrunStand",
+   "dur": 4,
+   "verdict": "static, not standing (hips low)",
+   "standing": false,
+   "fp": "16|-11|15|32|31|3",
+   "ref": {
+    "sepCm": 32.9,
+    "outL": -21.2,
+    "outR": 29.3,
+    "abdL": -32.6,
+    "abdR": 25.7,
+    "foldL": 160.2,
+    "foldR": 156.8
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         39.1,
+         34.6,
+         -59.9
+        ],
+        "spine": [
+         33.3,
+         -19.7,
+         39
+        ],
+        "chest": [
+         30.9,
+         9.9,
+         0.2
+        ],
+        "neck": [
+         1.7,
+         -0.7,
+         3.6
+        ],
+        "head": [
+         -52.5,
+         -11.6,
+         15.9
+        ],
+        "shoulderL": [
+         -23.4,
+         -16.7,
+         -25.8
+        ],
+        "upperArmL": [
+         -39.9,
+         -39.5,
+         -10.6
+        ],
+        "lowerArmL": [
+         -7,
+         -4.5,
+         3.1
+        ],
+        "handL": [
+         9.6,
+         12.9,
+         58.4
+        ],
+        "shoulderR": [
+         16.7,
+         -16.2,
+         0.3
+        ],
+        "upperArmR": [
+         -57.5,
+         -32.6,
+         13.5
+        ],
+        "lowerArmR": [
+         -9.6,
+         6.4,
+         -4.2
+        ],
+        "handR": [
+         14.9,
+         -36.1,
+         26.2
+        ],
+        "upperLegL": [
+         -110.2,
+         -36,
+         29.5
+        ],
+        "lowerLegL": [
+         132.8,
+         -31.1,
+         -23.7
+        ],
+        "footL": [
+         -42.5,
+         10.2,
+         17.5
+        ],
+        "toeL": [
+         -7.9,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -104.6,
+         -34.9,
+         -30.5
+        ],
+        "lowerLegR": [
+         4.9,
+         -0.3,
+         1.8
+        ],
+        "footR": [
+         69.3,
+         -16.7,
+         5.8
+        ],
+        "toeR": [
+         -2.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        -0.039,
+        -0.1512,
+        -0.0405
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         39.1,
+         34.6,
+         -59.9
+        ],
+        "spine": [
+         33.3,
+         -19.7,
+         39
+        ],
+        "chest": [
+         30.9,
+         9.9,
+         0.2
+        ],
+        "neck": [
+         1.7,
+         -0.7,
+         3.6
+        ],
+        "head": [
+         -52.5,
+         -11.6,
+         15.9
+        ],
+        "shoulderL": [
+         -23.4,
+         -16.7,
+         -25.8
+        ],
+        "upperArmL": [
+         -39.9,
+         -39.5,
+         -10.6
+        ],
+        "lowerArmL": [
+         -7,
+         -4.5,
+         3.1
+        ],
+        "handL": [
+         9.6,
+         12.9,
+         58.4
+        ],
+        "shoulderR": [
+         16.7,
+         -16.2,
+         0.3
+        ],
+        "upperArmR": [
+         -57.5,
+         -32.6,
+         13.5
+        ],
+        "lowerArmR": [
+         -9.6,
+         6.4,
+         -4.2
+        ],
+        "handR": [
+         14.9,
+         -36.1,
+         26.2
+        ],
+        "upperLegL": [
+         -110.2,
+         -36,
+         29.5
+        ],
+        "lowerLegL": [
+         132.8,
+         -31.1,
+         -23.7
+        ],
+        "footL": [
+         -42.5,
+         10.2,
+         17.5
+        ],
+        "toeL": [
+         -7.9,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -104.6,
+         -34.9,
+         -30.5
+        ],
+        "lowerLegR": [
+         4.9,
+         -0.3,
+         1.8
+        ],
+        "footR": [
+         69.3,
+         -16.7,
+         5.8
+        ],
+        "toeR": [
+         -2.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        -0.039,
+        -0.1512,
+        -0.0405
+       ]
+      }
+     ]
+    },
+    "sepCm": 45.3,
+    "outL": -11.6,
+    "outR": 33.3,
+    "foldL": 170.7,
+    "foldR": 168.4
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         39.1,
+         34.6,
+         -59.9
+        ],
+        "spine": [
+         33.3,
+         -19.7,
+         39
+        ],
+        "chest": [
+         30.9,
+         9.9,
+         0.2
+        ],
+        "neck": [
+         1.7,
+         -0.7,
+         3.6
+        ],
+        "head": [
+         -52.5,
+         -11.6,
+         15.9
+        ],
+        "shoulderL": [
+         -23.4,
+         -16.7,
+         -25.8
+        ],
+        "upperArmL": [
+         -39.9,
+         -39.5,
+         -25.42
+        ],
+        "lowerArmL": [
+         -7,
+         -4.5,
+         3.1
+        ],
+        "handL": [
+         9.6,
+         12.9,
+         58.4
+        ],
+        "shoulderR": [
+         16.7,
+         -16.2,
+         0.3
+        ],
+        "upperArmR": [
+         -57.5,
+         -32.6,
+         -46.5
+        ],
+        "lowerArmR": [
+         -9.6,
+         6.4,
+         -4.2
+        ],
+        "handR": [
+         14.9,
+         -36.1,
+         26.2
+        ],
+        "upperLegL": [
+         -110.2,
+         -36,
+         29.5
+        ],
+        "lowerLegL": [
+         132.8,
+         -31.1,
+         -23.7
+        ],
+        "footL": [
+         -42.5,
+         10.2,
+         17.5
+        ],
+        "toeL": [
+         -7.9,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -104.6,
+         -34.9,
+         -30.5
+        ],
+        "lowerLegR": [
+         4.9,
+         -0.3,
+         1.8
+        ],
+        "footR": [
+         69.3,
+         -16.7,
+         5.8
+        ],
+        "toeR": [
+         -2.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        -0.039,
+        -0.1512,
+        -0.0405
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         39.1,
+         34.6,
+         -59.9
+        ],
+        "spine": [
+         33.3,
+         -19.7,
+         39
+        ],
+        "chest": [
+         30.9,
+         9.9,
+         0.2
+        ],
+        "neck": [
+         1.7,
+         -0.7,
+         3.6
+        ],
+        "head": [
+         -52.5,
+         -11.6,
+         15.9
+        ],
+        "shoulderL": [
+         -23.4,
+         -16.7,
+         -25.8
+        ],
+        "upperArmL": [
+         -39.9,
+         -39.5,
+         -25.42
+        ],
+        "lowerArmL": [
+         -7,
+         -4.5,
+         3.1
+        ],
+        "handL": [
+         9.6,
+         12.9,
+         58.4
+        ],
+        "shoulderR": [
+         16.7,
+         -16.2,
+         0.3
+        ],
+        "upperArmR": [
+         -57.5,
+         -32.6,
+         -46.5
+        ],
+        "lowerArmR": [
+         -9.6,
+         6.4,
+         -4.2
+        ],
+        "handR": [
+         14.9,
+         -36.1,
+         26.2
+        ],
+        "upperLegL": [
+         -110.2,
+         -36,
+         29.5
+        ],
+        "lowerLegL": [
+         132.8,
+         -31.1,
+         -23.7
+        ],
+        "footL": [
+         -42.5,
+         10.2,
+         17.5
+        ],
+        "toeL": [
+         -7.9,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -104.6,
+         -34.9,
+         -30.5
+        ],
+        "lowerLegR": [
+         4.9,
+         -0.3,
+         1.8
+        ],
+        "footR": [
+         69.3,
+         -16.7,
+         5.8
+        ],
+        "toeR": [
+         -2.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        -0.039,
+        -0.1512,
+        -0.0405
+       ]
+      }
+     ]
+    },
+    "dL": -14.82,
+    "dR": 60,
+    "sepCm": 30.3,
+    "outL": -21.3,
+    "outR": 28.1,
+    "foldL": 170.7,
+    "foldR": 168.4
+   },
+   "alsoIn": []
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "SpireJumpIdle",
+   "dur": 4,
+   "verdict": "static, not standing (hips low)",
+   "standing": false,
+   "fp": "30|5|11|8|18|3",
+   "ref": {
+    "sepCm": 60,
+    "outL": 10.4,
+    "outR": 21.3,
+    "abdL": 29.2,
+    "abdR": 14.2,
+    "foldL": 39.8,
+    "foldR": 91.8
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         14.4,
+         0,
+         0
+        ],
+        "spine": [
+         25.8,
+         0,
+         0
+        ],
+        "chest": [
+         28.8,
+         0.1,
+         -4.1
+        ],
+        "neck": [
+         -19.4,
+         1.6,
+         -3
+        ],
+        "head": [
+         -38.3,
+         -7.4,
+         0
+        ],
+        "shoulderL": [
+         0.7,
+         -0.2,
+         1.8
+        ],
+        "upperArmL": [
+         -10.4,
+         12.8,
+         -1.6
+        ],
+        "lowerArmL": [
+         -142.2,
+         -59.4,
+         -40.9
+        ],
+        "handL": [
+         16.7,
+         -0.1,
+         8.4
+        ],
+        "shoulderR": [
+         0.7,
+         -0.2,
+         1.8
+        ],
+        "upperArmR": [
+         -8.6,
+         -20.7,
+         16.1
+        ],
+        "lowerArmR": [
+         -62.4,
+         44.9,
+         -5.6
+        ],
+        "handR": [
+         -38.4,
+         -38.2,
+         -19
+        ],
+        "upperLegL": [
+         -100.4,
+         -9.1,
+         28.8
+        ],
+        "lowerLegL": [
+         130.5,
+         -30.4,
+         -24.1
+        ],
+        "footL": [
+         23.1,
+         28.2,
+         -18.4
+        ],
+        "toeL": [
+         -55.1,
+         0,
+         0.1
+        ],
+        "upperLegR": [
+         -100.6,
+         10.9,
+         -28.8
+        ],
+        "lowerLegR": [
+         130.7,
+         30.5,
+         24.1
+        ],
+        "footR": [
+         24.2,
+         -26.9,
+         19.5
+        ],
+        "toeR": [
+         -55.1,
+         0,
+         -0.1
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0.0009,
+        -0.1397,
+        -0.011
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         14.4,
+         0,
+         0
+        ],
+        "spine": [
+         25.8,
+         0,
+         0
+        ],
+        "chest": [
+         28.8,
+         0.1,
+         -4.1
+        ],
+        "neck": [
+         -19.4,
+         1.6,
+         -3
+        ],
+        "head": [
+         -38.3,
+         -7.4,
+         0
+        ],
+        "shoulderL": [
+         0.7,
+         -0.2,
+         1.8
+        ],
+        "upperArmL": [
+         -10.4,
+         12.8,
+         -1.6
+        ],
+        "lowerArmL": [
+         -142.2,
+         -59.4,
+         -40.9
+        ],
+        "handL": [
+         16.7,
+         -0.1,
+         8.4
+        ],
+        "shoulderR": [
+         0.7,
+         -0.2,
+         1.8
+        ],
+        "upperArmR": [
+         -8.6,
+         -20.7,
+         16.1
+        ],
+        "lowerArmR": [
+         -62.4,
+         44.9,
+         -5.6
+        ],
+        "handR": [
+         -38.4,
+         -38.2,
+         -19
+        ],
+        "upperLegL": [
+         -100.4,
+         -9.1,
+         28.8
+        ],
+        "lowerLegL": [
+         130.5,
+         -30.4,
+         -24.1
+        ],
+        "footL": [
+         23.1,
+         28.2,
+         -18.4
+        ],
+        "toeL": [
+         -55.1,
+         0,
+         0.1
+        ],
+        "upperLegR": [
+         -100.6,
+         10.9,
+         -28.8
+        ],
+        "lowerLegR": [
+         130.7,
+         30.5,
+         24.1
+        ],
+        "footR": [
+         24.2,
+         -26.9,
+         19.5
+        ],
+        "toeR": [
+         -55.1,
+         0,
+         -0.1
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0.0009,
+        -0.1397,
+        -0.011
+       ]
+      }
+     ]
+    },
+    "sepCm": 80.7,
+    "outL": 21.7,
+    "outR": 31,
+    "foldL": 59.5,
+    "foldR": 107.7
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         14.4,
+         0,
+         0
+        ],
+        "spine": [
+         25.8,
+         0,
+         0
+        ],
+        "chest": [
+         28.8,
+         0.1,
+         -4.1
+        ],
+        "neck": [
+         -19.4,
+         1.6,
+         -3
+        ],
+        "head": [
+         -38.3,
+         -7.4,
+         0
+        ],
+        "shoulderL": [
+         0.7,
+         -0.2,
+         1.8
+        ],
+        "upperArmL": [
+         -10.4,
+         12.8,
+         58.4
+        ],
+        "lowerArmL": [
+         -142.2,
+         -59.4,
+         -40.9
+        ],
+        "handL": [
+         16.7,
+         -0.1,
+         8.4
+        ],
+        "shoulderR": [
+         0.7,
+         -0.2,
+         1.8
+        ],
+        "upperArmR": [
+         -8.6,
+         -20.7,
+         39.75
+        ],
+        "lowerArmR": [
+         -62.4,
+         44.9,
+         -5.6
+        ],
+        "handR": [
+         -38.4,
+         -38.2,
+         -19
+        ],
+        "upperLegL": [
+         -100.4,
+         -9.1,
+         28.8
+        ],
+        "lowerLegL": [
+         130.5,
+         -30.4,
+         -24.1
+        ],
+        "footL": [
+         23.1,
+         28.2,
+         -18.4
+        ],
+        "toeL": [
+         -55.1,
+         0,
+         0.1
+        ],
+        "upperLegR": [
+         -100.6,
+         10.9,
+         -28.8
+        ],
+        "lowerLegR": [
+         130.7,
+         30.5,
+         24.1
+        ],
+        "footR": [
+         24.2,
+         -26.9,
+         19.5
+        ],
+        "toeR": [
+         -55.1,
+         0,
+         -0.1
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0.0009,
+        -0.1397,
+        -0.011
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         14.4,
+         0,
+         0
+        ],
+        "spine": [
+         25.8,
+         0,
+         0
+        ],
+        "chest": [
+         28.8,
+         0.1,
+         -4.1
+        ],
+        "neck": [
+         -19.4,
+         1.6,
+         -3
+        ],
+        "head": [
+         -38.3,
+         -7.4,
+         0
+        ],
+        "shoulderL": [
+         0.7,
+         -0.2,
+         1.8
+        ],
+        "upperArmL": [
+         -10.4,
+         12.8,
+         58.4
+        ],
+        "lowerArmL": [
+         -142.2,
+         -59.4,
+         -40.9
+        ],
+        "handL": [
+         16.7,
+         -0.1,
+         8.4
+        ],
+        "shoulderR": [
+         0.7,
+         -0.2,
+         1.8
+        ],
+        "upperArmR": [
+         -8.6,
+         -20.7,
+         39.75
+        ],
+        "lowerArmR": [
+         -62.4,
+         44.9,
+         -5.6
+        ],
+        "handR": [
+         -38.4,
+         -38.2,
+         -19
+        ],
+        "upperLegL": [
+         -100.4,
+         -9.1,
+         28.8
+        ],
+        "lowerLegL": [
+         130.5,
+         -30.4,
+         -24.1
+        ],
+        "footL": [
+         23.1,
+         28.2,
+         -18.4
+        ],
+        "toeL": [
+         -55.1,
+         0,
+         0.1
+        ],
+        "upperLegR": [
+         -100.6,
+         10.9,
+         -28.8
+        ],
+        "lowerLegR": [
+         130.7,
+         30.5,
+         24.1
+        ],
+        "footR": [
+         24.2,
+         -26.9,
+         19.5
+        ],
+        "toeR": [
+         -55.1,
+         0,
+         -0.1
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0.0009,
+        -0.1397,
+        -0.011
+       ]
+      }
+     ]
+    },
+    "dL": 60,
+    "dR": -23.65,
+    "sepCm": 60.4,
+    "outL": 11.2,
+    "outR": 21.2,
+    "foldL": 59.5,
+    "foldR": 107.7
+   },
+   "alsoIn": [
+    "SlyCooper_Anims19.gltf/SpireJumpIdle"
+   ]
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "Standupright",
+   "dur": 4,
+   "verdict": "CANDIDATE",
+   "standing": true,
+   "fp": "24|5|5|28|28|10",
+   "ref": {
+    "sepCm": 47.6,
+    "outL": 10.8,
+    "outR": 9,
+    "abdL": 4,
+    "abdR": -1.7,
+    "foldL": 140.6,
+    "foldR": 140.2
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         0,
+         -0.3,
+         -5.7
+        ],
+        "spine": [
+         0,
+         -0.3,
+         -7.2
+        ],
+        "chest": [
+         -13.5,
+         -3,
+         14
+        ],
+        "neck": [
+         3.2,
+         0.2,
+         -0.6
+        ],
+        "head": [
+         11.1,
+         -0.2,
+         -0.5
+        ],
+        "shoulderL": [
+         15.2,
+         -1.7,
+         -16.4
+        ],
+        "upperArmL": [
+         1.4,
+         12.6,
+         -10.7
+        ],
+        "lowerArmL": [
+         -21.7,
+         -15.6,
+         8
+        ],
+        "handL": [
+         21.5,
+         10.5,
+         -20.1
+        ],
+        "shoulderR": [
+         14.3,
+         1.2,
+         13.5
+        ],
+        "upperArmR": [
+         2.1,
+         -23.3,
+         15.5
+        ],
+        "lowerArmR": [
+         -22,
+         15.8,
+         -8.1
+        ],
+        "handR": [
+         29.9,
+         -0.3,
+         -0.3
+        ],
+        "upperLegL": [
+         -6.3,
+         12.3,
+         -3.1
+        ],
+        "lowerLegL": [
+         6.3,
+         0.4,
+         -2.3
+        ],
+        "footL": [
+         -3.7,
+         14.9,
+         11.2
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -27.6,
+         -13.5,
+         -1.4
+        ],
+        "lowerLegR": [
+         42.4,
+         2.1,
+         15.2
+        ],
+        "footR": [
+         15.9,
+         -10.1,
+         -10.1
+        ],
+        "toeR": [
+         -31.9,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.001,
+        -0.0216
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         0,
+         -0.3,
+         -5.7
+        ],
+        "spine": [
+         0,
+         -0.3,
+         -7.2
+        ],
+        "chest": [
+         -13.5,
+         -3,
+         14
+        ],
+        "neck": [
+         3.2,
+         0.2,
+         -0.6
+        ],
+        "head": [
+         11.1,
+         -0.2,
+         -0.5
+        ],
+        "shoulderL": [
+         15.2,
+         -1.7,
+         -16.4
+        ],
+        "upperArmL": [
+         1.4,
+         12.6,
+         -10.7
+        ],
+        "lowerArmL": [
+         -21.7,
+         -15.6,
+         8
+        ],
+        "handL": [
+         21.5,
+         10.5,
+         -20.1
+        ],
+        "shoulderR": [
+         14.3,
+         1.2,
+         13.5
+        ],
+        "upperArmR": [
+         2.1,
+         -23.3,
+         15.5
+        ],
+        "lowerArmR": [
+         -22,
+         15.8,
+         -8.1
+        ],
+        "handR": [
+         29.9,
+         -0.3,
+         -0.3
+        ],
+        "upperLegL": [
+         -6.3,
+         12.3,
+         -3.1
+        ],
+        "lowerLegL": [
+         6.3,
+         0.4,
+         -2.3
+        ],
+        "footL": [
+         -3.7,
+         14.9,
+         11.2
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -27.6,
+         -13.5,
+         -1.4
+        ],
+        "lowerLegR": [
+         42.4,
+         2.1,
+         15.2
+        ],
+        "footR": [
+         15.9,
+         -10.1,
+         -10.1
+        ],
+        "toeR": [
+         -31.9,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.001,
+        -0.0216
+       ]
+      }
+     ]
+    },
+    "sepCm": 66.3,
+    "outL": 21.3,
+    "outR": 18.4,
+    "foldL": 154.2,
+    "foldR": 153.8
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         0,
+         -0.3,
+         -5.7
+        ],
+        "spine": [
+         0,
+         -0.3,
+         -7.2
+        ],
+        "chest": [
+         -13.5,
+         -3,
+         14
+        ],
+        "neck": [
+         3.2,
+         0.2,
+         -0.6
+        ],
+        "head": [
+         11.1,
+         -0.2,
+         -0.5
+        ],
+        "shoulderL": [
+         15.2,
+         -1.7,
+         -16.4
+        ],
+        "upperArmL": [
+         1.4,
+         12.6,
+         -25.119999999999997
+        ],
+        "lowerArmL": [
+         -21.7,
+         -15.6,
+         8
+        ],
+        "handL": [
+         21.5,
+         10.5,
+         -20.1
+        ],
+        "shoulderR": [
+         14.3,
+         1.2,
+         13.5
+        ],
+        "upperArmR": [
+         2.1,
+         -23.3,
+         28.75
+        ],
+        "lowerArmR": [
+         -22,
+         15.8,
+         -8.1
+        ],
+        "handR": [
+         29.9,
+         -0.3,
+         -0.3
+        ],
+        "upperLegL": [
+         -6.3,
+         12.3,
+         -3.1
+        ],
+        "lowerLegL": [
+         6.3,
+         0.4,
+         -2.3
+        ],
+        "footL": [
+         -3.7,
+         14.9,
+         11.2
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -27.6,
+         -13.5,
+         -1.4
+        ],
+        "lowerLegR": [
+         42.4,
+         2.1,
+         15.2
+        ],
+        "footR": [
+         15.9,
+         -10.1,
+         -10.1
+        ],
+        "toeR": [
+         -31.9,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.001,
+        -0.0216
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         0,
+         -0.3,
+         -5.7
+        ],
+        "spine": [
+         0,
+         -0.3,
+         -7.2
+        ],
+        "chest": [
+         -13.5,
+         -3,
+         14
+        ],
+        "neck": [
+         3.2,
+         0.2,
+         -0.6
+        ],
+        "head": [
+         11.1,
+         -0.2,
+         -0.5
+        ],
+        "shoulderL": [
+         15.2,
+         -1.7,
+         -16.4
+        ],
+        "upperArmL": [
+         1.4,
+         12.6,
+         -25.119999999999997
+        ],
+        "lowerArmL": [
+         -21.7,
+         -15.6,
+         8
+        ],
+        "handL": [
+         21.5,
+         10.5,
+         -20.1
+        ],
+        "shoulderR": [
+         14.3,
+         1.2,
+         13.5
+        ],
+        "upperArmR": [
+         2.1,
+         -23.3,
+         28.75
+        ],
+        "lowerArmR": [
+         -22,
+         15.8,
+         -8.1
+        ],
+        "handR": [
+         29.9,
+         -0.3,
+         -0.3
+        ],
+        "upperLegL": [
+         -6.3,
+         12.3,
+         -3.1
+        ],
+        "lowerLegL": [
+         6.3,
+         0.4,
+         -2.3
+        ],
+        "footL": [
+         -3.7,
+         14.9,
+         11.2
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -27.6,
+         -13.5,
+         -1.4
+        ],
+        "lowerLegR": [
+         42.4,
+         2.1,
+         15.2
+        ],
+        "footR": [
+         15.9,
+         -10.1,
+         -10.1
+        ],
+        "toeR": [
+         -31.9,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.001,
+        -0.0216
+       ]
+      }
+     ]
+    },
+    "dL": -14.42,
+    "dR": -13.25,
+    "sepCm": 46.4,
+    "outL": 10.7,
+    "outR": 9,
+    "foldL": 154.2,
+    "foldR": 153.8
+   },
+   "alsoIn": [
+    "SlyCooper_Anims19.gltf/Standupright",
+    "SlyCooper_Anims14.gltf/UprightStand"
+   ]
+  },
+  {
+   "file": "SlyCooper_Anims27.gltf",
+   "name": "KeyAction.001",
+   "dur": 0,
+   "verdict": "CANDIDATE",
+   "standing": true,
+   "fp": "39|12|12|34|34|10",
+   "ref": {
+    "sepCm": 77.9,
+    "outL": 24.8,
+    "outR": 24.8,
+    "abdL": 30.4,
+    "abdR": 30.4,
+    "foldL": 169.2,
+    "foldR": 169.2
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         0,
+         0,
+         0
+        ],
+        "spine": [
+         0,
+         0,
+         0
+        ],
+        "chest": [
+         0,
+         0,
+         0
+        ],
+        "neck": [
+         0,
+         0,
+         0
+        ],
+        "head": [
+         0,
+         0,
+         0
+        ],
+        "shoulderL": [
+         0,
+         0,
+         0
+        ],
+        "upperArmL": [
+         0,
+         0,
+         0
+        ],
+        "lowerArmL": [
+         0,
+         0,
+         0
+        ],
+        "handL": [
+         0,
+         0,
+         0
+        ],
+        "shoulderR": [
+         0,
+         0,
+         0
+        ],
+        "upperArmR": [
+         0,
+         0,
+         0
+        ],
+        "lowerArmR": [
+         0,
+         0,
+         0
+        ],
+        "handR": [
+         0,
+         0,
+         0
+        ],
+        "upperLegL": [
+         0,
+         0,
+         0
+        ],
+        "lowerLegL": [
+         0,
+         0,
+         0
+        ],
+        "footL": [
+         0,
+         0,
+         0
+        ],
+        "toeL": [
+         0,
+         0,
+         0
+        ],
+        "upperLegR": [
+         0,
+         0,
+         0
+        ],
+        "lowerLegR": [
+         0,
+         0,
+         0
+        ],
+        "footR": [
+         0,
+         0,
+         0
+        ],
+        "toeR": [
+         0,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        0,
+        0
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         0,
+         0,
+         0
+        ],
+        "spine": [
+         0,
+         0,
+         0
+        ],
+        "chest": [
+         0,
+         0,
+         0
+        ],
+        "neck": [
+         0,
+         0,
+         0
+        ],
+        "head": [
+         0,
+         0,
+         0
+        ],
+        "shoulderL": [
+         0,
+         0,
+         0
+        ],
+        "upperArmL": [
+         0,
+         0,
+         0
+        ],
+        "lowerArmL": [
+         0,
+         0,
+         0
+        ],
+        "handL": [
+         0,
+         0,
+         0
+        ],
+        "shoulderR": [
+         0,
+         0,
+         0
+        ],
+        "upperArmR": [
+         0,
+         0,
+         0
+        ],
+        "lowerArmR": [
+         0,
+         0,
+         0
+        ],
+        "handR": [
+         0,
+         0,
+         0
+        ],
+        "upperLegL": [
+         0,
+         0,
+         0
+        ],
+        "lowerLegL": [
+         0,
+         0,
+         0
+        ],
+        "footL": [
+         0,
+         0,
+         0
+        ],
+        "toeL": [
+         0,
+         0,
+         0
+        ],
+        "upperLegR": [
+         0,
+         0,
+         0
+        ],
+        "lowerLegR": [
+         0,
+         0,
+         0
+        ],
+        "footR": [
+         0,
+         0,
+         0
+        ],
+        "toeR": [
+         0,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        0,
+        0
+       ]
+      }
+     ]
+    },
+    "sepCm": 96,
+    "outL": 34,
+    "outR": 34,
+    "foldL": 172,
+    "foldR": 172
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         0,
+         0,
+         0
+        ],
+        "spine": [
+         0,
+         0,
+         0
+        ],
+        "chest": [
+         0,
+         0,
+         0
+        ],
+        "neck": [
+         0,
+         0,
+         0
+        ],
+        "head": [
+         0,
+         0,
+         0
+        ],
+        "shoulderL": [
+         0,
+         0,
+         0
+        ],
+        "upperArmL": [
+         0,
+         0,
+         -14.52
+        ],
+        "lowerArmL": [
+         0,
+         0,
+         0
+        ],
+        "handL": [
+         0,
+         0,
+         0
+        ],
+        "shoulderR": [
+         0,
+         0,
+         0
+        ],
+        "upperArmR": [
+         0,
+         0,
+         14.52
+        ],
+        "lowerArmR": [
+         0,
+         0,
+         0
+        ],
+        "handR": [
+         0,
+         0,
+         0
+        ],
+        "upperLegL": [
+         0,
+         0,
+         0
+        ],
+        "lowerLegL": [
+         0,
+         0,
+         0
+        ],
+        "footL": [
+         0,
+         0,
+         0
+        ],
+        "toeL": [
+         0,
+         0,
+         0
+        ],
+        "upperLegR": [
+         0,
+         0,
+         0
+        ],
+        "lowerLegR": [
+         0,
+         0,
+         0
+        ],
+        "footR": [
+         0,
+         0,
+         0
+        ],
+        "toeR": [
+         0,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        0,
+        0
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         0,
+         0,
+         0
+        ],
+        "spine": [
+         0,
+         0,
+         0
+        ],
+        "chest": [
+         0,
+         0,
+         0
+        ],
+        "neck": [
+         0,
+         0,
+         0
+        ],
+        "head": [
+         0,
+         0,
+         0
+        ],
+        "shoulderL": [
+         0,
+         0,
+         0
+        ],
+        "upperArmL": [
+         0,
+         0,
+         -14.52
+        ],
+        "lowerArmL": [
+         0,
+         0,
+         0
+        ],
+        "handL": [
+         0,
+         0,
+         0
+        ],
+        "shoulderR": [
+         0,
+         0,
+         0
+        ],
+        "upperArmR": [
+         0,
+         0,
+         14.52
+        ],
+        "lowerArmR": [
+         0,
+         0,
+         0
+        ],
+        "handR": [
+         0,
+         0,
+         0
+        ],
+        "upperLegL": [
+         0,
+         0,
+         0
+        ],
+        "lowerLegL": [
+         0,
+         0,
+         0
+        ],
+        "footL": [
+         0,
+         0,
+         0
+        ],
+        "toeL": [
+         0,
+         0,
+         0
+        ],
+        "upperLegR": [
+         0,
+         0,
+         0
+        ],
+        "lowerLegR": [
+         0,
+         0,
+         0
+        ],
+        "footR": [
+         0,
+         0,
+         0
+        ],
+        "toeR": [
+         0,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        0,
+        0
+       ]
+      }
+     ]
+    },
+    "dL": -14.52,
+    "dR": -14.52,
+    "sepCm": 77.5,
+    "outL": 24.7,
+    "outR": 24.7,
+    "foldL": 172,
+    "foldR": 172
+   },
+   "alsoIn": [
+    "SlyCooper_Anims19.gltf/KeyAction.001",
+    "SlyCooper_Anims14.gltf/KeyAction.001"
+   ]
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "CaneSwing Idle",
+   "dur": 4,
+   "verdict": "static, not standing (feet split)",
+   "standing": false,
+   "fp": "14|4|-3|29|25|9",
+   "ref": {
+    "sepCm": 27.1,
+    "outL": 7.8,
+    "outR": -5.1,
+    "abdL": 8.3,
+    "abdR": 146.6,
+    "foldL": 145.5,
+    "foldR": 124.8
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         -15.8,
+         0,
+         0
+        ],
+        "spine": [
+         23.6,
+         0,
+         0
+        ],
+        "chest": [
+         -31.2,
+         10.2,
+         -5.8
+        ],
+        "neck": [
+         -6.4,
+         -2.5,
+         6.1
+        ],
+        "head": [
+         23.6,
+         -7.5,
+         4.8
+        ],
+        "shoulderL": [
+         14.7,
+         1.7,
+         -26.1
+        ],
+        "upperArmL": [
+         25,
+         -10.5,
+         12.7
+        ],
+        "lowerArmL": [
+         -18.1,
+         -13,
+         6.4
+        ],
+        "handL": [
+         0,
+         0,
+         0
+        ],
+        "shoulderR": [
+         2.5,
+         -13,
+         -32.4
+        ],
+        "upperArmR": [
+         -86.4,
+         32.5,
+         12
+        ],
+        "lowerArmR": [
+         -33.8,
+         25.5,
+         -8.6
+        ],
+        "handR": [
+         -14.6,
+         -80.8,
+         -17.8
+        ],
+        "upperLegL": [
+         -14.8,
+         -4.7,
+         9.8
+        ],
+        "lowerLegL": [
+         65.5,
+         -6.7,
+         -22.1
+        ],
+        "footL": [
+         26.9,
+         9.2,
+         6.6
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         15.5,
+         5.7,
+         -0.7
+        ],
+        "lowerLegR": [
+         18.4,
+         -0.8,
+         6.7
+        ],
+        "footR": [
+         54.2,
+         -10.3,
+         -1.2
+        ],
+        "toeR": [
+         -0.6,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.3269,
+        -0.0733
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         -15.8,
+         0,
+         0
+        ],
+        "spine": [
+         23.6,
+         0,
+         0
+        ],
+        "chest": [
+         -31.2,
+         10.2,
+         -5.8
+        ],
+        "neck": [
+         -6.4,
+         -2.5,
+         6.1
+        ],
+        "head": [
+         23.6,
+         -7.5,
+         4.8
+        ],
+        "shoulderL": [
+         14.7,
+         1.7,
+         -26.1
+        ],
+        "upperArmL": [
+         25,
+         -10.5,
+         12.7
+        ],
+        "lowerArmL": [
+         -18.1,
+         -13,
+         6.4
+        ],
+        "handL": [
+         0,
+         0,
+         0
+        ],
+        "shoulderR": [
+         2.5,
+         -13,
+         -32.4
+        ],
+        "upperArmR": [
+         -86.4,
+         32.5,
+         12
+        ],
+        "lowerArmR": [
+         -33.8,
+         25.5,
+         -8.6
+        ],
+        "handR": [
+         -14.6,
+         -80.8,
+         -17.8
+        ],
+        "upperLegL": [
+         -14.8,
+         -4.7,
+         9.8
+        ],
+        "lowerLegL": [
+         65.5,
+         -6.7,
+         -22.1
+        ],
+        "footL": [
+         26.9,
+         9.2,
+         6.6
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         15.5,
+         5.7,
+         -0.7
+        ],
+        "lowerLegR": [
+         18.4,
+         -0.8,
+         6.7
+        ],
+        "footR": [
+         54.2,
+         -10.3,
+         -1.2
+        ],
+        "toeR": [
+         -0.6,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.3269,
+        -0.0733
+       ]
+      }
+     ]
+    },
+    "sepCm": 41.6,
+    "outL": 18.6,
+    "outR": -1.3,
+    "foldL": 158.5,
+    "foldR": 139
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         -15.8,
+         0,
+         0
+        ],
+        "spine": [
+         23.6,
+         0,
+         0
+        ],
+        "chest": [
+         -31.2,
+         10.2,
+         -5.8
+        ],
+        "neck": [
+         -6.4,
+         -2.5,
+         6.1
+        ],
+        "head": [
+         23.6,
+         -7.5,
+         4.8
+        ],
+        "shoulderL": [
+         14.7,
+         1.7,
+         -26.1
+        ],
+        "upperArmL": [
+         25,
+         -10.5,
+         -2.120000000000001
+        ],
+        "lowerArmL": [
+         -18.1,
+         -13,
+         6.4
+        ],
+        "handL": [
+         0,
+         0,
+         0
+        ],
+        "shoulderR": [
+         2.5,
+         -13,
+         -32.4
+        ],
+        "upperArmR": [
+         -86.4,
+         32.5,
+         33.6
+        ],
+        "lowerArmR": [
+         -33.8,
+         25.5,
+         -8.6
+        ],
+        "handR": [
+         -14.6,
+         -80.8,
+         -17.8
+        ],
+        "upperLegL": [
+         -14.8,
+         -4.7,
+         9.8
+        ],
+        "lowerLegL": [
+         65.5,
+         -6.7,
+         -22.1
+        ],
+        "footL": [
+         26.9,
+         9.2,
+         6.6
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         15.5,
+         5.7,
+         -0.7
+        ],
+        "lowerLegR": [
+         18.4,
+         -0.8,
+         6.7
+        ],
+        "footR": [
+         54.2,
+         -10.3,
+         -1.2
+        ],
+        "toeR": [
+         -0.6,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.3269,
+        -0.0733
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         -15.8,
+         0,
+         0
+        ],
+        "spine": [
+         23.6,
+         0,
+         0
+        ],
+        "chest": [
+         -31.2,
+         10.2,
+         -5.8
+        ],
+        "neck": [
+         -6.4,
+         -2.5,
+         6.1
+        ],
+        "head": [
+         23.6,
+         -7.5,
+         4.8
+        ],
+        "shoulderL": [
+         14.7,
+         1.7,
+         -26.1
+        ],
+        "upperArmL": [
+         25,
+         -10.5,
+         -2.120000000000001
+        ],
+        "lowerArmL": [
+         -18.1,
+         -13,
+         6.4
+        ],
+        "handL": [
+         0,
+         0,
+         0
+        ],
+        "shoulderR": [
+         2.5,
+         -13,
+         -32.4
+        ],
+        "upperArmR": [
+         -86.4,
+         32.5,
+         33.6
+        ],
+        "lowerArmR": [
+         -33.8,
+         25.5,
+         -8.6
+        ],
+        "handR": [
+         -14.6,
+         -80.8,
+         -17.8
+        ],
+        "upperLegL": [
+         -14.8,
+         -4.7,
+         9.8
+        ],
+        "lowerLegL": [
+         65.5,
+         -6.7,
+         -22.1
+        ],
+        "footL": [
+         26.9,
+         9.2,
+         6.6
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         15.5,
+         5.7,
+         -0.7
+        ],
+        "lowerLegR": [
+         18.4,
+         -0.8,
+         6.7
+        ],
+        "footR": [
+         54.2,
+         -10.3,
+         -1.2
+        ],
+        "toeR": [
+         -0.6,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.3269,
+        -0.0733
+       ]
+      }
+     ]
+    },
+    "dL": -14.82,
+    "dR": -21.6,
+    "sepCm": 26.9,
+    "outL": 7.7,
+    "outR": -5.1,
+    "foldL": 158.5,
+    "foldR": 139
+   },
+   "alsoIn": []
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "PoleClimbIdle",
+   "dur": 4,
+   "verdict": "static, not standing (feet split)",
+   "standing": false,
+   "fp": "8|-3|-4|15|14|7",
+   "ref": {
+    "sepCm": 15.3,
+    "outL": -5.2,
+    "outR": -7.7,
+    "abdL": 24.1,
+    "abdR": 54.5,
+    "foldL": 73.1,
+    "foldR": 71.1
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         1.9,
+         0,
+         0
+        ],
+        "spine": [
+         -16.1,
+         0,
+         0
+        ],
+        "chest": [
+         20.1,
+         0,
+         -0.3
+        ],
+        "neck": [
+         -3.3,
+         0.7,
+         -2.3
+        ],
+        "head": [
+         -39.7,
+         -2.5,
+         0.9
+        ],
+        "shoulderL": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmL": [
+         3.7,
+         -51.5,
+         -0.6
+        ],
+        "lowerArmL": [
+         -86.8,
+         -53.8,
+         -8.3
+        ],
+        "handL": [
+         -16.5,
+         47.3,
+         3.1
+        ],
+        "shoulderR": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmR": [
+         -50.9,
+         55.7,
+         5.5
+        ],
+        "lowerArmR": [
+         -89.8,
+         54.6,
+         10
+        ],
+        "handR": [
+         63.1,
+         -83,
+         64.4
+        ],
+        "upperLegL": [
+         -65.3,
+         0.1,
+         16.1
+        ],
+        "lowerLegL": [
+         82.2,
+         -12.1,
+         -25.6
+        ],
+        "footL": [
+         12.5,
+         -5.3,
+         1.6
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -93.7,
+         9.1,
+         -12.6
+        ],
+        "lowerLegR": [
+         100.9,
+         18.9,
+         27.4
+        ],
+        "footR": [
+         28.9,
+         -7,
+         -3.9
+        ],
+        "toeR": [
+         -0.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0195,
+        -0.0741
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         1.9,
+         0,
+         0
+        ],
+        "spine": [
+         -16.1,
+         0,
+         0
+        ],
+        "chest": [
+         20.1,
+         0,
+         -0.3
+        ],
+        "neck": [
+         -3.3,
+         0.7,
+         -2.3
+        ],
+        "head": [
+         -39.7,
+         -2.5,
+         0.9
+        ],
+        "shoulderL": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmL": [
+         3.7,
+         -51.5,
+         -0.6
+        ],
+        "lowerArmL": [
+         -86.8,
+         -53.8,
+         -8.3
+        ],
+        "handL": [
+         -16.5,
+         47.3,
+         3.1
+        ],
+        "shoulderR": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmR": [
+         -50.9,
+         55.7,
+         5.5
+        ],
+        "lowerArmR": [
+         -89.8,
+         54.6,
+         10
+        ],
+        "handR": [
+         63.1,
+         -83,
+         64.4
+        ],
+        "upperLegL": [
+         -65.3,
+         0.1,
+         16.1
+        ],
+        "lowerLegL": [
+         82.2,
+         -12.1,
+         -25.6
+        ],
+        "footL": [
+         12.5,
+         -5.3,
+         1.6
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -93.7,
+         9.1,
+         -12.6
+        ],
+        "lowerLegR": [
+         100.9,
+         18.9,
+         27.4
+        ],
+        "footR": [
+         28.9,
+         -7,
+         -3.9
+        ],
+        "toeR": [
+         -0.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0195,
+        -0.0741
+       ]
+      }
+     ]
+    },
+    "sepCm": 28.2,
+    "outL": 1.5,
+    "outR": -1.4,
+    "foldL": 89.6,
+    "foldR": 87.7
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         1.9,
+         0,
+         0
+        ],
+        "spine": [
+         -16.1,
+         0,
+         0
+        ],
+        "chest": [
+         20.1,
+         0,
+         -0.3
+        ],
+        "neck": [
+         -3.3,
+         0.7,
+         -2.3
+        ],
+        "head": [
+         -39.7,
+         -2.5,
+         0.9
+        ],
+        "shoulderL": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmL": [
+         3.7,
+         -51.5,
+         -40.46
+        ],
+        "lowerArmL": [
+         -86.8,
+         -53.8,
+         -8.3
+        ],
+        "handL": [
+         -16.5,
+         47.3,
+         3.1
+        ],
+        "shoulderR": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmR": [
+         -50.9,
+         55.7,
+         44.56
+        ],
+        "lowerArmR": [
+         -89.8,
+         54.6,
+         10
+        ],
+        "handR": [
+         63.1,
+         -83,
+         64.4
+        ],
+        "upperLegL": [
+         -65.3,
+         0.1,
+         16.1
+        ],
+        "lowerLegL": [
+         82.2,
+         -12.1,
+         -25.6
+        ],
+        "footL": [
+         12.5,
+         -5.3,
+         1.6
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -93.7,
+         9.1,
+         -12.6
+        ],
+        "lowerLegR": [
+         100.9,
+         18.9,
+         27.4
+        ],
+        "footR": [
+         28.9,
+         -7,
+         -3.9
+        ],
+        "toeR": [
+         -0.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0195,
+        -0.0741
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         1.9,
+         0,
+         0
+        ],
+        "spine": [
+         -16.1,
+         0,
+         0
+        ],
+        "chest": [
+         20.1,
+         0,
+         -0.3
+        ],
+        "neck": [
+         -3.3,
+         0.7,
+         -2.3
+        ],
+        "head": [
+         -39.7,
+         -2.5,
+         0.9
+        ],
+        "shoulderL": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmL": [
+         3.7,
+         -51.5,
+         -40.46
+        ],
+        "lowerArmL": [
+         -86.8,
+         -53.8,
+         -8.3
+        ],
+        "handL": [
+         -16.5,
+         47.3,
+         3.1
+        ],
+        "shoulderR": [
+         -8.8,
+         0,
+         0.3
+        ],
+        "upperArmR": [
+         -50.9,
+         55.7,
+         44.56
+        ],
+        "lowerArmR": [
+         -89.8,
+         54.6,
+         10
+        ],
+        "handR": [
+         63.1,
+         -83,
+         64.4
+        ],
+        "upperLegL": [
+         -65.3,
+         0.1,
+         16.1
+        ],
+        "lowerLegL": [
+         82.2,
+         -12.1,
+         -25.6
+        ],
+        "footL": [
+         12.5,
+         -5.3,
+         1.6
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -93.7,
+         9.1,
+         -12.6
+        ],
+        "lowerLegR": [
+         100.9,
+         18.9,
+         27.4
+        ],
+        "footR": [
+         28.9,
+         -7,
+         -3.9
+        ],
+        "toeR": [
+         -0.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0195,
+        -0.0741
+       ]
+      }
+     ]
+    },
+    "dL": -39.86,
+    "dR": -39.06,
+    "sepCm": 15,
+    "outL": -5.3,
+    "outR": -7.8,
+    "foldL": 89.6,
+    "foldR": 87.7
+   },
+   "alsoIn": []
+  },
+  {
+   "file": "SlyCooper_Anims19.gltf",
+   "name": "RailrunStand",
+   "dur": 4,
+   "verdict": "static, not standing (hips low)",
+   "standing": false,
+   "fp": "16|-10|14|32|31|4",
+   "ref": {
+    "sepCm": 32.9,
+    "outL": -20.5,
+    "outR": 28.3,
+    "abdL": -31.4,
+    "abdR": 24.6,
+    "foldL": 160.2,
+    "foldR": 156.8
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         40.1,
+         37,
+         -58.9
+        ],
+        "spine": [
+         33.8,
+         -21.4,
+         38.2
+        ],
+        "chest": [
+         30.9,
+         9.9,
+         0.6
+        ],
+        "neck": [
+         1.8,
+         -0.8,
+         3.6
+        ],
+        "head": [
+         -52.4,
+         -12.3,
+         15.4
+        ],
+        "shoulderL": [
+         -23.2,
+         -15.5,
+         -26.5
+        ],
+        "upperArmL": [
+         -40.6,
+         -39,
+         -12.8
+        ],
+        "lowerArmL": [
+         -7,
+         -4.7,
+         2.9
+        ],
+        "handL": [
+         10.9,
+         10.6,
+         58.7
+        ],
+        "shoulderR": [
+         16.6,
+         -16.2,
+         -0.5
+        ],
+        "upperArmR": [
+         -57.9,
+         -33.2,
+         11.8
+        ],
+        "lowerArmR": [
+         -9.6,
+         6.6,
+         -3.9
+        ],
+        "handR": [
+         14.6,
+         -37.3,
+         24.4
+        ],
+        "upperLegL": [
+         -110.5,
+         -37.3,
+         27.7
+        ],
+        "lowerLegL": [
+         132.7,
+         -30,
+         -25.1
+        ],
+        "footL": [
+         -42.4,
+         9.4,
+         17.9
+        ],
+        "toeL": [
+         -7.9,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -104.7,
+         -33.5,
+         -32
+        ],
+        "lowerLegR": [
+         4.9,
+         -0.4,
+         1.8
+        ],
+        "footR": [
+         69.2,
+         -17,
+         4.9
+        ],
+        "toeR": [
+         -2.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        -0.1337,
+        -0.5108,
+        -0.1633
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         40.1,
+         37,
+         -58.9
+        ],
+        "spine": [
+         33.8,
+         -21.4,
+         38.2
+        ],
+        "chest": [
+         30.9,
+         9.9,
+         0.6
+        ],
+        "neck": [
+         1.8,
+         -0.8,
+         3.6
+        ],
+        "head": [
+         -52.4,
+         -12.3,
+         15.4
+        ],
+        "shoulderL": [
+         -23.2,
+         -15.5,
+         -26.5
+        ],
+        "upperArmL": [
+         -40.6,
+         -39,
+         -12.8
+        ],
+        "lowerArmL": [
+         -7,
+         -4.7,
+         2.9
+        ],
+        "handL": [
+         10.9,
+         10.6,
+         58.7
+        ],
+        "shoulderR": [
+         16.6,
+         -16.2,
+         -0.5
+        ],
+        "upperArmR": [
+         -57.9,
+         -33.2,
+         11.8
+        ],
+        "lowerArmR": [
+         -9.6,
+         6.6,
+         -3.9
+        ],
+        "handR": [
+         14.6,
+         -37.3,
+         24.4
+        ],
+        "upperLegL": [
+         -110.5,
+         -37.3,
+         27.7
+        ],
+        "lowerLegL": [
+         132.7,
+         -30,
+         -25.1
+        ],
+        "footL": [
+         -42.4,
+         9.4,
+         17.9
+        ],
+        "toeL": [
+         -7.9,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -104.7,
+         -33.5,
+         -32
+        ],
+        "lowerLegR": [
+         4.9,
+         -0.4,
+         1.8
+        ],
+        "footR": [
+         69.2,
+         -17,
+         4.9
+        ],
+        "toeR": [
+         -2.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        -0.1337,
+        -0.5108,
+        -0.1633
+       ]
+      }
+     ]
+    },
+    "sepCm": 45.4,
+    "outL": -11.8,
+    "outR": 33.5,
+    "foldL": 170.5,
+    "foldR": 168.1
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         40.1,
+         37,
+         -58.9
+        ],
+        "spine": [
+         33.8,
+         -21.4,
+         38.2
+        ],
+        "chest": [
+         30.9,
+         9.9,
+         0.6
+        ],
+        "neck": [
+         1.8,
+         -0.8,
+         3.6
+        ],
+        "head": [
+         -52.4,
+         -12.3,
+         15.4
+        ],
+        "shoulderL": [
+         -23.2,
+         -15.5,
+         -26.5
+        ],
+        "upperArmL": [
+         -40.6,
+         -39,
+         -26.04
+        ],
+        "lowerArmL": [
+         -7,
+         -4.7,
+         2.9
+        ],
+        "handL": [
+         10.9,
+         10.6,
+         58.7
+        ],
+        "shoulderR": [
+         16.6,
+         -16.2,
+         -0.5
+        ],
+        "upperArmR": [
+         -57.9,
+         -33.2,
+         -48.2
+        ],
+        "lowerArmR": [
+         -9.6,
+         6.6,
+         -3.9
+        ],
+        "handR": [
+         14.6,
+         -37.3,
+         24.4
+        ],
+        "upperLegL": [
+         -110.5,
+         -37.3,
+         27.7
+        ],
+        "lowerLegL": [
+         132.7,
+         -30,
+         -25.1
+        ],
+        "footL": [
+         -42.4,
+         9.4,
+         17.9
+        ],
+        "toeL": [
+         -7.9,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -104.7,
+         -33.5,
+         -32
+        ],
+        "lowerLegR": [
+         4.9,
+         -0.4,
+         1.8
+        ],
+        "footR": [
+         69.2,
+         -17,
+         4.9
+        ],
+        "toeR": [
+         -2.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        -0.1337,
+        -0.5108,
+        -0.1633
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         40.1,
+         37,
+         -58.9
+        ],
+        "spine": [
+         33.8,
+         -21.4,
+         38.2
+        ],
+        "chest": [
+         30.9,
+         9.9,
+         0.6
+        ],
+        "neck": [
+         1.8,
+         -0.8,
+         3.6
+        ],
+        "head": [
+         -52.4,
+         -12.3,
+         15.4
+        ],
+        "shoulderL": [
+         -23.2,
+         -15.5,
+         -26.5
+        ],
+        "upperArmL": [
+         -40.6,
+         -39,
+         -26.04
+        ],
+        "lowerArmL": [
+         -7,
+         -4.7,
+         2.9
+        ],
+        "handL": [
+         10.9,
+         10.6,
+         58.7
+        ],
+        "shoulderR": [
+         16.6,
+         -16.2,
+         -0.5
+        ],
+        "upperArmR": [
+         -57.9,
+         -33.2,
+         -48.2
+        ],
+        "lowerArmR": [
+         -9.6,
+         6.6,
+         -3.9
+        ],
+        "handR": [
+         14.6,
+         -37.3,
+         24.4
+        ],
+        "upperLegL": [
+         -110.5,
+         -37.3,
+         27.7
+        ],
+        "lowerLegL": [
+         132.7,
+         -30,
+         -25.1
+        ],
+        "footL": [
+         -42.4,
+         9.4,
+         17.9
+        ],
+        "toeL": [
+         -7.9,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -104.7,
+         -33.5,
+         -32
+        ],
+        "lowerLegR": [
+         4.9,
+         -0.4,
+         1.8
+        ],
+        "footR": [
+         69.2,
+         -17,
+         4.9
+        ],
+        "toeR": [
+         -2.7,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        -0.1337,
+        -0.5108,
+        -0.1633
+       ]
+      }
+     ]
+    },
+    "dL": -13.24,
+    "dR": 60,
+    "sepCm": 30.9,
+    "outL": -20.5,
+    "outR": 27.7,
+    "foldL": 170.5,
+    "foldR": 168.1
+   },
+   "alsoIn": []
+  },
+  {
+   "file": "SlyCooper_Anims14.gltf",
+   "name": "CrouchingstandStand",
+   "dur": 4,
+   "verdict": "static, not standing (hips low)",
+   "standing": false,
+   "fp": "33|9|11|16|19|7",
+   "ref": {
+    "sepCm": 66.9,
+    "outL": 17.9,
+    "outR": 21,
+    "abdL": 23.9,
+    "abdR": 36.7,
+    "foldL": 82.4,
+    "foldR": 94.8
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         30.8,
+         0,
+         0
+        ],
+        "spine": [
+         26.4,
+         0,
+         0
+        ],
+        "chest": [
+         11.2,
+         5.3,
+         3
+        ],
+        "neck": [
+         -3.4,
+         0.2,
+         -0.8
+        ],
+        "head": [
+         -55.8,
+         -0.3,
+         -6.9
+        ],
+        "shoulderL": [
+         6.6,
+         -9.9,
+         -1.3
+        ],
+        "upperArmL": [
+         -30,
+         6.4,
+         -3
+        ],
+        "lowerArmL": [
+         -74.3,
+         -49.8,
+         -1.8
+        ],
+        "handL": [
+         -1.7,
+         8.1,
+         -10.2
+        ],
+        "shoulderR": [
+         5.3,
+         -23.2,
+         -2.1
+        ],
+        "upperArmR": [
+         -50.4,
+         12.1,
+         10.3
+        ],
+        "lowerArmR": [
+         -60.3,
+         43.4,
+         -4.1
+        ],
+        "handR": [
+         -30.6,
+         -18.9,
+         0.1
+        ],
+        "upperLegL": [
+         -60.1,
+         -10.1,
+         10.9
+        ],
+        "lowerLegL": [
+         82.3,
+         -12.1,
+         -25.6
+        ],
+        "footL": [
+         -44.2,
+         7.6,
+         9.1
+        ],
+        "toeL": [
+         -11.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -97.3,
+         13.6,
+         -11.5
+        ],
+        "lowerLegR": [
+         91.1,
+         15.3,
+         26.7
+        ],
+        "footR": [
+         -11.3,
+         -26.4,
+         -6
+        ],
+        "toeR": [
+         -19.1,
+         -0.1,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.2691,
+        -0.0831
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         30.8,
+         0,
+         0
+        ],
+        "spine": [
+         26.4,
+         0,
+         0
+        ],
+        "chest": [
+         11.2,
+         5.3,
+         3
+        ],
+        "neck": [
+         -3.4,
+         0.2,
+         -0.8
+        ],
+        "head": [
+         -55.8,
+         -0.3,
+         -6.9
+        ],
+        "shoulderL": [
+         6.6,
+         -9.9,
+         -1.3
+        ],
+        "upperArmL": [
+         -30,
+         6.4,
+         -3
+        ],
+        "lowerArmL": [
+         -74.3,
+         -49.8,
+         -1.8
+        ],
+        "handL": [
+         -1.7,
+         8.1,
+         -10.2
+        ],
+        "shoulderR": [
+         5.3,
+         -23.2,
+         -2.1
+        ],
+        "upperArmR": [
+         -50.4,
+         12.1,
+         10.3
+        ],
+        "lowerArmR": [
+         -60.3,
+         43.4,
+         -4.1
+        ],
+        "handR": [
+         -30.6,
+         -18.9,
+         0.1
+        ],
+        "upperLegL": [
+         -60.1,
+         -10.1,
+         10.9
+        ],
+        "lowerLegL": [
+         82.3,
+         -12.1,
+         -25.6
+        ],
+        "footL": [
+         -44.2,
+         7.6,
+         9.1
+        ],
+        "toeL": [
+         -11.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -97.3,
+         13.6,
+         -11.5
+        ],
+        "lowerLegR": [
+         91.1,
+         15.3,
+         26.7
+        ],
+        "footR": [
+         -11.3,
+         -26.4,
+         -6
+        ],
+        "toeR": [
+         -19.1,
+         -0.1,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.2691,
+        -0.0831
+       ]
+      }
+     ]
+    },
+    "sepCm": 86.8,
+    "outL": 28.4,
+    "outR": 30.8,
+    "foldL": 98.4,
+    "foldR": 110.2
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         30.8,
+         0,
+         0
+        ],
+        "spine": [
+         26.4,
+         0,
+         0
+        ],
+        "chest": [
+         11.2,
+         5.3,
+         3
+        ],
+        "neck": [
+         -3.4,
+         0.2,
+         -0.8
+        ],
+        "head": [
+         -55.8,
+         -0.3,
+         -6.9
+        ],
+        "shoulderL": [
+         6.6,
+         -9.9,
+         -1.3
+        ],
+        "upperArmL": [
+         -30,
+         6.4,
+         -34
+        ],
+        "lowerArmL": [
+         -74.3,
+         -49.8,
+         -1.8
+        ],
+        "handL": [
+         -1.7,
+         8.1,
+         -10.2
+        ],
+        "shoulderR": [
+         5.3,
+         -23.2,
+         -2.1
+        ],
+        "upperArmR": [
+         -50.4,
+         12.1,
+         39.47
+        ],
+        "lowerArmR": [
+         -60.3,
+         43.4,
+         -4.1
+        ],
+        "handR": [
+         -30.6,
+         -18.9,
+         0.1
+        ],
+        "upperLegL": [
+         -60.1,
+         -10.1,
+         10.9
+        ],
+        "lowerLegL": [
+         82.3,
+         -12.1,
+         -25.6
+        ],
+        "footL": [
+         -44.2,
+         7.6,
+         9.1
+        ],
+        "toeL": [
+         -11.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -97.3,
+         13.6,
+         -11.5
+        ],
+        "lowerLegR": [
+         91.1,
+         15.3,
+         26.7
+        ],
+        "footR": [
+         -11.3,
+         -26.4,
+         -6
+        ],
+        "toeR": [
+         -19.1,
+         -0.1,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.2691,
+        -0.0831
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         30.8,
+         0,
+         0
+        ],
+        "spine": [
+         26.4,
+         0,
+         0
+        ],
+        "chest": [
+         11.2,
+         5.3,
+         3
+        ],
+        "neck": [
+         -3.4,
+         0.2,
+         -0.8
+        ],
+        "head": [
+         -55.8,
+         -0.3,
+         -6.9
+        ],
+        "shoulderL": [
+         6.6,
+         -9.9,
+         -1.3
+        ],
+        "upperArmL": [
+         -30,
+         6.4,
+         -34
+        ],
+        "lowerArmL": [
+         -74.3,
+         -49.8,
+         -1.8
+        ],
+        "handL": [
+         -1.7,
+         8.1,
+         -10.2
+        ],
+        "shoulderR": [
+         5.3,
+         -23.2,
+         -2.1
+        ],
+        "upperArmR": [
+         -50.4,
+         12.1,
+         39.47
+        ],
+        "lowerArmR": [
+         -60.3,
+         43.4,
+         -4.1
+        ],
+        "handR": [
+         -30.6,
+         -18.9,
+         0.1
+        ],
+        "upperLegL": [
+         -60.1,
+         -10.1,
+         10.9
+        ],
+        "lowerLegL": [
+         82.3,
+         -12.1,
+         -25.6
+        ],
+        "footL": [
+         -44.2,
+         7.6,
+         9.1
+        ],
+        "toeL": [
+         -11.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -97.3,
+         13.6,
+         -11.5
+        ],
+        "lowerLegR": [
+         91.1,
+         15.3,
+         26.7
+        ],
+        "footR": [
+         -11.3,
+         -26.4,
+         -6
+        ],
+        "toeR": [
+         -19.1,
+         -0.1,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.2691,
+        -0.0831
+       ]
+      }
+     ]
+    },
+    "dL": -31,
+    "dR": -29.17,
+    "sepCm": 66.3,
+    "outL": 17.8,
+    "outR": 20.9,
+    "foldL": 98.4,
+    "foldR": 110.2
+   },
+   "alsoIn": []
+  },
+  {
+   "file": "SlyCooper_Anims4.gltf",
+   "name": "[Action Stash].001",
+   "dur": 1.25,
+   "verdict": "static, not standing (hips low)",
+   "standing": false,
+   "fp": "51|19|18|23|22|7",
+   "ref": {
+    "sepCm": 101.3,
+    "outL": 38.3,
+    "outR": 35.3,
+    "abdL": 68.8,
+    "abdR": 73.6,
+    "foldL": 113.3,
+    "foldR": 111
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         18.4,
+         0,
+         0
+        ],
+        "spine": [
+         18.4,
+         0,
+         0
+        ],
+        "chest": [
+         15.8,
+         6.1,
+         2.6
+        ],
+        "neck": [
+         0,
+         0,
+         0
+        ],
+        "head": [
+         -18.8,
+         -4.2,
+         -3.8
+        ],
+        "shoulderL": [
+         0.6,
+         6,
+         5
+        ],
+        "upperArmL": [
+         -52.5,
+         14.7,
+         35.8
+        ],
+        "lowerArmL": [
+         -43.1,
+         -32.5,
+         8.1
+        ],
+        "handL": [
+         9.8,
+         -7.5,
+         5.5
+        ],
+        "shoulderR": [
+         -3.3,
+         -28.1,
+         -9.2
+        ],
+        "upperArmR": [
+         -60.8,
+         -0.2,
+         -23.8
+        ],
+        "lowerArmR": [
+         -45,
+         33.9,
+         -7.9
+        ],
+        "handR": [
+         -22.5,
+         -45.6,
+         7.1
+        ],
+        "upperLegL": [
+         -76.6,
+         -11.9,
+         13.7
+        ],
+        "lowerLegL": [
+         89.5,
+         -14.7,
+         -26.6
+        ],
+        "footL": [
+         40.7,
+         14.1,
+         4.7
+        ],
+        "toeL": [
+         4.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -68,
+         15.6,
+         -3.6
+        ],
+        "lowerLegR": [
+         86.2,
+         13.5,
+         26.2
+        ],
+        "footR": [
+         49.1,
+         -19,
+         0.1
+        ],
+        "toeR": [
+         -11.8,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0248,
+        -0.0703
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         18.4,
+         0,
+         0
+        ],
+        "spine": [
+         18.4,
+         0,
+         0
+        ],
+        "chest": [
+         15.8,
+         6.1,
+         2.6
+        ],
+        "neck": [
+         0,
+         0,
+         0
+        ],
+        "head": [
+         -18.8,
+         -4.2,
+         -3.8
+        ],
+        "shoulderL": [
+         0.6,
+         6,
+         5
+        ],
+        "upperArmL": [
+         -52.5,
+         14.7,
+         35.8
+        ],
+        "lowerArmL": [
+         -43.1,
+         -32.5,
+         8.1
+        ],
+        "handL": [
+         9.8,
+         -7.5,
+         5.5
+        ],
+        "shoulderR": [
+         -3.3,
+         -28.1,
+         -9.2
+        ],
+        "upperArmR": [
+         -60.8,
+         -0.2,
+         -23.8
+        ],
+        "lowerArmR": [
+         -45,
+         33.9,
+         -7.9
+        ],
+        "handR": [
+         -22.5,
+         -45.6,
+         7.1
+        ],
+        "upperLegL": [
+         -76.6,
+         -11.9,
+         13.7
+        ],
+        "lowerLegL": [
+         89.5,
+         -14.7,
+         -26.6
+        ],
+        "footL": [
+         40.7,
+         14.1,
+         4.7
+        ],
+        "toeL": [
+         4.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -68,
+         15.6,
+         -3.6
+        ],
+        "lowerLegR": [
+         86.2,
+         13.5,
+         26.2
+        ],
+        "footR": [
+         49.1,
+         -19,
+         0.1
+        ],
+        "toeR": [
+         -11.8,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0248,
+        -0.0703
+       ]
+      }
+     ]
+    },
+    "sepCm": 105.7,
+    "outL": 40.1,
+    "outR": 38.3,
+    "foldL": 128,
+    "foldR": 125.8
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         18.4,
+         0,
+         0
+        ],
+        "spine": [
+         18.4,
+         0,
+         0
+        ],
+        "chest": [
+         15.8,
+         6.1,
+         2.6
+        ],
+        "neck": [
+         0,
+         0,
+         0
+        ],
+        "head": [
+         -18.8,
+         -4.2,
+         -3.8
+        ],
+        "shoulderL": [
+         0.6,
+         6,
+         5
+        ],
+        "upperArmL": [
+         -52.5,
+         14.7,
+         -24.200000000000003
+        ],
+        "lowerArmL": [
+         -43.1,
+         -32.5,
+         8.1
+        ],
+        "handL": [
+         9.8,
+         -7.5,
+         5.5
+        ],
+        "shoulderR": [
+         -3.3,
+         -28.1,
+         -9.2
+        ],
+        "upperArmR": [
+         -60.8,
+         -0.2,
+         36.2
+        ],
+        "lowerArmR": [
+         -45,
+         33.9,
+         -7.9
+        ],
+        "handR": [
+         -22.5,
+         -45.6,
+         7.1
+        ],
+        "upperLegL": [
+         -76.6,
+         -11.9,
+         13.7
+        ],
+        "lowerLegL": [
+         89.5,
+         -14.7,
+         -26.6
+        ],
+        "footL": [
+         40.7,
+         14.1,
+         4.7
+        ],
+        "toeL": [
+         4.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -68,
+         15.6,
+         -3.6
+        ],
+        "lowerLegR": [
+         86.2,
+         13.5,
+         26.2
+        ],
+        "footR": [
+         49.1,
+         -19,
+         0.1
+        ],
+        "toeR": [
+         -11.8,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0248,
+        -0.0703
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         18.4,
+         0,
+         0
+        ],
+        "spine": [
+         18.4,
+         0,
+         0
+        ],
+        "chest": [
+         15.8,
+         6.1,
+         2.6
+        ],
+        "neck": [
+         0,
+         0,
+         0
+        ],
+        "head": [
+         -18.8,
+         -4.2,
+         -3.8
+        ],
+        "shoulderL": [
+         0.6,
+         6,
+         5
+        ],
+        "upperArmL": [
+         -52.5,
+         14.7,
+         -24.200000000000003
+        ],
+        "lowerArmL": [
+         -43.1,
+         -32.5,
+         8.1
+        ],
+        "handL": [
+         9.8,
+         -7.5,
+         5.5
+        ],
+        "shoulderR": [
+         -3.3,
+         -28.1,
+         -9.2
+        ],
+        "upperArmR": [
+         -60.8,
+         -0.2,
+         36.2
+        ],
+        "lowerArmR": [
+         -45,
+         33.9,
+         -7.9
+        ],
+        "handR": [
+         -22.5,
+         -45.6,
+         7.1
+        ],
+        "upperLegL": [
+         -76.6,
+         -11.9,
+         13.7
+        ],
+        "lowerLegL": [
+         89.5,
+         -14.7,
+         -26.6
+        ],
+        "footL": [
+         40.7,
+         14.1,
+         4.7
+        ],
+        "toeL": [
+         4.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -68,
+         15.6,
+         -3.6
+        ],
+        "lowerLegR": [
+         86.2,
+         13.5,
+         26.2
+        ],
+        "footR": [
+         49.1,
+         -19,
+         0.1
+        ],
+        "toeR": [
+         -11.8,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.0248,
+        -0.0703
+       ]
+      }
+     ]
+    },
+    "dL": -60,
+    "dR": -60,
+    "sepCm": 89.1,
+    "outL": 33.3,
+    "outR": 28.5,
+    "foldL": 128,
+    "foldR": 125.8
+   },
+   "alsoIn": []
+  },
+  {
+   "file": "SlyCooper_Anims4.gltf",
+   "name": "CrouchingStand",
+   "dur": 5,
+   "verdict": "static, not standing (hips low)",
+   "standing": false,
+   "fp": "34|9|11|16|18|7",
+   "ref": {
+    "sepCm": 67.2,
+    "outL": 17.4,
+    "outR": 21.7,
+    "abdL": 17.2,
+    "abdR": 35.4,
+    "foldL": 82.1,
+    "foldR": 91.1
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         30.8,
+         0,
+         0
+        ],
+        "spine": [
+         28.1,
+         0,
+         0
+        ],
+        "chest": [
+         16.7,
+         6.5,
+         1.1
+        ],
+        "neck": [
+         -3.4,
+         0.2,
+         -0.8
+        ],
+        "head": [
+         -55.8,
+         -0.3,
+         -6.9
+        ],
+        "shoulderL": [
+         7,
+         -0.3,
+         1.2
+        ],
+        "upperArmL": [
+         -43.1,
+         4.7,
+         -17.4
+        ],
+        "lowerArmL": [
+         -74.7,
+         -50,
+         -2
+        ],
+        "handL": [
+         -3.6,
+         11.4,
+         -19.6
+        ],
+        "shoulderR": [
+         5.3,
+         -23.2,
+         -2.1
+        ],
+        "upperArmR": [
+         -54.4,
+         5.8,
+         11.3
+        ],
+        "lowerArmR": [
+         -64.3,
+         45.4,
+         -2.6
+        ],
+        "handR": [
+         -30.6,
+         -18.9,
+         0.1
+        ],
+        "upperLegL": [
+         -60.1,
+         -10.1,
+         10.9
+        ],
+        "lowerLegL": [
+         82.3,
+         -12.1,
+         -25.6
+        ],
+        "footL": [
+         -44.2,
+         7.6,
+         9.1
+        ],
+        "toeL": [
+         -11.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -97.4,
+         13.6,
+         -11.5
+        ],
+        "lowerLegR": [
+         91.1,
+         15.3,
+         26.7
+        ],
+        "footR": [
+         -11.3,
+         -26.4,
+         -6
+        ],
+        "toeR": [
+         -19.1,
+         -0.1,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.2692,
+        -0.0831
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         30.8,
+         0,
+         0
+        ],
+        "spine": [
+         28.1,
+         0,
+         0
+        ],
+        "chest": [
+         16.7,
+         6.5,
+         1.1
+        ],
+        "neck": [
+         -3.4,
+         0.2,
+         -0.8
+        ],
+        "head": [
+         -55.8,
+         -0.3,
+         -6.9
+        ],
+        "shoulderL": [
+         7,
+         -0.3,
+         1.2
+        ],
+        "upperArmL": [
+         -43.1,
+         4.7,
+         -17.4
+        ],
+        "lowerArmL": [
+         -74.7,
+         -50,
+         -2
+        ],
+        "handL": [
+         -3.6,
+         11.4,
+         -19.6
+        ],
+        "shoulderR": [
+         5.3,
+         -23.2,
+         -2.1
+        ],
+        "upperArmR": [
+         -54.4,
+         5.8,
+         11.3
+        ],
+        "lowerArmR": [
+         -64.3,
+         45.4,
+         -2.6
+        ],
+        "handR": [
+         -30.6,
+         -18.9,
+         0.1
+        ],
+        "upperLegL": [
+         -60.1,
+         -10.1,
+         10.9
+        ],
+        "lowerLegL": [
+         82.3,
+         -12.1,
+         -25.6
+        ],
+        "footL": [
+         -44.2,
+         7.6,
+         9.1
+        ],
+        "toeL": [
+         -11.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -97.4,
+         13.6,
+         -11.5
+        ],
+        "lowerLegR": [
+         91.1,
+         15.3,
+         26.7
+        ],
+        "footR": [
+         -11.3,
+         -26.4,
+         -6
+        ],
+        "toeR": [
+         -19.1,
+         -0.1,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.2692,
+        -0.0831
+       ]
+      }
+     ]
+    },
+    "sepCm": 87.3,
+    "outL": 28.1,
+    "outR": 31.6,
+    "foldL": 98.1,
+    "foldR": 106.7
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         30.8,
+         0,
+         0
+        ],
+        "spine": [
+         28.1,
+         0,
+         0
+        ],
+        "chest": [
+         16.7,
+         6.5,
+         1.1
+        ],
+        "neck": [
+         -3.4,
+         0.2,
+         -0.8
+        ],
+        "head": [
+         -55.8,
+         -0.3,
+         -6.9
+        ],
+        "shoulderL": [
+         7,
+         -0.3,
+         1.2
+        ],
+        "upperArmL": [
+         -43.1,
+         4.7,
+         -46.54
+        ],
+        "lowerArmL": [
+         -74.7,
+         -50,
+         -2
+        ],
+        "handL": [
+         -3.6,
+         11.4,
+         -19.6
+        ],
+        "shoulderR": [
+         5.3,
+         -23.2,
+         -2.1
+        ],
+        "upperArmR": [
+         -54.4,
+         5.8,
+         41.72
+        ],
+        "lowerArmR": [
+         -64.3,
+         45.4,
+         -2.6
+        ],
+        "handR": [
+         -30.6,
+         -18.9,
+         0.1
+        ],
+        "upperLegL": [
+         -60.1,
+         -10.1,
+         10.9
+        ],
+        "lowerLegL": [
+         82.3,
+         -12.1,
+         -25.6
+        ],
+        "footL": [
+         -44.2,
+         7.6,
+         9.1
+        ],
+        "toeL": [
+         -11.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -97.4,
+         13.6,
+         -11.5
+        ],
+        "lowerLegR": [
+         91.1,
+         15.3,
+         26.7
+        ],
+        "footR": [
+         -11.3,
+         -26.4,
+         -6
+        ],
+        "toeR": [
+         -19.1,
+         -0.1,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.2692,
+        -0.0831
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         30.8,
+         0,
+         0
+        ],
+        "spine": [
+         28.1,
+         0,
+         0
+        ],
+        "chest": [
+         16.7,
+         6.5,
+         1.1
+        ],
+        "neck": [
+         -3.4,
+         0.2,
+         -0.8
+        ],
+        "head": [
+         -55.8,
+         -0.3,
+         -6.9
+        ],
+        "shoulderL": [
+         7,
+         -0.3,
+         1.2
+        ],
+        "upperArmL": [
+         -43.1,
+         4.7,
+         -46.54
+        ],
+        "lowerArmL": [
+         -74.7,
+         -50,
+         -2
+        ],
+        "handL": [
+         -3.6,
+         11.4,
+         -19.6
+        ],
+        "shoulderR": [
+         5.3,
+         -23.2,
+         -2.1
+        ],
+        "upperArmR": [
+         -54.4,
+         5.8,
+         41.72
+        ],
+        "lowerArmR": [
+         -64.3,
+         45.4,
+         -2.6
+        ],
+        "handR": [
+         -30.6,
+         -18.9,
+         0.1
+        ],
+        "upperLegL": [
+         -60.1,
+         -10.1,
+         10.9
+        ],
+        "lowerLegL": [
+         82.3,
+         -12.1,
+         -25.6
+        ],
+        "footL": [
+         -44.2,
+         7.6,
+         9.1
+        ],
+        "toeL": [
+         -11.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -97.4,
+         13.6,
+         -11.5
+        ],
+        "lowerLegR": [
+         91.1,
+         15.3,
+         26.7
+        ],
+        "footR": [
+         -11.3,
+         -26.4,
+         -6
+        ],
+        "toeR": [
+         -19.1,
+         -0.1,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        -0.2692,
+        -0.0831
+       ]
+      }
+     ]
+    },
+    "dL": -29.14,
+    "dR": -30.42,
+    "sepCm": 66.6,
+    "outL": 17.3,
+    "outR": 21.7,
+    "foldL": 98.1,
+    "foldR": 106.7
+   },
+   "alsoIn": []
+  },
+  {
+   "file": "SlyCooper_Anims4.gltf",
+   "name": "UprightStand",
+   "dur": 5,
+   "verdict": "CANDIDATE",
+   "standing": true,
+   "fp": "24|6|4|28|28|10",
+   "ref": {
+    "sepCm": 47.5,
+    "outL": 11,
+    "outR": 8.7,
+    "abdL": 4.5,
+    "abdR": -2.4,
+    "foldL": 140.3,
+    "foldR": 139.5
+   },
+   "raw": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         0,
+         0,
+         -5.7
+        ],
+        "spine": [
+         0,
+         -0.1,
+         -5.7
+        ],
+        "chest": [
+         -13.5,
+         -2.5,
+         12.4
+        ],
+        "neck": [
+         3.2,
+         0.2,
+         -0.6
+        ],
+        "head": [
+         11.1,
+         -0.2,
+         -0.5
+        ],
+        "shoulderL": [
+         15.4,
+         -0.9,
+         -16.5
+        ],
+        "upperArmL": [
+         1.3,
+         12.1,
+         -9.6
+        ],
+        "lowerArmL": [
+         -22,
+         -16.1,
+         7.3
+        ],
+        "handL": [
+         21.7,
+         11.4,
+         -19.6
+        ],
+        "shoulderR": [
+         14.3,
+         0.6,
+         13.5
+        ],
+        "upperArmR": [
+         2.2,
+         -25.1,
+         15.1
+        ],
+        "lowerArmR": [
+         -22.6,
+         16.6,
+         -7.4
+        ],
+        "handR": [
+         29.9,
+         -0.3,
+         -0.3
+        ],
+        "upperLegL": [
+         -6.4,
+         12.5,
+         -2.5
+        ],
+        "lowerLegL": [
+         6.3,
+         0.5,
+         -2.3
+        ],
+        "footL": [
+         -3.7,
+         14.4,
+         11.9
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -27.7,
+         -13.4,
+         -2
+        ],
+        "lowerLegR": [
+         42.5,
+         1.4,
+         15.3
+        ],
+        "footR": [
+         15.9,
+         -9.6,
+         -10.6
+        ],
+        "toeR": [
+         -31.9,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        0,
+        -0.0741
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         0,
+         0,
+         -5.7
+        ],
+        "spine": [
+         0,
+         -0.1,
+         -5.7
+        ],
+        "chest": [
+         -13.5,
+         -2.5,
+         12.4
+        ],
+        "neck": [
+         3.2,
+         0.2,
+         -0.6
+        ],
+        "head": [
+         11.1,
+         -0.2,
+         -0.5
+        ],
+        "shoulderL": [
+         15.4,
+         -0.9,
+         -16.5
+        ],
+        "upperArmL": [
+         1.3,
+         12.1,
+         -9.6
+        ],
+        "lowerArmL": [
+         -22,
+         -16.1,
+         7.3
+        ],
+        "handL": [
+         21.7,
+         11.4,
+         -19.6
+        ],
+        "shoulderR": [
+         14.3,
+         0.6,
+         13.5
+        ],
+        "upperArmR": [
+         2.2,
+         -25.1,
+         15.1
+        ],
+        "lowerArmR": [
+         -22.6,
+         16.6,
+         -7.4
+        ],
+        "handR": [
+         29.9,
+         -0.3,
+         -0.3
+        ],
+        "upperLegL": [
+         -6.4,
+         12.5,
+         -2.5
+        ],
+        "lowerLegL": [
+         6.3,
+         0.5,
+         -2.3
+        ],
+        "footL": [
+         -3.7,
+         14.4,
+         11.9
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -27.7,
+         -13.4,
+         -2
+        ],
+        "lowerLegR": [
+         42.5,
+         1.4,
+         15.3
+        ],
+        "footR": [
+         15.9,
+         -9.6,
+         -10.6
+        ],
+        "toeR": [
+         -31.9,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        0,
+        -0.0741
+       ]
+      }
+     ]
+    },
+    "sepCm": 66.9,
+    "outL": 21.6,
+    "outR": 18.6,
+    "foldL": 153.6,
+    "foldR": 152.9
+   },
+   "matched": {
+    "pose": {
+     "dur": 1,
+     "loop": true,
+     "hold": 0.5,
+     "keys": [
+      {
+       "t": 0,
+       "e": "soft",
+       "P": {
+        "hips": [
+         0,
+         0,
+         -5.7
+        ],
+        "spine": [
+         0,
+         -0.1,
+         -5.7
+        ],
+        "chest": [
+         -13.5,
+         -2.5,
+         12.4
+        ],
+        "neck": [
+         3.2,
+         0.2,
+         -0.6
+        ],
+        "head": [
+         11.1,
+         -0.2,
+         -0.5
+        ],
+        "shoulderL": [
+         15.4,
+         -0.9,
+         -16.5
+        ],
+        "upperArmL": [
+         1.3,
+         12.1,
+         -24.34
+        ],
+        "lowerArmL": [
+         -22,
+         -16.1,
+         7.3
+        ],
+        "handL": [
+         21.7,
+         11.4,
+         -19.6
+        ],
+        "shoulderR": [
+         14.3,
+         0.6,
+         13.5
+        ],
+        "upperArmR": [
+         2.2,
+         -25.1,
+         29.41
+        ],
+        "lowerArmR": [
+         -22.6,
+         16.6,
+         -7.4
+        ],
+        "handR": [
+         29.9,
+         -0.3,
+         -0.3
+        ],
+        "upperLegL": [
+         -6.4,
+         12.5,
+         -2.5
+        ],
+        "lowerLegL": [
+         6.3,
+         0.5,
+         -2.3
+        ],
+        "footL": [
+         -3.7,
+         14.4,
+         11.9
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -27.7,
+         -13.4,
+         -2
+        ],
+        "lowerLegR": [
+         42.5,
+         1.4,
+         15.3
+        ],
+        "footR": [
+         15.9,
+         -9.6,
+         -10.6
+        ],
+        "toeR": [
+         -31.9,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        0,
+        -0.0741
+       ]
+      },
+      {
+       "t": 1,
+       "e": "soft",
+       "P": {
+        "hips": [
+         0,
+         0,
+         -5.7
+        ],
+        "spine": [
+         0,
+         -0.1,
+         -5.7
+        ],
+        "chest": [
+         -13.5,
+         -2.5,
+         12.4
+        ],
+        "neck": [
+         3.2,
+         0.2,
+         -0.6
+        ],
+        "head": [
+         11.1,
+         -0.2,
+         -0.5
+        ],
+        "shoulderL": [
+         15.4,
+         -0.9,
+         -16.5
+        ],
+        "upperArmL": [
+         1.3,
+         12.1,
+         -24.34
+        ],
+        "lowerArmL": [
+         -22,
+         -16.1,
+         7.3
+        ],
+        "handL": [
+         21.7,
+         11.4,
+         -19.6
+        ],
+        "shoulderR": [
+         14.3,
+         0.6,
+         13.5
+        ],
+        "upperArmR": [
+         2.2,
+         -25.1,
+         29.41
+        ],
+        "lowerArmR": [
+         -22.6,
+         16.6,
+         -7.4
+        ],
+        "handR": [
+         29.9,
+         -0.3,
+         -0.3
+        ],
+        "upperLegL": [
+         -6.4,
+         12.5,
+         -2.5
+        ],
+        "lowerLegL": [
+         6.3,
+         0.5,
+         -2.3
+        ],
+        "footL": [
+         -3.7,
+         14.4,
+         11.9
+        ],
+        "toeL": [
+         -0.7,
+         0,
+         0
+        ],
+        "upperLegR": [
+         -27.7,
+         -13.4,
+         -2
+        ],
+        "lowerLegR": [
+         42.5,
+         1.4,
+         15.3
+        ],
+        "footR": [
+         15.9,
+         -9.6,
+         -10.6
+        ],
+        "toeR": [
+         -31.9,
+         0,
+         0
+        ],
+        "tailA": [
+         0,
+         0,
+         0
+        ],
+        "tailB": [
+         0,
+         0,
+         0
+        ],
+        "tailC": [
+         0,
+         0,
+         0
+        ],
+        "tailD": [
+         0,
+         0,
+         0
+        ]
+       },
+       "pos": [
+        0,
+        0,
+        -0.0741
+       ]
+      }
+     ]
+    },
+    "dL": -14.74,
+    "dR": -14.31,
+    "sepCm": 46.3,
+    "outL": 11,
+    "outR": 8.7,
+    "foldL": 153.6,
+    "foldR": 152.9
+   },
+   "alsoIn": []
+  }
+ ]
+}

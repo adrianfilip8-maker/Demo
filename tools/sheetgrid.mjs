@@ -39,7 +39,7 @@ const FONT = {
   '*': [0x14, 0x08, 0x3e, 0x08, 0x14], '?': [0x02, 0x01, 0x51, 0x09, 0x06], '#': [0x14, 0x7f, 0x14, 0x7f, 0x14],
 };
 /** Draw one line of text into an RGB buffer at (x0,y0), integer scale s. */
-function text(buf, W, H, x0, y0, str, s, rgb) {
+export function text(buf, W, H, x0, y0, str, s, rgb) {
   let x = x0;
   for (const chRaw of String(str).toUpperCase()) {
     const g = FONT[chRaw] || FONT['?'];
@@ -59,7 +59,7 @@ function text(buf, W, H, x0, y0, str, s, rgb) {
 }
 
 /** Integer box downscale of a readPNG result to RGB. */
-function shrink(img, f) {
+export function shrink(img, f) {
   const w = Math.floor(img.w / f), h = Math.floor(img.h / f), ch = img.ch;
   const out = Buffer.alloc(w * h * 3);
   for (let y = 0; y < h; y++) {
@@ -78,41 +78,44 @@ function shrink(img, f) {
   return { w, h, data: out };
 }
 
-function writePNG(file, W, H, rgb) {
+export function encodePNG(W, H, rgb) {
   const raw = Buffer.alloc(H * (W * 3 + 1));
   for (let y = 0; y < H; y++) { raw[y * (W * 3 + 1)] = 0; rgb.copy(raw, y * (W * 3 + 1) + 1, y * W * 3, (y + 1) * W * 3); }
   const crcT = [...Array(256)].map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
   const crc = (b2) => { let c = 0xFFFFFFFF; for (const v of b2) c = crcT[(c ^ v) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
   const chunk = (t, d) => { const L = Buffer.alloc(4); L.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(t), d]); const C = Buffer.alloc(4); C.writeUInt32BE(crc(td)); return Buffer.concat([L, td, C]); };
   const ih = Buffer.alloc(13); ih.writeUInt32BE(W, 0); ih.writeUInt32BE(H, 4); ih[8] = 8; ih[9] = 2;
-  writeFileSync(file, Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk('IHDR', ih), chunk('IDAT', zlib.deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]));
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk('IHDR', ih), chunk('IDAT', zlib.deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]);
 }
+export const writePNG = (file, W, H, rgb) => writeFileSync(file, encodePNG(W, H, rgb));
 
-const [IDX, OUTF, COLS] = process.argv.slice(2);
-if (!IDX || !OUTF) throw new Error('usage: sheetgrid.mjs <index.json> <out.png> [cols]');
-const items = JSON.parse(readFileSync(IDX, 'utf8'));
-const cols = Number(COLS || 6);
-const F = Number(process.env.SHRINK || 2);
-const PAD = 6, CAP = 26, S = 1;
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const [IDX, OUTF, COLS] = process.argv.slice(2);
+  if (!IDX || !OUTF) throw new Error('usage: sheetgrid.mjs <index.json> <out.png> [cols]');
+  const items = JSON.parse(readFileSync(IDX, 'utf8'));
+  const cols = Number(COLS || 6);
+  const F = Number(process.env.SHRINK || 2);
+  const PAD = 6, CAP = 26, S = 1;
 
-const tiles = items.map((it) => ({ ...it, img: shrink(readPNG(it.png), F) }));
-const tw = Math.max(...tiles.map((t) => t.img.w)), th = Math.max(...tiles.map((t) => t.img.h));
-const rows = Math.ceil(tiles.length / cols);
-const W = cols * (tw + PAD) + PAD, H = rows * (th + CAP + PAD) + PAD;
-const buf = Buffer.alloc(W * H * 3, 18);
+  const tiles = items.map((it) => ({ ...it, img: shrink(readPNG(it.png), F) }));
+  const tw = Math.max(...tiles.map((t) => t.img.w)), th = Math.max(...tiles.map((t) => t.img.h));
+  const rows = Math.ceil(tiles.length / cols);
+  const W = cols * (tw + PAD) + PAD, H = rows * (th + CAP + PAD) + PAD;
+  const buf = Buffer.alloc(W * H * 3, 18);
 
-tiles.forEach((t, i) => {
-  const cx = (i % cols) * (tw + PAD) + PAD, cy = Math.floor(i / cols) * (th + CAP + PAD) + PAD;
-  for (let y = 0; y < t.img.h; y++) {
-    for (let x = 0; x < t.img.w; x++) {
-      const s = (y * t.img.w + x) * 3, d = ((cy + y) * W + (cx + x)) * 3;
-      buf[d] = t.img.data[s]; buf[d + 1] = t.img.data[s + 1]; buf[d + 2] = t.img.data[s + 2];
+  tiles.forEach((t, i) => {
+    const cx = (i % cols) * (tw + PAD) + PAD, cy = Math.floor(i / cols) * (th + CAP + PAD) + PAD;
+    for (let y = 0; y < t.img.h; y++) {
+      for (let x = 0; x < t.img.w; x++) {
+        const s = (y * t.img.w + x) * 3, d = ((cy + y) * W + (cx + x)) * 3;
+        buf[d] = t.img.data[s]; buf[d + 1] = t.img.data[s + 1]; buf[d + 2] = t.img.data[s + 2];
+      }
     }
-  }
-  text(buf, W, H, cx + 2, cy + t.img.h + 4, t.label, S + 1, [255, 235, 140]);
-  if (t.sub) text(buf, W, H, cx + 2, cy + t.img.h + 16, t.sub, S, [190, 200, 215]);
-});
+    text(buf, W, H, cx + 2, cy + t.img.h + 4, t.label, S + 1, [255, 235, 140]);
+    if (t.sub) text(buf, W, H, cx + 2, cy + t.img.h + 16, t.sub, S, [190, 200, 215]);
+  });
 
-writePNG(OUTF, W, H, buf);
-console.log(`wrote ${OUTF}  ${W}x${H}  (${tiles.length} tiles, ${cols} cols, shrink ${F}x)`);
+  writePNG(OUTF, W, H, buf);
+  console.log(`wrote ${OUTF}  ${W}x${H}  (${tiles.length} tiles, ${cols} cols, shrink ${F}x)`);
+}
