@@ -176,7 +176,44 @@ export const L = {
  * is either a measurement or is derived from one; see `vent()`'s docblock for which.
  */
 const VENT = {
-  x0: -22.70, x1: -21.00,               // the bore in x, down the shaft (1.70 m)
+  /**
+   * The bore in x. **2.40 m, and the width is set by the AFFORDANCE, not by the crawl capsule**
+   * (§602). `Controller.inVent()` is `col.overlap(position, radius + 0.05, ['vent'])`, so a vent
+   * box `[x0, x1]` FIRES for a capsule centre in `[x0 - 0.39, x1 + 0.39]` and ADMITS one only in
+   * `[x0 + 0.34, x1 - 0.34]`. §600 set the vent proxies to exactly the bore and shipped 1.70 m,
+   * which over-promises by 0.73 m at each end: driven column by column the mouth had three widths
+   * where it should have had one — drawn doorway 2.40 m, `inVent()` 2.00 m, passable 1.30 m —
+   * leaving 0.70 m of wall on the east side where the game drops Sly into `crawl`, lights the
+   * HUD's CRAWL badge, and then stops him at z -49.56. That is §563's own coordinate, so a player
+   * standing there got byte-identical behaviour to before the passage was built, which is what
+   * "the vent crawl space still is not accessible" meant on the deployed build.
+   *
+   * 2.40 m is what the SHIPPED DOORWAY WAS ALREADY DRAWN AT — §600 cut the shell -23.05..-20.65
+   * and then built a 1.70 m bore inside it — and it puts the PASSABLE range at [-22.36, -20.64],
+   * which contains x -21.0: the centre of the bricked-up opening §565 framed and §600 deleted,
+   * and therefore the address a player who remembers a vent in this wall walks to. `ventInset`
+   * then pulls the affordance back onto the same range so the two agree. `door` widens with the
+   * structure (it is `ox0..ox1`, outside the jambs) and is not the width the player squeezes
+   * through — the jambs drawn at [x1, ox1] fill it in.
+   */
+  x0: -22.70, x1: -20.30,
+  /**
+   * How far the `vent` region markers are pulled IN from the bore at each end, so `inVent()`
+   * fires only where the capsule fits.
+   *
+   * `radius + 0.05 + radius` = 0.73 is the algebraic value and it is NOT enough, which is why
+   * this is a measurement. At 0.67 the driven census still found a crawl-and-stop column at each
+   * extreme edge (0.20 m of band); at 0.77 it finds none, and the passable window is unchanged at
+   * 1.60 m. The algebra assumes the overlap sphere sits at the capsule's centre — it sits at
+   * `position`, which is the FEET, so a player standing on the paving at y 0.00 reaches the box
+   * top at y 0.38 from outside the trench entirely, and the effective lateral reach is larger
+   * than `radius + 0.05` at that stance.
+   *
+   * Insetting FURTHER is not free either: it opens a sliver where the player fits but does not
+   * crawl, and that is also stuck — they walk the ramp standing and the lintel stops them. So
+   * this is tuned to the narrowest inset that clears the driven census, not to the largest.
+   */
+  ventInset: 0.77,
   z0: -63.85, z1: -62.15,               // the bore in z, along the east run — the crypt's own
                                         // drawn opening is z -64..-62, so this sits inside it
   /**
@@ -201,8 +238,8 @@ const VENT = {
    */
   foot: { z: -62.15, y: -5.40 },        // the elbow; the east run's floor — 18.5 deg
   exitX: -12.05,                        // the crypt's west wall, inner face
-  mouthHole: [-22.70, -21.00, -51.2, -48.70],       // hall floor collider + paving
-  door: { a0: -23.05, a1: -20.65, y0: -2.60, y1: 0.95 },   // the north wall's drawn doorway
+  mouthHole: [-22.70, -20.30, -51.2, -48.70],       // hall floor collider + paving; tracks x0/x1
+  door: { a0: -23.05, a1: -19.95, y0: -2.60, y1: 0.95 },   // the north wall's drawn doorway = ox0..ox1
   /* The tomb west wall. `openY` is the DRAWN opening, in the vault shell's own local y (world
      = this - 12): `vaultOpenings` has always cut one here — at local 8.2..9.9, world
      -3.80..-2.10 — and §600 moves it down a course and a half onto the gallery it serves. */
@@ -3611,10 +3648,24 @@ function vent(A) {
       const len = Math.hypot(zb - za, yb - ya);
       return { len, rx: -Math.atan2(yb - ya, zb - za), y: (ya + yb) / 2, z: (za + zb) / 2 };
     };
-    A.proxy(new THREE.BoxGeometry(x1 - x0, bore, 1.40), ventOpts, { x: (x0 + x1) / 2, y: -0.32, z: -49.20 });
-    for (const [za, zb] of [[V.head.z - 0.4, V.knee.z], [V.knee.z, V.foot.z]]) {
+    /* §602: the two markers a player can touch FROM THE HALL are inset in x by `ventInset`, so
+       `inVent()` fires over [x0 + 0.38, x1 - 0.38] instead of [x0 - 0.39, x1 + 0.39]. Measured,
+       not assumed, which markers those are: driven north from the hall, `crawl` engages at
+       (x, 0.00, -48.28) — standing on the paving, 0.42 m SOUTH of the ramp head — and at that
+       stance `overlap` at 0.39 returns exactly ONE hit, the mouth box, with the raked head
+       section the second hit only once the radius is opened to 1.00. Both are inset; the two
+       DEEP markers are not.
+
+       The deep ones keep the full bore on purpose. Falling out of `crawl` inside a 1.40 m bore
+       is worse than a false promise at the door — `Crawl.update` returns 'idle' and the player
+       stands into the roof — so the run and the lower rake stay generous. Over-promising only
+       costs something where there is a wall on the other side of it. */
+    const vin = V.ventInset;
+    A.proxy(new THREE.BoxGeometry(x1 - x0 - 2 * vin, bore, 1.40), ventOpts, { x: (x0 + x1) / 2, y: -0.32, z: -49.20 });
+    for (const [za, zb, inset] of [[V.head.z - 0.4, V.knee.z, vin], [V.knee.z, V.foot.z, 0]]) {
       const r = rake(za, zb);
-      A.proxy(new THREE.BoxGeometry(x1 - x0, bore, r.len), ventOpts, { x: (x0 + x1) / 2, y: r.y, z: r.z, rx: r.rx });
+      A.proxy(new THREE.BoxGeometry(x1 - x0 - 2 * inset, bore, r.len), ventOpts,
+        { x: (x0 + x1) / 2, y: r.y, z: r.z, rx: r.rx });
     }
     A.proxy(new THREE.BoxGeometry(V.exitX + 0.45 - x0, bore, z1 - z0), ventOpts,
       { x: (x0 + V.exitX + 0.45) / 2, y: runY + bore * 0.5, z: (z0 + z1) / 2 });

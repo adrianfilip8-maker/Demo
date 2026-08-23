@@ -205,8 +205,14 @@ test('D3 the vent shaft has a floor everywhere the terrain proxy is now cut (§6
     'floor now, D3 is measuring something else and needs re-deriving.');
 
   /* TERRAIN's `PROXY_OPENINGS` vent-mouth rectangle, duplicated here rather than imported: an arm
-     that reads the constant it checks cannot notice the constant moving. */
-  const CUT = { x0: -23.10, x1: -20.60, z0: -52.00, z1: -48.50 };
+     that reads the constant it checks cannot notice the constant moving.
+
+     It moved — §602 widened the bore east to x -20.30 and the cut followed to -19.80 — and this
+     copy is updated to match ON PURPOSE. Left stale it would keep passing, because the old
+     rectangle is a subset of the new one: green, while the newly opened eastern strip went
+     unchecked. A duplicated constant only earns its keep if somebody moves it when the original
+     moves; otherwise it is the same staleness with a comment on it. */
+  const CUT = { x0: -23.10, x1: -19.80, z0: -52.00, z1: -48.50 };
   /* A downward RAY from y 0.35, and both halves of that are the measurement.
      · from y 0.35 and not from above the temple: the portal's head is a solid slab at y 0.67..0.92
        across the doorway, and a cast from 2.5 m lands on TOP of it and reports 0.95 — a roof read

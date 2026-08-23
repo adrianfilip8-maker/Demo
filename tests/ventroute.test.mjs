@@ -299,9 +299,13 @@ test('ventroute R5: the passage is DRAWN — the player sees a tunnel, not a voi
   const misses = [];
   const stations = [];
   for (let z = -50.4; z >= -61.6; z -= 1.2) stations.push([`shaft z ${z.toFixed(1)}`, V(-21.85, yAt(z) + 0.55, z), DIRS]);
-  /* The run's stations start EAST of the shaft's own mouth: at x -22.70..-21.00 the run's south
-     side is the shaft, and a `south` ray there correctly finds open tunnel rather than a wall. */
-  for (let x = -20.6; x <= -12.6; x += 1.2) stations.push([`run x ${x.toFixed(1)}`, V(x, FOOT.y + 0.55, -63.0), RUN_DIRS]);
+  /* The run's stations start EAST of the shaft's own mouth: where the shaft joins, the run's
+     south side IS the shaft, and a `south` ray there correctly finds open tunnel rather than a
+     wall. §602 widened the bore from x -22.70..-21.00 to -22.70..-20.30, so this line moves with
+     it — at -20.6 the station now stands in the junction, and this arm went red for exactly that,
+     which is the arm doing its job rather than a tolerance to widen. -20.0 is the first station
+     clear of the new east jamb. */
+  for (let x = -20.0; x <= -12.6; x += 1.2) stations.push([`run x ${x.toFixed(1)}`, V(x, FOOT.y + 0.55, -63.0), RUN_DIRS]);
   for (const [label, p, dirs] of stations) {
     for (const [dn, d] of dirs) {
       const h = seen(p, d);
@@ -469,4 +473,114 @@ test('ventroute R7: nothing in the passage holds a grounded player', async () =>
   console.log(`[ventroute R7] ${stations.length} stations, worst eight-way reach ${worst.toFixed(2)} m at ${worstAt}; `
     + `§566's closed space settles ${pocket.settled}/8 and reaches ${pocket.best.toFixed(2)} m (the discriminator)`
     + `\n  ${rows.join(' ')}`);
+});
+
+/* ====================================================================================== */
+test('ventroute R8: every stance that makes Sly crawl can also get through (§602)', async () => {
+  /* Why this arm exists.
+   *
+   * §600 shipped, §601 photographed it, R1-R7 were green, and the player's verdict on the live
+   * build was "the vent crawl space still is not accessible". R1 does not walk into the mouth: it
+   * STEERS to (-21.85, -52), the bore's own axis, and converges into the hole from wherever it
+   * starts. A person holds forward at the place they think the vent is, and §600.12 said as much
+   * in its bounds — *reachable*, never *forgiving*.
+   *
+   * Driven column by column, the shipped mouth had THREE widths where it should have had one:
+   *   drawn doorway  x -23.05..-20.65   2.40 m
+   *   inVent() fires x -22.70..-20.70   2.00 m
+   *   player passes  x -22.70..-21.40   1.30 m
+   * leaving 0.70 m of wall, all on the east side, where the game drops Sly into `crawl`, lights
+   * the HUD's CRAWL badge, and then stops him at z -49.56 — §563's own coordinate, i.e. exactly
+   * what a player got before §600 was written.
+   *
+   * The mechanism is arithmetic. `inVent()` is `col.overlap(position, radius + 0.05, ['vent'])`,
+   * so a vent box [x0, x1] FIRES for a capsule centre in [x0 - 0.39, x1 + 0.39] and ADMITS one
+   * only in [x0 + 0.34, x1 - 0.34]. Marking the region with a box the size of the bore therefore
+   * over-promises by 0.73 m at each end by construction, and §600 set the proxies to exactly the
+   * bore. This arm is the invariant that catches it: the set of stances that crawl must be a
+   * subset of the set that gets out.
+   *
+   * DOMAIN (§418.3)
+   * passes on : the shipped mouth — no column in x -23.4..-20.0 enters `crawl` and then fails to
+   *             reach the far side of the wall.
+   * fails on  : the same census with the affordance widened by 0.75 m, run in-arm. That is the
+   *             defect in its own terms — an affordance region wider than the bore it marks — and
+   *             it reproduces the 0.70 m band measured on 870c8e5.
+   *             It also fails on the SHIPPED PARAMETER at one setting off: built with
+   *             `VENT.ventInset` at 0.67 rather than 0.77, this arm goes red with a
+   *             crawl-and-stop column at each extreme edge (0.20 m of band). That is the better
+   *             discriminator of the two, because it is the real knob rather than a synthetic
+   *             one, and it is what set 0.77.
+   * does not discriminate: the same census 10 m east at x -12, where the wall is uncut. Nothing
+   *             crawls and nothing passes there, so the subset assertion is vacuously true — a
+   *             sealed wall and a correct mouth are indistinguishable to it, which is why the
+   *             arm also asserts the passable window is non-empty.
+   */
+  const { engine, collision, c } = await harness();
+
+  const step = (fwd) => {
+    engine.camera.rotation.set(0, 0, 0, 'YXZ');       // camera yaw 0 faces -z; hardReset's is PI
+    engine.camera.updateMatrixWorld(true);
+    engine.input.beginFrame(DT);
+    engine.input.move.x = 0; engine.input.move.y = fwd;
+    engine.time += DT; c.update(DT, engine.time);
+    engine.events.length = 0;
+  };
+
+  /** Settle in the trench at `x` and hold forward due north. */
+  const column = (x, pad = 0) => {
+    hardReset(engine, c, V(x, 0.20, -47.6), Math.PI);
+    for (let i = 0; i < 30; i++) step(0);
+    if (!c.grounded) return null;
+    let crawls = false, minZ = c.position.z;
+    for (let i = 0; i < 700; i++) {
+      step(1);
+      /* `pad` widens the affordance without touching the level: the same overlap `inVent()` runs,
+         at a larger radius. pad = 0 is the shipped affordance.
+
+         `collision.overlap` hands back a POOLED array — the next call refills it — so `length` is
+         read on the line below and the result is never held. Held across two more calls while
+         diagnosing §602, it reported 0 hits at a stance where a fresh call at the identical radius
+         reported 1, which pointed the whole diagnosis at `inVent()`'s `groundTag` branch instead
+         of at the marker's width. */
+      const hit = collision.overlap?.(c.position, c.radius + 0.05 + pad, ['vent']);
+      if (c.stateName === 'crawl' || (pad > 0 && hit && hit.length)) crawls = true;
+      if (c.position.z < minZ) minZ = c.position.z;
+    }
+    return { crawls, through: minZ < -52.2, minZ };
+  };
+
+  const scan = (pad) => {
+    const bad = [], pass = [], fire = [];
+    for (let x = -23.4; x <= -20.0 + 1e-9; x += 0.1) {
+      const xx = +x.toFixed(2);
+      const r = column(xx, pad);
+      if (!r) continue;
+      if (r.crawls) fire.push(xx);
+      if (r.through) pass.push(xx);
+      if (r.crawls && !r.through) bad.push(xx);
+    }
+    return { bad, pass, fire };
+  };
+
+  const shipped = scan(0);
+  const map = (a) => (a.length ? `${Math.min(...a).toFixed(2)}..${Math.max(...a).toFixed(2)} (${a.length} cols)` : 'none');
+
+  assert.ok(shipped.pass.length > 0,
+    'no column gets through the mouth at all — this arm is measuring a sealed wall, not an affordance mismatch');
+
+  assert.equal(shipped.bad.length, 0,
+    `${shipped.bad.length} column(s) enter \`crawl\` and cannot get through: x ${shipped.bad.map((v) => v.toFixed(2)).join(', ')}. `
+    + `crawl fires over ${map(shipped.fire)}, the passage admits ${map(shipped.pass)}. A stance where the game shows `
+    + 'the CRAWL badge and the wall then stops the player is the §602 defect: the affordance is wider than the hole.');
+
+  /* The failing input, in-arm: widen the affordance by 0.75 m and the same census must go red. */
+  const widened = scan(0.75);
+  assert.ok(widened.bad.length > 0,
+    'widening the affordance by 0.75 m produced no crawl-and-stop column, so this census cannot see an '
+    + 'over-wide affordance and its clean result above is not evidence');
+
+  console.log(`[ventroute R8] crawl fires ${map(shipped.fire)}, passage admits ${map(shipped.pass)}, `
+    + `crawl-and-stop columns: ${shipped.bad.length}; with the affordance widened 0.75 m the same census finds `
+    + `${widened.bad.length} (the discriminator)`);
 });

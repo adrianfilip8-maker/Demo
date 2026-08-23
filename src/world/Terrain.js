@@ -795,7 +795,11 @@ const PROXY_OPENINGS = [
    *     show as a trench in the desert. North of −52.00 the shaft is 0.5–4.6 m below the surface
    *     and the lid is a ceiling it never touches, so there is nothing there to cut.
    */
-  { id: 'vent-mouth', x0: -23.10, x1: -20.60, z0: -52.00, z1: -48.50 },
+  /* §602 widened the bore to x -22.70..-20.30, so the structure's outside is -23.05..-19.95 and
+     this cut follows it east. That edge carries 0.15 m of margin rather than the west's 0.05:
+     the effective-edge note above measured surviving sand reaching ~0.25 m INTO the cut, and
+     -19.80 puts that at -20.05, clear of the bore's east jamb at -20.30. */
+  { id: 'vent-mouth', x0: -23.10, x1: -19.80, z0: -52.00, z1: -48.50 },
 ];
 
 /** Sub-cells per axis on a proxy quad that meets an opening: 4.0 / 8 = 0.5 m of edge accuracy. */
