@@ -1491,6 +1491,14 @@ caps at elbow 0.45 (delivered 138°, still wider than the 132° this game shippe
 started), which restores about 4 cm of daylight while keeping the spread you asked for. The legs
 are untouched.
 
+**One caveat I want on the record before you look.** The measurement and the fix are both taken
+on the procedural rebuild of the rig, not on the exact shipped character — the shipped one carries
+extra per-bone geometry rotations that no skeleton measurement can see, and the tool that
+photographs it on the real character did not get a frame out this round (the box was running five
+jobs at once). So this is verified by numbers and by a regression test, and NOT yet by a picture
+on the rig you actually play. If it still looks crossed to you, that difference is the first thing
+I check, and it is one command away.
+
 **What to re-test, and it needs 20 seconds of doing nothing.** Stand still, don't touch the
 stick, and watch him for at least 15 seconds so the third idle comes up. His left hand should sit
 on his hip with clear air between the arms, and the arms should never pass through each other as
