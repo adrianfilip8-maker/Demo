@@ -350,3 +350,113 @@ test('L8 §551: a mid-boot unlock does not fetch the stem until frames are runni
   } finally { S.restore(); }
   console.log('  [L8] mid-boot unlock: 0 fetches until the first frame, then exactly 1; offline path: 0 ever');
 });
+
+/* ====================================================================== */
+/* §552 — the pad has no gesture                                          */
+/* ====================================================================== */
+
+test('L9 §552: a pad-only player reaches audio, on the one signal a pad produces', async () => {
+  /* ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : `inputDevice: 'pad'` on the bus creating the context, with NONE of the three
+   *               DOM gesture listeners having fired — which is the pad-only player's whole
+   *               situation, since a gamepad button is polled and dispatches no DOM event.
+   *   fails  on : RUN in-arm — the same bus event carrying 'kbm', which must NOT unlock, so this
+   *               cannot pass by unlocking on any event at all.
+   *   verdict   : §551 armed pointerdown/keydown/touchstart and a pad fires none of them. This is
+   *               the reachable signal: `Input._press(a,'pad')` -> `_setDevice('pad')` -> emit.
+   *   does NOT  : discriminate whether the browser HONOURS resume() without a qualifying gesture.
+   *   discrim.    §551 established this container applies no autoplay policy and that forcing the
+   *               flag changes nothing with no audio device. L11 covers the branch where it is
+   *               refused; neither can be verified here, which is why the design works either way.
+   */
+  const W = installWindow();
+  try {
+    const engine = stubEngine();
+    const a = new Audio(engine);
+    a.available = true;
+    await a.init();
+    assert.equal(a.ready, false, 'audio was already unlocked before any input');
+    const gestureListeners = W.win.count('pointerdown') + W.win.count('keydown') + W.win.count('touchstart');
+    assert.ok(gestureListeners > 0, 'the §551 DOM listeners are not armed at all');
+
+    engine.emit('inputDevice', 'pad');
+    assert.ok(a.ready, 'a pad press did not reach audio — a pad-only player has no path to sound');
+    /* and not one of the DOM gestures was involved */
+    assert.equal(W.win.fired ?? 0, 0, 'a DOM gesture handler ran; this arm is not testing the pad path');
+    a.dispose();
+  } finally { W.restore(); }
+
+  /* The counterexample: a keyboard device change must NOT unlock. */
+  const W2 = installWindow();
+  try {
+    const engine = stubEngine();
+    const a = new Audio(engine);
+    a.available = true;
+    await a.init();
+    engine.emit('inputDevice', 'kbm');
+    assert.equal(a.ready, false,
+      'a kbm device change unlocked audio — this would pass by unlocking on anything at all');
+    a.dispose();
+  } finally { W2.restore(); }
+  console.log('  [L9] inputDevice:pad creates the context with no DOM gesture; kbm does not');
+});
+
+test('L10 §552: a repeat unlock() retries resume instead of returning flat', async () => {
+  /* The trap this closes. `unlock()` used to open with `if (this.ctx) return this.ready`, which was
+     harmless only while nothing could create a context without a gesture. §552 makes a POLLED pad
+     press create one — and if the platform refuses to resume it, that context is born suspended.
+     Under the old early return the later, genuine click came back through here, hit it, and never
+     resumed: silent for the life of the page, with `ready` reporting true. */
+  const W = installWindow();
+  try {
+    const a = new Audio(stubEngine());
+    a.available = true;
+    await a.init();
+
+    const ctx = new OfflineCtx(SR);
+    let resumes = 0;
+    ctx.resume = () => { resumes++; return Promise.resolve(); };
+    a.unlock(ctx);
+    const first = resumes;
+    assert.ok(first >= 1, 'the first unlock() never asked the context to resume');
+
+    a.unlock();                      // the later, genuine gesture
+    assert.ok(resumes > first,
+      `a repeat unlock() did not retry resume (${resumes} calls) — a suspended context would stay silent forever`);
+    a.dispose();
+  } finally { W.restore(); }
+  console.log('  [L10] repeat unlock() retries resume');
+});
+
+test('L11 §552: while the context is not audible, the DOM listeners stay armed', async () => {
+  /* If a polled pad press creates a SUSPENDED context, the only thing that can start it is a real
+     gesture — so the gesture listeners must survive. Disarming on the first `unlock()` would throw
+     that click away, which is §551's own mistake one layer down. */
+  const W = installWindow();
+  try {
+    const a = new Audio(stubEngine());
+    a.available = true;
+    await a.init();
+    const armed = () => W.win.count('pointerdown');
+    assert.ok(armed() > 0, 'listeners were never armed');
+
+    /* A context that models suspension and refuses to leave it. */
+    const ctx = new OfflineCtx(SR);
+    ctx.state = 'suspended';
+    ctx.resume = () => Promise.resolve();
+    a.unlock(ctx);
+    assert.equal(a.audible, false, 'a suspended context reported itself audible');
+    W.win.dispatch('pointerdown');
+    assert.ok(armed() > 0,
+      'the DOM listeners disarmed while the context was still suspended — the real click that could '
+      + 'have started it would now be swallowed');
+
+    /* Once it does run, they retire. */
+    ctx.state = 'running';
+    assert.equal(a.audible, true, 'a running context did not report itself audible');
+    W.win.dispatch('pointerdown');
+    assert.equal(armed(), 0, 'the listeners never retire, so they leak for the life of the page');
+    a.dispose();
+  } finally { W.restore(); }
+  console.log('  [L11] listeners persist while suspended and retire once running');
+});

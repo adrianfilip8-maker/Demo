@@ -68,6 +68,8 @@ const P = { x: 1, y: 0, z: -2 };
  * dead in the first draft of this sweep when it is not.
  */
 const PAYLOAD = {
+  /* §552: the string `Input._setDevice` emits. A device name, not a cue — see SILENT_BY_DESIGN. */
+  inputDevice: 'pad',
   landed: { force: 12, pos: P, surface: 'stone' },
   jumped: { pos: P },
   doubleJump: {},
@@ -108,6 +110,11 @@ const SILENT_BY_DESIGN = {
   shot: 'stops every loop so a canonical capture never records a stale bed',
   treasureBanked: 'raises a music hold; the treasure cue is the score, not an sfx',
   paraglide: 'STOP half only; the loop is started from per-frame state in update()',
+  /* §552: control plane, not a cue. A gamepad button fires no DOM event and is not user
+     activation, so this is the ONLY signal a pad-only player produces; the handler creates the
+     context so that sound becomes possible at all. It must not voice — starting a sound on a
+     device change would fire on every swap between pad and keyboard. */
+  inputDevice: 'creates the context for a pad-only player; a device change is not a cue',
 };
 
 /* ====================================================================== */

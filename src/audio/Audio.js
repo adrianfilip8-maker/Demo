@@ -416,8 +416,13 @@ export class Audio {
        gating here would mean a harness that sets `available` after construction never arms. */
     if (typeof window === 'undefined' || this._gestureGo) return;
     const go = () => {
-      this._disarmGesture();
       try { this.unlock(); } catch { /* a failed unlock must never break the page */ }
+      /* §552: only stop listening once sound is genuinely running. A context created from a
+         POLLED gamepad press may be born suspended — a pad button is not a DOM event and browsers
+         do not count it as user activation — and in that state a real click is the only thing that
+         can start it. Disarming on the first call would throw that click away, which is the same
+         mistake §551 fixed one layer up. */
+      if (this.audible) this._disarmGesture();
     };
     this._gestureGo = go;
     for (const t of GESTURE_EVENTS) {
@@ -479,7 +484,14 @@ export class Audio {
    * rather than a reimplementation of it. Nothing in the game passes it.
    */
   unlock(existing) {
-    if (this.ctx || (!this.available && !existing)) return this.ready;
+    /* §552: a REPEAT call retries `resume()` instead of returning flat.
+       This used to be `if (this.ctx || …) return this.ready`, and that was a trap the moment
+       anything could create the context without a qualifying user gesture. A context born
+       SUSPENDED stayed suspended for the life of the page: the later, genuine click came back
+       through here, hit the early return, and never resumed it. Silent forever, with a context
+       that exists and a `ready` flag that says yes. Retrying costs one no-op promise. */
+    if (this.ctx) { this._tryResume(); return this.ready; }
+    if (!this.available && !existing) return this.ready;
     try {
       if (existing) this.ctx = existing;
       else {
@@ -506,7 +518,7 @@ export class Audio {
 
     // Chrome can still hand back a suspended context; resume is a promise that may
     // reject if the gesture wasn't trusted. Either way we must not throw.
-    try { this.ctx.resume?.().catch?.(() => {}); } catch {}
+    this._tryResume();
 
     try {
       this._startBeds();
@@ -535,6 +547,31 @@ export class Audio {
     if (!existing && this._framed) this._kickTrack();
 
     return this.ready;
+  }
+
+  /**
+   * Ask the context to run. Safe to call any number of times, on any path.
+   *
+   * Deliberately swallows: `resume()` rejects when the call did not come from a qualifying user
+   * gesture, and that rejection is information we cannot act on — it is the platform's answer, not
+   * an error in the page. `state` afterwards is what tells the truth; see `audible`.
+   */
+  _tryResume() {
+    try { this.ctx?.resume?.()?.catch?.(() => {}); } catch {}
+  }
+
+  /**
+   * Is sound actually coming out — as opposed to "we built a graph"?
+   *
+   * `ready` means the graph exists. A context can be `ready` and SUSPENDED, which is exactly the
+   * state a pad-only player can reach (§552), and the difference is the whole defect. `undefined`
+   * state means a context that does not model suspension at all (the offline harness), which is
+   * running by definition.
+   */
+  get audible() {
+    if (!this.ready || !this.ctx) return false;
+    const st = this.ctx.state;
+    return st === undefined || st === 'running';
   }
 
   /** Start the first stem load exactly once, and never under the offline/capture harness. */
@@ -1015,6 +1052,10 @@ export class Audio {
       /* Frames are running but nobody has touched the page yet: the one window in which the
          stem's bytes can be fetched for free. Guarded and idempotent — see `_prefetchStem`. */
       this._prefetchStem();
+      /* The same claim as the `inputDevice` subscription, made without depending on emit
+         semantics: if the player is already on a pad and we have no context, take it. One
+         property read per frame while locked, and nothing at all afterwards. */
+      if (!this.ctx && this.engine.input?.lastDevice === 'pad') { try { this.unlock(); } catch {} }
       return;
     }
 
@@ -1442,6 +1483,30 @@ export class Audio {
   _wireEngine() {
     const e = this.engine;
     const on = (evt, fn) => { try { this._unsub.push(e.on(evt, fn)); } catch {} };
+
+    /**
+     * §552 — THE PAD HAS NO GESTURE, so give it the only signal it does produce.
+     *
+     * The user played on a controller and reported the music still did not start. §551 armed
+     * `pointerdown`/`keydown`/`touchstart`, and **a gamepad button fires none of them**: the
+     * Gamepad API is POLLED, `Input._padButtons` reads button state inside `beginFrame`, and
+     * nothing in `src/core/Input.js` dispatches a DOM event for it — verified, zero
+     * `dispatchEvent` in that file. So a player who boots the page, picks up a pad and never
+     * touches mouse or keyboard had no path to audio at all.
+     *
+     * What a pad press DOES produce is this: `_press(a, 'pad')` calls `_setDevice('pad')`, which
+     * emits `inputDevice`. `lastDevice` starts `'kbm'`, so the first pad press always emits.
+     *
+     * **What this can and cannot buy, stated honestly.** Creating the context here costs nothing
+     * and may work. Whether `resume()` is HONOURED without a qualifying gesture is a platform
+     * question this project cannot test — §551 established that headless Chromium applies no
+     * autoplay policy and that forcing the flag changes nothing with no audio device — so this is
+     * written to be correct either way: if the policy allows it, the pad player gets audio with no
+     * click; if it refuses, the context sits suspended, the DOM listeners stay armed (see
+     * `_armGesture`), and the first real click starts it instead of being swallowed. The one
+     * outcome that is now impossible is the one that used to happen: nothing, forever.
+     */
+    on('inputDevice', (dev) => { if (dev === 'pad') { try { this.unlock(); } catch {} } });
 
     /* ---- movement (Moveset emits all of these) ---- */
     on('landed', (p) => {

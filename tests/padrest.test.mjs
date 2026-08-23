@@ -660,3 +660,52 @@ test('R5 first touch: a pad player who presses Options first gets the card, in s
     assert.equal(cardIsPad(hud), false, 'a connected-but-untouched pad swapped the card to shapes');
   }
 });
+
+/* ====================================================================== */
+/* R6 — the pad produces no DOM gesture, and what it does produce         */
+/* ====================================================================== */
+
+test('R6 §552: a pad press fires no DOM gesture event, and emits inputDevice instead', async () => {
+  /* ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
+   *   passes on : a real Cross press driven through `Input.beginFrame` leaving `pointerdown`,
+   *               `keydown` and `touchstart` listener counts at ZERO, while emitting
+   *               `inputDevice: 'pad'` exactly once.
+   *   fails  on : RUN in-arm — a real `keydown` on the same rig, which MUST reach the DOM
+   *               listeners. Without that clause an arm that simply never fires anything would
+   *               pass, and the claim "the pad is invisible to DOM listeners" would be untested.
+   *   verdict   : this is the source of §552. The Gamepad API is polled; `src/core/Input.js`
+   *               dispatches no synthetic event for a button, so the three listeners `Audio`
+   *               arms in §551 cannot see a pad at all. `inputDevice` is the reachable signal.
+   *   does NOT  : discriminate user ACTIVATION. Whether the browser would honour `resume()` off a
+   *   discrim.    polled press is a platform question this project cannot test (§551), and no arm
+   *               here claims otherwise.
+   */
+  const { engine, input, emits } = await hudRig();
+
+  let dom = 0;
+  const bump = () => { dom++; };
+  for (const t of ['pointerdown', 'keydown', 'touchstart']) win.addEventListener(t, bump);
+
+  /* A resting poll first: `_padValue` trusts a control only once seen released (§542). */
+  PIN(input); input.beginFrame(DT); input.endFrame();
+  assert.equal(dom, 0, 'polling a resting pad already fired a DOM event');
+
+  padState.buttons[0] = { pressed: true, value: 1 };            // Cross
+  PIN(input); input.beginFrame(DT); input.endFrame();
+
+  assert.ok(input.down('jump'), 'the Cross press never reached the action map');
+  assert.equal(dom, 0,
+    `a pad press fired ${dom} DOM gesture event(s) — if this ever becomes non-zero the §552 `
+    + 'workaround is unnecessary and should be removed rather than left as dead weight');
+  assert.deepEqual(emits, ['pad'], `inputDevice emits ${JSON.stringify(emits)} — expected exactly one 'pad'`);
+
+  /* The counterexample: a real key DOES reach the DOM listeners, so the zero above means
+     something. */
+  win.fire('keydown', { code: 'KeyE' });
+  assert.ok(dom > 0, 'a real keydown did not reach the listeners — this arm cannot see DOM events at all');
+
+  win.fire('keyup', { code: 'KeyE' });
+  for (const t of ['pointerdown', 'keydown', 'touchstart']) win.removeEventListener(t, bump);
+  padState.buttons[0] = { pressed: false, value: 0 };
+  console.log(`  [R6] pad press: 0 DOM gesture events, inputDevice emits ${JSON.stringify(emits)}; a real key fires ${dom}`);
+});

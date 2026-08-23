@@ -48368,3 +48368,90 @@ above would need a judgement per clip; and the offline numbers are `SlyModel`'s 
 shipped `SlyModelDLRig` carries per-bone geometry rotations that no skeleton metric sees (§470.1),
 which is why the frames beside this section are captured on the shipped rig with the same
 measurement running in-page.
+## §552 — The pad has no gesture: why §551 was correct and still did not reach the player
+
+User, on the deployed build: *"The music still doesn't seem to play on the controller."* §551 is live
+and works. It works for mouse and keyboard. **The user plays on a pad**, and a fix verified on the
+wrong device is the same shape as a check that is true by accident.
+
+### §552.1 The failure, established rather than assumed
+
+`Audio` armed `pointerdown`, `keydown` and `touchstart`. **A gamepad button fires none of them.** The
+Gamepad API is polled: `Input._padButtons` reads button state inside `beginFrame`, and
+`src/core/Input.js` dispatches **no** DOM event for a press — zero `dispatchEvent` in the file.
+
+Driven, not read (`padrest.test.mjs` **R6**): a real Cross press through the shipping `Input` leaves
+all three listener counts at **0** while emitting `inputDevice: 'pad'` exactly once — and a real
+`keydown` on the same rig fires them, so the zero means something. **A player who boots the page,
+picks up a pad and never touches mouse or keyboard had no path to audio at all.**
+
+### §552.2 The half that is measurable here, and the half that is not
+
+**Measurable, and measured:** that the three listeners cannot see a pad press; that `inputDevice` is
+the signal a pad does produce; that `Audio` now takes it.
+
+**Not measurable here, and not claimed:** whether a browser HONOURS `resume()` when the only input
+has been a polled gamepad press. §551 established why — headless Chromium applies no autoplay policy,
+and forcing `--autoplay-policy=user-gesture-required` changes nothing because there is no audio
+device for a policy to govern. That probe voided itself twice rather than answer.
+
+So this is built to be correct **either way**:
+
+- if the platform allows it, the pad player gets audio with no click at all;
+- if it refuses, the context sits suspended, the DOM listeners **stay armed**, and the first real
+  click starts it.
+
+The one outcome that is now impossible is the one that was happening: nothing, forever.
+
+### §552.3 The trap that would have made it worse
+
+`unlock()` opened with `if (this.ctx) return this.ready`. That was harmless only while nothing could
+create a context without a gesture — and §552 makes a *polled* pad press create one.
+
+**Under the old early return, a context born suspended stayed suspended for the life of the page.**
+The later, genuine click came back through `unlock()`, hit the early return, and never resumed:
+permanently silent, with `ready` reporting true. The naive version of this fix — "call `unlock()` on
+a pad press" — would have converted "no audio until you click" into "no audio ever".
+
+Three changes close it, and each has its own arm:
+
+| change | arm | mutation |
+|---|---|---|
+| a repeat `unlock()` retries `resume()` | L10 | restore the flat early return -> red |
+| the DOM listeners stay armed until genuinely **audible** | L11 | disarm unconditionally -> red |
+| `inputDevice: 'pad'` creates the context | L9 | drop the subscription -> red |
+
+`audible` is new and is the distinction the whole section turns on: **`ready` means a graph exists;
+`audible` means sound is actually coming out.** A context can be `ready` and suspended, and that is
+exactly the state a pad-only player could reach.
+
+### §552.4 The remedy if the platform does refuse, priced and NOT built
+
+If a qualifying gesture turns out to be required, the honest answer is that a pad-only player must
+touch a key or click once — **and the game must say so.** A silent game with no explanation is the
+defect either way.
+
+The loading screen already reads *"Click to play · WASD move · Mouse look · Space jump"*
+(`index.html:81`). It names the click but says nothing about a controller, so a pad player has no
+reason to think a click is needed at all. The smallest honest change is that one line, naming it:
+
+> `Click to play (once, even with a controller) · WASD move · Mouse look · Space jump`
+
+**Cost:** one line of static markup, no code, no runtime, no menu — the user has cut menus, and a
+line of text is not one. **Not built, and not mine:** `index.html` is outside this lane's ownership,
+and the wording is the first thing the user reads, which makes it a judgement rather than a fix.
+Brought for a ruling.
+
+### §552.5 DOMAIN
+
+- **R6** (`padrest.test.mjs`) — *passes on* a real pad press firing zero DOM gesture events and
+  emitting `inputDevice` once; *fails on* the counterexample run in-arm, a real `keydown`, which
+  must reach those listeners. Without it, an arm that fires nothing would pass. It also states the
+  reverse condition plainly: **if that zero ever becomes non-zero, §552's workaround is unnecessary
+  and should be deleted rather than left as dead weight.**
+- **L9** — *passes on* `inputDevice: 'pad'` creating the context with no DOM gesture; *fails on*
+  `'kbm'`, so it cannot pass by unlocking on any event at all.
+- **L10 / L11** — the two halves of §552.3, each mutation-checked above.
+- **What none of this reaches.** Whether the user hears anything. `OfflineCtx` is not a sound card
+  and this container is not a browser with an audio device — which is precisely why the design does
+  not depend on the answer.
