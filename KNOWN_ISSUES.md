@@ -51980,3 +51980,89 @@ textually indistinguishable unless the bound is written down.
 "the swing is unchanged" offered *before* it was played — which is why §605 declined to make one.
 Does not discriminate: a swing that is subtly worse in a way the player has not yet provoked, since
 one session of play is a sample, not a proof. Left open deliberately.
+
+## §479.20 — The user picked from the sheet: raw `Standupright` ships, and the four-round match was correcting away the thing they kept asking for
+
+The user, off the §479.19 contact sheet: *"I like the raw standupright more"*. Shipped:
+`GODOT_ALIAS.idle_confident` and `.idle_look` both take `Standupright`, played the way every
+other row in that table already plays its clip — retargeted, unmatched, no per-pose correction.
+
+**Why four rounds went the wrong way, stated plainly because it is the lesson.** Their pose is
+47.6 cm across the hands on THEIR rig. Retargeted onto ours it arrives at ~66 cm, because our
+rest arms sit ~14.5° wider (§479.6) and the world-delta method composes their motion onto our
+rest. §479.15–§479.17 read "match the reference" as "hit 47.7 cm" and hand-solved our procedural
+idle down to it — while the user's complaint, from the very first report, was *"arms and legs too
+tucked in"* and *"spread further out to the side"*. **Every match made the pose narrower, which is
+the exact axis of the complaint.** The instruments all passed each time because they were
+measuring agreement with a number we had chosen, not the property the user was naming.
+
+### §479.20.1 The three questions, answered by reading the pipeline rather than inferring
+
+**1. Is the matched-vs-raw difference per-clip or one global transform?** Neither, in the shipped
+game — *there was no such transform at all*. `buildClipSet` does exactly four things to a source
+clip: `trimRaw`, `retimeRaw`, `spliceClip` (donor fill) and the §531 limb lever. No abduction
+correction exists in the pipeline. The "matched" reading is a **tool-side construct built for the
+contact sheet** (`idlecensus.mjs` solves a per-arm rest-abduction delta by bisection so the sheet
+could show both readings), and it has never shipped. What shipped was narrower still: the standing
+idle was the ONLY verb never aliased — twelve verbs already play the repo's clips raw, and the
+idle stayed a hand-authored procedural pose that successive rounds solved toward the reference.
+So this change flips nothing global and needs no exemption: it makes the thirteenth verb
+consistent with the other twelve.
+
+**2. Does raw also win on the other poses?** For the shipped set the question is already closed —
+they are all raw today, and the user's ruling endorses the reading they are already getting. The
+sheet does show where the two readings differ most, and it is worth recording as a WATCH ITEM
+rather than a win: on the **gripping** poses, matched is the geometrically tighter one
+(PoleClimbIdle 15.0 cm on their rig → 28.2 raw; CaneSwing Idle 26.7 → 42.3; LedgeGrab Idle 51.1 →
+67.5). Those hands are supposed to be closed around a pole, a cane and a ledge lip. Since they
+ship raw, the in-situ risk is hands wider than the prop they hold — invisible to a posed take by
+construction (§479.4's stated limit), and now the specific thing to look at on hardware.
+
+**3. Why did the match exist at all — was it covering a retarget defect?** It was correcting a
+NUMBER, not a defect. The evidence is direct: the raw port's own geometry is clean — both hands
+well outboard of their own shoulders (21.3 / 18.4 cm), elbows at 154°, no limb through the torso
+in the profile frame, and the §479.16 defect it was once credited with fixing (the cane hand
+3.6 cm *inboard*, hidden behind the torso) is a property of the old **procedural** pose that raw
+does not have and never had. Nothing was being covered up. The one thing raw genuinely changes,
+recorded so nobody meets it as a surprise: the cane now hangs at his side rather than planting,
+because their rig has no cane bone and our socket carries it rigidly off `handR` — and that is
+exactly what the endorsed frame shows.
+
+### §479.20.2 One divergence from the endorsed frame, found by measuring rather than assuming
+
+The frame the user picked had NO limb lever on it. The shipped slots carried
+`GODOT_LIMB_OPEN.idle_* = { elbow: 0, knee: 0.60 }`. Measured against the endorsed pose the elbow
+exemption already reproduced the arms exactly (66.3 cm, out 21.3/18.4, fold 154.2/153.8 —
+identical to the bare clip), but the knee at 0.60 straightened the RIGHT knee **129.2° → 156.3°**:
+a 27° change to the stance in the picture. Both rows go to `knee: 0`, stated in the table as a
+choice: *the picture is the specification*, which is the rule four rounds were lost ignoring.
+§531's leg ruling is untouched everywhere else. Verified after: bare clip and both shipped slots
+all read knees 167.6 / 129.2.
+
+`idle_look` takes the same source for a measured reason and not for symmetry: §479.10 established
+that `Moveset.js:141` hands the standing idle to `idle_look` after 13 s of standing still, so it
+is the pose a standing player actually ends up staring at. Left on the matched arms it would have
+re-narrowed the silhouette by ~19 cm at the 13-second mark — the rejected look, on a timer.
+`idle_bored` stays procedural: it authors its own arm channels, already delivers the widest of the
+three (56.6 cm), and is the idle's remaining variety.
+
+### §479.20.3 On camera, and the arms re-derived rather than re-pinned
+
+`tools/idlevsref.mjs MODE=ruled` — both slots the player can reach, front-three-quarter AND
+profile, every front frame through §479.14's camDot guard (`cam·facing 0.82`; profiles 0.00):
+`shots/idle20-ruled-{confident,look}-{front34,profile}.png`. Live hand separation 70.9 / 70.6 cm,
+reproducing the sheet tile's own live 70.0 — the picture the user picked is the picture that
+ships. The profile is the frame that earns its place: raw arms could read wide from the front and
+clip the torso from the side, and they do not — the arms hang free with daylight at the ribs.
+
+Two arms in `anim.test.mjs` were invalidated by the ruling and **both were re-derived from the
+inverted claim, not re-pinned**:
+- the §531 lever's exemption check compared `shipped` against `proc` for these two slots, which
+  was only valid while both held the same procedural clip; it now compares shipped against the
+  SAME clip with the lever off (plus a knee-delta check for §479.20.2), which holds whatever
+  source fills the slot;
+- the §479.16/17 spread arm's band (`|sep − 47.7| ≤ 2.5`) inverts to a floor at the raw port's own
+  spread, with an origin check so a silent fallback to the procedural idle cannot pass it, and
+  its CONTRAST is now the §479.17 matched pose itself — still shipped as `?anim=proc`, measured
+  live at 47.7 cm with both hands outboard. That contrast states the arm's own limit exactly:
+  hands-outboard never distinguished the two poses, only the spread does.

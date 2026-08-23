@@ -179,6 +179,26 @@ try {
     }
   } else {
 
+  /* §479.20 MODE=ruled — acceptance for the user's ruling ("I like the raw standupright more").
+     The shipped standing idle is now the repo's `Standupright` played raw, in BOTH slots the
+     player can end up in: `idle_confident` on arrival and `idle_look` after 13 s of standing
+     still (Moveset.js:141). Two slots × front-three-quarter + profile = the two samples §466.5
+     wants, and the profile is not optional here: raw arms can read wide from the front while
+     clipping the torso from the side, which the front frame cannot see. */
+  if (process.env.MODE === 'ruled') {
+    await page.evaluate(() => { window.__SKIPMOVE = true; });
+    await sim(4);
+    for (const slot of ['idle_confident', 'idle_look']) {
+      await page.evaluate(async (n) => {
+        const A = await import('/src/player/Animation.js');
+        window.__ENGINE.get('animation').play(n, { fade: 0, loop: A.ACTIVE[n].loop, speed: 1 });
+      }, slot);
+      await sim(40);
+      const tag = slot.replace('idle_', '');
+      await snap(`ruled-${tag}-front34`, 35);
+      await snap(`ruled-${tag}-profile`, 90);
+    }
+  } else {
   /* OURS — the shipped standing idle, settled */
   await snap('ours-front34', 35);
   await snap('ours-profile', 90);
@@ -199,6 +219,7 @@ try {
   await sim(60);
   await snap('refretarget-front34', 35);
   await snap('refretarget-profile', 90);
+  }
   }
 } finally {
   await writeFile(`${OUT}/telemetry-vsref.json`, JSON.stringify({ sha, W, H, errs, log }, null, 2));

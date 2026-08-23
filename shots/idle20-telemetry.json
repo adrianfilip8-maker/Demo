@@ -1,0 +1,44 @@
+{
+  "sha": "2b0e41b",
+  "W": 1600,
+  "H": 900,
+  "errs": [],
+  "log": [
+    {
+      "frame": "ruled-confident-front34",
+      "az": 35,
+      "camDot": 0.82,
+      "view": "front",
+      "sepCm": 70.9,
+      "outL": 20.3,
+      "outR": 17.7
+    },
+    {
+      "frame": "ruled-confident-profile",
+      "az": 90,
+      "camDot": 0,
+      "view": "profile",
+      "sepCm": 70.9,
+      "outL": 20.3,
+      "outR": 17.7
+    },
+    {
+      "frame": "ruled-look-front34",
+      "az": 35,
+      "camDot": 0.82,
+      "view": "front",
+      "sepCm": 70.6,
+      "outL": 20.3,
+      "outR": 17.6
+    },
+    {
+      "frame": "ruled-look-profile",
+      "az": 90,
+      "camDot": 0,
+      "view": "profile",
+      "sepCm": 70.6,
+      "outL": 20.3,
+      "outR": 17.6
+    }
+  ]
+}

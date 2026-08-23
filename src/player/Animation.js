@@ -184,6 +184,24 @@ const GODOT_ALIAS = {
   spire_balance: 'SpireJumpIdle',
   spire_land:    'SpireJumplanding',
 
+  /* §479.20 — THE STANDING POSE, ruled by the user off the §479.19 contact sheet: *"I like the
+     raw standupright more"*. `Standupright` is the corpus's only sustained static standing pose
+     (§479.19.1), and this row plays it the way every other row above already plays its clip —
+     retargeted, unmatched, no per-pose correction. Four rounds of hand-matching our procedural
+     idle toward their MEASURED numbers (§479.15–§479.17) were removing the very spread the
+     user kept asking for: their 47.6 cm pose retargets to ~66 cm offline / 70 cm live on our
+     wider rest (§479.6's 14.5°), and it is that wider reading they picked. No `dur`, no `rate`,
+     no trim: the clip, as it lands.
+     `idle_look` takes the same source for one measured reason rather than a taste: §479.10
+     established that `Moveset.js:141` hands the standing idle to `idle_look` after 13 s, so it
+     is the pose a standing player actually ends up staring at — and leaving it on the old
+     matched arms would have re-narrowed the silhouette by ~22 cm at the 13-second mark, which
+     is precisely the tucked-in look this ruling rejects. `idle_bored` is deliberately NOT
+     aliased: it authors its own arm channels, already delivers the widest of the three
+     (56.6 cm), and its fidget is the idle's remaining variety. */
+  idle_confident: 'Standupright',
+  idle_look:      'Standupright',
+
   /* §479.8 — the combat + pickpocket port ("check to see if the attack and pickpocket
      animations were properly ported"). Their ground attack is ONE clip — `Canehit`, fired on
      every square press (`Hit Transition/hit_floor`, player__sly.gd:640, no TimeScale) — so all
@@ -390,8 +408,11 @@ export const GODOT_LIMB_OPEN = {
      past the 132° this project shipped pre-swap, so §531's ruling survives on the very pose it
      was aimed at. The knee is untouched — legs are free limbs and the spread ruling stands.
 
-     §479.17 TAKES BOTH STANDING IDLES TO ELBOW 0, and the reason is a measurement rather than
-     a preference. The user, after §479.16: *"The static pose does not appear to be the same as
+     §479.17 TOOK BOTH STANDING IDLES TO ELBOW 0, and the reason was a measurement rather than
+     a preference. (The hand-on-hip reasoning above is now HISTORY for these two slots: §479.20
+     aliases both to the repo's `Standupright`, which has no hand on the hip. The exemption
+     survives on its second, still-live justification — the fold measured below — and its row is
+     restated under §479.20 at the bottom of this table.) The user, after §479.16: *"The static pose does not appear to be the same as
      the godot repo."* Their `Standupright` folds the elbow to 137/139° — so once the reference
      is the target rather than a floor, the ruling's open elbow and the user's newer ruling
      collide ON THIS POSE, and the newer one wins on the clip it names. It is not merely a
@@ -405,8 +426,18 @@ export const GODOT_LIMB_OPEN = {
      the user has never ruled on the legs and §531's leg half stands. `idle_bored` is NOT
      listed — it overrides IDLE_A's arm channels with its own keys, its cane hand already
      delivers 8.1 cm outboard, and the user's complaint names the default standing pose. */
-  idle_confident: { elbow: 0, knee: 0.60 },
-  idle_look: { elbow: 0, knee: 0.60 },
+  /* §479.20 takes both standing idles to elbow 0 AND knee 0, and the knee half is a STATED
+     CHOICE rather than a side effect. The two slots now play the repo's `Standupright`
+     (GODOT_ALIAS), and the user ruled on a picture of that clip with NO lever on it at all:
+     *"I like the raw standupright more"*. Measured against the frame they endorsed, the elbow
+     exemption already reproduces the arms exactly (hand sep 66.3 cm, out 21.3/18.4, fold
+     154.2/153.8 — identical to the bare clip), but the set-wide knee at 0.60 straightens the
+     RIGHT knee 129.2° → 156.3°, a 27° change to the stance they picked. Four rounds were lost
+     substituting our reasoning for their picture, so the picture is the specification: knee 0
+     delivers the endorsed pose. Reversing it is one number if the straighter leg is preferred —
+     §531's leg ruling is untouched everywhere else in the set. */
+  idle_confident: { elbow: 0, knee: 0 },
+  idle_look: { elbow: 0, knee: 0 },
 };
 
 function limbOpenFor(game) {
