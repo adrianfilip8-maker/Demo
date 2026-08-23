@@ -119,6 +119,37 @@ const FRAMES = {
     pos: [-11.30, -3.85, -66.8], look: [0.55, -9.40, -71.70], fov: 62, tod: 0.62,
     player: null,
   },
+
+  /* ── §605 the hook rings, turned to stand vertical and face along the path ─────────────────
+     The acceptance test for a LOOK request is the pair, not either frame: a ring standing
+     vertical and facing the path must read as a CIRCLE from the approach and as a THIN VERTICAL
+     PROFILE from the side. Either one alone is satisfiable by the wrong geometry — a flat hoop
+     photographed from directly above also reads as a circle, and a flat hoop photographed from
+     its own level also reads as a thin line. Only the pair, from two cameras 90 deg apart on the
+     same rings, separates "vertical, facing the path" from "flat".
+
+     Cameras are ON the chain's own axis rather than hand-aimed. `ring-approach` stands 4.9 m
+     behind ring 1 along that ring's own facing and looks down the line, which is the sightline
+     a swinging player has. `ring-side` stands 14 m off the chain's mean bearing at the same
+     height band, which is the sightline a player on the ground has. */
+  ringapproach: {
+    pos: [16.98, 14.94, 23.17], look: [1.00, 14.50, -3.00], fov: 50, tod: 0.30,
+    player: null,
+  },
+  ringside: {
+    pos: [15.47, 16.80, -3.82], look: [4.20, 14.80, 4.50], fov: 55, tod: 0.30,
+    player: null,
+  },
+  /* The nave chain is the same claim with the jitter removed — these five rings draw no rng at
+     all, so their facing is exactly the path tangent and nothing blurs the reading. */
+  naveapproach: {
+    pos: [1.30, 6.86, -16.60], look: [-2.00, 6.60, -40.80], fov: 45, tod: 0.42,
+    player: null,
+  },
+  naveside: {
+    pos: [12.60, 7.90, -33.00], look: [-2.00, 6.65, -33.90], fov: 50, tod: 0.42,
+    player: null,
+  },
 };
 
 const argv = process.argv.slice(2);

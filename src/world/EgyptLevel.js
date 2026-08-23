@@ -703,6 +703,39 @@ function spirePoint(A, x, y, z) {
   return m;
 }
 
+/**
+ * §605 — the yaw that turns each ring's face along its OWN stretch of the chain.
+ *
+ * `K.hookRing` now stands the ring up with its face normal along local +Z, so one yaw per ring
+ * is the whole orientation: swing in along the path and you meet a circle; stand off to the side
+ * and you see a thin vertical profile.
+ *
+ * Per ring, NOT per chain — the chains turn corners (the courtyard main line bends 27.6° across
+ * its six legs, the hall nave 50.4° across its four), so one global facing would put a third of
+ * the set piece edge-on to the swing that arrives at it. The
+ * facing is the **chord from the ring you leave to the ring you are heading for**: for an
+ * interior ring that is the central difference `p[i-1] -> p[i+1]`, which bisects the corner
+ * rather than committing to either leg, so a ring on a bend faces the average of its two
+ * approaches and neither one meets it more than half the bend off-axis.
+ *
+ * AT THE ENDS there is only one neighbour and no average to take, so the facing is that single
+ * segment: ring 0 faces the way it sends you, the last ring faces the way you arrived. Ring 0
+ * of the main chain is also entered from the east mast rather than from a neighbour, and the
+ * mast stands 0.78 m off the ring on the outgoing side, so the outgoing segment is the right
+ * answer there for both approaches.
+ *
+ * Yaw only — no pitch. The chains descend (14.9 -> 14.0 over 47 m, about 1.1°), and tilting the
+ * face to follow that would be within a degree of vertical anyway while costing the "vertical
+ * profile" the request is about. Returned in radians, to be added to whatever jitter the caller
+ * already draws.
+ */
+function ringYaws(pts) {
+  return pts.map((p, i) => {
+    const a = pts[i - 1] || p, b = pts[i + 1] || p;
+    return Math.atan2(b[0] - a[0], b[2] - a[2]);
+  });
+}
+
 function hookPoint(A, x, y, z) {
   const p = new THREE.Vector3(x, y, z);
   const m = A.proxy(new THREE.SphereGeometry(0.55, 8, 6), { tag: 'hook', material: 'metal' }, { x, y, z });
@@ -2235,10 +2268,16 @@ function courtyardTraversal(A) {
 
   const ringGeo = K.hookRing({ r: 0.62, tube: 0.115, rng: R });
   const mats = [];
+  /* §605: face each ring along its own leg. The yaw jitter drops 30° -> 6°, because ±30° of
+     free spin is larger than the whole chain's 27.6° of bend — the jitter alone could turn one
+     ring further off its own approach than the chain turns over its entire 47 m, which is
+     exactly the "flat ellipse" the request is about. `jitter` draws three times whatever its
+     amount, so the stream is untouched: same three calls, same order, same positions. */
+  const ringYaw = ringYaws(hookLine);
   for (let i = 0; i < hookLine.length; i++) {
     const [x, y, z] = hookLine[i];
     const m = new THREE.Matrix4();
-    m.compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(D(R.jitter(2.5)), D(R.jitter(30)), D(R.jitter(2.5)), 'YXZ')), new THREE.Vector3(1, 1, 1));
+    m.compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(D(R.jitter(2.5)), ringYaw[i] + D(R.jitter(6)), D(R.jitter(2.5)), 'YXZ')), new THREE.Vector3(1, 1, 1));
     mats.push(m);
     hookPoint(A, x, y, z);
     /* The set piece magnetism exists for. Seven 0.62 m rings strung 7.14–9.71 m apart at
@@ -2305,10 +2344,11 @@ function courtyardTraversal(A) {
     [lowW, ...low.map(([x, y, z]) => [x, y + 0.85, z]), lowE]
       .map((p) => new THREE.Vector3(...p)), false, 'catmullrom', 0.4);
   A.add('court', 'rope_fibre', K.railGeo(cable2, { r: 0.07, seg: 44, rad: 4 }));
+  const lowYaw = ringYaws(low);
   for (let i = 0; i < low.length; i++) {
     const [x, y, z] = low[i];
     const m = new THREE.Matrix4();
-    m.compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(D(R.jitter(2)), D(R.jitter(25)), D(R.jitter(2)), 'YXZ')), new THREE.Vector3(0.94, 0.94, 0.94));
+    m.compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(D(R.jitter(2)), lowYaw[i] + D(R.jitter(5)), D(R.jitter(2)), 'YXZ')), new THREE.Vector3(0.94, 0.94, 0.94));
     mats.push(m);
     hookPoint(A, x, y, z);
     /* The return chain. Rings 0–1 hang over bare paving (11.6 m fall); rings 2–3 hang over
@@ -2728,11 +2768,18 @@ function hypostyleHall(A) {
     A.add('hall', 'rope_fibre', K.railGeo(cable, { r: 0.07, seg: 72, rad: 4 }));
     const ringGeo = K.hookRing({ r: 0.62, tube: 0.115 });
     const mats = [];
+    /* §605: `D(24 * i - 48)` was a fixed fan — each ring turned a further 24° regardless of
+       where the cable went. Measured against the path it was not merely arbitrary, it ran the
+       WRONG WAY: the fan sweeps -48° -> +48° while this chain's own bearing sweeps +29.5° ->
+       -20.9° (folded into the half-turn a torus can actually show). Only ring 2 was close, at
+       0° against the path's -5.8°, which is the middle of a fan crossing a bend and is luck.
+       Faced off the path instead. Still constant, still no draws. */
+    const naveYaw = ringYaws(naveRings);
     for (let i = 0; i < naveRings.length; i++) {
       const [x, y, z] = naveRings[i];
       const m = new THREE.Matrix4();
       m.compose(new THREE.Vector3(x, y, z),
-        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, D(24 * i - 48), 0, 'YXZ')),
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, naveYaw[i], 0, 'YXZ')),
         new THREE.Vector3(1, 1, 1));
       mats.push(m);
       A.add('hall', 'bronze_dark', K.place(K.chain({ len: 0.9, r: 0.06, links: 4 }), { x, y: y + 1.65, z }));

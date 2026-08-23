@@ -1722,13 +1722,26 @@ export function pavingField({ x0, x1, z0, z1, y = 0, slab = 2.2, thick = 0.5, rn
 
 /* ===================== traversal furniture ============================= */
 
-/** Hook ring: a fat torus on a bracket. Chunky because it has to read as grabbable. */
+/**
+ * Hook ring: a fat torus on a bracket. Chunky because it has to read as grabbable.
+ *
+ * The ring stands **vertical**, its circular face normal along local **+Z**, so the instance
+ * matrix only has to yaw it onto the path it hangs over (§605). It used to be laid flat by an
+ * `rx: PI/2` here, which put the face normal along +Y — a hoop seen from above, which is what
+ * the user was looking at when they asked for "a circle in the direction of the path, not flat".
+ *
+ * The SHACKLE is the evidence that flat was never the intent. It is a 0.42 m cylinder centred
+ * at `y = r + 0.16`, so it spans y `r − 0.05` … `r + 0.37`. Against a vertical ring that is
+ * right: the ring's crown is at y = r, the shackle overlaps it by 5 cm and reaches up to the
+ * cable, which every chain draws 0.85 m above the ring centre. Against the FLAT ring the hoop's
+ * crown was at y = tube = 0.115, so the shackle floated with a **0.455 m gap** under it and
+ * joined nothing — a bracket bolted to thin air, on all sixteen rings.
+ */
 export function hookRing({ r = 0.62, tube = 0.11, rng } = {}) {
   // A torus is one of the few shapes here that carries a terminator all the way round in
   // both directions; at 6 tubular segments it was a hexagonal wire and threw that away.
   const t = new THREE.TorusGeometry(r, tube, 10, 18);
   normaliseAttrs(t);
-  place(t, { rx: Math.PI * 0.5 });
   const shackle = new THREE.CylinderGeometry(tube * 1.5, tube * 1.5, 0.42, 10);
   normaliseAttrs(shackle);
   place(shackle, { y: r + 0.16 });
