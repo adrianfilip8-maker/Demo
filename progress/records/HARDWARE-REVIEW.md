@@ -1657,3 +1657,54 @@ the Sly 2 pose, which is the direction you asked for.
 it three times and every instrument I owned said it was fine each time. So the evidence here is
 photographs from a verified front angle, not numbers, and the numbers above are only there to say
 what moved.
+
+## 27. Correction to item 26: I made him wider than Sly 2, not the same as Sly 2 — plus the climb was playing backwards
+
+**Commit** this round · **Files** `src/player/Clips.js` (IDLE_A + `idle_look`'s turn keys),
+`src/player/Animation.js` (the lever exemption, the play-direction wiring) · **Ledger** §479.17,
+§479.18 · **Frames** `shots/idle17-*`, `shots/pole1-*`
+
+You said: *"The static pose does not appear to be the same as the godot repo."* You were right,
+and the mistake was mine and specific. Item 26 read "spread further out to the side" as a
+DIRECTION and treated Sly 2's own pose as a *floor* — so I deliberately shipped him **14 cm wider
+than the reference** (61.7 cm between the hands against their 47.7). That passes "wider" and fails
+"the same". Their pose is now the target, fold and all:
+
+```
+                          left hand out   right hand out   hands apart   elbow fold
+  Sly 2's Standupright        10.7 cm          9.0 cm        47.7 cm      137°
+  what you just saw           24.8 cm          9.7 cm        61.7 cm      159°
+  now                         11.9 cm          9.0 cm        47.7 cm      136°
+```
+
+The one thing I kept from item 26 is the fix underneath it: **both hands stay outboard of their
+own shoulders**, so the cane arm never goes back to hiding behind his torso. I checked their pose
+for that before matching it — their right elbow does sit very slightly inboard, but the hand is
+9 cm out, so matching them doesn't bring the defect back.
+
+**Two things worth knowing, because they explain why three rounds of this looked fine to me.**
+First, the "spread the limbs" setting from your earlier note (elbows/knees opened) was *fighting*
+this pose: on the reference's arm geometry, opening the elbow swings the hands toward the middle,
+and at the shipped amount it pushed the cane hand 1.4 cm back *inboard* — the exact thing you'd
+already complained about. The standing idles are now exempt from it (legs unchanged; you never
+ruled on those). Second, **porting their clip does not reproduce their pose** — our skeleton's
+arms rest ~14.5° wider than theirs, so their idle retargeted onto our rig arrives 70 cm wide. I
+rendered both from the same camera so you can see it: `idle17-ours-front34.png` versus
+`idle17-refretarget-front34.png`.
+
+**The climbing animation — you were right to ask.** It was the correct clip played the **wrong
+way round**. Their animation graph plays `PoleClimbing` through a node flagged BACKWARD, and we
+played it forward. Two clips in their whole tree carry that flag and both happened to be ones we
+use; I measured the other one (the hook swing) and its reversal is literally invisible — the
+motion is symmetric in time — so I left it alone rather than change something for no reason. The
+climb now runs their direction. Rate was already right (their timescale on that node is 1.0).
+
+**What to check on hardware.**
+
+1. **Stand still and look at him.** Then keep standing there — the pose changes at 6 s and again
+   at 13 s, and all three now sit at the reference's width. If any of them still reads wrong,
+   tell me *which one* (first / after a few seconds / after a while); that alone localizes it.
+2. **Climb the SE drainpipe.** This is the one I cannot photograph honestly — the climb only
+   plays attached to a real pole, so my frames are posed on flat ground and show limb phase, not
+   a climb in context. Does it now read as going *up*?
+3. `?anim=proc` still restores the all-procedural build if you want a live A/B.
