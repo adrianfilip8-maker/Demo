@@ -53034,15 +53034,12 @@ growth against a wall the placement was already touching. The 0.015 m at 1× is 
 underneath: that bottle has been fifteen millimetres from a wall since it was placed, and nothing
 in the tree measured it until now.
 
-**It was NOT fixed by moving the bottle**, and that is deliberate: §700's "zero changed `pos:`
-literals" is a property worth keeping and the diff keeps it — `git diff` over `Props.js` contains
-no `[x, y, z]` line on either side. The two levers, for whoever picks this up:
-
-- `spots[6]` from `[-9.5, 16.40, -16.5]` to about `z −16.33` clears it with margin, and is a
-  placement change the twelve-beat argument in `Props.js`'s header should sanction, not a lane
-  scaling a mesh.
-- Scaling the set to 1.2× rather than 3× clears it without moving anything — and is not what was
-  asked for.
+**This bottle was subsequently MOVED, on an explicit coordinator decision — see §701.10.** The
+table above is the state in which the defect was found and is left standing as the finding; the
+shipped placement is `z −16.25` and the shipped sweep is **12/12 clear**. The do-not-move rule
+existed to protect R2 reachability, and here it stood between the user and the thing they asked
+for, so it was overridden deliberately and in writing rather than eroded. Every other placement
+is untouched: **`spots[6]` is the only `pos:` literal this whole change edits.**
 
 **The sway's price, isolated.** `SWAY=` on `bottlefit` moves that one term against the same
 world. Tripling it changes no placement's verdict and costs the two tightest of the twelve most
@@ -53100,15 +53097,8 @@ render rather than from that sentence:
 
 Identical on both arms; in the live frame the set costs **one** draw, because the twin is hidden.
 
-**The in-situ arm fired FROZEN on both arms, and it fired at a DIFFERENT wrong number each
-time.** §700 saw `Engine.stats.drawCalls` read `1` in every sample. This round read **180** in
-every sample on the before arm and **188** in every sample on the after arm — 9 visible, 9 hidden,
-spread 0, delta 0, both times. Three runs, three different frozen values, every one of them
-producing a delta of zero that happens to agree with the correct conclusion. That is the whole
-argument for the detector: `1` looks obviously wrong and invites suspicion, `180` and `188` look
-exactly like plausible draw counts for a level this size and invite none. `Engine.stats` remains
-unusable in this harness; the isolated render is the figure and the in-situ arm only ever
-corroborates it.
+The in-situ arm fired the FROZEN verdict on both arms. That is not a footnote to this section
+and has been promoted to a claim of its own — **§701.11**.
 
 
 ### §701.8 The frames
@@ -53134,17 +53124,24 @@ size-matched control answers the question the overflow costs — *does it still 
 and it does: at 3× the label band and the cork are more legible, not less. **The PLACED pair is the
 one that matters** and it is the pair that shows what the user asked for.
 
-The interpenetration exhibit, two bearings (§466.5), after arm only — there is nothing to compare
-it against on the before arm, where the same bottle cleared by 15 mm:
+The interpenetration exhibit, two bearings (§466.5), shot twice: once with bottle 6 at its old
+`z −16.5` and once at the shipped `z −16.25`. **These two cameras are anchored to the PRE-MOVE
+spot and are the only ones in `bottleshot` that do not track the current literal** — a before/after
+of a placement CHANGE cannot let the lens move with the subject, or both pictures show the same
+relative arrangement and nothing is proved. Anchored, the lens is identical in world space, the
+parapet does not shift a pixel, and the bottle is seen to step out of it. The subject lands
+~0.27 m off centre as a result; each capture's own NDC report confirms IN FRAME (−0.114 and
+−0.104 in x).
 
-| frame | what it shows |
-|---|---|
-| `cornice-side` | grazing along the parapet face from +x: the bottle's lower right is **cut off by the stone** — the block's front face passes through the glass and the bottle's bottom corner is inside it |
-| `cornice-over` | from above the parapet's top edge (y 17.00): the wall crosses the bottle at label height and the near half of the body is behind/inside the block, which reads as a bottle set into the masonry |
+| frame | at `z −16.5` (crossing) | at `z −16.25` (shipped) |
+|---|---|---|
+| `cornice-side` | grazing the parapet face from +x: the bottle's lower right is **cut off by the stone**, its ink outline stops where the block's front face passes through the glass | the silhouette is **whole** — the outline runs unbroken around the body and the parapet passes behind it, with daylight between |
+| `cornice-over` | from above the parapet top (y 17.00): the wall crosses the bottle at label height and the near half sits inside the block, reading as a bottle set into masonry | the bottle stands clear on the ledge, complete, the parapet's corner beside it rather than through it |
 
-Both agree with `bottlefit`'s number — 0.149 m of a 0.251 m half-width buried — and neither was
-needed to find it. The measurement found it; the frames are so the reader does not have to take
-the measurement on trust.
+The crossing pair agreed with `bottlefit`'s number (0.149 m of a 0.251 m half-width buried) and
+the fixed pair agrees with the new one (0.105 m of air, visibly tight and visibly air). Neither
+pair was needed to *find* anything — the measurement found it both times. The frames are so the
+reader does not have to take a measurement on trust.
 
 ### §701.9 The suite
 
@@ -53161,12 +53158,113 @@ The lock was held for **4.4 minutes**, deliberately — §700's in-situ run held
 Carmelita lane is queued behind it on the same box. The four `[clue]` prints inside that run are
 the R0–R3 figures quoted in §701.3, from this run rather than from an in-tree one.
 
-### §701.9 Bounds — what this does not cover
+### §701.10 The move — one `pos:` literal, and the sweep that was measured on the wrong instrument
 
-- **Only the clue bottle changed.** No other prop or pickup was scaled, and **no placement moved**:
-  `git diff` over `Props.js` contains no `[x, y, z]` line on either side.
-- **Bottle 6 ships interpenetrating.** It is measured, photographed and left, because every fix
-  moves something this change was told not to move. Two levers are named in §701.4.
+The do-not-move rule was **overridden explicitly by the coordinator**, in writing, on the grounds
+that it existed to protect R2 reachability and had come to stand between the user and the thing
+they asked for: they asked for 3× bottles and 1.22× is not 3×. Recorded here as a decision rather
+than allowed to look like a lane's drift. `spots[6]` is the only placement literal this whole
+change edits.
+
+#### The first attempt was wrong, and it was wrong in the reassuring direction
+
+The candidate `z −16.05` was chosen off a sweep that asked **the drawn scene** where the floor
+under the bottle was. The drawn cornice runs on past −16.05 and reported a surface at y 15.360,
+drop 1.040 m, R2 reach 0.140 m — a clean, comfortable, entirely false answer.
+
+**The collider stops at z −16.200.** R2 asks the collider. At −16.05 the downward probe misses
+the ledge, finds `wall` **3.400 m** below, and R2 reads **2.500 m against a 2.40 m magnet** — a
+failing bottle, produced by a measurement that looked immaculate. It was caught only because
+R2 was re-run with R2's own instrument rather than trusted to follow from the sweep.
+
+This is §701.4's own lesson one instrument further along, and it is worth stating flatly:
+**interpenetration is a drawn-geometry question and reachability is a collider question, and this
+level does not keep the two in step.** `tools/bottlefit.mjs` is right to read the drawn scene and
+would be wrong to answer anything about reach; `cluevault` R1/R2/R3 are right to read the
+collider and would be wrong about what a player can see. Neither is a substitute for the other,
+and the failure mode when they are confused is a number that is clean, plausible and false.
+
+#### The real constraint: the bottle is wider than the strip it stands on
+
+Measured at x −9.5, both instruments:
+
+```
+  walkable `ledge` collider   z −16.729 … −16.200      0.529 m wide, flat at y 15.360
+  parapet face                z −16.602                outward normal +z, top edge y 17.00
+  free strip in front of it   z −16.602 … −16.200      0.402 m
+  the 3x bottle                                        0.502 m across
+```
+
+**0.502 > 0.402.** There is no z at which this bottle both clears the parapet and stands over the
+collider; the two margins trade 1:1 across a window only 0.151 m wide:
+
+| z | clearance (visible) | collider margin (blocking) |
+|---|---|---|
+| −16.351 | 0.000 | 0.151 |
+| **−16.250** | **0.101** | **0.050** ← shipped |
+| −16.200 | 0.151 | 0.000 |
+
+The split favours the visible margin because **the two are not the same kind of number**.
+Clearance degrades gradually and only cosmetically; the collider edge is a cliff — one millimetre
+past −16.200 and R2 goes from 0.140 m to 2.500 m. Sitting hard against a cliff is precisely how
+this placement came to be living on 15 mm in the first place, so it is not repeated one axis over.
+
+Measured after the move, on both instruments:
+
+```
+  bottlefit, all twelve, full pose envelope     12/12 CLEAR   bottle 6 at 0.105 m (was CROSSING)
+  R1 12/12 · drop 0.561-5.460 m                 bottle 6 drop 1.040 m   — unchanged
+  R2 12/12 inside 2.40 m · 0.080-0.700 m        bottle 6 reach 0.140 m  — unchanged, exactly
+  R3 12/12 out of reach from the courtyard      97 stands, 97 blocked by headroom
+```
+
+**Bottle 6's own R2 margin is 0.140 m before and 0.140 m after**, because the ledge is flat and
+the move is along it; the aggregate 0.080–0.700 m and the worst case (bottle 4 by cling
+`notch-pylon-e-w-5`) are untouched. No other bottle's clearance moved by a millimetre — the
+move pushed it into nothing else, which was the other thing worth checking.
+
+#### What is still on the table, and is not a lane's call
+
+**A comfortable margin exists, but not here.** The parapet ends at **x ≈ −12.3**; west of it the
+same ledge at the same y gives clearance **past 0.60 m** with R2 still reading 0.140 m. The
+walkable strip's +z edge is at −16.200 for every x from −16 to −4, so this is the only place on
+the cornice where a 3× bottle actually fits properly. That is a **3 m slide, not a nudge**, and it
+would move which part of the hall front the beat marks — so it is recorded for a decision rather
+than taken. Worth knowing when weighing it: this spot's x is inherited from the §8.1 coordinate
+`Props.js` itself flags as stale, so it is less load-bearing than it looks.
+
+### §701.11 `Engine.stats` returned a DIFFERENT wrong number in each arm
+
+Stated as its own claim, because "the counter is broken" undersells the hazard by a wide margin.
+
+| run | `Engine.stats.drawCalls`, 9 samples | spread | delta on hiding the bottles |
+|---|---|---|---|
+| §700 | `1` every time | 0 | 0 |
+| §701 before arm | `180` every time | 0 | 0 |
+| §701 after arm | `188` every time | 0 | 0 |
+
+Three runs, three different frozen values, and **every one of them produced a delta of zero that
+agrees with the correct conclusion.** The counter is never rewritten under a staged shot because
+`setShot` stops the rAF loop, so each arm returns whatever stale number happened to be sitting
+there.
+
+The sharp part is not that it is wrong, it is *how* it is wrong. **`1` invites suspicion — nobody
+believes a level this size draws in one call.** `180` and `188` look exactly like plausible draw
+counts, sit next to a true conclusion, and would have been believed. A wrong instrument that
+returns an absurd value is nearly harmless; a wrong instrument that returns a credible value is
+the dangerous one, and this one has now returned both. `bottledraw`'s detector catches it not by
+range-checking the number but by refusing to report a zero delta while meshes it has **already
+proved** cost draws are being hidden — a check on the *relationship* rather than on the value,
+which is the only kind that survives the counter picking a new plausible number next time.
+
+### §701.12 Bounds — what this does not cover
+
+- **Only the clue bottle changed.** No other prop or pickup was scaled.
+- **Bottle 6 was moved and one `pos:` literal changed** — `z −16.5 → −16.25`, on the coordinator's
+  explicit override (§701.10). It ships CLEAR at 0.105 m, not comfortable: the geometry caps a
+  z-only fix at 0.151 m because the bottle is wider than the strip. The 3 m westward slide that
+  would give it real room is recorded, not taken.
+- **`spots[6]` aside, no placement moved.** The other eleven literals are untouched.
 - **`clueBob` was not scaled** and is not claimed to have been. Unlike `clueCollect` and
   `clueSway` it has never been documented as a function of the bottle's height (its comment ties
   it to PROPS' own bob), so scaling it would have been inventing a derivation, not following one.
