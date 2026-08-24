@@ -52861,3 +52861,14 @@ of this block's own commit, and lands somewhere about guards or about Carmelita'
   `Particles.js` puts one on a clue bottle. An earlier draft of three files asserted the opposite —
   a plausible sentence written from `PAL.sparkCore`'s *name* rather than from the code, which
   survived two readings before it was checked and cut.
+
+---
+
+## §701 — CLAIMED: "the Carmelita sculpt seems off and the head seems to be missing" — scale answered, cause discriminated
+
+**Number claimed by this commit** (§700.9: a grep for a free number is a read with no lock; only
+the committed heading reserves it). This lane owns `src/ai/CarmelitaGuard.js`, the model/skinning
+path in `src/ai/Guard.js` (NOT §697's `groundProbe`/`groundSlopeMax`), `tools/carmelita2*.mjs`,
+`tools/carmatlas.mjs` and `public/assets/sly-anim/`.
+
+Work in progress; findings appended below in this section.
