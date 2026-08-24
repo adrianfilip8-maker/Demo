@@ -91,13 +91,23 @@ const FRAMES = {
     spot: [0.0, 35.0, -52.0], eye: [3.15, 1.35, 1.95], aim: [0, 0.66, 0], fov: 30, tod: 0.62,
   },
 
-  /* The hall front cornice — the ONE placement `tools/bottlefit.mjs` reports interpenetrating at
-     3x. Not a pretty frame and not meant to be: it is the exhibit for a measured defect, and a
-     measurement nobody photographed is a measurement the reader has to take on trust. Two
-     angles, because §466.5 wants two samples of a visual claim and because the burial is on the
-     -z side and a single bearing can hide it behind the bottle's own body.
-       side  a grazing look along the wall face, from +x, at bottle height
-       over  from above the parapet's top (y 17.00), where the bottle passes through it */
+  /* The hall front cornice — the ONE placement `tools/bottlefit.mjs` reported interpenetrating
+     at 3x, and the one placement in the level that has since been moved (§701.10). Not pretty
+     frames and not meant to be: they are the exhibit for a measured defect and then for its fix,
+     and a measurement nobody photographed is a measurement the reader has to take on trust. Two
+     angles, because §466.5 wants two samples of a visual claim and because the burial was on the
+     -z side, where a single bearing can hide it behind the bottle's own body.
+       side  a grazing look along the parapet face, from +x, at bottle height
+       over  from above the parapet's top (y 17.00), where the bottle passed through it
+
+     **`spot` here is the PRE-MOVE placement and is deliberately not updated.** Everywhere else
+     in this file `spot` is the bottle's current authored literal, because that is what keeps two
+     arms on one camera. These two frames are a before/after of a placement CHANGE, so tracking
+     the literal would have moved the lens with the subject and produced two pictures of the same
+     relative arrangement — which is precisely the thing under test. Anchored to the old spot the
+     camera is identical in world space across both arms, the parapet does not move a pixel, and
+     the bottle is seen to step out of it. The subject lands ~0.4 m off centre as a result and
+     each capture's own NDC report is what confirms it is still in frame. */
   'cornice-side': {
     spot: [-9.5, 16.4, -16.5], eye: [2.6, 0.35, 0.9], aim: [0, 0.45, 0], fov: 45, tod: 0.5,
   },
