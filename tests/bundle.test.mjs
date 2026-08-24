@@ -256,8 +256,10 @@ const KNOWN_UNSHIPPED_PAYLOAD = [
  */
 const MOVED_OUT_OF_PUBLIC = [
   ['audio/footstep.mp3', 'staging/assets/audio/footstep.mp3'],
-  ['sly-anim/carmelita-body.png', 'staging/assets/sly-anim/carmelita-body.png'],
-  ['sly-anim/carmelita-head.png', 'staging/assets/sly-anim/carmelita-head.png'],
+  /* carmelita-body.png / carmelita-head.png were here until 2026-08-24. They are now WIRED —
+     `CarmelitaGuard.CARMELITA_TEX`, sampled by the guard materials — so their lines are deleted
+     per this ledger's own rule rather than left as stale exceptions. The staging copies stay
+     where they are; they are simply no longer the only copies. */
   ['sly-anim/sly-body.png', 'staging/assets/sly-anim/sly-body.png'],
   ['sly-anim/sly-cane.glb', 'staging/assets/sly-anim/sly-cane.glb'],
   ['sly-anim/sly-head.png', 'staging/assets/sly-anim/sly-head.png'],

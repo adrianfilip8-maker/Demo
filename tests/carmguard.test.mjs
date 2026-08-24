@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import {
-  bindToRig3, rig3BindWorld, BONE_MAP, HEAD_MESHES, NO_SOURCE, resolveName,
+  bindToRig3, rig3BindWorld, BONE_MAP, MATERIAL_ATLAS, UNREMAPPED, atlasOf, NO_SOURCE, resolveName,
+  CARMELITA_TEX,
 } from '../src/ai/CarmelitaGuard.js';
 import { RIG3 } from '../src/player/SlyModel3.js';
 import { GUARD_TUNE } from '../src/ai/Guard.js';
@@ -25,11 +26,16 @@ import { ROSTER } from '../src/ai/Patrol.js';
  * was claimed. Those are the failures that would otherwise present as a character that is wrong
  * but plausible — §211's whole argument.
  *
- * **It cannot say whether she looks right.** No frame has been rendered. In particular the split of
- * her two 2048² albedos across the two merged groups is assigned by node name and is *unverified* —
- * the source materials carry no `baseColorTexture`, so the glTF does not record which mesh used
- * which atlas. That is stated in `CarmelitaGuard.js` and in §241, and this suite pins the split so
- * it cannot drift silently before somebody can photograph it.
+ * **It cannot say whether she looks right**, and two things it cannot say are worth naming:
+ *
+ *   - The split of her two 2048² albedos is no longer a guess. It is transcribed from the source
+ *     project's own importer (`Carmelita_Animations7.fbx.import`'s "materials" block → the three
+ *     `Carmelita *.tres` → the two PNGs) into `MATERIAL_ATLAS`, and the test below asserts the
+ *     bind used it mesh by mesh. §241 recorded this as unrecoverable offline; it was recoverable,
+ *     one file up, by the same method `sly-godot/PROVENANCE.md` had already used for Sly.
+ *   - The **skinIndex off-by-one is still live** (§309, owner-parked): `instantiate()` prepends
+ *     `root` and these indices were built root-less, so every vertex drives from one bone early.
+ *     Nothing here fixes that and nothing here should — it is measured, on record, and parked.
  *
  * Every data-driven test asserts a non-zero inspected count (§211.1).
  */
@@ -212,18 +218,42 @@ test('the merge is two groups, so the garrison keeps its two-material draw budge
   for (const m of mats) assert.ok(m === 0 || m === 1, `group material index ${m} has no material behind it`);
 });
 
-test('the head/body split is pinned, because nothing has verified it', () => {
+test('the head/body split follows the source project\'s own material remap', () => {
   need();
   const { bodyMeshes, headMeshes } = BOUND.stats;
-  const named = [];
-  SCENE.traverse((o) => { if (o.isSkinnedMesh) named.push(o.name); });
-  const head = named.filter((n) => HEAD_MESHES.has(n));
-  console.log(`[carmguard] head atlas (UNVERIFIED, by node name): ${head.join(', ')}`);
+  const meshes = [];
+  SCENE.traverse((o) => { if (o.isSkinnedMesh) meshes.push(o); });
+  assert.ok(meshes.length > 0, 'inspected no meshes');
+
+  /* The authority is `Carmelita_Animations7.fbx.import`'s "materials" block, transcribed into
+     MATERIAL_ATLAS — see CarmelitaGuard.js's header and sly-anim/PROVENANCE.md. This asserts the
+     binding actually USED it, mesh by mesh, so the table cannot be edited without the split
+     moving with it. `BustRetopo` is the one that matters: it is `BodyMat`, and the retired
+     node-name guess put it in the head group on the strength of the word "Bust". */
+  const head = meshes.filter((m) => atlasOf(m.material) === 1).map((m) => m.name);
+  const body = meshes.filter((m) => atlasOf(m.material) === 0).map((m) => m.name);
+  console.log(`[carmguard] head atlas (from the Godot remap): ${head.join(', ')}`);
   console.log(`[carmguard] body ${bodyMeshes} meshes / head ${headMeshes} meshes`);
-  assert.ok(named.length > 0, 'inspected no meshes');
-  assert.equal(bodyMeshes + headMeshes, named.length, 'a mesh went into neither group');
+
+  assert.equal(bodyMeshes + headMeshes, meshes.length, 'a mesh went into neither group');
+  assert.equal(headMeshes, head.length, 'the bind grouped a different set than MATERIAL_ATLAS names');
+  assert.equal(bodyMeshes, body.length, 'the bind grouped a different set than MATERIAL_ATLAS names');
   assert.ok(headMeshes > 0, 'nothing was assigned the head atlas — carmelita-head.png would be unused');
   assert.ok(bodyMeshes > 0, 'nothing was assigned the body atlas');
+
+  assert.ok(head.includes('Head_LP') && head.includes('Hair_LP'),
+    'the head and hair are not on the head atlas — the remap transcription has drifted');
+  assert.ok(body.includes('BustRetopo'),
+    'BustRetopo is BodyMat in Carmelita_Animations7.fbx.import; putting it on the head atlas is '
+    + 'the exact error the node-name guess made');
+
+  /* The three the source does NOT remap are the only ones still chosen rather than measured. */
+  for (const m of meshes) {
+    const n = Array.isArray(m.material) ? m.material[0]?.name : m.material?.name;
+    if (UNREMAPPED.includes(n)) {
+      assert.equal(atlasOf(m.material), 0, `${m.name} carries unremapped ${n} and belongs to body by the stated fallback`);
+    }
+  }
 });
 
 test('the garrison cost is measured, not assumed', () => {
@@ -289,4 +319,34 @@ test('the source scene is still present and untouched', () => {
   const size = readFileSync(SOURCE).length;
   console.log(`[carmguard] source ${SOURCE} ${(size / 1048576).toFixed(2)} MB`);
   assert.ok(size > 1000000, `source is ${size} bytes — that is not the 3.86 MB scene`);
+});
+
+test('both albedos are wired, at relative URLs, and the revert token still exists', () => {
+  /* §666: a leading slash resolves to the domain root and 404s under this project's `/Demo/`
+     page prefix, and it is invisible in dev by construction. `vite.config.js` sets `base: './'`,
+     so these must stay relative to match. */
+  assert.equal(CARMELITA_TEX.length, 2, 'expected one albedo per merged group');
+  for (const url of CARMELITA_TEX) {
+    assert.ok(!url.startsWith('/'), `${url} starts with a slash — §666, it would 404 under /Demo/`);
+    assert.ok(!/^https?:/i.test(url), `${url} is off-site — the build must stay self-contained`);
+    /* `public/` is copied to `dist/` verbatim, so the served path is the file path. */
+    const file = new URL(`../public/${url}`, import.meta.url);
+    assert.ok(existsSync(file), `${url} is fetched by CarmelitaGuard but not present under public/`);
+    const bytes = readFileSync(file);
+    assert.ok(bytes.length > 100000, `${url} is ${bytes.length} bytes — that is not a 2048² albedo`);
+    /* PNG signature + IHDR, so a truncated or placeholder file fails here rather than in a frame. */
+    assert.equal(bytes.readUInt32BE(0), 0x89504e47, `${url} is not a PNG`);
+    assert.equal(bytes.readUInt32BE(16), 2048, `${url} is not 2048 wide`);
+    assert.equal(bytes.readUInt32BE(20), 2048, `${url} is not 2048 tall`);
+    assert.equal(bytes[24], 8, `${url} is not 8-bit — the sibling Sly import had a 16-bit trap`);
+  }
+  console.log(`[carmguard] albedos wired: ${CARMELITA_TEX.join(', ')}`);
+
+  /* The one-token revert. If this default ever moves, it should move deliberately. */
+  assert.equal(GUARD_TUNE.carmelitaTex, 1,
+    'carmelitaTex is the default-on switch for her albedos; 0 restores the linen mannequin');
+  /* §309 parked the guard MODEL art pass. Texturing is an import completion and must not have
+     quietly taken those two gates with it. */
+  assert.equal(GUARD_TUNE.guardArt, 0, '§309 parks guardArt at 0 — it must stay parked');
+  assert.equal(GUARD_TUNE.guardSkin, 0, '§309 parks guardSkin at 0 — it must stay parked');
 });

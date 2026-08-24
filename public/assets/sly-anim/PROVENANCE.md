@@ -105,8 +105,13 @@ else that may be usable".
 | file | what it is | where it is now |
 |---|---|---|
 | `carmelita-anims.glb` | **a second character — 199 bones, 11 clips**, 3.86 MB | here — build-time input to `carmelita2clips` / `carmelita2guard` |
-| `carmelita-body.png` | 1.30 MB albedo | **`staging/assets/sly-anim/`** — `carmelita-guard.glb` embeds its own images, so these loose copies are fetched by nothing |
-| `carmelita-head.png` | 0.71 MB albedo | **`staging/assets/sly-anim/`** |
+| `carmelita-body.png` | 1.30 MB albedo | ~~`staging/`, fetched by nothing~~ — **also here now, and sampled**; see the third import below |
+| `carmelita-head.png` | 0.71 MB albedo | ~~`staging/`, fetched by nothing~~ — **also here now, and sampled**; see the third import below |
+
+> **Correction (2026-08-24).** The reason given above for parking the two albedos in `staging/` —
+> "`carmelita-guard.glb` embeds its own images" — is **false**, and was checked this time rather
+> than assumed: the shipped GLB contains **0 images and 0 textures**, and all six of its materials
+> carry no `baseColorTexture` at all. Nothing was ever sampling them. That is corrected below.
 
 Source path: `Sly-Cooper--A-Thief-in-Godot/Assets/Temp Imports/tempcarmelita/`.
 
@@ -129,3 +134,72 @@ this project has no equivalent of.
 
 Nothing Paris-themed was taken. Both repos are largely Parisian rooftops, awnings, lamp posts and an
 Eiffel Tower; an Ancient Egypt level has no use for any of it.
+
+---
+
+## Third import — 2026-08-24: her two albedos, and the atlas split that was never a guess
+
+Prompted by the owner reporting the source repository as updated and asking to import "any relevant
+files from the scripts, scenes, and assets folders about Carmelita". Two findings, in the order
+they matter.
+
+**1. The update changed nothing about Carmelita.** The repository is now at HEAD `a312a99` ("The
+REAL Godot 4.7 Update"). Every Carmelita file in it is byte-identical to what was imported on
+2026-08-08 — checked by hash, not by date or size:
+
+```
+6dad373fccebbdbf171cb5c10cee37d9  Assets/Temp Imports/tempcarmelita/Carmelita_Animations7.glb
+6dad373fccebbdbf171cb5c10cee37d9  public/assets/sly-anim/carmelita-anims.glb
+f3fac1a6bf8b29922631934448771da2  ..._CarmelitaBody_TestMaterialBody_BaseColor.png   → carmelita-body.png
+dadeef93231629e47ef11dfa0d78bfaa  ..._CarmelitaHead_TestMaterialBody_BaseColor.png   → carmelita-head.png
+```
+
+So there was no new mesh, no new clip and no new texture to take. (The clone is shallow — one
+commit — so this was established against the *files*, which is the stronger check anyway.)
+`Assets/Models/Vehicles/helicopter-carmelita*.glb` is a vehicle, not the character, and is not here.
+
+**2. What WAS missing: the two albedos, and which mesh wears which.** They are 2048², 8-bit,
+colour-type 2 (no alpha) — checked in the PNG headers, because the sibling Sly import had a
+16-bit/8-bit trap. They are now `carmelita-body.png` and `carmelita-head.png` **in this
+directory**, fetched by `src/ai/CarmelitaGuard.js`'s `CARMELITA_TEX` at relative URLs.
+
+`CarmelitaGuard.js` and §241 both recorded the head/body split as *unverified and unrecoverable
+offline*, on the grounds that the glTF carries no `baseColorTexture`. That was true of the glTF and
+false of the repository. The record lives one file up, in the Godot importer — which is exactly
+where `sly-godot/PROVENANCE.md` had already read **Sly's** two atlases from. The same method,
+applied to Carmelita:
+
+```
+Assets/Temp Imports/tempcarmelita/Carmelita_Animations7.fbx.import   "materials":
+    BodyMat → uid://bnewj3kvedjat → Assets/Materials/Carmelita Body.tres → ..._CarmelitaBody_...png
+    EyeMat  → uid://4r18yagxqqq   → Assets/Materials/Carmelita Eyes.tres → ..._CarmelitaHead_...png
+    HeadMat → uid://dcdj8rdtni3ux → Assets/Materials/Carmelita Head.tres → ..._CarmelitaHead_...png
+```
+
+The discriminator is therefore the **source material**, not the node name. The retired node-name
+guess was wrong where it counted: it put `BustRetopo` — 1,768 triangles of chest, and `BodyMat` —
+on the *head* atlas on the strength of the word "Bust".
+
+| group | meshes | from |
+|---|---|---|
+| body (`carmelita-body.png`) | Buckles.002, BustRetopo, Collar, Badge_Loop, Zip, Antennae.003, Barrel, Coat, Hand, Legs, MainBody, Shoes, Tail | `BodyMat`, remapped |
+| head (`carmelita-head.png`) | Hair_LP, Scrunchy2, Head_LP, Irises, Eyeshine_001_L | `HeadMat` / `EyeMat`, remapped |
+| body, **by fallback** | Stomach_LP, TeethUpper_LowPoly, Tongue_LowPoly | `OH_Outline_Material`, `OutlineMat.001`, `TestMaterialBody.001` — **not remapped by the source**, so neither atlas is theirs; they render as flat colours in Godot. 1,440 of 29,791 tris, all under the coat or inside the mouth. Grouped with body, and that choice is arbitrary within this stated bound. |
+
+**3. The mesh census, re-run and unchanged.** `tools/carmelita2guard.mjs` keeps 21 skinned meshes
+(29,791 tris) and drops 13 (7,260 tris) — `Arrow`, `Circle`, `Cube`, `IKPolehandle`, `singlecircle`,
+`Starcircle`, `Handrot`, `HandCurlCTL`, `BézierCircle` and four `Text*`. The rule is *no skin and no
+material*, asserted rather than listed, which is why it is not fooled by `Stomach_LP` and
+`TeethUpper_LowPoly` wearing outline-shaped material names while being real body parts. The source
+scene corroborates the drop independently: `Scenes/Character Mesh/carmelita_animations_7.tscn` sets
+`visible = false` on all four `Text*` nodes.
+
+**4. Not taken, deliberately.** `Scripts/carmelita_mesh.gd` was read for intent and not ported — it
+is an `AnimationTree` state router plus a distance-based mesh rescale, and this project routes guard
+state through `Patrol.js` already. Her behaviour wiring (`enemy_carmelita.tscn`,
+`enemy_base_flashlight.gd`, `spotlight_detection.tscn`, `gun.tscn`) is out of scope: the existing
+guard AI stays and only what the guard is *made of* changed. Nothing under `Assets/Music/` or
+`Assets/Effects/` was opened, copied, decoded or referenced.
+
+**Licence: unchanged and still none stated** — the governing paragraph is in
+`../sly-godot/PROVENANCE.md` and covers these files too.

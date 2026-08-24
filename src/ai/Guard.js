@@ -2,12 +2,19 @@ import * as THREE from 'three';
 import { rng } from '../core/Rand.js';
 import { buildGuardAssets, instantiate, GROUPS, GUARD_PALETTE } from './GuardModel.js';
 import { removeOutlineShell } from '../render/Outline.js';
-import { loadCarmelitaGuard } from './CarmelitaGuard.js';
+import { loadCarmelitaGuard, CARMELITA_TEX } from './CarmelitaGuard.js';
 import { GuardAnim } from './GuardAnim.js';
 import {
   ROSTER, buildRoutes, Senses, VISION, DETECT, STATE, stateForSuspicion, speedFor,
   coneColourStop,
 } from './Patrol.js';
+
+/**
+ * The roster types whose procedural body Carmelita's mesh replaces — the two humanoids. The
+ * scarab keeps its own body and its own materials; it is a beetle sentinel and she is not one.
+ * Named once so the mesh substitution and the material substitution cannot drift apart.
+ */
+const CARMELITA_TYPES = ['temple', 'heavy'];
 
 /**
  * Guards — the assembly layer over GuardModel / GuardAnim / Patrol.
@@ -217,6 +224,17 @@ const TUNE = {
      reversible, and at 0 touch nothing. */
   guardArt: 0,
   guardSkin: 0,
+
+  /* Carmelita's own two 2048² albedos on the two humanoid roster types, instead of the
+     garrison's linen/bronze pair. 1 = hers (the default), 0 = the linen mannequin exactly as
+     before — the one-token revert, the same shape as the character's `?char=dlraw`/`?char=dl`.
+     This is an ASSET IMPORT COMPLETION, not the art pass §309 parked: it adds no draw call, no
+     triangle and no vertex-colour write, and it leaves `guardArt`/`guardSkin` untouched at 0.
+     §309's three diagnoses — identity-white vertex colours, the bronze head block, and the
+     skinIndex off-by-one — are all still on record and still parked. In particular the
+     off-by-one is UNFIXED here and she is still skinned one bone early under animation; a
+     texture cannot address that and this does not pretend to. */
+  carmelitaTex: 1,
 
   /* (B) the cone. coneShape 1 takes the structured-beam branch in BEAM_FRAG (uConeShape);
      0 = the legacy branch, spelled byte-identical to the pre-seal shader. The five
@@ -1466,7 +1484,7 @@ export class Guards {
     let carmelita = null;
     try { carmelita = await loadCarmelitaGuard(); } catch { carmelita = null; }
     if (carmelita) {
-      for (const t of ['temple', 'heavy']) {
+      for (const t of CARMELITA_TYPES) {
         assets[t] = { ...assets[t], ...carmelita };
         this.stats.tris += carmelita.tris | 0;
       }
@@ -1484,6 +1502,13 @@ export class Guards {
     }
 
     const materials = this._buildMaterials();
+    /* Her own albedos, for the roster types her mesh replaced. Null headless (no `carmelita`,
+       so no fetch and no TextureLoader), and null if `TUNE.carmelitaSkin` is turned off — see
+       `_buildCarmelitaMaterials`. Two materials for the whole garrison either way: this selects
+       WHICH two a guard gets, and never how many groups his geometry draws in. */
+    const carmMats = (this.carmelita && TUNE.carmelitaTex > 0.5)
+      ? this._buildCarmelitaMaterials() : null;
+    this._carmMats = carmMats;      // read by applyArt(), which must not duplicate group 0 over her head atlas
     this.routes = buildRoutes(TUNE.seed);
     this.collision = this.engine.get('collision');
 
@@ -1496,7 +1521,8 @@ export class Guards {
         continue;
       }
       let g = null;
-      try { g = new Guard(this, i, entry, asset, materials, route); }
+      const mats = (carmMats && CARMELITA_TYPES.includes(entry.type)) ? carmMats : materials;
+      try { g = new Guard(this, i, entry, asset, mats, route); }
       catch (err) {
         this.engine.warn(`guards: failed to build roster #${i} — ${err?.message || err}`);
         continue;
@@ -1545,7 +1571,15 @@ export class Guards {
       if (g.type === 'scarab' || g.mesh.geometry !== carm.geometry) continue;
       if (art) {
         if (!g._baseMats) g._baseMats = g.mesh.material;
-        if (!g._artMats) g._artMats = [g._baseMats[0], g._baseMats[0]];
+        /* `[body, body]` exists for ONE reason: the garrison's `metal` material has no albedo
+           map and metal 0.85, which is the dark glossy mannequin head/chest block in the r12
+           crops. When she is wearing her own two albedos that problem is already solved and
+           group 1 is her HEAD atlas — duplicating group 0 over it would paint her face with
+           the body texture, so the swap is skipped rather than applied blind. */
+        if (!g._artMats) {
+          g._artMats = (this._carmMats && g._baseMats === this._carmMats)
+            ? g._baseMats : [g._baseMats[0], g._baseMats[0]];
+        }
         g.mesh.material = g._artMats;
         if (!g.mesh.userData.slyShell && shading?.outline) {
           try { if (shading.outline(g.mesh, { thickness: 1.05 })) g._artShell = true; }
@@ -1600,6 +1634,45 @@ export class Guards {
   }
 
   /** §4.4: textures.get() hands back a *bundle*, not a texture. Unwrap every slot. */
+  /**
+   * The two materials for a Carmelita-bodied guard: her body atlas on group 0, her head atlas on
+   * group 1, in `CarmelitaGuard.MATERIAL_ATLAS` order.
+   *
+   * Two materials, exactly as `_buildMaterials` returns two, so the draw cost per guard is
+   * unchanged at `GROUPS.length` — this swaps WHICH textures the same two draws sample. Built
+   * once for the whole garrison, not once per guard.
+   *
+   * Never reached headlessly: the caller gates on `this.carmelita`, which is null without fetch,
+   * so no `TextureLoader` is constructed in the ten suites that stand `Guards` up in plain Node.
+   *
+   * Her albedos replace the linen/bronze `map` only. Everything else — the toon banding, the rim,
+   * the detail layer — is the garrison's, so she is lit and inked like the rest of the level
+   * rather than arriving as a differently-shaded cutout.
+   */
+  _buildCarmelitaMaterials() {
+    const load = (url) => {
+      const t = new THREE.TextureLoader().load(url);
+      t.colorSpace = THREE.SRGBColorSpace;
+      /* glTF convention, and her UVs were authored against it — the same pair of lines
+         `SlyModelGodot._material` needs for the sibling import from this repo. */
+      t.flipY = false;
+      t.anisotropy = 4;
+      this._geoms.push(t);          // disposed with the pool (`dispose?.()`, §2507)
+      return t;
+    };
+    /* No `repeat`: every UV in this asset is a character atlas lookup, so the default clamp is
+       right and a repeat would tile her face. */
+    const common = {
+      color: 0xffffff, bands: 3, rim: 0.72, rimColor: 0x7fd4ff,
+      spec: 0.10, gloss: 16, rough: 0.84, sss: 0.34,
+      fallbackRough: 0.85, fallbackMetal: 0,
+    };
+    return [
+      this._mat({ ...common, name: 'carmelita_body', map: load(CARMELITA_TEX[0]), fallbackColor: 0x2f3c66 }),
+      this._mat({ ...common, name: 'carmelita_head', map: load(CARMELITA_TEX[1]), fallbackColor: 0xc98f5a }),
+    ];
+  }
+
   _tex(name) {
     let set = null;
     try { set = this.engine.get('textures')?.get?.(name) ?? null; } catch { set = null; }

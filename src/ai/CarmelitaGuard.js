@@ -49,12 +49,23 @@ import { RIG3 } from '../player/SlyModel3.js';
  * A dropped joint leaves the geometry it weighted stranded at the origin, which reads as missing
  * geometry rather than as a rigging bug.
  *
- * ── What this file does NOT claim ───────────────────────────────────────────────────────────
- * **No frame of this has ever been rendered.** Every assertion in the test suite is structural —
- * bone coverage, weight normalisation, bind-transfer bounds, no NaN, triangle and draw counts.
- * In particular the split of her two 2048² albedos across the mesh groups is **assigned by node
- * name and is unverified**: the source materials carry no `baseColorTexture`, so the GLB does not
- * record which mesh uses which atlas, and nothing offline can recover it. See §241.
+ * ── The atlas split, which used to be a guess and is now the source project's own record ────
+ * This file used to assign the two 2048² albedos **by node name**, and said so: the GLB's
+ * materials carry no `baseColorTexture`, so nothing in the GLB records which mesh wears which
+ * atlas. §241 recorded that as unrecoverable offline. It is not — the record simply lives one
+ * file up, in the *Godot importer's* material remap, which is where `sly-godot/PROVENANCE.md`
+ * had already read Sly's own two atlases from. Applying that same method here:
+ *
+ *     Carmelita_Animations7.fbx.import  "materials" →   BodyMat → uid://bnewj3kvedjat
+ *                                                       EyeMat  → uid://4r18yagxqqq
+ *                                                       HeadMat → uid://dcdj8rdtni3ux
+ *     Assets/Materials/Carmelita Body.tres  (bnewj3kvedjat) → ..._CarmelitaBody_...BaseColor.png
+ *     Assets/Materials/Carmelita Eyes.tres  (4r18yagxqqq)   → ..._CarmelitaHead_...BaseColor.png
+ *     Assets/Materials/Carmelita Head.tres  (dcdj8rdtni3ux) → ..._CarmelitaHead_...BaseColor.png
+ *
+ * So the discriminator is the **source material**, not the node name — see `MATERIAL_ATLAS`. The
+ * old guess was wrong where it mattered: it put `BustRetopo` (1,768 tris of chest) in the head
+ * group on the strength of the word "Bust", and `BustRetopo` is `BodyMat`.
  */
 
 const BASE = 'assets/sly-anim/';
@@ -91,17 +102,35 @@ export const BONE_MAP = {
  * materials for the whole garrison — that is what keeps eleven characters inside the draw budget,
  * and it is kept. So her 21 meshes merge into two groups.
  *
- * **This assignment is by node name and is not verified by anything.** The source materials carry
- * no `baseColorTexture`; the Godot project assigned `carmelita-head.png` and `carmelita-body.png`
- * outside the glTF, and the file does not record which mesh used which. The names are strongly
- * suggestive — `Head_LP`, `Hair_LP`, `Irises`, `Eyeshine_001_L`, `TeethUpper_LowPoly`,
- * `Tongue_LowPoly`, `Scrunchy2` are a head atlas by any reading — but "strongly suggestive" is not
- * "measured", and it is recorded as a guess so that a capture can settle it later.
+ * The assignment is **read off the source project's own importer**, not inferred from node names
+ * — see the header. Eighteen of the twenty-one meshes are decided by it; the other three are
+ * `UNREMAPPED` below and are the only ones still chosen rather than measured.
  */
-export const HEAD_MESHES = new Set([
-  'Head_LP', 'Hair_LP', 'Scrunchy2', 'Irises', 'Eyeshine_001_L',
-  'TeethUpper_LowPoly', 'TeethLower_LowPoly', 'Tongue_LowPoly', 'BustRetopo',
-]);
+export const MATERIAL_ATLAS = {
+  BodyMat: 0,     // Carmelita Body.tres  → carmelita-body.png
+  HeadMat: 1,     // Carmelita Head.tres  → carmelita-head.png
+  EyeMat: 1,      // Carmelita Eyes.tres  → carmelita-head.png
+};
+
+/**
+ * The three source materials the Godot project does **not** remap, so neither atlas is theirs:
+ * in that project they render as flat colours from the FBX (`OH_Outline_Material` black,
+ * `OutlineMat.001` light grey). They are `Stomach_LP` (416 tris, a panel under the coat),
+ * `TeethUpper_LowPoly` (832) and `Tongue_LowPoly` (192) — 1,440 of 29,791 tris, all of them
+ * inside the mouth or under the coat.
+ *
+ * We have two groups and no third material to spend on them, so they go to `body`. That choice is
+ * **arbitrary within a stated bound** rather than measured, and it is recorded here as such — the
+ * point of `MATERIAL_ATLAS` is that the other eighteen no longer are.
+ */
+export const UNREMAPPED = ['OH_Outline_Material', 'OutlineMat.001', 'TestMaterialBody.001'];
+
+/** Which merged group (0 body, 1 head) a source mesh's material puts it in. */
+export function atlasOf(material) {
+  const names = Array.isArray(material) ? material.map((m) => m?.name) : [material?.name];
+  for (const n of names) if (n && MATERIAL_ATLAS[n] != null) return MATERIAL_ATLAS[n];
+  return 0;
+}
 
 /** RIG3 bones Carmelita's rig cannot supply. Reported, and asserted exactly by the test. */
 export const NO_SOURCE = ['capBrim', 'browL', 'browR', 'tailA', 'tailB', 'tailC', 'tailD'];
@@ -265,7 +294,7 @@ export function bindToRig3(scene) {
     g.morphTargetsRelative = false;
     if (g.index) tris += g.index.count / 3; else tris += nV / 3;
 
-    const gi = HEAD_MESHES.has(mesh.name) ? 1 : 0;
+    const gi = atlasOf(mesh.material);
     groups[gi].push(g);
     regionNames[gi].push({ name: mesh.name, count: nV });
   }
@@ -350,3 +379,14 @@ export async function loadCarmelitaGuard(url = ASSET) {
 }
 
 export const CARMELITA_ASSET = ASSET;
+
+/**
+ * Her two albedos, in `MATERIAL_ATLAS` group order — index 0 is the body atlas, index 1 the head.
+ *
+ * They are separate files rather than GLB-embedded images because the source is: the Godot
+ * project assigns them through `.tres` material overrides, and `carmelita-guard.glb` carries
+ * **zero** images and zero textures (checked in the file, not assumed). Relative URLs, resolved
+ * against the page like every other asset here, because §666's leading slash resolves to the
+ * domain root and 404s under this project's `/Demo/` path prefix.
+ */
+export const CARMELITA_TEX = [`${BASE}carmelita-body.png`, `${BASE}carmelita-head.png`];

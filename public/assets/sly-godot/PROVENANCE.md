@@ -237,3 +237,50 @@ that is their design and it is the visible part of the substitution.
 - **Anything under `Assets/Music/` or `Assets/Effects/`.** Untouchable, per this project's absolute
   rule; nothing in the import tool reads, decodes or references either directory. `Assets/Models/`
   is a different category and is the only one this took from.
+
+---
+
+## Carmelita's two albedos — 2026-08-24, repo HEAD `a312a99`
+
+The character herself is not in this directory — she lives in `../sly-anim/`, and the full record
+of that import (census, clip list, what was deliberately not taken) is in
+`../sly-anim/PROVENANCE.md`'s second and third sections. This entry exists because she comes from
+**this** repository, so the licence paragraph at the top of this file governs her too, and because
+the method that resolved her textures is the one already written down here for Sly.
+
+**Source repository:** <https://github.com/NoahChase/Sly-Cooper--A-Thief-in-Godot>, at HEAD
+`a312a997ca7d085a88b7443d754e5d3f57d66311` ("The REAL Godot 4.7 Update"). Read-only and anonymous;
+nothing was pushed there.
+
+**The update turned out to change nothing about Carmelita.** Her mesh and both textures at
+`a312a99` are byte-identical to what was imported on 2026-08-08, established by hash rather than by
+timestamp — `6dad373f…` for `Carmelita_Animations7.glb`, `f3fac1a6…` and `dadeef93…` for the two
+PNGs. There was no new geometry, clip or texture to take.
+
+**What was taken, and how each file was identified:**
+
+```
+Assets/Temp Imports/tempcarmelita/
+  Carmelita_Animations7_CarmelitaBody_TestMaterialBody_BaseColor.png  → ../sly-anim/carmelita-body.png
+  Carmelita_Animations7_CarmelitaHead_TestMaterialBody_BaseColor.png  → ../sly-anim/carmelita-head.png
+```
+
+Identified the same way this file identified Sly's two atlases — by reading the Godot importer's
+material remap, not by matching filenames:
+
+```
+Carmelita_Animations7.fbx.import  "materials":
+    BodyMat → uid://bnewj3kvedjat → Assets/Materials/Carmelita Body.tres → …CarmelitaBody…png
+    EyeMat  → uid://4r18yagxqqq   → Assets/Materials/Carmelita Eyes.tres → …CarmelitaHead…png
+    HeadMat → uid://dcdj8rdtni3ux → Assets/Materials/Carmelita Head.tres → …CarmelitaHead…png
+```
+
+That is what settles which of her 21 meshes wears which atlas — `MATERIAL_ATLAS` in
+`src/ai/CarmelitaGuard.js`. §241 had recorded the split as unrecoverable offline on the grounds
+that the glTF carries no `baseColorTexture`; true of the glTF, false of the repository. Both PNGs
+are 2048², 8-bit, colour-type 2, checked in their headers — this file's own note about
+`Sly_Body.png` existing in both 16-bit and 8-bit is why that is checked rather than assumed.
+
+**Licence: none stated**, exactly as for everything else taken from these two repositories. The
+paragraph at the top of this file is the governing statement and applies unchanged. Nothing under
+`Assets/Music/` or `Assets/Effects/` was opened, copied, decoded or referenced.
