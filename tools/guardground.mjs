@@ -157,6 +157,43 @@ const FRAMES = {
       + '~554 px of body, head ~82 px. The SECOND sample for the same claim, on a different guard '
       + 'from a different bearing (§466.5) — not a re-crop of the pylon frame.',
   },
+
+  /* ---- FACE: a genuine FRONT view, verified as one (§702) --------------------------------
+   *
+   * The two `portrait-*` frames above were added to read the atlas split, and for that they are
+   * fine. They are NOT front views, and one of them is the opposite: measured with
+   * `tools/carmscale.mjs`, which prints dot(guard forward, direction to camera) for every camera
+   * against every settled guard, `portrait-colonnade` sees guard1 at **dot −0.94** — dead behind
+   * him. A frame called "portrait" that shows the back of a head cannot carry a claim about a
+   * face, and nothing in its name says so. This repository has been here before.
+   *
+   * So these two are computed to be front views and then CHECKED to be:
+   *
+   *     face-pylon      guard4  dot +0.996 @ 4.00 m     camDot: clear, nearest 2.513 m
+   *     face-colonnade  guard1  dot +0.996 @ 4.00 m     camDot: clear, nearest 1.826 m
+   *
+   * Two different guards, two different quarters of the level, two different bearings — the two
+   * samples §466.5 wants, not one frame cropped twice.
+   *
+   * The positions are LITERALS, derived once from the settled garrison and then frozen. They are
+   * deliberately not recomputed from the live guard at capture time: the arms of a before/after
+   * pair would then be shot from two different cameras and would compare nothing (§700.8). The
+   * derivation is `head + forward × 4.0 + (0, 0.35, 0)`, aimed at the head centre, with the
+   * garrison settled for the same 60 s both arms use. */
+  'face-pylon': {
+    pos: [-1.191, 1.796, 32.458], look: [-5.079, 1.446, 31.518], fov: 22, tod: 0.78,
+    about: ['guard4 temple/pylon_gate'],
+    note: 'guard4 head-on at 4.0 m, dot +0.996 — a face, verified rather than named. 22 deg gives '
+      + 'head and shoulders. camDot: enclosed 0/26, nearest 2.513 m, subject clear.',
+  },
+  'face-colonnade': {
+    pos: [-18.150, 1.829, 18.479], look: [-18.446, 1.479, 22.467], fov: 22, tod: 0.78,
+    about: ['guard1 temple/courtyard_ring'],
+    note: 'guard1 head-on at 4.0 m, dot +0.996, from the south — the SECOND face sample, on a '
+      + 'different guard in a different quarter. camDot: enclosed 0/26, nearest 1.826 m, subject '
+      + 'clear. Note this is very nearly the reverse bearing of portrait-colonnade, which sees '
+      + 'the same guard at dot −0.94.',
+  },
 };
 
 const want = process.argv.slice(2).filter((a) => !a.startsWith('-'));
