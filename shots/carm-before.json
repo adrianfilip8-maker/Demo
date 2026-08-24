@@ -1,0 +1,413 @@
+{
+  "settleSeconds": 60,
+  "park": [
+    600,
+    0,
+    600
+  ],
+  "frames": {
+    "portrait-pylon": {
+      "file": "shots/carm-before/portrait-pylon.png",
+      "ms": 61130,
+      "pos": [
+        -1,
+        1.9,
+        27.6
+      ],
+      "look": [
+        -4.93,
+        1.25,
+        31.5
+      ],
+      "fov": 20,
+      "about": [
+        "guard4 temple/pylon_gate"
+      ],
+      "note": "the close-pylon stance on a 20 deg lens, aimed at the chest: guard4 head-to-hip at 5.5 m, ~620 px of body with the head ~80 px. For reading the uniform and the face, and for seeing which atlas the chest is wearing.",
+      "projected": {
+        "guard0": {
+          "feetPx": [
+            -1343,
+            -15
+          ],
+          "headPx": [
+            -1327,
+            129
+          ],
+          "heightPx": 144,
+          "inFrame": false
+        },
+        "guard1": {
+          "feetPx": [
+            4349,
+            563
+          ],
+          "headPx": [
+            4451,
+            92
+          ],
+          "heightPx": 471,
+          "inFrame": false
+        },
+        "guard2": {
+          "feetPx": [
+            435,
+            -15
+          ],
+          "headPx": [
+            436,
+            129
+          ],
+          "heightPx": 144,
+          "inFrame": false
+        },
+        "guard3": {
+          "feetPx": [
+            210,
+            134
+          ],
+          "headPx": [
+            216,
+            396
+          ],
+          "heightPx": 262,
+          "inFrame": false
+        },
+        "guard4": {
+          "feetPx": [
+            639,
+            803
+          ],
+          "headPx": [
+            639,
+            75
+          ],
+          "heightPx": 728,
+          "inFrame": false
+        },
+        "guard5": {
+          "feetPx": [
+            -1377,
+            34
+          ],
+          "headPx": [
+            -1366,
+            126
+          ],
+          "heightPx": 92,
+          "inFrame": false
+        },
+        "guard6": {
+          "feetPx": [
+            -725,
+            53
+          ],
+          "headPx": [
+            -719,
+            125
+          ],
+          "heightPx": 72,
+          "inFrame": false
+        },
+        "guard7": {
+          "feetPx": [
+            -715,
+            798
+          ],
+          "headPx": [
+            -708,
+            884
+          ],
+          "heightPx": 86,
+          "inFrame": false
+        },
+        "guard8": {
+          "feetPx": [
+            -1063,
+            -286
+          ],
+          "headPx": [
+            -1057,
+            -226
+          ],
+          "heightPx": 60,
+          "inFrame": false
+        }
+      }
+    },
+    "portrait-colonnade": {
+      "file": "shots/carm-before/portrait-colonnade.png",
+      "ms": 59367,
+      "pos": [
+        -18.44,
+        3,
+        28.5
+      ],
+      "look": [
+        -18.46,
+        1.25,
+        22.32
+      ],
+      "fov": 18,
+      "about": [
+        "guard1 temple/courtyard_ring"
+      ],
+      "note": "the close-colonnade stance on an 18 deg lens, aimed at the chest: guard1 at 6.2 m, ~554 px of body, head ~82 px. The SECOND sample for the same claim, on a different guard from a different bearing (§466.5) — not a re-crop of the pylon frame.",
+      "projected": {
+        "guard0": {
+          "feetPx": [
+            1683,
+            -109
+          ],
+          "headPx": [
+            1697,
+            -226
+          ],
+          "heightPx": 117,
+          "inFrame": false
+        },
+        "guard1": {
+          "feetPx": [
+            641,
+            764
+          ],
+          "headPx": [
+            641,
+            89
+          ],
+          "heightPx": 675,
+          "inFrame": false
+        },
+        "guard2": {
+          "feetPx": [
+            4164,
+            20
+          ],
+          "headPx": [
+            4249,
+            -182
+          ],
+          "heightPx": 202,
+          "inFrame": false
+        },
+        "guard3": {
+          "feetPx": [
+            4936,
+            -114
+          ],
+          "headPx": [
+            5113,
+            -464
+          ],
+          "heightPx": 350,
+          "inFrame": false
+        },
+        "guard4": {
+          "feetPx": [
+            -13857,
+            -3632
+          ],
+          "headPx": [
+            -10865,
+            -1152
+          ],
+          "heightPx": 2480,
+          "inFrame": false
+        },
+        "guard5": {
+          "feetPx": [
+            1313,
+            -171
+          ],
+          "headPx": [
+            1319,
+            -247
+          ],
+          "heightPx": 76,
+          "inFrame": false
+        },
+        "guard6": {
+          "feetPx": [
+            1715,
+            -178
+          ],
+          "headPx": [
+            1724,
+            -249
+          ],
+          "heightPx": 71,
+          "inFrame": false
+        },
+        "guard7": {
+          "feetPx": [
+            1957,
+            -976
+          ],
+          "headPx": [
+            1972,
+            -1085
+          ],
+          "heightPx": 109,
+          "inFrame": false
+        },
+        "guard8": {
+          "feetPx": [
+            1313,
+            93
+          ],
+          "headPx": [
+            1317,
+            44
+          ],
+          "heightPx": 49,
+          "inFrame": false
+        }
+      }
+    }
+  },
+  "subjects": [
+    {
+      "id": "guard0",
+      "type": "temple",
+      "route": "south_gate",
+      "pos": [
+        0.035,
+        0,
+        -12.859
+      ],
+      "u": 0,
+      "speed": 0,
+      "state": "patrol"
+    },
+    {
+      "id": "guard1",
+      "type": "temple",
+      "route": "courtyard_ring",
+      "pos": [
+        -18.457,
+        0,
+        22.317
+      ],
+      "u": 0.0525,
+      "speed": 0,
+      "state": "patrol"
+    },
+    {
+      "id": "guard2",
+      "type": "heavy",
+      "route": "courtyard_ring",
+      "pos": [
+        17.706,
+        0,
+        4.953
+      ],
+      "u": 0.6041,
+      "speed": 0,
+      "state": "patrol"
+    },
+    {
+      "id": "guard3",
+      "type": "temple",
+      "route": "obelisk_watch",
+      "pos": [
+        7.808,
+        2,
+        14.238
+      ],
+      "u": 0.1174,
+      "speed": 1.457,
+      "state": "patrol"
+    },
+    {
+      "id": "guard4",
+      "type": "temple",
+      "route": "pylon_gate",
+      "pos": [
+        -4.931,
+        0,
+        31.506
+      ],
+      "u": 0.2274,
+      "speed": 0,
+      "state": "patrol"
+    },
+    {
+      "id": "guard5",
+      "type": "temple",
+      "route": "hall_nave",
+      "pos": [
+        0.008,
+        0,
+        -36.216
+      ],
+      "u": 0.5761,
+      "speed": 1.55,
+      "state": "patrol"
+    },
+    {
+      "id": "guard6",
+      "type": "heavy",
+      "route": "hall_weave",
+      "pos": [
+        13.21,
+        0,
+        -40.764
+      ],
+      "u": 0.7054,
+      "speed": 1.009,
+      "state": "patrol"
+    },
+    {
+      "id": "guard7",
+      "type": "temple",
+      "route": "rooftop_run",
+      "pos": [
+        9.077,
+        17,
+        -25.234
+      ],
+      "u": 0.2648,
+      "speed": 1.736,
+      "state": "patrol"
+    },
+    {
+      "id": "guard8",
+      "type": "heavy",
+      "route": "tomb_vault",
+      "pos": [
+        9.095,
+        -12,
+        -65.06
+      ],
+      "u": 0.3954,
+      "speed": 0,
+      "state": "patrol"
+    }
+  ],
+  "errors": [],
+  "camdot": {
+    "portrait-pylon": {
+      "ok": true,
+      "reasons": [],
+      "near": 0,
+      "dirs": 26,
+      "nearest": 1.903,
+      "forward": 10.739,
+      "forwardName": "arch:court:hieroglyph_wall",
+      "targetLen": 5.575,
+      "subjectBlocked": false
+    },
+    "portrait-colonnade": {
+      "ok": true,
+      "reasons": [],
+      "near": 0,
+      "dirs": 26,
+      "nearest": 2.227,
+      "forward": 11.001,
+      "forwardName": "paving:court",
+      "targetLen": 6.423,
+      "subjectBlocked": false
+    }
+  },
+  "consoleErrors": []
+}
