@@ -203,3 +203,87 @@ guard AI stays and only what the guard is *made of* changed. Nothing under `Asse
 
 **Licence: unchanged and still none stated** — the governing paragraph is in
 `../sly-godot/PROVENANCE.md` and covers these files too.
+
+---
+
+## Fourth import — 2026-08-24: her FACE, which no glTF in that project has ever contained
+
+Prompted by the owner, playing the deployed build: *"The Carmelita sculpt seems to be off and the
+head seems to be missing."* Both halves were real and they had different causes; the ledger entry
+is **KNOWN_ISSUES §702**. Only the second half is an import, and it is this.
+
+**`Head_LP` — muzzle, nose, eyes, cheeks, ears — reaches us with 32 triangles.** Its index buffer
+is 96 elements long and references 64 of its 3,040 vertices. The vertex cloud is intact and spans
+the whole head; only the connectivity was lost, which is why every structural check in
+`tests/carmguard.test.mjs` passed for sixteen days while 99.4% of the face went undrawn. What
+reached the screen was a patch 0.150 × 0.068 × 0.062 m in the middle of her face.
+
+It is upstream and it is not a mistake of ours. **The same mesh is 5,000 triangles in that
+project's own `Carmelita_Animations7.fbx`**, and every other mesh in the scene matches the FBX
+exactly:
+
+```
+Hair_LP 9528 = 9528   Coat 3188 = 3188   Hand 4606 = 4606   BustRetopo 1768 = 1768   Shoes 1076 = 1076
+Head_LP    32 ≠ 5000
+```
+
+Both of that project's glTF exports carry the broken head — `Carmelita_Animations7.glb` keeps the
+3,040-vertex cloud with a 96-element index, `Carmelita_Animations7.gltf` keeps only 48 vertices.
+So the third import's hash check above, which correctly proved the `.glb` had not changed, was
+comparing two copies of the same broken export. **The answer was one file up again**, which is now
+the third time that has been true in this import (material overrides in the `.import` sidecar,
+twice; the mesh itself in the `.fbx`, once).
+
+| file | what it is | why | where it is now |
+|---|---|---|---|
+| `carmelita-head-lp.glb` | `Head_LP` at its authored 5,000 triangles, 15,000 vertices, 851 kB | the face | **here** — fetched by `CarmelitaGuard.CARMELITA_HEAD`, spliced by `spliceHead()` |
+| `Carmelita_Animations7.fbx` | 16.9 MB, the authoring export | where the head came from | **not committed** — a development-time input only (AGENTS.md §1.1) |
+
+### Why the spliced head is provably the same head
+
+`tools/carmhead.mjs` refuses to write unless all three hold, and they are re-checked in the suite
+from committed bytes so nobody needs the 16.9 MB FBX to believe this:
+
+```
+both skins list the same 199 bones in the same ORDER    199/199   → skinIndex transfers unremapped
+every bind position agrees after the exact ×100 cm      max 0.0000003 m
+the 64 SURVIVING vertices are a fiducial                64/64 position at distance 0
+                                                        64/64 UV, under (u, 1−v)
+                                                        64/64 dominant bone
+```
+
+The fiducial is the whole argument: a head taken from the wrong asset, the wrong scale, the wrong
+axis convention or the wrong UV flip each fail it. It is shown able to reject — a head displaced by
+1 cm matches 0 of 64. The single convention difference between the two exports is the UV v-axis,
+and it is *derived* from the fiducial rather than declared: 0.2705 + 0.7295 = 1.0000 exactly, on
+every one of the 64.
+
+### What was NOT taken
+
+- **The four morph targets** — `Ugh`, `Grr`, `Blink`, `Key 4`. This pipeline drops morph
+  attributes, so the recovered face does not blink. On the register, not wired.
+- **The shock pistol.** `MainBody`, `Barrel` and `Antennae.003` are 100% weighted to the
+  `ShockPistol` armature root, a **sibling** of the body root `Bone001` rather than a descendant.
+  The source parks the gun 0.86 m to her side and 0.9 m behind her, and a correct bind puts it
+  back there — floating in mid-air beside every guard. Dropped by that structural rule, not by
+  name; `Legs`, which carries 3.6% on the `Hips_Center` helper root, is kept.
+- **Nothing under `Assets/Music/` or `Assets/Effects/`** was opened, copied, decoded or
+  referenced. Unchanged from the previous three imports.
+
+### One correction to the third import's own table, above
+
+That table's last row calls `Stomach_LP`, `TeethUpper_LowPoly` and `Tongue_LowPoly` "all under the
+coat or inside the mouth". That sentence was written from the node names and the material remap and
+was never measured. `tools/carminterior.mjs` measures it — 14 rays per sampled vertex, counting how
+many escape the body:
+
+```
+Tongue_LowPoly 100.0%   TeethUpper_LowPoly 99.8%      ← sealed; dropped for the triangle budget
+Stomach_LP      80.8%   vs Collar 90.9%, Badge_Loop 81.6%, BustRetopo 81.2%  — all worn; KEPT
+```
+
+Two of the three are sealed. The third is not, and it stays. The sentence is left standing above
+with this correction attached rather than rewritten, because it is what was believed then.
+
+**Licence: unchanged and still none stated** — the governing paragraph is in
+`../sly-godot/PROVENANCE.md` and covers `carmelita-head-lp.glb` exactly as it covers the rest.
