@@ -52892,9 +52892,273 @@ Work in progress; findings appended below in this section.
 
 ---
 
-## §701 — "Scale the bottles to be 3 times larger": the size is a build output, and what a bigger silhouette collides with
+## §701 — "Scale the bottles to be 3 times larger": the size was three literals, and the one bottle that no longer fits
 
-**CLAIMED — this block is being written. §700.9 records that a grep for a free number is a read
-with no lock, so the heading lands first and the content follows in later commits.**
+The user, in full: **"Scale the bottles to be 3 times larger."** A one-line request, and it was
+taken as one — no redesign of the pickup system. Almost all of the work below is in what the
+change was *not allowed* to disturb.
 
-The user, in full: **"Scale the bottles to be 3 times larger."**
+### §701.1 The before and after, read out of the code rather than multiplied off a literal
+
+`clueBottle({ h })` does not deliver `h`. It delivers `h * CLUE_HEIGHT_RATIO`, and §700 pinned
+that ratio precisely because the placements were tuned against the delivered silhouette. So the
+number that was tripled is `h`, and the number that matters is what comes out of it:
+
+```
+                     BEFORE            AFTER          factor
+  h                  0.42              1.26           3.000
+  delivered HEIGHT   0.43260 m         1.29780 m      3.000     measured off the merged geometry
+  half-width         0.0837 m          0.2510 m       3.000
+  base y             0.000000          0.000000       —         base-origin, unchanged
+  verts / tris       190 / 272         190 / 272      —         a scale is not a re-bake
+```
+
+**`CLUE_HEIGHT_RATIO` did not move and must not.** It is a property of the baked module (unit
+height, base at origin), not of the size anyone chose. The size anyone chose is now
+`PropKit.CLUE_HEIGHT`.
+
+### §701.2 The size was three literals that had to agree, and now it is one
+
+The brief for this change said "there is a size constant that other things read — find out what
+depends on it before you tripling it". Reading it out, there was no *constant*; there were three
+copies of a number and two prose derivations:
+
+| where | was | now |
+|---|---|---|
+| `PropKit.clueBottle()`'s default `h` | `0.42` | `CLUE_HEIGHT` |
+| `Pickups.TUNE.clueHeight` | `0.42` | `CLUE_HEIGHT` |
+| `Props._clueBottles()` | bare `h: 0.42` | `CLUE_HEIGHT` |
+| `Pickups.TUNE.clueCollect` | `0.55` — *comment*: playerRadius + half the height | `0.98` |
+| `Pickups.TUNE.clueSway` | `0.0618` — *comment*: 1/7 of the height | `0.1854` |
+| `Pickups.TUNE.clueRock` | `0.349066` rad | unchanged — it is an ANGLE |
+| `Pickups.TUNE.clueBob` | `0.11` | unchanged — never claimed to be height-derived |
+| `cluevault` V1b | pins `0.43260` | re-derived, see §701.5 |
+
+The three-literal shape is the interesting one and it is worse than it looks. `Props._clueBottles()`
+draws a **decorative twin** of the pickup at the same twelve spots, and `Pickups._adopt()` sets
+`clue_bottles.visible = false` — so a scale edit that reached `Pickups` and not `Props` would have
+produced a build where the two halves of one object disagree, **with every frame in the game
+looking exactly right**, because the half that is wrong is the half nobody draws. It would surface
+the day someone unhid the twin, months later, in a diff that touched nothing related.
+
+The two derived numbers are the substantive part of the change:
+
+- **`clueCollect` 0.55 → 0.98.** `stepPickup` measures the player capsule's centre against the
+  bottle's **base**, so a contact radius is a statement about the mesh's size. Its own comment
+  already said what happens if it does not track: *"using `collect` 0.50 unchanged would make you
+  clip through the neck of one before it registered."* Left at 0.55 against a 1.29780 m bottle,
+  the player walks through the upper **0.75 m** of the mesh before collection fires. It is still
+  far inside `magnet` (2.40), so nothing about reach, R2 or R3 moves; this is the contact term
+  only and §223's snap-radius/catch-radius split still holds.
+- **`clueSway` 0.0618 → 0.1854.** §700 derived this as *1/7 of the bottle's height* — their 0.125
+  on a 0.875 m bottle — and wrote the warning down: copying an absolute number across a scale
+  change is the mistake. Leaving 0.0618 on a bottle three times taller makes it 1/21 of its
+  height: the same mistake in the other direction. Its price is measured in §701.4, not asserted.
+
+### §701.3 R1 / R2 / R3 — re-run, and unchanged for a reason worth stating
+
+```
+[clue] world: 301 colliders · 117,496 tris · 8 hazards (PROPS) · 26 handholds
+[clue] R1 12/12 found a surface · drop 0.561-5.460 m
+[clue] R2 12/12 inside the 2.4 m magnet · 0.080-0.700 m · worst bottle 4 by cling notch-pylon-e-w-5
+[clue] R3 12/12 out of reach from the courtyard · 97 candidate stands at floor level, 97 blocked by headroom
+```
+
+**Identical to §700's figures, to the digit.** That is the correct result and it is not a
+tautology — it is the property the base-origin bake buys. R2 measures from where a player can
+stand to the bottle's **pickup point**, and the pickup point is the authored spot, which is the
+mesh's base. A bottle that grows grows *upward and outward from that point*; it does not move it.
+Had the bake been centre-origin, tripling the mesh would have lifted every bottle 0.43 m and R2
+would have moved on all twelve without a single line any of the three tests read being edited.
+
+Re-run rather than reasoned about, because "it should be unchanged" and "it is unchanged" are
+different claims and only one of them is evidence. The worst case is still the ladder bottle at
+**0.700 m** from rung `notch-pylon-e-w-5`, and R2's two in-arm counterexamples (the stale §8.1
+cornice coordinate at 12.700 m; the ladder bottle read as a floor bottle at 4.560 m) both still
+fail as they must.
+
+What a scale change *can* move is the distance from a stance to the bottle's **surface**, and it
+moves it the safe way: the mesh is base-origin and grows away from the measured point, so its
+surface can only come nearer to any stance, never further. The term that governs surface contact
+is `clueCollect`, and that is the one that was re-derived.
+
+### §701.4 Interpenetration — all twelve, exactly, and the one that fails
+
+This is the defect the change was actually likely to produce, and a screenshot of one bottle
+cannot find it: it is a per-placement question and there are twelve placements. `tools/bottlefit.mjs`
+is new and answers it exactly.
+
+**Rays are the wrong instrument here and it is not obvious why.** `camdot.mjs`'s 26-ray probe is
+the standing tool for "is this thing inside something", but `THREE.Raycaster` honours
+`material.side`: a ray fired from inside a `FrontSide` wall leaves through its own back face and
+reports a clean distance. **A bottle buried in masonry measures as a bottle standing in open air** —
+a wrong answer in the reassuring direction, which is §700.3's frozen-stats failure wearing a
+different hat. So `bottlefit` tests the bottle's own 272 triangles against the world's 438,550
+drawn triangles with a separating-axis test: no ray, no side, no culling. It also tests the **pose
+envelope** rather than the rest pose — swing {−1,0,+1} × bob {−1,0,+1} × 6 yaws, because a bottle
+in this game is never at its authored spot.
+
+Clearance is min distance from a bottle vertex to a world triangle; `>0.60 m` means nothing was
+within the search pad at all.
+
+| # | placement | 1× (h 0.42, sway 0.0618) | 3× (h 1.26, sway 0.1854) | nearest thing |
+|---|---|---|---|---|
+| 0 | terrace stage 1 | > 0.60 | 0.403 | `arch:court:sandstone_worn` |
+| 1 | terrace stage 2 | > 0.60 | > 0.60 | — |
+| 2 | obelisk kiosk lintel | 0.805 | 0.544 | `arch:court:rope_fibre` |
+| 3 | peristyle SE architrave | 0.364 | **0.192** | `arch:court:bronze_dark` |
+| 4 | pylon ladder rung 5 | 0.298 | **0.169** | `arch:court:bronze_dark` |
+| 5 | east pylon deck | > 0.60 | > 0.60 | — |
+| 6 | hall front cornice | **0.015** | **CROSSES** | `arch:hall:sandstone_block` |
+| 7 | west aisle roof | > 0.60 | > 0.60 | — |
+| 8 | nave deck | > 0.60 | > 0.60 | — |
+| 9 | inner pylon south stage | > 0.60 | > 0.60 | — |
+| 10 | pylon summit deck | 0.355 | 0.324 | `arch:pylon:bronze_dark` |
+| 11 | tomb vault floor | 0.266 | **0.033** | `arch:tomb:sandstone_worn` |
+
+**Eleven of twelve clear. Bottle 6 does not, and it was never going to.**
+
+Measured at the placement, from the axis outward: a `sandstone_block` face stands at
+**z −16.602** with its outward normal +z and its top edge at **y 17.00**, i.e. 0.102 m behind a
+bottle at z −16.5, for the first 0.60 m of the bottle's height. The arithmetic is then fixed:
+
+```
+  half-width at 1x   0.0837 m   →  clearance 0.015 m   (fifteen millimetres)
+  half-width at 3x   0.2510 m   →  overlap   0.149 m   buried in the face
+  largest scale that still clears  =  0.102 / 0.0837  =  1.22x
+```
+
+So **no meaningful enlargement of this bottle fits that gap** — not 3×, not 1.5×. The rock is
+about Z and moves the bottle in x, so it contributes nothing to this overlap; it is pure radius
+growth against a wall the placement was already touching. The 0.015 m at 1× is the real finding
+underneath: that bottle has been fifteen millimetres from a wall since it was placed, and nothing
+in the tree measured it until now.
+
+**It was NOT fixed by moving the bottle**, and that is deliberate: §700's "zero changed `pos:`
+literals" is a property worth keeping and the diff keeps it — `git diff` over `Props.js` contains
+no `[x, y, z]` line on either side. The two levers, for whoever picks this up:
+
+- `spots[6]` from `[-9.5, 16.40, -16.5]` to about `z −16.33` clears it with margin, and is a
+  placement change the twelve-beat argument in `Props.js`'s header should sanction, not a lane
+  scaling a mesh.
+- Scaling the set to 1.2× rather than 3× clears it without moving anything — and is not what was
+  asked for.
+
+**The sway's price, isolated.** `SWAY=` on `bottlefit` moves that one term against the same
+world. Tripling it changes no placement's verdict and costs the two tightest of the twelve most
+of their margin: peristyle architrave 0.281 → 0.192 m, tomb vault floor 0.105 → 0.033 m. That is
+recorded in `Pickups.js` beside the number, with reverting it named as the lever — the first
+draft of that comment said "costs no placement its clearance", which was written before the run
+and was false.
+
+### §701.5 V1b was RE-DERIVED, not re-pinned
+
+V1b asserted one literal, `0.43260 m`. Bumping it to `1.29780` and moving on would have repeated
+exactly what §700 corrected in V13: **the literal was never the claim, it was the claim's value on
+the day.** The claim is a chain, and the chain is now what executes:
+
+```
+  BAKE       clueBottle({h:1}) stands CLUE_HEIGHT_RATIO, base at y 0   ← what a re-bake breaks
+  SIZE       TUNE.clueHeight === PropKit.CLUE_HEIGHT                   ← one authored size
+  DELIVERED  1.29780 m, still pinned absolutely                        ← placements cannot self-check
+  DERIVED    clueCollect ≤ playerRadius + height/2 (within 0.015)
+             clueSway    === height / 7 (within 0.0005)                ← was prose, now executes
+  TWIN       Props._clueBottles() builds at `CLUE_HEIGHT`, scraped     ← the invisible half
+```
+
+The DELIVERED height stays an absolute number on purpose: a placement cannot check itself, so
+changing it must force R1/R2/R3 and `bottlefit` to be **re-run**, not re-read. Five in-arm
+counterexamples (§418.3), all executed rather than described: a bottle built 50 % taller misses
+the height band; a module baked to half height misses the BAKE band; **the pre-§701 values 0.55
+and 0.0618 both miss their derivation bands against the current height** — that is the regression
+this arm exists for, shown failing on the exact input that would have produced it; and a `Props`
+body built at a bare `h: 0.42` fails the twin scrape.
+
+### §701.6 The HUD icon does NOT scale, and the coupling test says why
+
+`Icons.clueBottle()` is coupled to the world mesh through `BOTTLE_PALETTE`, and V13 asserts that
+coupling. Read out rather than assumed: the palette carries **three colours and no dimension**,
+and the glyph is drawn into a fixed `viewBox="0 0 46 46"` at whatever pixel size the toast gives
+it. There is no path by which a world-space metre reaches the icon, and there should not be — the
+icon is drawn to its own frame and a toast that grew three times because a mesh did would be a
+bug, not a feature. **The coupling is about identity, not size.** V13 re-run after the change:
+green, unchanged, and unchanged for the right reason.
+
+### §701.7 Draw calls and triangles — measured, because `Engine.stats` still lies here
+
+Scaling a mesh changes neither count, and this says so from `tools/bottledraw.mjs`'s isolated
+render rather than from that sentence:
+
+```
+  clue_bottles   instanced ×12  visible false   190 verts  272 tris   vcol=true colorAttr=true
+  pickup_clues   instanced ×12  visible true    190 verts  272 tris   vcol=true colorAttr=true
+
+  scene with nothing visible      0 draws
+  scene with ONLY the bottles     2 draws        clue_bottles alone 1 draw / 3264 tris
+  ==> the clue-bottle set costs 2 draw call(s)   pickup_clues alone 1 draw / 3264 tris
+```
+
+Identical on both arms; in the live frame the set costs **one** draw, because the twin is hidden.
+
+**The in-situ arm fired FROZEN on both arms, and it fired at a DIFFERENT wrong number each
+time.** §700 saw `Engine.stats.drawCalls` read `1` in every sample. This round read **180** in
+every sample on the before arm and **188** in every sample on the after arm — 9 visible, 9 hidden,
+spread 0, delta 0, both times. Three runs, three different frozen values, every one of them
+producing a delta of zero that happens to agree with the correct conclusion. That is the whole
+argument for the detector: `1` looks obviously wrong and invites suspicion, `180` and `188` look
+exactly like plausible draw counts for a level this size and invite none. `Engine.stats` remains
+unusable in this harness; the isolated render is the figure and the in-situ arm only ever
+corroborates it.
+
+
+### §701.8 The frames
+
+`tools/bottleshot.mjs`, `camDot` first on every camera (7/7 ok), before and after. **§700's four
+cameras are frozen and were not touched** — a before/after pair shot from two cameras compares
+nothing, and these are the pair the user has already seen. Each capture also reports where the
+live instance projected in NDC and how far it was from the lens, because a tool in this repository
+spent its whole life labelling rear shots "front"; all 11 captures report IN FRAME.
+
+| frame | claim | before (0.43260 m) | after (1.29780 m) |
+|---|---|---|---|
+| `placed-terrace` | PLACED — §8.1 step 1, ~5.14 m, the distance a player meets it | a small green bottle you have to be looking for against the grey ledge | unmistakable at a glance, ~3× the height, still clear of the wall behind it |
+| `placed-nave` | PLACED — nave deck 18 m up, different sun, bearing and ground | a thumb-sized silhouette against terracotta, easily read as debris | reads as a pickup from across the deck; now tall enough to occlude the obelisk behind it |
+| `read-summit` | READ — pylon summit, sky behind, 1.32/1.41 m from the lens | the whole bottle: green glass, red cork, pale label band | **overflows the frame** — glass and part of the label and nothing else |
+| `read-terrace` | READ — 32 m lower, warm stone behind, tod 0.34 | the whole bottle, three materials separable | overflows the same way |
+| `read-summit-fit` | READ, size-matched control — same camera pulled back ×3 | — | all three materials read exactly as before: green body, red cork and neck, gold band across the belly |
+
+**The two READ frames overflowing is a true result, not a broken camera, and it is left in.** Those
+lenses sit 1.26 m from the subject because the subject used to be 0.43 m tall. Re-aiming them would
+have destroyed the only direct before/after comparison in the set to make a prettier picture. The
+size-matched control answers the question the overflow costs — *does it still read as a bottle* —
+and it does: at 3× the label band and the cork are more legible, not less. **The PLACED pair is the
+one that matters** and it is the pair that shows what the user asked for.
+
+The interpenetration exhibit, two bearings (§466.5), after arm only — there is nothing to compare
+it against on the before arm, where the same bottle cleared by 15 mm:
+
+| frame | what it shows |
+|---|---|
+| `cornice-side` | grazing along the parapet face from +x: the bottle's lower right is **cut off by the stone** — the block's front face passes through the glass and the bottle's bottom corner is inside it |
+| `cornice-over` | from above the parapet's top edge (y 17.00): the wall crosses the bottle at label height and the near half of the body is behind/inside the block, which reads as a bottle set into the masonry |
+
+Both agree with `bottlefit`'s number — 0.149 m of a 0.251 m half-width buried — and neither was
+needed to find it. The measurement found it; the frames are so the reader does not have to take
+the measurement on trust.
+
+### §701.9 Bounds — what this does not cover
+
+- **Only the clue bottle changed.** No other prop or pickup was scaled, and **no placement moved**:
+  `git diff` over `Props.js` contains no `[x, y, z]` line on either side.
+- **Bottle 6 ships interpenetrating.** It is measured, photographed and left, because every fix
+  moves something this change was told not to move. Two levers are named in §701.4.
+- **`clueBob` was not scaled** and is not claimed to have been. Unlike `clueCollect` and
+  `clueSway` it has never been documented as a function of the bottle's height (its comment ties
+  it to PROPS' own bob), so scaling it would have been inventing a derivation, not following one.
+- **The magnet did not move.** `TUNE.magnet` is `Controller.TUNE.pickRange` and belongs to the
+  player's reach, not to the bottle. Only the contact term is a statement about the mesh.
+- **Nothing was touched in `src/ai/`, the ring or pose paths, or the Carmelita lane's files.**
+- **`bottlefit`'s clearances above 0.60 m are upper bounds, not measurements.** Triangles further
+  than the search pad from the pose envelope are never evaluated, so a row reading `> 0.60` means
+  "nothing within the pad", and a number printed above 0.60 (bottle 2) is the nearest thing found
+  inside the pad rather than a proven global minimum. Everything at or under 0.60 m is exact.
