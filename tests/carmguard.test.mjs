@@ -383,10 +383,17 @@ test('§702 the shock pistol is dropped by the ARMATURE, and the body is not', (
   console.log(`[carmguard] carry=${carry} dropped ${dropped.join(', ') || 'none'} `
     + `from root(s) ${droppedRoots.join(', ') || '—'}, soleLift ${BOUND.stats.soleLift} m`);
   assert.equal(carry, CARRY.REBIND, 'the shipped default is no longer the corrected carry');
-  assert.deepEqual([...dropped].sort(), ['Antennae003', 'Barrel', 'MainBody'],
-    'the dropped set changed — it must be exactly the three shock-pistol meshes');
-  assert.deepEqual(droppedRoots, ['ShockPistol'],
-    'a mesh was dropped from an armature root other than the pistol prop');
+  assert.deepEqual([...dropped].sort(),
+    ['Antennae003', 'Barrel', 'MainBody', 'TeethUpper_LowPoly', 'Tongue_LowPoly'],
+    'the dropped set changed — it must be the three shock-pistol meshes and the two sealed '
+    + 'mouth-interior meshes, and nothing else');
+  assert.deepEqual([...droppedRoots].sort(), ['ShockPistol', 'interior'],
+    'a mesh was dropped for a reason other than the pistol prop or the measured mouth interior');
+  /* Stomach_LP is the one §698's prose grouped with the mouth and the measurement did not:
+     80.8% enclosed against Collar 90.9% and BustRetopo 81.2%, all of them worn. It stays. */
+  assert.ok(!dropped.includes('Stomach_LP'),
+    'Stomach_LP was cut — tools/carminterior.mjs measures it at 80.8% enclosed, the same band as '
+    + 'the collar and the chest piece, so it is not interior geometry');
 
   /* the input seen to be KEPT: `Legs` carries 3.6% of its weight on the `Hips_Center` helper
      root, which is also not a body root. A rule keyed on "any non-body weight" would eat it. */
@@ -407,7 +414,8 @@ test('§702 the shock pistol is dropped by the ARMATURE, and the body is not', (
 
   const legacy = bindToRig3(loadScene(), { carry: CARRY.LEGACY });
   assert.equal((legacy.stats.dropped || []).length, 0, 'the legacy carry must keep the pistol — it is the byte-for-byte revert');
-  assert.equal(legacy.tris - BOUND.tris, 1672, 'the pistol is not 1,672 triangles any more');
+  assert.equal(legacy.tris - BOUND.tris, 1672 + 1024,
+    'the dropped mass is not the 1,672-triangle pistol plus the 1,024-triangle mouth interior');
 });
 
 /**

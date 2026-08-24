@@ -181,6 +181,36 @@ export const MATERIAL_ATLAS = {
  */
 export const UNREMAPPED = ['OH_Outline_Material', 'OutlineMat.001', 'TestMaterialBody.001'];
 
+/**
+ * The mouth interior, dropped — and the sentence that was nearly used to drop more.
+ *
+ * §702's recovered face costs 4,968 triangles a guard, which took the worst main view to **101%
+ * of the 1.2 M cap** (`tools/budgetattrib.mjs --inpage`, `dunes`). A hard AGENTS.md §1 constraint
+ * is not something to record and ship, so something had to come out, and it had to be geometry
+ * that was never on screen rather than geometry that was.
+ *
+ * §698 named three meshes as "under the coat or inside the mouth" — `Stomach_LP`,
+ * `TeethUpper_LowPoly`, `Tongue_LowPoly`, the three the Godot importer does not remap. That
+ * sentence was written from the node names and the material table and had never been measured.
+ * `tools/carminterior.mjs` measures it: for a sample of each mesh's vertices it fires 14 rays and
+ * counts how many escape the body. Outer surfaces score low, sealed interiors score ~100%:
+ *
+ *     Tongue_LowPoly      100.0%      TeethUpper_LowPoly   99.8%       ← sealed
+ *     Stomach_LP           80.8%      — against Collar 90.9%, Badge_Loop 81.6%, BustRetopo 81.2%
+ *     controls: Coat 36.4%, Hair_LP 26.8%, Shoes 11.9%   |   Irises (behind the cornea) 74.2%
+ *
+ * So two of the three are sealed and **`Stomach_LP` is not** — it sits in the same band as the
+ * collar, the badge and the chest piece, all of them worn and visible. It is therefore NOT cut,
+ * even though cutting it would have bought another 416 triangles and even though a sentence
+ * already in the ledger would have justified it. That is the §699 rule applied to §698's own
+ * prose: a claim about what is in a file is only a measurement if something re-reads it.
+ *
+ * 1,024 triangles a guard × 9 guards × 2 (each guard is drawn again as an ink shell) = 18,432
+ * off the worst view, which lands it at 99.4% of the cap. The headroom after this is about
+ * 7 k triangles and the guard import owns half the frame — §313's standing finding, unchanged.
+ */
+export const INTERIOR = ['TeethUpper_LowPoly', 'Tongue_LowPoly'];
+
 /** Which merged group (0 body, 1 head) a source mesh's material puts it in. */
 export function atlasOf(material) {
   const names = Array.isArray(material) ? material.map((m) => m?.name) : [material?.name];
@@ -384,6 +414,10 @@ export function bindToRig3(scene, opts = {}) {
     /* A mesh whose weight lands ENTIRELY on a non-body armature root is a detached prop, not
        part of the character. Measured off the hierarchy, per mesh, so `Legs` — 3.6% on the
        `Hips_Center` helper root, 96.4% on the body — is kept and the pistol is not. */
+    if (carry === CARRY.REBIND && INTERIOR.includes(mesh.name)) {
+      dropped.push({ name: mesh.name, root: 'interior' });
+      continue;
+    }
     if (carry === CARRY.REBIND) {
       const si0 = mesh.geometry.attributes.skinIndex, sw0 = mesh.geometry.attributes.skinWeight;
       if (si0 && sw0) {

@@ -38,6 +38,7 @@
  *   node tools/budgetattrib.mjs --json out.json # also write the machine-readable rows
  *   node tools/budgetattrib.mjs --detail night  # per-owner rows for one shot
  */
+import './_domshim.mjs';
 import * as THREE from 'three';
 import { writeFile } from 'node:fs/promises';
 import { SHOTS } from '../src/core/Shots.js';
@@ -70,7 +71,42 @@ const DETAIL = argv.filter((a) => !a.startsWith('--'));
  * This mode is a SUBSTITUTION MODEL, not an in-page measurement: it swaps the measured asset
  * mass onto the headless guard/player transforms. It is quoted as such everywhere it appears.
  */
-const CARMELITA_TRIS = 29791;      // measured: glb index accessors, 21 primitives
+/* Collected diagnostics, declared here because the measured Carmelita mass below reports into it. */
+const warnings = [];
+
+/* CARMELITA_TRIS used to be the literal 29791, "measured: glb index accessors, 21 primitives".
+ * §702 moved it twice in one change — the shock pistol left (−1,672) and the recovered face
+ * arrived (+4,968) — and a literal here would have gone on reporting the old number in the
+ * REASSURING direction, which is §700.3's lesson and §310's before it. So it is no longer a
+ * literal: it is read from the same `bindToRig3` the game calls, over the same committed assets,
+ * with the same head splice. If the asset or the bind changes again this moves with it.
+ *
+ * `.tris` is what `Guard.js` adds to `this.stats.tris`, so this is the number the runtime uses,
+ * not a re-derivation of it. Falls back to the historical literal only if the assets are absent,
+ * and says so loudly rather than quoting a number it did not measure. */
+const CARMELITA_TRIS = await (async () => {
+  try {
+    const { readFileSync } = await import('node:fs');
+    const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+    const { bindToRig3, spliceHead } = await import('../src/ai/CarmelitaGuard.js');
+    const parse = async (p) => {
+      const b = readFileSync(p);
+      return new Promise((res, rej) => new GLTFLoader().parse(
+        b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength), '', res, rej));
+    };
+    const scene = (await parse('public/assets/sly-anim/carmelita-guard.glb')).scene;
+    try {
+      const h = await parse('public/assets/sly-anim/carmelita-head-lp.glb');
+      let geo = null;
+      h.scene.traverse((o) => { if (!geo && o.isMesh) geo = o.geometry; });
+      if (geo) spliceHead(scene, geo);
+    } catch { /* the stub head is the documented fallback; the count below reports what it got */ }
+    return bindToRig3(scene).tris;
+  } catch (e) {
+    warnings.push(`carmelita mass NOT measured (${e.message}) — falling back to the 2026-08-08 literal 29791`);
+    return 29791;
+  }
+})();
 const CARMELITA_DRAWS = 2;         // merged geometry, two material groups
 const SLY_TRIS = 13321 + 494;      // sly.fbx (4 meshes) + sly-cane.glb
 const SLY_DRAWS = 4;
@@ -92,7 +128,6 @@ const L = {
 const BLIT_DRAWS = 11, BLIT_TRIS = 22;
 
 /* ---------------------------------------------------------------- build --- */
-const warnings = [];
 const built = {};
 const texStub = { tex: () => null, get: () => null, material: () => null, bundle: () => null };
 const engine = {
