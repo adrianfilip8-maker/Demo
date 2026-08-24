@@ -52582,3 +52582,269 @@ position. The source repository states no licence, that is unchanged at `a312a99
 standing instruction that copyright is not an obstacle here governs these files exactly as it
 governs the rest of the import. §698 took two PNGs from a repository this project was already
 taking a character from.
+
+---
+
+## §698 — "Substitute in the bottle asset from the repo": the pickup was found by reading the scene graph, and three materials were measured rather than assumed to cost three draws
+
+The user, in full: **"Substitute in the bottle asset from the repo instead of the current one."**
+The clue bottle up to this point was a hand-authored lathe in `PropKit.clueBottle()` — "dumpy glass
+body, cork, wax seal", 147 verts / 198 tris, one flat material in §2.1.6's pickup blue.
+
+### §698.1 Which file — established by reading the scene graph, not by matching the filename
+
+A filename search for "bottle" in the reference project returns **two** models and nothing in the
+names separates them. The one that is the pickup was resolved by following what actually instances
+what:
+
+```
+Scenes/Design Tools/bottle.tscn
+  ├─ ExtResource("1_q8b3u")  =  res://Assets/Models/Pickups/BOTTLE.glb      ← THE PICKUP
+  ├─ ExtResource("1_2e5h4")  =  res://Scripts/bottle.gd                     (NOT taken)
+  ├─ Area3D/CollisionShape3D    SphereShape3D radius 0.625 at y 0.666
+  └─ BOTTLE ROT / BOTTLE        Transform3D(scale 0.875, translate y 0.125)
+       └─ AnimationPlayer       autoplay "idle" — where the motion actually lives
+```
+
+`Assets/Models/Detail Items/ParisWineBottle.glb` is **scenery and is not this** — it is part of the
+Paris rooftop set §-noted elsewhere in this file. Nothing else in the repository instances
+`BOTTLE.glb`; the pickup is singular. Recorded here so the next person does not have to
+re-establish that the other one was considered and rejected.
+
+**Provenance, and the source moving under us.** The clone is anonymous and read-only. It has since
+advanced to HEAD `a312a99` *("The REAL Godot 4.7 Update")*, and the import was re-verified against
+it rather than assumed to still hold: `md5 6f7a787d9ad0f6218c6ab73a5ddd9853` is byte-identical
+between the source tree and our committed `public/assets/sly-godot/bottle.glb`. Licence: **none
+stated** by the source, imported on the project owner's standing instruction, which
+`PROVENANCE.md` records in those words rather than paraphrasing into permission.
+
+### §698.2 Zero images is the fact that decided how it is used
+
+```
+10,700 bytes   glTF 2.0   Khronos glTF Blender I/O v5.0.21
+1 mesh (Cube.001), 3 primitives, 190 verts / 272 tris
+0 images        0 animations        0 skins
+source bounds  y 0.000167 .. 0.999983   =>  height 0.999816 — a UNIT bottle, base at origin
+
+  Glass   94 verts  152 tris   y 0.000..0.709   linear [0.00372, 0.09565, 0]        sRGB #0c5700
+  Cork    80 verts  104 tris   y 0.709..1.000   linear [0.24449, 0,       0.00042]  sRGB #880001
+  label   16 verts   16 tris   y 0.278..0.460   linear [0.80001, 0.46756, 0]        sRGB #e7b600
+```
+
+With **no textures at all**, those three `baseColorFactor`s *are* the entire surface authoring. So
+importing the shape and repainting it in our old pickup blue would have been importing half the
+asset and calling it done. They come in verbatim as a vertex-colour stream — verbatim because glTF
+authors them **linear** and three treats a colour attribute as linear working space, so
+sRGB-converting them on the way in would wash them out.
+
+### §698.3 The draw-call question, measured rather than reasoned about
+
+Three materials, twelve bottles: the obvious reading is "3× on a set that ships twelve times", and
+the obvious reading is exactly what this project keeps being wrong about (§589 left a comment in
+`Guard.js` reading "11 guards" long after two had been removed). `tools/bottledraw.mjs` measures
+it with **two instruments**, because the second one is not trustworthy here on its own.
+
+Both arms are the same tool at the same `SAMPLES`, run in this tree and in a worktree at
+`76b2c0e` — the commit before the import:
+
+```
+                                BEFORE (76b2c0e)        AFTER (imported)
+  pickup_clues  instanced ×12   147 v / 198 tris        190 v / 272 tris
+                                vcol false              vcol true, colorAttr true
+                                transparent, side 0     opaque, DoubleSide
+                    alone:      1 draw,  2376 tris      1 draw,  3264 tris
+  clue_bottles  instanced ×12   visible FALSE — PROPS' decorative twin, hidden by Pickups
+                    alone:      1 draw,  2376 tris      1 draw,  3264 tris
+
+  scene with nothing visible       0 draws                 0 draws
+  scene with ONLY the bottles      2 draws                 2 draws
+  ==> the clue-bottle set costs    2 draw call(s)          2 draw call(s)
+```
+
+**The draw-call delta is ZERO.** Three source materials on a set that ships twelve times cost
+nothing extra, and the "3× on twelve bottles" reading was wrong. In the live frame the set costs
+**one** draw — `clue_bottles` is `visible false`, so only `pickup_clues` submits — and that is
+true in both trees. What did move is triangles: **2376 → 3264 across the whole set**, +888, the
+price of 272 tris per bottle instead of 198.
+
+**Both arms also fired the FROZEN verdict, and that is a finding rather than a nuisance.**
+`Engine.stats.drawCalls` read **1** in every sample, in both trees — not a plausible count for a
+level of this size. So `Engine.stats` is not a usable source in this harness at all, not merely
+under a staged shot as the detector's message says. The detector caught it because it refuses to
+report a zero delta when meshes it has *already proved* cost draws are being hidden. Without that
+check this run would have printed "median delta 0" and looked like a clean confirmation of exactly
+the conclusion it happens to support — the most dangerous shape a wrong measurement can take.
+
+The three groups are merged into **one geometry carrying a `color` attribute** and drawn as a
+single `InstancedMesh` with one material, which is what keeps the count flat — the same trick the
+garrison and the terrain already use. `PropKit.CLUE_ATTRS` is what keeps that stream alive through
+`normaliseAttrs`; without it the merge silently drops the colours and the bottle draws flat white,
+which is why `cluevault`'s V1b asserts the attribute exists rather than trusting the merge.
+
+**The in-situ arm has now failed in both directions, and neither failure announced itself.** Both
+are now detected explicitly instead of being left to be read off the numbers:
+
+| failure | what it looks like | why |
+|---|---|---|
+| MOVING | 275 visible / 275 hidden / 277 restored | under `withGame` the rAF loop runs; guards and the camera move and the frame's draw count moves with them. A single unpaired reading there is noise quoted as a measurement. |
+| FROZEN | spread 0, delta 0 — *looks exactly like a clean result* | under a staged shot (`setShot`) the rAF loop is STOPPED, so `Engine.stats.drawCalls` is never rewritten and every sample returns the same stale number. |
+
+The isolated render is immune to both — it calls `renderer.render()` itself and reads the counter
+that call resets. **It is the figure; the in-situ arm only ever corroborates it.**
+
+### §698.4 The HUD icon and the world object are deliberately ONE thing
+
+`Icons.js` has said so since long before this change: the toast has to be recognisable as the thing
+you just picked up. Swapping the world mesh and leaving the icon would have silently desynced them,
+and nothing would have warned.
+
+So the icon was redrawn in the imported mesh's three colours, with the mesh's **measured**
+proportions rather than an impression of them — body 0–71% of the height, neck 71–100%, label band
+across the belly at 28–46%. The colours are not retyped: `Icons.js` imports `BOTTLE_PALETTE` from
+`src/world/BottleMesh.js`, the same generated module the mesh's vertex stream is built from, so
+neither side of the coupling can be edited without the other.
+
+`cluevault`'s V13 arm was **re-derived rather than re-pinned**. It used to assert
+`glyph('clue').includes('#8fd8ff')`; that literal was never the claim — it was the claim's value on
+the day. It now asserts the coupling: every colour the world mesh is built from must appear in the
+glyph. That inverts correctly, which the old literal could not — an icon redrawn in a colour the
+mesh does not use, *and* a mesh regenerated to colours the icon was not updated for, both fail it.
+
+**The pickup-blue signal is not lost; it moved.** `Pickups._clueMat` keeps `rimColor 0x8fd8ff`, so
+"collectable" is still said in blue — on the rim, where it carries at the distance a bottle is
+actually spotted from, rather than on a body that now has a surface of its own.
+
+### §698.5 What did NOT transfer: their scale, and the height that had to survive
+
+Their scene instances the mesh at `scale 0.875`, so their bottle stands 0.875 m. **That number does
+not transfer and was not taken.** Ours delivers **0.43260 m** — the measured height of the
+procedural lathe it replaces, to five decimals — because `TUNE.clueHeight`, `TUNE.clueCollect` and
+`cluevault`'s R2 magnet were all tuned against the *delivered silhouette*, not against `h`.
+
+Both meshes are base-origin (`bbox.min.y === 0`), so **the pickup point does not move** and none of
+the twelve authored placements were touched. This matters more than it looks: R1/R2/R3 assert that
+every bottle sits inside the 2.40 m pickup magnet from the nearest place a player can stand
+(measured 0.080–0.700 m; worst case the ladder bottle 5.460 m below a cornice). A re-bake at a
+different scale, or a normalisation that stopped putting the base at the origin, would move the
+object out from under all three **without touching a single line any of them read** — so the size
+is now a build output, and V1b pins it.
+
+V1b pins the two properties those tests actually rest on and nothing else — not the vertex count,
+not the colours, not the profile, all of which are the asset's business and are meant to change
+when the asset does. The band is shown able to **reject** a bottle built 50% taller, so it is a
+test rather than decoration.
+
+Matched on height, the imported bottle is the **slimmer** silhouette (±0.084 m against ±0.134 m).
+That is their design, and it is the visible part of the substitution.
+
+### §698.6 The motion is adapted from data, not ported from code
+
+The `.glb` carries **zero animations** — the motion lives in `bottle.tscn`'s AnimationPlayer. Its
+numbers were read and **re-implemented** in our own loop (`Pickups.TUNE.clue*`): a 1.5 s cycle
+(`clueRockRate = 2π / 1.5`, theirs to the digit), `BOTTLE ROT` swinging ±0.349066 rad (±20°) about
+Z, the child swaying in x and dipping y 0.25 → 0.20.
+
+The sway crossed over **by proportion, not by copying**: theirs is 0.125 against a bottle 0.875 m
+tall — 1/7 of its height — so ours is 1/7 of 0.4326 m = 0.0618. Copying 0.125 onto a bottle half
+the size would have been a bottle swinging twice as far relative to itself.
+
+`Scripts/bottle.gd` was **not** taken. The code rule here is design references and adapted
+mechanics only — *if you are porting a function, stop*. Taking a mesh is an asset import and is
+fine; re-implementing a bob from published numbers is adaptation and is fine; transliterating the
+script is neither. The pickup logic was already ours.
+
+**Nothing under `Assets/Music/` or `Assets/Effects/` was read, decoded, converted or referenced.**
+Those are unmodified commercial recordings and are absolutely out of bounds; `Assets/Models/` is a
+different category and is the only directory this took from. The import tool touches nothing else.
+
+### §698.7 §666 — the class of fault that is invisible in dev by construction
+
+A leading-slash URL resolves to the domain root and 404s under the `/Demo/` prefix, and
+`vite build` emits sidecars under hashed names. Both are invisible on the dev server **by
+construction**, and they cost three playtest rounds.
+
+**This import adds no runtime asset URL at all.** `tools/godot2bottle.mjs` bakes the `.glb` to
+`src/world/BottleMesh.js` at build time, so `clueBottle()` stays synchronous — which it has to be,
+because `Props` and `Pickups` both build from it — and the runtime never fetches the file. The
+`.glb` is committed anyway, so the numbers above can be checked against the bytes rather than
+believed and the bake is re-runnable, and it is registered in `tests/bundle.test.mjs`'s
+unshipped-payload list so it cannot drift into the bundle unnoticed.
+
+Verified rather than argued — `node tools/prodboot.mjs`, production build served under a
+`/Demo/`-shaped prefix that 404s anything outside it:
+
+```
+ready true (39.7 s)     modules 17     requests 119
+── MISSES — 4xx/5xx (0) ──   none
+── VERDICT ──
+   boot completed past module 30 (audio): true
+   zero 4xx/5xx:                          true
+   (aborts, not gated:                    18)
+```
+
+The eighteen `net::ERR_ABORTED` are cancellations, not misses: the tool closes the browser in a
+`finally`, so every request still in flight at teardown produces one, and they appear on a clean
+build and a broken one alike. The gate is on 4xx/5xx and it is green. No bottle asset appears in
+the emitted bundle listing at all, which is the point — the mesh ships as JavaScript.
+
+### §698.8 The frames
+
+`tools/bottleshot.mjs`, four cameras, before and after. **Every camera is computed from the
+bottle's authored placement literal, never from the live mesh** — the bottle bobs and now also
+sways ±0.0618 m, so aiming at wherever the instance happens to be would give the two arms two
+different cameras, and a before/after pair shot from two cameras compares nothing. `camDot` runs
+first as the standing pre-flight against a camera standing inside geometry, and each capture also
+reports where the bottle actually projected in NDC and how many pixels it covers, because a tool
+in this repository spent its entire life labelling rear shots "front".
+
+Two claims, two samples each (§466.5) — READ carried by two different bottles at two heights and
+two times of day, PLACED by two decks differing in height, surroundings, sun angle and bearing:
+
+| frame | claim | before | after |
+|---|---|---|---|
+| `read-summit` | READ — pylon deck, nothing behind it but sky, tod 0.62 | a pale translucent lathe that nearly disappears into the sand behind it: no cork, no label, barely an edge | dark green glass, red cork and neck, a pale label band across the belly — three separable materials |
+| `read-terrace` | READ — 32 m lower, warm stone behind, tod 0.34 | the same washed-out pale shape | still three. The cork grades cool-dark here rather than red, and still reads as its own material |
+| `placed-terrace` | PLACED — §8.1 step 1, ~4.9 m at 50°, the distance a player meets it | a squat pale-blue pot on the ledge — legible as *something*, but not as a bottle | a slim green bottle with a visible neck and band, reading as a pickup |
+| `placed-nave` | PLACED — nave deck 18 m up, different sun and bearing | — | reads against warm terracotta as clearly as against grey stone |
+
+The READ pair is the substitution's whole visible argument. The bottle it replaced was
+`transparent: true, opacity: 0.55` over a pale blue, and against sunlit desert stone at distance
+that is very nearly nothing. The imported one is **opaque** — because the source authors alpha 1
+on every factor and declares no `alphaMode`, and because a near-black glass at 0.55 is smoke.
+
+The placed pair also shows the silhouette change the height match does not hide: the old lathe is
+dumpy and round, the imported one slimmer (±0.084 m half-width against ±0.134 m). That is their
+design, and it is the part of the substitution a player will actually notice.
+
+**Camera framing note, stated rather than cropped out:** `placed-terrace`'s eye sits at +1.6 rather
+than +1.0, on a measured basis — at +1.0 `camDot` puts a surface 0.384 m off the lens, inside
+§601's 0.48 m failure. +1.6 takes the near field to 1.129 m and moves the subject 0.13 m further
+away, which is the smaller distortion of the two.
+
+### §698.9 A section number that was taken while this lane was writing into it
+
+`bf0426f` and `1902e35` — both this lane's — were written against **§697**, and the guard lane
+landed its own §697 *("The guards are floating")* in this file eleven minutes after the second of
+them. Two lanes reserved the same number informally and the file arbitrated in favour of whoever
+committed the heading first.
+
+The three code references were repointed to §698 here. **The two commit messages still say §697
+and are not being rewritten** — they are pushed history, the rule is fix forward, and a commit
+message is a record of what was believed at the time. This paragraph is the pointer for anyone who
+follows §697 out of `bf0426f` and lands in a block about floating guards.
+
+### §698.10 Bounds — what this does not cover
+
+- **Only the clue bottle changed.** No other prop, pickup or placement was touched, and none of
+  the twelve bottle positions moved.
+- **The `Area3D` sphere (r 0.625 at y 0.666) was not ported.** Our pickup magnet is
+  `TUNE.clueCollect`, tuned against our own player radius; their collider is recorded above as
+  provenance, not adopted as a value.
+- **The label is a colour band, not a texture.** The source has no images, so there is no artwork
+  on the label in their asset either — a reader expecting a printed label will not find one, and
+  that is faithful rather than missing.
+- **No claim is made here about a sparkle field around the bottle.** `SparkleField` draws §2.1.6's
+  blue diamonds on TRAVERSAL AFFORDANCES off COLLISION's affordance query; nothing in
+  `Particles.js` puts one on a clue bottle. An earlier draft of three files asserted the opposite —
+  a plausible sentence written from `PAL.sparkCore`'s *name* rather than from the code, which
+  survived two readings before it was checked and cut.

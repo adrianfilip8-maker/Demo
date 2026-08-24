@@ -668,7 +668,7 @@ export class Props {
    * publisher — and it is the same shape the coin loop was in before `Pickups.js` was written.
    * The missing piece was never the modelling; it was the placement and the emit.
    *
-   * **`glass` is past tense above, deliberately (§697).** The bottle is now the reference
+   * **`glass` is past tense above, deliberately (§698).** The bottle is now the reference
    * project's imported `BOTTLE.glb` and carries its own three colours in a vertex stream, so the
    * recipe is white-with-`vertexColors` and the pickup blue lives on the rim instead of the body.
    * The paragraph is kept as history because it explains why this key exists at all; the tense is
