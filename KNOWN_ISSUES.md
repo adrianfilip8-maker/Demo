@@ -53145,18 +53145,21 @@ reader does not have to take a measurement on trust.
 
 ### §701.9 The suite
 
-Clean worktree detached at the pushed commit `07d469d`, nothing copied in, under the FIFO
-capture lock, reporting through the test process's **exit code** rather than through a pattern
-found in its own output (§589.1):
+Clean worktree detached at the pushed commit, nothing copied in, under the FIFO capture lock,
+reporting through the test process's **exit code** rather than through a pattern found in its own
+output (§589.1). Two runs, because bottle 6 moved between them:
 
 ```
-  # tests 1033   # pass 1033   # fail 0   # cancelled 0   # skipped 0
-  === EXIT CODE 0 · 265.2 s ===
+  07d469d   before the move   # tests 1033  # pass 1033  # fail 0    EXIT CODE 0 · 265.2 s
+  b2226fa   as shipped        # tests 1034  # pass 1033  # fail 1    EXIT CODE 1 · 361.1 s
 ```
 
-The lock was held for **4.4 minutes**, deliberately — §700's in-situ run held it for 74 and the
-Carmelita lane is queued behind it on the same box. The four `[clue]` prints inside that run are
-the R0–R3 figures quoted in §701.3, from this run rather than from an in-tree one.
+The count rose by one because another lane added an arm between the two runs. **The single
+failure is `F3 GC` and it is not this change — see §701.12, where the counterexample is run.**
+
+The lock was held for 4.4 and 6.0 minutes, deliberately — §700's in-situ run held it for 74 and
+the Carmelita lane is on the same box. The four `[clue]` prints inside the second run are the
+R0–R3 figures quoted in §701.3 and §701.10, from that run rather than from an in-tree one.
 
 ### §701.10 The move — one `pos:` literal, and the sweep that was measured on the wrong instrument
 
@@ -53257,7 +53260,39 @@ range-checking the number but by refusing to report a zero delta while meshes it
 proved** cost draws are being hidden — a check on the *relationship* rather than on the value,
 which is the only kind that survives the counter picking a new plausible number next time.
 
-### §701.12 Bounds — what this does not cover
+### §701.12 `F3 GC` failed, and the control cleared this change rather than an argument doing it
+
+The full suite at the shipped commit came back **1033 / 1034**. The one failure is
+`framebudget.test.mjs` **F3 GC** — *"1 major collection(s) during 3000 driven frames against 0
+during an idle loop of the same length in the same process"*.
+
+**Isolated at the shipped commit it failed 5 times out of 5**, which rules out "flake" as an
+explanation and is why it was not left at that. The control is what settles it:
+
+| tree | isolated F3 GC runs | result |
+|---|---|---|
+| `b2226fa` — the shipped commit | 5 | **5 fail** |
+| `763bd65` — the tip BEFORE any bottle work | 3 | **3 fail** |
+
+Same test, same box, same minute, a tree with none of this change in it: **identical failure.**
+This change is not the cause, established by running the counterexample rather than by reasoning
+about the dependency set — though that agrees: F3 drives `Controller.update` in a tight loop and
+nothing in `PropKit`/`Pickups`/`Props` is in that path. The bottle work is build-time geometry and
+two `TUNE` constants; it allocates nothing per frame.
+
+**What is the cause is on the box, and the arm says so itself.** Its own header records the
+camera lane hitting exactly this: *"four lanes share this machine, and another lane's memory
+pressure triggers a collection in THIS process's observer just as readily as our own allocation
+would"* (§546.5). During these runs the Carmelita lane was rendering through headless chromium at
+**270 % CPU**. The within-run idle baseline the arm was hardened with reduces that exposure but
+cannot remove it: a collection that lands inside the driven window and not inside the idle window
+still reads as an excess of one, and one is all it takes.
+
+Recorded rather than retried into silence, because a suite figure quoted from a contended box is
+the contaminated figure this file keeps warning about — and because "it passes in isolation" was
+not true here and would have been the comfortable thing to claim.
+
+### §701.13 Bounds — what this does not cover
 
 - **Only the clue bottle changed.** No other prop or pickup was scaled.
 - **Bottle 6 was moved and one `pos:` literal changed** — `z −16.5 → −16.25`, on the coordinator's
