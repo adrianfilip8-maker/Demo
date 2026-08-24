@@ -52888,7 +52888,507 @@ This lane owns `src/ai/CarmelitaGuard.js`, the model/skinning path in `src/ai/Gu
 §697's `groundProbe`/`groundSlopeMax`), `tools/carmelita2*.mjs`, `tools/carmatlas.mjs` and
 `public/assets/sly-anim/`.
 
-Work in progress; findings appended below in this section.
+The owner, playing the deployed build, in full: **"The Carmelita sculpt seems to be off and the
+head seems to be missing. Verify that it was scaled correctly."**
+
+Three claims, and they separate cleanly:
+
+- **The scale is correct.** She draws at 1.82 m against a 1.88 m player, her head is 38–41% of her
+  height on all nine guards, and the only non-uniform scale anywhere in her chain is `GuardAnim`'s
+  deliberate ±4.8% squash-and-stretch. §702.1 answers this first and with numbers, because it was
+  asked directly.
+- **The sculpt was off** because the bind transfer applied each source bone's inverse-bind
+  ROTATION and put no target rotation back — limbs out by 116–174°, the face rig scattered through
+  180° onto one point. §702.5.
+- **The head was missing** because `Head_LP` ships with a 96-element index: **32 of its 5,000
+  triangles**. The face was never in the file we imported, and it is whole in the project's own
+  FBX. §702.6.
+
+**Neither cause is §309's parked skinIndex off-by-one.** That defect is real, was re-measured
+here, and its parked `+1` fix was checked and found correct for what it names — and it is not what
+the owner is looking at, because the mangling is present at the BIND POSE where every skinning
+matrix is the identity. `guardArt` and `guardSkin` are still 0. §702.4 carries the reasoning,
+because "we did not need it after all" is not a finding on its own.
+
+### §702.1 The answer to the question that was asked: the scale is CORRECT
+
+The owner asked directly, so it is answered directly and first, whichever way it went. Every
+number is the guard **as drawn** — the SkinnedMesh the frame submits, CPU-skinned through
+`applyBoneTransform` (the GLSL `skinning_vertex` chunk verbatim) and then `localToWorld`, which is
+the second half the renderer does. `tools/carmscale.mjs`, garrison walked for 60 s on the shipped
+`Guards.update` path, nobody teleported (§435.4). Taken with the carry corrected and before the
+face was recovered; the face does not move any of them, because it fits inside the hair's
+envelope — the head group measures y 1.092..1.816 with the 32-triangle stub and y 1.092..1.816
+with the 5,000-triangle face, and the merged height is 1.816 m either way.
+
+```
+id       type    route            drawn h   drawn w   y range          head h  head/body  head↔bone
+guard0   temple  south_gate         1.818     1.335   -0.002.. 1.816    0.724    39.8%      0.119
+guard1   temple  courtyard_ring     1.836     1.629    0.009.. 1.845    0.732    39.9%      0.176
+guard2   heavy   courtyard_ring     1.811     1.578   -0.001.. 1.810    0.742    41.0%      0.164
+guard3   temple  obelisk_watch      1.873     1.567    2.035.. 3.908    0.707    37.8%      0.173
+guard4   temple  pylon_gate         1.818     1.216   -0.002.. 1.816    0.740    40.7%      0.170
+guard5   temple  hall_nave          1.683     1.667    0.005.. 1.688    0.675    40.1%      0.185
+guard6   heavy   hall_weave         1.701     1.608    0.004.. 1.704    0.673    39.6%      0.182
+guard7   temple  rooftop_run        1.798     1.643   17.007..18.805    0.706    39.3%      0.180
+guard8   heavy   tomb_vault         1.819     1.629  -12.003..-10.184   0.730    40.1%      0.176
+
+the player, measured the same way   1.876     1.181   -0.032.. 1.844     capsule r 0.34, h 1.80
+```
+
+**She stands 1.82 m against a 1.88 m player.** That is a guard, and it is right. Her head is
+0.67–0.74 m and 38–41% of her height in every sample, which is the cartoon proportion the asset
+was sculpted at — a head that had collapsed, been displaced or gone missing would not produce a
+consistent 40% on nine guards.
+
+**Non-uniform scale — looked for specifically, because it is a classic sculpt-mangler, and found,
+and it is not the problem.** The static chain is clean: `guard_body` (SkinnedMesh) → `guard0`
+(Group) → `guards` (Group) → Scene, every one of them `[1, 1, 1]`, and the head node carries no
+scale of its own. What is non-uniform is the LIVE `root.scale`, which `GuardAnim` drives as squash
+and stretch — 8 of 9 guards carry one at any instant, x and z always equal, y opposed:
+
+```
+guard5 [1.03394, 0.95208, 1.03394]   guard3 [0.97725, 1.03419, 0.97725]   guard8 [1.00008, 0.99992, 1.00008]
+```
+
+The extremes are ±4.8% in y. It is deliberate, it is the reason guard5 and guard6 measure 1.68 and
+1.70 rather than 1.82, and ±5% cannot make a face unreadable. Not the fault.
+
+**One thing the scale reading DOES turn up, recorded as a bound rather than fixed here.** The
+roster's `SPECS.height` is `temple` 2.02 m and `heavy` 2.34 m. Carmelita's mesh replaces the
+procedural body on both, and nothing scales her to either — the field is read in exactly one place
+(`GuardModel.js`'s hand sizing on the procedural body) and that code no longer runs for these nine.
+So a `heavy` draws at the same 1.81 m as a `temple`, and the roster's size distinction between the
+two humanoid types is currently invisible. That is a design question about the garrison, not a
+defect in the import, and it is not what the owner is looking at.
+
+### §702.2 The five candidates, each killed by a different measurement
+
+The report had at least five causes behind it and the point of this pass was to separate them, not
+to pick the one already on the register.
+
+| # | candidate | verdict | what killed it |
+|---|---|---|---|
+| 1 | the head meshes are not drawn | **TRUE of the FACE, and it is the literal cause** | all five head-atlas meshes are in the scene graph, visible and non-degenerate — but `Head_LP`'s index buffer draws 32 of its 5,000 triangles. §702.6 |
+| 2 | the head is collapsed to a point | refuted | measured in the state under complaint: no region has zero extent. The smallest bounding diagonal in the merged buffer is `Eyeshine_001_L` at 0.021 m (18 vertices), and `Hair_LP` is 0.538 m. The hair IS crushed — 0.254 m of vertical extent against the source's 0.408 — but crushed to 62% is not collapsed to a point, and the distinction is what sends you looking for a rotation rather than a zero |
+| 3 | the head is displaced elsewhere | refuted | in the state under complaint the head-atlas group spans y 1.212–1.688 with the `head` bone at y 1.473 — on the neck, where it belongs. The whole merged bbox is 1.117 m wide and 1.683 m tall, so there is no stray blob inside the frame or outside it |
+| 4 | textured to nothing | refuted | no degenerate UV island, and **zero** vertices at exactly (0,0) across all 21 meshes; `tools/carmatlas.mjs` rasterises each mesh's own UV triangles into its assigned atlas and the head panel lands on hair curls, brown irises, black pupils and eyeshine |
+| 5 | the bone set is truncated | refuted **decisively** | §702.3 |
+
+**The atlas split's five head meshes, enumerated as asked** — all present in the scene graph,
+all `visible`, none degenerate:
+
+```
+Hair_LP  5546 v / 9528 tris     Head_LP  3040 v / 32 tris (!)     Scrunchy2  1582 v / 2797 tris
+Irises    100 v /  128 tris     Eyeshine_001_L  18 v / 16 tris
+```
+
+The previous lane's census did **not** cut head geometry with the Blender annotations. It kept a
+mesh iff it was skinned and dropped it iff it had neither skin nor material, and all five of these
+are skinned. That was right. The `(!)` is §702.6.
+
+### §702.3 The 199 bones are not 199, and the skinning is a texture — candidate 5, closed
+
+Nobody had looked at this and it was a strong candidate for both halves of the report at once, so
+it is answered with the renderer's own numbers rather than reasoned about:
+
+```
+skeleton bones ......... 25            boneMatrices floats ..... 576
+bone TEXTURE in use .... true (12×12)  MAX_VERTEX_UNIFORM_VECTORS  4096
+maxVertexTextures ...... 32            RENDERER  WebKit WebGL / WebGL 2.0 (SwiftShader)
+```
+
+**The 199 is the SOURCE joint count, not the skin's.** `bindToRig3` folds 199 source joints onto
+24 RIG3 bones and `instantiate()` prepends `root`, so the skin the GPU sees has **25** bones.
+Three r185 uploads bone matrices as a data texture unconditionally, so the uniform-vector budget
+is not in the path at all — and even if it were, 25 bones against 4096 vectors is not close to
+anything. There is no truncation, on SwiftShader or on a real GPU, and the difference between the
+harness and the owner's machine cannot produce this symptom.
+
+### §702.4 §309 was reopened, and the parked lever turned out NOT to be the cause
+
+The dispatch was explicit: §309 parks the guard-model art pass, the owner is now reporting the
+artefact the parked defect would produce, and that reopens it for this symptom. That authority was
+used to **investigate**, and the investigation says the parked defect is not what the owner is
+looking at. So `TUNE.guardArt` and `TUNE.guardSkin` are still 0, `shiftGuardSkin` is still
+unapplied, and `tests/guardart.test.mjs`'s pins are untouched.
+
+The reasoning, because "we didn't need it after all" is not a finding on its own:
+
+**The off-by-one is real and was re-measured.** Mean distance from each vertex to its dominant
+bone's bind position, over 20,950 vertices:
+
+```
+indices as the importer built them (root-less) :  0.089 m     ← the intent
+indices as the runtime skeleton orders them    :  0.295 m     ← what is drawn      3.30×
+```
+
+which reproduces §698's 0.0892 / 0.2938 / 3.3× to the digit. More than that, something nobody had
+checked was checked: `shiftGuardSkin`'s `+1` assumes the runtime order is the importer's order with
+one name inserted at the front. **It is** — the two orders were compared name by name, all 24, and
+the runtime is exactly `['root', ...importer]`; the same check rejects an order with two bones
+swapped. And `+1` does not overflow: the highest weighted index is 23 and the skeleton has 25
+bones. So the parked fix is the correct fix for the defect it names.
+
+**It is nevertheless not the cause of the reported sculpt, and the reason is structural.** A
+skinning-index error is invisible at the bind pose by construction: at rest every bone matrix is
+`boneWorld × boneInverse` = identity, so reading the wrong bone reads the wrong identity. The
+mangling the owner is looking at is **present at the bind pose** — rendered below with no
+animation, no skeleton and no renderer involved at all. Something that is visible with the
+skinning switched off cannot be caused by the skinning.
+
+This is §439/§440 in the direction that matters: the defect already on the register was the
+leading suspect, and taking it as the finding would have shipped a `+1` remap, changed the picture
+slightly, and left the real cause in place with the ledger saying it was fixed.
+
+### §702.5 CAUSE ONE: the bind transfer rotated every region into its source bone's frame
+
+`bindToRig3` carries the artist's mesh from Carmelita's bind pose into RIG3's. It did it like this:
+
+```
+v' = Σ w · ourBindWorld[target(j)] · srcInverseBind[j] · v
+```
+
+and the header argued the operation was correct because RIG3's bind carries no rotation, so
+`ourBindWorld` is a pure translation and "the rotation in `M` is entirely the *undoing* of the
+source bind — which is the whole operation". **The premise is true and the conclusion does not
+follow.** `srcInverseBind` undoes the source bone's bind *rotation*, and nothing puts a target
+rotation back, so every vertex ends up rotated into its source bone's local frame and then planted
+world-axis-aligned. Measured in this asset — 194 of 199 source bind matrices carry more than 1°,
+and the joints that matter carry a great deal:
+
+```
+shoulder 116.12°   upper_arm 135.18°   forearm 130.32°   Hand (median) 147.08°
+thigh 173.90°      shin 172.82°        foot 149.02°      toe 121.68°
+head: 51 joints fold in, 0.83°–180.00°, median 132.80°, source bind positions spanning 0.97 m
+```
+
+That is the whole picture: limbs splayed by 116–174°, and a face rig scattered through 180° and
+collapsed onto one point. **The head is the worst-hit part because the fold is concentrated
+there** — 51 of the 175 folded joints are the face rig, and they all land on one bone.
+
+The correct carry is a **pure translation per target bone**. Keeping the source bone's own
+orientation and moving only its position, the rotations cancel exactly:
+
+```
+T(q_t) · R_j · (T(p_t)·R_j)⁻¹  =  T(q_t) · R_j · R_j⁻¹ · T(−p_t)  =  T(q_t − p_t)
+```
+
+`p_t` is the source bind position of the **direct** bone for that target, not of the individual
+folded joint — otherwise the 51 face joints, whose bind positions span 0.97 m, would each be
+translated differently and scatter the face all over again. Each mapped region is now translated
+rigidly from where the artist put it to where our bind wants it, and the four-weight blend
+stretches the joints in between. Normals are left exactly as authored: a translation cannot rotate
+them.
+
+**The measurable, chosen so a rotation cannot slip past it.** The first version of the test
+compared bounding-box DIAGONALS and had to be thrown away: an AABB diagonal is nearly
+rotation-invariant for a compact blob, so it scored the legacy head at 0.609 m against the source's
+0.610 m and pronounced it fine while the picture showed it destroyed. That is §439/§440 in
+miniature — an instrument blind to the exact transform under test — and it is recorded rather than
+quietly replaced. What characterises a translation is that it preserves every INTERNAL offset, so
+the measurable is the RMS deviation from a rigid translation of the same region in the source:
+
+```
+                             §702 carry        legacy carry
+Hair_LP  (5546 v, 1 bone)    7.79e-9 m rms     0.1796 m rms  (max 0.324 m)
+Tail     (single bone)       0.0000            0.3817
+Scrunchy2(single bone)       0.0000            0.1358
+worst single-bone region     2.31e-8 m         0.382 m
+worst blended region         0.0856 m (Hand, shoulder→fingertip; a joint blend, and bounded)
+```
+
+Seven of the eighteen shipped regions are weighted to exactly one bone. Those cannot blend, so under a translation carry
+their residual is not "small", it is **zero** — and under the old carry every one of them deforms,
+which no translation can do. That is the assertion, and `CARRY.LEGACY` runs in-arm as the input
+seen to fail (§418.3).
+
+### §702.6 CAUSE TWO: the face was never in the file — 32 of its 5,000 triangles
+
+Fixing the carry restores the hair, the ponytail and the head's placement on the neck. It leaves a
+face with **32 triangles in it**, and that is the literal reading of "the head seems to be
+missing" — the ears and the muzzle are `Head_LP`'s geometry, so before this there were none at
+all, in any pose, under any carry.
+
+`Head_LP` — muzzle, nose, eyes, cheeks, ears — arrives with an index buffer of **96 elements**
+referencing **64 of its 3,040 vertices**. The vertex cloud is intact and spans the whole head;
+only the connectivity was lost. That is why sixteen days of structural checks stayed green: the
+mesh is present, visible, finite, normalised, correctly weighted, correctly UV'd, correctly
+atlassed, and 0.6% of it is drawn. What reached the screen was a patch
+
+```
+0.150 × 0.068 × 0.062 m,   x −0.075..0.075   y 1.397..1.465   z 0.005..0.067
+```
+
+in the middle of the face — a small flat shard where a muzzle should be. Read against the report's
+own words: no readable face, no muzzle, no ears. There were none to read.
+
+**It is upstream and it is not ours.** The same mesh is **5,000 triangles** in the fan project's
+own `Carmelita_Animations7.fbx`, and every other mesh in the scene matches the FBX exactly:
+
+```
+Hair_LP 9528 = 9528   Coat 3188 = 3188   Hand 4606 = 4606   BustRetopo 1768 = 1768   Shoes 1076 = 1076
+Head_LP    32 ≠ 5000                                                       ← 99.4% of the face
+```
+
+Both of the project's glTF exports carry the 32-triangle version (`.glb` keeps the 3,040-vertex
+cloud, `.gltf` keeps only 48 vertices), so §698's re-check of the updated repository could not have
+found this by comparing `.glb` hashes — it was comparing two copies of the same broken export. The
+answer was one file up again — the **third** time that has been true in this one import: the
+material overrides were in the `.import` sidecar for Sly and then for Carmelita (§698), and now the
+mesh itself is in the `.fbx`.
+
+**The splice, and the argument that it is the same head.** `tools/carmhead.mjs` refuses to write
+unless three things hold:
+
+```
+both skins list the same 199 bones in the same ORDER   → skinIndex transfers unremapped, 199/199
+every bind position agrees after the exact ×100 cm     → max disagreement 0.0000003 m
+the 64 SURVIVING vertices are a fiducial               → 64/64 position at distance 0
+                                                         64/64 UV, under (u, 1−v)
+                                                         64/64 dominant bone
+```
+
+The fiducial is the point of the file: a head taken from the wrong asset, the wrong scale, the
+wrong axis convention or the wrong UV flip all fail it, and it is re-run in the suite from
+committed bytes so nobody has to re-download 17 MB to believe it. It is shown able to reject — a
+head displaced by 1 cm matches 0/64.
+
+**What did NOT come across, stated rather than discovered later.** The FBX head carries four morph
+targets — `Ugh`, `Grr`, `Blink`, `Key 4`. This pipeline drops morph attributes, so the recovered
+face does not blink. It is on the register, not wired. (Those morphs are also the reason an earlier
+measurement of the FBX head's bounding box read ±0.178 m against the base mesh's ±0.144:
+`computeBoundingBox()` expands to cover the morph extremes. The emitted accessor bounds are now
+computed from the exact bytes being written, not from a cached box.)
+
+### §702.7 Two things came OUT, and one thing deliberately did not
+
+**The shock pistol.** `MainBody`, `Barrel` and `Antennae003` are Carmelita's gun, and they are
+100% weighted to the `ShockPistol` armature root — a **sibling of the body root `Bone001`**, not a
+descendant of it. The source parks the pistol 0.86 m to her side and 0.9 m behind her; the broken
+carry rotated it into her torso, where it was part of the jumble. A correct carry puts it back
+where the source parked it, which is a pistol floating in mid-air beside every guard. It is cut by
+the ARMATURE — drop a mesh iff 100% of its weight lands on joints whose armature root is not an
+ancestor of any `BONE_MAP` joint — which is §698's method (read the record, do not guess from the
+name) and which is shown able to reject: `Legs` carries 3.6% on the `Hips_Center` helper root and
+96.4% on the body, and is kept.
+
+**The mouth interior, because the face broke the triangle budget.** The recovered face costs 4,968
+triangles a guard, and `tools/budgetattrib.mjs --inpage` put the worst main view at **1.211 M =
+101% of the 1.2 M cap**. A breach of a hard §1 constraint is not something to record and ship.
+
+§698 named three meshes as "under the coat or inside the mouth" and that sentence was written from
+node names and a material table. `tools/carminterior.mjs` measures it instead — 14 rays per sampled
+vertex, counting how many escape the body:
+
+```
+Tongue_LowPoly      100.0%      TeethUpper_LowPoly   99.8%       ← sealed
+Stomach_LP           80.8%      vs Collar 90.9%, Badge_Loop 81.6%, BustRetopo 81.2%  — all worn
+controls: Coat 36.4%  Hair_LP 26.8%  Shoes 11.9%   |   Irises (behind the cornea) 74.2%
+separation 37.9 points → the reading discriminates
+```
+
+A second instrument, in a different direction: `tools/carmsil.mjs` rasterises the character with no
+renderer and the two mouth meshes account for **208 of 92,181 covered pixels (0.23%)** in the
+orthographic side projection — a sliver at the mouth line, not nothing. They are cut anyway, and
+that is a price, stated as one. (In the *front* projection they showed at all only because the stub
+head left a hole where the face should be; with the face recovered they are behind lips.)
+
+Two of the three are sealed and are cut. **`Stomach_LP` is not, and it stays** — it sits in the
+same band as the collar, the badge and the chest piece, all of them visible. Cutting it would have
+bought another 416 triangles and a sentence already in the ledger would have justified it. That is
+exactly the §699 shape and the exact moment to refuse it.
+
+```
+                                     per guard      dunes (worst main view)
+before §702                            29,791       1.152 M   96%      §698's measurement
+carry fixed, pistol + mouth out        27,095       1.103 M   92%      arithmetic, not run
++ the recovered face                   32,063       1.193 M   99%      MEASURED  ← shipped
+(the face without the two cuts)        33,087       1.211 M  101%      MEASURED  ← would have breached
+```
+
+The third row is the only one that describes a state anyone can boot, and the two rows marked
+MEASURED are `budgetattrib --inpage` runs; the second is arithmetic off the other two and is
+labelled so, because a derived figure printed in the same column as a measured one is how a table
+starts lying.
+
+Legal, and thin: the headroom is about 7 k triangles and the guard import owns half of that frame.
+That is §313's standing finding — the mass owner is the guard import — unchanged and now closer to
+the wall. `budgetattrib`'s `CARMELITA_TRIS` is no longer a literal: it moved twice in this one
+change and a stale literal would have gone on reporting the old number in the **reassuring**
+direction, which is §700.3's lesson and §310's before it. It now reads `bindToRig3` over the same
+committed assets.
+
+### §702.8 Base origin, and §697 re-measured because vertices moved
+
+Unlike §698, this change **does** move vertices, so §697's ground work is genuinely at risk and was
+re-run rather than reasoned about.
+
+The source mesh is base-origin — `Shoes` reaches y = 0.000 exactly — and the guard mount assumes
+it, because `Guard._step` assigns root Y from the ground probe. RIG3's ankle sits at y 0.064 while
+Carmelita's boot is 0.118 m from ankle to sole, so the honest carry lands her sole at −0.054 and
+she stands 5.4 cm into the pavement. The merged geometry is therefore lifted by one uniform
+`soleLift = 0.05359 m` so its lowest vertex sits at y = 0. That is a **normalisation, stated as
+one**, and it is anchored on the source's own base-origin property — not on the 0.00543 m the
+broken carry happened to produce, which would have been fitting to an artefact.
+
+`TUNE.groundProbe` (0.06) and `TUNE.groundSlopeMax` (30) are untouched.
+
+**And re-running it found a second defect in this lane's own work, which is the reason to re-run
+things.** The first `guardfloat` after the carry fix came back with every guard's sole 2.4–5.1 cm
+higher than §698 recorded — a systematic lift, not noise. Chasing it back to the bind:
+
+```
+                          heel (footL)      toe (toeL)
+legacy carry              y 0.0413          y 0.0054      ← tipped forward
+per-bone carry            y 0.0000          y 0.0632      ← tipped BACK
+toe anchored to the foot  y 0.0000          y 0.0000      ← flat, and what ships
+```
+
+**The boot is one rigid part and it spans two bones.** Ankle → toe is `(0, −0.107, 0.067)`,
+0.126 m, in Carmelita's rig and `(0, −0.044, 0.175)`, 0.180 m, in RIG3 — 43% longer and pointing
+somewhere else — so translating the toe region by its own delta shears the shoe instead of
+repositioning it. `RIGID_WITH` anchors the toe region to the foot's translation; the toe *bone*
+still drives those vertices, so toe-off still bends the boot, and only where it starts from
+changes. The list is two entries long and is deliberately not a general escape hatch: every other
+joint's rig-to-rig disagreement is small next to the part it carries, which is what the four-weight
+blend is for.
+
+The legacy carry tipped the boot the *other* way, and that is why nothing had ever noticed: **a
+tipped boot still has something touching the floor, and `guardfloat` reads the lowest vertex.** The
+instrument was not wrong; it was answering the question it was asked, and "is the lowest vertex on
+the floor" is not "is the sole flat on the floor".
+
+```
+gapC = lowest skinned FOOT vertex, AFTER modelMatrix (what is drawn) MINUS topmost up-facing RENDERED surface [m]
+gapT = the same vertex BEFORE modelMatrix (shader `transformed`)        MINUS the same surface [m]
+gapA = what the guard snapped to (collision)                            MINUS the same surface [m]  <- cause 3 lives here
+#  id       type   route            n  u-span |    gapC: min    p25    med    p75    max |  gapT med | gapA med  | patrol%
+0  guard0   temple south_gate       360 1.00 |  -0.052  -0.008   0.010   0.029   0.124 |   0.010  |   0.011   |  100%
+1  guard1   temple courtyard_ring   360 0.05 |  -0.023   0.016   0.020   0.028   0.073 |   0.020  |   0.029   |  100%
+2  guard2   heavy  courtyard_ring   360 0.08 |  -0.021  -0.010  -0.006   0.003   0.032 |  -0.006  |   0.004   |  100%
+3  guard3   temple obelisk_watch    360 1.00 |  -0.027  -0.007  -0.002   0.010   0.026 |  -2.002  |  -0.001   |  100%
+4  guard4   temple pylon_gate       360 0.06 |   0.036   0.039   0.042   0.050   0.056 |   0.042  |   0.052   |  100%
+5  guard5   temple hall_nave        360 1.00 |  -0.029   0.001   0.041   0.053   0.078 |   0.040  |   0.055   |  100%
+6  guard6   heavy  hall_weave       360 0.81 |  -0.048   0.001   0.008   0.017   0.124 |   0.007  |   0.018   |  100%
+7  guard7   temple rooftop_run      360 1.00 |  -0.030  -0.007  -0.001   0.010   0.042 | -17.001  |   0.001   |  100%
+8  guard8   heavy  tomb_vault       360 0.15 |  -0.091  -0.089  -0.085  -0.077  -0.049 |  11.915  |  -0.075   |  100%
+```
+
+**Not regressed.** Every median is within 1 cm of the figure §698 recorded on this same route set,
+every guard patrols **100%** of its lap, and the two guards furthest from zero are furthest for
+reasons that are not the model: `gapA` — what the guard snapped to, minus the rendered floor — is
++0.052 under guard4 and −0.075 under guard8, which is §697's own "cause 3", the collider
+disagreeing with the picture, and it predates all of this.
+
+```
+median gapC        §698    §702 with the boot tipped    §702 as shipped
+guard0            0.017            0.044                     0.010
+guard1            0.027            0.077                     0.020
+guard2            0.002            0.052                    -0.006
+guard3            0.003            0.030                    -0.002
+guard4            0.050            0.100  (patrol 99%)       0.042
+guard5            0.045            0.070                     0.041
+guard6            0.014            0.061                     0.008
+guard7            0.005            0.029                    -0.001
+guard8           -0.078           -0.027                    -0.085
+```
+
+The middle column is why this was re-run twice rather than once. `TUNE.groundProbe` and
+`TUNE.groundSlopeMax` were never touched in either pass; the whole correction is in this lane's own
+geometry.
+
+### §702.9 The frames
+
+**The two arms are the SAME COMMIT.** Both were shot from `547bb43`; the before arm is a detached
+worktree at that commit with exactly two characters changed — `carmelitaBind: 1 → 0` and
+`carmelitaHead: 1 → 0`. Nothing else differs, so the pair compares the change and not a fortnight
+of other lanes' work. Same four cameras, same 60 s settle, same tool.
+
+**One honest gap in that sentence.** The mouth-interior cut (§702.7) landed while the after arm's
+page was already up, and the log does not say which side of that edit the module fetch fell on. So
+the after frames may carry `TeethUpper_LowPoly` and `Tongue_LowPoly`, which the shipped build does
+not. It is named rather than glossed, and it is bounded: those two are 208 of 92,181 covered pixels
+(0.23%) in the renderer-free side projection and are behind the recovered face's lips in the front
+one. Nothing in the four frames' claims — a face, a muzzle, two ears, a readable silhouette — turns
+on them.
+
+**And they are comparable, checked rather than asserted.** The garrison settles deterministically:
+guard4 to `(-4.931, 31.506)` and guard1 to `(-18.457, 22.324)`, which is what `tools/carmscale.mjs`
+measured on an independent boot and what §698 recorded for guard4. `close-pylon` reports guard4 at
+**280 px**, reproducing §697's own "post ~280 px". Nobody moved; only the pixels on them changed.
+
+**Two of the four cameras are the owner's own.** `close-pylon` and `portrait-pylon` are the
+literals behind `shots/carm-after-close-pylon.png` and `shots/carm-after-portrait-pylon.png` — the
+two frames the report was written against — so the before/after is on the pictures that prompted
+it, not on a camera chosen to flatter the fix.
+
+**The other two are FRONT views, and that is a measurement.** §702's own probe caught the reason
+this needs saying: `portrait-colonnade`, added in §698 as the second sample for reading her face,
+sees guard1 at **dot −0.94** — dead behind him. `face-pylon` and `face-colonnade` are computed
+from the settled garrison to sit on each guard's forward axis and then checked: **dot +0.996**
+both, 4.00 m, two different guards in two different quarters (§466.5). All four cleared camDot:
+enclosed 0/26, nearest surface 1.826–2.513 m, subject unoccluded.
+
+Frames are `shots/carm702-{before,after}-<name>.png`.
+
+| frame | subject | before (`carmelitaBind 0`, `carmelitaHead 0`) | after |
+|---|---|---|---|
+| `face-pylon` | guard4, dot +0.996, 4.0 m | a dark mass where the head should be: no face, no muzzle, no ears, only a crushed cap of hair. Both arms are flat white-and-black plates jutting out at the wrong angle; the torso is a jumble of navy and orange with no readable garment. This is the owner's report, on the owner's subject | a fox face: brown eyes, orange muzzle, black nose, two pointed ears, dark-blue curls, the gold badge at the throat, navy corset and gold gauntlets |
+| `face-colonnade` | guard1, dot +0.996, 4.0 m | the same, on the other guard: a small dark head with nothing on it, and the near arm a flat white plate. Two samples, two guards, one defect | the same face on a different guard from a different bearing — eyes, muzzle, ears, hair all legible past the brazier |
+| `portrait-pylon` | guard4, the owner's camera | **the owner's frame, reproduced.** Set `shots/carm702-before/portrait-pylon.png` beside `shots/carm-after-portrait-pylon.png` — the picture the report was written against — and they are the same picture: the same dark head with no face, the same white plates for arms, the same splayed limbs, the same crates behind. That the before arm lands on the owner's own frame is what makes the after arm evidence rather than a different scene | a clean three-quarter profile: muzzle, ear, braided hair, tan jacket over navy, gold gloves, the fox tail behind |
+| `close-pylon` | guard4, the owner's camera | the same figure at full length: a jumble with a dark head, no readable garment and limbs at angles no stance produces | a whole standing figure with a readable silhouette, feet on the paving, tail behind |
+
+**The offline arm, which needs no camera at all.** `tools/carmsil.mjs` projects the triangles
+itself and z-buffers them into a PNG, so the pipeline can be differenced one stage at a time — and
+its "front" is the projection axis, not a filename. Head-atlas pixels as a share of the character:
+
+```
+                                          front    side
+shots/carmsil-src-*        the source     16.0%   19.6%   ← itself the 32-triangle head
+shots/carmsil-bind-*       legacy carry   10.7%   13.9%   ← hair crushed, face scattered
+shots/carmsil-bind-fixed-* carry fixed    16.4%   20.0%   ← the sculpt back, still no face
+shots/carmsil-bind-head-*  + the face     20.9%   22.4%   ← a muzzle and two ears appear
+```
+
+`carmsil-bind-front.png` against `carmsil-bind-fixed-front.png` is the whole of §702.5 in two
+pictures, with no renderer, no lighting, no material and no animation involved: the first is the
+mangled figure the owner photographed, produced from the committed asset by the committed bind.
+
+### §702.10 Bounds — what this does NOT do
+
+- **`TUNE.guardArt` and `TUNE.guardSkin` are still 0.** §309's art pass stays parked; the
+  skinIndex off-by-one is still live, still measured (0.089 → 0.295 m, 3.30×), and is still wrong
+  under every animated pose. §702 establishes it is not the reported symptom, not that it is fine.
+- **The tail is rigid and it is long.** With the carry fixed, the fox tail sits where the artist
+  put it: 0.941 m behind her, against a 0.42 m collision radius, so it can pass through a wall she
+  is walking beside. Under the broken carry it measured 0.183 m — crumpled inside her body, which
+  is why nothing had noticed. Growing `GUARD_TUNE.radius` to cover an appendage would re-derive
+  §235's route clearances off a tail; it is pinned as a stated exception instead. `BONE_MAP` names
+  no tail joint, so the source tail folds to `hips` and does not swing.
+- **The recovered face does not blink** — the four morph targets are not wired.
+- **The arms now read as held wide, and that is newly VISIBLE rather than newly broken.** RIG3's
+  bind is an A-pose (`upperArmL` x 0.170 → `handL` x 0.515), the artist's bind is an A-pose too,
+  and the corrected carry preserves it. What poses the bones at runtime is `GuardAnim.CLIPS`,
+  authored as deltas for the *procedural* guard body — and §698 §5b established that Carmelita's
+  own eleven retargeted clips in `GuardClips.js` are dead code that nothing imports. So the arms
+  sit near their bind angle. The broken carry hid this by rotating the arms 135° into a jumble;
+  the fix reveals it. It is an animation question, it belongs to §698's dead-clips finding, and it
+  is not touched here.
+- **`heavy` and `temple` guards are the same size** (§702.1). Not touched.
+- **No claim is made that she now looks *right*** — only that she has a face, that the sculpt is
+  the artist's, and that both are measured.
+
+### §702.11 Revert — two tokens, independent
+
+```
+GUARD_TUNE.carmelitaBind: 1 → 0    the legacy carry, byte-for-byte, WITH the pistol and the mouth
+GUARD_TUNE.carmelitaHead: 1 → 0    the 32-triangle stub instead of the recovered face
+```
+
+Either alone, or both. The head fetch is optional at runtime as well, so a 404 on
+`carmelita-head-lp.glb` and `carmelitaHead: 0` have the same outcome: the character keeps the stub
+rather than being lost. `guardArt`/`guardSkin` stay at 0 under every combination.
 
 ---
 
