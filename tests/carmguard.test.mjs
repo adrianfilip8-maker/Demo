@@ -6,7 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import {
   bindToRig3, rig3BindWorld, BONE_MAP, MATERIAL_ATLAS, UNREMAPPED, atlasOf, NO_SOURCE, resolveName,
-  CARMELITA_TEX, CARRY, spliceHead,
+  CARMELITA_TEX, CARMELITA_HEAD, CARRY, spliceHead,
 } from '../src/ai/CarmelitaGuard.js';
 import { RIG3 } from '../src/player/SlyModel3.js';
 import { GUARD_TUNE } from '../src/ai/Guard.js';
@@ -623,6 +623,20 @@ test('both albedos are wired, at relative URLs, and the revert token still exist
   }
   console.log(`[carmguard] albedos wired: ${CARMELITA_TEX.join(', ')}`);
 
+  /* §702's recovered face is a THIRD runtime fetch and carries the same §666 hazard, which is
+     invisible on the dev server by construction — so it is checked here rather than in a frame. */
+  assert.ok(!CARMELITA_HEAD.startsWith('/'),
+    `${CARMELITA_HEAD} starts with a slash — §666, it would 404 under /Demo/`);
+  assert.ok(!/^https?:/i.test(CARMELITA_HEAD), `${CARMELITA_HEAD} is off-site`);
+  {
+    const file = new URL(`../public/${CARMELITA_HEAD}`, import.meta.url);
+    assert.ok(existsSync(file), `${CARMELITA_HEAD} is fetched by CarmelitaGuard but not under public/`);
+    const bytes = readFileSync(file);
+    assert.equal(bytes.readUInt32LE(0), 0x46546c67, `${CARMELITA_HEAD} is not a glTF binary`);
+    assert.ok(bytes.length > 500000, `${CARMELITA_HEAD} is ${bytes.length} bytes — too small to be the head`);
+    console.log(`[carmguard] recovered face wired: ${CARMELITA_HEAD} (${(bytes.length / 1024).toFixed(0)} kB)`);
+  }
+
   /* The one-token revert. If this default ever moves, it should move deliberately. */
   assert.equal(GUARD_TUNE.carmelitaTex, 1,
     'carmelitaTex is the default-on switch for her albedos; 0 restores the linen mannequin');
@@ -630,4 +644,8 @@ test('both albedos are wired, at relative URLs, and the revert token still exist
      quietly taken those two gates with it. */
   assert.equal(GUARD_TUNE.guardArt, 0, '§309 parks guardArt at 0 — it must stay parked');
   assert.equal(GUARD_TUNE.guardSkin, 0, '§309 parks guardSkin at 0 — it must stay parked');
+  /* §702 reopened §309 for the reported symptom, investigated, and found the parked defect was
+     NOT the cause — so these two stay at 0 and §702's own two tokens carry the change instead. */
+  assert.equal(GUARD_TUNE.carmelitaBind, 1, 'carmelitaBind 0 restores the pre-§702 bind transfer');
+  assert.equal(GUARD_TUNE.carmelitaHead, 1, 'carmelitaHead 0 restores the 32-triangle head stub');
 });
