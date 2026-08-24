@@ -53379,7 +53379,27 @@ mangled figure the owner photographed, produced from the committed asset by the 
 - **No claim is made that she now looks *right*** — only that she has a face, that the sculpt is
   the artist's, and that both are measured.
 
-### §702.11 Revert — two tokens, independent
+### §702.11 The suite
+
+`node --test "tests/*.test.mjs"` from a **clean worktree at the pushed commit `d7887e8`**, holding
+the FIFO capture lock so it was not sharing the CPU with a capture:
+
+```
+# tests 1034     # pass 1034     # fail 0     # cancelled 0     # skipped 0     # todo 0
+duration 271.5 s        exit 0
+```
+
+Six of those are new and all six can reject: the rigid-carry check (single-bone regions must
+deviate 0 from a translation, with `CARRY.LEGACY` run in-arm as the failing input), the
+prop-armature rule (shown keeping `Legs` at 3.6% non-body weight), the interior cut, the sole on
+the ground plane, the 64-vertex head fiducial (shown rejecting a head moved 1 cm), and the §666
+URL check on the new asset. Two existing tests were corrected rather than re-pinned: `guardart`'s
+`>= 20` region literal now derives from the bind's own group tally, and `carmguard`'s collision-
+radius test now excludes the tail and ponytail the way it already excluded the bind-pose arms —
+and asserts the tail's real 0.941 m reach as a stated bound instead of letting a crumpled tail
+flatter it.
+
+### §702.12 Revert — two tokens, independent
 
 ```
 GUARD_TUNE.carmelitaBind: 1 → 0    the legacy carry, byte-for-byte, WITH the pistol and the mouth
