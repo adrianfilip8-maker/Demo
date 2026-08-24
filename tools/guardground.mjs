@@ -129,6 +129,34 @@ const FRAMES = {
     about: ['guard4 temple/pylon_gate'],
     note: 'from the south-east at 5.7 m, the one bearing where the crate stack does not hide his boots. post ~280 px, pre ~295 px',
   },
+
+  /* ---- PORTRAIT: head AND torso in one frame, on two DIFFERENT guards (§698) ------------
+   *
+   * The atlas split is decided by the source project's material remap (`MATERIAL_ATLAS`), and
+   * `carmguard.test.mjs` asserts it mesh by mesh — but a mesh-by-mesh assertion cannot see the
+   * failure it is guarding against. A wrong split reads as a **face-coloured chest or a
+   * chest-coloured face**, which is a fact about pixels. So both of these frame the head and the
+   * torso together; a portrait that crops at the collar could not falsify anything.
+   *
+   * These reuse the two camera POSITIONS `close-pylon` / `close-colonnade` already cleared
+   * through camDot, and change only the lens and the aim height — a longer lens cannot walk a
+   * camera into a crate. The aim drops to chest height (1.25 m) because the wider frames look at
+   * 1.80/1.05 m; at a 20 deg lens an axis aimed above his head puts the subject on the bottom
+   * edge. Feet fall outside the frame by design — `close-*` is where the soles are evidence. */
+  'portrait-pylon': {
+    pos: [-1.0, 1.90, 27.6], look: [-4.93, 1.25, 31.5], fov: 20, tod: 0.78,
+    about: ['guard4 temple/pylon_gate'],
+    note: 'the close-pylon stance on a 20 deg lens, aimed at the chest: guard4 head-to-hip at 5.5 m, '
+      + '~620 px of body with the head ~80 px. For reading the uniform and the face, and for seeing '
+      + 'which atlas the chest is wearing.',
+  },
+  'portrait-colonnade': {
+    pos: [-18.44, 3.00, 28.5], look: [-18.46, 1.25, 22.32], fov: 18, tod: 0.78,
+    about: ['guard1 temple/courtyard_ring'],
+    note: 'the close-colonnade stance on an 18 deg lens, aimed at the chest: guard1 at 6.2 m, '
+      + '~554 px of body, head ~82 px. The SECOND sample for the same claim, on a different guard '
+      + 'from a different bearing (§466.5) — not a re-crop of the pylon frame.',
+  },
 };
 
 const want = process.argv.slice(2).filter((a) => !a.startsWith('-'));
