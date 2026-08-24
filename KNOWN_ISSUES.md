@@ -53830,3 +53830,49 @@ not true here and would have been the comfortable thing to claim.
   than the search pad from the pose envelope are never evaluated, so a row reading `> 0.60` means
   "nothing within the pad", and a number printed above 0.60 (bottle 2) is the nearest thing found
   inside the pad rather than a proven global minimum. Everything at or under 0.60 m is exact.
+
+---
+
+## §703 — The green figure §701.12 could not obtain: F3 GC was contention, and a quiet box says so
+
+§701.12 closed with one deliverable explicitly **not** obtained, and said so rather than substituting
+the run from one commit earlier:
+
+> a green full-suite figure at the exact shipped SHA is the one deliverable I did not obtain
+
+That was the right call and it left a real gap: `framebudget` **F3 GC** failed 5/5 at `1513b39`, and
+the lane's counterexample (3/3 failing at `763bd65`, the tip before any bottle work) proved only that
+*this change* did not cause it. "Not caused by the change" and "not a defect" are different claims,
+and only the first had evidence.
+
+**Obtained here, because the condition the lane could not control had lifted.** Both lanes had
+finished; the box measured 4.4% CPU with nothing rendering, where during §701 the Carmelita lane was
+driving headless chromium at 270%.
+
+```
+worktree   detached at 1513b39, clean (node_modules symlinked, untracked)
+box        4.4% CPU, no concurrent lane, no capture in flight
+result     1034 tests / 1034 pass / 0 fail / 285.0 s
+```
+
+**F3 GC passed.** The diagnosis in §701.12 is therefore confirmed rather than merely consistent: the
+arm is contention-sensitive, exactly as its own §546.5 header documents, and nothing in the bottle or
+Carmelita work broke it.
+
+### §703.1 The load-bearing detail is the last line of the run, not the first
+
+The command ended with an explicit `pwd` check, and this is not ceremony — §694 records a run of this
+same suite reporting **286 pass / 80 fail**, every failure reading `spawn /opt/node22/bin/node ENOENT`
+against an interpreter that was fine, because another lane deleted the worktree underneath it. A
+missing `cwd` is reported by `spawn` against the **file** argument, so the message names the wrong
+path and the failure looks like a broken toolchain.
+
+The distinguishing evidence in that incident was a `getcwd` line printed *after* the summary — which a
+`tail` of the output can discard. So the guard is now inside the command: the run is only quotable if
+its own working directory still exists when it finishes. It did.
+
+**Domain (§418.3).** Passes on: this run. Fails on: §694's, where the same suite at a comparable SHA
+returned 80 failures with the tree deleted mid-run, and on §701's contended arm where F3 GC failed 5/5.
+Does not discriminate: a genuine budget regression that only manifests under load — which is why
+§701.12's figure was worth keeping in the record rather than overwriting with this one. Both readings
+stand; they are measurements of different boxes, not of different code.
