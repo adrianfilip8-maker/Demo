@@ -80,7 +80,6 @@ const LABELS = [
 /* ======================= primitives, allocation-free ======================= */
 
 /** Separating-axis test, two triangles as flat 9-arrays. 2 face normals + 9 edge crosses. */
-const _ax = new Float64Array(3);
 function sat(A, ao, B, bo) {
   for (let pass = 0; pass < 11; pass++) {
     let x, y, z;
