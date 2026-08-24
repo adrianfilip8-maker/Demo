@@ -659,14 +659,20 @@ export class Props {
    *
    * ── What was already here ─────────────────────────────────────────────────────────────
    * Three quarters of this feature shipped and none of it was connected. `clueBottle()`
-   * (`PropKit.js:1144`) is exported and was imported by nothing. `MATERIALS.glass` and
-   * `MATERIALS.cork` sit in this file's own table, unused by any other builder, and `glass` is
+   * (`PropKit.js`) is exported and was imported by nothing. `MATERIALS.glass` and
+   * `MATERIALS.cork` sit in this file's own table, unused by any other builder, and `glass` was
    * `0x8fd8ff` — §2.1.6's pickup blue, chosen for this and nothing else. `Sfx.js:516` carries a
    * built `clue_bottle` cue that `tests/audio.test.mjs` proves non-clipping and non-silent, and
    * `Audio.js:1305` has a live `on('clue')` subscriber. **`emit('clue')` existed nowhere in
    * `src/`.** This is §239's defect exactly — four teams building against a contract with no
    * publisher — and it is the same shape the coin loop was in before `Pickups.js` was written.
    * The missing piece was never the modelling; it was the placement and the emit.
+   *
+   * **`glass` is past tense above, deliberately (§697).** The bottle is now the reference
+   * project's imported `BOTTLE.glb` and carries its own three colours in a vertex stream, so the
+   * recipe is white-with-`vertexColors` and the pickup blue lives on the rim instead of the body.
+   * The paragraph is kept as history because it explains why this key exists at all; the tense is
+   * the whole correction, and leaving it in the present is how a comment starts lying.
    *
    * ── Why these twelve places ───────────────────────────────────────────────────────────
    * Not scatter. Two blind critics said this level does not communicate its routes, and a clue

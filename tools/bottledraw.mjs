@@ -29,10 +29,17 @@
  */
 import { withGame } from './harness.mjs';
 
-const NAMES = ['pickup_clues', 'clue_bottles'];
+export const NAMES = ['pickup_clues', 'clue_bottles'];
 
-const res = await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page, info }) => {
-  return page.evaluate(async (names) => {
+/**
+ * The whole measurement, as ONE function so `bottleshot.mjs` can run it inside its own boot
+ * instead of taking the capture lock a second time. Playwright serialises this to the page, so
+ * it must close over nothing — everything it needs arrives in `names`.
+ *
+ * A boot on this container is minutes of exclusive lock; two tools measuring the same frame is
+ * two waits for one answer.
+ */
+export const measureInPage = async (names) => {
     const eng = window.__ENGINE;
     const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
     /* Several frames, not one: `Engine.stats` is written at the end of a frame and the first
@@ -112,10 +119,10 @@ const res = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
       },
       back,
     };
-  }, NAMES).then((r) => ({ ...r, renderer: info.renderer, warnings: info.warnings, consoleErrors: info.consoleErrors }));
-});
+};
 
-console.log(`renderer: ${res.renderer}\n`);
+/** Print a measurement produced by `measureInPage`. Shared for the same reason. */
+export function reportDraw(res) {
 console.log('clue-bottle meshes in the live scene:');
 for (const c of res.census) {
   console.log(`  ${c.name.padEnd(14)} ${c.instanced ? `instanced ×${String(c.count).padStart(2)}` : 'mesh        '}` +
@@ -141,3 +148,14 @@ if (S.spread > 2) {
     'for the isolated count above, not a figure in its own right)');
 }
 if (res.consoleErrors?.length) console.log(`\nconsole errors:\n  ${res.consoleErrors.join('\n  ')}`);
+}
+
+/* Run standalone. `bottleshot.mjs` imports the two exports above and folds this measurement into
+   its own boot, so the pair costs one capture lock rather than two. */
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const res = await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page, info }) =>
+    page.evaluate(measureInPage, NAMES)
+      .then((r) => ({ ...r, renderer: info.renderer, consoleErrors: info.consoleErrors })));
+  console.log(`renderer: ${res.renderer}\n`);
+  reportDraw(res);
+}

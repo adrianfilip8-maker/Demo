@@ -895,9 +895,13 @@ export class Pickups {
    *
    * **The pickup-blue signal did not go away; it moved to the rim.** `rimColor 0x8fd8ff` is
    * unchanged, and a rim is what actually carries "collectable" at the distance these are read
-   * from — the body colour was doing that job only by accident of having no other one. `PAL.
-   * sparkCore` and the sparkle field around each pickup are untouched. Opaque, because the
-   * source authors alpha 1 on every factor and a near-black glass at 0.55 is smoke.
+   * from — the body colour was doing that job only by accident of having no other one. `spec`
+   * and `gloss` are unchanged with it. Stated narrowly on purpose: `SparkleField`'s §2.1.6 blue
+   * diamonds mark **traversal affordances** off COLLISION's query, not pickups, so no claim is
+   * made here about a sparkle around the bottle — checked in `Particles.js`, not assumed.
+   *
+   * Opaque, because the source authors alpha 1 on every factor and declares no `alphaMode`, and
+   * because a near-black glass at 0.55 is smoke.
    */
   _clueMat() {
     const shading = this.engine.get?.('shading');

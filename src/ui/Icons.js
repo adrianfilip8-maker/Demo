@@ -556,9 +556,9 @@ export function sparkle(cls = '', color = C.spark) {
  * at 28–46%. The colours come from `C.bottle*`, which is the same generated module the mesh's
  * vertex stream reads, so neither side of the coupling can be edited without the other.
  *
- * **The pickup-blue signal is not lost, it moved**: `Pickups._clueMat` keeps `rimColor #8fd8ff`
- * and the sparkle field around every pickup is untouched, so "collectable" is still said in blue
- * — on the rim, where it carries at the distance a bottle is actually spotted from.
+ * **The pickup-blue signal is not lost, it moved**: `Pickups._clueMat` keeps `rimColor #8fd8ff`,
+ * so "collectable" is still said in blue — on the rim, where it carries at the distance a bottle
+ * is actually spotted from, rather than on a body that now has a surface of its own.
  *
  * House rules as the header states them: the dark thickness shape offset downward, the ink
  * silhouette, one hard specular notch and no gradient.

@@ -31,6 +31,7 @@
 import { chromium } from 'playwright';
 import { acquire } from './lock.mjs';
 import { camDot } from './camdot.mjs';
+import { measureInPage, reportDraw, NAMES } from './bottledraw.mjs';
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -237,6 +238,15 @@ async function main() {
         process.stdout.write(`      material ${p.material}  vertexColors ${p.vertexColors}  ${p.tris} tris\n`);
       }
     }
+    /* The draw-call measurement rides along in this boot rather than taking the capture lock a
+       second time — on this container a lock acquisition has cost twenty minutes of queueing
+       behind another lane, and both tools were asking about the same twelve meshes. Run LAST so
+       nothing it does to `visible` can reach a frame; it restores every flag it touches, and its
+       own restore-check would say so if it did not. */
+    process.stdout.write('\n· draw-call measurement (same boot)\n');
+    const draw = await page.evaluate(measureInPage, NAMES);
+    reportDraw(draw);
+
     if (consoleErrors.length) process.stdout.write(`\nconsole errors:\n  ${consoleErrors.join('\n  ')}\n`);
   } finally {
     await browser.close().catch(() => {});
