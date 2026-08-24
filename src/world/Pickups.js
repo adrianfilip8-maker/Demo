@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { rng, WORLD_SEED } from '../core/Rand.js';
-import { coin as coinGeo, clueBottle, CLUE_ATTRS, ingot, scarab, collar, place, mergeAll } from './PropKit.js';
+import { coin as coinGeo, clueBottle, CLUE_ATTRS, CLUE_HEIGHT, ingot, scarab, collar, place, mergeAll } from './PropKit.js';
 
 /**
  * Pickups — the collect loop. Coins, clue bottles, treasure, and the fence they are carried to.
@@ -111,13 +111,26 @@ export const TUNE = {
   treasureBob:   0.16,   // treasure is bigger, so it swims wider and slower — a different silhouette
   treasureRate:  1.25,
   treasureSpin:  0.75,
-  /* Clue bottles. `PropKit.clueBottle`'s own default `h`, kept in step so the collect radius
-     below and the art agree — the same reason `coinRadius` is pinned to `coin(0.16, …)`. */
-  clueHeight:    0.42,
-  /* playerRadius 0.34 + half the bottle's height. A bottle stands up where a coin lies flat, so
-     its grabbable extent is vertical and larger than a coin's; using `collect` 0.50 unchanged
-     would make you clip through the neck of one before it registered. */
-  clueCollect:   0.55,
+  /* Clue bottles. NOT a literal any more (§701): `PropKit.CLUE_HEIGHT` is the single authored
+     size and this reads it, so the pickup, its decorative twin in `Props._clueBottles()` and the
+     two radii below cannot be scaled apart — the same reason `coinRadius` is pinned to
+     `coin(0.16, …)`. `h` is the lathe parameter; the DELIVERED height is `h * CLUE_HEIGHT_RATIO`
+     and that is the number the two derivations under it use. */
+  clueHeight:    CLUE_HEIGHT,                          // 1.26 → 1.29780 m delivered
+  /**
+   * playerRadius 0.34 + half the DELIVERED height, rounded down to the file's two places:
+   * 0.34 + 1.29780/2 = 0.9889 → 0.98. A bottle stands up where a coin lies flat, so its
+   * grabbable extent is vertical and larger than a coin's; using `collect` 0.50 unchanged would
+   * make you clip through the neck of one before it registered.
+   *
+   * **This is a derived number and it moved with the scale (§701): 0.55 → 0.98.** Leaving it at
+   * 0.55 against a bottle three times taller is exactly the defect the sentence above names,
+   * at triple size — `stepPickup` measures the capsule centre against the bottle's BASE, so a
+   * player would have walked through the upper 0.75 m of the bottle before it registered. Still
+   * far inside `magnet` (2.40), so nothing about reach or R2/R3 changes; this is the contact
+   * term only, and §223's distinction between a snap radius and a catch radius still holds.
+   */
+  clueCollect:   0.98,
   clueBob:       0.11,
   clueRate:      1.7,
   clueSpin:      1.1,
@@ -132,9 +145,17 @@ export const TUNE = {
    *
    * `clueRockRate` is `2π / 1.5` so the loop is theirs to the digit. `clueSway` is their 0.125
    * carried across by PROPORTION rather than copied: their bottle stands 0.875 m (a unit mesh at
-   * `scale 0.875`), so the sway is 1/7 of its height, and 1/7 of ours (0.4326 m) is 0.0618 m.
-   * Copying 0.125 would have been a sway 29% of our bottle's height — the same class of mistake
-   * as assuming their `scale 0.875` transfers.
+   * `scale 0.875`), so the sway is 1/7 of its height, and 1/7 of ours is `clueSway`.
+   * Copying 0.125 would have been a sway 29% of the bottle's height as it then stood — the same
+   * class of mistake as assuming their `scale 0.875` transfers.
+   *
+   * **The proportion is the value; the metres are not (§701).** When the bottle was tripled this
+   * moved with it — 0.0618 → 0.1854 — because it is defined as 1/7 of the delivered height and
+   * a sway left at 0.0618 on a 1.29780 m bottle would have been 1/21 of it: the same error §700
+   * warned about, in the other direction. `clueRock` is an ANGLE and does not scale; the arc a
+   * ±20° lean sweeps grows with the bottle on its own, which is the point of expressing it as an
+   * angle. Re-measured after the change: `tools/bottlefit.mjs` reports the extra 0.12 m of
+   * lateral travel costs no placement its clearance.
    *
    * The Y-spin STAYS, which is a departure from the reference and a deliberate one: their bottle
    * does not spin, but theirs is placed to be seen from one side and ours sit on a route walked
@@ -143,7 +164,7 @@ export const TUNE = {
    */
   clueRockRate:  Math.PI * 2 / 1.5,
   clueRock:      0.349066,
-  clueSway:      0.0618,
+  clueSway:      0.1854,   // (CLUE_HEIGHT * CLUE_HEIGHT_RATIO) / 7 = 1.29780 / 7
 
   /* ---- economy ---- */
   milestone:     100,    // coins between purse toasts — "something reacts when it changes"

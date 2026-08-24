@@ -1156,8 +1156,41 @@ export const CLUE_ATTRS = ['color'];
  * **0.43260 m**. That ratio is pinned here rather than rounded away because `TUNE.clueHeight`,
  * `TUNE.clueCollect` and `cluevault`'s R2 magnet were all tuned against the delivered silhouette,
  * not against `h`. Substituting the mesh must not move any of them.
+ *
+ * **The ratio is the invariant; the height is not (§701).** `h` has since been tripled on
+ * request and the delivered height with it — 0.43260 m → 1.29780 m. This number did not move,
+ * because it is a property of the baked module (unit height, base at origin) rather than of the
+ * size anyone chose. `CLUE_HEIGHT` below is the size anyone chose.
  */
 export const CLUE_HEIGHT_RATIO = 1.03;
+
+/**
+ * The clue bottle's authored size — **the one number the whole bottle is scaled by**, and the
+ * only place it is written down (§701).
+ *
+ *   0.42 → 1.26   delivered height 0.43260 m → 1.29780 m, three times larger, on request.
+ *
+ * ── Why this constant exists at all ────────────────────────────────────────────────────────
+ * It used to be three literals: `clueBottle`'s own default, `Pickups.TUNE.clueHeight`, and a
+ * bare `h: 0.42` in `Props._clueBottles()`. Three copies of a number that MUST agree — the
+ * pickup and its decorative twin are the same object at the same spots, and `TUNE.clueCollect`
+ * and `TUNE.clueSway` are both derived from the delivered height. Scaling it meant editing three
+ * unrelated files and hoping; a lane that edited two of them would have shipped a twin at the
+ * old size behind a pickup at the new one, and since `Pickups` hides the twin the frame would
+ * have looked correct while the built world disagreed with itself. One constant, three readers.
+ *
+ * ── What reads it, and what breaks if it moves ─────────────────────────────────────────────
+ *   `Pickups.TUNE.clueHeight`   the pickup's own build
+ *   `Pickups.TUNE.clueCollect`  playerRadius + half the DELIVERED height — re-derive it
+ *   `Pickups.TUNE.clueSway`     1/7 of the DELIVERED height (the reference's proportion)
+ *   `Props._clueBottles()`      the decorative twin, which must match the pickup exactly
+ *   `cluevault` V1b             pins the delivered height; R1/R2/R3 rest on it
+ *
+ * The pickup POINT does not move with this number and is not meant to: the mesh is base-origin
+ * (`bbox.min.y === 0`), the twelve placements are the base, and `stepPickup` measures to the
+ * base. Growing the bottle grows it upward and outward from its authored spot.
+ */
+export const CLUE_HEIGHT = 1.26;
 
 /**
  * Sly's clue bottle — the reference project's own pickup mesh.
@@ -1184,7 +1217,7 @@ export const CLUE_HEIGHT_RATIO = 1.03;
  * damage it. The parameter stays so the two call sites keep their signature.
  */
 export function clueBottle(opts = {}) {
-  const { h = 0.42 } = opts;
+  const { h = CLUE_HEIGHT } = opts;
   const s = (h * CLUE_HEIGHT_RATIO) / 1.0;    // the module is normalised to unit height
   const bag = new Bag();
   for (const grp of BOTTLE_MESH.groups) {

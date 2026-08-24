@@ -4,7 +4,7 @@ import {
   Bag, mergeAll, place, matrixOf,
   brazier, wallTorch, vessel, canopicJar, basket, ropeCoil, ropeSpan,
   offeringTable, incenseStand, scaffold, banner, bannerMast,
-  coin, clueBottle, CLUE_ATTRS, ingot, scarab, sootStain, flameCard, chunk,
+  coin, clueBottle, CLUE_ATTRS, CLUE_HEIGHT, ingot, scarab, sootStain, flameCard, chunk,
 } from './PropKit.js';
 import {
   seatedColossus, sphinx, anubis, falconRa, coffinLid, fallenHead, brokenStatue,
@@ -769,7 +769,11 @@ export class Props {
       [0.0, -11.00, -60.0],  // tomb vault floor (y −12) — §8.1 step 7
     ];
     const parts = [];
-    clueBottle({ h: 0.42, rng: R }).drain((_key, geo) => parts.push(geo));
+    /* `CLUE_HEIGHT`, not a literal (§701). This mesh is the decorative twin of the one
+       `Pickups._build()` draws at the same twelve spots, and `Pickups` hides whichever of the
+       two it does not own — so a scale edit that reached one file and not the other would leave
+       the built world disagreeing with itself while every frame still looked right. */
+    clueBottle({ h: CLUE_HEIGHT, rng: R }).drain((_key, geo) => parts.push(geo));
     /* `CLUE_ATTRS` is not optional. The bottle's three source materials survive as a vertex
        colour stream, and `normaliseAttrs` deletes every attribute outside `position/normal/uv`
        unless it is named here — a bare `mergeAll(parts)` merges cleanly and draws flat white. */

@@ -76,6 +76,34 @@ const FRAMES = {
   'placed-nave': {
     spot: [0.0, 18.0, -34.0], eye: [3.6, 0.9, 3.5], aim: [0, 0.2, 0], fov: 50, tod: 0.62,
   },
+
+  /* ---- §701 additions. The four above are UNCHANGED and are the before/after pair. ---- */
+
+  /* The four cameras above are frozen deliberately: a before/after pair shot from two cameras
+     compares nothing, so nothing about them moves when the bottle's size does. That has one
+     honest cost — `read-summit`'s lens sits 1.26 m from a bottle that is now 1.29780 m tall, so
+     the after frame is a wall of glass and the READ claim ("can you tell the three materials
+     apart") cannot be read off it. This is the same camera pulled back by the same factor the
+     bottle grew, so the subject subtends what it did before. It is the SIZE-MATCHED control, not
+     a replacement: `read-summit` still answers "did it get bigger", this answers "does it still
+     read as a bottle". */
+  'read-summit-fit': {
+    spot: [0.0, 35.0, -52.0], eye: [3.15, 1.35, 1.95], aim: [0, 0.66, 0], fov: 30, tod: 0.62,
+  },
+
+  /* The hall front cornice — the ONE placement `tools/bottlefit.mjs` reports interpenetrating at
+     3x. Not a pretty frame and not meant to be: it is the exhibit for a measured defect, and a
+     measurement nobody photographed is a measurement the reader has to take on trust. Two
+     angles, because §466.5 wants two samples of a visual claim and because the burial is on the
+     -z side and a single bearing can hide it behind the bottle's own body.
+       side  a grazing look along the wall face, from +x, at bottle height
+       over  from above the parapet's top (y 17.00), where the bottle passes through it */
+  'cornice-side': {
+    spot: [-9.5, 16.4, -16.5], eye: [2.6, 0.35, 0.9], aim: [0, 0.45, 0], fov: 45, tod: 0.5,
+  },
+  'cornice-over': {
+    spot: [-9.5, 16.4, -16.5], eye: [2.4, 1.5, 1.6], aim: [0, 0.55, 0], fov: 45, tod: 0.5,
+  },
 };
 
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
