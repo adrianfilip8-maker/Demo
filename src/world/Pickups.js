@@ -154,8 +154,11 @@ export const TUNE = {
    * a sway left at 0.0618 on a 1.29780 m bottle would have been 1/21 of it: the same error §700
    * warned about, in the other direction. `clueRock` is an ANGLE and does not scale; the arc a
    * ±20° lean sweeps grows with the bottle on its own, which is the point of expressing it as an
-   * angle. Re-measured after the change: `tools/bottlefit.mjs` reports the extra 0.12 m of
-   * lateral travel costs no placement its clearance.
+   * angle. **The extra 0.12 m of lateral travel is not free and the price was measured rather
+   * than waved at** — `tools/bottlefit.mjs`, same world, only this term moved: it changes no
+   * placement's verdict, and it costs the two tightest of the twelve most of their margin (the
+   * peristyle architrave 0.281 → 0.192 m, the tomb vault floor 0.105 → 0.033 m). Reverting this
+   * one number to 0.0618 buys those back and is the lever if either ever has to give.
    *
    * The Y-spin STAYS, which is a departure from the reference and a deliberate one: their bottle
    * does not spin, but theirs is placed to be seen from one side and ours sit on a route walked

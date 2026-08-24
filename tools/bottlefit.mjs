@@ -50,6 +50,11 @@ import path from 'node:path';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const YAWS = +(process.env.YAWS || 6);
 const PAD = +(process.env.PAD || 0.60);       // how far out a clearance is still worth reporting
+/* `SWAY=` overrides `TUNE.clueSway` for one run. There to answer one question and not as a knob:
+   the sway is 1/7 of the bottle's height by derivation, so tripling the bottle triples it, and
+   "does the extra lateral travel cost anything" has to be measurable against the same world with
+   only that term moved. Anything printed under an override says so on the header line. */
+const SWAY = process.env.SWAY === undefined ? null : +process.env.SWAY;
 
 /* The twelve, scraped from `Props._clueBottles()` rather than copied — `cluevault.test.mjs`'s
    own rule: a hand-copied fixture measures a layout nobody plays the moment PROPS moves one. */
@@ -269,10 +274,11 @@ async function run(hs) {
     const height = B.bbox.max.y - B.bbox.min.y;
     const halfW = Math.max(B.bbox.max.x, -B.bbox.min.x, B.bbox.max.z, -B.bbox.min.z);
     /* The bottle's reach once rocked: the top corner swings out by sin(rock) * height. */
-    const reach = halfW * Math.cos(TUNE.clueRock) + height * Math.sin(TUNE.clueRock) + TUNE.clueSway;
+    const sway = SWAY === null ? TUNE.clueSway : SWAY;
+    const reach = halfW * Math.cos(TUNE.clueRock) + height * Math.sin(TUNE.clueRock) + sway;
     process.stdout.write(`\n${'='.repeat(100)}\n  h = ${h}   HEIGHT ${height.toFixed(5)} m (h x ${CLUE_HEIGHT_RATIO})` +
       `   half-width ${halfW.toFixed(4)} m   base y ${B.bbox.min.y.toFixed(6)}   ${B.triCount} tris\n` +
-      `  pose envelope: bob ±${TUNE.clueBob}  sway ±${TUNE.clueSway}  rock ±${(TUNE.clueRock * 180 / Math.PI).toFixed(1)}°` +
+      `  pose envelope: bob ±${TUNE.clueBob}  sway ±${sway}${SWAY === null ? '' : ' (OVERRIDE)'}  rock ±${(TUNE.clueRock * 180 / Math.PI).toFixed(1)}°` +
       `  → lateral reach ${reach.toFixed(3)} m, top of swing y+${(height * Math.cos(TUNE.clueRock) + TUNE.clueBob).toFixed(3)}\n` +
       `${'='.repeat(100)}\n`);
 
@@ -296,7 +302,7 @@ async function run(hs) {
             const yaw = (yi / YAWS) * Math.PI * 2;
             e.set(0, yaw, swing * TUNE.clueRock, 'ZYX');
             q.setFromEuler(e);
-            p.set(spot[0] + swing * TUNE.clueSway, spot[1] + bob * TUNE.clueBob, spot[2]);
+            p.set(spot[0] + swing * sway, spot[1] + bob * TUNE.clueBob, spot[2]);
             M.compose(p, q, one);
             const m = M.elements;
             let bx0 = Infinity, by0 = Infinity, bz0 = Infinity, bx1 = -Infinity, by1 = -Infinity, bz1 = -Infinity;
