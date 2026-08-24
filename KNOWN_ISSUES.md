@@ -53146,6 +53146,21 @@ Both agree with `bottlefit`'s number — 0.149 m of a 0.251 m half-width buried 
 needed to find it. The measurement found it; the frames are so the reader does not have to take
 the measurement on trust.
 
+### §701.9 The suite
+
+Clean worktree detached at the pushed commit `07d469d`, nothing copied in, under the FIFO
+capture lock, reporting through the test process's **exit code** rather than through a pattern
+found in its own output (§589.1):
+
+```
+  # tests 1033   # pass 1033   # fail 0   # cancelled 0   # skipped 0
+  === EXIT CODE 0 · 265.2 s ===
+```
+
+The lock was held for **4.4 minutes**, deliberately — §700's in-situ run held it for 74 and the
+Carmelita lane is queued behind it on the same box. The four `[clue]` prints inside that run are
+the R0–R3 figures quoted in §701.3, from this run rather than from an in-tree one.
+
 ### §701.9 Bounds — what this does not cover
 
 - **Only the clue bottle changed.** No other prop or pickup was scaled, and **no placement moved**:
