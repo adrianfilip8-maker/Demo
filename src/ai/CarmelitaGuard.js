@@ -374,6 +374,7 @@ export function bindToRig3(scene, opts = {}) {
   const bindWorld = rig3BindWorld();
   /* Source bind world POSITION of the direct bone for each target — the anchor every joint
      folded into that target shares, so a fold cannot scatter the region it belongs to. */
+  const ZERO = new THREE.Vector3();
   const srcAnchor = new Map();
   for (let i = 0; i < srcBones.length; i++) {
     const t = direct.get(srcBones[i].name);
@@ -383,14 +384,14 @@ export function bindToRig3(scene, opts = {}) {
   }
   const M = srcBones.map((b, i) => {
     const t = targetOf[i];
-    const ours = new THREE.Matrix4().makeTranslation(
-      bindWorld[t].x, bindWorld[t].y, bindWorld[t].z);
-    if (carry === CARRY.LEGACY) return ours.multiply(skel.boneInverses[i]);
+    const q = bindWorld[t];
+    if (carry === CARRY.LEGACY) {
+      return new THREE.Matrix4().makeTranslation(q.x, q.y, q.z).multiply(skel.boneInverses[i]);
+    }
     /* T(q_t − p_t): the source bone's own orientation is KEPT, so the rotations cancel and the
        region is translated rigidly. See the header for the derivation. */
-    const a = srcAnchor.get(t) || new THREE.Vector3();
-    return new THREE.Matrix4().makeTranslation(
-      bindWorld[t].x - a.x, bindWorld[t].y - a.y, bindWorld[t].z - a.z);
+    const p = srcAnchor.get(t) || ZERO;
+    return new THREE.Matrix4().makeTranslation(q.x - p.x, q.y - p.y, q.z - p.z);
   });
   /* Under REBIND every `M` is a pure translation, so the authored normals are already correct
      and `Q` is identity by construction. Extracting it anyway keeps one code path. */
