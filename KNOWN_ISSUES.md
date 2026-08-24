@@ -52864,12 +52864,29 @@ of this block's own commit, and lands somewhere about guards or about Carmelita'
 
 ---
 
-## §701 — CLAIMED: "the Carmelita sculpt seems off and the head seems to be missing" — scale answered, cause discriminated
+## §702 — "the Carmelita sculpt seems off and the head seems to be missing" — scale answered, cause discriminated
 
-**Number claimed by this commit** (§700.9: a grep for a free number is a read with no lock; only
-the committed heading reserves it). This lane owns `src/ai/CarmelitaGuard.js`, the model/skinning
-path in `src/ai/Guard.js` (NOT §697's `groundProbe`/`groundSlopeMax`), `tools/carmelita2*.mjs`,
-`tools/carmatlas.mjs` and `public/assets/sly-anim/`.
+**§700.9 for the third time, in one evening, and this time BOTH lanes lost.** This block was
+committed as §701 in `f2c1553`; the bottle lane committed its own §701 in `842cab8`, whose parent
+is `f2c1553` — so it rebased onto this heading and still wrote the same number. By §700.9's stated
+rule ("whoever commits the heading first wins") §701 was this lane's. It is being given up anyway,
+renumbered here to **§702**, on the only ground that actually matters at this moment: this block
+was a six-line stub and theirs is a full import writeup, so moving the cheaper one is the smaller
+total edit and leaves one §701 in the file rather than two.
+
+That is a *third* independent instance in a single evening, and it upgrades §700.9's finding: the
+race is not rare, it is the default. **Committing the heading first does not prevent the
+collision** — it only decides who is entitled to keep the number, and entitlement does not
+un-write the other lane's block. The only mechanism that would actually work is a number nobody
+else can pick concurrently, and this repository does not have one.
+
+The commit message on `f2c1553` still says §701 and is not being rewritten — history, fix forward
+(§314). This paragraph is the pointer for anyone who follows §701 out of it and lands in the
+bottles.
+
+This lane owns `src/ai/CarmelitaGuard.js`, the model/skinning path in `src/ai/Guard.js` (NOT
+§697's `groundProbe`/`groundSlopeMax`), `tools/carmelita2*.mjs`, `tools/carmatlas.mjs` and
+`public/assets/sly-anim/`.
 
 Work in progress; findings appended below in this section.
 
