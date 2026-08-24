@@ -52872,3 +52872,12 @@ path in `src/ai/Guard.js` (NOT §697's `groundProbe`/`groundSlopeMax`), `tools/c
 `tools/carmatlas.mjs` and `public/assets/sly-anim/`.
 
 Work in progress; findings appended below in this section.
+
+---
+
+## §701 — "Scale the bottles to be 3 times larger": the size is a build output, and what a bigger silhouette collides with
+
+**CLAIMED — this block is being written. §700.9 records that a grep for a free number is a read
+with no lock, so the heading lands first and the content follows in later commits.**
+
+The user, in full: **"Scale the bottles to be 3 times larger."**
