@@ -53780,37 +53780,72 @@ range-checking the number but by refusing to report a zero delta while meshes it
 proved** cost draws are being hidden — a check on the *relationship* rather than on the value,
 which is the only kind that survives the counter picking a new plausible number next time.
 
-### §701.12 `F3 GC` failed, and the control cleared this change rather than an argument doing it
+### §701.12 The suite's single failure — and a RETRACTION: my isolation harness was the artefact
 
-The full suite at the shipped commit came back **1033 / 1034**. The one failure is
-`framebudget.test.mjs` **F3 GC** — *"1 major collection(s) during 3000 driven frames against 0
-during an idle loop of the same length in the same process"*.
+The suite at the shipped commit came back **1033 / 1034**, and chasing that one failure produced a
+wrong answer before it produced the right one. Both are recorded, because the wrong one is the
+more useful.
 
-**Isolated at the shipped commit it failed 5 times out of 5**, which rules out "flake" as an
-explanation and is why it was not left at that. The control is what settles it:
+#### What I wrote first, and why it was wrong
 
-| tree | isolated F3 GC runs | result |
+The failing arm was `framebudget.test.mjs` **F3 GC**. I re-ran it "in isolation" with
+`--test-name-pattern="F3 GC"`, got **5 failures out of 5**, concluded it could not be a flake,
+ran the same isolation at `763bd65` (before any bottle work), got **3 out of 3**, and wrote that
+the cause was **box contention** — the Carmelita lane was rendering through headless chromium at
+270 % CPU, and the arm's own header (§546.5) blames exactly that.
+
+Every number there is real and the conclusion drawn from them was still wrong. On a **quiet** box
+— load 0.12, no other lane rendering — the same filtered command failed **3/3 on my tree and 5/5
+on the control.** Contention could not be the explanation for a failure that reproduces with
+nothing to contend with.
+
+**The artefact was `--test-name-pattern` itself.** Filtering to one arm skips every other test in
+the file, so the process reaches F3 with a different allocation history, and F3's within-run
+baseline — driven loop against idle loop, moments apart — is sensitive to precisely that. Run the
+file the way the suite runs it, no filter, on the same quiet box:
+
+| tree | `--test-name-pattern="F3 GC"` | whole file, no filter |
 |---|---|---|
-| `b2226fa` — the shipped commit | 5 | **5 fail** |
-| `763bd65` — the tip BEFORE any bottle work | 3 | **3 fail** |
+| `e6a5e8e` (shipped) | 3 runs → **3 fail** | 3 runs → **3 pass** |
+| `763bd65` (before any bottle work) | 5 runs → **5 fail** | 3 runs → **2 pass, 1 fail** |
 
-Same test, same box, same minute, a tree with none of this change in it: **identical failure.**
-This change is not the cause, established by running the counterexample rather than by reasoning
-about the dependency set — though that agrees: F3 drives `Controller.update` in a tight loop and
-nothing in `PropKit`/`Pickups`/`Props` is in that path. The bottle work is build-time geometry and
-two `TUNE` constants; it allocates nothing per frame.
+So F3 is a **pre-existing flaky arm at roughly 1-in-3 on the control tree**, it passed 3/3 on
+mine, and *the 100 % failure rate I quoted was a property of my own harness rather than of any
+tree.* I measured the instrument and reported it as the subject — the same shape as §699, and the
+same shape as §700.3's frozen counter, committed by the person who had just written both up.
 
-**What is the cause is on the box, and the arm says so itself.** Its own header records the
-camera lane hitting exactly this: *"four lanes share this machine, and another lane's memory
-pressure triggers a collection in THIS process's observer just as readily as our own allocation
-would"* (§546.5). During these runs the Carmelita lane was rendering through headless chromium at
-**270 % CPU**. The within-run idle baseline the arm was hardened with reduces that exposure but
-cannot remove it: a collection that lands inside the driven window and not inside the idle window
-still reads as an excess of one, and one is all it takes.
+#### What is actually established
 
-Recorded rather than retried into silence, because a suite figure quoted from a contended box is
-the contaminated figure this file keeps warning about — and because "it passes in isolation" was
-not true here and would have been the comfortable thing to claim.
+- **This change did not cause it.** That survives intact and is now better supported: F3 fails on
+  a tree containing none of this work and passes on the tree containing all of it. The dependency
+  set agrees — F3 drives `Controller.update`, and nothing in `PropKit`/`Pickups`/`Props` is in
+  that path; the bottle work is build-time geometry and two `TUNE` constants, allocating nothing
+  per frame.
+- **The cause is not established, and specifically is NOT contention.** Recorded as open rather
+  than closed with a plausible sentence.
+
+#### The suite runs, all of them
+
+All four runs, clean worktree detached, nothing copied in, under the FIFO capture lock, reporting
+through the test process's **exit code** and not through a pattern in its own output (§589.1):
+
+| # | commit | box | result | failing arm |
+|---|---|---|---|---|
+| 1 | `07d469d` (one `Props.js` literal earlier) | quiet | **1033 / 1033, exit 0** · 265.2 s | — |
+| 2 | `b2226fa` | contended | 1033 / 1034, exit 1 · 361.1 s | `framebudget` F3 GC |
+| 3 | `e6a5e8e` (shipped) | quiet | 1033 / 1034, exit 1 · 293.4 s | **`padrest` R1b** |
+| 4 | `e6a5e8e` (shipped) | quiet | **1034 / 1034, exit 0** · 290.9 s | — |
+
+**Run 4 is the green figure at the shipped commit**, and run 3 is why it is quoted with the other
+three beside it rather than on its own. Run 3 is also the one that settles the shape: F3 passed
+and a **different** arm failed — `padrest.test.mjs` R1b, which **§675 already documents as a
+pre-existing flake**, measured there at 4 pass / 1 fail over five isolated runs on an idle box.
+Two known-flaky arms, at most one failure per run, drawn from the pair this file had already
+written up, neither in any path this change touches; run 4 shows both green together.
+
+Every run is listed rather than only the green one, because re-rolling a flaky suite until it
+comes up green and quoting that alone is how a contaminated figure gets laundered into a clean
+one. The count is 1034 rather than 1033 because another lane added an arm partway through.
 
 ### §701.13 Bounds — what this does not cover
 
