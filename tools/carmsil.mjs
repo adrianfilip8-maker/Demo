@@ -42,12 +42,13 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { PNG } from 'pngjs';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { bindToRig3, atlasOf } from '../src/ai/CarmelitaGuard.js';
+import { bindToRig3, atlasOf, spliceHead } from '../src/ai/CarmelitaGuard.js';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const i = argv.indexOf(k); return i >= 0 && argv[i + 1] !== undefined ? argv[i + 1] : d; };
 const STAGE = arg('--stage', 'bind');
+const HEAD = arg('--head', '1') !== '0';
 const POSE = arg('--pose', '');
 const SHIFT = Number(arg('--shift', 0));
 const TAG = arg('--tag', '');
@@ -57,6 +58,19 @@ const buf = readFileSync(path.join(ROOT, 'public/assets/sly-anim/carmelita-guard
 const gltf = await new Promise((res, rej) => new GLTFLoader().parse(
   buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), '', res, rej));
 gltf.scene.updateMatrixWorld(true);
+
+/* The recovered face (§702). Off with `--head 0`, which is the shipped revert token's arm. */
+if (HEAD) {
+  const hp = path.join(ROOT, 'public/assets/sly-anim/carmelita-head-lp.glb');
+  const hb = readFileSync(hp);
+  const hg = await new Promise((res, rej) => new GLTFLoader().parse(
+    hb.buffer.slice(hb.byteOffset, hb.byteOffset + hb.byteLength), '', res, rej));
+  let geoH = null;
+  hg.scene.traverse((o) => { if (!geoH && o.isMesh) geoH = o.geometry; });
+  const r = spliceHead(gltf.scene, geoH);
+  console.log(`head splice: ${JSON.stringify(r)}`);
+  gltf.scene.updateMatrixWorld(true);
+}
 
 /* ── assemble the triangle soup for the requested stage ─────────────────────────────────── */
 /** @type {{pos:Float32Array, nrm:Float32Array, idx:Uint32Array, grp:Uint8Array, label:string}} */

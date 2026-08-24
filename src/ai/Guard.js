@@ -247,6 +247,14 @@ const TUNE = {
      that §697 reads. */
   carmelitaBind: 1,
 
+  /* The recovered FACE — §702, the other half of "the head seems to be missing", and the literal
+     one. `Head_LP` reaches us with a 96-element index: 32 triangles out of the 5,000 the project's
+     own FBX carries, so 99.4% of the muzzle, nose, cheeks and ears has never been drawn. 1 =
+     splice `carmelita-head-lp.glb` in (the default); 0 = the 32-triangle stub exactly as shipped.
+     The fetch is optional at runtime too — if it fails the character keeps the stub rather than
+     being lost, so this token and a 404 have the same outcome. */
+  carmelitaHead: 1,
+
   /* (B) the cone. coneShape 1 takes the structured-beam branch in BEAM_FRAG (uConeShape);
      0 = the legacy branch, spelled byte-identical to the pre-seal shader. The five
      constants below feed ONLY the taken candidate branch (unread at 0). */
@@ -1494,8 +1502,10 @@ export class Guards {
      * The scarab keeps its procedural body — it is a beetle sentinel, and Carmelita is not one. */
     let carmelita = null;
     try {
-      carmelita = await loadCarmelitaGuard(undefined,
-        { carry: TUNE.carmelitaBind > 0.5 ? CARMELITA_CARRY.REBIND : CARMELITA_CARRY.LEGACY });
+      carmelita = await loadCarmelitaGuard(undefined, {
+        carry: TUNE.carmelitaBind > 0.5 ? CARMELITA_CARRY.REBIND : CARMELITA_CARRY.LEGACY,
+        head: TUNE.carmelitaHead > 0.5,
+      });
     } catch { carmelita = null; }
     if (carmelita) {
       for (const t of CARMELITA_TYPES) {

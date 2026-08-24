@@ -6,7 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import {
   bindToRig3, rig3BindWorld, BONE_MAP, MATERIAL_ATLAS, UNREMAPPED, atlasOf, NO_SOURCE, resolveName,
-  CARMELITA_TEX, CARRY,
+  CARMELITA_TEX, CARRY, spliceHead,
 } from '../src/ai/CarmelitaGuard.js';
 import { RIG3 } from '../src/player/SlyModel3.js';
 import { GUARD_TUNE } from '../src/ai/Guard.js';
@@ -408,6 +408,104 @@ test('§702 the shock pistol is dropped by the ARMATURE, and the body is not', (
   const legacy = bindToRig3(loadScene(), { carry: CARRY.LEGACY });
   assert.equal((legacy.stats.dropped || []).length, 0, 'the legacy carry must keep the pistol — it is the byte-for-byte revert');
   assert.equal(legacy.tris - BOUND.tris, 1672, 'the pistol is not 1,672 triangles any more');
+});
+
+/**
+ * §702 — the recovered face, and the fiducial that says it is the same head.
+ *
+ * `Head_LP` ships with a 96-element index: 32 of its 5,000 triangles. The vertex cloud is whole,
+ * so every structural check in this file passed while 99.4% of the face went undrawn — which is
+ * §699's shape a third time. The repair takes the mesh from the project's own FBX, and the
+ * argument that it is the SAME mesh is the 64 vertices that survived the export: they must be
+ * present in the recovered head at distance 0 with the same UV. That is checked here, from the
+ * committed bytes, so nobody has to re-download 17 MB to believe it.
+ */
+test('§702 the recovered face is the same head, pinned by the 64 surviving vertices', async () => {
+  need();
+  const HEAD = 'public/assets/sly-anim/carmelita-head-lp.glb';
+  assert.ok(existsSync(HEAD), `${HEAD} is missing — run \`node tools/carmhead.mjs --fbx <…> --write\``);
+  const hb = readFileSync(HEAD);
+  const hg = await new Promise((res, rej) => new GLTFLoader().parse(
+    hb.buffer.slice(hb.byteOffset, hb.byteOffset + hb.byteLength), '', res, rej));
+  let head = null;
+  hg.scene.traverse((o) => { if (!head && o.isMesh) head = o.geometry; });
+  assert.ok(head, 'the recovered head asset holds no mesh');
+  for (const a of ['position', 'normal', 'uv', 'skinIndex', 'skinWeight']) {
+    assert.ok(head.attributes[a], `the recovered head has no ${a} — it could not be bound`);
+  }
+  const tris = head.index.count / 3;
+  console.log(`[carmguard] §702 recovered head: ${head.attributes.position.count} verts, ${tris} tris, `
+    + `${(hb.length / 1024).toFixed(0)} kB`);
+  assert.ok(tris > 4000, `the recovered head is only ${tris} triangles`);
+
+  /* the stub, as the shipped asset carries it */
+  let stub = null;
+  SCENE.traverse((o) => { if (o.name === 'Head_LP') stub = o; });
+  assert.ok(stub, 'Head_LP is not in the shipped asset');
+  SCENE.updateMatrixWorld(true);
+  const sg = stub.geometry.clone();
+  sg.applyMatrix4(stub.matrixWorld);
+  const stubTris = sg.index.count / 3;
+  console.log(`[carmguard] §702 the shipped stub draws ${stubTris} triangles from `
+    + `${sg.attributes.position.count} vertices`);
+  assert.equal(stubTris, 32, 'the shipped Head_LP is no longer the 32-triangle stub — re-read §702');
+
+  /* the fiducial */
+  const key = (a, i) => `${a.getX(i).toFixed(5)},${a.getY(i).toFixed(5)},${a.getZ(i).toFixed(5)}`;
+  const hp = head.attributes.position, hu = head.attributes.uv;
+  const byPos = new Map();
+  for (let j = 0; j < hp.count; j++) {
+    const k = key(hp, j);
+    if (!byPos.has(k)) byPos.set(k, []);
+    byPos.get(k).push(j);
+  }
+  const sp = sg.attributes.position, su = sg.attributes.uv;
+  const survivors = [...new Set(Array.from({ length: sg.index.count }, (_, i) => sg.index.getX(i)))];
+  let pos = 0, uv = 0;
+  for (const v of survivors) {
+    const c = byPos.get(key(sp, v));
+    if (!c) continue;
+    pos++;
+    if (c.some((j) => Math.abs(hu.getX(j) - su.getX(v)) < 1e-3 && Math.abs(hu.getY(j) - su.getY(v)) < 1e-3)) uv++;
+  }
+  console.log(`[carmguard] §702 fiducial: ${pos}/${survivors.length} positions, ${uv}/${survivors.length} UVs`);
+  assert.equal(pos, survivors.length,
+    'a surviving vertex is not in the recovered head — this is not the same mesh, or the units differ');
+  assert.equal(uv, survivors.length,
+    'a surviving vertex has a different UV in the recovered head — the v-flip is wrong and her face '
+    + 'would sample the wrong half of the atlas');
+
+  /* §418.3 — the check is shown able to reject: shift the recovered head 1 cm and it must fail */
+  {
+    const moved = head.clone();
+    moved.translate(0.01, 0, 0);
+    const mp = moved.attributes.position;
+    const mset = new Set();
+    for (let j = 0; j < mp.count; j++) mset.add(key(mp, j));
+    let hit = 0;
+    for (const v of survivors) if (mset.has(key(sp, v))) hit++;
+    assert.ok(hit < survivors.length,
+      'the fiducial still passes on a head displaced by 1 cm — it cannot reject a bad conversion');
+    console.log(`[carmguard] §702 falsifier: a head moved 1 cm matches ${hit}/${survivors.length}`);
+  }
+
+  /* skinIndex must address the 199-bone source order, unremapped */
+  const hsi = head.attributes.skinIndex;
+  let maxJ = -1;
+  for (let i = 0; i < hsi.count * 4; i++) maxJ = Math.max(maxJ, hsi.array[i]);
+  assert.ok(maxJ < 199, `the recovered head indexes bone ${maxJ}, past the 199-joint source rig`);
+
+  /* and the splice itself, through the shipped function */
+  const r = spliceHead(SCENE, head);
+  console.log(`[carmguard] §702 spliceHead: ${JSON.stringify(r)}`);
+  assert.equal(r.ok, true, r.why);
+  assert.equal(r.before, 32);
+  assert.equal(r.after, tris);
+  const rebound = bindToRig3(SCENE);
+  console.log(`[carmguard] §702 with the face: ${rebound.tris} tris per guard (was ${BOUND.tris})`);
+  assert.equal(rebound.tris - BOUND.tris, tris - 32, 'the spliced head did not reach the bound mesh');
+  /* put the scene back so later tests still see the shipped asset */
+  stub.geometry = sg.clone().applyMatrix4(new THREE.Matrix4().copy(stub.matrixWorld).invert());
 });
 
 test('the garrison cost is measured, not assumed', () => {

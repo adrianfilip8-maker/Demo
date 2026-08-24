@@ -119,6 +119,13 @@ import { RIG3 } from '../player/SlyModel3.js';
 
 const BASE = 'assets/sly-anim/';
 const ASSET = `${BASE}carmelita-guard.glb`;
+/**
+ * The repaired face — see `spliceHead` and `tools/carmhead.mjs`.
+ *
+ * Relative, like every other asset here, because §666's leading slash resolves to the domain
+ * root and 404s under this project's `/Demo/` path prefix.
+ */
+export const CARMELITA_HEAD = `${BASE}carmelita-head-lp.glb`;
 
 /**
  * Source joint → RIG3 bone. Identical to `MAP` in `tools/carmelita2clips.mjs`; that tool derived
@@ -204,6 +211,65 @@ export function rig3BindWorld() {
     if (!world[parent]) world[parent] = world.root;
   }
   return world;
+}
+
+/**
+ * Put the recovered face back into the parsed scene, in place of the 32-triangle stub.
+ *
+ * ── the defect this repairs (§702) ──────────────────────────────────────────────────────────
+ * `Head_LP` — muzzle, nose, eyes, cheeks, ears — reaches us with an index buffer of **96
+ * elements, 32 triangles**, referencing 64 of its 3,040 vertices. Its vertex CLOUD is intact and
+ * spans the whole head; only the connectivity was lost, so every structural check passes: the
+ * mesh is present, visible, finite, normalised, correctly weighted, correctly UV'd, correctly
+ * atlassed — and 0.6% of it is drawn. What reaches the screen is a patch 0.150 × 0.068 × 0.062 m
+ * in the middle of the face, which is the "dark mass with no readable face, muzzle or ears".
+ *
+ * It is upstream and it is not ours: the same mesh is **5,000 triangles** in the project's own
+ * `Carmelita_Animations7.fbx`, and every other mesh in the scene matches the FBX exactly
+ * (Hair_LP 9528 = 9528, Coat 3188 = 3188, Hand 4606 = 4606). Only the head differs. Both glTF
+ * exports upstream carry the 32-triangle version, so re-importing the `.glb` cannot recover it.
+ *
+ * ── what is spliced, and why it is the same mesh ────────────────────────────────────────────
+ * `tools/carmhead.mjs` reads the FBX and emits `carmelita-head-lp.glb`, refusing to write unless
+ * three things hold: the two skins list the same 199 bones in the same ORDER (so `skinIndex`
+ * transfers unremapped), every bind position agrees to 0.0000003 m after the FBX's exact ×100
+ * centimetres, and all **64 surviving vertices match by position at distance 0 with a UV equal
+ * to (u, 1−v)** — the single convention difference between the exports. That fiducial is the
+ * argument: a head from the wrong asset, scale, axis convention or UV flip all fail it.
+ *
+ * ── the one thing that does NOT come across ─────────────────────────────────────────────────
+ * The FBX head carries four morph targets — `Ugh`, `Grr`, `Blink`, `Key 4`. This pipeline drops
+ * morph attributes (so does `bindToRig3`, and so did the geometry it replaces), so the recovered
+ * face does not blink. Stated because it is a real capability being left on the table, not
+ * because anything here depends on it.
+ *
+ * @param {THREE.Object3D} scene  the parsed `carmelita-guard.glb` scene, mutated in place
+ * @param {THREE.BufferGeometry} head  the parsed `carmelita-head-lp.glb` geometry, world space
+ * @returns {{ok: boolean, why?: string, before?: number, after?: number}}
+ */
+export function spliceHead(scene, head) {
+  if (!head?.attributes?.position || !head.index) return { ok: false, why: 'no head geometry' };
+  if (!head.attributes.skinIndex || !head.attributes.skinWeight) {
+    return { ok: false, why: 'the head carries no skin attributes — it cannot be bound' };
+  }
+  let target = null;
+  scene.traverse((o) => { if (o.isSkinnedMesh && o.name === 'Head_LP') target = o; });
+  if (!target) return { ok: false, why: 'Head_LP is not in the scene' };
+
+  const before = (target.geometry.index?.count ?? target.geometry.attributes.position.count) / 3;
+  /* The emitted head is in the SOURCE SCENE'S WORLD space, because that is the only frame both
+     files can agree on. `bindToRig3` applies each mesh's `matrixWorld` before it touches a
+     vertex, so the node transform has to be divided out here or it is applied twice. Identity is
+     the common case and this costs nothing then; it is done unconditionally because a silent
+     double-transform is exactly the failure that would look like a slightly-wrong face. */
+  scene.updateMatrixWorld(true);
+  const g = head.clone();
+  const inv = new THREE.Matrix4().copy(target.matrixWorld).invert();
+  g.applyMatrix4(inv);
+  target.geometry = g;
+  target.morphTargetInfluences = undefined;
+  target.morphTargetDictionary = undefined;
+  return { ok: true, before, after: g.index.count / 3 };
 }
 
 /**
@@ -492,8 +558,23 @@ export async function loadCarmelitaGuard(url = ASSET, opts = {}) {
       loader.loadAsync(url),
       new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000)),
     ]);
+    /* The recovered face is a SECOND, OPTIONAL fetch, and its failure must not cost the
+       character. If it does not arrive the scene keeps its 32-triangle stub and everything else
+       behaves exactly as before — which is also what the `head: false` revert does. */
+    let head = null;
+    if (opts.head !== false) {
+      try {
+        const hg = await Promise.race([
+          loader.loadAsync(opts.headUrl || CARMELITA_HEAD),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000)),
+        ]);
+        hg.scene.traverse((o) => { if (!head && o.isMesh) head = o.geometry; });
+      } catch { head = null; }
+      if (head) head = spliceHead(gltf.scene, head).ok ? head : null;
+    }
     const asset = bindToRig3(gltf.scene, opts);
     asset.source = url;
+    asset.headRecovered = !!head;
     return asset;
   } catch {
     return null;
