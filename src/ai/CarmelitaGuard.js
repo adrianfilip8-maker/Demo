@@ -217,6 +217,25 @@ export const UNREMAPPED = ['OH_Outline_Material', 'OutlineMat.001', 'TestMateria
  */
 export const INTERIOR = ['TeethUpper_LowPoly', 'Tongue_LowPoly'];
 
+/**
+ * Targets whose geometry is carried with ANOTHER target's translation, because the two bones hold
+ * one rigid part between them and the two rigs disagree about where the second bone sits.
+ *
+ * Only the boot qualifies here, and it qualifies by a wide margin. Ankle → toe is
+ * `(0, −0.107, 0.067)`, 0.126 m, in Carmelita's rig and `(0, −0.044, 0.175)`, 0.180 m, in RIG3 —
+ * 43% longer and pointing somewhere else. Translating the toe region by its own delta therefore
+ * shears the shoe rather than repositioning it, and the sole stops being flat:
+ *
+ *     toe anchored to itself   heel y 0.0000   toe y 0.0632     ← the boot tips back
+ *     toe anchored to the foot heel y 0.0000   toe y 0.0000     ← flat, and what ships
+ *     (the legacy carry        heel y 0.0413   toe y 0.0054     ← tipped the other way)
+ *
+ * Every other joint's rig-to-rig disagreement is small next to the part it carries, which is what
+ * the four-weight blend is for. This is not a general escape hatch and the list is deliberately
+ * two entries long.
+ */
+export const RIGID_WITH = { toeL: 'footL', toeR: 'footR' };
+
 /** Which merged group (0 body, 1 head) a source mesh's material puts it in. */
 export function atlasOf(material) {
   const names = Array.isArray(material) ? material.map((m) => m?.name) : [material?.name];
@@ -389,7 +408,15 @@ export function bindToRig3(scene, opts = {}) {
       new THREE.Matrix4().copy(skel.boneInverses[i]).invert()));
   }
   const M = srcBones.map((b, i) => {
-    const t = targetOf[i];
+    const t0 = targetOf[i];
+    /* A boot is ONE rigid object and it spans two bones. Giving `toe` its own delta tips it:
+       RIG3's toe sits 0.077 m further forward and 0.009 m higher above its ankle than Carmelita's
+       does, so the toe box lifts 0.0632 m off the ground while the heel stays at 0 — measured.
+       The legacy carry tipped it the other way (heel 0.0413, toe 0.0054), which is why nothing had
+       noticed: a tipped boot still has SOMETHING touching the floor, and `guardfloat` reads the
+       lowest vertex. Anchoring the toe to the foot keeps the sole flat. The toe BONE still drives
+       those vertices, so toe-off still bends the boot; only where it starts from changes. */
+    const t = RIGID_WITH[t0] || t0;
     const q = bindWorld[t];
     if (carry === CARRY.LEGACY) {
       return new THREE.Matrix4().makeTranslation(q.x, q.y, q.z).multiply(skel.boneInverses[i]);
