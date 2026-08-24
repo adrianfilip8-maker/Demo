@@ -52285,3 +52285,300 @@ wides from stances 90° and 6 m of elevation apart, not one re-framed.
 **What the frames do not show, said rather than cropped out:** guard4 appears in
 `wide-colonnade` at 77 px behind the colonnade with his feet occluded — in the frame, but not
 evidence in it. And there is no picture of guard8 at all. See §697.6.
+
+## §698 — "The repo seems to be updated": it was, Carmelita was not, and the thing actually missing was her skin
+
+The request was to check the updated fan repository for anything relevant to Carmelita, import it,
+and substitute it in for the guard. Three of those four words turned out to be already done, and
+the fourth had been recorded as impossible.
+
+### 1. The update changed nothing about Carmelita — established by hash, not by date
+
+`NoahChase/Sly-Cooper--A-Thief-in-Godot` is now at `a312a997ca7d085a88b7443d754e5d3f57d66311`
+("The REAL Godot 4.7 Update"). Every Carmelita file in it is **byte-identical** to what landed here
+on 2026-08-08:
+
+```
+6dad373fccebbdbf171cb5c10cee37d9   tempcarmelita/Carmelita_Animations7.glb  ==  public/assets/sly-anim/carmelita-anims.glb
+f3fac1a6bf8b29922631934448771da2   …_CarmelitaBody_…BaseColor.png
+dadeef93231629e47ef11dfa0d78bfaa   …_CarmelitaHead_…BaseColor.png
+```
+
+The clone is shallow — one commit — so there is no upstream history to diff. That does not matter:
+comparing the *files* is the stronger check anyway, and it says there was no new mesh, no new clip
+and no new texture to take. `Assets/Models/Vehicles/helicopter-carmelita*.glb` is a vehicle.
+
+**So nothing was imported because the repo updated.** What follows was found by looking at what the
+existing import had and had not done.
+
+### 2. She was already the guard, and the mesh census was already right
+
+`Guard.js` has replaced the procedural body on the `temple` and `heavy` roster types — 9 of the
+roster — since 2026-08-08. The 34-mesh trap in the source scene (four `Text*` nodes, `BézierCircle`,
+IK handles) was already handled, and handled better than by name: `tools/carmelita2guard.mjs` keeps
+a mesh iff it is **skinned**, drops it iff it has **no skin and no material**, and asserts the two
+rules agree. 21 kept / 29,791 tris, 13 dropped / 7,260 tris. Re-run this pass, unchanged. The
+source scene corroborates it independently — `carmelita_animations_7.tscn` sets `visible = false`
+on all four `Text*` nodes — and the rule is why `Stomach_LP` and `TeethUpper_LowPoly`, which wear
+outline-*named* materials while being real body parts, were not deleted.
+
+### 3. What was actually missing: both her albedos, and a false reason for their absence
+
+`carmelita-guard.glb` carries **0 images and 0 textures**, and all six of its materials have no
+`baseColorTexture` — checked in the file. Her geometry was therefore being drawn in the garrison's
+own `guard_body` (linen) and `guard_metal` (bronze): a linen mannequin with a bronze head block.
+
+`sly-anim/PROVENANCE.md` said the two PNGs sat unused in `staging/` because "`carmelita-guard.glb`
+embeds its own images". That is false, and it is the sentence that kept them out of the build for
+sixteen days. Corrected in place.
+
+### 4. §241 said the atlas split was unrecoverable offline. It was recoverable, one file up
+
+The standing claim — in `CarmelitaGuard.js`, in `carmguard.test.mjs` and in §241 — was that since
+the glTF carries no `baseColorTexture`, nothing offline can say which mesh wears which atlas, so
+the split was **assigned by node name and flagged unverified**.
+
+True of the glTF; false of the repository. Godot does not put material overrides in the glTF, it
+puts them in the importer sidecar — which is exactly where `sly-godot/PROVENANCE.md` had already
+read *Sly's* two atlases from, two imports earlier. The same method, applied to Carmelita:
+
+```
+Carmelita_Animations7.fbx.import  "materials":
+    BodyMat → uid://bnewj3kvedjat → Assets/Materials/Carmelita Body.tres → …CarmelitaBody…png
+    EyeMat  → uid://4r18yagxqqq   → Assets/Materials/Carmelita Eyes.tres → …CarmelitaHead…png
+    HeadMat → uid://dcdj8rdtni3ux → Assets/Materials/Carmelita Head.tres → …CarmelitaHead…png
+```
+
+The discriminator is the **source material**, not the node name (`MATERIAL_ATLAS`). The retired
+guess was wrong where it counted: it put `BustRetopo` — 1,768 triangles of chest, and `BodyMat` —
+on the *head* atlas, on the strength of the word "Bust". Measured split is now body 16 / head 5.
+
+Three meshes the source does **not** remap (`Stomach_LP`, `TeethUpper_LowPoly`, `Tongue_LowPoly`
+— 1,440 of 29,791 tris, all under the coat or inside the mouth) have no atlas of their own in
+Godot either; they go to body by a stated fallback, and that is the only part of the split still
+chosen rather than measured.
+
+### 5. Two defects found that this pass deliberately did NOT fix
+
+**(a) The skinIndex off-by-one is live, and it is the reason she reads as a mannequin.**
+`instantiate()` prepends `root` to the skeleton; the importer built its indices root-less. Measured
+this pass, over 2,993 sampled vertices — mean distance from each vertex to its dominant bone's bind
+position:
+
+```
+indices as the importer built them (root-less) :  0.0892 m
+indices as the runtime skeleton orders them    :  0.2938 m     3.3x
+```
+
+Every vertex drives from one bone early. This is not new — it is one of §309's three recorded
+diagnoses, the owner **parked the guard model art pass on 2026-08-14**, and `TUNE.guardArt` /
+`TUNE.guardSkin` are pinned inert at 0 with the fix (`shiftGuardSkin`) already written. Nothing
+here touches them. A texture cannot address it and this does not pretend to: she is correctly
+textured and still skinned one bone early under animation.
+
+**(b) Her eleven retargeted clips are dead code.** Every comment in this area asserts that
+"`GUARD_CLIPS` has been Carmelita's motion since `tools/carmelita2clips.mjs` ran". It has not.
+There are **two different symbols named `GUARD_CLIPS`**:
+
+```
+src/ai/GuardAnim.js:1216   export { CLIPS as GUARD_CLIPS }      ← procedural; what clipsFor() compiles and guards play
+src/ai/GuardClips.js       export const GUARD_CLIPS = {…}       ← Carmelita's 11, imported by tests/carmelita.test.mjs and NOTHING else
+```
+
+`clipsFor(type)` returns `compile(CLIPS)` from `GuardAnim.js`. No source file imports
+`GuardClips.js`. The name collision is what made it look wired.
+
+It *is* emitted into the build, and that is not a contradiction — `src/main.js`'s
+`import.meta.glob('./{…,ai,…}/*.js')` matches every file in `src/ai/`, so vite emits
+`GuardClips-*.js` as a 275 kB chunk (42.7 kB gzipped). But `MANIFEST` loads only `./ai/Guard.js`
+from that directory, so the chunk is never dynamically imported and never fetched by a browser.
+Deployed, never downloaded. Checked, because "it is in the bundle" looked at first like evidence
+against the finding and is not.
+
+Wiring it is a real change, not a one-liner, and it carries a hazard that belongs to §697's family:
+the generated header states the hips offsets are **raw source metres, unrescaled**, from a 1.687 m
+character onto a 1.8 m rig. Coverage against the twelve states in use is also partial — `idle`,
+`walk_patrol`, `look_around`, `run_chase` and `stunned` have honest counterparts (`Idle`,
+`PatrolWalk`, `Lookaround`, `Run`, `HitTaken`); `idle_bored`, `walk_alert`, `suspicious` need a
+reuse; and `alert`, `ko`, `pickpocketed_reaction` have none. `Shoot(BodyMovement/GunMovement)` is a
+*gun* animation on a garrison that swings, which is a bad match rather than a missing one. Left on
+the register rather than forced.
+
+### 6. The §697 question, which turns out to be the wrong question here
+
+The obvious worry about swapping a character in is §697's: if the new rig's origin is at the hips
+rather than the feet, a correct ground snap still hovers her by a leg length, and it looks
+identical to the bug that was just fixed.
+
+It does not apply, for a reason worth writing down: **she was already the guard.** §697 measured
+this mesh. Nothing in this pass moves a vertex, a bone or a collider — it changes which image two
+existing draws sample — so the ground relationship is unchanged by construction. Measured anyway,
+off the bound geometry in guard-root local space:
+
+```
+lowest vertex  y = +0.00543 m      highest y = +1.68829 m      height 1.6829 m
+```
+
+The origin is at the feet: her lowest vertex sits **5.4 mm above** `root`, inside the 0.005–0.019 m
+band §697 recorded for the CPU-skinned foot. There is no offset to compensate at the mount, and
+§697's `TUNE.groundProbe` / `groundSlopeMax` are untouched.
+
+### 7. Cost — measured, and unchanged
+
+Textures add neither draws nor triangles; they change which image the same two draws sample.
+`tools/budgetattrib.mjs --inpage`, worst main view (`dunes`), identical before and after:
+
+```
+112 draws  = 45% of the 250 cap        1.152M tris = 96% of the 1.2M cap
+guards at dunes: 29 draws / 541k tris  — which confirms Guard.js's "29 draw calls" comment
+```
+
+That comment had been stale before (§589) so it was re-counted rather than trusted. Per guard:
+29,791 tris in 2 draws, geometry **shared** across all 9 — one upload, per-instance `Skeleton` only.
+The added cost is download and VRAM: 2.1 MB of PNG, two 2048² sRGB uploads. The triangle budget is
+at 96% for reasons that have nothing to do with this change and everything to do with nine
+30k-triangle characters; it is on the register, not breached.
+
+### 8. The frames, and what they are evidence for
+
+Before and after on the same four cameras, from the same isolated worktree, with the same
+instrument and the same 60 s settle. The only thing that differs between the arms is the source
+under test: `20366bb` for the before, `6602d03` for the after.
+
+**The arms are comparable, and that is checked rather than asserted.** Guard4 settled to
+`(-4.931, 31.506)` in both arms to three decimals and guard1 to within 4 mm; and the two §697
+cameras reproduce §697's own projected sizes — guard4 at 280 px on `close-pylon`, guard1 at 258 px
+on `close-colonnade`, against the "post ~280 px" / "post ~258 px" recorded there. Nobody moved;
+only the pixels on them changed.
+
+```
+shots/carm-before-portrait-pylon.png       shots/carm-after-portrait-pylon.png
+shots/carm-before-portrait-colonnade.png   shots/carm-after-portrait-colonnade.png
+                                           shots/carm-after-close-{pylon,colonnade}.png
+```
+
+Two portrait cameras were added for this (`tools/guardground.mjs`, additive — the four §697
+entries are untouched). They reuse camera POSITIONS already cleared by camDot and change only the
+lens and the aim height, so no lens is walked into a crate that was not already walked into one.
+All four cleared the pre-flight again: enclosed 0/26, nearest 1.9–2.2 m, subject unoccluded.
+
+*Before*: a linen-grey mannequin with a dark bronze head-and-chest block — Carmelita's geometry in
+`guard_body` and `guard_metal`. That is what the user had been looking at for sixteen days.
+*After*: the navy coat and trousers, gold gauntlets and gloves, orange fox fur, dark blue hair.
+
+**The atlas split is verified in the picture**, which `carmguard.test.mjs` structurally cannot do:
+a wrong split reads as a face-coloured chest or a chest-coloured face, and in both portraits the
+head carries hair and the torso carries uniform. That agrees with `shots/carm-atlas-{body,head}.png`
+(`tools/carmatlas.mjs`), which reaches the same conclusion by a completely different route —
+rasterising each mesh's own UV triangles into the atlas it was assigned, with no renderer at all.
+
+One caveat on the report files: `in frame: NOBODY` on the portraits is the tool's own bookkeeping,
+not a statement about the frames. Its in-frame test projects the guard ROOT, which sits at the
+feet, and a chest-height portrait crops the feet by design.
+
+### 9. Production, and §666 demonstrated rather than cited
+
+`node tools/prodboot.mjs` — **exit 0**, 119 requests, **zero 4xx/5xx**, boot past module 30. Then
+served `dist/` under a `/Demo/`-shaped prefix directly and asked for the three assets by the URLs
+the code actually builds:
+
+```
+200  assets/sly-anim/carmelita-body.png   1365774 bytes  PNG
+200  assets/sly-anim/carmelita-head.png    749027 bytes  PNG
+200  assets/sly-anim/carmelita-guard.glb  1651704 bytes  glTF
+404  /assets/sly-anim/carmelita-body.png            <- the same file, leading slash
+```
+
+The last row is §666, live: the leading-slash form resolves to the domain root and 404s under the
+project-page prefix. `CARMELITA_TEX` is relative, `vite.config.js` sets `base: './'`, and the
+built bundle contains no leading-slash asset reference anywhere. The PNGs are served from
+`public/`, so they are copied verbatim rather than emitted under hashed names — which is the other
+half of §666, the one that broke the FBX-with-sidecars import.
+
+### 10. §697, re-measured after the swap
+
+`node tools/guardfloat.mjs`, 360 samples per guard along the whole lap, gapC = lowest skinned foot
+vertex as drawn minus the topmost up-facing RENDERED surface:
+
+```
+#  id       type   route            n  u-span |  gapC: min    p25    med    p75    max
+0  guard0   temple south_gate       360 1.00  | -0.038  -0.002   0.017   0.036   0.124
+1  guard1   temple courtyard_ring   360 0.05  | -0.003   0.023   0.027   0.035   0.078
+2  guard2   heavy  courtyard_ring   360 0.08  | -0.023  -0.003   0.002   0.010   0.052
+3  guard3   temple obelisk_watch    360 1.00  | -0.022  -0.002   0.003   0.017   0.032
+4  guard4   temple pylon_gate       360 0.04  |  0.044   0.046   0.050   0.058   0.063
+5  guard5   temple hall_nave        360 1.00  | -0.027   0.008   0.045   0.059   0.084
+6  guard6   heavy  hall_weave       360 0.81  | -0.039   0.006   0.014   0.024   0.143
+7  guard7   temple rooftop_run      360 1.00  | -0.023  -0.000   0.005   0.017   0.050
+8  guard8   heavy  tomb_vault       360 0.14  | -0.091  -0.082  -0.078  -0.070  -0.064
+```
+
+Every median is inside 8 cm of the floor and every guard patrols 100% of the lap. §697's fault was
+1.2–2.1 m of clear air under three of nine; nothing resembling it is here. That is the expected
+result and it is worth saying why it was never really at risk: a material swap moves no vertex, no
+bone and no collider. `TUNE.groundProbe` and `groundSlopeMax` are untouched.
+
+### 11. Revert — one token
+
+`GUARD_TUNE.carmelitaTex: 1 → 0` in `src/ai/Guard.js`. That restores the linen/bronze mannequin
+exactly: the material selection is the only thing gated, the geometry, the census and the atlas
+table are untouched by it, and `guardArt`/`guardSkin` stay at 0 either way. Same shape as the
+character's `?char=dlraw` / `?char=dl`.
+
+## §699 — A claim written once and then trusted as a measurement: the shape behind §698, and why every check stayed green while the guard stayed grey
+
+§698 has two causes and they are the same cause twice. Both are a sentence that was *written* by
+somebody reasoning about a file, and then *read* by everybody afterwards as though it had been
+measured. Neither was ever re-checked against the bytes, and neither had to be wrong for long
+before it became load-bearing.
+
+**Instance 1 — "`carmelita-guard.glb` embeds its own images."**
+Written into `sly-anim/PROVENANCE.md` as the reason both 2048² albedos could sit unused in
+`staging/`. The file contains **0 images and 0 textures**; all six of its materials have no
+`baseColorTexture`. One `readUInt32LE` on the JSON chunk falsifies it. It went unchecked for
+sixteen days, during which the guard the user was looking at was a linen mannequin.
+
+**Instance 2 — "the atlas split cannot be recovered offline."**
+Written into `CarmelitaGuard.js`, repeated in `carmguard.test.mjs`, and promoted to a numbered
+finding in §241. The stated reason was true and the conclusion did not follow: the glTF does not
+record the split, but the *repository* does, in the importer sidecar
+(`Carmelita_Animations7.fbx.import`) — and `sly-godot/PROVENANCE.md` had **already used exactly
+that method, on this same repository, for Sly's two atlases**, two imports earlier. The answer was
+not merely recoverable; the technique was written down in a sibling file the whole time.
+
+### Why the test suite could not catch either
+
+This is the part worth keeping. `carmguard.test.mjs` was thorough — 13 tests, bone coverage, weight
+normalisation, bind-transfer bounds, NaN, triangle and draw counts — and every one of them passed
+throughout. It could not catch either instance because **both claims were about things the suite
+had been told not to check**:
+
+- the split was pinned *as a guess*, so the test asserted the guess was internally consistent
+  rather than correct. A test that pins an unverified assumption makes it harder to notice, not
+  easier: it turns green every run and reads as coverage.
+- the textures were declared out of scope by the provenance sentence, so nothing asserted they
+  were fetched. There was no failing check because there was no check.
+
+Structural tests answer "is the thing self-consistent". Neither instance was an inconsistency.
+Both were a **premise**, and a premise is invisible to a suite built on it.
+
+### The rule this earns
+
+A claim about a file's *contents* is only a measurement if something re-reads the file. Where a
+`PROVENANCE.md` or a module header states what a binary contains — images, textures, joints,
+clips — the check should be cheap enough to run and should live in the suite, not in prose. §698
+added three lines of exactly that shape (PNG signature, 2048×2048, 8-bit) for the two albedos, and
+they would have failed on day one.
+
+And the narrower rule, for this repository specifically: **when a Godot import looks like it is
+missing information, look one file up.** Godot keeps material overrides, animation slices and
+import settings in the `.import` sidecar, not in the exported glTF. Twice now the sidecar has held
+the answer that the exported asset did not.
+
+### Not a licence question
+
+Recorded so the next reader does not have to re-derive it: none of this changes the licence
+position. The source repository states no licence, that is unchanged at `a312a99`, and the owner's
+standing instruction that copyright is not an obstacle here governs these files exactly as it
+governs the rest of the import. §698 took two PNGs from a repository this project was already
+taking a character from.
