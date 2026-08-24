@@ -52066,3 +52066,222 @@ inverted claim, not re-pinned**:
   its CONTRAST is now the §479.17 matched pose itself — still shipped as `?anim=proc`, measured
   live at 47.7 cm with both hands outboard. That contrast states the arm's own limit exactly:
   hands-outboard never distinguished the two poses, only the spread does.
+
+---
+
+## §697 — "The guards are floating": the ground probe reported the bottom of its own sphere, and three of nine hung in the air on a height no surface occupied
+
+The user, playing the deployed build: **"The guards are floating rather than being on the ground."**
+One sentence, and at least four different defects can produce it. They have different fixes and
+two of them have *opposite* fixes, so the first job was not to repair anything.
+
+### §697.1 What it was NOT — and the measurement that says so
+
+| candidate | verdict |
+|---|---|
+| 1. route waypoints authored at a wrong Y | **NO.** `Patrol.ROUTES` waypoints are `[x, z]`; Y is resolved at runtime. `baseY` is a fallback only, and it was never reached — every floating guard had `hadGround = true`. |
+| 2. a missing or broken ground snap | **partly** — the snap ran on every frame and returned a hit every time. It was neither missing nor failing. It was answering a slightly different question than the caller was asking. |
+| 3. a correct snap onto a FLOATING COLLIDER | **NO**, and this is the one that had to be killed with evidence rather than argument. See below. |
+| 4. a foot-vs-origin offset | **NO.** The guard rig's origin is at the feet: the lowest CPU-skinned foot vertex sits 0.005–0.019 m above `root.position` in the walk pose, measured per guard per frame. |
+
+**Cause 3 was eliminated by measuring with an instrument that does not share the assumption.**
+`Guard._step` snaps to `Collision.groundCheck`, so asking `Collision` where the ground is cannot
+falsify "the collider is in the wrong place" — instrument and subject share the belief (§439/§440).
+So `tools/guardfloat.mjs` runs two: the collision BVH the guard actually snaps to, and a
+`THREE.Raycaster` down the **rendered scene graph**. ARCHITECTURE's collision proxies are separate,
+invisible meshes from the drawn ones, so the two share no geometry and `colY − renderY` is exactly
+"the collider disagrees with the picture".
+
+They agree. On the 20 cm neighbourhood grid around the worst-floating guard, the collider and the
+art report the same height in every cell where both find a surface — `1.54 / 1.54`, `1.46 / 1.46`.
+**The collider is not floating. The guard is.** And the fix for a floating guard is the opposite of
+the fix for a floating collider, so this mattered.
+
+> Before trusting that, the rendered-world instrument was made to prove it is not blind: it prints
+> the full scene census, 71 admitted meshes of 453, and `kaykit:props` (31 064 tris) and every
+> `props_*` merged mesh are in the admitted list. A run whose census shows no props is a broken
+> instrument and its verdict is void.
+
+### §697.2 What it actually was
+
+`Collision.groundCheck(pos, radius, maxDist)` sweeps a **sphere** downward and reports
+
+```js
+res.y = centerY - r;      // the bottom of the PROBE, at the moment of contact
+```
+
+which is the surface height only when the contact is directly underneath it. Grazing the top edge
+of a crate one probe-radius to the side, it returns a height a quarter of a metre below the crate
+and over a metre above the pavement — **a height at which no surface in the level exists**.
+`Guard._step` and `_place` assigned that verbatim to `position.y`.
+
+Guards are the only body in this game whose vertical position is *assigned* from that call rather
+than integrated. The player has a capsule solver, gravity and a slide; a guard has none, so
+whatever he is put on he stays on. Worse, once he is up there the real floor is further below him
+than `stepDown` (1.05 m), so every subsequent step is refused as a cliff — which is why all three
+were not only floating but **frozen**, motionless for the rest of the session.
+
+**The tell is that the answer moves with the probe.** On the west-colonnade guard:
+
+| probe radius | `groundCheck` says | a real floor, same guard, flat paving |
+|---|---|---|
+| 0.020 – 0.250 | *no support at all* | y 0.000 |
+| 0.294 (`radius * 0.7`, his own) | y **1.289** | y 0.000 |
+| 0.350 | y **1.380** | y 0.000 |
+| 0.392 | y **1.406** | y 0.000 |
+| 0.450 | y **1.428** | y 0.000 |
+
+A floor's height is not a function of how fat you are. Widened to a 40 m span so it could see the
+pavement, the fat probe still preferred the phantom.
+
+`walkable` cannot catch it and was checked before being ruled out: that hit reports **slope 10.4°,
+`walkable` YES**. It is a flat-normalled surface in the wrong place, not a steep one.
+
+### §697.3 The second half, which the first half does not reach
+
+Narrowing the probe fixed two of the three and left the third at 0.39 m. `tools/guardlift.mjs`
+traces every frame in which any guard's `y` moves more than a centimetre — **three frames in 30 s**,
+all one guard, and they name the cause:
+
+```
+t 3.267   y 0     -> 0.013    n.y 0.048   slope 87.23°   walkable no
+t 3.400   y 0.032 -> 0        n.y 1.000   slope  0.00°   walkable YES   (back on the floor)
+t 3.433   y 0     -> 0.369    n.y 0.695   slope 45.99°   walkable YES   (and there he stayed)
+```
+
+`Props` registers every solid prop as a collider tagged `ground` — correctly, props *are* standable
+— so the wall of a brazier bowl is floor as far as `groundCheck` is concerned. That surface is
+genuinely underneath him, so no probe width can see it.
+
+The slope populations do not overlap. Over 400 samples on each of the nine routes, **every surface
+a guard legitimately stands on reads 0.00°**, except the rooftop run which peaks at 6.95°. The two
+faces that lifted him read 45.96° and 87.23°. `groundSlopeMax` is set to 30 — 4× margin over the
+steepest real floor, 16° of clearance under the shallowest false one — and deliberately stricter
+than `Collision.TUNE.slopeWalkableDeg` (50), which is the *player's* limit and answers a different
+question.
+
+**Neither rule is redundant, and the domain says so in both directions (§418.3):**
+
+| | narrow probe alone | slope gate alone | both |
+|---|---|---|---|
+| guard1, phantom at 10.4° beside him | fixed | **misses** (10.4 < 30) | fixed |
+| guard1, brazier wall at 46.0° under him | **misses** (a 0.06 probe touches it too) | fixed | fixed |
+| guard4, KayKit box top at 0.0° beside him | fixed | **misses** (0.0 < 30) | fixed |
+| guard8, KayKit box top beside him | fixed | **misses** | fixed |
+
+### §697.4 The numbers, per guard, along the whole route
+
+Gap = the guard's **lowest CPU-skinned foot vertex** minus the topmost up-facing **rendered**
+surface under it. 200 s of walking, sampled every 0.5 s, 400 samples per guard. Guards are never
+placed at a `u` and measured — they walk there through the shipped update path (§435.4).
+
+| # | guard | route | before: med (max) | after: med (max) |
+|---|---|---|---|---|
+| 0 | temple | south_gate | 0.014 (0.099) | 0.014 (0.115) |
+| 1 | temple | courtyard_ring | **1.318** (1.332) | **0.027** (0.083) |
+| 2 | heavy | courtyard_ring | 0.003 (0.054) | 0.002 (0.060) |
+| 3 | temple | obelisk_watch | 0.003 (0.032) | 0.003 (0.033) |
+| 4 | temple | pylon_gate | **1.946** (1.960) | **0.050** (0.063) |
+| 5 | temple | hall_nave | 0.045 (0.084) | 0.044 (0.084) |
+| 6 | heavy | hall_weave | 0.015 (0.093) | 0.015 (0.150) |
+| 7 | temple | rooftop_run | 0.006 (0.051) | 0.005 (0.045) |
+| 8 | heavy | tomb_vault | **1.816** (2.138) | **−0.077** (−0.054) |
+
+Six guards move by ≤ 0.001 m, which is the blast radius this change should have. guard8's −0.077 is
+the tomb's collision proxy sitting ~0.03 m under `paving:tomb`; that is a level-authoring gap of its
+own, pre-existing, and 4 cm rather than 1.8 m.
+
+### §697.5 NOT a regression — it predates everything currently in flight
+
+Measured, not inferred: the same tool at `e4beb1e` (the commit before the ring lane's `fbace4a`)
+reads guard1 1.256 / guard4 1.910 / guard8 1.839, and at `a236b49` (§589, the commit that
+established today's nine-guard roster) 1.299 / 1.879 / 1.792. **The same three guards, the same
+magnitudes, before either.**
+
+**The ring lane is cleared, and the brief I was given about it was wrong in a way worth recording.**
+I was told `ffd97af` "touched `src/world/EgyptLevel.js`". It does not: `ffd97af` is four PNGs under
+`shots/` and nothing else. The ring lane's code commit is `fbace4a`, and the run at `fbace4a~1`
+above is what actually clears it. The instruction to "confirm rather than trust my summary" was
+right, and confirming took one `git show --stat`.
+
+### §697.6 Bounds — what this does NOT fix, and what nothing here can see
+
+- **Four of the nine are stalled, and this change does not unstall them.** guard1, guard2, guard4
+  and guard8 advance ≤ 0.17 of their route parameter in 200 s: their patrol lines run within a body
+  radius of props, and `_step`'s forward rays stop them. That is a ROUTE-vs-PROPS defect, it is
+  visible in the before arm too (guard2 is stalled *and* perfectly grounded, in both arms), and it
+  is not what the user reported. Fixing it means re-authoring waypoints against props, which
+  `tests/patrol.test.mjs` currently checks against architecture only. **Left open deliberately.**
+- Nothing here changes `Collision.groundCheck`. Its sphere-bottom convention is still what it was,
+  and `Controller`, `Particles` and `Guards._findStand` still call it. Those were not measured. The
+  fix is confined to `src/ai/Guard.js` because guards are the only caller that *assigns* the result.
+- **No frame contains two guards with both sets of feet visible.** Forty-odd cameras were put
+  through the `camDot` pre-flight; the west colonnade stands between guard1 and guard4, and four
+  column rows stand between guard5 and guard6. "Several at once" is delivered as the nine-guard
+  table above and the settle report, not as one photograph. Saying so beats shipping a wide in
+  which the second guard is 77 px of shadow behind a column.
+- **guard8 has no picture.** Every bearing round him is a tomb wall inside 0.35 m of the lens or a
+  crate across his feet; the two that were clear could not also contain his pre-fix stand. He is a
+  row in the table and not a frame.
+- Nothing here is played. The frames are staged with the rig off, as every capture here is. Whether
+  a guard now *reads* as planted in motion is the user's call, which is the §696 shape again: the
+  last link is the one no instrument in this repo can reach.
+
+### §697.7 The instrument was wrong twice before it was right
+
+Both faults were in the probe, not the subject, and the second is the dangerous kind.
+
+1. The sole column returned `1e+189`. `SkinnedMesh.applyBoneTransform(i, v)` is the GLSL
+   `skinning_vertex` chunk verbatim — it expects the vertex position **already in `v`** and
+   overwrites it. Absurd numbers made this cheap to find; the version of this bug that returns a
+   plausible number is the one to fear.
+2. The reference surface was "the topmost up-facing rendered surface, cast from 6 m above the
+   guard". That is not the floor he is standing on — it is whatever is highest at his XZ. Beside a
+   plinth it picked the plinth's lip and reported a **correctly grounded** guard as 1.00 m
+   underground, which briefly made a working fix look like a regression. The reference is now
+   sampled from the subject's own feet downward.
+
+Both are §435.4 with the serial numbers filed off: a probe written from your model of the world
+tests your model. The rule that survived is the one in the tools' shared header — read a number
+against the control rows the tool prints, never on its own.
+
+### §697.8 Draw calls unchanged
+
+Flagged because `src/ai/Guard.js` carries the garrison's draw-call budget in its own comments and
+§589 left that comment reading "11 guards / 35 draw calls" for a long time after two came off the
+roster. This change adds two `TUNE` numbers, one predicate and one getter. It creates no mesh,
+touches no instance buffer and changes no material. **9 guards × (body + metal + ink shell) + 1 beam
++ 1 pool = 29, exactly as the comment says.**
+
+### §697.9 The frames — four cameras, both arms, and the two the level would not give
+
+Same camera in both arms, guards walked to where they are photographed by the shipped update
+path (§435.4), all four cameras through the `camDot` pre-flight (§604) before a browser was
+launched. `shots/guardfloat-{before,after}-*.png`; the settle report and the per-frame projected
+pixel boxes are in `shots/guardfloat-{before,after}.json`, so each file name is checkable against
+its contents rather than trusted.
+
+| frame | subject | before | after |
+|---|---|---|---|
+| `close-pylon` | guard4, from the SE at 5.5 m, 295 / 280 px | hanging in clear sky, boots at row 340 with nothing under them, the crate stack he is "standing on" well below and to his right | boots on the paving beside the crates |
+| `close-colonnade` | guard1, down the colonnade at 6.5 m, 249 / 258 px | floating over the brazier bowl, the flame in front of his shins | standing on the paving beside the brazier, soles on the stone |
+| `wide-open` | guard1, 75° lens, 142 / 137 px | clear of the paving above the brazier | on the paving |
+| `wide-colonnade` | guard1, 65° across the colonnade, 161 / 135 px | same, from 90° round | on the paving |
+
+The settle report is the numeric half of the same pair, and it covers the whole garrison:
+
+```
+        before                          after
+guard1  y  1.3494                       y  0
+guard4  y  1.9415                       y  0
+guard8  y -10.1485                      y -12          (the tomb floor)
+guard0/2/5/6  y 0     guard3  y 2     guard7  y 17     — identical in both arms
+```
+
+**Two claims, two samples each (§466.5).** "The soles meet the floor" is carried by two closes on
+two DIFFERENT guards, not two crops of one. "He is on the ground in context" is carried by two
+wides from stances 90° and 6 m of elevation apart, not one re-framed.
+
+**What the frames do not show, said rather than cropped out:** guard4 appears in
+`wide-colonnade` at 77 px behind the colonnade with his feet occluded — in the frame, but not
+evidence in it. And there is no picture of guard8 at all. See §697.6.
