@@ -53911,3 +53911,50 @@ returned 80 failures with the tree deleted mid-run, and on §701's contended arm
 Does not discriminate: a genuine budget regression that only manifests under load — which is why
 §701.12's figure was worth keeping in the record rather than overwriting with this one. Both readings
 stand; they are measurements of different boxes, not of different code.
+
+### §703.2 — RETRACTION: the green run confirmed nothing about cause, and the title of §703 is wrong
+
+§703 states, in its heading and its body, that **"F3 GC was contention"**, and offers as evidence a
+single 1034/1034 run on a box at 4.4% CPU. The lane that raised the contention hypothesis has since
+retracted it, and the retraction takes §703's conclusion with it. Corrected here rather than edited
+above, because the wrong reasoning is the part worth keeping visible.
+
+**What actually explains the failures.** `--test-name-pattern="F3 GC"` skips every other test in the
+file, so the process reaches F3 with a different allocation history — and F3's baseline is a driven
+loop against an idle loop moments apart, which is sensitive to exactly that. Run as the suite runs it:
+
+| tree | filtered to F3 | whole file, unfiltered |
+|---|---|---|
+| shipped | 3 runs → **3 fail** | 3 runs → **3 pass** |
+| pre-bottle control | 5 runs → **5 fail** | 3 runs → **2 pass, 1 fail** |
+
+F3 is a **pre-existing flaky arm at roughly 1-in-3 on the control tree**. The 100% failure rate that
+made contention look compelling was a property of the isolation harness, not of any tree or any box.
+
+**Why my run could not have shown what I said it showed.** A single green suite is numerically
+identical under both hypotheses — "the contention was removed" and "a 1-in-3 flake came up green"
+produce exactly the same 1034/1034. This file already carries that lesson in general form: *when a
+null result and a positive result are numerically identical, you need a second quantity that differs
+between them.* I had one quantity and drew a causal conclusion from it. The second quantity existed
+and was cheap — run the arm unfiltered, several times, on both trees — and the lane ran it.
+
+**The `padrest` datum I did not have, which settles it.** On a quiet box at the shipped commit, a run
+came back 1033/1034 with F3 **passing** and `padrest` R1b failing instead — an arm §675 already
+documents as a 1-in-5 flake. So the shipped commit fails intermittently on an idle box, from at least
+two independent flaky arms. My green run is one sample from that distribution, not a verdict on it.
+
+**What survives §703:** the run happened, at the shipped SHA, on a clean worktree whose cwd was
+verified to exist at the end, and it was green. That is a fact about one run. **What does not survive:**
+the causal claim in the heading, and §703's "confirmed rather than merely consistent" — it was merely
+consistent, and I wrote the stronger word.
+
+**The standing hazard this earns.** Re-running a flaky suite until it comes up green and then quoting
+only that run is how a contaminated figure gets laundered into a clean one. It is the more dangerous
+sibling of §694, because nothing about the green run looks wrong. The rule: **a suite figure quoted as
+evidence about a cause must come with the other runs beside it**, and a single green run is evidence
+that the tree can pass, never that a particular explanation is the right one.
+
+**Domain (§418.3).** Passes on: the four-run table above, which separates harness from tree from box.
+Fails on: §703 as originally written, and on any single-run figure offered as a causal claim. Does not
+discriminate: whether F3's underlying sensitivity is worth fixing — that is open, and is now recorded
+as open rather than closed with a plausible sentence.
