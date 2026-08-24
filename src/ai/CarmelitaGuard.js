@@ -199,6 +199,12 @@ export const UNREMAPPED = ['OH_Outline_Material', 'OutlineMat.001', 'TestMateria
  *     Stomach_LP           80.8%      — against Collar 90.9%, Badge_Loop 81.6%, BustRetopo 81.2%
  *     controls: Coat 36.4%, Hair_LP 26.8%, Shoes 11.9%   |   Irises (behind the cornea) 74.2%
  *
+ * `tools/carmsil.mjs` puts a second number on the same question from a different direction — it
+ * rasterises the character with no renderer and differences the pixel counts. The two mouth
+ * meshes account for **208 of 92,181 covered pixels (0.23%)** in the orthographic side
+ * projection: a sliver at the mouth line, not nothing. They are cut anyway, and that is stated as
+ * a price rather than as free.
+ *
  * So two of the three are sealed and **`Stomach_LP` is not** — it sits in the same band as the
  * collar, the badge and the chest piece, all of them worn and visible. It is therefore NOT cut,
  * even though cutting it would have bought another 416 triangles and even though a sentence

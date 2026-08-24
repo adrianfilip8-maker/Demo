@@ -32,6 +32,7 @@
  *
  *   node tools/carmsil.mjs --stage src
  *   node tools/carmsil.mjs --stage bind
+ *   node tools/carmsil.mjs --stage bind --carry legacy --head 0   # the pre-§702 picture
  *   node tools/carmsil.mjs --stage pose --pose /tmp/carmpose.json --shift 0
  *
  * Reads only committed assets. No fetch, no lock, no browser.
@@ -42,13 +43,16 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { PNG } from 'pngjs';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { bindToRig3, atlasOf, spliceHead } from '../src/ai/CarmelitaGuard.js';
+import { bindToRig3, atlasOf, spliceHead, CARRY } from '../src/ai/CarmelitaGuard.js';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const i = argv.indexOf(k); return i >= 0 && argv[i + 1] !== undefined ? argv[i + 1] : d; };
 const STAGE = arg('--stage', 'bind');
 const HEAD = arg('--head', '1') !== '0';
+/* `--carry legacy` reproduces the transfer that shipped before §702, so the committed
+   before/after pairs in shots/ stay reproducible from this tool after the fix landed. */
+const CARRY_MODE = arg('--carry', 'rebind') === 'legacy' ? CARRY.LEGACY : CARRY.REBIND;
 const POSE = arg('--pose', '');
 const SHIFT = Number(arg('--shift', 0));
 const TAG = arg('--tag', '');
@@ -106,7 +110,7 @@ if (STAGE === 'src') {
   });
   soup = { ...fromGeometries(list), label: 'src — source meshes, node transforms baked' };
 } else {
-  const asset = bindToRig3(gltf.scene);
+  const asset = bindToRig3(gltf.scene, { carry: CARRY_MODE });
   const geo = asset.geometry;
   if (STAGE === 'pose') {
     const dump = JSON.parse(readFileSync(POSE, 'utf8'));
