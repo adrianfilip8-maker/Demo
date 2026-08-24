@@ -52585,13 +52585,13 @@ taking a character from.
 
 ---
 
-## §698 — "Substitute in the bottle asset from the repo": the pickup was found by reading the scene graph, and three materials were measured rather than assumed to cost three draws
+## §700 — "Substitute in the bottle asset from the repo": the pickup was found by reading the scene graph, and three materials were measured rather than assumed to cost three draws
 
 The user, in full: **"Substitute in the bottle asset from the repo instead of the current one."**
 The clue bottle up to this point was a hand-authored lathe in `PropKit.clueBottle()` — "dumpy glass
 body, cork, wax seal", 147 verts / 198 tris, one flat material in §2.1.6's pickup blue.
 
-### §698.1 Which file — established by reading the scene graph, not by matching the filename
+### §700.1 Which file — established by reading the scene graph, not by matching the filename
 
 A filename search for "bottle" in the reference project returns **two** models and nothing in the
 names separates them. The one that is the pickup was resolved by following what actually instances
@@ -52618,7 +52618,7 @@ between the source tree and our committed `public/assets/sly-godot/bottle.glb`. 
 stated** by the source, imported on the project owner's standing instruction, which
 `PROVENANCE.md` records in those words rather than paraphrasing into permission.
 
-### §698.2 Zero images is the fact that decided how it is used
+### §700.2 Zero images is the fact that decided how it is used
 
 ```
 10,700 bytes   glTF 2.0   Khronos glTF Blender I/O v5.0.21
@@ -52637,7 +52637,7 @@ asset and calling it done. They come in verbatim as a vertex-colour stream — v
 authors them **linear** and three treats a colour attribute as linear working space, so
 sRGB-converting them on the way in would wash them out.
 
-### §698.3 The draw-call question, measured rather than reasoned about
+### §700.3 The draw-call question, measured rather than reasoned about
 
 Three materials, twelve bottles: the obvious reading is "3× on a set that ships twelve times", and
 the obvious reading is exactly what this project keeps being wrong about (§589 left a comment in
@@ -52692,7 +52692,7 @@ are now detected explicitly instead of being left to be read off the numbers:
 The isolated render is immune to both — it calls `renderer.render()` itself and reads the counter
 that call resets. **It is the figure; the in-situ arm only ever corroborates it.**
 
-### §698.4 The HUD icon and the world object are deliberately ONE thing
+### §700.4 The HUD icon and the world object are deliberately ONE thing
 
 `Icons.js` has said so since long before this change: the toast has to be recognisable as the thing
 you just picked up. Swapping the world mesh and leaving the icon would have silently desynced them,
@@ -52714,7 +52714,7 @@ mesh does not use, *and* a mesh regenerated to colours the icon was not updated 
 "collectable" is still said in blue — on the rim, where it carries at the distance a bottle is
 actually spotted from, rather than on a body that now has a surface of its own.
 
-### §698.5 What did NOT transfer: their scale, and the height that had to survive
+### §700.5 What did NOT transfer: their scale, and the height that had to survive
 
 Their scene instances the mesh at `scale 0.875`, so their bottle stands 0.875 m. **That number does
 not transfer and was not taken.** Ours delivers **0.43260 m** — the measured height of the
@@ -52737,7 +52737,7 @@ test rather than decoration.
 Matched on height, the imported bottle is the **slimmer** silhouette (±0.084 m against ±0.134 m).
 That is their design, and it is the visible part of the substitution.
 
-### §698.6 The motion is adapted from data, not ported from code
+### §700.6 The motion is adapted from data, not ported from code
 
 The `.glb` carries **zero animations** — the motion lives in `bottle.tscn`'s AnimationPlayer. Its
 numbers were read and **re-implemented** in our own loop (`Pickups.TUNE.clue*`): a 1.5 s cycle
@@ -52757,7 +52757,7 @@ script is neither. The pickup logic was already ours.
 Those are unmodified commercial recordings and are absolutely out of bounds; `Assets/Models/` is a
 different category and is the only directory this took from. The import tool touches nothing else.
 
-### §698.7 §666 — the class of fault that is invisible in dev by construction
+### §700.7 §666 — the class of fault that is invisible in dev by construction
 
 A leading-slash URL resolves to the domain root and 404s under the `/Demo/` prefix, and
 `vite build` emits sidecars under hashed names. Both are invisible on the dev server **by
@@ -52787,7 +52787,7 @@ The eighteen `net::ERR_ABORTED` are cancellations, not misses: the tool closes t
 build and a broken one alike. The gate is on 4xx/5xx and it is green. No bottle asset appears in
 the emitted bundle listing at all, which is the point — the mesh ships as JavaScript.
 
-### §698.8 The frames
+### §700.8 The frames
 
 `tools/bottleshot.mjs`, four cameras, before and after. **Every camera is computed from the
 bottle's authored placement literal, never from the live mesh** — the bottle bobs and now also
@@ -52821,19 +52821,32 @@ than +1.0, on a measured basis — at +1.0 `camDot` puts a surface 0.384 m off t
 §601's 0.48 m failure. +1.6 takes the near field to 1.129 m and moves the subject 0.13 m further
 away, which is the smaller distortion of the two.
 
-### §698.9 A section number that was taken while this lane was writing into it
+### §700.9 The same section number was taken twice while this lane was writing into it
 
-`bf0426f` and `1902e35` — both this lane's — were written against **§697**, and the guard lane
-landed its own §697 *("The guards are floating")* in this file eleven minutes after the second of
-them. Two lanes reserved the same number informally and the file arbitrated in favour of whoever
-committed the heading first.
+Not an anecdote — it happened **twice in one evening, to one lane, in both directions**, and that
+makes it a property of how these lanes share a checkout rather than a slip.
 
-The three code references were repointed to §698 here. **The two commit messages still say §697
-and are not being rewritten** — they are pushed history, the rule is fix forward, and a commit
-message is a record of what was believed at the time. This paragraph is the pointer for anyone who
-follows §697 out of `bf0426f` and lands in a block about floating guards.
+| | this lane wrote against | who took it | gap |
+|---|---|---|---|
+| first | **§697** in `bf0426f` and `1902e35` | the guard lane's §697 *("The guards are floating")* | 11 minutes after the second |
+| second | **§698** in the first draft of this very block | the Carmelita lane's §698–699 *("The repo seems to be updated")* | landed in the commit immediately before this one |
 
-### §698.10 Bounds — what this does not cover
+The second collision is the instructive one, because it happened *while writing the paragraph
+about the first*. §698 was checked and free — `grep` across the tree returned nothing — and it was
+taken between that check and the commit. **A grep for a free section number is a read with no
+lock, and every lane here is doing the same read against the same file.** Whoever commits the
+heading first wins; the loser does not find out until their own commit lands next to it.
+
+So the number is not reserved by intending to use it, by checking that it is free, or by writing
+it into code — only by being in the committed heading. This block is **§700**, renumbered after
+the fact, and the code references moved with it.
+
+**The commit messages still say §697 and §698 and are not being rewritten** — they are history,
+the rule is fix forward, and a commit message is a record of what was believed when it was
+written. This paragraph is the pointer for anyone who follows §697 out of `bf0426f`, or §698 out
+of this block's own commit, and lands somewhere about guards or about Carmelita's albedos.
+
+### §700.10 Bounds — what this does not cover
 
 - **Only the clue bottle changed.** No other prop, pickup or placement was touched, and none of
   the twelve bottle positions moved.
