@@ -1,0 +1,693 @@
+{
+  "settleSeconds": 60,
+  "park": [
+    600,
+    0,
+    600
+  ],
+  "frames": {
+    "portrait-pylon": {
+      "file": "shots/carm-after/portrait-pylon.png",
+      "ms": 60179,
+      "pos": [
+        -1,
+        1.9,
+        27.6
+      ],
+      "look": [
+        -4.93,
+        1.25,
+        31.5
+      ],
+      "fov": 20,
+      "about": [
+        "guard4 temple/pylon_gate"
+      ],
+      "note": "the close-pylon stance on a 20 deg lens, aimed at the chest: guard4 head-to-hip at 5.5 m, ~620 px of body with the head ~80 px. For reading the uniform and the face, and for seeing which atlas the chest is wearing.",
+      "projected": {
+        "guard0": {
+          "feetPx": [
+            -1343,
+            -15
+          ],
+          "headPx": [
+            -1327,
+            129
+          ],
+          "heightPx": 144,
+          "inFrame": false
+        },
+        "guard1": {
+          "feetPx": [
+            4347,
+            562
+          ],
+          "headPx": [
+            4449,
+            92
+          ],
+          "heightPx": 470,
+          "inFrame": false
+        },
+        "guard2": {
+          "feetPx": [
+            435,
+            -15
+          ],
+          "headPx": [
+            436,
+            129
+          ],
+          "heightPx": 144,
+          "inFrame": false
+        },
+        "guard3": {
+          "feetPx": [
+            455,
+            136
+          ],
+          "headPx": [
+            459,
+            443
+          ],
+          "heightPx": 307,
+          "inFrame": false
+        },
+        "guard4": {
+          "feetPx": [
+            639,
+            803
+          ],
+          "headPx": [
+            639,
+            75
+          ],
+          "heightPx": 728,
+          "inFrame": false
+        },
+        "guard5": {
+          "feetPx": [
+            -1377,
+            34
+          ],
+          "headPx": [
+            -1367,
+            126
+          ],
+          "heightPx": 92,
+          "inFrame": false
+        },
+        "guard6": {
+          "feetPx": [
+            -725,
+            53
+          ],
+          "headPx": [
+            -720,
+            125
+          ],
+          "heightPx": 72,
+          "inFrame": false
+        },
+        "guard7": {
+          "feetPx": [
+            -715,
+            797
+          ],
+          "headPx": [
+            -708,
+            884
+          ],
+          "heightPx": 87,
+          "inFrame": false
+        },
+        "guard8": {
+          "feetPx": [
+            -1063,
+            -286
+          ],
+          "headPx": [
+            -1057,
+            -226
+          ],
+          "heightPx": 60,
+          "inFrame": false
+        }
+      }
+    },
+    "portrait-colonnade": {
+      "file": "shots/carm-after/portrait-colonnade.png",
+      "ms": 55137,
+      "pos": [
+        -18.44,
+        3,
+        28.5
+      ],
+      "look": [
+        -18.46,
+        1.25,
+        22.32
+      ],
+      "fov": 18,
+      "about": [
+        "guard1 temple/courtyard_ring"
+      ],
+      "note": "the close-colonnade stance on an 18 deg lens, aimed at the chest: guard1 at 6.2 m, ~554 px of body, head ~82 px. The SECOND sample for the same claim, on a different guard from a different bearing (§466.5) — not a re-crop of the pylon frame.",
+      "projected": {
+        "guard0": {
+          "feetPx": [
+            1683,
+            -109
+          ],
+          "headPx": [
+            1697,
+            -226
+          ],
+          "heightPx": 117,
+          "inFrame": false
+        },
+        "guard1": {
+          "feetPx": [
+            641,
+            764
+          ],
+          "headPx": [
+            641,
+            89
+          ],
+          "heightPx": 675,
+          "inFrame": false
+        },
+        "guard2": {
+          "feetPx": [
+            4164,
+            20
+          ],
+          "headPx": [
+            4249,
+            -182
+          ],
+          "heightPx": 202,
+          "inFrame": false
+        },
+        "guard3": {
+          "feetPx": [
+            6067,
+            -68
+          ],
+          "headPx": [
+            6355,
+            -516
+          ],
+          "heightPx": 448,
+          "inFrame": false
+        },
+        "guard4": {
+          "feetPx": [
+            -13857,
+            -3632
+          ],
+          "headPx": [
+            -10865,
+            -1152
+          ],
+          "heightPx": 2480,
+          "inFrame": false
+        },
+        "guard5": {
+          "feetPx": [
+            1312,
+            -171
+          ],
+          "headPx": [
+            1318,
+            -247
+          ],
+          "heightPx": 76,
+          "inFrame": false
+        },
+        "guard6": {
+          "feetPx": [
+            1715,
+            -178
+          ],
+          "headPx": [
+            1724,
+            -249
+          ],
+          "heightPx": 71,
+          "inFrame": false
+        },
+        "guard7": {
+          "feetPx": [
+            1955,
+            -975
+          ],
+          "headPx": [
+            1970,
+            -1084
+          ],
+          "heightPx": 109,
+          "inFrame": false
+        },
+        "guard8": {
+          "feetPx": [
+            1313,
+            93
+          ],
+          "headPx": [
+            1317,
+            44
+          ],
+          "heightPx": 49,
+          "inFrame": false
+        }
+      }
+    },
+    "close-pylon": {
+      "file": "shots/carm-after/close-pylon.png",
+      "ms": 72068,
+      "pos": [
+        -1,
+        1.9,
+        27.6
+      ],
+      "look": [
+        -4.93,
+        1.8,
+        31.5
+      ],
+      "fov": 50,
+      "about": [
+        "guard4 temple/pylon_gate"
+      ],
+      "note": "from the south-east at 5.7 m, the one bearing where the crate stack does not hide his boots. post ~280 px, pre ~295 px",
+      "projected": {
+        "guard0": {
+          "feetPx": [
+            -100,
+            296
+          ],
+          "headPx": [
+            -99,
+            349
+          ],
+          "heightPx": 53,
+          "inFrame": false
+        },
+        "guard1": {
+          "feetPx": [
+            2063,
+            515
+          ],
+          "headPx": [
+            2069,
+            335
+          ],
+          "heightPx": 180,
+          "inFrame": false
+        },
+        "guard2": {
+          "feetPx": [
+            563,
+            296
+          ],
+          "headPx": [
+            563,
+            349
+          ],
+          "heightPx": 53,
+          "inFrame": false
+        },
+        "guard3": {
+          "feetPx": [
+            571,
+            352
+          ],
+          "headPx": [
+            571,
+            468
+          ],
+          "heightPx": 116,
+          "inFrame": false
+        },
+        "guard4": {
+          "feetPx": [
+            640,
+            609
+          ],
+          "headPx": [
+            640,
+            329
+          ],
+          "heightPx": 280,
+          "inFrame": true
+        },
+        "guard5": {
+          "feetPx": [
+            -114,
+            314
+          ],
+          "headPx": [
+            -114,
+            348
+          ],
+          "heightPx": 34,
+          "inFrame": false
+        },
+        "guard6": {
+          "feetPx": [
+            129,
+            321
+          ],
+          "headPx": [
+            129,
+            348
+          ],
+          "heightPx": 27,
+          "inFrame": false
+        },
+        "guard7": {
+          "feetPx": [
+            114,
+            607
+          ],
+          "headPx": [
+            114,
+            642
+          ],
+          "heightPx": 35,
+          "inFrame": false
+        },
+        "guard8": {
+          "feetPx": [
+            13,
+            197
+          ],
+          "headPx": [
+            13,
+            219
+          ],
+          "heightPx": 22,
+          "inFrame": false
+        }
+      }
+    },
+    "close-colonnade": {
+      "file": "shots/carm-after/close-colonnade.png",
+      "ms": 110062,
+      "pos": [
+        -18.44,
+        3,
+        28.5
+      ],
+      "look": [
+        -18.46,
+        1.05,
+        22.32
+      ],
+      "fov": 45,
+      "about": [
+        "guard1 temple/courtyard_ring"
+      ],
+      "note": "down the colonnade from the north at 6.2 m — the side the brazier is NOT on. post ~258 px, pre ~250 px, feet clear",
+      "projected": {
+        "guard0": {
+          "feetPx": [
+            1041,
+            154
+          ],
+          "headPx": [
+            1048,
+            108
+          ],
+          "heightPx": 46,
+          "inFrame": true
+        },
+        "guard1": {
+          "feetPx": [
+            640,
+            488
+          ],
+          "headPx": [
+            640,
+            230
+          ],
+          "heightPx": 258,
+          "inFrame": true
+        },
+        "guard2": {
+          "feetPx": [
+            1994,
+            203
+          ],
+          "headPx": [
+            2031,
+            125
+          ],
+          "heightPx": 78,
+          "inFrame": false
+        },
+        "guard3": {
+          "feetPx": [
+            2728,
+            170
+          ],
+          "headPx": [
+            2852,
+            -5
+          ],
+          "heightPx": 175,
+          "inFrame": false
+        },
+        "guard4": {
+          "feetPx": [
+            -5211,
+            -1278
+          ],
+          "headPx": [
+            -3850,
+            -256
+          ],
+          "heightPx": 1022,
+          "inFrame": false
+        },
+        "guard5": {
+          "feetPx": [
+            899,
+            129
+          ],
+          "headPx": [
+            902,
+            100
+          ],
+          "heightPx": 29,
+          "inFrame": true
+        },
+        "guard6": {
+          "feetPx": [
+            1054,
+            127
+          ],
+          "headPx": [
+            1058,
+            99
+          ],
+          "heightPx": 28,
+          "inFrame": true
+        },
+        "guard7": {
+          "feetPx": [
+            1152,
+            -186
+          ],
+          "headPx": [
+            1159,
+            -229
+          ],
+          "heightPx": 43,
+          "inFrame": false
+        },
+        "guard8": {
+          "feetPx": [
+            898,
+            232
+          ],
+          "headPx": [
+            900,
+            213
+          ],
+          "heightPx": 19,
+          "inFrame": true
+        }
+      }
+    }
+  },
+  "subjects": [
+    {
+      "id": "guard0",
+      "type": "temple",
+      "route": "south_gate",
+      "pos": [
+        0.035,
+        0,
+        -12.859
+      ],
+      "u": 0,
+      "speed": 0,
+      "state": "patrol"
+    },
+    {
+      "id": "guard1",
+      "type": "temple",
+      "route": "courtyard_ring",
+      "pos": [
+        -18.457,
+        0,
+        22.321
+      ],
+      "u": 0.0525,
+      "speed": 0,
+      "state": "patrol"
+    },
+    {
+      "id": "guard2",
+      "type": "heavy",
+      "route": "courtyard_ring",
+      "pos": [
+        17.706,
+        0,
+        4.953
+      ],
+      "u": 0.6041,
+      "speed": 0,
+      "state": "patrol"
+    },
+    {
+      "id": "guard3",
+      "type": "temple",
+      "route": "obelisk_watch",
+      "pos": [
+        7.643,
+        2,
+        17.33
+      ],
+      "u": 0.0502,
+      "speed": 1.457,
+      "state": "patrol"
+    },
+    {
+      "id": "guard4",
+      "type": "temple",
+      "route": "pylon_gate",
+      "pos": [
+        -4.931,
+        0,
+        31.506
+      ],
+      "u": 0.2271,
+      "speed": 0,
+      "state": "patrol"
+    },
+    {
+      "id": "guard5",
+      "type": "temple",
+      "route": "hall_nave",
+      "pos": [
+        0.008,
+        0,
+        -36.267
+      ],
+      "u": 0.5779,
+      "speed": 1.55,
+      "state": "patrol"
+    },
+    {
+      "id": "guard6",
+      "type": "heavy",
+      "route": "hall_weave",
+      "pos": [
+        13.205,
+        0,
+        -40.797
+      ],
+      "u": 0.7049,
+      "speed": 1.009,
+      "state": "patrol"
+    },
+    {
+      "id": "guard7",
+      "type": "temple",
+      "route": "rooftop_run",
+      "pos": [
+        9.075,
+        17,
+        -25.292
+      ],
+      "u": 0.2655,
+      "speed": 1.736,
+      "state": "patrol"
+    },
+    {
+      "id": "guard8",
+      "type": "heavy",
+      "route": "tomb_vault",
+      "pos": [
+        9.095,
+        -12,
+        -65.06
+      ],
+      "u": 0.3952,
+      "speed": 0,
+      "state": "patrol"
+    }
+  ],
+  "errors": [],
+  "camdot": {
+    "portrait-pylon": {
+      "ok": true,
+      "reasons": [],
+      "near": 0,
+      "dirs": 26,
+      "nearest": 1.903,
+      "forward": 10.739,
+      "forwardName": "arch:court:hieroglyph_wall",
+      "targetLen": 5.575,
+      "subjectBlocked": false
+    },
+    "portrait-colonnade": {
+      "ok": true,
+      "reasons": [],
+      "near": 0,
+      "dirs": 26,
+      "nearest": 2.227,
+      "forward": 11.001,
+      "forwardName": "paving:court",
+      "targetLen": 6.423,
+      "subjectBlocked": false
+    },
+    "close-pylon": {
+      "ok": true,
+      "reasons": [],
+      "near": 0,
+      "dirs": 26,
+      "nearest": 1.903,
+      "forward": 10.93,
+      "forwardName": "arch:court:hieroglyph_wall",
+      "targetLen": 5.538,
+      "subjectBlocked": false
+    },
+    "close-colonnade": {
+      "ok": true,
+      "reasons": [],
+      "near": 0,
+      "dirs": 26,
+      "nearest": 2.227,
+      "forward": 9.928,
+      "forwardName": "paving:court",
+      "targetLen": 6.48,
+      "subjectBlocked": false
+    }
+  },
+  "consoleErrors": []
+}
