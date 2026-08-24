@@ -244,7 +244,7 @@ async function main() {
        nothing it does to `visible` can reach a frame; it restores every flag it touches, and its
        own restore-check would say so if it did not. */
     process.stdout.write('\n· draw-call measurement (same boot)\n');
-    const draw = await page.evaluate(measureInPage, NAMES);
+    const draw = await page.evaluate(measureInPage, { names: NAMES });
     reportDraw(draw);
 
     if (consoleErrors.length) process.stdout.write(`\nconsole errors:\n  ${consoleErrors.join('\n  ')}\n`);

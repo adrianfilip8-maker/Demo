@@ -32,14 +32,31 @@ import { withGame } from './harness.mjs';
 export const NAMES = ['pickup_clues', 'clue_bottles'];
 
 /**
+ * In-situ sample pairs. NINE is the default and is what a staged shot should keep — there the
+ * rAF loop is stopped, nothing re-renders between callbacks, and nine pairs cost seconds.
+ *
+ * Under `withGame` the game loop runs, so **every one of these frames is a full software render
+ * of the whole level**: 9 pairs × 2 reads × 12 settle frames = 216 rendered frames, which on this
+ * container measured out at over an hour of held capture lock and was killed at 74 minutes with
+ * nothing printed. That is not a better measurement than a short one — the isolated render below
+ * is the figure either way, this arm only ever corroborates it, and an hour of exclusive lock
+ * with five other lanes queued is a cost paid by everyone else for a number the tool itself
+ * says not to quote.
+ *
+ * So it is settable, and BOTH ARMS OF A BEFORE/AFTER MUST USE THE SAME VALUE — a delta assembled
+ * from two different sample counts is two instruments, not one.
+ */
+export const DEFAULT_SAMPLES = 9;
+
+/**
  * The whole measurement, as ONE function so `bottleshot.mjs` can run it inside its own boot
  * instead of taking the capture lock a second time. Playwright serialises this to the page, so
- * it must close over nothing — everything it needs arrives in `names`.
+ * it must close over nothing — everything it needs arrives in the argument.
  *
  * A boot on this container is minutes of exclusive lock; two tools measuring the same frame is
  * two waits for one answer.
  */
-export const measureInPage = async (names) => {
+export const measureInPage = async ({ names, samples = 9 }) => {
     const eng = window.__ENGINE;
     const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
     /* Several frames, not one: `Engine.stats` is written at the end of a frame and the first
@@ -100,7 +117,7 @@ export const measureInPage = async (names) => {
     /* ---- instrument 2: in-situ A/B, sampled ---------------------------------------------- */
     const was = found.map((m) => m.visible);
     const onS = [], offS = [];
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < samples; i++) {
       found.forEach((m, k) => { m.visible = was[k]; });
       onS.push((await read()).draws);
       found.forEach((m) => { m.visible = false; });
@@ -114,7 +131,7 @@ export const measureInPage = async (names) => {
       census,
       isolated: { empty, onlyClues, cost: onlyClues - empty, per },
       insitu: {
-        on: med(onS), off: med(offS), onS, offS,
+        on: med(onS), off: med(offS), onS, offS, samples,
         spread: Math.max(...onS) - Math.min(...onS),
       },
       back,
@@ -139,22 +156,45 @@ for (const p of I.per) console.log(`     ${p.name.padEnd(14)} alone: ${p.calls} 
 console.log(`  ==> the clue-bottle set costs ${I.cost} draw call(s)` +
   `  (${I.per.filter((p) => p.calls > 0).length} of ${I.per.length} meshes drawing)`);
 
-console.log('\nIN SITU — the live frame, 9 paired samples, median');
+console.log(`\nIN SITU — the live frame, ${S.samples ?? '?'} paired samples, median` +
+  (S.samples < DEFAULT_SAMPLES ? '  (SHORTENED — corroboration only, see DEFAULT_SAMPLES)' : ''));
 console.log(`  bottles VISIBLE   median ${String(S.on).padStart(4)}   samples ${S.onS.join(' ')}`);
 console.log(`  bottles HIDDEN    median ${String(S.off).padStart(4)}   samples ${S.offS.join(' ')}`);
 console.log(`  ==> median delta ${S.on - S.off} draw call(s), against a frame-to-frame spread of ${S.spread}`);
-if (S.spread > 2) {
+/**
+ * This arm has now failed in BOTH directions, and neither failure announced itself, so both are
+ * checked for explicitly rather than left to be read off the numbers:
+ *
+ *   MOVING  under `withGame` the rAF loop runs, guards and the camera move, and the frame's draw
+ *           count moves with them. First run: 275 visible / 275 hidden / 277 restored. A single
+ *           unpaired reading there is noise quoted as a measurement.
+ *   FROZEN  under a staged shot (`setShot`) the rAF loop is STOPPED, so `Engine.stats.drawCalls`
+ *           is never rewritten and every sample returns the same stale number. That is what a
+ *           spread of 0 with a delta of 0 means, and it looks exactly like a clean result.
+ *
+ * The isolated render is unaffected by both — it calls `renderer.render()` itself and reads the
+ * counter that call resets. It is the figure; this arm only ever corroborates it.
+ */
+if (S.spread === 0 && S.on - S.off === 0 && I.cost > 0) {
+  console.log('  !! NOT A MEASUREMENT: hiding meshes that provably cost ' + I.cost + ' draw(s) changed');
+  console.log(`     nothing, and the frame did not move at all across ${S.samples} samples. \`Engine.stats\` is`);
+  console.log('     frozen — the rAF loop is stopped in a staged shot. Use the isolated count.');
+} else if (S.spread > 2) {
   console.log(`  (the live frame moves by ${S.spread} draws on its own, so this arm is corroboration ` +
     'for the isolated count above, not a figure in its own right)');
 }
 if (res.consoleErrors?.length) console.log(`\nconsole errors:\n  ${res.consoleErrors.join('\n  ')}`);
 }
 
-/* Run standalone. `bottleshot.mjs` imports the two exports above and folds this measurement into
-   its own boot, so the pair costs one capture lock rather than two. */
+/* Run standalone. `bottleshot.mjs` imports the exports above and folds this measurement into its
+   own boot, so the pair costs one capture lock rather than two.
+
+   SAMPLES=n shortens the in-situ arm — see DEFAULT_SAMPLES for why that is a real choice on this
+   container and not a shortcut. Use the SAME n on both halves of a before/after. */
 if (import.meta.url === `file://${process.argv[1]}`) {
+  const samples = +(process.env.SAMPLES || DEFAULT_SAMPLES);
   const res = await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page, info }) =>
-    page.evaluate(measureInPage, NAMES)
+    page.evaluate(measureInPage, { names: NAMES, samples })
       .then((r) => ({ ...r, renderer: info.renderer, consoleErrors: info.consoleErrors })));
   console.log(`renderer: ${res.renderer}\n`);
   reportDraw(res);
