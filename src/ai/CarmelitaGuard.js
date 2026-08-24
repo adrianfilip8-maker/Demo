@@ -26,17 +26,66 @@ import { RIG3 } from '../player/SlyModel3.js';
  * deltas *on top of RIG3's bind* — its generated header says so. Binding Carmelita's mesh at RIG3's
  * bind is therefore the pose her own clips were written for.
  *
- * ── The rebind, which is `SlyModelGodot`'s ──────────────────────────────────────────────────
+ * ── The carry into our bind, and the formula that was wrong for sixteen days (§702) ─────────
  * Keep the artist's geometry and skin weights, re-express those weights over our bones, and carry
- * the mesh from the source bind pose into ours:
+ * the mesh from the source bind pose into ours. The transfer used to be:
  *
- *     v' = Σ w · ourBindWorld[target(j)] · srcInverseBind[j] · v
+ *     v' = Σ w · ourBindWorld[target(j)] · srcInverseBind[j] · v          ← WRONG, `CARRY.LEGACY`
  *
- * `srcInverseBind` comes from the loaded `Skeleton.boneInverses` rather than from re-deriving the
- * armature's world matrices, because that is the value the source file actually asserts. RIG3's
- * bind carries no rotation (`instantiate` places every bone by position alone), so `ourBindWorld`
- * is a pure translation and the rotation in `M` is entirely the *undoing* of the source bind —
- * which is the whole operation.
+ * with a header arguing that because RIG3's bind carries no rotation, `ourBindWorld` is a pure
+ * translation and "the rotation in `M` is entirely the *undoing* of the source bind — which is
+ * the whole operation". The premise is true and the conclusion does not follow. `srcInverseBind`
+ * undoes the source bone's bind ROTATION, and nothing puts a target rotation back, so every
+ * vertex is left rotated into its source bone's local frame and then planted world-axis-aligned.
+ * Measured in this asset: 194 of 199 source bind matrices carry more than 1° of rotation, and the
+ * joints that matter carry a lot of it —
+ *
+ *     upper_arm 135.2°   forearm 130.3°   Hand (median) 147.1°   shin 172.8°   foot 149.0°
+ *     the 51 joints of the face rig fold into `head` spanning 0.83°–180.0°, median 132.8°
+ *
+ * so the limbs come out splayed and the face is scattered through 180° and collapsed onto one
+ * point. That is the sculpt the owner reported, and it is present at the BIND POSE — before any
+ * animation, and therefore not the §309 skinIndex defect, which is invisible at bind.
+ *
+ * The correct carry is a **pure translation per target bone**. Writing the source bind as
+ * `T(p_j)·R_j`, keeping the bone's own orientation and moving only its position gives
+ *
+ *     T(q_t) · R_j · (T(p_j)·R_j)⁻¹  =  T(q_t) · R_j · R_j⁻¹ · T(−p_j)  =  T(q_t − p_j)
+ *
+ * — the rotations cancel exactly. So each mapped region is rigidly translated from where the
+ * artist put it to where our bind wants it, and the four-weight blend stretches the joints
+ * between. `q_t` is our bind position; `p_t` is the source bind position of the **direct** bone
+ * for that target, not of the individual folded joint — otherwise the 51 face joints, whose bind
+ * positions span 0.97 m, would each be translated differently and scatter the face all over
+ * again. `CARRY.REBIND`, and the default.
+ *
+ * Normals are left exactly as authored under `REBIND`: a translation cannot rotate them.
+ *
+ * ── The prop subtree, which the wrong carry was hiding ──────────────────────────────────────
+ * `MainBody`, `Barrel` and `Antennae003` are Carmelita's shock pistol, and they are **100%
+ * weighted to the `ShockPistol` armature root** — a sibling of the body root `Bone001`, not a
+ * descendant of it. The source parks the pistol 0.86 m to her side and 0.9 m behind her; the
+ * broken carry rotated it into her torso where it read as part of the jumble. A correct carry
+ * puts it back where the source parked it, which is a pistol floating in mid-air beside every
+ * guard. It is excluded — by the ARMATURE, the same way §698 read the atlas split off the
+ * importer rather than guessing from a node name:
+ *
+ *     drop a mesh iff 100% of its weight lands on joints whose armature root is not an ancestor
+ *     of any BONE_MAP joint.
+ *
+ * That rule drops exactly those three (1,672 of 29,791 tris) and keeps `Legs`, which carries
+ * 3.6% on the `Hips_Center` helper root and 96.4% on the body — so it is shown able to reject.
+ * There is no hand attach, no holster and no clip that draws a gun (§698: `Shoot` is a gun
+ * animation on a garrison that swings), so re-attaching it would be authoring, not importing.
+ *
+ * ── Base origin, preserved from the source rather than from the old bug ─────────────────────
+ * The source mesh is base-origin: `Shoes` reaches y = 0.000 exactly. RIG3's `footL` sits at
+ * y 0.064 while Carmelita's boot is 0.118 m from ankle to sole, so the honest carry lands her
+ * sole at −0.054 and she would stand 5.4 cm into the pavement. The merged geometry is therefore
+ * lifted so its lowest vertex sits at y = 0 — one uniform translation, reported as
+ * `stats.soleLift`, anchored on the source's own base-origin property and NOT on the 0.00543 m
+ * the broken carry happened to produce. §697's ground work reads the lowest skinned foot vertex,
+ * so `tools/guardfloat.mjs` is the check on this and was re-run.
  *
  * Driving her own 199-joint hierarchy instead would need a full retarget layer and would leave
  * every clip, the cone, the alert ladder and every guard interaction to be rewritten.
@@ -158,15 +207,26 @@ export function rig3BindWorld() {
 }
 
 /**
+ * How the mesh is carried from the source bind pose into RIG3's — see the header.
+ *
+ * `REBIND` is the corrected transfer and the default. `LEGACY` reproduces the transfer that
+ * shipped from 2026-08-08 to §702 **exactly**, including the pistol, so the defect can be put
+ * back in one token and a before/after arm is a real comparison rather than a reconstruction.
+ */
+export const CARRY = { REBIND: 'rebind', LEGACY: 'legacy' };
+
+/**
  * Bind the loaded scene to RIG3.
  *
  * Pure over `scene` so it runs headless: the emitted `.glb` carries no images, so
  * `GLTFLoader.parse` needs no DOM and this whole path is testable in plain Node.
  *
  * @param {THREE.Object3D} scene   the parsed glTF scene
+ * @param {{carry?: string}} [opts]  `CARRY.REBIND` (default) or `CARRY.LEGACY`
  * @returns {{geometry, skeleton, tris, missing, stats}} the `GuardModel` asset shape
  */
-export function bindToRig3(scene) {
+export function bindToRig3(scene, opts = {}) {
+  const carry = opts.carry === CARRY.LEGACY ? CARRY.LEGACY : CARRY.REBIND;
   scene.updateMatrixWorld(true);
 
   /* ---- 1. collect the skinned meshes and the one skeleton they share ---- */
@@ -206,14 +266,38 @@ export function bindToRig3(scene) {
   const order = RIG3.BONE_ORDER.filter((b) => used.has(b));
   const boneIndex = new Map(order.map((n, i) => [n, i]));
 
+  /* ---- 3b. the armature roots, so a detached prop is separable from the body ----
+     `Bone001` is the body root because it is an ancestor of the mapped joints; `ShockPistol` is
+     a sibling of it and is the pistol. Read from the hierarchy, never from a node name. */
+  const armatureRoot = srcBones.map((b) => { let p = b; while (p.parent?.isBone) p = p.parent; return p.name; });
+  const bodyRoots = new Set();
+  for (let i = 0; i < srcBones.length; i++) if (direct.has(srcBones[i].name)) bodyRoots.add(armatureRoot[i]);
+  const isProp = armatureRoot.map((r) => !bodyRoots.has(r));
+
   /* ---- 4. the bind transfer, one matrix per SOURCE joint ---- */
   const bindWorld = rig3BindWorld();
+  /* Source bind world POSITION of the direct bone for each target — the anchor every joint
+     folded into that target shares, so a fold cannot scatter the region it belongs to. */
+  const srcAnchor = new Map();
+  for (let i = 0; i < srcBones.length; i++) {
+    const t = direct.get(srcBones[i].name);
+    if (!t || srcAnchor.has(t)) continue;
+    srcAnchor.set(t, new THREE.Vector3().setFromMatrixPosition(
+      new THREE.Matrix4().copy(skel.boneInverses[i]).invert()));
+  }
   const M = srcBones.map((b, i) => {
     const t = targetOf[i];
     const ours = new THREE.Matrix4().makeTranslation(
       bindWorld[t].x, bindWorld[t].y, bindWorld[t].z);
-    return ours.multiply(skel.boneInverses[i]);
+    if (carry === CARRY.LEGACY) return ours.multiply(skel.boneInverses[i]);
+    /* T(q_t − p_t): the source bone's own orientation is KEPT, so the rotations cancel and the
+       region is translated rigidly. See the header for the derivation. */
+    const a = srcAnchor.get(t) || new THREE.Vector3();
+    return new THREE.Matrix4().makeTranslation(
+      bindWorld[t].x - a.x, bindWorld[t].y - a.y, bindWorld[t].z - a.z);
   });
+  /* Under REBIND every `M` is a pure translation, so the authored normals are already correct
+     and `Q` is identity by construction. Extracting it anyway keeps one code path. */
   const Q = M.map((m) => new THREE.Quaternion().setFromRotationMatrix(
     new THREE.Matrix4().extractRotation(m)));
 
@@ -229,7 +313,27 @@ export function bindToRig3(scene) {
   const p0 = new THREE.Vector3(), pa = new THREE.Vector3(), pt = new THREE.Vector3();
   const n0 = new THREE.Vector3(), na = new THREE.Vector3(), nt = new THREE.Vector3();
 
+  const dropped = [];
   for (const mesh of skinned) {
+    /* A mesh whose weight lands ENTIRELY on a non-body armature root is a detached prop, not
+       part of the character. Measured off the hierarchy, per mesh, so `Legs` — 3.6% on the
+       `Hips_Center` helper root, 96.4% on the body — is kept and the pistol is not. */
+    if (carry === CARRY.REBIND) {
+      const si0 = mesh.geometry.attributes.skinIndex, sw0 = mesh.geometry.attributes.skinWeight;
+      if (si0 && sw0) {
+        let body = 0, total = 0;
+        for (let k = 0; k < sw0.array.length; k++) {
+          const w = sw0.array[k];
+          if (!(w > 0)) continue;
+          total += w;
+          if (!isProp[si0.array[k]]) body += w;
+        }
+        if (total > 0 && body <= 0) {
+          dropped.push({ name: mesh.name, root: armatureRoot[si0.array[0]] || '?' });
+          continue;
+        }
+      }
+    }
     const g = mesh.geometry.clone();
     /* Every mesh sits under its own node transform; bake it before touching vertices or the
        parts assemble in the wrong places. The skin's bind is in skeleton space, and these nodes
@@ -316,6 +420,22 @@ export function bindToRig3(scene) {
   merged.addGroup(0, bodyCount, 0);
   if (headCount) merged.addGroup(headStart, headCount, 1);
 
+  /* ---- 6b. base origin: put the sole on the rig's ground plane ----
+     The source mesh is base-origin (`Shoes` reaches y = 0.000 exactly) and the guard mount
+     assumes it: `Guard._step` assigns root Y from the ground probe. RIG3's ankle is 0.064 above
+     the floor and Carmelita's boot is 0.118 from ankle to sole, so the honest carry lands her
+     5.4 cm under the pavement. One uniform lift restores the property the source asserts —
+     stated as a normalisation, not measured, and checked by `tools/guardfloat.mjs`. */
+  let soleLift = 0;
+  if (carry === CARRY.REBIND) {
+    merged.computeBoundingBox();
+    soleLift = -merged.boundingBox.min.y;
+    if (Math.abs(soleLift) > 1e-6) {
+      merged.translate(0, soleLift, 0);
+      merged.computeBoundingBox();
+    }
+  }
+
   /* ---- 7. the skeleton spec `instantiate()` wants ---- */
   const skeleton = RIG3.SKELETON
     .filter(([n]) => used.has(n))
@@ -346,6 +466,8 @@ export function bindToRig3(scene) {
       meshes: skinned.length, bones: order.length, folded,
       srcJoints: srcBones.length, groups: merged.groups.length,
       bodyMeshes: groups[0].length, headMeshes: groups[1].length,
+      carry, soleLift: Math.round(soleLift * 1e5) / 1e5,
+      dropped: dropped.map((d) => d.name), droppedRoots: [...new Set(dropped.map((d) => d.root))],
     },
   };
 }
@@ -355,7 +477,7 @@ export function bindToRig3(scene) {
  * `Guards.init()` falls back to the procedural body rather than losing the garrison. Ten headless
  * suites build `Guards` with no fetch at all and must keep working.
  */
-export async function loadCarmelitaGuard(url = ASSET) {
+export async function loadCarmelitaGuard(url = ASSET, opts = {}) {
   /* No DOM means no page to resolve `assets/…` against. `GLTFLoader.loadAsync` on a relative URL
    * in Node does not reject — it never settles at all, and `node --test` reports every test in the
    * file as "Promise resolution is still pending but the event loop has already resolved". That is
@@ -370,7 +492,7 @@ export async function loadCarmelitaGuard(url = ASSET) {
       loader.loadAsync(url),
       new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000)),
     ]);
-    const asset = bindToRig3(gltf.scene);
+    const asset = bindToRig3(gltf.scene, opts);
     asset.source = url;
     return asset;
   } catch {

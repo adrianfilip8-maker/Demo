@@ -157,8 +157,14 @@ test('GUARD_DRESS names every Carmelita region — an unnamed region would paint
   const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
   const gltf = await new Promise((res, rej) => new GLTFLoader().parse(ab, '', res, rej));
   const bound = bindToRig3(gltf.scene);
-  assert.ok(Array.isArray(bound.regions) && bound.regions.length >= 20,
+  /* The count is taken from the bind's own group tally rather than pinned to a literal: §702
+     drops the three shock-pistol meshes (they are 100% weighted to a non-body armature root), so
+     a `>= 20` literal here failed on a change that is correct. What must hold is that every mesh
+     that reached a group also left a region behind. */
+  assert.ok(Array.isArray(bound.regions) && bound.regions.length >= 15,
     `bindToRig3 returned ${bound.regions?.length ?? 0} regions — the metadata is missing`);
+  assert.equal(bound.regions.length, bound.stats.bodyMeshes + bound.stats.headMeshes,
+    'a merged mesh left no region behind — the dress would paint the wrong vertices');
   const nV = bound.geometry.getAttribute('position').count;
   let covered = 0, inspected = 0;
   const missing = [];
@@ -167,7 +173,7 @@ test('GUARD_DRESS names every Carmelita region — an unnamed region would paint
     covered += r.count;
     if (GUARD_DRESS[r.name] === undefined) missing.push(r.name);
   }
-  assert.ok(inspected >= 20, `inspected only ${inspected} regions`);
+  assert.ok(inspected >= 15, `inspected only ${inspected} regions`);
   assert.equal(covered, nV, `regions cover ${covered}/${nV} vertices — starts have drifted`);
   assert.deepEqual(missing, [], 'regions with no GUARD_DRESS entry would render identity white');
   // Contiguity: regions are disjoint and ascending by construction.

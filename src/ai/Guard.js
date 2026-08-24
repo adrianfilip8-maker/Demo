@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { rng } from '../core/Rand.js';
 import { buildGuardAssets, instantiate, GROUPS, GUARD_PALETTE } from './GuardModel.js';
 import { removeOutlineShell } from '../render/Outline.js';
-import { loadCarmelitaGuard, CARMELITA_TEX } from './CarmelitaGuard.js';
+import { loadCarmelitaGuard, CARMELITA_TEX, CARRY as CARMELITA_CARRY } from './CarmelitaGuard.js';
 import { GuardAnim } from './GuardAnim.js';
 import {
   ROSTER, buildRoutes, Senses, VISION, DETECT, STATE, stateForSuspicion, speedFor,
@@ -235,6 +235,17 @@ const TUNE = {
      off-by-one is UNFIXED here and she is still skinned one bone early under animation; a
      texture cannot address that and this does not pretend to. */
   carmelitaTex: 1,
+
+  /* The bind-transfer repair — §702, the owner's "the sculpt seems off and the head seems to be
+     missing". 1 = `CARRY.REBIND`, the corrected pure-translation carry (the default); 0 =
+     `CARRY.LEGACY`, the transfer that shipped from 2026-08-08, byte-for-byte, pistol included.
+     The old formula undid each source bone's bind ROTATION and put none back, so the limbs came
+     out rotated 116°–173° and the 51 face joints were scattered through 180° onto one point —
+     which is why she had no readable head. It is present at the BIND POSE and is therefore NOT
+     §309's skinIndex off-by-one; `guardArt`/`guardSkin` stay at 0 and that defect stays parked
+     and on record. One token, one revert, geometry only — no draw call, no material, no TUNE
+     that §697 reads. */
+  carmelitaBind: 1,
 
   /* (B) the cone. coneShape 1 takes the structured-beam branch in BEAM_FRAG (uConeShape);
      0 = the legacy branch, spelled byte-identical to the pre-seal shader. The five
@@ -1482,7 +1493,10 @@ export class Guards {
      *
      * The scarab keeps its procedural body — it is a beetle sentinel, and Carmelita is not one. */
     let carmelita = null;
-    try { carmelita = await loadCarmelitaGuard(); } catch { carmelita = null; }
+    try {
+      carmelita = await loadCarmelitaGuard(undefined,
+        { carry: TUNE.carmelitaBind > 0.5 ? CARMELITA_CARRY.REBIND : CARMELITA_CARRY.LEGACY });
+    } catch { carmelita = null; }
     if (carmelita) {
       for (const t of CARMELITA_TYPES) {
         assets[t] = { ...assets[t], ...carmelita };

@@ -6,7 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import {
   bindToRig3, rig3BindWorld, BONE_MAP, MATERIAL_ATLAS, UNREMAPPED, atlasOf, NO_SOURCE, resolveName,
-  CARMELITA_TEX,
+  CARMELITA_TEX, CARRY,
 } from '../src/ai/CarmelitaGuard.js';
 import { RIG3 } from '../src/player/SlyModel3.js';
 import { GUARD_TUNE } from '../src/ai/Guard.js';
@@ -57,6 +57,10 @@ if (present) {
   BOUND = bindToRig3(SCENE);
   console.log(`\n[carmguard] ${ASSET} — ${JSON.stringify(BOUND.stats)}  ${BOUND.tris} tris\n`);
 }
+
+/** `bindToRig3` clones every geometry it touches, so the same parsed scene can be bound twice —
+ *  which is what lets §702's falsifier run the OLD carry in-arm instead of describing it. */
+const loadScene = () => SCENE;
 
 const need = () => assert.ok(present, `${ASSET} is missing — run \`node tools/carmelita2guard.mjs --write\``);
 
@@ -230,12 +234,19 @@ test('the head/body split follows the source project\'s own material remap', () 
      binding actually USED it, mesh by mesh, so the table cannot be edited without the split
      moving with it. `BustRetopo` is the one that matters: it is `BodyMat`, and the retired
      node-name guess put it in the head group on the strength of the word "Bust". */
-  const head = meshes.filter((m) => atlasOf(m.material) === 1).map((m) => m.name);
-  const body = meshes.filter((m) => atlasOf(m.material) === 0).map((m) => m.name);
+  /* §702 drops the shock pistol — the meshes weighted 100% to the `ShockPistol` armature root,
+     which is a SIBLING of the body root rather than a descendant of it. They never reach a
+     group, so they are excluded from the census here too, by the same rule and from the same
+     place: `stats.dropped`, which the bind reports rather than the test re-deriving. */
+  const dropped = new Set(BOUND.stats.dropped || []);
+  const kept = meshes.filter((m) => !dropped.has(m.name));
+  const head = kept.filter((m) => atlasOf(m.material) === 1).map((m) => m.name);
+  const body = kept.filter((m) => atlasOf(m.material) === 0).map((m) => m.name);
   console.log(`[carmguard] head atlas (from the Godot remap): ${head.join(', ')}`);
-  console.log(`[carmguard] body ${bodyMeshes} meshes / head ${headMeshes} meshes`);
+  console.log(`[carmguard] body ${bodyMeshes} meshes / head ${headMeshes} meshes`
+    + `; dropped as prop: ${[...dropped].join(', ') || 'none'} (roots ${(BOUND.stats.droppedRoots || []).join(', ') || '—'})`);
 
-  assert.equal(bodyMeshes + headMeshes, meshes.length, 'a mesh went into neither group');
+  assert.equal(bodyMeshes + headMeshes, kept.length, 'a mesh went into neither group');
   assert.equal(headMeshes, head.length, 'the bind grouped a different set than MATERIAL_ATLAS names');
   assert.equal(bodyMeshes, body.length, 'the bind grouped a different set than MATERIAL_ATLAS names');
   assert.ok(headMeshes > 0, 'nothing was assigned the head atlas — carmelita-head.png would be unused');
@@ -254,6 +265,149 @@ test('the head/body split follows the source project\'s own material remap', () 
       assert.equal(atlasOf(m.material), 0, `${m.name} carries unremapped ${n} and belongs to body by the stated fallback`);
     }
   }
+});
+
+/**
+ * §702 — the carry translates rigidly, and the OLD carry is shown failing it in-arm.
+ *
+ * The defect the owner reported ("the sculpt seems off and the head seems to be missing") was in
+ * the bind transfer, not in animation: it undid each source bone's bind ROTATION and put none
+ * back, so every mapped region came out rotated into its source bone's local frame. It is present
+ * at the BIND POSE, so a structural test can see it — the previous suite could not, only because
+ * nothing here ever compared the bound shape against the shape it came from.
+ *
+ * ── choosing a measurable that a rotation cannot slip past ──────────────────────────────────
+ * The first version of this test compared bounding-box DIAGONALS and had to be thrown away: an
+ * AABB diagonal is nearly rotation-invariant for a compact blob, so it scored the legacy head at
+ * 0.609 m against the source's 0.610 m and pronounced it fine while the picture showed it
+ * destroyed. That is the §439/§440 shape in miniature — an instrument blind to the exact
+ * transform under test — and it is recorded rather than quietly replaced.
+ *
+ * What actually characterises a translation is that it preserves every INTERNAL offset. So the
+ * measurable is the RMS deviation of each region's vertices from a rigid translation of the same
+ * region in the source: centre both, difference them. A rotation of any size shows up; a pure
+ * translation of any size does not.
+ *
+ * The strong claim is on the regions whose weights land on a SINGLE target bone. Those cannot
+ * blend, so under a translation carry their residual is not "small", it is exactly zero.
+ */
+test('§702 the carry translates rigidly — single-bone regions move without deforming', () => {
+  need();
+  const srcPos = new Map();
+  SCENE.traverse((o) => {
+    if (!o.isSkinnedMesh) return;
+    const g = o.geometry.clone();
+    g.applyMatrix4(o.matrixWorld);
+    srcPos.set(o.name, g.attributes.position);
+  });
+
+  /** RMS/max deviation from a rigid translation, and how many target bones the region touches. */
+  const measure = (bound) => {
+    const pos = bound.geometry.attributes.position;
+    const si = bound.geometry.attributes.skinIndex.array;
+    const sw = bound.geometry.attributes.skinWeight.array;
+    const ca = new THREE.Vector3(), cb = new THREE.Vector3();
+    const a = new THREE.Vector3(), b = new THREE.Vector3();
+    const out = new Map();
+    for (const r of bound.regions) {
+      const s = srcPos.get(r.name);
+      if (!s || s.count !== r.count) continue;
+      const bones = new Set();
+      ca.set(0, 0, 0); cb.set(0, 0, 0);
+      for (let i = 0; i < r.count; i++) {
+        ca.add(a.fromBufferAttribute(s, i));
+        cb.add(b.fromBufferAttribute(pos, r.start + i));
+        for (let k = 0; k < 4; k++) {
+          if (sw[(r.start + i) * 4 + k] > 0) bones.add(si[(r.start + i) * 4 + k]);
+        }
+      }
+      ca.divideScalar(r.count); cb.divideScalar(r.count);
+      let sum = 0, mx = 0;
+      for (let i = 0; i < r.count; i++) {
+        a.fromBufferAttribute(s, i).sub(ca);
+        b.fromBufferAttribute(pos, r.start + i).sub(cb);
+        const d = a.distanceTo(b);
+        sum += d * d; mx = Math.max(mx, d);
+      }
+      out.set(r.name, { rms: Math.sqrt(sum / r.count), max: mx, bones: bones.size, n: r.count });
+    }
+    return out;
+  };
+
+  const good = measure(BOUND);
+  const legacy = bindToRig3(loadScene(), { carry: CARRY.LEGACY });
+  const bad = measure(legacy);
+  assert.ok(good.size > 10, `measured only ${good.size} regions`);
+
+  const single = [...good.entries()].filter(([, m]) => m.bones === 1);
+  const multi = [...good.entries()].filter(([, m]) => m.bones > 1);
+  assert.ok(single.length >= 5, `only ${single.length} single-bone regions — the split is not being read`);
+  assert.ok(multi.length >= 5, `only ${multi.length} multi-bone regions`);
+  console.log(`[carmguard] §702 rigid carry: ${single.length} single-bone regions, `
+    + `worst rms ${Math.max(...single.map(([, m]) => m.rms)).toExponential(2)} m; `
+    + `${multi.length} blended, worst rms ${Math.max(...multi.map(([, m]) => m.rms)).toFixed(4)} m`);
+
+  for (const [n, m] of single) {
+    assert.ok(m.rms < 1e-6,
+      `${n} is weighted to one bone yet deviates ${m.rms.toFixed(4)} m rms from a rigid translation`);
+  }
+  /* Blended regions legitimately stretch where two bones' separation differs between the rigs —
+     `Hand` spans shoulder→fingertip and is the largest. Bounded, not zero. */
+  for (const [n, m] of multi) {
+    assert.ok(m.rms < 0.10, `${n} deviates ${m.rms.toFixed(4)} m rms — more than a joint blend explains`);
+  }
+
+  /* §418.3 — the input seen to FAIL, run here rather than described. Under the old carry the
+     single-bone regions deform too, which is impossible for any translation. */
+  const badSingle = single.map(([n]) => [n, bad.get(n)?.rms ?? 0]).sort((x, y) => y[1] - x[1]);
+  console.log(`[carmguard] §702 legacy, the same single-bone regions: `
+    + badSingle.slice(0, 4).map(([n, v]) => `${n} ${v.toFixed(3)}`).join(', ') + ' m rms');
+  assert.ok(badSingle[0][1] > 0.05,
+    'the legacy carry no longer deforms a single-bone region — this check can no longer reject '
+    + 'the defect it was written for and is decoration');
+
+  /* the head half of the report, named: `Hair_LP` is 5,546 vertices weighted entirely to `head`,
+     so it is the largest region that MUST be rigid, and it is the one the owner was looking at. */
+  const hairGood = good.get('Hair_LP'), hairBad = bad.get('Hair_LP');
+  console.log(`[carmguard] §702 Hair_LP (${hairGood.n} verts, ${hairGood.bones} bone): `
+    + `rebind ${hairGood.rms.toExponential(2)} m rms, legacy ${hairBad.rms.toFixed(4)} m rms `
+    + `(max ${hairBad.max.toFixed(3)} m)`);
+  assert.equal(hairGood.bones, 1, 'Hair_LP is no longer a single-bone region — re-read this claim');
+  assert.ok(hairGood.rms < 1e-6, 'the hair is deformed by the corrected carry');
+  assert.ok(hairBad.rms > 0.10, 'the legacy hair was not deformed — the falsifier is not falsifying');
+});
+
+test('§702 the shock pistol is dropped by the ARMATURE, and the body is not', () => {
+  need();
+  const { dropped = [], droppedRoots = [], carry } = BOUND.stats;
+  console.log(`[carmguard] carry=${carry} dropped ${dropped.join(', ') || 'none'} `
+    + `from root(s) ${droppedRoots.join(', ') || '—'}, soleLift ${BOUND.stats.soleLift} m`);
+  assert.equal(carry, CARRY.REBIND, 'the shipped default is no longer the corrected carry');
+  assert.deepEqual([...dropped].sort(), ['Antennae003', 'Barrel', 'MainBody'],
+    'the dropped set changed — it must be exactly the three shock-pistol meshes');
+  assert.deepEqual(droppedRoots, ['ShockPistol'],
+    'a mesh was dropped from an armature root other than the pistol prop');
+
+  /* the input seen to be KEPT: `Legs` carries 3.6% of its weight on the `Hips_Center` helper
+     root, which is also not a body root. A rule keyed on "any non-body weight" would eat it. */
+  const names = new Set(BOUND.regions.map((r) => r.name));
+  assert.ok(names.has('Legs'), 'Legs was dropped — the rule is "100% prop", not "any prop weight"');
+  assert.ok(names.has('Shoes') && names.has('Head_LP') && names.has('Hair_LP'),
+    'body geometry was dropped by the prop rule');
+
+  /* the pistol is not merely absent from the regions — it is out of the buffer */
+  assert.equal(BOUND.regions.length, BOUND.stats.bodyMeshes + BOUND.stats.headMeshes,
+    'regions and group counts disagree — a dropped mesh left a region behind');
+
+  /* base origin, which §697's ground work reads */
+  BOUND.geometry.computeBoundingBox();
+  const minY = BOUND.geometry.boundingBox.min.y;
+  console.log(`[carmguard] §702 sole at y ${minY.toFixed(5)} m, crown ${BOUND.geometry.boundingBox.max.y.toFixed(3)} m`);
+  assert.ok(Math.abs(minY) < 1e-4, `the sole is at ${minY.toFixed(4)}, not on the rig's ground plane`);
+
+  const legacy = bindToRig3(loadScene(), { carry: CARRY.LEGACY });
+  assert.equal((legacy.stats.dropped || []).length, 0, 'the legacy carry must keep the pistol — it is the byte-for-byte revert');
+  assert.equal(legacy.tris - BOUND.tris, 1672, 'the pistol is not 1,672 triangles any more');
 });
 
 test('the garrison cost is measured, not assumed', () => {
@@ -290,21 +444,35 @@ test('the collision radius still bounds the body it is used for', () => {
   const ARM = new Set(['shoulderL', 'shoulderR', 'upperArmL', 'upperArmR',
     'lowerArmL', 'lowerArmR', 'handL', 'handR']);
   const armIdx = new Set(order.map((n, i) => (ARM.has(n) ? i : -1)).filter((i) => i >= 0));
+  /* §702: the APPENDAGES are excluded for the same reason the bind-pose arms already were —
+     they are held out in the reference pose and are not the volume a wall ray is protecting.
+     Before §702 no exclusion was needed because the broken carry crumpled both INSIDE the body:
+     the tail measured 0.183 m from the axis where the artist put it at 0.941 m. That was the
+     defect flattering the check, not the check being right. Both are measured below and the
+     tail's real reach is asserted as a BOUND rather than wished away. */
+  const APPENDAGE = new Set(['Tail', 'Scrunchy2']);
+  const isAppendage = new Uint8Array(pos.count);
+  for (const r of BOUND.regions) {
+    if (!APPENDAGE.has(r.name)) continue;
+    for (let i = r.start; i < r.start + r.count; i++) isAppendage[i] = 1;
+  }
   const p = new THREE.Vector3();
-  let rTorso = 0, inspected = 0;
+  let rTorso = 0, rTail = 0, inspected = 0;
   for (let v = 0; v < pos.count; v++) {
+    p.fromBufferAttribute(pos, v);
+    const r = Math.hypot(p.x, p.z);
+    if (isAppendage[v]) { rTail = Math.max(rTail, r); continue; }
     let armW = 0;
     for (let k = 0; k < 4; k++) {
       const w = sw[v * 4 + k];
       if (w > 0 && armIdx.has(si[v * 4 + k])) armW += w;
     }
     if (armW >= 0.5) continue;             // bind-pose arms are held out; they are not the body
-    p.fromBufferAttribute(pos, v);
-    rTorso = Math.max(rTorso, Math.hypot(p.x, p.z));
+    rTorso = Math.max(rTorso, r);
     inspected++;
   }
-  console.log(`[carmguard] torso radius ${rTorso.toFixed(3)} m vs shipped `
-    + `temple ${GUARD_TUNE.radius.temple} / heavy ${GUARD_TUNE.radius.heavy}`);
+  console.log(`[carmguard] torso radius ${rTorso.toFixed(3)} m (tail/ponytail reach ${rTail.toFixed(3)} m) `
+    + `vs shipped temple ${GUARD_TUNE.radius.temple} / heavy ${GUARD_TUNE.radius.heavy}`);
   assert.ok(inspected > 5000, `inspected only ${inspected} torso vertices`);
   assert.ok(rTorso > 0.05, 'measured a torso radius of nearly zero — the instrument is not reading the mesh');
   for (const t of ['temple', 'heavy']) {
@@ -312,6 +480,13 @@ test('the collision radius still bounds the body it is used for', () => {
       `${t} radius ${GUARD_TUNE.radius[t]} is smaller than the body it now wraps (${rTorso.toFixed(3)} m) — `
       + 'the C1 clearance floor in tests/patrol.test.mjs is derived from it and would be understated');
   }
+  /* The stated bound: the fox tail reaches well past the collision radius, so it can pass through
+     a wall a guard is walking beside. That is cosmetic and it is the artist's silhouette; growing
+     `radius` to cover it would re-derive the §235 route clearances off an appendage. Pinned so
+     the exception stays visible and so a tail that quietly collapses again fails here. */
+  assert.ok(rTail > GUARD_TUNE.radius.temple,
+    'the tail no longer reaches past the collision radius — if it collapsed, the carry regressed');
+  assert.ok(rTail < 1.2, `the tail reaches ${rTail.toFixed(3)} m, further than the sculpt has ever been`);
 });
 
 test('the source scene is still present and untouched', () => {
