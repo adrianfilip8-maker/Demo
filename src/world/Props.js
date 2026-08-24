@@ -759,24 +759,36 @@ export class Props {
       [14.0, 29.90, 34.0],   // east pylon deck (ground y 28.92) — where the ladder ends
       /* Hall front cornice — §8.1 step 3's release point. NOT at the header's own
          (−9.5, 13.6, −15.2): a downward ray there falls the full 15 m to the courtyard paving.
-         The built cornice `ledge` is at y 15.36, measured, and runs unbroken from z −16.55 to
-         at least −15.65. Flagged in the report; the §8.1 coordinate is stale and is not this
-         function's to rewrite.
-         ── z −16.5 → −16.05 (§701.10), the ONE placement this file has ever moved ─────────────
-         There is a `sandstone_block` parapet face at **z −16.602**, outward normal +z, top edge
-         y 17.00. At z −16.5 the bottle's axis stood 0.102 m in front of it, which left the OLD
+         The built cornice `ledge` collider is at y 15.36 and runs z −16.729 … −16.200, measured.
+         Flagged in the report; the §8.1 coordinate is stale and is not this function's to rewrite.
+         ── z −16.5 → −16.25 (§701.10), the ONE placement this file has ever moved ─────────────
+         A `sandstone_block` parapet face stands at **z −16.602**, outward normal +z, top edge
+         y 17.00. At z −16.5 the bottle's axis was 0.102 m in front of it, which left the OLD
          0.0837 m half-width exactly **15 mm** of air — a margin nothing in the tree measured
-         until `tools/bottlefit.mjs` existed, and one that the 3× scale turned into 0.149 m of
-         glass inside masonry. No enlargement past 1.22× ever fitted that gap.
-         **Moved on an explicit coordinator decision, not on a lane's judgement**, and the target
-         is a margin rather than a clearance: 0.299 m is one bottle half-width (0.251) of slack
-         beyond contact, so the placement survives another ~2.2× scale — the exact class of edit
-         that destroyed it — and it sits mid-pack among the other eleven (bottle 10 is 0.324).
-         The ledge is FLAT across the whole sweep, so R2's margin is **0.140 m before and after**
-         and R1's drop is 1.040 m before and after: the nudge costs reachability nothing, which
-         is why this direction was chosen. −z was never available — below z −16.55 the ledge
-         stops and the ray finds the parapet top at y 16.319 instead. */
-      [-9.5, 16.40, -16.05],
+         until `tools/bottlefit.mjs` existed, and which the 3× scale turned into 0.149 m of glass
+         inside masonry. Nothing past 1.22× ever fitted that gap. Moved on an **explicit
+         coordinator decision** overriding the do-not-move rule, not on a lane's judgement.
+         **The honest constraint, because this placement has no comfortable home at 3×:** the
+         free strip between the parapet face (−16.602) and the +z edge of the walkable collider
+         (−16.200) is **0.402 m**, and the bottle is **0.502 m** across. It is wider than the
+         strip it stands on. Every z either overlaps the parapet or overhangs the collider edge,
+         and the two margins trade 1:1 across a window only 0.151 m wide:
+
+             z −16.351   clearance 0.000   collider margin 0.151
+             z −16.250   clearance 0.101   collider margin 0.050   ← here
+             z −16.200   clearance 0.151   collider margin 0.000
+
+         −16.25 spends the split on the VISIBLE margin while leaving the blocking one real. The
+         two are not the same kind of number: clearance degrades gradually and only cosmetically,
+         while the collider edge is a cliff — one millimetre past −16.200 the downward probe
+         misses the ledge entirely, finds `wall` 3.400 m below, and R2 reads **2.500 m against a
+         2.40 m magnet**. Sitting ON that edge is how the 15 mm happened in the first place.
+         What does NOT change: the ledge is flat, so R1's drop stays 1.040 m and R2's reach stays
+         **0.140 m before and after**. −z was never available — below −16.729 the ledge stops.
+         **A proper margin exists only west of x ≈ −12.3, where the parapet ends and clearance
+         jumps past 0.60 m on the same ledge at the same y.** That is a 3 m slide rather than a
+         nudge, so it is recorded for a decision rather than taken here (§701.10). */
+      [-9.5, 16.40, -16.25],
       [-16.0, 14.50, -30.0], // west aisle roof (y 13.5) — the rooftop run
       [0.0, 18.00, -34.0],   // nave deck (y 17.0) — the rooftop run
       [0.0, 27.00, -49.5],   // inner pylon south stage (ground y 26.0)
