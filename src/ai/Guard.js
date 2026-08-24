@@ -85,6 +85,78 @@ const TUNE = {
                            // which is precisely what keeps the rooftop patrol on the roof.
   rejoinSnap: 1.6,         // metres off-route before `u` stops advancing and he walks back
   arriveEps: 0.30,
+  /**
+   * The radius of the guard's downward ground probe.
+   *
+   * `Collision.groundCheck` sweeps a SPHERE of whatever radius it is handed and reports the
+   * height of **that sphere's bottom** at the moment of contact. That is the surface height
+   * only when the contact is directly underneath it. Grazing the top edge of a crate one probe
+   * radius to the side, the same call returns a height a quarter of a metre below the crate and
+   * over a metre above the pavement — a height at which no surface in the level exists. `_step`
+   * and `_place` assigned that verbatim to `position.y`, so the guard stood in mid-air; and
+   * once he was up there the real floor lay further below him than `stepDown`, so every later
+   * step was refused as a cliff and he hung there for the rest of the session, motionless.
+   * Measured in the running game, three of the nine did exactly that: 1.27 m over the west
+   * colonnade, 1.91 m in front of the pylon, 1.79 m in the tomb.
+   *
+   * The tell is that the answer MOVES WITH THE PROBE. On the guard standing over the colonnade
+   * paving, `groundCheck` at the radii around his own returned
+   *
+   *     r 0.020 … 0.250   no support at all
+   *     r 0.294           y 1.289      <- his own probe, `radius * 0.7`
+   *     r 0.350           y 1.380
+   *     r 0.392           y 1.406
+   *     r 0.450           y 1.428
+   *
+   * while a guard on real pavement reads y 0.000 at every one of those radii, and the same
+   * probe widened to 40 m of span still preferred the phantom over the floor it could now see.
+   * A floor's height is not a function of how fat you are.
+   *
+   * So the support comes from a probe narrow enough that it can only touch what is genuinely
+   * beneath him. It is deliberately not zero — a hairline probe can slip between two abutting
+   * box proxies that do not quite meet — but it is far narrower than his body, because his body
+   * is kept off obstacles by the two forward rays in `_step`, not by his feet.
+   *
+   * This changes the probe's LATERAL reach only. `groundCheck` starts its sweep at
+   * `pos.y + radius + groundLift` and reports `centre - radius`, so the band of floor heights
+   * it can return is `[pos.y + groundLift, pos.y - maxDist]` whatever the radius — measured, on
+   * a guard on flat pavement, as an identical `distance` of 0.850 at every radius from 0.02 to
+   * 0.45. `stepUp` and `stepDown` therefore still mean exactly what they say.
+   *
+   * Set to 0 to restore the pre-fix behaviour (`radius * 0.7`) exactly; both arms are pinned in
+   * `src/ai/Guard.test.mjs`.
+   */
+  groundProbe: 0.06,
+  /**
+   * The steepest surface a guard will accept as a floor, in degrees. 0 disables the check.
+   *
+   * `groundProbe` above stops the probe reaching sideways for something to stand on. It does
+   * not stop it landing on a steep face that genuinely IS under him, and one guard did exactly
+   * that: `Props` registers every solid prop as a collider tagged `ground` — correctly, props
+   * are standable — so a merged brazier is floor as far as `groundCheck` is concerned, bowl
+   * walls included. Traced frame by frame over the shipped update path, the west-colonnade
+   * guard left the pavement in two steps 0.17 s apart:
+   *
+   *     t 3.267   y 0 -> 0.013    n.y 0.048   slope 87.23 deg   walkable no
+   *     t 3.400   y 0.032 -> 0    n.y 1.000   slope  0.00 deg   walkable YES   (back on the floor)
+   *     t 3.433   y 0 -> 0.369    n.y 0.695   slope 45.99 deg   walkable YES   (and there he stayed)
+   *
+   * Measured over 400 samples on each of the nine routes, every surface a guard legitimately
+   * stands on in this level reads **0.00 deg**, except the rooftop run which peaks at 6.95.
+   * The two faces that lifted him read 45.96 and 87.23. Any threshold between roughly 10 and
+   * 40 separates those populations; 30 leaves 4x margin over the steepest real floor and 16 deg
+   * of clearance under the shallowest false one.
+   *
+   * **Deliberately stricter than `Collision.SLOPE.walkable` (50 deg), which is the PLAYER's
+   * limit.** He has a capsule solver, gravity and a slide, so a moment on a 46 deg face costs
+   * him nothing. A guard has none of those: `_step` assigns the probe's height to `position.y`
+   * outright and nothing ever pulls him back down, so whatever he is put on he stays on for the
+   * rest of the session. The two limits answer different questions and should not be shared.
+   *
+   * A COLLISION that reports no `slope` is accepted unchanged: this narrows what counts as
+   * floor, it never invents one.
+   */
+  groundSlopeMax: 30,
   knockback: 3.4,          // m/s impulse from a cane hit
   knockDamp: 6.5,
   hitsToKo: 3,
@@ -585,6 +657,22 @@ const _colW = new THREE.Color();
 const _colN = new THREE.Color();
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const RAY_OPTS = { ignoreTags: ['hazard', 'water', 'rail', 'hook', 'spire', 'vent'] };
+
+/**
+ * Is this `groundCheck` result a floor a guard may stand on?
+ *
+ * `groundCheck` answers "did the probe touch anything", and `_step` read that as "there is a
+ * floor here". On pavement the two statements coincide. Against prop geometry they do not —
+ * see `TUNE.groundSlopeMax` for the traced frames and the measured slope populations. Guards
+ * are the only body in the game whose vertical position is *assigned* from this call rather
+ * than integrated, so they are the only one that needs the stricter reading.
+ */
+function isFloor(g) {
+  if (!g?.hit || !Number.isFinite(g.y)) return false;
+  if (TUNE.groundSlopeMax > 0 && Number.isFinite(g.slope)
+      && g.slope > TUNE.groundSlopeMax * THREE.MathUtils.DEG2RAD) return false;
+  return true;
+}
 
 const clamp = THREE.MathUtils.clamp;
 const shortAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -1142,9 +1230,9 @@ class Guard {
     if (col?.groundCheck) {
       _v2.set(nx, this.position.y + TUNE.stepUp, nz);
       let g = null;
-      try { g = col.groundCheck(_v2, this.radius * 0.7, TUNE.stepUp + TUNE.stepDown); } catch { g = null; }
-      if (g?.hit && Number.isFinite(g.y)) { y = g.y; this.hadGround = true; }
-      else if (this.hadGround) ok = false;              // a cliff. Refuse.
+      try { g = col.groundCheck(_v2, this.groundProbe, TUNE.stepUp + TUNE.stepDown); } catch { g = null; }
+      if (isFloor(g)) { y = g.y; this.hadGround = true; }
+      else if (this.hadGround) ok = false;              // a cliff, or the face of a crate. Refuse.
       else y = this.route.baseY ?? this.position.y;     // COLLISION doesn't cover this space
     } else {
       y = this.route.baseY ?? this.position.y;
@@ -1173,14 +1261,23 @@ class Guard {
     this._routePoint.copy(this.route.at(bestU, _scan));
   }
 
+  /**
+   * The radius handed to `Collision.groundCheck`. See `TUNE.groundProbe` for why it is not the
+   * body radius: the call reports the bottom of its own probe sphere, so a fat one standing
+   * against the side of a crate names a height nothing occupies.
+   */
+  get groundProbe() {
+    return TUNE.groundProbe > 0 ? TUNE.groundProbe : this.radius * 0.7;
+  }
+
   _place(p) {
     this.position.copy(p);
     const col = this.owner.collision;
     if (col?.groundCheck) {
       _v2.set(p.x, p.y + 2.0, p.z);
       let g = null;
-      try { g = col.groundCheck(_v2, this.radius * 0.7, 5.0); } catch { g = null; }
-      if (g?.hit && Number.isFinite(g.y)) { this.position.y = g.y; this.hadGround = true; return; }
+      try { g = col.groundCheck(_v2, this.groundProbe, 5.0); } catch { g = null; }
+      if (isFloor(g)) { this.position.y = g.y; this.hadGround = true; return; }
     }
     if (this.route.baseY !== null && this.route.baseY !== undefined) this.position.y = this.route.baseY;
   }
