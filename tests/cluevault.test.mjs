@@ -188,12 +188,19 @@ test('V1b the clue bottle is the size the placements were tuned around (§700, r
    *
    * DOMAIN (§418.3)
    * PASSES ON: the shipped tree — bake 1.03 at h 1, delivered 1.29780 m, base at 0,
-   *            clueCollect 0.98, clueSway 0.1854, and Props building at `CLUE_HEIGHT`.
+   *            clueCollect 0.77, clueSway 0.1236, and Props building at `CLUE_HEIGHT`.
    * FAILS ON:  FIVE, all RUN in-arm — a bottle built 50% taller misses the height band; the
-   *            PREVIOUS `clueCollect` 0.55 and `clueSway` 0.0618 both miss their derivation
-   *            bands against the current height (this is the regression the arm exists for, and
-   *            it is the input it was seen to fail on); a `Props` body built at a bare `h: 0.42`
-   *            fails the twin scrape; and a bake normalised to half height misses the BAKE band.
+   *            PRE-SHRINK `clueCollect` 0.98 and `clueSway` 0.1854 both miss their derivation
+   *            bands against the current height (this is the regression the arm exists for, it
+   *            is the input it was seen to fail on, and it is a LIVE counterexample rather than
+   *            a historical one — those were the shipped values one commit ago); a `Props` body
+   *            built at a bare `h: 0.42` fails the twin scrape; and a bake normalised to half
+   *            height misses the BAKE band.
+   *
+   * The counterexample values are refreshed at every resize ON PURPOSE. Pinned to §700's 0.55
+   * and 0.0618 they would still have passed — those miss the band by so much that the arm would
+   * have been proving the tolerance can reject something absurd rather than something plausible.
+   * The value that actually threatens this arm is the one shipped immediately before.
    */
   const { clueBottle, mergeAll, CLUE_ATTRS, CLUE_HEIGHT, CLUE_HEIGHT_RATIO } = await import('../src/world/PropKit.js');
   const { TUNE: PTUNE } = await import('../src/world/Pickups.js');
@@ -223,8 +230,8 @@ test('V1b the clue bottle is the size the placements were tuned around (§700, r
   /* ---- DELIVERED: the number the placements depend on ---- */
   const bb = measure(PTUNE.clueHeight);
   const height = bb.max.y - bb.min.y;
-  assert.ok(Math.abs(height - 1.29780) < 0.0005,
-    `the clue bottle now stands ${height.toFixed(5)} m, not the 1.29780 m the twelve placements ` +
+  assert.ok(Math.abs(height - 0.86520) < 0.0005,
+    `the clue bottle now stands ${height.toFixed(5)} m, not the 0.86520 m the twelve placements ` +
     'were last measured against — re-run R1/R2/R3 and tools/bottlefit.mjs before changing this number');
   assert.ok(Math.abs(bb.min.y) < 1e-6,
     `the clue bottle's base is at y ${bb.min.y.toFixed(6)}, not 0`);
@@ -259,16 +266,17 @@ test('V1b the clue bottle is the size the placements were tuned around (§700, r
 
   /* ---- the discriminators, RUN rather than asserted (§418.3) ---- */
   const wrong = measure(PTUNE.clueHeight * 1.5);
-  assert.ok(Math.abs((wrong.max.y - wrong.min.y) - 1.29780) > 0.0005,
+  assert.ok(Math.abs((wrong.max.y - wrong.min.y) - 0.86520) > 0.0005,
     'a bottle built 50% taller still passes the height band — the tolerance is too wide to mean anything');
   assert.ok(Math.abs(unitH * 0.5 - CLUE_HEIGHT_RATIO) > 5e-4,
     'a module baked to half height still passes the BAKE band');
-  /* The pre-§701 values of the two derived numbers. Both were correct against a 0.43260 m bottle
-     and are wrong against this one; showing them rejected is what makes the bands above a test. */
-  assert.ok(!(0.55 <= wantCollect + 1e-9 && 0.55 > wantCollect - 0.015),
-    'the pre-scale clueCollect 0.55 still satisfies the derivation band — it cannot catch a stale radius');
-  assert.ok(Math.abs(0.0618 - height / 7) > 0.0005,
-    'the pre-scale clueSway 0.0618 still satisfies the proportion band — it cannot catch a stale sway');
+  /* The values shipped ONE COMMIT AGO, against the 1.29780 m bottle §705 shrank. Both were
+     correct then and are wrong now; showing them rejected is what makes the bands above a test,
+     and using the most recent stale pair rather than the oldest is what keeps it a hard one. */
+  assert.ok(!(0.98 <= wantCollect + 1e-9 && 0.98 > wantCollect - 0.015),
+    'the pre-shrink clueCollect 0.98 still satisfies the derivation band — it cannot catch a stale radius');
+  assert.ok(Math.abs(0.1854 - height / 7) > 0.0005,
+    'the pre-shrink clueSway 0.1854 still satisfies the proportion band — it cannot catch a stale sway');
   assert.ok(!/clueBottle\(\{\s*h:\s*CLUE_HEIGHT/.test('clueBottle({ h: 0.42, rng: R })'),
     'the twin scrape accepts a bare literal — it is not checking what it says it checks');
 });

@@ -1168,7 +1168,16 @@ export const CLUE_HEIGHT_RATIO = 1.03;
  * The clue bottle's authored size — **the one number the whole bottle is scaled by**, and the
  * only place it is written down (§701).
  *
- *   0.42 → 1.26   delivered height 0.43260 m → 1.29780 m, three times larger, on request.
+ *   0.42 → 1.26    delivered 0.43260 → 1.29780 m, three times larger, on request (§701)
+ *   1.26 → 0.84    delivered 1.29780 → 0.86520 m, shrunk BY one third, on request (§705)
+ *
+ * **§705's reading is stated here because it is the whole risk of that request.** "Shrink by one
+ * third" was taken as *to two thirds of current*, not *to one third* and not *by a factor of
+ * three*. The rejected reading lands exactly back on 0.43260 — it would undo §701 entirely, and
+ * someone who wanted that would say "revert", not "shrink by one third" one round after asking
+ * for 3×. That the result is exactly 2× the pre-§701 size is arithmetic, not a target. **If the
+ * reading is wrong the fix is this one constant**, which is the entire reason the three literals
+ * were unified in the first place.
  *
  * ── Why this constant exists at all ────────────────────────────────────────────────────────
  * It used to be three literals: `clueBottle`'s own default, `Pickups.TUNE.clueHeight`, and a
@@ -1178,19 +1187,24 @@ export const CLUE_HEIGHT_RATIO = 1.03;
  * unrelated files and hoping; a lane that edited two of them would have shipped a twin at the
  * old size behind a pickup at the new one, and since `Pickups` hides the twin the frame would
  * have looked correct while the built world disagreed with itself. One constant, three readers.
+ * Two rounds of resizing have now gone through it, each touching exactly this line.
  *
  * ── What reads it, and what breaks if it moves ─────────────────────────────────────────────
  *   `Pickups.TUNE.clueHeight`   the pickup's own build
- *   `Pickups.TUNE.clueCollect`  playerRadius + half the DELIVERED height — re-derive it
+ *   `Pickups.TUNE.clueCollect`  playerRadius + half the DELIVERED height — RE-DERIVE, never scale
  *   `Pickups.TUNE.clueSway`     1/7 of the DELIVERED height (the reference's proportion)
  *   `Props._clueBottles()`      the decorative twin, which must match the pickup exactly
  *   `cluevault` V1b             pins the delivered height; R1/R2/R3 rest on it
  *
+ * `TUNE.clueRock` is an ANGLE and `TUNE.clueBob` was never height-derived; neither moves with
+ * this number, in either direction. §701 settled both.
+ *
  * The pickup POINT does not move with this number and is not meant to: the mesh is base-origin
  * (`bbox.min.y === 0`), the twelve placements are the base, and `stepPickup` measures to the
- * base. Growing the bottle grows it upward and outward from its authored spot.
+ * base. The bottle grows and shrinks about its authored spot, which is why neither resize moved
+ * a placement and why R2's margins came back unchanged both times.
  */
-export const CLUE_HEIGHT = 1.26;
+export const CLUE_HEIGHT = 0.84;
 
 /**
  * Sly's clue bottle — the reference project's own pickup mesh.

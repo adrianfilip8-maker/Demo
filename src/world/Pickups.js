@@ -116,21 +116,27 @@ export const TUNE = {
      two radii below cannot be scaled apart — the same reason `coinRadius` is pinned to
      `coin(0.16, …)`. `h` is the lathe parameter; the DELIVERED height is `h * CLUE_HEIGHT_RATIO`
      and that is the number the two derivations under it use. */
-  clueHeight:    CLUE_HEIGHT,                          // 1.26 → 1.29780 m delivered
+  clueHeight:    CLUE_HEIGHT,                          // 0.84 → 0.86520 m delivered
   /**
    * playerRadius 0.34 + half the DELIVERED height, rounded down to the file's two places:
-   * 0.34 + 1.29780/2 = 0.9889 → 0.98. A bottle stands up where a coin lies flat, so its
+   * 0.34 + 0.86520/2 = 0.7726 → 0.77. A bottle stands up where a coin lies flat, so its
    * grabbable extent is vertical and larger than a coin's; using `collect` 0.50 unchanged would
    * make you clip through the neck of one before it registered.
    *
-   * **This is a derived number and it moved with the scale (§701): 0.55 → 0.98.** Leaving it at
-   * 0.55 against a bottle three times taller is exactly the defect the sentence above names,
-   * at triple size — `stepPickup` measures the capsule centre against the bottle's BASE, so a
-   * player would have walked through the upper 0.75 m of the bottle before it registered. Still
-   * far inside `magnet` (2.40), so nothing about reach or R2/R3 changes; this is the contact
-   * term only, and §223's distinction between a snap radius and a catch radius still holds.
+   * **RE-DERIVED at every resize, never scaled: 0.55 → 0.98 (§701) → 0.77 (§705).** Re-deriving
+   * and scaling happen to agree when the bottle grows and disagree when it shrinks — 0.98 × 2/3
+   * is 0.653, which is 0.12 m SHORT of contact and would leave the player pushing into the glass
+   * before it registered. `stepPickup` measures the capsule centre against the bottle's BASE, so
+   * the term is `playerRadius + half height` and nothing else; the formula is the value.
+   *
+   * The two-place rounding goes DOWN, and that direction is the file's doctrine rather than
+   * tidiness: this is a CONTACT term, and **any generosity beyond touching belongs in `magnet`,
+   * not here** — §223's snap-radius/catch-radius split, stated in this block's own header. So
+   * 0.77 sits 2.6 mm inside true contact rather than 0.2 mm outside it, which is negligible
+   * against a 0.34 m capsule and is on the correct side of the line. `cluevault` V1b enforces
+   * exactly that: `clueCollect ≤ playerRadius + height/2`, and within 0.015 of it.
    */
-  clueCollect:   0.98,
+  clueCollect:   0.77,
   clueBob:       0.11,
   clueRate:      1.7,
   clueSpin:      1.1,
@@ -149,16 +155,18 @@ export const TUNE = {
    * Copying 0.125 would have been a sway 29% of the bottle's height as it then stood — the same
    * class of mistake as assuming their `scale 0.875` transfers.
    *
-   * **The proportion is the value; the metres are not (§701).** When the bottle was tripled this
-   * moved with it — 0.0618 → 0.1854 — because it is defined as 1/7 of the delivered height and
-   * a sway left at 0.0618 on a 1.29780 m bottle would have been 1/21 of it: the same error §700
-   * warned about, in the other direction. `clueRock` is an ANGLE and does not scale; the arc a
-   * ±20° lean sweeps grows with the bottle on its own, which is the point of expressing it as an
-   * angle. **The extra 0.12 m of lateral travel is not free and the price was measured rather
-   * than waved at** — `tools/bottlefit.mjs`, same world, only this term moved: it changes no
-   * placement's verdict, and it costs the two tightest of the twelve most of their margin (the
-   * peristyle architrave 0.281 → 0.192 m, the tomb vault floor 0.105 → 0.033 m). Reverting this
-   * one number to 0.0618 buys those back and is the lever if either ever has to give.
+   * **The proportion is the value; the metres are not (§701).** It has now tracked the delivered
+   * height through two resizes in opposite directions — 0.0618 → 0.1854 (§701) → 0.1236 (§705) —
+   * because it is defined as 1/7 of that height and nothing else. `clueRock` is an ANGLE and does
+   * not scale in either direction; the arc a ±20° lean sweeps follows the bottle on its own,
+   * which is the point of expressing it as an angle. `clueBob` was never height-derived and does
+   * not move either.
+   *
+   * **Its price was measured, not waved at, and shrinking pays it back.** `SWAY=` on
+   * `tools/bottlefit.mjs` moves this one term against the same world. Tripling it cost the two
+   * tightest placements most of their margin (peristyle architrave 0.281 → 0.192 m, tomb vault
+   * floor 0.105 → 0.033 m) while changing no verdict; §705's reduction hands that back, and the
+   * measured clearances there are the check rather than the expectation.
    *
    * The Y-spin STAYS, which is a departure from the reference and a deliberate one: their bottle
    * does not spin, but theirs is placed to be seen from one side and ours sit on a route walked
@@ -167,7 +175,7 @@ export const TUNE = {
    */
   clueRockRate:  Math.PI * 2 / 1.5,
   clueRock:      0.349066,
-  clueSway:      0.1854,   // (CLUE_HEIGHT * CLUE_HEIGHT_RATIO) / 7 = 1.29780 / 7
+  clueSway:      0.1236,   // (CLUE_HEIGHT * CLUE_HEIGHT_RATIO) / 7 = 0.86520 / 7
 
   /* ---- economy ---- */
   milestone:     100,    // coins between purse toasts — "something reacts when it changes"
