@@ -53958,3 +53958,15 @@ that the tree can pass, never that a particular explanation is the right one.
 Fails on: §703 as originally written, and on any single-run figure offered as a causal claim. Does not
 discriminate: whether F3's underlying sensitivity is worth fixing — that is open, and is now recorded
 as open rather than closed with a plausible sentence.
+
+---
+
+## §704 — "use the source rig and animations rather than trying to modify them": the native 199-joint import
+
+**CLAIMED — lane in progress.** Native-Carmelita lane, branch `claude/sly-cooper-ancient-egypt-0koo0u`,
+opened from `e818875`. Scope: import Carmelita's own 199-joint skeleton, her own skin weights, and her
+own eleven clips as authored — no `BONE_MAP`, no bind transfer, no `RIGID_WITH` rigid carry, no
+retarget. The vision cone, the alert ladder and guard interaction are **out of scope by the user's
+explicit instruction** and are not touched.
+
+Findings appended below as they are measured.
