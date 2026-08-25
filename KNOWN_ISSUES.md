@@ -54193,3 +54193,53 @@ correct answer. `1` invites suspicion; `180`, `188` and now `153` all look like 
 counts for a level this size. The detector catches it by refusing a zero delta while meshes it has
 already **proved** cost draws are hidden — a check on the relationship, never on the value, which
 is the only kind that survives the counter picking a new plausible number every single time.
+
+### §705.9 The suite — ONE run, green, no re-rolls
+
+Clean worktree detached at the pushed commit `bac6f8a`, nothing copied in, under the FIFO capture
+lock, reporting through the test process's **exit code** (§589.1):
+
+```
+  # tests 1051   # pass 1051   # fail 0   # cancelled 0   # skipped 0
+  === EXIT CODE 0 · 243.2 s ===
+  === CWD GUARD (§694): OK — worktree intact, figure is quotable ===
+```
+
+**Exactly one run was made and it was green.** §703.2 records that re-rolling a flaky suite and
+quoting the green result is how a contaminated figure launders clean, so the number of runs is
+stated rather than left to be assumed: one. Both known-flaky arms — `framebudget` F3 GC at about
+1-in-3 and `padrest` R1b at about 1-in-5 — passed on it. Neither was filtered, and F3 in
+particular was **not** run under `--test-name-pattern`, which §703.2 established is itself the
+artefact that makes that arm fail 100 % of the time on every tree.
+
+The count is 1051 rather than §701's 1034 because other lanes have added arms since.
+
+**The `§694` guard is inside the runner, not appended after it.** A deleted working directory
+makes `spawn` report ENOENT against the *interpreter*, so a run whose worktree is removed
+underneath it returns dozens of failures naming a binary that is fine; §703.1 records that the
+distinguishing evidence in that incident was a `getcwd` printed after the summary, which a `tail`
+of the output discards. Here the runner re-`realpath`s the worktree after the child exits and
+prints a verdict line that says in words whether the figure may be quoted. It may.
+
+The lock was held **4.1 minutes**. The Carmelita lane is live on this box; the two capture runs
+this round held it 3.5 and 7.5 minutes.
+
+### §705.10 Bounds — what this does not cover
+
+- **Only the clue bottle changed.** No other prop or pickup was resized.
+- **No placement moved.** `spots[6]`, moved in §701.10, was NOT moved again — §705.5 reports the
+  better-balanced z that is now available and leaves the decision open. Zero changed `pos:`
+  literals this round.
+- **The reading of the request is an interpretation, not a measurement.** §705.1 states it and
+  names the rejected alternative; if it is wrong the correction is one constant.
+- **`clueRock` and `clueBob` did not move**, in either direction, and §701 settled why. Not
+  relitigated here.
+- **The HUD icon is untouched and was not re-verified beyond its coupling test.** §701.6
+  established that `BOTTLE_PALETTE` carries three colours and no dimension, so world scale cannot
+  reach the glyph; V13 stays green and stays green for that reason.
+- **`bottlefit` clearances above 0.60 m remain upper bounds**, not measurements — triangles past
+  the search pad are never evaluated. Everything at or under 0.60 m is exact.
+- **The 3× before-frames are re-shot from `c1e6bc9`, not the originals.** §701's files were lost
+  with the checkout rollback; the arm is pinned to a SHA instead, which is stronger provenance,
+  but they are not byte-identical to the images §701 described.
+
