@@ -274,6 +274,23 @@ const TUNE = {
      spread — that spread was the squash and nothing else. */
   carmelitaNative: 0,
 
+  /* Her shock pistol, on the native arm only. §704 measured what §702's header had reasoned
+     about: six of her eleven clips are TWO-HANDED WEAPON STANCES — her hands close to 0.086 m
+     apart and the `ShockPistol` armature travels from 1.38 m away at rest to 0.23 m from both —
+     so the gun needs no attach logic, no holster and no authoring. It is a sibling armature root
+     driven by the same clips, and on the native path it simply works.
+
+     It is 0 because it does not FIT, not because it does not work: 1,672 triangles a guard, and
+     every guard is drawn twice for the ink shell, so 1,672 × 9 × 2 = 30,096 against a measured
+     headroom of ~7,000 (`tools/budgetattrib.mjs --inpage`, 1.193 M of a 1.200 M cap). Turning it
+     on takes the worst main view over §1's cap; the number is here so that is a decision rather
+     than a surprise. `?carmpistol=1` at the URL for a one-off look.
+
+     It also selects the clip map: armed, `walk_patrol` goes back to `PatrolWalk`, the clip named
+     for it, which reads as a crouch around nothing without the weapon and as an armed patrol
+     with it (`CLIP_FOR_ARMED`). */
+  carmelitaPistol: 0,
+
   /* (B) the cone. coneShape 1 takes the structured-beam branch in BEAM_FRAG (uConeShape);
      0 = the legacy branch, spelled byte-identical to the pre-seal shader. The five
      constants below feed ONLY the taken candidate branch (unread at 0). */
@@ -720,6 +737,18 @@ const RAY_OPTS = { ignoreTags: ['hazard', 'water', 'rail', 'hook', 'spire', 'ven
  * shape this project already uses. No `location` (a plain-module host, or a headless suite) takes
  * the TUNE value, which defaults to the shipped rebind.
  */
+function wantPistol() {
+  let flag = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) {
+      flag = (new URLSearchParams(location.search).get('carmpistol') || '').toLowerCase();
+    }
+  } catch { /* no location in a plain-module host — take the TUNE value */ }
+  if (flag === '1' || flag === 'on') return true;
+  if (flag === '0' || flag === 'off') return false;
+  return TUNE.carmelitaPistol > 0.5;
+}
+
 function wantNative() {
   let flag = '';
   try {
@@ -785,7 +814,7 @@ class Guard {
     this.headBone = rig.bones.head || rig.bones.Head || rig.bones.headS || rig.bones.hips || rig.bones.body;
 
     this.anim = native
-      ? new CarmelitaNativeAnim(rig, asset.clips, index * 3.17 + 0.61)
+      ? new CarmelitaNativeAnim(rig, asset.clips, index * 3.17 + 0.61, { armed: !!asset.armed })
       : new GuardAnim(rig.bones, entry.type, index * 3.17 + 0.61);
     this.senses = new Senses(entry.type, TUNE.seed + index * 977);
 
@@ -1553,7 +1582,9 @@ export class Guards {
        to take the garrison down with it. */
     this.carmelitaNative = false;
     if (wantNative()) {
-      try { carmelita = await loadCarmelitaNative({ head: TUNE.carmelitaHead > 0.5 }); }
+      try {
+        carmelita = await loadCarmelitaNative({ head: TUNE.carmelitaHead > 0.5, pistol: wantPistol() });
+      }
       catch { carmelita = null; }
       if (carmelita) this.carmelitaNative = true;
       else this.engine.warn('guards: the native Carmelita rig did not load — falling back to the RIG3 rebind');

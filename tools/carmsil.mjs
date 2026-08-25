@@ -21,6 +21,12 @@
  *                   in-game guard (`--pose <json>`), with `--shift 0|1` selecting the shipped
  *                   skinIndex or the +1 remap. This is the only stage that can show the skinning
  *                   defect, because the defect is invisible at bind by construction.
+ *   --stage native  §704 — her OWN 199-joint rig, no rebind, at `MOUNT_SCALE`. `--clip <name>
+ *                   --t <seconds>` poses it with one of her own clips through the shipped
+ *                   `CarmelitaNativeAnim.update` at a fixed 60 Hz (stepped, never assigned —
+ *                   §435.4); `--noscale` shows the authored size. Compare against `bind`: same
+ *                   frame, same projection, same shading, same 1 m rule, so the two pictures
+ *                   differ only by the pipeline that made them.
  *
  * The view axis is an ARGUMENT, not a filename. `--view front` projects along -Z onto XY and is
  * front *by construction*; there is no name to mislabel and no camera to point the wrong way.
@@ -44,6 +50,7 @@ import path from 'node:path';
 import { PNG } from 'pngjs';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { bindToRig3, atlasOf, spliceHead, CARRY } from '../src/ai/CarmelitaGuard.js';
+import { buildNative, instantiateNative, spliceHeadNative, CarmelitaNativeAnim, MOUNT_SCALE } from '../src/ai/CarmelitaNative.js';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const argv = process.argv.slice(2);
@@ -56,6 +63,11 @@ const CARRY_MODE = arg('--carry', 'rebind') === 'legacy' ? CARRY.LEGACY : CARRY.
 const POSE = arg('--pose', '');
 const SHIFT = Number(arg('--shift', 0));
 const TAG = arg('--tag', '');
+/* §704's stage. `--clip <name> --t <seconds>` poses the native rig with one of HER clips; without
+   them it renders the bind pose. `--noscale` drops MOUNT_SCALE so the authored size is visible. */
+const CLIP = arg('--clip', '');
+const TIME = Number(arg('--t', 0));
+const NOSCALE = argv.includes('--noscale');
 const W = 520, H = 900;
 
 const buf = readFileSync(path.join(ROOT, 'public/assets/sly-anim/carmelita-guard.glb'));
@@ -64,16 +76,21 @@ const gltf = await new Promise((res, rej) => new GLTFLoader().parse(
 gltf.scene.updateMatrixWorld(true);
 
 /* The recovered face (§702). Off with `--head 0`, which is the shipped revert token's arm. */
+let headGeom = null;
 if (HEAD) {
   const hp = path.join(ROOT, 'public/assets/sly-anim/carmelita-head-lp.glb');
   const hb = readFileSync(hp);
   const hg = await new Promise((res, rej) => new GLTFLoader().parse(
     hb.buffer.slice(hb.byteOffset, hb.byteOffset + hb.byteLength), '', res, rej));
-  let geoH = null;
-  hg.scene.traverse((o) => { if (!geoH && o.isMesh) geoH = o.geometry; });
-  const r = spliceHead(gltf.scene, geoH);
-  console.log(`head splice: ${JSON.stringify(r)}`);
-  gltf.scene.updateMatrixWorld(true);
+  hg.scene.traverse((o) => { if (!headGeom && o.isMesh) headGeom = o.geometry; });
+  /* The native stage does its own splice, through its own FIDUCIAL-GATED path — splicing here
+     too would leave `buildNative` re-checking a head it had already installed, and would mean the
+     two stages did not exercise the same code. */
+  if (STAGE !== 'native') {
+    const r = spliceHead(gltf.scene, headGeom);
+    console.log(`head splice: ${JSON.stringify(r)}`);
+    gltf.scene.updateMatrixWorld(true);
+  }
 }
 
 /* ── assemble the triangle soup for the requested stage ─────────────────────────────────── */
@@ -109,6 +126,51 @@ if (STAGE === 'src') {
     list.push({ g, group: atlasOf(o.material) });
   });
   soup = { ...fromGeometries(list), label: 'src — source meshes, node transforms baked' };
+} else if (STAGE === 'native') {
+  /* §704 — the NATIVE import, at the mount scale, optionally posed by one of her own clips.
+     This is the arm that has to be compared against `bind`: same frame, same projection, same
+     shading, same 1 m rule, so the two pictures differ only by the pipeline that made them.
+     `--clip <name> --t <seconds>` drives her own `AnimationMixer`; with no `--clip` this is the
+     bind pose, which is where §702 proved the rebind's mangling lived. */
+  const asset = buildNative(gltf.scene, HEAD ? headGeom : null);
+  const mat = new THREE.MeshBasicMaterial();
+  const rig = instantiateNative(asset, [mat, mat], { scale: NOSCALE ? 1 : MOUNT_SCALE });
+  let label = `native — her 199-joint rig at the bind pose${NOSCALE ? ' (unscaled)' : `, ×${MOUNT_SCALE}`}`;
+  if (CLIP) {
+    const cb = readFileSync(path.join(ROOT, 'public/assets/sly-anim/carmelita-clips.glb'));
+    const cg = await new Promise((res, rej) => new GLTFLoader().parse(
+      cb.buffer.slice(cb.byteOffset, cb.byteOffset + cb.byteLength), '', res, rej));
+    const anim = new CarmelitaNativeAnim(rig, cg.animations, 0);
+    /* Settle to the requested time by STEPPING the shipped update path at a fixed 60 Hz, never by
+       assigning a clock (§435.4 — probes occupy space the way the agent does). */
+    anim.play(CLIP, { fade: 0 });
+    const steps = Math.max(1, Math.round(TIME * 60));
+    for (let i = 0; i < steps; i++) anim.update(1 / 60);
+    label += ` — ${CLIP} settled to ${(steps / 60).toFixed(3)}s over ${steps} frames of the shipped update`;
+  }
+  rig.root.updateMatrixWorld(true);
+
+  /* CPU-skin through `applyBoneTransform` (the GLSL chunk verbatim) then `localToWorld`, which is
+     the second half the renderer does — the same two steps `tools/carmscale.mjs` measures with. */
+  const geo = rig.mesh.geometry;
+  const p = geo.getAttribute('position'), n = geo.getAttribute('normal');
+  const nv = p.count;
+  const pos = new Float32Array(nv * 3), nrm = new Float32Array(nv * 3);
+  const v = new THREE.Vector3();
+  const nMat = new THREE.Matrix3().setFromMatrix4(rig.mesh.matrixWorld);
+  for (let i = 0; i < nv; i++) {
+    v.fromBufferAttribute(p, i);
+    rig.mesh.applyBoneTransform(i, v);
+    rig.mesh.localToWorld(v);
+    pos[i * 3] = v.x; pos[i * 3 + 1] = v.y; pos[i * 3 + 2] = v.z;
+    v.fromBufferAttribute(n, i).applyMatrix3(nMat).normalize();
+    nrm[i * 3] = v.x; nrm[i * 3 + 1] = v.y; nrm[i * 3 + 2] = v.z;
+  }
+  const grp = new Uint8Array(nv);
+  for (const r of asset.regions) for (let i = r.start; i < r.start + r.count; i++) grp[i] = r.group;
+  const idx = new Uint32Array(geo.index.count);
+  for (let i = 0; i < geo.index.count; i++) idx[i] = geo.index.getX(i);
+  soup = { pos, nrm, idx, grp, label };
 } else {
   const asset = bindToRig3(gltf.scene, { carry: CARRY_MODE });
   const geo = asset.geometry;
@@ -247,7 +309,7 @@ function coverage(view) {
   return { png, body, head };
 }
 
-const name = `carmsil-${STAGE}${STAGE === 'pose' ? `-shift${SHIFT}` : ''}${TAG ? `-${TAG}` : ''}`;
+const name = `carmsil-${STAGE}${STAGE === "pose" ? `-shift${SHIFT}` : ""}${CLIP ? `-${CLIP.replace(/[^a-zA-Z0-9]/g, "")}` : ""}${TAG ? `-${TAG}` : ""}`;
 console.log(`stage: ${soup.label}`);
 for (const view of ['front', 'side']) {
   const { png, body, head } = coverage(view);

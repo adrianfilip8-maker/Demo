@@ -6,7 +6,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import {
   buildNative, instantiateNative, spliceHeadNative, headFiducial,
-  CarmelitaNativeAnim, CLIP_FOR, UNUSED_CLIPS, ONCE, MOUNT_SCALE, CARMELITA_CLIPS_ASSET,
+  CarmelitaNativeAnim, CLIP_FOR, CLIP_FOR_ARMED, clipMapFor, UNUSED_CLIPS, ONCE, MOUNT_SCALE,
+  CARMELITA_CLIPS_ASSET,
 } from '../src/ai/CarmelitaNative.js';
 import { GUARD_TUNE } from '../src/ai/Guard.js';
 
@@ -337,4 +338,81 @@ test('the +1 skinIndex remap can never reach the native geometry', () => {
   const src = readFileSync('src/ai/Guard.js', 'utf8');
   assert.match(src, /shiftGuardSkin\(carm\.geometry, skin && !this\.carmelitaNative\)/,
     'the §309 remap is refused on the native arm — there it is a fresh off-by-one, not a fix');
+});
+
+/* ───────────────── the weapon stances, and the pistol that pays for them ───────────────── */
+
+has('the armed clips are identified by MEASUREMENT, not by their names', () => {
+  if (!ANIMS.length) return;
+  /* Pose the SOURCE skeleton with its own clips and measure how far apart her hands end up.
+     A two-handed weapon stance closes them to ~8.6 cm; arms at the sides or swinging do not.
+     This is the discriminator that says `PatrolWalk` is a sneak around a gun and
+     `CasualWalking` is the upright walk a garrison wants — a claim no clip NAME can settle. */
+  return (async () => {
+    const fresh = await parse(ASSET);
+    let skel = null;
+    fresh.scene.traverse((o) => { if (!skel && o.isSkinnedMesh) skel = o.skeleton; });
+    const by = new Map(skel.bones.map((b) => [b.name, b]));
+    const rest = skel.bones.map((b) => ({ p: b.position.clone(), q: b.quaternion.clone(), s: b.scale.clone() }));
+    const reset = () => skel.bones.forEach((b, i) => {
+      b.position.copy(rest[i].p); b.quaternion.copy(rest[i].q); b.scale.copy(rest[i].s);
+    });
+    const handGap = (name, t) => {
+      reset();
+      const clip = ANIMS.find((c) => c.name === name);
+      const mx = new THREE.AnimationMixer(fresh.scene);
+      mx.clipAction(clip).play(); mx.setTime(t);
+      fresh.scene.updateMatrixWorld(true);
+      const l = new THREE.Vector3().setFromMatrixPosition(by.get('HandL').matrixWorld);
+      const r = new THREE.Vector3().setFromMatrixPosition(by.get('HandR').matrixWorld);
+      mx.stopAllAction(); mx.uncacheRoot(fresh.scene);
+      return l.distanceTo(r);
+    };
+    const armed = ['Idle', 'Lookaround', 'PatrolWalk', 'Shoot(BodyMovement)'];
+    for (const n of armed) {
+      const d = handGap(n, 0);
+      assert.ok(d < 0.15, `${n} is a two-handed stance — hands ${d.toFixed(3)} m apart`);
+    }
+    /* The other arm (§418.3): the clips actually used for locomotion must NOT be armed, or the
+       discriminator is measuring something every clip has. */
+    for (const n of ['CasualWalking', 'Run']) {
+      const d = handGap(n, 0);
+      assert.ok(d > 0.30, `${n} is NOT a two-handed stance — hands ${d.toFixed(3)} m apart`);
+    }
+    /* And the map follows the measurement rather than the names. */
+    assert.equal(CLIP_FOR.walk_patrol, 'CasualWalking', 'the patrol walk is the UPRIGHT clip');
+    assert.equal(CLIP_FOR.run_chase, 'Run');
+    assert.ok(UNUSED_CLIPS.includes('PatrolWalk'),
+      'the clip NAMED PatrolWalk is unused on the unarmed build, and that is stated');
+  })();
+});
+
+has('the pistol is available, priced, and off by default', () => {
+  const bare = buildNative(SCENE, null);
+  assert.equal(bare.stats.armed, false);
+  assert.ok(bare.stats.propTris > 1600 && bare.stats.propTris < 1700,
+    `the pistol is ${bare.stats.propTris} triangles a guard`);
+  /* 9 guards, each drawn twice for the ink shell, against ~7,000 triangles of headroom. */
+  const cost = bare.stats.propTris * 9 * 2;
+  assert.ok(cost > 7000, `and ${cost} over the garrison, which does not fit — this is why it is 0`);
+
+  const fresh = buildNative(SCENE, null, { pistol: true });
+  assert.equal(fresh.stats.armed, true);
+  assert.equal(fresh.stats.kept, 19, 'armed keeps the three pistol meshes');
+  assert.equal(fresh.tris - bare.tris, bare.stats.propTris, 'and costs exactly the pistol');
+  for (const n of ['MainBody', 'Barrel', 'Antennae003']) {
+    assert.ok(fresh.regions.some((r) => r.name === n), `${n} is in the armed build`);
+    assert.ok(!bare.regions.some((r) => r.name === n), `${n} is NOT in the default build`);
+  }
+  /* Armed, the patrol walk goes back to the clip named for it. */
+  assert.equal(clipMapFor(true).walk_patrol, 'PatrolWalk');
+  assert.equal(clipMapFor(false).walk_patrol, 'CasualWalking');
+  assert.equal(CLIP_FOR_ARMED.run_chase, CLIP_FOR.run_chase, 'and nothing else changes');
+});
+
+test('the pistol token exists, is off, and is documented at its site', () => {
+  assert.equal(GUARD_TUNE.carmelitaPistol, 0);
+  const src = readFileSync('src/ai/Guard.js', 'utf8');
+  assert.match(src, /carmpistol/, 'the URL token is there');
+  assert.match(src, /30,096/, 'and the triangle cost is stated where the decision is made');
 });

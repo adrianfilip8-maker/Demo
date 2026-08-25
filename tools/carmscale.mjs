@@ -32,7 +32,7 @@
  *      from each candidate camera. A frame's NAME cannot establish that it sees a face; this
  *      prints the number, so "front" is a measurement.
  *
- *   node tools/carmscale.mjs [--seconds 60]
+ *   node tools/carmscale.mjs [--seconds 60] [--query carm=native]
  */
 import { withGame } from './harness.mjs';
 
@@ -41,6 +41,14 @@ const arg = (k, d) => {
   return i >= 0 && process.argv[i + 1] ? Number(process.argv[i + 1]) : d;
 };
 const SECONDS = arg('--seconds', 60);
+/* §704: `--query carm=native` measures the NATIVE arm through the same tool and the same settle,
+   so the two rigs' drawn heights, head fractions and bone counts are comparable rather than
+   merely both reported. Passed to `withGame`, which appends it before any module loads — the arm
+   is chosen at boot in `Guards.init`, so it cannot be switched afterwards. */
+const QUERY = (() => {
+  const i = process.argv.indexOf('--query');
+  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : '';
+})();
 
 /* The cameras whose framing this run is asked to vet. Positions are the ones `guardground.mjs`
    already cleared through camDot; nothing new is walked into a crate here. */
@@ -51,7 +59,7 @@ const CAMS = {
   'portrait-colonnade': { pos: [-18.44, 3.00, 28.5], look: [-18.46, 1.25, 22.32] },
 };
 
-const out = await withGame({ width: 640, height: 360, quality: 'low' }, async ({ page }) => {
+const out = await withGame({ width: 640, height: 360, quality: 'low', query: QUERY }, async ({ page }) => {
   page.setDefaultTimeout(0);
   return page.evaluate(async ([seconds, CAMS]) => {
     let THREE = null;
@@ -126,7 +134,9 @@ const out = await withGame({ width: 640, height: 360, quality: 'low' }, async ({
       if (!mesh) { rows.push({ id: g.id, error: 'no skinned mesh on this guard' }); continue; }
       const whole = drawnBox(mesh);
       const head = headSpan ? drawnBox(mesh, headSpan.start, headSpan.end - headSpan.start) : null;
-      const headBone = g.bones?.head || null;
+      /* §704: her native rig names it `Head`; RIG3 names it `head`. Both are looked up so the
+         head row is populated on either arm rather than silently null on one of them. */
+      const headBone = g.bones?.head || g.bones?.Head || null;
       const hb = headBone ? new THREE.Vector3().setFromMatrixPosition(headBone.matrixWorld) : null;
       /* forward: the guard's own heading, taken from the root's world matrix rather than from
          a yaw field, so it is the orientation the frame actually draws. */

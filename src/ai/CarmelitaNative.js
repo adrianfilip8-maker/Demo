@@ -128,10 +128,52 @@ export const CARMELITA_CLIPS_ASSET = `${BASE}carmelita-clips.glb`;
  * pistol that this import drops. They are still loaded and still playable by name, so a later
  * state can reach one without touching this file.
  */
+/**
+ * **Six of her eleven clips are TWO-HANDED WEAPON STANCES, and this was measured, not guessed.**
+ *
+ * The clip names promise a guard set and do not deliver one. Judged by their names,
+ * `Idle`/`PatrolWalk`/`Lookaround` are exactly what a patrolling garrison wants. Rendered, they
+ * are a crouched figure with its hands clasped in front of nothing. The discriminator is the
+ * distance between her two hands, taken off the SOURCE skeleton posed by its own clips:
+ *
+ *     clip                  hands apart   pistol→hand   drawn height (×MOUNT_SCALE)
+ *     Idle                     0.086 m      0.23/0.25       1.39–1.47 m
+ *     Lookaround               0.086 m      0.23/0.24       1.43 m
+ *     PatrolWalk               0.086 m      0.23/0.25       1.51 m
+ *     Shoot(BodyMovement)      0.086 m      0.23/0.25       1.47 m
+ *     CasualWalking            0.40 m       0.23/0.49       1.77 m      ← arms at her sides
+ *     Run                      0.72 m       0.23/0.77       1.48 m      ← arms swinging
+ *     (the bind pose)          0.87 m       0.67/1.38       1.82 m      ← pistol parked at her side
+ *
+ * Her hands close to 8.6 cm apart and the `ShockPistol` armature travels from 1.38 m away at rest
+ * to 0.23 m from BOTH hands. She is holding the gun, and the source animates it there — six clips
+ * out of eleven. That also explains the height: those clips sit 20–25% below the bind pose because
+ * a two-handed firing stance is a crouch, not because anything here is scaled wrong.
+ *
+ * **This retires a sentence in `CarmelitaGuard.js`.** That header says re-attaching the pistol
+ * "would be authoring, not importing", on the grounds that there is "no hand attach, no holster
+ * and no clip that draws a gun". The first two are true and the third is not: the pistol needs no
+ * attach logic at all, because its armature is a sibling root driven by the same eleven clips.
+ * The REBIND could not see this — it maps only joints under the body root, so the pistol stayed
+ * parked wherever the bind left it, and a gun lying 0.86 m to one side reads as a bug rather than
+ * as a weapon. On the native path it simply works, for free.
+ *
+ * **It does not fit.** The pistol is `MainBody` + `Barrel` + `Antennae003` = 1,672 triangles a
+ * guard, and every guard is drawn twice (the ink shell): 1,672 × 9 × 2 = **30,096 triangles**
+ * against a measured headroom of about **7,000** (`tools/budgetattrib.mjs --inpage`: 1.193 M of a
+ * 1.200 M cap, 99%). So it is a token, `TUNE.carmelitaPistol`, defaulting to **0**, and the
+ * number is recorded here so the trade is a decision someone can make rather than a discovery.
+ */
 export const CLIP_FOR = {
   idle: 'Idle',
   idle_bored: 'Lookaround',
-  walk_patrol: 'PatrolWalk',
+  /* Upright, and NOT the clip whose name says patrol — see ARMED_STANCE above. `CasualWalking`
+     draws at 1.768 m with her arms at her sides; `PatrolWalk` draws at 1.508 m with her hands
+     clasped around a pistol this build does not draw. */
+  walk_patrol: 'CasualWalking',
+  /* The set contains exactly one upright walk, so the alert walk is the same clip. `Guard.js`
+     already scales `speed` per state (0.5–1.5 on this branch), which is the difference that was
+     available; inventing a second walk is not. */
   walk_alert: 'CasualWalking',
   run_chase: 'Run',
   look_around: 'Lookaround',
@@ -144,14 +186,23 @@ export const CLIP_FOR = {
      with, and §698 already recorded the mismatch it comes from: it is a GUN animation on a
      garrison that swings. It is used because a guard who attacks with no clip at all reads worse
      than one who attacks with the wrong one, and because the alternative — authoring a swing —
-     is exactly what the owner asked us to stop doing. Stated as a compromise, not as a fit.
-     `Shoot(GunMovement)` is the pistol's own half of that clip pair and stays unused, because
-     the pistol is not on her. */
+     is exactly what the owner asked us to stop doing. Stated as a compromise, not as a fit. */
   attack: 'Shoot(BodyMovement)',
 };
 
+/**
+ * The same map for a build that DRAWS THE PISTOL (`TUNE.carmelitaPistol`). Only the patrol walk
+ * changes, and it changes back to the clip named for it: with the weapon in her hands the armed
+ * stance reads as an armed patrol rather than as a crouch around nothing. The linkage is
+ * expressed here rather than left as a note, because a note is what goes stale.
+ */
+export const CLIP_FOR_ARMED = { ...CLIP_FOR, walk_patrol: 'PatrolWalk', walk_alert: 'PatrolWalk' };
+
+/** Which map a build uses. `armed` is `TUNE.carmelitaPistol > 0.5`. */
+export function clipMapFor(armed) { return armed ? CLIP_FOR_ARMED : CLIP_FOR; }
+
 /** Her clips that no guard state reaches. Loaded and playable; simply never asked for. */
-export const UNUSED_CLIPS = ['Air', 'Jump', 'Run.001', 'Shoot(GunMovement)'];
+export const UNUSED_CLIPS = ['Air', 'Jump', 'PatrolWalk', 'Run.001', 'Shoot(GunMovement)'];
 
 /**
  * Guard clips that must not loop — a one-shot reaction, or a state that holds its last frame.
@@ -335,7 +386,14 @@ export function buildNative(scene, headGeom = null, opts = {}) {
     throw new Error('carmelita-native: bone names are not unique — AnimationMixer binds by name');
   }
 
-  const { kept, props, interior, bodyRoots } = classify(skinned, skel);
+  const cls = classify(skinned, skel);
+  const { props, interior, bodyRoots } = cls;
+  /* The pistol is a real, animated part of six of her eleven clips — see the CLIP_FOR header —
+     and on this path it needs no attach logic at all. It is off by default because it does not
+     fit: 1,672 triangles a guard, ×9 guards ×2 (the ink shell) = 30,096 against ~7,000 of
+     headroom. `armed` puts it back for anyone who buys the room elsewhere. */
+  const armed = !!opts.pistol;
+  const kept = armed ? [...cls.kept, ...props.map((p) => p.mesh)] : cls.kept;
   if (!kept.length) throw new Error('carmelita-native: every mesh was classified away');
 
   /* ---- merge, keeping the source skinIndex values EXACTLY as authored ---- */
@@ -451,8 +509,13 @@ export function buildNative(scene, headGeom = null, opts = {}) {
       soleLift: Math.round(soleLift * 1e6) / 1e6,
       height: Math.round(height * 1e5) / 1e5,
       maxSkinIndex, bodyRoots,
-      dropped: [...props.map((p) => p.mesh.name), ...interior.map((m) => m.name)],
-      droppedProps: props.map((p) => `${p.mesh.name}@${p.root}`),
+      armed,
+      dropped: [...(armed ? [] : props.map((p) => p.mesh.name)), ...interior.map((m) => m.name)],
+      droppedProps: armed ? [] : props.map((p) => `${p.mesh.name}@${p.root}`),
+      propTris: props.reduce((n, p) => {
+        const g = p.mesh.geometry;
+        return n + (g.index ? g.index.count : g.attributes.position.count) / 3;
+      }, 0),
       droppedInterior: interior.map((m) => m.name),
       propRule: PROP_ROOT_RULE,
       head: headSplice,
@@ -550,7 +613,7 @@ export class CarmelitaNativeAnim {
    * @param {THREE.AnimationClip[]} clips  her eleven, as loaded
    * @param {number} seed  phase offset, so nine guards do not breathe in lockstep
    */
-  constructor(rig, clips, seed = 0) {
+  constructor(rig, clips, seed = 0, opts = {}) {
     this.rig = rig;
     this.mixer = new THREE.AnimationMixer(rig.rig || rig.root);
     this.clips = new Map();
@@ -559,7 +622,8 @@ export class CarmelitaNativeAnim {
     /** Guard name → action, built once. A name with no clip resolves to `idle` and is reported. */
     this.actions = new Map();
     this.missing = [];
-    for (const [guardName, srcName] of Object.entries(CLIP_FOR)) {
+    this.map = clipMapFor(!!opts.armed);
+    for (const [guardName, srcName] of Object.entries(this.map)) {
       const clip = this.clips.get(srcName);
       if (!clip) { this.missing.push(`${guardName}→${srcName}`); continue; }
       const a = this.mixer.clipAction(clip);
@@ -576,7 +640,7 @@ export class CarmelitaNativeAnim {
        configuration — which is how `alert` came to be a LoopRepeat action that never reported
        finished, while its `setLoop(LoopOnce)` sat three lines above looking correct. `play()` is
        now the single authority on loop mode for exactly this reason. */
-    const mapped = new Set(Object.values(CLIP_FOR));
+    const mapped = new Set(Object.values(this.map));
     for (const [name, clip] of this.clips) {
       if (this.actions.has(name) || mapped.has(name)) continue;
       const a = this.mixer.clipAction(clip);
@@ -584,6 +648,20 @@ export class CarmelitaNativeAnim {
       a.setLoop(THREE.LoopRepeat, Infinity);
       this.actions.set(name, a);
     }
+
+    /* Her OWN clip names, aliased onto the guard name that owns each action. Without this
+       `play('PatrolWalk')` finds nothing and falls back to `idle` — silently, because falling
+       back to idle is the correct behaviour for a name that genuinely has no clip. That cost a
+       set of frames: three `carmsil --clip` renders of `Idle`, `PatrolWalk` and `CasualWalking`
+       came back bit-identical, all of them idle, and the pixel counts agreed to four digits so
+       nothing looked wrong. A name that resolves to something else must be visible. */
+    this.alias = new Map();
+    for (const [guardName, srcName] of Object.entries(this.map)) {
+      if (!this.actions.has(guardName)) continue;
+      if (!this.actions.has(srcName) && !this.alias.has(srcName)) this.alias.set(srcName, guardName);
+    }
+    /** Names asked for that resolved to neither an action nor an alias. Read by the tools. */
+    this.unknown = new Set();
 
     this.names = [...this.actions.keys()];
     this._current = '';
@@ -617,9 +695,11 @@ export class CarmelitaNativeAnim {
 
   /** Cross-fade to a clip by GUARD name. Re-playing the current clip is a no-op unless `restart`. */
   play(name, { fade = 0.18, loop = null, speed = 1, restart = false } = {}) {
-    const next = this.actions.get(name) || this.actions.get('idle');
+    const resolved = this.actions.has(name) ? name : (this.alias.get(name) || null);
+    if (!resolved) this.unknown.add(name);
+    const nextName = resolved || 'idle';
+    const next = this.actions.get(nextName);
     if (!next) return;
-    const nextName = this.actions.has(name) ? name : 'idle';
     if (this._current === nextName && !restart) { this.speed = speed; return; }
     const prev = this.actions.get(this._current);
     /* An omitted `loop` restores the NAME'S OWN default rather than leaving whatever the last
@@ -647,13 +727,14 @@ export class CarmelitaNativeAnim {
 
   /** Hold one frame of a clip — the screenshot harness needs a deterministic pose. */
   freeze(name, t = 0) {
-    const a = this.actions.get(name);
-    if (!a) return false;
+    const key = this.actions.has(name) ? name : this.alias.get(name);
+    const a = key ? this.actions.get(key) : null;
+    if (!a) { this.unknown.add(name); return false; }
     for (const [, other] of this.actions) if (other !== a) { other.stop(); other.enabled = false; }
     a.reset(); a.enabled = true; a.setEffectiveWeight(1); a.play();
     a.time = THREE.MathUtils.clamp(t, 0, a.getClip()?.duration || 0);
     a.paused = true;
-    this._current = name;
+    this._current = key;
     this._frozen = true;
     this.mixer.update(0);
     this._applyLook(0);
@@ -744,6 +825,7 @@ export async function loadCarmelitaNative(opts = {}) {
       } catch { head = null; }
     }
     const asset = buildNative(gltf.scene, head, opts);
+    asset.armed = !!opts.pistol;
     /* The clips are a THIRD fetch. A guard with no clips is still a guard standing at his bind
        pose, which is a far better failure than no garrison. */
     let clips = [];
