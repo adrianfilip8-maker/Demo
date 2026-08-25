@@ -115,11 +115,18 @@ export const CARMELITA_CLIPS_ASSET = `${BASE}carmelita-clips.glb`;
  * detection, the alert ladder, the swing — untouched by this import, which is what the owner
  * asked for.
  *
- * Ten names are requested by `Guard._chooseClip` and `_playOneShot`; all ten are mapped. Five of
- * her eleven clips have no guard state that reaches them and are listed in `UNUSED_CLIPS` rather
- * than quietly absent — `Air` and `Jump` need a guard who leaves the ground and none does, and the
- * two `Shoot` clips are gun animations on a garrison that swings (§698). They are still loaded and
- * still playable by name, so a later state can reach them without touching this file.
+ * **Twelve** names are requested by `Guard._chooseClip` and `_playOneShot`, and all twelve are
+ * mapped. The count is worth stating because ten of them are obvious from `_chooseClip`'s switch
+ * and two are not: `attack` and `pickpocketed_reaction` are fired from `_playOneShot` at the swing
+ * and the pickpocket, a hundred lines away from the switch. `tests/carmnative.test.mjs` greps them
+ * out of `Guard.js` rather than restating them here, so a state added later cannot silently fall
+ * through to `idle` — which is how it caught both of these.
+ *
+ * Four of her eleven clips have no guard state that reaches them and are listed in `UNUSED_CLIPS`
+ * rather than quietly absent — `Air` and `Jump` need a guard who leaves the ground and none does,
+ * `Run.001` is a second run the roster has no speed for, and `Shoot(GunMovement)` animates the
+ * pistol that this import drops. They are still loaded and still playable by name, so a later
+ * state can reach one without touching this file.
  */
 export const CLIP_FOR = {
   idle: 'Idle',
@@ -132,13 +139,32 @@ export const CLIP_FOR = {
   alert: 'HitTaken',
   stunned: 'HitTaken',
   ko: 'HitTaken',
+  pickpocketed_reaction: 'HitTaken',
+  /* The swing. `Shoot(BodyMovement)` is the only whole-body aggressive action she was authored
+     with, and §698 already recorded the mismatch it comes from: it is a GUN animation on a
+     garrison that swings. It is used because a guard who attacks with no clip at all reads worse
+     than one who attacks with the wrong one, and because the alternative — authoring a swing —
+     is exactly what the owner asked us to stop doing. Stated as a compromise, not as a fit.
+     `Shoot(GunMovement)` is the pistol's own half of that clip pair and stays unused, because
+     the pistol is not on her. */
+  attack: 'Shoot(BodyMovement)',
 };
 
 /** Her clips that no guard state reaches. Loaded and playable; simply never asked for. */
-export const UNUSED_CLIPS = ['Air', 'Jump', 'Run.001', 'Shoot(BodyMovement)', 'Shoot(GunMovement)'];
+export const UNUSED_CLIPS = ['Air', 'Jump', 'Run.001', 'Shoot(GunMovement)'];
 
-/** Guard clips that must not loop — a one-shot reaction, or a state that holds its last frame. */
-export const ONCE = new Set(['alert', 'stunned', 'ko']);
+/**
+ * Guard clips that must not loop — a one-shot reaction, or a state that holds its last frame.
+ * `Guard._playOneShot` passes `loop: false` explicitly for the four it fires, so this is the
+ * default for the two that are chosen by `_chooseClip` instead (`stunned`, `ko`) and a restatement
+ * for the rest.
+ *
+ * `suspicious` is deliberately NOT here even though `_playOneShot('suspicious')` exists: it is
+ * also a sustained state in `_chooseClip`'s switch, and a guard who plants to look suspicious and
+ * then freezes on the last frame is worse than one who keeps looking. The one-shot call passes
+ * `loop: false` for its own firing and `play()` restores this default on the next call.
+ */
+export const ONCE = new Set(['alert', 'stunned', 'ko', 'attack', 'pickpocketed_reaction']);
 
 /**
  * The uniform mount scale — see the header. Derived, not chosen: the shipped rebound guard's
@@ -542,9 +568,17 @@ export class CarmelitaNativeAnim {
       else a.setLoop(THREE.LoopRepeat, Infinity);
       this.actions.set(guardName, a);
     }
-    /* Her own names are playable too, so nothing here forecloses a later state reaching `Jump`. */
+    /* Her own names are playable too, so nothing here forecloses a later state reaching `Jump`.
+       ONLY the clips no guard name already maps, and that restriction is load-bearing:
+       `AnimationMixer.clipAction(clip, root)` is CACHED by (clip, root) and returns the SAME
+       action object every time. Four guard names resolve to `HitTaken` and three to `Lookaround`,
+       so registering her source names unconditionally handed those actions a second
+       configuration — which is how `alert` came to be a LoopRepeat action that never reported
+       finished, while its `setLoop(LoopOnce)` sat three lines above looking correct. `play()` is
+       now the single authority on loop mode for exactly this reason. */
+    const mapped = new Set(Object.values(CLIP_FOR));
     for (const [name, clip] of this.clips) {
-      if (this.actions.has(name)) continue;
+      if (this.actions.has(name) || mapped.has(name)) continue;
       const a = this.mixer.clipAction(clip);
       a.enabled = true;
       a.setLoop(THREE.LoopRepeat, Infinity);
@@ -588,10 +622,13 @@ export class CarmelitaNativeAnim {
     const nextName = this.actions.has(name) ? name : 'idle';
     if (this._current === nextName && !restart) { this.speed = speed; return; }
     const prev = this.actions.get(this._current);
-    if (loop !== null) {
-      if (loop) next.setLoop(THREE.LoopRepeat, Infinity);
-      else { next.setLoop(THREE.LoopOnce, 1); next.clampWhenFinished = true; }
-    }
+    /* An omitted `loop` restores the NAME'S OWN default rather than leaving whatever the last
+       caller set — `GuardAnim.play` does the same (`loop === null ? clip.loop : loop`), and
+       without it one `_playOneShot('suspicious')` would leave the sustained SUSPICIOUS state
+       clamped on its last frame forever after. */
+    const wantLoop = loop === null ? !ONCE.has(nextName) : !!loop;
+    if (wantLoop) { next.setLoop(THREE.LoopRepeat, Infinity); next.clampWhenFinished = false; }
+    else { next.setLoop(THREE.LoopOnce, 1); next.clampWhenFinished = true; }
     next.reset();
     next.enabled = true;
     next.setEffectiveTimeScale(1);

@@ -3,6 +3,7 @@ import { rng } from '../core/Rand.js';
 import { buildGuardAssets, instantiate, GROUPS, GUARD_PALETTE } from './GuardModel.js';
 import { removeOutlineShell } from '../render/Outline.js';
 import { loadCarmelitaGuard, CARMELITA_TEX, CARRY as CARMELITA_CARRY } from './CarmelitaGuard.js';
+import { loadCarmelitaNative, instantiateNative, CarmelitaNativeAnim } from './CarmelitaNative.js';
 import { GuardAnim } from './GuardAnim.js';
 import {
   ROSTER, buildRoutes, Senses, VISION, DETECT, STATE, stateForSuspicion, speedFor,
@@ -254,6 +255,24 @@ const TUNE = {
      The fetch is optional at runtime too — if it fails the character keeps the stub rather than
      being lost, so this token and a 404 have the same outcome. */
   carmelitaHead: 1,
+
+  /* §704 — the owner's "use the source rig and animations rather than trying to modify them".
+     1 = her NATIVE 199-joint skeleton, her own skin weights and her own eleven clips played by
+     `THREE.AnimationMixer` (`src/ai/CarmelitaNative.js`); 0 = the RIG3 rebind exactly as before
+     (the default), which stays byte-for-byte on the shipped path. `?carm=native` / `?carm=rebind`
+     overrides it at the URL, the same shape as `?char=dlraw`/`?char=dl` and `?kaykit=`.
+
+     What the two arms differ in is what the guard is MADE OF and what drives its bones, and
+     nothing else. `Guard`'s AI — patrol routing, detection, the alert ladder, the swing — is
+     identical on both, because the native driver implements `GuardAnim`'s interface and the
+     integration surface is clip NAMES rather than bone names. §697's `groundProbe` and
+     `groundSlopeMax` are not read by either arm and are not touched.
+
+     Two consequences worth stating rather than discovering: the native arm carries 199 bones per
+     guard against 24 (measured cost in §704), and it does NOT apply `GuardAnim`'s ±4.8%
+     squash-and-stretch, so the nine guards measure one height rather than §702's 1.68–1.87 m
+     spread — that spread was the squash and nothing else. */
+  carmelitaNative: 0,
 
   /* (B) the cone. coneShape 1 takes the structured-beam branch in BEAM_FRAG (uConeShape);
      0 = the legacy branch, spelled byte-identical to the pre-seal shader. The five
@@ -696,6 +715,24 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const RAY_OPTS = { ignoreTags: ['hazard', 'water', 'rail', 'hook', 'spire', 'vent'] };
 
 /**
+ * §704's arm selector. `?carm=native` / `?carm=rebind` at the URL beats `TUNE.carmelitaNative`,
+ * so a capture harness can bracket the two without editing a file — the `?kaykit=` / `?char=`
+ * shape this project already uses. No `location` (a plain-module host, or a headless suite) takes
+ * the TUNE value, which defaults to the shipped rebind.
+ */
+function wantNative() {
+  let flag = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) {
+      flag = (new URLSearchParams(location.search).get('carm') || '').toLowerCase();
+    }
+  } catch { /* no location in a plain-module host — take the TUNE value */ }
+  if (flag === 'native') return true;
+  if (flag === 'rebind' || flag === 'off') return false;
+  return TUNE.carmelitaNative > 0.5;
+}
+
+/**
  * Is this `groundCheck` result a floor a guard may stand on?
  *
  * `groundCheck` answers "did the probe touch anything", and `_step` read that as "there is a
@@ -732,15 +769,24 @@ class Guard {
     this.radius = TUNE.radius[entry.type] ?? 0.42;
     this.rng = rng((TUNE.seed ^ Math.imul(index + 1, 2654435761)) >>> 0);
 
-    const rig = instantiate(asset, materials);
+    /* §704: which rig this guard is made of. `asset.native` is set only by
+       `loadCarmelitaNative`, so the scarab — which keeps its procedural body and never receives a
+       Carmelita asset — takes the original path unconditionally and needs no type test here. */
+    const native = !!asset.native;
+    const rig = native ? instantiateNative(asset, materials) : instantiate(asset, materials);
     this.root = rig.root;
     this.mesh = rig.mesh;
     this.bones = rig.bones;
     this.skeleton = rig.skeleton;
     this.root.name = this.id;
-    this.headBone = rig.bones.head || rig.bones.headS || rig.bones.hips || rig.bones.body;
+    /* Her own head joint is `Head`; RIG3's is `head`. `_eyePosition` reads this bone's world
+       position to put the vision beam's origin on the walk bob, so it has to resolve on both
+       rigs — and it is a lookup, not a change to the cone. */
+    this.headBone = rig.bones.head || rig.bones.Head || rig.bones.headS || rig.bones.hips || rig.bones.body;
 
-    this.anim = new GuardAnim(rig.bones, entry.type, index * 3.17 + 0.61);
+    this.anim = native
+      ? new CarmelitaNativeAnim(rig, asset.clips, index * 3.17 + 0.61)
+      : new GuardAnim(rig.bones, entry.type, index * 3.17 + 0.61);
     this.senses = new Senses(entry.type, TUNE.seed + index * 977);
 
     /* --- route state --- */
@@ -1501,12 +1547,25 @@ export class Guards {
      *
      * The scarab keeps its procedural body — it is a beetle sentinel, and Carmelita is not one. */
     let carmelita = null;
-    try {
-      carmelita = await loadCarmelitaGuard(undefined, {
-        carry: TUNE.carmelitaBind > 0.5 ? CARMELITA_CARRY.REBIND : CARMELITA_CARRY.LEGACY,
-        head: TUNE.carmelitaHead > 0.5,
-      });
-    } catch { carmelita = null; }
+    /* §704's arm. `wantNative()` reads the URL token first and `TUNE.carmelitaNative` second, and
+       a failed native load falls through to the rebind rather than to nothing — three fallbacks
+       deep (native → rebind → procedural `blob()`), because a character import must not be able
+       to take the garrison down with it. */
+    this.carmelitaNative = false;
+    if (wantNative()) {
+      try { carmelita = await loadCarmelitaNative({ head: TUNE.carmelitaHead > 0.5 }); }
+      catch { carmelita = null; }
+      if (carmelita) this.carmelitaNative = true;
+      else this.engine.warn('guards: the native Carmelita rig did not load — falling back to the RIG3 rebind');
+    }
+    if (!carmelita) {
+      try {
+        carmelita = await loadCarmelitaGuard(undefined, {
+          carry: TUNE.carmelitaBind > 0.5 ? CARMELITA_CARRY.REBIND : CARMELITA_CARRY.LEGACY,
+          head: TUNE.carmelitaHead > 0.5,
+        });
+      } catch { carmelita = null; }
+    }
     if (carmelita) {
       for (const t of CARMELITA_TYPES) {
         assets[t] = { ...assets[t], ...carmelita };
@@ -1587,7 +1646,12 @@ export class Guards {
     const art = TUNE.guardArt > 0.5;
     const skin = TUNE.guardSkin > 0.5;
 
-    shiftGuardSkin(carm.geometry, skin);
+    /* §704: the +1 remap corrects `instantiate()` prepending `root` to a root-less boneIndex.
+       `instantiateNative()` prepends nothing and remaps nothing, so on the native arm the shift
+       is not a fix but a fresh off-by-one — measured at 0.688 m of vertex displacement against
+       the artist's own file (`tools/carmnative.mjs` §5). It is refused there rather than trusted
+       to stay at 0. */
+    shiftGuardSkin(carm.geometry, skin && !this.carmelitaNative);
     paintGuardRegions(carm.geometry, carm.regions, art ? GUARD_DRESS : null);
 
     const shading = this.engine.get('shading');
