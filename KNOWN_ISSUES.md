@@ -53973,9 +53973,223 @@ Findings appended below as they are measured.
 
 ---
 
-## §705 — "Shrink the bottles by one third": the reading, stated so it is cheap to correct
-
-**CLAIMED — this block is being written. §700.9: a grep for a free number is a read with no lock,
-so the heading lands first and the content follows.**
+## §705 — "Shrink the bottles by one third": the reading, and a correction to §701.10's arithmetic
 
 The user, in full: **"Shrink the bottles by one third."**
+
+### §705.1 The reading, stated first because it is the whole risk
+
+Taken as **shrink BY one third — to two thirds of current**. Written down here and beside the
+constant in `PropKit.js` so that correcting it costs one line rather than an investigation.
+
+```
+  h            1.26    → 0.84
+  delivered    1.29780 → 0.86520 m       exactly x 2/3, measured off the merged geometry
+  half-width   0.25100 → 0.16735 m       width 0.502 → 0.335
+  base y       0.000000 → 0.000000       still base-origin: no placement moves
+  verts / tris 190 / 272 → 190 / 272     a scale is not a re-bake
+```
+
+**The other reading was considered and rejected.** "Shrink by a factor of three" lands on
+0.43260 m — *exactly* the pre-§701 size, i.e. a total undo of the previous round. Someone who
+wanted that would say "revert" or "back to the original", not "shrink by one third" one round
+after asking for 3×. They are trimming the result, not cancelling it.
+
+That the answer is **exactly 2× the original** (0.86520 = 2 × 0.43260) is arithmetic falling out
+of 3 × 2/3, not a target anyone aimed at. Recorded because a tidy number invites the suspicion
+that it was engineered toward, and it was not.
+
+### §705.2 The derived numbers, re-derived — and this is the resize where that matters
+
+§701 established which numbers are functions of the delivered height. Shrinking exercises that
+distinction harder than growing did:
+
+| | before | after | rule |
+|---|---|---|---|
+| `clueCollect` | 0.98 | **0.77** | `playerRadius 0.34 + height/2` = 0.7726, two places, down |
+| `clueSway` | 0.1854 | **0.1236** | `height / 7` = 0.12360, the reference's proportion |
+| `clueRock` | 0.349066 | 0.349066 | an ANGLE — does not scale, in either direction |
+| `clueBob` | 0.11 | 0.11 | never height-derived; §701 settled this |
+
+**`clueCollect` is where re-deriving and scaling part company.** Growing, the two agree. Shrinking
+they do not: `0.98 × 2/3 = 0.653`, which is **0.12 m short of contact**. That is the failure
+direction that shows — the player pushes into the glass and nothing happens — and it is exactly
+what a lane that "scaled the derived values" would have shipped. The formula is the value.
+
+The two-place rounding goes **down** on purpose, and that is the file's own doctrine rather than
+tidiness: `collect` is a CONTACT term and **any generosity beyond touching belongs in `magnet`**
+(§223, restated in `TUNE`'s own header). 0.77 sits 2.6 mm inside true contact rather than 0.2 mm
+outside it. `cluevault` V1b enforces the direction: `clueCollect ≤ playerRadius + height/2`.
+
+**V1b's counterexamples were refreshed to the values shipped one commit ago (0.98, 0.1854)**
+rather than left at §700's (0.55, 0.0618). Those older values miss the bands by so much that the
+arm would have been proving its tolerance can reject something absurd; the value that actually
+threatens this arm is always the previous one.
+
+### §705.3 Interpenetration — 12/12 clear, and every margin improved
+
+`tools/bottlefit.mjs`, all twelve, full pose envelope (swing × bob × yaw), triangle-vs-triangle
+against 438,550 drawn triangles. Rays remain the wrong instrument here for §701.4's reason:
+`Raycaster` honours `material.side`, so a ray fired from inside a `FrontSide` wall leaves through
+its own back face and reports a buried bottle as one standing in open air.
+
+The pose envelope shrank with the bottle: **lateral reach 0.865 → 0.577 m**, top of swing
+**y+1.330 → y+0.923**.
+
+| # | placement | 3× (1.29780) | 2/3 (0.86520) | nearest |
+|---|---|---|---|---|
+| 0 | terrace stage 1 | 0.403 | **0.591** | `arch:court:sandstone_worn` |
+| 1 | terrace stage 2 | > 0.60 | > 0.60 | — |
+| 2 | obelisk kiosk lintel | 0.544 | **0.659** | `arch:court:rope_fibre` |
+| 3 | peristyle SE architrave | 0.192 | **0.277** | `arch:court:bronze_dark` |
+| 4 | pylon ladder rung 5 | 0.169 | **0.231** | `arch:court:bronze_dark` |
+| 5 | east pylon deck | > 0.60 | > 0.60 | — |
+| 6 | hall front cornice | 0.105 | **0.181** | `arch:hall:sandstone_block` |
+| 7 | west aisle roof | > 0.60 | > 0.60 | — |
+| 8 | nave deck | > 0.60 | > 0.60 | — |
+| 9 | inner pylon south stage | > 0.60 | > 0.60 | — |
+| 10 | pylon summit deck | 0.324 | **0.339** | `arch:pylon:bronze_dark` |
+| 11 | tomb vault floor | 0.033 | **0.144** | `arch:tomb:sandstone_worn` |
+
+**12/12 clear, no placement moved, and the tightest bottle in the level went from 33 mm to
+144 mm.** Bottle 11 is the one to watch: §701 recorded the tripled `clueSway` costing it most of
+its margin, and shrinking hands that back with interest.
+
+### §705.4 R1 / R2 / R3 — unchanged, and unchanged for the same structural reason as §701
+
+```
+[clue] R1 12/12 found a surface · drop 0.561-5.460 m
+[clue] R2 12/12 inside the 2.4 m magnet · 0.080-0.700 m · worst bottle 4 by cling notch-pylon-e-w-5
+[clue] R3 12/12 out of reach from the courtyard · 97 stands at floor level, 97 blocked by headroom
+```
+
+Identical to §701 and to §700, to the digit, and that is the base-origin bake paying out a second
+time: R2 measures from where a player can stand to the bottle's **pickup point**, which is the
+authored spot, which is the mesh's base. The bottle changes size *about* that point in either
+direction without moving it.
+
+Per-bottle floor reach, from R2's own instrument (the collider, not the drawn scene):
+
+```
+  0 0.100   1 0.100   2 0.100   3 0.339   4 4.560*  5 0.080
+  6 0.140   7 0.100   8 0.100   9 0.100  10 0.100  11 0.100
+  * bottle 4's FLOOR reading, which R2 is required to reject; it is taken from a cling
+    (rung notch-pylon-e-w-5) at 0.700 m. §701's counterexample, still firing.
+```
+
+**Bottle 6 specifically: 0.140 m before and after**, drop 1.040 m onto the `ledge` collider at
+y 15.360 — the number this whole thread has been protecting.
+
+### §705.5 Bottle 6's window HAS opened — reported, not taken
+
+§701.10 shipped `spots[6]` at `z −16.25` and recorded a trade-off: clearance to the parapet and
+margin to the walkable collider's `+z` edge move against each other 1:1, and their sum is fixed.
+At the smaller width the sum is larger, so the window is genuinely wider:
+
+| | 3× | 2/3 |
+|---|---|---|
+| feasible z band (both margins > 0) | −16.351 … −16.200 | **−16.425 … −16.200** |
+| width of that band | 0.151 m | **0.225 m** |
+| best BALANCED z | −16.2755 → 0.076 / 0.076 | **−16.3125 → 0.119 / 0.113** |
+| at the SHIPPED z −16.25 | 0.101 / 0.050 | **0.181 / 0.050** |
+
+**At the shipped placement, doing nothing, clearance went 0.101 → 0.181 m.** A better-balanced
+option now exists at `z −16.3125`, which would trade 62 mm of clearance for 63 mm of collider
+margin and bring the smaller of the two from 0.050 to 0.113 m.
+
+**It was NOT taken.** One move was authorised (§701.10) and it is spent; moving a collectible in
+two consecutive rounds is worse than a slightly lopsided margin, and the placement is now clear
+by a comfortable amount either way. Recorded as an option for a decision.
+
+### §705.6 CORRECTION to §701.10: the "wider than the strip" arithmetic was wrong
+
+§701.10 said, of the 3× bottle:
+
+> the free strip between the parapet face (−16.602) and the +z edge of the walkable collider
+> (−16.200) is **0.402 m**, and the bottle is **0.502 m** across. It is wider than the strip it
+> stands on. Every z either overlaps the parapet or overhangs the collider edge
+
+**The table beneath that sentence was measured and is right; the sentence is wrong**, and it is
+wrong in a way this round exposed by re-running the same sweep at a new width. Both margins were
+positive together at 3× — the measured window was `−16.351 … −16.200`, non-empty, and at its
+midpoint both read 0.076 m. "No z satisfies both" was never true.
+
+The error is a units mismatch that a plausible-sounding sentence hid. The two margins are not
+measured against the same thing:
+
+```
+  clearance       from the bottle's SURFACE to the parapet face   →  (z + 16.602) − halfWidth
+  collider margin from the bottle's AXIS to the ledge edge        →  (−16.200) − z
+  sum             = 0.402 − halfWidth      (NOT 0.402 − width)
+```
+
+`strip − halfWidth` is 0.151 at 3× and 0.235 at 2/3, and both match the measured sums (0.151,
+0.231 — the 4 mm gap is the rock bringing the body fractionally closer than the planar z gap
+implies). Comparing the full *width* against the strip mixed a body measure with an axis measure
+and produced a number that implied an empty window.
+
+Why the axis measure is the right one for that term: R2's probe fires **straight down from the
+spot**, so what must be over the collider is the axis, not the silhouette. And a body overhanging
+the *collider* edge is not visibly hanging over anything — §701.10's own discovery was that the
+**drawn** cornice runs on well past where the collider stops, which is what made the first
+candidate at `z −16.05` look safe. The conclusion §701.10 drew stands, the placement it chose
+stands, and the arithmetic it justified them with does not.
+
+### §705.7 The frames
+
+`tools/bottleshot.mjs`, `camDot` first on every camera (5/5 ok), all captures reporting IN FRAME
+with their NDC. §700's four cameras are still frozen and were not touched.
+
+**The 3× frames from §701 no longer existed.** `shots/` subdirectories are gitignored working
+output, and the local checkout reverted to an August-21 state — the fifth time this session, as
+warned. Git was intact; the untracked frames and this lane's scratch scripts were not. So the
+before arm was re-shot from a worktree detached at `c1e6bc9` (the pre-shrink commit), which is a
+better provenance than the lost files had anyway: the arm is pinned to a SHA rather than to
+whatever happened to be on disk.
+
+| frame | 3× (1.29780 m) | 2/3 (0.86520 m) |
+|---|---|---|
+| `placed-terrace` | a large bottle dominating the ledge, close enough to the wall to read as leaning on it | clearly smaller, still unmistakably a bottle — neck, cork and label band all legible, and visibly standing off the wall |
+| `placed-nave` | the same at 18 m up against terracotta | the same reduction; still reads as a pickup from across the deck |
+| `read-summit` | overflows the frame | **still overflows** — checked, not assumed |
+| `read-terrace` | overflows the frame | still overflows |
+| `read-summit-fit` | full bottle, three materials | full bottle with room to spare, all three materials legible |
+
+**`read-summit` and `read-terrace` still overflow, and that was measured rather than hoped.**
+Their lenses sit 1.26 m from the subject on a 30° vertical FOV, which frames 0.711 m of height;
+the bottle is 0.865 m. It shrank by a third and is still taller than the frame those two cameras
+cut. So `read-summit-fit` remains the honest READ control and is kept. The PLACED pair carries
+the before/after claim, and it is the pair that answers what the user asked.
+
+Only the two PLACED cameras were re-shot on the before arm. The READ before-frames were not,
+because §701 already records them as overflowing at 3× and a second unusable frame is lock time
+spent on nothing — the Carmelita lane is queued on the same box.
+
+### §705.8 Draw calls, triangles — and `Engine.stats` freezing at a FOURTH plausible number
+
+Scaling changes neither count, said from `tools/bottledraw.mjs`'s isolated render rather than
+from that sentence:
+
+```
+  scene with nothing visible      0 draws
+  scene with ONLY the bottles     2 draws     clue_bottles alone 1 draw / 3264 tris
+  ==> the clue-bottle set costs 2 draw call(s) pickup_clues alone 1 draw / 3264 tris
+```
+
+Identical across §700, §701 and §705; one draw in the live frame, because the twin is hidden.
+
+**§701.11 gets a fourth data point and it is the strongest one yet.** The in-situ arm fired the
+FROZEN verdict again, at a value none of the previous runs produced:
+
+| run | `Engine.stats.drawCalls`, 9 samples | spread | delta |
+|---|---|---|---|
+| §700 | `1` | 0 | 0 |
+| §701 before | `180` | 0 | 0 |
+| §701 after | `188` | 0 | 0 |
+| **§705** | **`153`** | 0 | 0 |
+
+Four runs, four different frozen values, every one producing a delta of zero that agrees with the
+correct answer. `1` invites suspicion; `180`, `188` and now `153` all look like ordinary draw
+counts for a level this size. The detector catches it by refusing a zero delta while meshes it has
+already **proved** cost draws are hidden — a check on the relationship, never on the value, which
+is the only kind that survives the counter picking a new plausible number every single time.
