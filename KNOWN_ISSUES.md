@@ -53970,3 +53970,12 @@ retarget. The vision cone, the alert ladder and guard interaction are **out of s
 explicit instruction** and are not touched.
 
 Findings appended below as they are measured.
+
+---
+
+## §705 — "Shrink the bottles by one third": the reading, stated so it is cheap to correct
+
+**CLAIMED — this block is being written. §700.9: a grep for a free number is a read with no lock,
+so the heading lands first and the content follows.**
+
+The user, in full: **"Shrink the bottles by one third."**
