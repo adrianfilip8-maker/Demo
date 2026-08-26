@@ -54658,12 +54658,20 @@ photograph two different stances from two different bearings and call the differ
 cannot establish that it sees a face, and §702.9 caught `portrait-colonnade` sitting at dot −0.94
 for a season:
 
-| | guard4 | guard1 |
-|---|---|---|
-| `carm704-rebind-*` | **+0.994** @ 4.02 m | **+0.994** @ 4.02 m |
-| `carm704-native-*` | **+0.981** @ 3.81 m | **+0.983** @ 3.79 m |
+| | arm | guard4 | guard1 |
+|---|---|---|---|
+| `carm704-rebind-*` | `?carm=rebind` | **+0.994** @ 4.02 m | **+0.994** @ 4.02 m |
+| `carm704-default-*` | **no query at all** | **+0.981** @ 3.81 m | **+0.983** @ 3.78 m |
 
 The tool refuses to shoot below dot 0.90 rather than shipping a frame with a name that says front.
+
+**The "after" pair is shot with NO query**, which is a different claim from the one a forced
+`?carm=native` can make. `--arm native` proves the native path works; `--arm default` proves the
+native path is **what a player gets**. After the default flip the second is the one that needed
+proving, and the tool reads `guards.carmelitaNative` back off the built garrison rather than
+trusting its own flag — it came back **`true`** with no token present, on 199-bone skeletons. The
+forced-token pair was shot first, is identical to this one, and is not committed: two near-identical
+files would suggest the distinction is cosmetic, and it is the opposite.
 
 What the pair shows: the rebind holds both arms straight out sideways with the coat torn open and
 the tail a flat dark slab; the native arm has her authored stance, the jacket intact, and **a fox
