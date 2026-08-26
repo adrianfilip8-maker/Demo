@@ -55210,8 +55210,15 @@ wrong prop of the same class (FAIL-B, in-arm) — both blow up by 0.6–30 m, so
 nor the prop half is decorative. *Cannot discriminate:* finger curl; whether a grip READS as
 closed; anything about the standing idle, which is not driven here.
 
-**Suite.** `node --test "tests/*.test.mjs"` from a CLEAN WORKTREE at the pushed commit `7810ecc`,
-under the FIFO lock: **1057/1057, EXIT=0, 244.9 s.** One run, quoted whole (§703.2); neither
-documented flake (`framebudget` F3 GC ~1-in-3, `padrest` R1b ~1-in-5) fired. `src/` is untouched by
-this section, so there is nothing here the suite could regress; the run is the record that nothing
-did.
+**Suite.** `node --test "tests/*.test.mjs"` from a CLEAN WORKTREE, under the FIFO lock. Both runs
+this lane made, not only the last one (§703.2):
+
+    7810ecc  (the instrument)        1057/1057   EXIT=0   244.9 s
+    f8d4946  (this section)          1057/1057   EXIT=0   257.1 s
+
+Neither documented flake fired (`framebudget` F3 GC ~1-in-3, `padrest` R1b ~1-in-5), and neither
+file was filtered — `framebudget` in particular is run whole, because `--test-name-pattern` changes
+its allocation history and makes F3 fail 100%. `src/` is untouched by this lane, so there is nothing
+here the suite could regress; the runs are the record that nothing did. The second run is from a
+worktree checked out at the commit this section lands in, so the working tree the other live lane is
+editing (`src/ai/Patrol.js`) is not in it.
