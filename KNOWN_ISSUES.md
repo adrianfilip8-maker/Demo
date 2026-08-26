@@ -54682,36 +54682,76 @@ tail that reads as a fox tail**. She is also visibly shorter, which is §704.5 a
 > — but §702.9 did this better by clearing all four through camDot, and a future round should. The
 > `carmsil-*` frames are the unoccluded evidence for the sculpt, which is why they are listed first.
 
-### §704.9 The suite
+### §704.9 The default flip, and the defect only re-running could find
 
-`node --test "tests/*.test.mjs"` from a **clean worktree at the pushed commit `de324d1`**, holding
-the FIFO capture lock so no run shared the CPU with a capture, cwd checked from **inside** the
-spawned command rather than after it (§694 — a deleted cwd makes `spawn` accuse the binary):
+The lane first shipped `TUNE.carmelitaNative = 0` — the native arm built, tested and measured, but
+**off**. That was conservative and it was wrong: the owner asked to import the character using the
+source rig and animations, and with a default of 0 anyone opening the build still saw the rebind.
+The flip to **1** is the delivery.
+
+**The flip moved the code under test, and the previous green did not cover it.** §704's first suite
+figure — 1056/1056 three times — was measured at `de324d1` with native OFF, so it certified the
+REBIND path. The first run after the flip came back **1054/1056**, and again **1054/1056**:
+reproducible, not flaky, and the same two arms both times.
+
+```
+tests/guardsuite.test.mjs   "init raised no warnings"                        FAIL
+tests/patrol.test.mjs  C3   "180 s of patrol … nobody is stuck"              FAIL
+      error: guards: the native Carmelita rig did not load — falling back to the RIG3 rebind
+```
+
+**One cause, and it was mine.** `loadCarmelitaNative` returns `null` immediately when there is no
+DOM — its documented contract, and the reason ten headless suites can build `Guards` with no fetch
+at all — and `Guards.init` warned on any null. So **every headless boot raised a warning**, and two
+suites that assert `init` is silent were right to fail. The warning was not reporting an anomaly; it
+was reporting the designed path.
+
+The fix keeps the warning for the case that actually wants a human — a page that COULD have fetched
+the asset and did not — and gates it on a DOM existing. **§357.1** is the rule it broke: *a guard
+that fires on noise gets switched off, and a guard that is switched off is the defect it was meant
+to prevent.*
+
+> **What this is an instance of.** A default is not a constant, it is the selection of which code
+> path the world runs. Testing arm A thoroughly and then shipping arm B is §442's shape — a
+> measurement correctly performed on the wrong subject — with the subject being *the build* rather
+> than a mesh. The instrument that caught it was not clever; it was simply pointed at the thing
+> that shipped. **A suite figure inherits the configuration it ran under, and a token flip
+> invalidates it.**
+
+### §704.9a The suite, at the shipped default
+
+`node --test "tests/*.test.mjs"` from a **clean worktree at the pushed commit `9a9f5af`**, with
+`carmelitaNative: 1` verified in the worktree's own `Guard.js` before running, holding the FIFO
+capture lock, cwd checked from **inside** the spawned command (§694):
 
 | run | result | duration | cwd at end |
 |---|---|---|---|
-| 1 | **1056 / 1056**, 0 fail | 247.6 s | exists |
-| 2 | **1056 / 1056**, 0 fail | 243.1 s | exists |
-| 3 | **1056 / 1056**, 0 fail | 240.1 s | exists |
+| 1 | **1056 / 1057**, 1 fail — `framebudget` **F3 GC** | 236.9 s | exists |
+| 2 | **1057 / 1057**, 0 fail | 233.4 s | exists |
+| 3 | **1057 / 1057**, 0 fail | 236.0 s | exists |
 
-1034 was the baseline; the 22 new arms are `tests/carmnative.test.mjs`. All three runs are quoted
-because that is the rule §703.2 earned, and the rule cuts against me here as much as for anyone:
-`framebudget` F3 GC is a documented ~1-in-3 flake and `padrest` R1b ~1-in-5, so three consecutive
-greens has a prior around 15% even on a tree that is fine. **Three greens is a fact about three
-runs.** It says this tree can pass and says nothing about whether those arms have stopped flaking.
+**The one failure is `F3 GC`, and §675/§703 document it as a pre-existing ~1-in-3 flake** — §703's
+own table records the control tree at 3 runs → 2 pass, 1 fail when run unfiltered, which is exactly
+the rate observed here. It is in `tests/framebudget.test.mjs`, which this lane does not touch.
 
-Every one of the 22 new arms can reject, and the ones that gate something exercise BOTH directions
-(§418.3): the head fiducial passes the recovered head at 2.6e-7 m and rejects `Hair_LP` at
-7.6e-2 m; the prop rule drops the three pistol meshes and is shown keeping `Legs` at 3.6% non-body
-weight; the weapon-stance discriminator finds `Idle`/`Lookaround`/`PatrolWalk`/`Shoot` under 0.15 m
-and requires `CasualWalking`/`Run` over 0.30 m; the pistol arm asserts both that it costs exactly
-1,672 triangles and that 30,096 does not fit; the mixer arm requires joints to move under a clip
-and a driver with no clips to move nothing; and both look-overlay arms assert the gaze does
-something before asserting it does not drift, so neither can pass on a no-op.
+**That is consistency, not proof, and the difference matters.** One failure in three is equally
+consistent with "the documented flake came up" and with "this lane made F3 slightly worse", and
+three runs cannot separate them. What can be said with the data actually in hand: **pooled across
+all six suite runs this lane made — three at `de324d1` before the flip and three at `9a9f5af`
+after — F3 failed once in six**, against a documented ~1-in-3. That is not evidence of improvement
+either; it is a small sample quoted in full so nobody has to take a characterisation on trust.
+Deciding whether F3's underlying sensitivity is worth fixing remains open, exactly as §703.2 left
+it.
 
-Two arms read the shipped source rather than restating it — the twelve clip names are grepped out
-of `Guard.js`, and §697's `groundProbe` / `groundSlopeMax` are asserted at 0.06 and 30 so this lane
-cannot quietly move them.
+**Every run this lane made is on the page** — the three greens at `de324d1`, the two reproducible
+1054/1057s that the flip caused, and these three. That is the rule §703.2 earned and it cuts
+against me here twice: quoting only the post-fix runs would hide that the flip shipped broken for
+one commit, and quoting only the greens would launder a flake into a clean figure. **Green runs are
+facts about those runs.**
+
+The 23 new arms are `tests/carmnative.test.mjs`, and the newest of them is the regression for the
+defect above: it asserts the process really has no DOM, then that the loader resolves to `null`
+rather than throwing, then that the warning is gated on a DOM existing.
 
 ### §704.10 How to revert
 
