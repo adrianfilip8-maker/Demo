@@ -82,6 +82,26 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high', query: Q
     for (let f = 0; f < Math.round(seconds / dt); f++) { t += dt; guards.update(dt, t); }
 
     const asset = guards.carmelita;
+    /* §604's pre-flight, in miniature: a camera is usable if it is not buried and can see its
+       subject. ENCLOSED counts hits within 0.6 m over 14 directions (a lens inside a pillar hits
+       in nearly all of them); SUBJECT checks that the first thing along the look direction is not
+       nearer than the subject itself, which is the miss §603 made with a clean near field. */
+    const collision = engine.get('collision');
+    const RAYOPT = { ignoreTags: ['hazard', 'water', 'rail', 'hook', 'spire', 'vent'] };
+    const DIRS = [];
+    for (const d of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) DIRS.push(new THREE.Vector3(...d));
+    for (const sx of [1,-1]) for (const sy of [1,-1]) for (const sz of [1,-1]) DIRS.push(new THREE.Vector3(sx,sy,sz).normalize());
+    const coneCamClear = (p, look) => {
+      if (!collision?.raycast) return true;               // no collision module: cannot test, do not block
+      let near = 0;
+      for (const d of DIRS) { const h = collision.raycast(p, d, 0.6, RAYOPT); if (h?.hit) near++; }
+      if (near > 3) return false;                          // enclosed
+      const to = look.clone().sub(p);
+      const dist = to.length();
+      const h = collision.raycast(p, to.normalize(), dist + 0.5, RAYOPT);
+      return !(h?.hit && h.distance < dist - 0.5);         // subject occluded
+    };
+
     const byId = new Map(guards.guards.map((g) => [g.id, g]));
     const cams = camIn ? JSON.parse(camIn) : {};
     const rows = [];
@@ -115,14 +135,29 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high', query: Q
       } else {
         camPos = centre.clone().addScaledVector(fwd, range); camPos.y = box.min.y + eye;
         lookAt = new THREE.Vector3(centre.x, box.min.y + eye * 0.92, centre.z);
-        /* the cone camera: broadside, so the beam is seen along its length rather than down it */
-        const side = new THREE.Vector3(fwd.z, 0, -fwd.x).normalize();
-        conePos = centre.clone().addScaledVector(side, 7.5).addScaledVector(fwd, 2.2);
-        conePos.y = box.min.y + 2.3;
+        /* The cone camera: broadside, so the beam is seen along its length rather than down it.
+           §604: a blind offset is how §601 and §603 both shipped a camera standing inside
+           something, and the first version of THIS tool did it again — `pistol709-cone-p1-guard1`
+           came back as a flat blue field, the inside of a pillar. So the bearing is SEARCHED and
+           each candidate is tested before it is used, not after. */
         coneLook = centre.clone().addScaledVector(fwd, 2.6); coneLook.y = box.min.y + 0.9;
+        conePos = null;
+        const side = new THREE.Vector3(fwd.z, 0, -fwd.x).normalize();
+        for (const sgn of [1, -1]) {
+          for (const dist of [7.5, 6.0, 9.0, 5.0]) {
+            for (const ahead of [2.2, 0.0, 4.0, -2.0]) {
+              const p = centre.clone().addScaledVector(side, sgn * dist).addScaledVector(fwd, ahead);
+              p.y = box.min.y + 2.3;
+              if (coneCamClear(p, coneLook)) { conePos = p; break; }
+            }
+            if (conePos) break;
+          }
+          if (conePos) break;
+        }
       }
       const toCam = camPos.clone().sub(centre).normalize();
-      const toCone = conePos.clone().sub(centre).normalize();
+      const coneOK = !!conePos && coneCamClear(conePos, coneLook);
+      const toCone = conePos ? conePos.clone().sub(centre).normalize() : new THREE.Vector3(0, 0, 1);
       rows.push({
         id, state: g.state, clip: g.anim?.current || '?',
         drawnH: +(box.max.y - box.min.y).toFixed(4),
@@ -135,11 +170,12 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high', query: Q
         apexMovedBy: +apex.distanceTo(eyeP).toFixed(4),
         apexAboveFeet: +(apex.y - g.position.y).toFixed(4),
         dot: +fwd.dot(toCam).toFixed(3),
-        coneDot: +fwd.dot(toCone).toFixed(3),
+        coneDot: +fwd.dot(toCone).toFixed(3), coneOK,
         dist: +camPos.distanceTo(centre).toFixed(2),
         cam: {
           pos: camPos.toArray().map((n) => +n.toFixed(4)), look: lookAt.toArray().map((n) => +n.toFixed(4)),
-          conePos: conePos.toArray().map((n) => +n.toFixed(4)), coneLook: coneLook.toArray().map((n) => +n.toFixed(4)),
+          conePos: conePos ? conePos.toArray().map((n) => +n.toFixed(4)) : null,
+          coneLook: coneLook.toArray().map((n) => +n.toFixed(4)),
         },
       });
     }
@@ -194,7 +230,10 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high', query: Q
       await writeFile(file, Buffer.from(png.split(',')[1], 'base64'));
       console.log(`  → shots/pistol709-${TAG}-${r.id}.png`);
     }
-    /* cone frame — profile, at night so the beam is not faded out by daylight */
+    /* cone frame — profile, at night so the beam is not faded out by daylight.
+       REFUSED rather than written when the camera is buried: a flat field of wall is not
+       weaker evidence than a good frame, it is evidence of something else entirely. */
+    if (!r.coneOK) { console.log(`  cone frame REFUSED for ${r.id} — no unoccluded broadside camera found`); continue; }
     const cpng = await page.evaluate(async (F) => {
       const g = window.__GAME, e = g.engine;
       const ch = e.get('character');
