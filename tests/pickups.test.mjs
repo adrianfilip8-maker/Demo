@@ -805,3 +805,108 @@ test('dispose unhooks everything and restores what it hid', async () => {
   engine.emit('guardAlert', { id: 1, state: 'chase' });
   assert.equal(pk.wallet.carrying, null);
 });
+
+/* =============================================================================================
+   6. the coin's ART — one authored size, and a badge that must not leak (§712)
+============================================================================================= */
+
+/**
+ * These four arms exist because of a defect that had already happened once, one collectible over.
+ *
+ * The coin's size used to live in FOUR literals across two files — `Props._collectibles()` drew
+ * `coin(0.16, 0.035)`, `Pickups._build()` drew `coinGeo(TUNE.coinRadius, 0.035)` (radius from
+ * TUNE, thickness a bare literal), and `TUNE.coinRadius` held a third copy of the radius. The two
+ * halves of one number had two different authorities, so they could be scaled apart with nothing
+ * failing anywhere. §701 found exactly this shape in the bottle and §705 found the trap in its
+ * derived term; C1-C4 below are what stops it being found a third time.
+ */
+
+test('C1 the coin has ONE authored size, and both TUNE and the drawn mesh read it', async () => {
+  const { COIN_RADIUS, COIN_THICKNESS } = await import('../src/world/PropKit.js');
+  assert.equal(TUNE.coinRadius, COIN_RADIUS,
+    'TUNE.coinRadius has stopped reading PropKit.COIN_RADIUS — it is a second authority again');
+
+  const { pk } = await bootPickups();
+  const geo = pk._coinMesh?.geometry;
+  assert.ok(geo, 'no pickup_coins geometry was built');
+  geo.computeBoundingBox();
+  const b = geo.boundingBox;
+  const dia = b.max.x - b.min.x, thick = b.max.y - b.min.y;
+  /* The DRAWN mesh, not the constant — the literal that got away last time was the thickness,
+     and only measuring the built geometry can see it. */
+  assert.ok(Math.abs(dia - COIN_RADIUS * 2) < 1e-6,
+    `the drawn coin is ${dia.toFixed(5)} m across against COIN_RADIUS ${COIN_RADIUS} (${COIN_RADIUS * 2} m)`);
+  assert.ok(Math.abs(thick - COIN_THICKNESS) < 1e-6,
+    `the drawn coin is ${thick.toFixed(5)} m thick against COIN_THICKNESS ${COIN_THICKNESS} — this is the ` +
+    'exact half of the number that used to be a bare literal in _build()');
+
+  /* Props' decorative twin is HIDDEN at runtime, which is precisely why it can drift unseen.
+     It is built from the same two constants and this is the only thing that says so. */
+  const src = fs.readFileSync(path.join(HERE, '..', 'src/world/Props.js'), 'utf8');
+  assert.match(src, /coin\(COIN_RADIUS, COIN_THICKNESS\)/,
+    'Props._collectibles() no longer builds its twin from the authored size; it is hidden at ' +
+    'runtime, so a literal there is invisible in every frame while kaykit P2/P3 measure it');
+});
+
+test('C2 the contact radius is the FORMULA, and the scaled value is not it', () => {
+  // pass input: the derivation
+  assert.equal(TUNE.collect, +(TUNE.playerRadius + TUNE.coinRadius).toFixed(10),
+    'collect is no longer playerRadius + coinRadius');
+  // fail input: what scaling the old literal would have produced, named so it cannot creep back
+  const scaled = +(0.50 * (TUNE.coinRadius / 0.16)).toFixed(10);
+  assert.notEqual(TUNE.collect, scaled,
+    `collect equals the SCALED value ${scaled}, not the re-derived one. §705: scaling a derived ` +
+    'contact term hands the player reach at which he is touching nothing, which is a second magnet');
+});
+
+test('C3 the badge decodes headlessly and lands on the coin face, 0..1, rim parked', async () => {
+  const { decodeCoinBadge, COIN_BADGE_SIZE, COIN_BADGE_RIM_UV } = await import('../src/world/CoinBadge.js');
+  /* Headless is the point: no DOM, no canvas, no fetch. If this ever needs a browser the badge
+     becomes a branch the suite cannot execute, which is how §666 happened. */
+  const img = await decodeCoinBadge();
+  assert.ok(img, 'the coin badge did not decode in plain Node — it has become browser-only');
+  assert.equal(img.size, COIN_BADGE_SIZE);
+  assert.equal(img.data.length, COIN_BADGE_SIZE * COIN_BADGE_SIZE * 4, 'not RGBA at the declared size');
+
+  const { pk } = await bootPickups();
+  const geo = pk._coinMesh.geometry;
+  const uv = geo.attributes.uv, nor = geo.attributes.normal;
+  let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity, caps = 0;
+  const rim = new Set();
+  for (let i = 0; i < uv.count; i++) {
+    const ny = Math.abs(nor.getY(i));
+    if (ny >= Math.abs(nor.getX(i)) && ny >= Math.abs(nor.getZ(i))) {
+      caps++;
+      u0 = Math.min(u0, uv.getX(i)); u1 = Math.max(u1, uv.getX(i));
+      v0 = Math.min(v0, uv.getY(i)); v1 = Math.max(v1, uv.getY(i));
+    } else rim.add(`${uv.getX(i).toFixed(6)},${uv.getY(i).toFixed(6)}`);
+  }
+  assert.ok(caps > 0, '§211.1: inspected 0 cap vertices');
+  /* pass input: the caps span the whole square, so the disc samples the inscribed circle — which
+     is where the badge's coin is, and its transparent corners fall outside it. */
+  assert.ok(u0 < 1e-6 && u1 > 1 - 1e-6 && v0 < 1e-6 && v1 > 1 - 1e-6,
+    `cap UVs span u[${u0}..${u1}] v[${v0}..${v1}], not 0..1 — the shipped default is boxProjectUVs ` +
+    'at UV_PER_M, which on a 0.24 m coin is a 0.24-wide patch straddling the UV origin and samples ' +
+    'four wrapped corners of the badge');
+  /* fail input: one rim value, not many. A rim carrying the box projection smears the die. */
+  assert.equal(rim.size, 1, `the rim carries ${rim.size} distinct UVs; it must be parked on one texel`);
+  assert.equal([...rim][0], `${COIN_BADGE_RIM_UV[0].toFixed(6)},${COIN_BADGE_RIM_UV[1].toFixed(6)}`,
+    'the rim is parked somewhere other than COIN_BADGE_RIM_UV');
+});
+
+test('C4 the badge is on the coin and NOT on the treasure', async () => {
+  const { pk } = await bootPickups();
+  const coinMat = pk._coinMesh.material;
+  assert.ok(coinMat.map, 'the coin lost its badge');
+  /* The treasure is the fail input, and it is a real risk rather than a hypothetical: the Eye of
+     Ra is built out of `coin()` discs and the hoard is 140 more, so a shared gold material would
+     strike the badge across a sun disc with nothing failing. */
+  let inspected = 0;
+  for (const t of pk.treasures) {
+    if (!t.mesh) continue;
+    inspected++;
+    assert.notEqual(t.mesh.material, coinMat, `treasure ${t.id} shares the coin's material`);
+    assert.ok(!t.mesh.material.map, `treasure ${t.id} is wearing the coin badge`);
+  }
+  assert.ok(inspected >= 3, `§211.1: inspected ${inspected} treasures`);
+});
