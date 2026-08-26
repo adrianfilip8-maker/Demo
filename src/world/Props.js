@@ -4,7 +4,8 @@ import {
   Bag, mergeAll, place, matrixOf,
   brazier, wallTorch, vessel, canopicJar, basket, ropeCoil, ropeSpan,
   offeringTable, incenseStand, scaffold, banner, bannerMast,
-  coin, clueBottle, CLUE_ATTRS, CLUE_HEIGHT, ingot, scarab, sootStain, flameCard, chunk,
+  coin, COIN_RADIUS, COIN_THICKNESS, clueBottle, CLUE_ATTRS, CLUE_HEIGHT, ingot, scarab,
+  sootStain, flameCard, chunk,
 } from './PropKit.js';
 import {
   seatedColossus, sphinx, anubis, falconRa, coffinLid, fallenHead, brokenStatue,
@@ -634,7 +635,16 @@ export class Props {
     // A trail along the architrave ledge, rewarding the rooftop route.
     for (let i = 0; i < 10; i++) spots.push([-21 + i * 4.6, 9.9, 30]);
 
-    const geo = coin(0.16, 0.035);
+    /* SIZE from `PropKit`, not a literal (§712). This mesh is the DECORATIVE TWIN: `Pickups`
+       adopts all 44 spots below and hides it, so nothing here is normally drawn. It still has to
+       track the pickup's size exactly, for two reasons that are easy to forget precisely because
+       it is invisible — `tests/kaykit.test.mjs` P3 measures THIS mesh's instances against the
+       KayKit colliders, so a twin at the old size silently measures a coin the player never sees;
+       and if `Pickups` ever fails to init, this is what the level falls back to.
+       Deliberately NOT `faceUV`: the twin wears `MATERIALS.gold`'s tiling `gold_leaf`, which a
+       0..1 cap remap would stretch one whole tile across each face. The badge lives on the
+       pickup's own material in `Pickups._coinMat()`, which is the only coin anyone sees. */
+    const geo = coin(COIN_RADIUS, COIN_THICKNESS);
     this._geoms.push(geo);
     const mat = this._mat('gold');
     const mesh = new THREE.InstancedMesh(geo, mat, spots.length);

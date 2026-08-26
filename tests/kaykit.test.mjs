@@ -1030,7 +1030,21 @@ test('P2: KayKit against Props art — seven placements, and six of them are flo
       + `${String(r.base).padStart(4)} base + ${String(r.body).padStart(4)} body (to ${r.bodyHi.toFixed(2)} m)  [${r.who}]`).join('\n'));
 
   assert.equal(rows.length, 7, 'the number of KayKit placements touching drawn Props art has changed');
-  assert.deepEqual(rows.map((r) => r.i), [18, 21, 33, 4, 16, 22, 7], 'a different set of placements now touches Props art');
+  /**
+   * The order is by total overlap, so it is a RANKING and it moved when the coins were scaled
+   * 50% larger (§712) — while the SET did not. Measured on both sides, everything else identical:
+   *
+   *   row  7  barrel_large @(20.6, 4)  [coins]   0 base +  40 body (to 1.03 m)  →  0 + 66 (1.11 m)
+   *
+   * That is the only row that changed at all, its source is `[coins]`, and 40 → 66 lifts it past
+   * row 16 (62) and row 22 (58) from last place to fifth. Nothing started or stopped touching:
+   * `rows.length` is 7 before and after and the seven indices are the same seven.
+   *
+   * The pin is deliberately kept order-sensitive rather than softened to a set comparison. This
+   * arm exists so the census cannot drift silently, and a ranking that reshuffles is exactly the
+   * signal that some prop's footprint changed — which is what happened here, on purpose.
+   */
+  assert.deepEqual(rows.map((r) => r.i), [18, 21, 33, 4, 7, 16, 22], 'a different set of placements now touches Props art');
 
   /* the one the whole category was opened over, and the correction to it */
   const chest = rows.find((r) => r.i === 21);

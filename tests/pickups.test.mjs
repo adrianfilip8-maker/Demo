@@ -49,6 +49,19 @@ import { TUNE as CTUNE } from '../src/player/Controller.js';
  *
  * P4's prediction was hand-integrated (trapezoid over 1/v, 0.2 m steps) before the law was
  * coded. Nothing below was tuned after seeing a result.
+ *
+ * ── The block above is a RECORD, and its numbers are deliberately not updated (§712) ────────
+ * The coins were scaled 50% larger on request: `coinRadius` 0.16 → **0.24**, so `collectRadius`
+ * re-derives to `0.34 + 0.24` = **0.58 m**. The `0.50` on the line above is left standing because
+ * it is what was registered, and a pre-registration that gets edited to match what shipped has
+ * stopped being one. What the tests below enforce is the **derivation**, not the literal — P1
+ * asserts `collect === playerRadius + coinRadius` whatever those are, which is exactly why a
+ * resize could not silently break the contact/magnet split §223 draws.
+ *
+ * P2's `~9.99` is likewise a prediction about the LAW, evaluated at the 0.50 m it was registered
+ * at. `magnetSpeedAt` depends on `magnet`, `speedMin`, `speedMax` and `curve` and on none of the
+ * coin's dimensions, so the law is untouched by the resize; capture simply now happens at 0.58 m,
+ * further out on a falling curve, at 9.386 m/s. See P2's own note.
  */
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -94,8 +107,35 @@ test('P2 at the moment of capture the coin is outrunning a sprinting player', ()
   const v = magnetSpeedAt(TUNE.collect);
   assert.ok(v > CTUNE.runSpeed,
     `capture speed ${v.toFixed(3)} must exceed runSpeed ${CTUNE.runSpeed} or the player outruns his own loot`);
-  // The prediction registered before the law was coded was ~9.99 m/s.
-  assert.ok(Math.abs(v - 9.99) < 0.05, `capture speed ${v.toFixed(3)} drifted from the registered prediction 9.99`);
+
+  /**
+   * The registered ~9.99 m/s is a prediction about the **magnet law**, and it is checked at the
+   * distance it was registered for — NOT at whatever `TUNE.collect` currently is (§712).
+   *
+   * PREREG-loot1 registered `collectRadius = 0.34 + 0.16 = 0.50` and `~9.99` in the same block,
+   * so 9.99 is `v(0.50)`. When the coins were scaled 50% larger, `coinRadius` went 0.16 → 0.24
+   * and `collect` was re-derived 0.50 → 0.58 — and `v(0.58)` is 9.386. **Nothing about the law
+   * moved**: `magnetSpeedAt` reads `magnet`, `speedMin`, `speedMax` and `curve`, all four
+   * unchanged. Only the point on the curve at which capture happens moved outward.
+   *
+   * Re-pinning the constant to 9.386 would have quietly converted a pre-registration into a
+   * curve fitted to whatever shipped, which is the one thing a PREREG block exists to prevent.
+   * Asserting `v(0.50)` instead keeps the prediction meaning exactly what it meant — if the law
+   * is ever retuned, this still fails, which is its whole job.
+   */
+  const vAtRegistered = magnetSpeedAt(0.50);
+  assert.ok(Math.abs(vAtRegistered - 9.99) < 0.05,
+    `the magnet LAW drifted: v(0.50) is ${vAtRegistered.toFixed(3)}, registered ~9.99. This is not about ` +
+    'the coin\'s size — 0.50 m is the distance PREREG-loot1 registered the prediction at, and the law ' +
+    'is supposed to be independent of it.');
+
+  /* And the margin that actually matters, stated rather than left implicit: capture is now at
+     0.58 m instead of 0.50 m, so it happens further out and therefore SLOWER. It still has to
+     beat a sprint, and the headroom is the number worth reading in a failure. */
+  assert.ok(v - CTUNE.runSpeed > 1.0,
+    `capture speed ${v.toFixed(3)} is only ${(v - CTUNE.runSpeed).toFixed(3)} m/s clear of runSpeed ` +
+    `${CTUNE.runSpeed}; growing the coin moves capture outward along a falling curve, and this is the ` +
+    'term that pays for it');
 });
 
 test('P3 the assist is bounded — outside the radius nothing moves at all', () => {

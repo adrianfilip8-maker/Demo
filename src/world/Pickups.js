@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { rng, WORLD_SEED } from '../core/Rand.js';
-import { coin as coinGeo, clueBottle, CLUE_ATTRS, CLUE_HEIGHT, ingot, scarab, collar, place, mergeAll } from './PropKit.js';
+import {
+  coin as coinGeo, COIN_RADIUS, COIN_THICKNESS, clueBottle, CLUE_ATTRS, CLUE_HEIGHT,
+  ingot, scarab, collar, place, mergeAll,
+} from './PropKit.js';
+import { decodeCoinBadge, COIN_BADGE_SIZE, COIN_BADGE_RIM_UV } from './CoinBadge.js';
 
 /**
  * Pickups — the collect loop. Coins, clue bottles, treasure, and the fence they are carried to.
@@ -79,8 +83,9 @@ import { coin as coinGeo, clueBottle, CLUE_ATTRS, CLUE_HEIGHT, ingot, scarab, co
  *
  * The two radii come from different places on purpose. `collect` is a CONTACT test: the player
  * capsule (`Controller.TUNE.radius` 0.34) actually overlapping the coin Props already draws
- * (r 0.16). Any generosity beyond touching belongs in the magnet term, not in the contact term
- * — that is exactly the distinction §223 drew between a snap radius and a catch radius.
+ * (`PropKit.COIN_RADIUS`). Any generosity beyond touching belongs in the magnet term, not in the
+ * contact term — that is exactly the distinction §223 drew between a snap radius and a catch
+ * radius.
  *
  * `magnet` is `Controller.TUNE.pickRange` (2.4), the reach at which Sly's hands can already
  * take something off a guard's belt. A coin magnet and a pocket reach are the same gesture at
@@ -89,9 +94,26 @@ import { coin as coinGeo, clueBottle, CLUE_ATTRS, CLUE_HEIGHT, ingot, scarab, co
  */
 export const TUNE = {
   /* ---- radii (m) ---- */
-  coinRadius:    0.16,   // Props.js draws coin(0.16, 0.035); the collectible must match the art
+  /* NOT a literal any more (§712): `PropKit.COIN_RADIUS` is the single authored size and this
+     reads it, so the pickup mesh, its decorative twin in `Props._collectibles()` and the derived
+     term below cannot be scaled apart — the same arrangement `clueHeight` has carried since §701,
+     and for the same reason. Four literals used to hold this number between two files. */
+  coinRadius:    COIN_RADIUS,                          // 0.16 → 0.24 (§712, "50% larger")
   playerRadius:  0.34,   // Controller.TUNE.radius
-  collect:       0.50,   // playerRadius + coinRadius — the capsule actually overlapping the coin
+  /**
+   * playerRadius + coinRadius: 0.34 + 0.24 = **0.58**.
+   *
+   * **RE-DERIVED at every resize, never scaled — 0.50 → 0.58 (§712).** §705 is the precedent and
+   * the trap. Scaling this term with the art gives 0.50 × 1.5 = **0.75**, which is 0.17 m of
+   * reach the player is not touching anything at: it silently converts a CONTACT radius into a
+   * second, smaller magnet and collapses the §223 snap/catch split this block's own header
+   * states. The formula is the value; `stepPickup` measures the capsule centre against the coin
+   * centre and the term is `playerRadius + coinRadius` and nothing else.
+   *
+   * `tests/pickups.test.mjs` P1 asserts exactly this equality, so a scaled 0.75 fails the suite
+   * rather than shipping — which is the whole reason the derivation is pinned there and not here.
+   */
+  collect:       0.58,
   magnet:        2.40,   // Controller.TUNE.pickRange
   fence:         2.20,   // a body-length short of the magnet; banking is a place you stand, not brush past
   /* `movement.position` is the capsule BASE. Measuring a coin against the player's feet would
@@ -114,7 +136,7 @@ export const TUNE = {
   /* Clue bottles. NOT a literal any more (§701): `PropKit.CLUE_HEIGHT` is the single authored
      size and this reads it, so the pickup, its decorative twin in `Props._clueBottles()` and the
      two radii below cannot be scaled apart — the same reason `coinRadius` is pinned to
-     `coin(0.16, …)`. `h` is the lathe parameter; the DELIVERED height is `h * CLUE_HEIGHT_RATIO`
+     `PropKit.COIN_RADIUS`. `h` is the lathe parameter; the DELIVERED height is `h * CLUE_HEIGHT_RATIO`
      and that is the number the two derivations under it use. */
   clueHeight:    CLUE_HEIGHT,                          // 0.84 → 0.86520 m delivered
   /**
@@ -463,6 +485,11 @@ export class Pickups {
   async init() {
     this.engine.scene.add(this.root);
     this._author();
+    /* AWAITED before `_build`, so the coin material is built once with its map already on it
+       rather than built bare and patched later. `decodeCoinBadge` needs no DOM, no canvas and no
+       fetch (see `CoinBadge.js`), so this resolves identically in the browser and under
+       `node --test` — it does not become a browser-only branch that the suite never executes. */
+    this._badgeTex = await this._badgeTexture();
     this._build();
     this._wire();
     /* The purse sync is DEFERRED to the first update() on purpose — see `_synced` below. */
@@ -566,9 +593,13 @@ export class Pickups {
     }
 
     if (this.coins.length) {
-      const geo = coinGeo(TUNE.coinRadius, 0.035);
+      /* Thickness from `PropKit`, not a literal — this used to take its radius from `TUNE` and
+         its thickness from a bare `0.035`, which is two halves of one number in two places
+         (§712). `faceUV` re-authors the caps to a 0..1 disc for the badge and parks the rim on
+         one texel; see `PropKit.coin`'s header for why that is an option and not the default. */
+      const geo = coinGeo(TUNE.coinRadius, COIN_THICKNESS, { faceUV: true, rimUV: COIN_BADGE_RIM_UV });
       this._geoms.push(geo);
-      const mesh = new THREE.InstancedMesh(geo, this._mat('gold'), this.coins.length);
+      const mesh = new THREE.InstancedMesh(geo, this._coinMat(), this.coins.length);
       mesh.name = 'pickup_coins';
       mesh.frustumCulled = false;
       mesh.userData.noShadow = true;   // tiny, and self-shadowing them is pure acne (Props' own note)
@@ -655,6 +686,77 @@ export class Pickups {
     try { m = shading?.make ? shading.make(opts) : null; } catch { m = null; }
     if (!m) m = new THREE.MeshStandardMaterial({ color: opts.color, roughness: 0.28, metalness: 0.85, map: opts.map });
     this._materials.push(m);
+    return m;
+  }
+
+  /**
+   * The reference project's coin badge as a `DataTexture`, or null where it cannot be decoded.
+   *
+   * ── What this is, stated plainly, because the instruction's premise was wrong ────────────────
+   * The instruction was *"substitute out the texture of the coins with the coin texture from the
+   * godot repo"*. **That repository has no coin texture.** Its 3D coin,
+   * `Scenes/Design Tools/pickup_coin.tscn`, is a procedural `CylinderMesh` under a
+   * `StandardMaterial3D` carrying an albedo colour, an emission colour, a rim and a clearcoat and
+   * **no `albedo_texture`**; `Assets/Models/Pickups/` holds a bottle and a diamond and no coin.
+   * What ships here is the one coin IMAGE in that repository — a gold coin struck with a
+   * five-pointed star, filed under `Assets/Textures/Icons/` as a **UI icon**. It is a coin face,
+   * so it goes on the coin's face. That it is an icon is recorded here, in `CoinBadge.js` and in
+   * `staging/assets/sly-coin/PROVENANCE.md` rather than smoothed over, because it is the one fact
+   * a reader needs in order to redirect this cheaply if they meant something else.
+   *
+   * ── Rows are flipped here, deliberately ─────────────────────────────────────────────────────
+   * PNG stores rows top-down and three's UV origin is bottom-left, so an unflipped `DataTexture`
+   * lands the badge upside down. `flipY` is NOT the fix: three has historically ignored it for
+   * `DataTexture`, so relying on it is relying on a detail that has changed. The rows are
+   * reversed in JS instead, which is deterministic and is what `tests/pickups.test.mjs` can
+   * actually assert. (The star is mirror-symmetric about its vertical axis, so the fact that a
+   * cylinder's two caps see the same image mirrored costs nothing here — worth knowing before
+   * anyone maps an asymmetric die onto this.)
+   */
+  async _badgeTexture() {
+    let img = null;
+    try { img = await decodeCoinBadge(); } catch { img = null; }
+    if (!img?.data || img.size !== COIN_BADGE_SIZE) return null;
+    const n = img.size, row = n * 4;
+    const flipped = new Uint8Array(img.data.length);
+    for (let y = 0; y < n; y++) flipped.set(img.data.subarray(y * row, y * row + row), (n - 1 - y) * row);
+    const t = new THREE.DataTexture(flipped, n, n, THREE.RGBAFormat);
+    t.colorSpace = THREE.SRGBColorSpace;
+    /* Clamp, not repeat: the cap UVs are exactly 0..1 and the rim UVs are one texel, so there is
+       nothing to tile and a wrap would only ever be an artefact at the disc's edge. */
+    t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+    t.anisotropy = 4;
+    t.needsUpdate = true;
+    this._geoms.push(t);          // disposed with the pool (`dispose?.()`), same as every geometry
+    return t;
+  }
+
+  /**
+   * The coin's own material: the gold recipe with the badge on `map`.
+   *
+   * A SEPARATE material from `_mat('gold')` on purpose, and it costs no extra draw: the coins are
+   * already one `InstancedMesh`, so this swaps WHICH texture that one draw samples rather than
+   * adding a draw. What it must not do is reach the treasure — `_treasureGeo` builds the Eye of
+   * Ra out of `coin()` discs and the hoard is 140 more, and a badge struck across a sun disc is
+   * exactly the silent regression a shared material would produce. `_mat` already returns a fresh
+   * material per call, so the separation is real rather than assumed.
+   *
+   * `color` drops to white where the badge is present. The gold recipe tints `map` by `0xe8b942`,
+   * which on a map that is *already* gold multiplies to a muddy olive; the badge carries its own
+   * colour, exactly as `BOTTLE.glb`'s vertex stream does for the clue bottle (§700). With no
+   * badge the recipe is untouched, so a host that cannot inflate gets today's plain gold coin
+   * rather than a white one.
+   */
+  _coinMat() {
+    const m = this._mat('gold');
+    if (!this._badgeTex) return m;
+    m.map = this._badgeTex;
+    if (m.color?.setHex) m.color.setHex(0xffffff);
+    /* The tiling detail layer has to go with it. These sample `gold_leaf`'s UVs, which the coin
+       no longer has — its caps are a 0..1 badge lookup now — so leaving them on would drape a
+       stone-scale normal and roughness pattern across a 0.48 m face at one tile per coin. */
+    m.normalMap = null; m.roughnessMap = null; m.aoMap = null; m.metalnessMap = null;
+    m.needsUpdate = true;
     return m;
   }
 

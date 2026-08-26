@@ -1056,11 +1056,90 @@ export function bannerMast(opts = {}) {
 
 /* ============================ treasure ================================= */
 
-/** A single coin. Twelve-sided so the rim catches a hard specular step. */
-export function coin(r = 0.075, t = 0.016) {
+/**
+ * THE authored size of a collectible coin, in metres — one number, not four (§712).
+ *
+ * Before this existed the size lived in four literals across two files: `Props._collectibles()`
+ * drew `coin(0.16, 0.035)` for the decorative twin, `Pickups._build()` drew
+ * `coinGeo(TUNE.coinRadius, 0.035)` for the mesh the player actually sees, and `TUNE.coinRadius`
+ * held a third copy of the radius. **`Pickups` took its radius from `TUNE` and its thickness from
+ * a bare literal**, so the two could be scaled apart with nothing failing anywhere — and the twin
+ * is HIDDEN at runtime, so an edit reaching one file and not the other looks perfect in every
+ * frame while `tests/kaykit.test.mjs` P3, which measures the twin, silently measures a different
+ * coin from the one on screen. That is §701's bottle defect exactly, one collectible over.
+ *
+ * So both call sites read these, and `Pickups.TUNE.coinRadius` reads `COIN_RADIUS`. Anything
+ * derived from the size is **RE-DERIVED from the formula, never scaled** — §705's rule, and the
+ * one derived term here is `TUNE.collect`, which is `playerRadius + COIN_RADIUS` and nothing else.
+ *
+ * The thickness is held at the shipped 0.035/0.16 proportion so a resize keeps the coin a coin
+ * rather than turning it into a plate or a hockey puck.
+ *
+ * **0.16 → 0.24 on request, "scale the coins 50% larger" (§712).** The reference project's own
+ * coin is `top_radius 0.25` (`Scenes/Design Tools/pickup_coin.tscn`), so this lands 0.01 m under
+ * theirs — a coincidence rather than a derivation, and recorded because it is a useful sanity
+ * check rather than because it drove the number.
+ */
+export const COIN_RADIUS = 0.24;
+export const COIN_THICKNESS = 0.0525;      // COIN_RADIUS * (0.035 / 0.16), the shipped proportion
+
+/**
+ * A single coin. Twelve-sided so the rim catches a hard specular step.
+ *
+ * ── `faceUV`, and why it is an option rather than the default ────────────────────────────────
+ * The default UVs are `boxProjectUVs` at `UV_PER_M`, which on the caps is a planar XZ projection
+ * — the right SHAPE for a disc, but in **metres**: a 0.16 m coin's cap UVs span u,v ∈ [-0.08,
+ * 0.08], a 16%-wide patch straddling the UV origin. That is correct for a tiling detail map like
+ * `gold_leaf` and useless for an image: mapped as-is, the badge is sampled from four wrapped
+ * corners of itself.
+ *
+ * `faceUV: true` re-authors the caps to a 0..1 disc (`u = 0.5 + x/2r`, `v = 0.5 + z/2r`), so a
+ * square face image lands on the coin's face inscribed exactly, and parks every RIM vertex on a
+ * single texel (`rimUV`) so the coin's edge is flat metal rather than a smear of the die.
+ *
+ * It is NOT the default because `coin()` has two other callers who must not move:
+ * `Props._treasurePile()` draws **140** loose coins and `Pickups._treasureGeo('eye')` builds the
+ * Eye of Ra from two discs, and both wear `gold_leaf`. Switching their caps to 0..1 would stretch
+ * one whole tile of a tiling texture across each face — a visible regression in the hoard, paid
+ * for a feature only the collectible uses.
+ */
+export function coin(r = 0.075, t = 0.016, opts = {}) {
   const g = new THREE.CylinderGeometry(r, r * 0.97, t, 12, 1);
   normaliseAttrs(g);
-  return boxProjectUVs(g);
+  boxProjectUVs(g);
+  if (opts.faceUV) faceProjectCoinUVs(g, r, opts.rimUV);
+  return g;
+}
+
+/**
+ * Re-author a coin's UVs so its two faces carry a 0..1 image and its rim carries one texel.
+ *
+ * Cap and rim are told apart by the vertex normal, exactly as `boxProjectUVs` does it — a
+ * cylinder cap's normal is ±Y and a rim's is not, and reading the normal rather than the vertex
+ * index survives three changing `CylinderGeometry`'s vertex order.
+ *
+ * @param {THREE.BufferGeometry} geo   a coin from `coin()`
+ * @param {number} r                   the radius it was built at
+ * @param {number[]} [rimUV]           where to park the rim, default the texture's left edge
+ */
+export function faceProjectCoinUVs(geo, r, rimUV = [0.5, 0.5]) {
+  const pos = geo.attributes.position, nor = geo.attributes.normal, uv = geo.attributes.uv;
+  if (!pos || !nor || !uv) return geo;
+  const inv = r > 0 ? 1 / (2 * r) : 0;
+  for (let i = 0; i < pos.count; i++) {
+    const nx = Math.abs(nor.getX(i)), ny = Math.abs(nor.getY(i)), nz = Math.abs(nor.getZ(i));
+    if (ny >= nx && ny >= nz) {
+      /* A cap. The disc of radius r maps to the circle inscribed in the 0..1 square, so a badge
+         drawn as a disc in a square frame lands on the coin face edge to edge. The square's
+         corners are outside that circle and are never sampled — which is exactly where the
+         reference badge keeps its 21% of transparent texels. */
+      uv.setXY(i, 0.5 + pos.getX(i) * inv, 0.5 + pos.getZ(i) * inv);
+    } else {
+      uv.setXY(i, rimUV[0], rimUV[1]);
+    }
+  }
+  uv.needsUpdate = true;
+  return geo;
 }
 
 /** Ingot: a squat truncated pyramid, stamped. Reads as heavy. */
