@@ -57140,4 +57140,159 @@ Everything this lane owns is green: `pickups` 36/36, and the six-file adjacency 
 
 ## §713 — the six cane and thief clips were already shipped; the cane bone is measured and refused
 
-_Claimed. Content follows in the next commit._
+The task this lane was given was to extract six clips — `Canehit`, `CaneSwing`, `CaneSwing Grab`,
+`CaneSwing Idle`, `PickPocket`, `KeyAction.001` — retarget them onto RIG3 and bind them, on the
+stated ground that `sly-godot-moves.glb` held 18 clips and those six had "never been extracted".
+
+**Five of the six were already extracted, already retargeted onto RIG3, and four were already
+bound.** The 18-clip inventory was read off a working tree that had silently reverted to an
+August-21 commit. That is §442 in its purest form — a correct measurement on the wrong subject —
+and it reached the brief itself, not just an instrument. Re-measured at `97d51e3`, from the files'
+own bytes rather than from any inventory:
+
+```
+public/assets/sly-godot/sly-godot-moves.glb    23 clips   (JSON chunk, read without three)
+src/player/GodotClips.js                       23 clips   baked, RIG3, 21 bones
+GODOT_ALIAS                                    20 verbs bound, every source row resolving
+```
+
+`Canehit`, `CaneSwing`, `CaneSwing Grab`, `CaneSwing Idle` and `PickPocket` are all in both the GLB
+and the baked module. `cane_combo_1/2/3 → Canehit`, `pickpocket → PickPocket`,
+`hook_grab → CaneSwing Grab` and `hook_swing → CaneSwing` were bound at `cd5d8a0` under §479.8.
+**Nothing was extracted, retargeted or bound by this lane, because there was nothing left to do on
+that axis.** What follows is the measurement that establishes it and the one design decision that
+was genuinely still open.
+
+### §713.1 `KeyAction.001` is not an animation, and the 24th clip is fully accounted for
+
+It is the one source clip that never reached `moves.glb`, and PROVENANCE already records it as
+deliberately not taken. Measured rather than inherited — it carries exactly **one channel**:
+
+```
+ch0: node #183 "Head_LowPoly"  path=weights  interp=LINEAR
+     times   [0.0000, 1.6333]
+     outputs [0.81537, 0, 0, 0, 0.08344]  and  [0.81537, 0, 0, 0, 0.08344]
+```
+
+A morph-target track on the face, two keys, **identical at both ends**. Zero skeletal channels; no
+cane channel; nothing that varies with time. Every other clip in the file carries 499 channels. It
+is a held facial expression, not a motion, and there is no verb it could serve and nothing in it to
+retarget. The clip count of the source is closed: 23 taken, 1 measured and correctly refused.
+
+### §713.2 The cane bone: measured, and REFUSED — the house track already moves the cane further
+
+§711 established the mechanism and this lane re-derived it independently, reading the glTF's
+accessors directly rather than through `GLTFLoader` (§439/§440 — an instrument that inherits the
+retarget's bone map cannot falsify the retarget's bone map):
+
+- `Cane_LowPoly` (node #107, 896 tris) is an **unskinned child NODE** of `CaneBone.001` (node #108).
+  It has no `skin` and no `JOINTS_0`; it rides the bone's node transform directly.
+- `CaneBone.001` is skin joint #104 and carries **exactly 0.000000 total weight** across all seven
+  skinned meshes — checked per vertex, not asserted. A prop mount, not a deformer.
+- It is a **direct child of `hand.R`**, so in glTF's parent-local TRS its own rotation channel *is*
+  its rotation relative to the hand. No FK and no skinning are needed to read the articulation, and
+  none is used.
+
+Controls, in-arm (§418.3): PASS input `forearm.R` reads **136.274°** on the same clip; FAIL input, a
+synthetic constant quaternion, reads **0.000°**. The first run of this probe named a bone that does
+not exist on this rig (`lowerarm.R` — the source calls it `forearm.R`) and returned NO CHANNEL for
+the pass control; the numbers below are from the run where the control actually fired.
+
+**Cane motion relative to the hand, source vs what we ship** (max pairwise angle over the clip, the
+same measure on both sides; slide is scaled to the source's own forearm→hand bone length, 0.2326):
+
+| clip | source rotation | source slide | **shipped `cane` track** |
+|---|---|---|---|
+| `Canehit` → `cane_combo_1` | 130.62° | 204% | **163.36°** |
+| `Canehit` → `cane_combo_2` | 130.62° | 204% | **179.97°** |
+| `Canehit` → `cane_combo_3` | 130.62° | 204% | **179.99°** |
+| `PickPocket` → `pickpocket` | 51.35° | 170% | **106.88°** |
+| `CaneSwing Grab` → `hook_grab` | **0.00°** | 180% | **127.98°** |
+| `CaneSwing` → `hook_swing` | **0.00°** | 0% | **16.10°** |
+| `CaneSwing Idle` (unbound) | **0.00°** | 0% | — |
+| `KeyAction.001` | no channel | no channel | — |
+
+Across the whole corpus 23 of 24 clips animate the bone and **six articulate it** — `Canehit`
+130.62°, `PoleGrab` 173.89°, `LedgeGrab` 78.52°, `PickPocket` 51.35°, `PoleClimbing` 35.32°,
+`PoleClimbIdle` 9.17°. That reproduces §711's list of six exactly, by a different route.
+
+**The decision: do not add a cane bone to RIG3.** The premise the task was built on — that
+retargeting throws the cane's articulation away and leaves it dead in the fist — is half right and
+the wrong half is the one that matters. The channels *are* dropped: RIG3 has 21 bones and no cane
+joint, and `GodotClips.js` says so in its own header. But the cane is not left static, because
+**RIG3 never drove the cane in the first place.** Our cane is a separate prop socketed into `handR`
+with its own per-key `cane` aim track (`Clips.js`), and `spliceClip`'s donor fill hands every
+swapped clip the procedural clip's aim track, time-scaled. So the comparison is not
+"articulated vs rigid", it is "their cane track vs ours" — and on **every verb in the table ours
+moves the cane further**, by 33° on the attack and 55° on the pickpocket. On the whole `CaneSwing`
+family theirs is **flat zero**: importing it would *delete* the 128° catch and the 16° hang we ship
+today and replace them with a cane welded to the fist.
+
+Adding the joint would also not be the narrow fix it looks like. Nothing is skinned to it on either
+side, and `Cane.js` reads the `cane` track, not a bone — so a new RIG3 joint would be inert until
+`Cane.js` were rewired to follow it, which is a redesign of the prop mount and not one joint. The
+socket already sits where §711 said it does. **Cost of the refusal: zero triangles, zero bones,
+zero budget, and §10's planted cane is untouched by construction.**
+
+The honest limit, stated rather than buried: this measures *magnitude*, not *phase*. Their cane
+track was authored against their arm; ours was authored against a procedural arm that no longer
+plays under it. Magnitude cannot prove the composition reads well, which is what the frames are for.
+
+### §713.3 A hypothesis that failed: the cane does NOT arrive late
+
+§479.8 hand-carried the attack's *event* to t 0.10 because the donor rule time-scales procedural
+timings by the duration ratio; the `cane` track comes through that same rule and was **not**
+hand-carried, so it should have been sitting ~63 ms late. Driven through the real rig and the real
+prop (`SlyModel`, `sampleInto`, `sampleCane`, the shipped FK), forward reach relative to the hips —
+the same measure §479.8 used to locate contact, so the numbers are commensurable. Controls: PASS
+`walk` handR peaks at t 0.547 of 0.750 s over a 0.2252 m range; FAIL `idle_confident` ranges
+0.00962 m.
+
+```
+cane_combo_1   handR peak 0.753 m @ t 0.105   declared contact 0.100   tip peak @ 0.075  (-25 ms)
+cane_combo_3   handR peak 0.753 m @ t 0.105   declared contact 0.100   tip peak @ 0.090  (-10 ms)
+cane_combo_2   handR peak 0.753 m @ t 0.105   declared contact 0.100   hook peak @ 0.105 (+0 ms)
+pickpocket     handR peak 0.634 m @ t 0.264                            hook peak @ 0.253 (-11 ms)
+```
+
+The cane leads or lands on the strike on every slot. **The hypothesis is refused and no timing fix
+ships.** §435.4: the probe tests the model, and this one tested mine.
+
+One thing it did surface, recorded as an observation and **not** acted on: the three combo slots
+play one identical body (`godot:Canehit`) under three *different* donor cane tracks, so the cane
+tip's peak reach runs 0.607 / 1.332 / 1.504 m across slots that are otherwise the same swing. Under
+the user's ruling that *"cane swings are repeats, should not be combos"* the body already repeats
+and the cane does not. Making the cane repeat too would be a one-line change and provably no worse
+than what slot 1 ships today — but it removes the only remaining variety across the three slots,
+which §479.8 recorded as a deliberate stated limit. That is a taste call on a ruling read at second
+hand, so it is put here with its numbers for the user to settle rather than taken.
+
+### §713.4 What was verified unchanged
+
+- **§479.20, the raw `Standupright`.** The baked clip is **bit-identical** to `97d51e3`
+  (sha256 `a8ba715b4875fdb5`, dur 4, 81 keys, loop) and so is the entire 23-clip baked set.
+  `idle_confident` and `idle_look` still alias it with `{ elbow: 0, knee: 0 }`. Untouched.
+- **The budget.** No clip, asset, mesh or bone changed; the only files this lane writes are
+  `KNOWN_ISSUES.md` and `PROVENANCE.md`. Delta against §709's binding in-page figure is **0** —
+  1,192,970 of 1,200,000, 7,030 spare, unmoved. (`Engine.stats.drawCalls` stays unusable here.)
+- **§708, the grip poses — re-measured and reported, NOT fixed**, as instructed. `tools/gripgap.mjs`,
+  palm→prop in cm, shipped (raw) against `?anim=proc`; since the baked set is bit-identical these
+  cannot have moved, and they have not:
+
+```
+verb / site                                   raw L   raw R  raw worst |  proc L  proc R  proc worst
+pole_climb · SE drainpipe (§495.C)             27.0    25.1      23.8  |    7.0     2.6       5.3
+pole_climb · obelisk rope (§495.A)             27.0    25.1      23.8  |    7.0     2.6       5.3
+ledge_hang · temple terrace lip, south         10.0    43.0      16.2  |   22.1    21.4      23.4
+ledge_hang · temple terrace lip, east           9.8    43.0      16.4  |   22.2    21.6      24.2
+ledge_hang · temple plinth lip, south           9.9    42.8      16.3  |   21.6    21.0      23.1
+hook_swing · main-0 (courtyard chain)         131.1   134.8     231.2  |  138.9   136.1     254.3
+hook_swing · low-2 (return chain)             100.5    32.0      77.7  |   40.5    50.8      96.6
+rail_walk  · colossi-rope (§495.B)             12.1    26.0      17.1  |    8.0     8.1      12.0
+rail_walk  · roof-e                            26.9    26.8      35.2  |   13.9    16.7      22.7
+```
+
+  The ledge-grab off hand is the 43 cm column and it is still open; §708 says leave it, so it is left.
+  `CaneSwing Idle` is one of the clips §708 flagged and it remains **unbound to any verb** — our hook
+  family is `hook_grab`/`hook_swing`/`hook_release` and there is no hanging-idle verb for it to fill,
+  so it stays one of the seven baked-but-unused clips rather than being bound to manufacture a use.

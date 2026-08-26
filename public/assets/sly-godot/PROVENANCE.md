@@ -363,6 +363,29 @@ same `CaneBone.001` under the same `hand.R`, and it is present in the committed 
 today. The true, narrower statement is that **RIG3** has no cane bone, so `godot2clips.mjs`'s bone
 map had nowhere to send those channels and dropped them.
 
+**How much articulation, in numbers (§713.2).** Re-derived by reading the `.gltf` accessors directly
+rather than through `GLTFLoader`, so the retarget's own bone map cannot launder the answer. In glTF
+a node's TRS is expressed in its parent's frame and `CaneBone.001` is a direct child of `hand.R`, so
+its rotation channel *is* cane-relative-to-hand — no FK and no skinning are involved. Max pairwise
+angle over each clip, with slide scaled to this rig's own forearm→hand bone length (0.2326):
+
+```
+Canehit         130.62°  slide 204%      PoleGrab        173.89°
+PickPocket       51.35°  slide 170%      LedgeGrab        78.52°
+CaneSwing         0.00°  slide   0%      PoleClimbing     35.32°
+CaneSwing Grab    0.00°  slide 180%      PoleClimbIdle     9.17°
+CaneSwing Idle    0.00°  slide   0%      KeyAction.001   no channel at all
+```
+
+Controls that make those numbers admissible (§418.3): `forearm.R` on the same clip reads 136.274°
+(pass) and a synthetic constant quaternion reads 0.000° (fail).
+
+**This is why no cane bone was added to RIG3** — the decision, with its reasoning, is §713.2. Our
+cane is a separate prop on a per-key `cane` aim track, and the donor fill already gives every
+swapped clip more cane motion than the source bone carries (163.36° vs 130.62° on the attack,
+106.88° vs 51.35° on the pickpocket, and 127.98° vs **0.00°** on the hook catch). Importing these
+channels would reduce the cane's motion, not restore it.
+
 ## The textures — none copied, and why that is the correct answer here
 
 Anims27's own image URIs are an author-local path that **does not exist in the repository**:
