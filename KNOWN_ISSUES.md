@@ -54413,6 +54413,32 @@ ANIMATED pose, and her clips go below it by design — `HitTaken` reaches −0.1
 median, it is inside a tail on one of nine guards, and it is recorded **open** rather than closed
 with a plausible sentence: whether it needs a per-frame floor clamp is a decision, not a fact.
 
+### §704.4a The census, by geometry and skin binding rather than by name
+
+The source scene's "34 meshes" is a count of DRAWABLES, and the three kinds are separable without
+reading a single node name. `carmelita-anims.glb`, every node, by type:
+
+```
+Bone           199        SkinnedMesh     21        Group          1  (Scene)
+LineSegments     9        Mesh             4        Object3D       2  (TeethLower_LowPoly, metarig)
+```
+
+21 + 9 + 4 = 34. The **21 SkinnedMesh** are the character. The **9 LineSegments** — `Arrow`,
+`Circle`, `Cube`, `IKPolehandle`, `singlecircle`, `Starcircle`, `Handrot`, `HandCurlCTL`,
+`BézierCircle` — are the custom bone shapes a Blender animator sees in the viewport, and they are
+not even `isMesh`, so a census that walks `isMesh` never sees them. The **4 `Mesh`** are `Text`,
+`Text001`, `Text002`, `Text003` — **6,729 triangles of annotation**, carrying no skin and no
+material.
+
+None of the 13 is cut by this lane, because `tools/carmelita2guard.mjs` already cut them by data —
+*no skin **and** no material* — and this path consumes its output. What this lane cuts, from the 21
+that remain, is stated in §704.1's table: three pistol meshes off the ARMATURE (1,672 tris) and two
+sealed mouth meshes (1,024 tris), leaving **16 meshes and 32,063 triangles**.
+
+`Object3D TeethLower_LowPoly` is worth one line because it looks like a body part and is not one:
+it is an empty node with no geometry at all, which is why the lower teeth are absent from every
+count while the upper teeth are a real 832-triangle mesh.
+
 ### §704.5 SIX OF HER ELEVEN CLIPS ARE TWO-HANDED WEAPON STANCES — and the clip names hide it
 
 The clip names promise a guard set and do not deliver one. Judged by name, `Idle`, `PatrolWalk` and
