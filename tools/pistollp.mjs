@@ -47,6 +47,7 @@
  *
  *   node tools/pistollp.mjs                      # measure a sweep of ratios, write nothing
  *   node tools/pistollp.mjs --target 380 --write # bake it
+ *   node tools/pistollp.mjs --pixels            # the shipped asset vs the full one, in PIXELS
  *   node tools/pistollp.mjs --selftest
  */
 import './_domshim.mjs';
@@ -299,7 +300,6 @@ if (SELFTEST) {
   process.exit(0);
 }
 
-/* ──────────────────────── sweep, or bake one target ──────────────────────── */
 /** Per canonical shot: the pistol body's on-screen diagonal, from tools/budgetattrib's cameras.
  *  Used to turn a deviation in mm into the only unit that decides this — pixels. */
 const SHOT_PX = [['guard', 5.7, 105.6], ['impact', 15.2, 39.9], ['courtyard', 11.0, 36.3],
@@ -307,6 +307,52 @@ const SHOT_PX = [['guard', 5.7, 105.6], ['impact', 15.2, 39.9], ['courtyard', 11
 const MOUNT_SCALE = 1.108338;
 const BODY_DIAG = 0.5226;                 // MainBody local bbox diagonal, metres
 
+/* ───────────────── the comparison at the size it is actually drawn ────────── */
+/* `--pixels` answers the only question a deviation in millimetres cannot: at the size the pistol
+ * is DRAWN, how many pixels of its silhouette does the decimation actually change? Both meshes
+ * are rasterised into the same coverage grid at the pixel size each canonical shot gives them,
+ * and the disagreement is counted. It needs the committed low-poly asset, not a fresh
+ * decimation, so it reports what SHIPS. */
+if (argv.includes('--pixels')) {
+  const lpScene = (await parse(OUT)).scene;
+  lpScene.updateMatrixWorld(true);
+  const lpGeo = {};
+  lpScene.traverse((o) => { if (o.isMesh && PISTOL_MESHES.includes(o.name)) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); lpGeo[o.name] = g; } });
+  const flat = (m) => PISTOL_MESHES.flatMap((n) => triangles(m[n]));
+  const TA = flat(srcGeo), TB = flat(lpGeo);
+  const box = new THREE.Box3();
+  for (const t of TA) for (const v of t) box.expandByPoint(new THREE.Vector3(v[0], v[1], v[2]));
+  const c = box.getCenter(new THREE.Vector3());
+  const R = box.getSize(new THREE.Vector3()).length() * 0.5 * 1.03;
+  const view = (fwd, res, ts) => {
+    const f = fwd.clone().normalize();
+    const up = Math.abs(f.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+    const ri = new THREE.Vector3().crossVectors(up, f).normalize();
+    const ru = new THREE.Vector3().crossVectors(f, ri).normalize();
+    return raster(ts, (v) => {
+      const x = (v[0]-c.x)*ri.x + (v[1]-c.y)*ri.y + (v[2]-c.z)*ri.z;
+      const y = (v[0]-c.x)*ru.x + (v[1]-c.y)*ru.y + (v[2]-c.z)*ru.z;
+      return [(x/R*0.5+0.5)*res, (1-(y/R*0.5+0.5))*res];
+    }, res);
+  };
+  const VIEWS = [['side', new THREE.Vector3(1,0,0)], ['front', new THREE.Vector3(0,0,1)], ['three-quarter', new THREE.Vector3(1,0.35,0.9)]];
+  console.log(`\nSILHOUETTE AT THE DRAWN SIZE — ${srcTris.MainBody + srcTris.Barrel + srcTris.Antennae003} `
+    + `triangles vs the committed ${TB.length}, rasterised into the pixels each shot gives them.\n`);
+  console.log('  shot         px   view             full   shipped   disagree   as % of the full silhouette');
+  for (const [shot, , px] of SHOT_PX) {
+    const res = Math.max(8, Math.round(px));
+    for (const [name, dir] of VIEWS) {
+      const a = view(dir, res, TA), b = view(dir, res, TB);
+      let A1 = 0, B1 = 0, both = 0, either = 0;
+      for (let i = 0; i < a.length; i++) { if (a[i]) A1++; if (b[i]) B1++; if (a[i] && b[i]) both++; if (a[i] || b[i]) either++; }
+      console.log(`  ${shot.padEnd(11)} ${String(res).padStart(4)}   ${name.padEnd(15)} ${String(A1).padStart(5)}  ${String(B1).padStart(7)}   `
+        + `${String(either - both).padStart(7)}   ${(100 * (either - both) / A1).toFixed(1).padStart(6)}%`);
+    }
+  }
+  process.exit(0);
+}
+
+/* ──────────────────────── sweep, or bake one target ──────────────────────── */
 const ratios = TARGET ? [TARGET / TOTAL] : [0.60, 0.45, 0.35, 0.28, 0.23, 0.18, 0.12];
 console.log(`shock pistol, from ${path.basename(GUARD)}: `
   + PISTOL_MESHES.map((n) => `${n} ${srcTris[n]}`).join(' + ') + ` = ${TOTAL} triangles\n`);
