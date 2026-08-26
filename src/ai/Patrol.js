@@ -210,6 +210,40 @@ export const STATE = {
  *      radius and `Guard._step` stops him with forward rays at exactly that distance, so a
  *      centre-line that clears a column by 0.4 m pins him against it for the rest of the run.
  *      The test demands `radius + 0.20 m`.
+ *
+ * ── AND THE THREE RULES WERE MEASURED AGAINST ARCHITECTURE ONLY, WHICH IS HALF THE LEVEL ───
+ *
+ * Every number above was checked against `EgyptLevel.js`'s masonry and nothing else. `Props`
+ * and `KayKit` are separate modules that register their own colliders *after* Architecture, and
+ * `tests/patrol.test.mjs` built neither — so the suite was green while **five of the nine
+ * guards could not move**, four of them from the first frame:
+ *
+ *     guard1  courtyard_ring  5.3 m in 200 s   brazier at (-18, 22)   — the west leg ran x = -18
+ *     guard2  courtyard_ring 10.5 m in 200 s   brazier at ( 18,  6)   — the east leg swung through it
+ *     guard4  pylon_gate      0.0 m in 200 s   KayKit crate (-5.5, 30.5) — he SPAWNED inside it
+ *     guard6  hall_weave     91.9 m, then stopped at t = 100 s   KayKit barrels (-12.5, -33.5)
+ *     guard8  tomb_vault      0.2 m in 200 s   KayKit crates (8.6, -64.4)
+ *
+ * The shape is the same every time and it is not a typo anywhere: **the route and the prop were
+ * authored to the same round number by two people solving different problems.** `Props`'
+ * braziers "light the processional route" and sit at x = ±18 — which is where the ring's west
+ * leg was. `KayKit`'s six camera props were grid-searched against paving, columns, wall proxies
+ * and shot framing; that list has four entries and **patrol routes are not one of them** — its
+ * own header records that the claim "nothing lands ... on a route" was retired as unchecked.
+ * Neither constraint set contained the other, and no instrument spanned both.
+ *
+ *   4. **Props are level geometry too, and the route yields to them unless it cannot.** Which
+ *      side moves is a cost question, decided per conflict and recorded at each site below. A
+ *      brazier carries a light, an ember emitter and a hazard volume; a KayKit camera prop is
+ *      pinned to a measured shot distance in `tests/kaykit.test.mjs`. A waypoint carries a
+ *      dwell and nothing else — `SHOT_POSE.guard` *solves* for its subject's stand rather than
+ *      reading one, so no shot in the game reads a coordinate from this table. The waypoint is
+ *      almost always the cheaper thing to move, and every repair below moves the waypoint.
+ *      The one place it could not — see `courtyard_ring` — the ROUTE'S TOPOLOGY changed instead,
+ *      because no centre-line existed at any offset.
+ *
+ * `tests/patrol.test.mjs` C6/C7 now measure this, against the props the shipped game builds,
+ * along the spline rather than at the waypoints, over the seed jitter rather than at one draw.
  */
 export const ROUTES = {
   /* The south forecourt, between the hall front and the terrace — the stretch of pavement the
@@ -217,17 +251,29 @@ export const ROUTES = {
      walks it. Stays south of z = −1.5: the four propylon piers stand at x ±(11.2‥13.8) and
      ±(19.7‥22.3) across z −0.5‥2.5, and the old route walked straight into the east one. */
   south_gate: {
+    /* §707: the south legs came off z = -13 (they were [0,-13] and ±[9,-12]) and now run at
+       -11.5 / -10.5. `Props._courtyardDress` scatters 26 pots and baskets, and the 30 % that are
+       not "against a wall" take `R.pick([-13, 31])` — so the mid-floor pottery lands on exactly
+       two z lines, and this route's dwell post was on one of them. Nine vessels cluster at
+       x 6.5‥10.5, z -12‥-14; the old leg passed 0.10 m from one over the jitter, against the
+       0.62 m this route's temple guard needs.
+
+       Guard #0 was NOT stalled by it, and that is worth knowing rather than guessing at: `_step`
+       clamps on two forward RAYS, not on a swept capsule, so a pot 0.10 m off the centre-line
+       goes past his shoulder untouched while a pot dead ahead stops him. He was walking through
+       the pottery, not into it. Moved anyway — the clearance bar is what keeps the next prop out
+       of the beat, and a bar the level violates is not a bar. Measured 1.153 m over 24 seeds. */
     closed: true, baseY: 0, space: 'courtyard',
     points: [
-      [0.0, -13.0, 2.6, 'look'],
-      [9.0, -12.0, 1.0, null],
+      [0.0, -11.5, 2.6, 'look'],
+      [9.0, -10.5, 1.0, null],
       [16.5, -7.5, 2.2, 'look'],
       [16.0, -3.0, 1.2, null],
       [6.0, -3.5, 1.4, null],
       [-6.0, -3.5, 2.0, 'bored'],
       [-16.0, -3.0, 1.2, null],
       [-16.5, -7.5, 2.2, 'look'],
-      [-9.0, -12.0, 1.0, null],
+      [-9.0, -10.5, 1.0, null],
     ],
   },
 
@@ -235,24 +281,75 @@ export const ROUTES = {
      east side and back along the pylon face. The long walk the player times.
 
      The east leg is the awkward one and it is deliberately kinked. At z ≈ 1 it must thread the
-     6 m gap between two propylon piers, so it runs at x = 16.8; north of z = 20 the ramp
+     6 m gap between two propylon piers, so it runs at x = 16.5; north of z = 20 the ramp
      landing occupies x 12.2‥19.0 at y = 1.47, a 1.5 m step the guard's `stepUp` refuses, so it
-     swings out to x = 20.0 between that landing and the peristyle columns at x = 22. */
+     swings out to x = 20.0 between that landing and the peristyle columns at x = 22.
+
+     ── §707: THE RING IS NO LONGER A RING, AND THAT IS FORCED RATHER THAN CHOSEN ────────────
+     Three separate props stood on this beat and two of them stopped a body dead:
+
+       west leg   x = -18 ran through the braziers at (-18, 6) AND (-18, 22). `Props`' eight
+                  brazier spots are `[±18, 6], [±18, 22], [±7.5, 32], [±20, -10]` — the same
+                  x the leg used, because both were written to "the west colonnade". guard1
+                  covered 5.3 m in 200 s: his ground probe met the tripod's near-vertical face
+                  at 87.2°, past `groundSlopeMax`, so `_step` refused the footfall rather than
+                  clamping the forward ray. Same prop, different branch, identical symptom.
+                  Now x = -15.8, which is the centre of the 3.3 m band between the brazier line
+                  and the west colossus plinth (x -14) and still inside the z = 1 pier gap
+                  (-18.5‥-15).
+       east leg   the 16.8 → 20.0 swing crossed the brazier at (18, 6) at x ≈ 17.8. guard2 was
+                  pinned there by the chest ray at 0.56 m for 189.5 s of a 200 s run. The swing
+                  now happens north of the stores instead: 16.5 up to z = 15, out to 20.0 by
+                  z = 20, which is the only line between the ramp landing and the peristyle.
+       north leg  z = 29.8, x -8‥8, ran through `KayKit`'s `crates_stacked` at (-5.5, 30.5) —
+                  the courtyard's ONE near camera prop, pinned by coordinate in
+                  `tests/kaykit.test.mjs` C4 along with its measured `sly-profile` framing.
+
+     The north leg is the one place in this file where no waypoint works, and it was worth
+     proving rather than asserting before touching the topology. That crate sits in the mouth of
+     the pylon throat, between the west colossus plinth (north face z = 28.6) and the throat
+     jambs (x ±7.5 for z ≥ 30.6). Measured on a 0.5 m grid of the shipped colliders, the widest
+     centre-line clearance anywhere on a west-bound crossing is:
+
+         south of the crate, x = -6.0   0.39 m      north of it, x = -7.5, z = 30.5   0.80 m
+         south of the crate, x = -5.0   0.47 m      north of it, x = -7.5, z = 31.0   0.40 m
+
+     — and the Heavy's own RADIUS is 0.56 m. He does not fit, at any offset, at any z. This is
+     not a margin the bar could be relaxed to accept; the lane is sealed. Moving the crate was
+     tried and measured too: 1.0 m north leaves 0.36 m for this route and 0.25 m for
+     `pylon_gate`, because its collider is 2.9 m deep along z and the band between the two beats
+     is 2.4 m. There is no position for it that opens both.
+
+     So the ring is now an OPEN ping-pong whose two ends sit either side of the crate, at
+     (±8, 29.5). The guard paces the whole perimeter and turns around instead of closing the
+     last 16 m — which `pylon_gate`'s guard patrols anyway, 3.7 m further north. `obelisk_watch`
+     and `hall_weave` are open for the same class of reason and say so; this is the third.
+
+     Measured over 24 seeds of the waypoint jitter, against Architecture AND the shipped props:
+     nearest masonry 0.834 m, nearest prop 0.794 m, both against the 0.76 m bar. */
   courtyard_ring: {
-    closed: true, baseY: 0, space: 'courtyard',
+    closed: false, baseY: 0, space: 'courtyard',
     points: [
-      [-18.0, 28.5, 2.2, 'look'],
-      [-18.0, 16.0, 0, null],
-      [-18.0, 1.0, 1.6, null],
-      [-18.0, -10.0, 2.4, 'look'],
-      [-6.0, -13.0, 1.0, null],
-      [6.0, -13.0, 1.0, null],
-      [16.8, -10.0, 1.8, null],
-      [16.8, 1.0, 0, null],
-      [20.0, 15.0, 1.6, null],
-      [20.0, 27.5, 2.6, 'bored'],
-      [8.0, 29.8, 1.4, 'look'],
-      [-8.0, 29.8, 0, null],
+      [-8.0, 29.5, 1.4, 'look'],
+      /* Three points hold the north-west lane straight at z ≈ 29.5. A four-point corner here
+         bulged to z = 29.81 and clipped the stone pile at (-12.6, 30.1) — the lane is 1.0 m of
+         clearance at 29.5 and 0.52 m at 30.0, so the bulge, not the leg, was the violation. */
+      [-12.0, 29.5, 0, null],
+      [-15.5, 29.4, 0, null],
+      [-15.8, 26.5, 2.2, 'look'],
+      [-15.8, 16.0, 0, null],
+      [-15.8, 1.0, 1.6, null],
+      [-15.8, -10.0, 2.4, 'look'],
+      [-6.0, -11.5, 1.0, null],
+      [6.0, -11.5, 1.0, null],
+      [16.5, -10.0, 1.8, null],
+      [16.5, 1.0, 0, null],
+      [16.5, 15.0, 0, null],
+      [20.0, 20.0, 1.6, null],
+      [20.0, 26.5, 2.6, 'bored'],
+      [15.5, 29.4, 0, null],
+      [12.0, 29.5, 0, null],
+      [8.0, 29.5, 1.4, 'look'],
     ],
   },
 
@@ -343,13 +440,29 @@ export const ROUTES = {
      This replaces `sphinx_avenue`, which patrolled z 43‥77 out on the approach. That is
      outside the collision mesh entirely (the courtyard ground ends at z = 34), so its guard
      was walking on the authored fallback height over sloping sand, and it is also 10‥45 m
-     behind the player's spawn, guarding nothing he has to cross. */
+     behind the player's spawn, guarding nothing he has to cross.
+
+     ── §707: 2 m north, because the west half of the old beat is inside a crate ─────────────
+     The old line (±6.2, 31.2) → (0, 32.4) put guard4's spawn at u = 0.10 INSIDE `KayKit`'s
+     `crates_stacked` collider at (-5.5, 30.5), which spans x -6.9‥-4.1, z 29.1‥31.9. He
+     travelled 0.0 m in 200 s and every one of his 400 samples classified `blocked` — the only
+     guard in the garrison who never took a step. Nothing was wrong with him; the waypoint was
+     authored in 2 m of solid.
+
+     The crate stays: it is the courtyard's single near camera prop, its position and its
+     `sly-profile` framing are pinned by coordinate in `tests/kaykit.test.mjs` C4, and the
+     argument for it in `KayKit.js` runs forty lines. The beat moves instead, to the clear band
+     across the throat at z 33.0‥33.5 — north of the crate's 31.9 face, south of where the
+     courtyard paving ends at z = 34. Under the lintel is a better read for a gate sentry than
+     in front of it, and the two 'look' posts and the about-face are unchanged.
+
+     Measured over 24 seeds: nearest prop 1.152 m against a 0.62 m bar (it was 0.000). */
   pylon_gate: {
     closed: false, baseY: 0, space: 'courtyard',
     points: [
-      [-6.2, 31.2, 2.2, 'look'],
-      [0.0, 32.4, 1.2, null],
-      [6.2, 31.2, 2.2, 'look'],
+      [-6.0, 33.2, 2.2, 'look'],
+      [0.0, 33.4, 1.2, null],
+      [6.0, 33.2, 2.2, 'look'],
     ],
   },
 
@@ -366,15 +479,56 @@ export const ROUTES = {
      wall (z = −18.1) and the first nave column row (z = −20.4) is 2.3 m wide, and a 0.56 m
      Heavy on a Catmull-Rom that bulges 0.7 m at the corners does not fit through it — measured
      at 0.34 m of clearance, against the 0.76 m he needs. Ping-ponging the U instead puts a
-     full about-face at each end of the aisle, which is a better read than a corner anyway. */
+     full about-face at each end of the aisle, which is a better read than a corner anyway.
+
+     ── §707: the west leg steps around the barrels, because the corridor has no through line ──
+     `KayKit`'s `barrel_small_stack` stands at (-12.5, -33.5) — the route's own x, to the
+     decimal, and for the same reason the ring met the braziers: it was placed for the `temple`
+     camera against paving, columns, walls and framing, and this beat was not on that list. Its
+     collider spans x -13.4‥-11.6. guard6 walked 91.9 m and then stopped for the last 99.5 s of
+     a 200 s run, which is the whole argument for measuring patrol over minutes: a spawn-time
+     check and a 60 s check both call him healthy.
+
+     Sliding the leg does not work, and the sweep is the reason this is a dodge rather than a
+     number. West of the barrels the aisle column at (-16.5, -26) closes the line; east of them
+     the nave column at z = -31 does. Over 24 seeds:
+
+         x = -10.7   prop 0.572   x = -10.5   prop 0.776   x = -10.4   prop 0.877
+         x = -10.5   arch 0.626   x = -10.3   arch 0.537   (the nave column takes over)
+
+     — a window about 0.1 m wide between "inside the barrels" and "inside the column", against
+     ±0.22 m of authored jitter. There is no straight leg.
+
+     So the leg keeps x = -12.5, where its 2.6 m of column clearance was measured, and steps out
+     to -14.6 for the 3.5 m the barrels occupy — into the bay between the aisle column rows at
+     z = -26 and z = -38, which is empty. A sentry walking around a stack of barrels is what a
+     sentry does. Measured 1.116 m of prop clearance over 24 seeds, against 0.76.
+
+     ── and the cross-leg moved 1.5 m north, which the dodge is what FOUND ──────────────────
+     The north cross-leg sat at z = -43.5 with the ends at -42.5, and its east half passed the
+     nave block at (6.4, -43.7) with 0.636 m over a seed sweep — under the same 0.76 m bar, and
+     nothing to do with props. C1 measures ONE seed and got 0.821 m there, so it had always been
+     green; adding three waypoints to the west leg shifted every later `r.jitter(0.22)` draw in
+     the route's own stream, C1 landed on 0.740 m instead, and failed. The margin was always
+     that thin — the dodge only changed which member of the family got measured.
+
+     Repaired rather than tuned back under the bar, because the window's real middle is not
+     where the header said. Measured on a 0.5 m grid at x = 6.5‥9.5, the clearance profile
+     across the window is 1.38 m at z = -43.0, 1.88 at -42.5, **2.38 at -42.0**, 1.88 at -41.5:
+     the widest line is z = -42.0, not the "z ≈ -43" this comment used to claim. Ends at -42.0,
+     the 'bored' dwell at -42.4, and the whole route now measures 0.842 m of masonry clearance
+     over 24 seeds instead of 0.636. */
   hall_weave: {
     closed: false, baseY: 0, space: 'hall',
     points: [
       [-12.5, -20.0, 2.0, 'look'],
-      [-12.5, -31.0, 0, null],
-      [-12.5, -42.5, 1.6, null],
-      [0.0, -43.5, 1.4, 'bored'],
-      [12.5, -42.5, 1.6, null],
+      [-12.5, -28.5, 0, null],
+      [-14.6, -32.0, 0, null],
+      [-14.6, -35.5, 0, null],
+      [-12.5, -39.0, 0, null],
+      [-12.5, -42.0, 1.6, null],
+      [0.0, -42.4, 1.4, 'bored'],
+      [12.5, -42.0, 1.6, null],
       [12.5, -31.0, 0, null],
       [12.5, -20.0, 2.0, 'look'],
     ],
@@ -432,14 +586,26 @@ export const ROUTES = {
      rows leave a 0.9 m corridor at the south end and a 1.0 m one at the north, and a 0.56 m
      Heavy does not turn a corner in either. The aisle itself (x 6.6‥12.1) is 5.5 m wide and
      runs the length of the room, so he paces it, which is the right patrol for a tomb guard
-     anyway — he is standing over the thing you came for. */
+     anyway — he is standing over the thing you came for.
+
+     ── §707: x = 11.0, not 9.2, and it is the only value that works ────────────────────────
+     The hoard's `crates_stacked` at (8.6, -12, -64.4) has a collider spanning x 7.2‥10.0, and
+     the old centre-line at 9.2 went straight into it: guard8 covered 0.2 m in 200 s, blocked on
+     399 of 400 samples from t = 0.5 s. He is the aisle's only body and he never left the spot
+     he spawned on.
+
+     A 5.5 m aisle with a 2.8 m crate in it has one line left, and the sweep says so exactly —
+     over 20 seeds, x = 10.8 gives 0.754 m of prop clearance (bar 0.76) and x = 11.2 gives
+     0.697 m of masonry clearance (same bar). 11.0 is the single value clearing both: prop
+     0.954 m, masonry 0.897 m. The crate is not moved — it is part of the hoard composition the
+     room is built around, and unlike the route it has nowhere better to be. */
   tomb_vault: {
     closed: false, baseY: -12.0, space: 'tomb',
     points: [
-      [9.2, -61.5, 2.4, 'look'],
-      [9.2, -67.0, 1.4, 'look'],
-      [9.2, -72.0, 0, null],
-      [9.2, -74.5, 2.4, 'look'],
+      [11.0, -61.5, 2.4, 'look'],
+      [11.0, -67.0, 1.4, 'look'],
+      [11.0, -72.0, 0, null],
+      [11.0, -74.5, 2.4, 'look'],
     ],
   },
 
@@ -457,7 +623,21 @@ export const ROUTES = {
   /* Scarab skittering a tight ring around the sarcophagus, inside the pillar rows. It gets to
      close the loop where the Heavy cannot: 0.26 m of radius fits the 1.0 m gaps between the
      plinth and the pillars, and the two cross-legs at z = −68.0 and −74.6 pass north and south
-     of the plinth footprint (z −73.7‥−70.3) rather than over it. */
+     of the plinth footprint (z −73.7‥−70.3) rather than over it.
+
+     ── §707: this ring is inside the hoard, and it is LEFT THAT WAY, deliberately ───────────
+     Measured against the shipped props it touches `props_gold` at (3.6, −70.6) with 0.000 m of
+     clearance — the coin stacks at (2.8, −68.2) and (5.9, −73.2) and the `chest` at (4.6, −70.0)
+     are on the line. It is not repaired here and it is not an oversight: §589 took both scarab
+     bodies off the level, so **this route has no walker**, and nothing can stall on it. C6 in
+     `tests/patrol.test.mjs` asserts on routes that appear in `ROSTER` and reports the rest, so
+     the day someone appends a scarab line to the roster — the two lines §589 says would put one
+     back — this route stops being reported and starts being asserted, and fails until it is
+     re-authored. That is the right moment for it to matter, and the wrong moment is now:
+     threading a 0.26 m body between a plinth, three pillars and a treasure hoard is a piece of
+     design work, not a coordinate nudge, and doing it blind for a body nobody can see would be
+     tuning against a test rather than against the room. `architrave_ledge` is in the same state
+     for the same reason and is clear of props anyway (4.09 m). */
   tomb_scarab: {
     closed: true, baseY: -12.0, space: 'tomb',
     points: [

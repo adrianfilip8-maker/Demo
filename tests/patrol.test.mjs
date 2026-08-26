@@ -643,6 +643,337 @@ test('CAL-2c: the stall test detects a guard pinned by a wall dropped across his
 });
 
 /* ====================================================================== */
+/* C6/C7 — the props, which everything above this line is blind to         */
+/* ====================================================================== */
+
+/**
+ * ── Why C1–C3 were green while five of nine guards could not move (§707) ──────────────────
+ *
+ * Everything above harvests `arch._colliders`, and that is Architecture's list. `Props` and
+ * `KayKit` are separate modules registered after it in `main.js`'s manifest, each with its own
+ * colliders, and this file built neither. So "the route clears the level" meant "the route
+ * clears the masonry", and the level has 36 KayKit placements and nine merged prop buckets in
+ * it that a guard's forward ray hits exactly as hard as a column.
+ *
+ * Measured in the shipped browser build over 200 s (`tools/patrolstall.mjs`), with C1–C3 green:
+ * guard1 5.3 m, guard2 10.5 m, guard4 0.0 m, guard8 0.2 m, and guard6 fine for 100 s and then
+ * stopped for the remaining 99.5 s. Five bodies, four of them from spawn.
+ *
+ * ── What is measured here, and why each choice ────────────────────────────────────────────
+ *
+ *  1. **The shipped props, built by the shipped code.** `tests/_kaykitboot.mjs` primes three's
+ *     `Cache` so `GLTFLoader` never reaches the DOM, and `Props` needs nothing but an engine
+ *     stub. Both run their real placement paths on the real assets. Nothing here retypes a
+ *     coordinate out of `KayKit.PLACEMENTS` or `Props._courtyardDress`, because a test that
+ *     restates the table it checks is a copy, not a measurement.
+ *
+ *  2. **Triangles, not boxes.** `Props._flushBuckets` registers ONE collider per material for
+ *     the whole level — `props_bronze` is a single mesh whose AABB spans x ±22, z −74…33. An
+ *     AABB oracle would report every courtyard route as buried inside it and every tomb route
+ *     as clear of it, both wrong. So the soup is per-triangle, gridded on XZ.
+ *
+ *  3. **Only the tags the guard can hit.** `Guard`'s `RAY_OPTS` ignores hazard/water/rail/hook/
+ *     spire/vent, so the brazier's own `hazard` volume is not an obstacle and is not counted.
+ *     What stopped guard1 and guard2 was the bronze *geometry*, registered `ground`.
+ *
+ *  4. **Along the spline, not at the waypoints.** Sampled by DISTANCE (≤ 8 cm), so a 12 m route
+ *     and a 152 m one are measured at the same resolution. C7 below is the arm that proves this
+ *     matters rather than asserting it: a prop planted mid-segment is invisible to a
+ *     waypoint-only check and caught here.
+ *
+ *  5. **Over the jitter, not at one draw.** `Route`'s constructor moves every waypoint by
+ *     `r.jitter(0.22)`, so the shipped spline is one of a family. C1 measures the family's
+ *     single shipped member; this measures the worst over `PROP_SEEDS` draws, because a
+ *     clearance that holds only at seed 0x9a2d10 is not a clearance.
+ *
+ *  6. **Asserted for routes with a walker; reported for the rest.** `ROSTER` decides. §589 took
+ *     both scarab bodies off the level, so `architrave_ledge` and `tomb_scarab` have nobody on
+ *     them and nobody can stall on them — and `tomb_scarab`'s ring is threaded through the tomb
+ *     hoard on purpose. They are printed every run with their real numbers, and the moment a
+ *     scarab line is appended to `ROSTER` they become assertions and fail until re-authored.
+ *     That is the point at which they start to matter.
+ */
+
+const PROP_BOOT_T0 = Date.now();
+const PROP_REG = [];
+let _propOwner = 'props';
+const propEngine = {
+  quality: 'high', scene: new THREE.Scene(), debug: {}, stats: {}, warnings: [],
+  warn(m) { this.warnings.push(String(m)); },
+  get: () => null, has: () => false, on: () => () => {}, emit: () => {},
+  registerCollider: (mesh, opts) => PROP_REG.push({ mesh, opts, owner: _propOwner }),
+};
+{
+  const { primeKayKitAssets } = await import('./_kaykitboot.mjs');
+  primeKayKitAssets();
+  const { Props } = await import('../src/world/Props.js');
+  const { KayKit } = await import('../src/world/KayKit.js');
+  _propOwner = 'props'; await new Props(propEngine).init();
+  _propOwner = 'kaykit'; await new KayKit(propEngine).init();
+}
+const PROP_BOOT_MS = Date.now() - PROP_BOOT_T0;
+
+/** The six tags `Guard`'s forward rays pass through. Anything else is a solid to a guard. */
+const RAY_IGNORED = new Set(['hazard', 'water', 'rail', 'hook', 'spire', 'vent']);
+
+/** Every prop triangle a guard can walk into, in world space, with its owner. */
+const PROP_TRIS = [];
+for (const r of PROP_REG) {
+  if (RAY_IGNORED.has(r.opts?.tag || 'ground')) continue;
+  const m = r.mesh;
+  if (!m?.geometry?.attributes?.position) continue;
+  m.updateMatrixWorld(true);
+  const g = m.geometry, pos = g.attributes.position, idx = g.index;
+  const n = idx ? idx.count : pos.count;
+  const v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  const src = `${r.owner}:${m.name || '(unnamed)'}`;
+  for (let i = 0; i < n; i += 3) {
+    for (let k = 0; k < 3; k++) {
+      v[k].fromBufferAttribute(pos, idx ? idx.getX(i + k) : i + k).applyMatrix4(m.matrixWorld);
+    }
+    PROP_TRIS.push({
+      x: [v[0].x, v[1].x, v[2].x], z: [v[0].z, v[1].z, v[2].z],
+      lo: Math.min(v[0].y, v[1].y, v[2].y), hi: Math.max(v[0].y, v[1].y, v[2].y),
+      minx: Math.min(v[0].x, v[1].x, v[2].x), maxx: Math.max(v[0].x, v[1].x, v[2].x),
+      minz: Math.min(v[0].z, v[1].z, v[2].z), maxz: Math.max(v[0].z, v[1].z, v[2].z),
+      src,
+    });
+  }
+}
+
+/* 1 m cells: the query radius is PROP_FAR, so a handful of cells are scanned per sample. */
+const PCELL = 1;
+const PGRID = new Map();
+for (let i = 0; i < PROP_TRIS.length; i++) {
+  const t = PROP_TRIS[i];
+  for (let ix = Math.floor(t.minx / PCELL); ix <= Math.floor(t.maxx / PCELL); ix++) {
+    for (let iz = Math.floor(t.minz / PCELL); iz <= Math.floor(t.maxz / PCELL); iz++) {
+      const k = key(ix, iz);
+      let a = PGRID.get(k);
+      if (!a) PGRID.set(k, a = []);
+      a.push(i);
+    }
+  }
+}
+
+/** Clearances above this are not distinguished — every bar in this file is far below it. */
+const PROP_FAR = 2.0;
+
+function pointSeg2(px, pz, ax, az, bx, bz) {
+  const dx = bx - ax, dz = bz - az, L = dx * dx + dz * dz;
+  let t = L > 0 ? ((px - ax) * dx + (pz - az) * dz) / L : 0;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  return Math.hypot(px - (ax + dx * t), pz - (az + dz * t));
+}
+
+/** Horizontal distance from (x, z) to a triangle's XZ projection. 0 when inside it. */
+function pointTri2(px, pz, t) {
+  const [x0, x1, x2] = t.x, [z0, z1, z2] = t.z;
+  const d1 = (px - x1) * (z0 - z1) - (x0 - x1) * (pz - z1);
+  const d2 = (px - x2) * (z1 - z2) - (x1 - x2) * (pz - z2);
+  const d3 = (px - x0) * (z2 - z0) - (x2 - x0) * (pz - z0);
+  if (!(((d1 < 0) || (d2 < 0) || (d3 < 0)) && ((d1 > 0) || (d2 > 0) || (d3 > 0)))) return 0;
+  return Math.min(pointSeg2(px, pz, x0, z0, x1, z1),
+    pointSeg2(px, pz, x1, z1, x2, z2),
+    pointSeg2(px, pz, x2, z2, x0, z0));
+}
+
+/**
+ * Horizontal clearance from (x, z) to the nearest PROP surface standing in the body band
+ * `[yLo, yHi]`, capped at `PROP_FAR`. `extra` is a triangle list for the calibration arms.
+ */
+function propClearanceAt(x, z, yLo, yHi, extra = []) {
+  let best = PROP_FAR, src = null;
+  const consider = (t) => {
+    if (t.hi < yLo || t.lo > yHi) return;
+    if (x < t.minx - best || x > t.maxx + best || z < t.minz - best || z > t.maxz + best) return;
+    const d = pointTri2(x, z, t);
+    if (d < best) { best = d; src = t.src; }
+  };
+  for (let ix = Math.floor((x - PROP_FAR) / PCELL); ix <= Math.floor((x + PROP_FAR) / PCELL); ix++) {
+    for (let iz = Math.floor((z - PROP_FAR) / PCELL); iz <= Math.floor((z + PROP_FAR) / PCELL); iz++) {
+      for (const i of PGRID.get(key(ix, iz)) || []) consider(PROP_TRIS[i]);
+    }
+  }
+  for (const t of extra) consider(t);
+  return { d: best, src };
+}
+
+/** A solid box as 12 world-space triangles, for planting obstacles in the calibration arms. */
+function boxTris(cx, cy, cz, sx, sy, sz, src = 'planted') {
+  const hx = sx / 2, hy = sy / 2, hz = sz / 2;
+  const c = [
+    [cx - hx, cy - hy, cz - hz], [cx + hx, cy - hy, cz - hz], [cx + hx, cy - hy, cz + hz], [cx - hx, cy - hy, cz + hz],
+    [cx - hx, cy + hy, cz - hz], [cx + hx, cy + hy, cz - hz], [cx + hx, cy + hy, cz + hz], [cx - hx, cy + hy, cz + hz],
+  ];
+  const faces = [[0, 1, 2], [0, 2, 3], [4, 6, 5], [4, 7, 6], [0, 4, 5], [0, 5, 1],
+    [1, 5, 6], [1, 6, 2], [2, 6, 7], [2, 7, 3], [3, 7, 4], [3, 4, 0]];
+  return faces.map(([a, b, d]) => {
+    const p = [c[a], c[b], c[d]];
+    return {
+      x: p.map((q) => q[0]), z: p.map((q) => q[2]),
+      lo: Math.min(...p.map((q) => q[1])), hi: Math.max(...p.map((q) => q[1])),
+      minx: Math.min(...p.map((q) => q[0])), maxx: Math.max(...p.map((q) => q[0])),
+      minz: Math.min(...p.map((q) => q[2])), maxz: Math.max(...p.map((q) => q[2])), src,
+    };
+  });
+}
+
+/* The per-route seed offset `buildRoutes` uses, so a Route built here is a Route the game could
+   build. `ROUTE_NAMES` is the same `Object.keys(ROUTES)` ordering `buildRoutes` walks, which is
+   what makes `i * 7919` mean the same thing in both places. */
+const ROUTE_ORDER = Object.fromEntries(ROUTE_NAMES.map((n, i) => [n, i]));
+const PROP_SEEDS = 6;
+const PROP_STEP = 0.08;                       // metres between spline samples
+const walkersOn = (name) => ROSTER.filter((e) => e.route === name);
+const chestOn = (name) => Math.max(0.34,
+  ...walkersOn(name).map((e) => GUARD_TUNE.chestY?.[e.type] ?? 1.15));
+
+/**
+ * Worst prop clearance along a route, over the jitter. Returns the worst sample and the count
+ * inspected — a pass has to prove it looked (§211.1).
+ */
+function propSweep(name, { points = null, extra = [], seeds = PROP_SEEDS } = {}) {
+  const base = ROUTES[name];
+  const def = points ? { ...base, points } : base;
+  const baseY = def.baseY ?? 0;
+  const radius = widestOn(name);
+  const yLo = baseY + 0.02, yHi = baseY + chestOn(name) + 0.10;
+  const p = new THREE.Vector3();
+  let worst = Infinity, at = null, src = null, inspected = 0, len = 0;
+  for (let s = 0; s < seeds; s++) {
+    const route = new Route(name, def, SEED + s * 131 + ROUTE_ORDER[name] * 7919);
+    len = Math.max(len, route.length);
+    const N = Math.max(120, Math.ceil(route.length / PROP_STEP));
+    for (let i = 0; i < N; i++) {
+      route.at(i / N, p);
+      inspected++;
+      const c = propClearanceAt(p.x, p.z, yLo, yHi, extra);
+      if (c.d < worst) { worst = c.d; at = [p.x, p.z]; src = c.src; }
+    }
+  }
+  return { name, radius, need: radius + 0.20, worst, at, src, inspected, len };
+}
+
+console.log(`\n[patrol] props built in ${PROP_BOOT_MS} ms — ${PROP_REG.length} prop colliders, `
+  + `${PROP_TRIS.length} guard-blocking triangles in ${PGRID.size} cells\n`);
+
+test('C6: every route a guard actually walks clears the PROPS by his radius plus 20 cm', () => {
+  const walked = ROUTE_NAMES.filter((n) => walkersOn(n).length > 0);
+  const idle = ROUTE_NAMES.filter((n) => walkersOn(n).length === 0);
+  assert.ok(walked.length >= 8, `only ${walked.length} routes have a walker — ROSTER did not load`);
+  assert.ok(PROP_TRIS.length > 10000, `only ${PROP_TRIS.length} prop triangles — the props did not build`);
+
+  const bad = [];
+  let inspected = 0;
+  console.log('[C6] nearest PROP surface along each route, worst over '
+    + `${PROP_SEEDS} jitter seeds, sampled every ${PROP_STEP * 100} cm:`);
+  for (const name of walked) {
+    const r = propSweep(name);
+    inspected += r.inspected;
+    console.log(`  ${name.padEnd(18)} ${walkersOn(name).map((e) => e.type).join('+').padEnd(13)} `
+      + `need ${r.need.toFixed(2)}  nearest ${(r.worst >= PROP_FAR ? '>2.00' : r.worst.toFixed(3)).padStart(6)} m`
+      + `  at (${r.at[0].toFixed(2)}, ${r.at[1].toFixed(2)})  ${r.src || 'nothing within 2 m'}`);
+    if (r.worst <= r.need) {
+      bad.push(`${name} (${walkersOn(name).map((e) => e.type).join('+')}): ${r.worst.toFixed(3)} m at `
+        + `(${r.at[0].toFixed(2)}, ${r.at[1].toFixed(2)}) on ${r.src}, needs > ${r.need.toFixed(2)}`);
+    }
+  }
+
+  /* Reported, not asserted — see point 6 in the banner. These two routes have no body on them
+     and cannot stall anybody; `tomb_scarab` is threaded through the tomb hoard deliberately. */
+  console.log('[C6] routes with no walker in ROSTER — measured, NOT asserted until one is added:');
+  for (const name of idle) {
+    const r = propSweep(name, { seeds: 2 });
+    inspected += r.inspected;
+    console.log(`  ${name.padEnd(18)} (no walker)   would need ${r.need.toFixed(2)}  nearest `
+      + `${(r.worst >= PROP_FAR ? '>2.00' : r.worst.toFixed(3)).padStart(6)} m  ${r.src || 'nothing within 2 m'}`);
+  }
+
+  assert.ok(inspected > 30000, `inspected only ${inspected} spline samples`);
+  assert.deepEqual(bad, [], `${bad.length} route(s) run into level props:\n  ${bad.join('\n  ')}`);
+});
+
+test('CAL-6: the prop check detects a crate dropped on a beat that is currently clear', () => {
+  /* `rooftop_run` is 17 m above every prop in the level and reports nothing within 2 m on any
+     seed, so it is the one route where a positive arm cannot be confused with a real prop.
+     Planted at a waypoint's own coordinates: 1.4 m of crate, on the deck. */
+  const clean = propSweep('rooftop_run');
+  assert.ok(clean.worst >= PROP_FAR,
+    `rooftop_run is no longer prop-free (${clean.worst.toFixed(3)} m) — pick another control`);
+
+  const crate = boxTris(-8.5, 17.0 + 0.7, -32.7, 1.4, 1.4, 1.4, 'CAL-6 crate');
+  const hit = propSweep('rooftop_run', { extra: crate });
+  console.log(`[CAL-6] rooftop_run clean: >${PROP_FAR.toFixed(2)} m; with a 1.4 m crate on the leg: `
+    + `${hit.worst.toFixed(3)} m at (${hit.at[0].toFixed(2)}, ${hit.at[1].toFixed(2)})`);
+  assert.ok(hit.inspected > 4000, `inspected ${hit.inspected} samples`);
+  assert.ok(hit.worst <= hit.need,
+    `CAL-6 DID NOT FIRE — a crate standing on the route measured ${hit.worst.toFixed(3)} m against a `
+    + `${hit.need.toFixed(2)} m bar, so C6 is blind to props and every C6 pass is void`);
+
+  /* And the negative half: the same crate 6 m off the beat must NOT trip it, or the arm is
+     reporting "something exists in the level" rather than "something is on the route". */
+  const aside = propSweep('rooftop_run', { extra: boxTris(-14.5, 17.7, -32.7, 1.4, 1.4, 1.4, 'CAL-6 aside') });
+  assert.ok(aside.worst > aside.need,
+    `CAL-6's negative arm failed: a crate 6 m off the route measured ${aside.worst.toFixed(3)} m, `
+    + 'so C6 fires on props that are nowhere near the beat');
+});
+
+test('CAL-6b: the oracle holds both prop families — a KayKit box and a Props bucket', () => {
+  /* The two register completely differently and only one of them is the drawn art:
+     `KayKit._collider` makes an invisible per-item box, `Props._flushBuckets` registers the
+     visible merged mesh itself. An oracle that had silently dropped either family would still
+     look healthy on the other, so both are asserted present by name. */
+  const owners = new Set(PROP_TRIS.map((t) => t.src.split(':')[0]));
+  const buckets = new Set(PROP_TRIS.filter((t) => t.src.startsWith('props:')).map((t) => t.src));
+  const kk = PROP_TRIS.filter((t) => t.src === 'kaykit:kaykit:solid').length;
+  console.log(`[CAL-6b] owners ${[...owners].join(', ')} — ${buckets.size} Props buckets, ${kk} KayKit box triangles`);
+  assert.ok(owners.has('props'), 'no Props triangles in the oracle');
+  assert.ok(owners.has('kaykit'), 'no KayKit triangles in the oracle');
+  assert.ok(kk >= 12 * 20, `only ${kk} KayKit collider triangles — 29 boxes would be 348`);
+  assert.ok(buckets.size >= 5, `only ${buckets.size} Props buckets registered as solid`);
+  /* And the hazard volumes are NOT in it: a brazier's fire is not an obstacle to a guard. */
+  assert.ok(PROP_REG.some((r) => r.opts?.tag === 'hazard'), 'Props registered no hazard volumes at all');
+  assert.ok(!PROP_TRIS.some((t) => t.src.includes('hazard')), 'a hazard volume leaked into the solid set');
+});
+
+test('C7: clearance is measured ALONG the segments — a waypoint-only check cannot see this', () => {
+  /* The third thing §707 had to establish: C1 samples the spline, but "clearance at the
+     waypoints" is a different measurement, and a reader who assumed the cheaper one would have
+     been wrong about what protects this file. So it is demonstrated rather than described.
+
+     A crate is planted at the MIDPOINT of `hall_nave`'s longest leg — a route with no prop
+     within 2 m of it — and both measurements are run on the same geometry. If the waypoint-only
+     check ever caught it, the distance-sampled sweep would be redundant and this arm says so. */
+  const name = 'hall_nave';
+  const pts = ROUTES[name].points;
+  const [ax, az] = pts[1], [bx, bz] = pts[2];
+  const mid = [(ax + bx) / 2, (az + bz) / 2];
+  const crate = boxTris(mid[0], 0.7, mid[1], 1.2, 1.4, 1.2, 'C7 crate');
+
+  const baseY = ROUTES[name].baseY ?? 0;
+  const yLo = baseY + 0.02, yHi = baseY + chestOn(name) + 0.10;
+  const need = widestOn(name) + 0.20;
+
+  // (a) the waypoint-only measurement, on the authored coordinates
+  let wpWorst = Infinity;
+  for (const [x, z] of pts) wpWorst = Math.min(wpWorst, propClearanceAt(x, z, yLo, yHi, crate).d);
+  // (b) the same geometry, sampled along the spline
+  const seg = propSweep(name, { extra: crate });
+
+  console.log(`[C7] a 1.2 m crate at the midpoint of ${name}'s longest leg (${mid[0].toFixed(1)}, ${mid[1].toFixed(1)}): `
+    + `waypoint-only sees ${wpWorst >= PROP_FAR ? '>2.00' : wpWorst.toFixed(3)} m, `
+    + `segment sweep sees ${seg.worst.toFixed(3)} m, bar ${need.toFixed(2)} m`);
+  assert.ok(pts.length >= 3, `inspected ${pts.length} waypoints`);
+  assert.ok(seg.inspected > 1000, `inspected ${seg.inspected} spline samples`);
+  assert.ok(seg.worst <= need,
+    `C7 is not set up: the planted crate measured ${seg.worst.toFixed(3)} m even along the segments`);
+  assert.ok(wpWorst > need,
+    'C7 PROVED NOTHING — the waypoint-only check also caught the mid-segment crate at '
+    + `${wpWorst.toFixed(3)} m, so this arm is not demonstrating the gap it claims`);
+});
+
+/* ====================================================================== */
 /* C4 — the timing gap                                                     */
 /* ====================================================================== */
 
