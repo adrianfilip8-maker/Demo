@@ -56612,6 +56612,50 @@ the top of a new file is exactly the right habit; it just cannot be done by quot
 rule's enforcement searches for. **§364.3 is enforced by a scanner, so the rule's own documentation
 has to be written in a form the scanner will not trip over.**
 
+### §711.1 The suite — every run quoted, including the ones that failed (§703.2)
+
+`node --test "tests/*.test.mjs"` from a **clean worktree at the pushed commit**, holding the FIFO
+capture lock, cwd checked from **inside** the spawned command (§694).
+
+**First, at `4ccbed3` — three runs, and all three failed identically. That is the important row**,
+because a documented flake is intermittent and this was not:
+
+| run | result | duration | cwd at end |
+|---|---|---|---|
+| 1 | 1083 / 1084, **1 fail** | 286.2 s | exists |
+| 2 | 1083 / 1084, **1 fail** | 291.5 s | exists |
+| 3 | 1083 / 1084, **1 fail** | 287.7 s | exists |
+
+Identified as `audiowired` **A2**, caused by this lane and fixed in `0e12b2f` — see the §364.3
+section above. Three-for-three is what made it obvious it was not a flake.
+
+**Then at `c15a6f6`, the final pushed commit — six runs:**
+
+| set | run | result | duration | cwd at end |
+|---|---|---|---|---|
+| F | 1 | **1084 / 1084**, 0 fail | 285.2 s | exists |
+| F | 2 | **1084 / 1084**, 0 fail | 280.8 s | exists |
+| F | 3 | 1083 / 1084, 1 fail *(name not captured — see below)* | 287.7 s | exists |
+| G | 1 | **1084 / 1084**, 0 fail | 287.6 s | exists |
+| G | 2 | 1083 / 1084, 1 fail — **`R1b instrument: the pinned clock agrees with one built from real sleeps`** | 279.3 s | exists |
+| G | 3 | **1084 / 1084**, 0 fail | 278.4 s | exists |
+
+`R1b` is in **`tests/padrest.test.mjs`**, which is the documented **~1-in-5 flake** named in this
+lane's brief, in a file this lane does not touch. Four of six runs fully green; the two failures
+are one test, intermittently.
+
+**Two honest notes on this table rather than one clean claim.** The F-set's single failure went
+**unidentified** — the runner was piping through `tail -40` and the failing subtest's `not ok` line
+was above the window, so it was filtered out before it reached the log. That was fixed for the
+G set, which is how R1b was caught. Quoting it as "presumably the same flake" would be the §699
+shape — a claim written once and then trusted as a measurement — so it is quoted as what it is:
+one unidentified failure, in a set whose other five runs are accounted for.
+
+And `framebudget`'s **F3 GC**, the other documented flake, was run **unfiltered five times in
+isolation and passed 5/5**. That is not evidence it has gone away: §703 established F3 GC is a
+**contention** effect, and a file run alone has nothing to contend with. It is recorded so nobody
+reads 5/5 as a repair.
+
 ### How to revert
 
 Nothing to revert — **the default is untouched**. `?char=sly27` is additive: one row in
