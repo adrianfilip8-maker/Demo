@@ -57368,3 +57368,8 @@ changed no code.** The diff against `97d51e3` is `KNOWN_ISSUES.md`, `PROVENANCE.
 PNGs — nothing under `src/`, `tests/`, `tools/` or `public/assets/*.glb`. The suite is evidence that
 the tree it was run on is the tree that was measured, not evidence that a change was safe, because
 there was no change to be unsafe.
+
+**A fourth run, at the commit that carries this section** (the §712 precedent — a suite table
+committed at one sha and quoted at another is a claim about a tree nobody ran): `d57dade`, clean
+worktree, same lock, same runner — **1084 / 1084, 0 fail, 364.9 s**, pwd `/home/user/wt-713` checked
+inside the command, cwd present at end, zero `not ok` lines. Four runs, four green.
