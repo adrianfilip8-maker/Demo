@@ -54701,3 +54701,13 @@ Deleting `src/ai/CarmelitaNative.js`, `tests/carmnative.test.mjs`, `tools/carmna
 and the four `carmelitaNative`/`carmelitaPistol` references in `Guard.js` removes the lane entirely.
 The native arm falls back to the rebind and then to the procedural `blob()` body, so three
 independent failures deep the garrison still stands.
+
+---
+
+## §706 — `GuardClips.js` is imported by nothing, and two headers say it drives the garrison
+
+**CLAIMED — being written now.** Promoted out of §704.2, which found it. It is a defect in the
+guard ANIMATION WIRING, not in the Carmelita import, and a reader chasing "why do the guards move
+like that" should not have to read a ten-subsection import writeup to reach it.
+
+Findings below.
