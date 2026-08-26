@@ -608,6 +608,59 @@ test('the pistol token is on, and both halves of what pays for it are documented
   assert.match(src, /1\.768 m/, 'and so is the CasualWalking height it replaces');
 });
 
+test('_coneApex rides the bone when there is a muzzle, and IS _eyePosition when there is not', async () => {
+  /* A grep proving `_updateCones` calls `_coneApex` proves the wiring, not the behaviour. This
+     drives the method on real `Guard` instances, in both directions (§418.3).
+     Headless, `loadCarmelitaNative` returns null and the garrison falls back to procedural
+     bodies, so every guard here has `pistolMesh === null` — which is exactly the fallback leg
+     that protects the scarab, the rebind arm and `?carmpistol=0`. The muzzle leg is driven by
+     giving one guard a bone and a local offset, because that is all the method reads. */
+  const { Guards } = await import('../src/ai/Guard.js');
+  const engine = {
+    quality: 'high', scene: new THREE.Scene(), debug: {}, stats: {}, warnings: [],
+    settings: { shadowCascades: 3, shadowMap: 3072 },
+    warn: () => {}, has: () => false, get: () => null,
+    on: () => () => {}, emit: () => {}, registerCollider: () => {},
+  };
+  const gs = new Guards(engine, null);
+  await gs.init?.();
+  assert.ok(gs.guards.length >= 9, `${gs.guards.length} guards built`);          // §211.1
+
+  /* FALLBACK LEG: no pistol anywhere, so the apex must be the eye, exactly. */
+  let checked = 0;
+  for (const g of gs.guards) {
+    assert.equal(g.pistolMesh, null, `${g.id} has no pistol headless`);
+    assert.equal(g.muzzleBone, null);
+    const apex = g._coneApex(new THREE.Vector3());
+    const eye = g._eyePosition(new THREE.Vector3());
+    assert.deepEqual(apex.toArray(), eye.toArray(), `${g.id}: with no pistol the apex IS the eye`);
+    checked++;
+  }
+  assert.equal(checked, gs.guards.length);
+
+  /* MUZZLE LEG: a bone with a known world matrix and a known local offset. */
+  const g0 = gs.guards[0];
+  const eyeBefore = g0._eyePosition(new THREE.Vector3()).clone();
+  const bone = new THREE.Object3D();
+  bone.position.set(3, 5, 7);
+  bone.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+  bone.updateMatrixWorld(true);
+  g0.muzzleBone = bone;
+  g0.muzzleLocal = new THREE.Vector3(0, 0.08432, -0.07882);
+  const want = g0.muzzleLocal.clone().applyMatrix4(bone.matrixWorld);
+  const got = g0._coneApex(new THREE.Vector3());
+  assert.ok(got.distanceTo(want) < 1e-9,
+    `the apex is the local offset through the bone's world matrix (${got.toArray()} vs ${want.toArray()})`);
+  assert.ok(got.distanceTo(eyeBefore) > 1,
+    'and it is nowhere near the head-bone eye — otherwise this test could not tell the two legs apart');
+
+  /* A bone whose matrix has gone non-finite must fall back rather than emit NaN into the beam. */
+  bone.matrixWorld.elements[12] = NaN;
+  const back = g0._coneApex(new THREE.Vector3());
+  assert.ok(Number.isFinite(back.x) && Number.isFinite(back.y) && Number.isFinite(back.z),
+    'a non-finite bone matrix falls back to the eye instead of producing a NaN apex');
+});
+
 test('the cone apex moved and the SENSING eye did not — the alert ladder is untouched', () => {
   const src = readFileSync('src/ai/Guard.js', 'utf8');
   /* The one line that decides scope. `sense.eye` feeds `Senses.evaluate`, which is the ladder. */
