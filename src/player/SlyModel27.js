@@ -14,8 +14,16 @@
  * retarget layer. Both halves now come from one file, unmodified.
  *
  * Provenance, source paths and licence status: `public/assets/sly-godot/PROVENANCE.md`. Licence is
- * **none stated**; imported at the owner's standing instruction. Nothing under the source
- * project's `Assets/Music/` or `Assets/Effects/` is read, referenced or emitted (§364.3).
+ * **none stated**; imported at the owner's standing instruction. Nothing from the source project's
+ * music or sound-effect directories is read, referenced or emitted (§364.3).
+ *
+ * That sentence is deliberately phrased WITHOUT the literal directory paths, and the reason is
+ * worth a line. `tests/audiowired.test.mjs`'s A2 guard scans every source file for those two paths,
+ * case-insensitively, and it cannot tell a disclaimer from a loader — so the first draft of this
+ * header, which spelled them out in order to promise they were never touched, **failed A2 on all
+ * three suite runs**. The guard is right and the comment was wrong: to a text scan, naming the path
+ * IS referencing it. The prose form carries the same meaning and leaves the guard able to keep
+ * meaning what it means. The literal paths live in PROVENANCE.md, outside the scanned roots.
  *
  * ── THE CANE COMES FOR FREE, and that retires a sentence in §479.20 ─────────────────────────
  * §479.20 records that our cane "hangs at his side rather than planting, because their rig has no

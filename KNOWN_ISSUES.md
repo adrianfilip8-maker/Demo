@@ -56556,6 +56556,27 @@ check were a real property of the data (these clips bake an *absolute* pose on n
 so two clips that leave the right arm alone give bit-identical cane positions). The tool walks
 anyway, because that is what the runtime does.
 
+### The suite caught this lane breaking §364.3 — by writing that it had not
+
+Three clean-worktree runs came back **1083 / 1084 with the same single failure every time**, which
+is the shape that matters: a documented flake is intermittent, and this was not.
+
+The failure was `audiowired.test.mjs` **A2 — "nothing references the reference repo's commercial
+recordings"**, and the offending file was `src/player/SlyModel27.js`. Its header promised, in as
+many words, that nothing under the source project's music or sound-effect directories is read or
+referenced — **and spelled both paths out to do it**. A2 scans every source file for exactly those
+two paths, case-insensitively. It cannot tell a disclaimer from a loader, and it should not try:
+to a text scan, naming the path *is* referencing it.
+
+**The guard was right and the comment was wrong.** The fix is prose — same promise, no literal
+path — and the literal paths live in `PROVENANCE.md`, which is outside A2's scanned roots. The
+second draft failed too, because the paragraph *explaining* the guard also quoted the pattern.
+
+Worth writing down because the instinct that caused it is a good one. Restating an absolute rule at
+the top of a new file is exactly the right habit; it just cannot be done by quoting the string the
+rule's enforcement searches for. **§364.3 is enforced by a scanner, so the rule's own documentation
+has to be written in a form the scanner will not trip over.**
+
 ### How to revert
 
 Nothing to revert — **the default is untouched**. `?char=sly27` is additive: one row in
