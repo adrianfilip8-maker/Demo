@@ -54568,7 +54568,67 @@ on a no-op.
 > It now reads a guard's mesh by name and prints the player's row alongside, because a number with
 > no companion is exactly how the swap hid.
 
-### §704.8 How to revert
+### §704.8 The frames
+
+**Offline first, because it is the stronger evidence.** `tools/carmsil.mjs` projects the triangles
+itself and z-buffers them into a PNG — no renderer, no camera, no lock — and its "front" is the
+projection AXIS, not a filename, so it cannot be a mislabelled rear shot and needs no camDot. Same
+frame, same projection, same shading, same 1 m rule on every stage, so the pictures differ only by
+the pipeline that made them.
+
+| file | what it is |
+|---|---|
+| `shots/carmsil-bind-704before-{front,side}.png` | the shipped RIG3 rebind at the bind pose |
+| `shots/carmsil-native-704after-{front,side}.png` | her own rig at the bind pose, × `MOUNT_SCALE` |
+| `shots/carmsil-src-704src-{front,side}.png` | the artist's sculpt, node transforms only |
+
+The before/after is not subtle. The rebind leaves a **gap at the neck**, the coat torn open at the
+shoulders and the collar broken; the native arm has the head on the neck, the coat intact, and her
+authored A-pose. Both measure **1.816 m** and both have a 0.375 m head.
+
+**The `src` pair is the control, and it settles what is NOT ours.** The flat tail slab and the
+beaded ponytail are in the artist's file — identical in all three stages — and so is the shock
+pistol lying beside her feet, which both arms correctly drop. If the source asserts it, it ships.
+
+The five clip fronts (`carmsil-native-{Idle,Lookaround,PatrolWalk,CasualWalking,Run}-704-front.png`)
+are §704.5's evidence: four crouched with the hands clasped, two upright.
+
+> **Three renders were deleted rather than committed**, and the reason is the finding. `carmsil
+> --clip` took a SOURCE clip name, `play()` had no alias for one, and falling back to `idle` is the
+> correct behaviour for a name with no clip — so renders labelled `Idle`, `PatrolWalk` and
+> `CasualWalking` came back **bit-identical**, all three of them idle, with pixel counts agreeing
+> to four digits. Nothing looked wrong. `play()` and `freeze()` now resolve either name and record
+> what they could not resolve.
+
+**In-game, both arms, the same cameras.** `tools/carmnativeshot.mjs`, 1280×720, 60 s settle on the
+shipped `Guards.update` path, nobody teleported (§435.4), two guards in two quarters (§466.5).
+
+The camera is computed once from the rebind arm's settled garrison and then **passed in verbatim**
+to the native run. The two arms do not settle to the same instant-by-instant positions — their clip
+sets have different durations — so recomputing "the camera in front of guard4" per arm would
+photograph two different stances from two different bearings and call the difference a fix.
+
+**Front is measured on BOTH sides rather than inherited from the first**, because a frame's name
+cannot establish that it sees a face, and §702.9 caught `portrait-colonnade` sitting at dot −0.94
+for a season:
+
+| | guard4 | guard1 |
+|---|---|---|
+| `carm704-rebind-*` | **+0.994** @ 4.02 m | **+0.994** @ 4.02 m |
+| `carm704-native-*` | **+0.981** @ 3.81 m | **+0.983** @ 3.79 m |
+
+The tool refuses to shoot below dot 0.90 rather than shipping a frame with a name that says front.
+
+What the pair shows: the rebind holds both arms straight out sideways with the coat torn open and
+the tail a flat dark slab; the native arm has her authored stance, the jacket intact, and **a fox
+tail that reads as a fox tail**. She is also visibly shorter, which is §704.5 and not a scale error.
+
+> **Stated limitation.** These four cameras had **no occlusion pre-flight**, so the brazier and the
+> crate cut across both subjects. It is the same obstruction in both arms, so the comparison holds
+> — but §702.9 did this better by clearing all four through camDot, and a future round should. The
+> `carmsil-*` frames are the unoccluded evidence for the sculpt, which is why they are listed first.
+
+### §704.9 How to revert
 
 One token, and the shipped path is the default:
 
