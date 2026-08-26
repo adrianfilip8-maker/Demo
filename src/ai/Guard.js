@@ -323,12 +323,22 @@ const TUNE = {
      rather than discovered. */
   carmelitaPistol: 1,
 
-  /* Whether the pistol gets its own ink shell. 0, and that is the whole reason the gun fits:
-     shelling it doubles 3,465 triangles to 6,930 and takes the worst view to 99.99% of the cap,
-     with no margin left for anything else. Set to 1 to see the difference — the two frames are
-     in §709. The pistol is drawn INSIDE the hand and forearm that hold it, both of which keep
-     their outline, so what the shell would add is a line around a 36 px object that is already
-     bounded by inked geometry on most of its border. */
+  /* Whether the pistol gets its own ink shell. **0, and this is a budget decision, not an art
+     one — the honest version of it is in §709 and it is not free.**
+
+     Shelling the pistol doubles its 3,465 triangles to 6,930 and takes the worst main view from
+     99.70% of §1's cap to 99.99%, leaving 100 triangles of margin for everything that comes
+     after. Both fit; only one of them leaves room.
+
+     What it costs is measured rather than waved away. An earlier draft of this comment claimed
+     the pistol "is already bounded by inked geometry on most of its border" because it is held
+     in an inked hand. **That was written and not checked, and it is false.** Rasterised at the
+     `courtyard` distance over the clips a guard patrols in, the pistol covers ~263 px with a
+     ~68 px silhouette border, and only **18–20% of that border touches the body** — the other
+     80% is against open background, where the missing line is a real difference from every other
+     object in the frame.
+
+     Set to 1 to put it back; the before/after frames are in §709. */
   carmelitaPistolInk: 0,
 
   /* (B) the cone. coneShape 1 takes the structured-beam branch in BEAM_FRAG (uConeShape);
