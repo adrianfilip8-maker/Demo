@@ -177,6 +177,11 @@ const TUNE = {
   conePitch: 0.115,        // radians below horizontal — a guard scans the ground, not the sky
   // The apex sits well clear of his own skull: a cone starting inside the head washes an
   // additive white haze over his chest and kills the very silhouette it should reveal.
+  // §709: these two now offset the SENSING eye only (`_eyePosition`, which feeds the alert
+  // ladder and was out of scope). An armed Carmelita guard draws her cone from the pistol
+  // muzzle instead (`_coneApex`), which is 0.50–0.52 m in front of her on the patrol clips —
+  // clear of the whole body rather than only of the skull, so the reason these exist is
+  // satisfied more strongly there, not abandoned. They still position both on every other path.
   coneEyeFwd: 0.45,
   coneEyeUp: 0.08,
 
@@ -293,16 +298,38 @@ const TUNE = {
      so the gun needs no attach logic, no holster and no authoring. It is a sibling armature root
      driven by the same clips, and on the native path it simply works.
 
-     It is 0 because it does not FIT, not because it does not work: 1,672 triangles a guard, and
-     every guard is drawn twice for the ink shell, so 1,672 × 9 × 2 = 30,096 against a measured
-     headroom of ~7,000 (`tools/budgetattrib.mjs --inpage`, 1.193 M of a 1.200 M cap). Turning it
-     on takes the worst main view over §1's cap; the number is here so that is a decision rather
-     than a surprise. `?carmpistol=1` at the URL for a one-off look.
+     **§709 turned it on.** It was 0 because it did not FIT, not because it did not work: 1,672
+     triangles a guard, and every guard is drawn twice for the ink shell, so 1,672 × 9 × 2 =
+     30,096 against a measured headroom of 7,030 (`tools/budgetattrib.mjs --inpage`, 1,192,970 of
+     a 1,200,000 cap). Two measurements closed that, and neither is "raise the cap":
+
+       · **385 triangles, not 1,672.** The pistol body is a 0.58 m diagonal drawn at 36.3 px in
+         `courtyard` — the shot that sets the 99% — so 1,108 triangles on it was about two per
+         pixel. `tools/pistollp.mjs` decimates it to `carmelita-pistol-lp.glb` and measures the
+         cost: 2.27 mm mean and 16.98 mm worst-vertex deviation, i.e. 0.14 px and 1.06 px there.
+       · **Drawn once, not twice.** The pistol is its own `SkinnedMesh` on the shared skeleton
+         rather than merged into the body buffer, so the body's ink shell does not duplicate it.
+         One extra draw a guard: 9 of the 138 the worst main view has spare.
+
+     385 × 9 = 3,465, landing the worst main view at 1,196,435 — 99.70% of the cap. `?carmpistol=0`
+     at the URL to put it back the way it was.
 
      It also selects the clip map: armed, `walk_patrol` goes back to `PatrolWalk`, the clip named
      for it, which reads as a crouch around nothing without the weapon and as an armed patrol
-     with it (`CLIP_FOR_ARMED`). */
-  carmelitaPistol: 0,
+     with it (`CLIP_FOR_ARMED`). **That is a visible change and it is not free**: `PatrolWalk`
+     draws at 1.508 m where `CasualWalking` draws at 1.768 m, so a patrolling guard is 26 cm
+     shorter and visibly crouched. It is the more correct read for an armed guard and it is the
+     clip the source authored for the job; it is recorded here because it should be reported
+     rather than discovered. */
+  carmelitaPistol: 1,
+
+  /* Whether the pistol gets its own ink shell. 0, and that is the whole reason the gun fits:
+     shelling it doubles 3,465 triangles to 6,930 and takes the worst view to 99.99% of the cap,
+     with no margin left for anything else. Set to 1 to see the difference — the two frames are
+     in §709. The pistol is drawn INSIDE the hand and forearm that hold it, both of which keep
+     their outline, so what the shell would add is a line around a 36 px object that is already
+     bounded by inked geometry on most of its border. */
+  carmelitaPistolInk: 0,
 
   /* (B) the cone. coneShape 1 takes the structured-beam branch in BEAM_FRAG (uConeShape);
      0 = the legacy branch, spelled byte-identical to the pre-seal shader. The five
@@ -818,6 +845,16 @@ class Guard {
     const rig = native ? instantiateNative(asset, materials) : instantiate(asset, materials);
     this.root = rig.root;
     this.mesh = rig.mesh;
+    /* §709. Null on every path but the armed native one, and every consumer below tests it —
+       the scarab has no pistol, the rebind arm has no pistol, and an unarmed native build has
+       no pistol. */
+    this.pistolMesh = rig.pistolMesh || null;
+    /* Where the vision cone's apex goes, in `ShockPistolbarrel`'s own bind-local frame. Resolved
+       once here rather than per frame: it is a property of the asset, and the bone it rides is
+       what makes it track the animation. */
+    this.muzzleBone = (this.pistolMesh && asset.pistol?.muzzle?.ok)
+      ? (rig.bones.ShockPistolbarrel || null) : null;
+    this.muzzleLocal = this.muzzleBone ? new THREE.Vector3().fromArray(asset.pistol.muzzle.local) : null;
     this.bones = rig.bones;
     this.skeleton = rig.skeleton;
     this.root.name = this.id;
@@ -1483,7 +1520,14 @@ class Guard {
 
   /* --- world queries used by the owner ---------------------------------- */
 
-  /** Eye position, taken off the live head bone so the beam bobs with his walk. */
+  /**
+   * Eye position, taken off the live head bone so the beam bobs with his walk.
+   *
+   * **This is a SENSING position, and §709 deliberately left it alone.** `_step` feeds it to
+   * `Senses.evaluate` as `sense.eye` (line ~971), which is the origin of the line-of-sight ray
+   * the whole alert ladder turns on. Moving it would move detection, and detection was out of
+   * scope. What §709 moved is `_coneApex` below — where the beam is DRAWN.
+   */
   _eyePosition(out) {
     if (this.headBone) {
       out.setFromMatrixPosition(this.headBone.matrixWorld);
@@ -1492,6 +1536,41 @@ class Guard {
       if (Number.isFinite(out.x)) return out;
     }
     return out.copy(this.position).setY(this.position.y + this.vision.eyeHeight);
+  }
+
+  /**
+   * Where the vision cone is DRAWN from — the muzzle of her shock pistol, when she has one.
+   *
+   * §709, on the owner's request that the cone originate from the end of the gun barrel. The
+   * apex is `muzzleLocal` — a point in `ShockPistolbarrel`'s own bind-local frame, derived from
+   * the far end of the `Barrel` mesh by `muzzleFromBarrel` — pushed through that bone's live
+   * world matrix. Two consequences worth stating:
+   *
+   *   · It TRACKS THE CLIP for free, because the bone does. Nothing here is a baked world
+   *     offset, and it must not become one: at the BIND pose the pistol is parked **0.93 m out
+   *     to her side**, so an offset captured from an undriven rig would put the cone there and
+   *     look plausible in a still (§442's signature failure, and the counterexample
+   *     `tools/muzzle.mjs` uses).
+   *   · The bone matrices must be CURRENT. They are: `_step` already calls
+   *     `root.updateMatrixWorld(true)` at its end for exactly this reason (the head bone), and
+   *     `_updateCones` runs after every guard has stepped.
+   *
+   * **§178's note about the apex clearing the skull is not made moot by this, it is satisfied
+   * more strongly.** That offset existed because a cone starting inside the head washes additive
+   * haze over the chest. Measured across the driven patrol clips the muzzle sits 0.50–0.52 m in
+   * FRONT of her root and 0.35–0.39 m to one side at 0.67–0.70 m up — outside the body entirely,
+   * not merely clear of the head. `tools/muzzle.mjs` reports the distance to her drawn hull.
+   *
+   * Falls back to `_eyePosition` whenever there is no pistol: the scarab, the rebind arm, an
+   * unarmed build, and any guard whose muzzle derivation refused. So the beam has an origin on
+   * every path and the unarmed build is bit-identical to what it was.
+   */
+  _coneApex(out) {
+    if (this.muzzleBone && this.muzzleLocal) {
+      out.copy(this.muzzleLocal).applyMatrix4(this.muzzleBone.matrixWorld);
+      if (Number.isFinite(out.x)) return out;
+    }
+    return this._eyePosition(out);
   }
 
   /** Pouch on the back of his belt — the thing Sly's hand actually reaches for. */
@@ -1633,10 +1712,18 @@ export class Guards {
          multiplies the albedo by (0,0,0), which rendered every roster guard as the §290
          black-gloss mannequin. Synthesize the identity so map × vColor = map. The procedural
          scarab keeps its real colours; only geometry that lost the attribute gets ones. */
-      const g = carmelita.geometry;
-      if (g && !g.getAttribute('color')) {
-        const n = g.getAttribute('position').count;
-        g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+      const withColour = (geo) => {
+        if (!geo || geo.getAttribute('color')) return;
+        const n = geo.getAttribute('position').count;
+        geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+      };
+      withColour(carmelita.geometry);
+      /* §709: the pistol is a second buffer and needs the same identity colour channel. Missing
+         it, the same unbound-attribute failure this comment is about would render the gun black
+         while the body beside it came out correct — the hardest version of that bug to spot. */
+      withColour(carmelita.pistol?.geometry);
+      if (carmelita.pistol) {
+        for (const t of CARMELITA_TYPES) this.stats.tris += carmelita.pistol.tris | 0;
       }
       this.carmelita = carmelita;
     }
@@ -1670,6 +1757,9 @@ export class Guards {
       this.group.add(g.root);
       this.guards.push(g);
       this.stats.draws += GROUPS.length;
+      /* §709: the pistol is its own mesh, so it is its own draw. That IS the trade — one draw a
+         guard buys not being duplicated by the ink shell, which is 3,465 triangles. */
+      if (g.pistolMesh) this.stats.draws += 1;
     }
 
     this._applyOutlines();
@@ -1710,6 +1800,14 @@ export class Guards {
        to stay at 0. */
     shiftGuardSkin(carm.geometry, skin && !this.carmelitaNative);
     paintGuardRegions(carm.geometry, carm.regions, art ? GUARD_DRESS : null);
+    /* §709: the pistol is a second buffer with its own regions, and `GUARD_DRESS` already has
+       entries for all three of them (`MainBody` linen, `Barrel` and `Antennae003` bronzeDark) —
+       they were written for the merged build and have simply never had geometry to land on.
+       No `shiftGuardSkin`: the pistol exists only on the native arm, where that remap is refused
+       for the reason directly above. */
+    if (carm.pistol?.geometry) {
+      paintGuardRegions(carm.pistol.geometry, carm.pistol.regions, art ? GUARD_DRESS : null);
+    }
 
     const shading = this.engine.get('shading');
     for (const g of this.guards) {
@@ -1726,12 +1824,16 @@ export class Guards {
             ? g._baseMats : [g._baseMats[0], g._baseMats[0]];
         }
         g.mesh.material = g._artMats;
+        /* The pistol draws in ONE group off the body atlas, so it takes the same array and
+           three resolves group 0 from it — the same material the torso beside it is wearing. */
+        if (g.pistolMesh) g.pistolMesh.material = g._artMats;
         if (!g.mesh.userData.slyShell && shading?.outline) {
           try { if (shading.outline(g.mesh, { thickness: 1.05 })) g._artShell = true; }
           catch { /* the paint must not die on an ink failure */ }
         }
       } else {
         if (g._baseMats) g.mesh.material = g._baseMats;
+        if (g._baseMats && g.pistolMesh) g.pistolMesh.material = g._baseMats;
         if (g._artShell) {
           try { removeOutlineShell(g.mesh); } catch { /* symmetric with the ensure */ }
           g._artShell = false;
@@ -1882,10 +1984,20 @@ export class Guards {
   _applyOutlines() {
     const shading = this.engine.get('shading');
     if (!shading?.outline) return;
+    /* §709. The pistol is deliberately NOT in this loop by default. `Outline.js` builds a shell
+       as a second mesh over the host's own geometry OBJECT, so anything sharing that buffer is
+       drawn twice — which is the entire reason the gun did not fit. Keeping it out is worth
+       3,465 triangles, and it is a knob rather than a decision baked into the structure so the
+       two can be photographed side by side. */
+    const inkPistol = TUNE.carmelitaPistolInk > 0.5;
     for (const g of this.guards) {
       try {
         const shell = shading.outline(g.mesh, { thickness: g.type === 'scarab' ? 0.7 : 1.05 });
         if (shell) this.stats.draws++;
+        if (inkPistol && g.pistolMesh) {
+          const ps = shading.outline(g.pistolMesh, { thickness: 1.05 });
+          if (ps) this.stats.draws++;
+        }
       } catch (err) {
         this.engine.warn(`guards: outline failed on ${g.id} — ${err?.message || err}`);
         break;
@@ -2314,8 +2426,17 @@ export class Guards {
       const cfg = g.vision;
       const down = g.state === STATE.KO;
 
-      /* --- where the beam starts and which way it throws --- */
-      g._eyePosition(_eye);
+      /* --- where the beam starts and which way it throws ---
+         §709 moved the ORIGIN to the muzzle and deliberately did NOT move the aim. The direction
+         below is still `g.forward` pitched down by `TUNE.conePitch`, and the reason is measured:
+         the barrel swings hard through the clips. Across the two walks a guard can reach, the
+         bore's pitch runs +25.2°..+37.8° on `PatrolWalk` and −25.7°..−14.1° on `CasualWalking` —
+         a 63.5° span whose two halves do not even overlap — and its yaw sweeps 101° on `Run` and
+         146° on `HitTaken` (`tools/muzzle.mjs`). A barrel-aimed cone would therefore spend the
+         whole patrol pointed about 31° into the sky, because `PatrolWalk` is a high-ready carry,
+         and would swing a third of a turn during a stagger. It would also change WHAT A GUARD
+         SEES, and the alert ladder was out of scope. */
+      g._coneApex(_eye);
       const pitch = TUNE.conePitch;
       const cp = Math.cos(pitch);
       _dir.set(g.forward.x * cp, -Math.sin(pitch), g.forward.z * cp).normalize();
@@ -2379,8 +2500,14 @@ export class Guards {
       _col.multiplyScalar(TUNE.poolMix);
       this.poolMesh.setColorAt(i, _col);
       /* Where his lower rim meets the floor, as a fraction of the throw. Below that the beam
-         is still in the air and there is nothing on the pavement to light. */
-      const onset = cfg.eyeHeight / Math.tan(Math.min(1.45, pitch + cfg.halfAngle));
+         is still in the air and there is nothing on the pavement to light.
+         §709: the height that matters is the APEX's, not the eye's, and once the apex is the
+         muzzle those are different numbers — 0.67–0.70 m against `eyeHeight` 1.66 on the patrol
+         clips. Reading `cfg.eyeHeight` here would have started the pavement wedge 2.4× too far
+         out from a beam that now leaves the gun. Falls back to `cfg.eyeHeight` exactly when
+         there is no pistol, so the unarmed build's onset is the arithmetic it always was. */
+      const apexUp = g.muzzleBone ? Math.max(0.05, _eye.y - g.position.y) : cfg.eyeHeight;
+      const onset = apexUp / Math.tan(Math.min(1.45, pitch + cfg.halfAngle));
       this._poolOnset.array[i] = clamp(onset / reach, 0.01, 0.9);
     }
 

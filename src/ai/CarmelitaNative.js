@@ -108,6 +108,10 @@ import { atlasOf, INTERIOR, CARMELITA_HEAD, CARMELITA_ASSET } from './CarmelitaG
 const BASE = 'assets/sly-anim/';
 /** The eleven clips, cut out of the source scene by `tools/carmelita2native.mjs`. */
 export const CARMELITA_CLIPS_ASSET = `${BASE}carmelita-clips.glb`;
+/** The 385-triangle shock pistol, decimated out of `carmelita-guard.glb` by `tools/pistollp.mjs`. */
+export const CARMELITA_PISTOL_ASSET = `${BASE}carmelita-pistol-lp.glb`;
+/** The three meshes that are the pistol. Loader names — three strips '.' from glTF node names. */
+export const PISTOL_MESHES = ['MainBody', 'Barrel', 'Antennae003'];
 
 /**
  * Guard clip name → her clip name. **This is the whole integration surface.**
@@ -160,11 +164,25 @@ export const CARMELITA_CLIPS_ASSET = `${BASE}carmelita-clips.glb`;
  * parked wherever the bind left it, and a gun lying 0.86 m to one side reads as a bug rather than
  * as a weapon. On the native path it simply works, for free.
  *
- * **It does not fit.** The pistol is `MainBody` + `Barrel` + `Antennae003` = 1,672 triangles a
- * guard, and every guard is drawn twice (the ink shell): 1,672 × 9 × 2 = **30,096 triangles**
- * against a measured headroom of about **7,000** (`tools/budgetattrib.mjs --inpage`: 1.193 M of a
- * 1.200 M cap, 99%). So it is a token, `TUNE.carmelitaPistol`, defaulting to **0**, and the
- * number is recorded here so the trade is a decision someone can make rather than a discovery.
+ * **At full resolution it does not fit, and §709 is how it was made to.** The pistol is
+ * `MainBody` + `Barrel` + `Antennae003` = 1,672 triangles a guard, and every guard is drawn twice
+ * (the ink shell): 1,672 × 9 × 2 = **30,096 triangles** against a measured headroom of **7,030**
+ * (`tools/budgetattrib.mjs --inpage`: 1,192,970 of a 1,200,000 cap, 99%). Two things closed that
+ * gap, and neither of them is "turn the cap up":
+ *
+ *   1. **It is decimated to 385 triangles** — `tools/pistollp.mjs`, committed as
+ *      `carmelita-pistol-lp.glb`. The mass was never buying anything: the pistol body is a 0.58 m
+ *      diagonal that spans 36.3 px in `courtyard`, the shot that sets the 99% figure, so 1,108
+ *      triangles on its body was about two triangles per pixel. Decimated it deviates 2.27 mm in
+ *      the mean and 16.98 mm at the worst vertex, which is 0.14 px and 1.06 px at that shot.
+ *   2. **It is drawn ONCE, not twice** — the pistol is its own `SkinnedMesh` sharing this rig's
+ *      skeleton rather than merged into the body buffer, so the body's ink shell does not
+ *      duplicate it. That is what halves the multiplier, and it costs one draw call a guard
+ *      (9 of the 138 the main view has spare). `TUNE.carmelitaPistolInk` shells it anyway for
+ *      anyone who wants to see the difference; it ships at 0.
+ *
+ * 385 × 9 = 3,465 triangles, landing the worst main view at 1,196,435 — 99.70% of the cap with
+ * 3,574 triangles still in hand. `TUNE.carmelitaPistol` now defaults to **1**.
  */
 export const CLIP_FOR = {
   idle: 'Idle',
@@ -315,6 +333,163 @@ export function spliceHeadNative(scene, headGeom) {
 }
 
 /**
+ * Put the decimated pistol into the parsed scene, in place of the full-resolution one.
+ *
+ * The same shape as `spliceHeadNative`, and gated the same way: it refuses rather than
+ * half-succeeds. `tools/pistollp.mjs` emits the three meshes already in the source scene's world
+ * space with their `skinIndex` values UNCHANGED — that is the whole reason the bake works without
+ * a remap — so the gate here is the one thing that could silently go wrong: a replacement whose
+ * joints are not the joints the original addressed would bind to the wrong bones and put the gun
+ * somewhere else on the rig entirely.
+ *
+ * @returns {{ok: boolean, why?: string, before?: number, after?: number}}
+ */
+export function splicePistolNative(scene, geos) {
+  if (!geos) return { ok: false, why: 'no low-poly pistol supplied' };
+  scene.updateMatrixWorld(true);
+  const targets = {};
+  scene.traverse((o) => { if (o.isSkinnedMesh && PISTOL_MESHES.includes(o.name)) targets[o.name] = o; });
+  const missing = PISTOL_MESHES.filter((n) => !targets[n] || !geos[n]);
+  if (missing.length) return { ok: false, why: `absent: ${missing.join(', ')}` };
+
+  let before = 0, after = 0;
+  const staged = [];
+  for (const n of PISTOL_MESHES) {
+    const src = targets[n].geometry, lp = geos[n];
+    if (!lp.attributes.skinIndex || !lp.attributes.skinWeight) {
+      return { ok: false, why: `${n}: the replacement carries no skin attributes — it cannot be bound` };
+    }
+    /* Every joint the replacement addresses must be one the original addressed. A joint the
+       original never used is either a different rig or a remapped index, and both put the gun
+       in the wrong place with no other symptom. */
+    const had = new Set(), got = new Set();
+    const si = src.attributes.skinIndex, sw = src.attributes.skinWeight;
+    for (let i = 0; i < si.array.length; i++) if (sw.array[i] > 1e-6) had.add(si.array[i]);
+    const li = lp.attributes.skinIndex, lw = lp.attributes.skinWeight;
+    for (let i = 0; i < li.array.length; i++) if (lw.array[i] > 1e-6) got.add(li.array[i]);
+    const stray = [...got].filter((j) => !had.has(j));
+    if (stray.length) return { ok: false, why: `${n}: replacement addresses joints ${stray.join(',')} the original never did` };
+    const g = lp.clone();
+    g.applyMatrix4(new THREE.Matrix4().copy(targets[n].matrixWorld).invert());
+    staged.push([targets[n], g]);
+    before += (src.index ? src.index.count : src.attributes.position.count) / 3;
+    after += g.index.count / 3;
+  }
+  /* Nothing is written until every mesh has passed, so a rejection cannot leave a half-swapped
+     pistol behind — one low-poly mesh beside two full ones is a worse state than either. */
+  for (const [target, g] of staged) {
+    target.geometry = g;
+    target.morphTargetInfluences = undefined;
+    target.morphTargetDictionary = undefined;
+  }
+  return { ok: true, before, after };
+}
+
+/**
+ * The muzzle: the far end of the barrel, in `ShockPistolbarrel`'s own bind-local frame.
+ *
+ * **Why this frame and not a world offset.** `Barrel` is 100% weighted to `ShockPistolbarrel` and
+ * nothing else — measured, not assumed, and asserted below. A point expressed in that bone's
+ * local frame therefore rides the animation exactly: `bone.matrixWorld · muzzle` is the muzzle,
+ * every frame, with no per-frame skinning and no offset to keep in sync. A world offset baked at
+ * any one pose would be right at that pose and wrong at all the others — and at the BIND pose,
+ * where a careless instrument samples, it would be **0.93 m out to her side** (§442's signature:
+ * the pistol is parked there until a clip runs).
+ *
+ * **Which end.** The barrel's own principal axis, from a PCA of its vertices, gives two ends.
+ * The muzzle is the one FURTHER FROM THE `Trigger` BONE — a trigger sits at the grip, and the
+ * muzzle is the far end of the barrel from the grip. Measured on the shipped asset the two
+ * distances are 0.242 m and 0.180 m, a 34% margin, and the margin is returned so a future asset
+ * that does not discriminate says so instead of picking the wrong end quietly.
+ *
+ * The rule is a STATIC one and this file is not the place to run animation. It is confirmed by an
+ * independent, animation-driven instrument — `tools/muzzle.mjs` re-derives which end is the muzzle
+ * from the driven clips (the end further from her chest, on every clip) and refuses if the two
+ * disagree. §439/§440: an instrument that shares this function's reasoning could not falsify it.
+ *
+ * @returns {{local: number[], axis: number[], bone: string, extent: number, margin: number,
+ *            trigger: number[], ok: boolean, why?: string}}
+ */
+export function muzzleFromBarrel(scene, boneOrder, boneInverses) {
+  scene.updateMatrixWorld(true);
+  let barrel = null;
+  scene.traverse((o) => { if (o.isSkinnedMesh && o.name === 'Barrel') barrel = o; });
+  if (!barrel) return { ok: false, why: 'Barrel is not in the scene' };
+  const jb = boneOrder.indexOf('ShockPistolbarrel');
+  const jt = boneOrder.indexOf('Trigger');
+  if (jb < 0) return { ok: false, why: 'ShockPistolbarrel is not in the bone order' };
+  if (jt < 0) return { ok: false, why: 'Trigger is not in the bone order — the end rule has no reference' };
+
+  /* the 100%-to-one-bone property the frame choice rests on */
+  const si = barrel.geometry.attributes.skinIndex, sw = barrel.geometry.attributes.skinWeight;
+  let onBone = 0, total = 0;
+  for (let i = 0; i < sw.array.length; i++) {
+    const w = sw.array[i]; if (!(w > 1e-6)) continue;
+    total += w; if (si.array[i] === jb) onBone += w;
+  }
+  const share = total > 0 ? onBone / total : 0;
+  if (share < 0.999) {
+    return { ok: false, why: `Barrel is only ${(share * 100).toFixed(1)}% weighted to ShockPistolbarrel — `
+      + 'a single-bone frame would not track it', share };
+  }
+
+  const inv = new THREE.Matrix4().fromArray(boneInverses[jb]);
+  const toLocal = new THREE.Matrix4().multiplyMatrices(inv, barrel.matrixWorld);
+  const pos = barrel.geometry.attributes.position;
+  const pts = [];
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) pts.push(v.fromBufferAttribute(pos, i).applyMatrix4(toLocal).clone());
+
+  /* principal axis by power iteration on the covariance — the barrel's own long direction,
+     rather than whichever cardinal axis happens to be closest to it */
+  const c = new THREE.Vector3();
+  for (const p of pts) c.add(p);
+  c.multiplyScalar(1 / pts.length);
+  const cov = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+  for (const p of pts) {
+    const d = [p.x - c.x, p.y - c.y, p.z - c.z];
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cov[i * 3 + j] += d[i] * d[j];
+  }
+  let ax = new THREE.Vector3(1, 0.3, 0.2).normalize();
+  for (let k = 0; k < 128; k++) {
+    const n = new THREE.Vector3(
+      cov[0] * ax.x + cov[1] * ax.y + cov[2] * ax.z,
+      cov[3] * ax.x + cov[4] * ax.y + cov[5] * ax.z,
+      cov[6] * ax.x + cov[7] * ax.y + cov[8] * ax.z);
+    if (n.lengthSq() < 1e-24) break;
+    ax = n.normalize();
+  }
+  let tmin = Infinity, tmax = -Infinity;
+  for (const p of pts) { const t = p.clone().sub(c).dot(ax); if (t < tmin) tmin = t; if (t > tmax) tmax = t; }
+  /* Each end is the MEAN of the vertices within 3 mm of it, not a single extreme vertex: one
+     vertex is where the decimation's error is largest and the mean of a rim is where the rim is. */
+  const endOf = (lo, hi) => {
+    const e = new THREE.Vector3(); let n = 0;
+    for (const p of pts) { const t = p.clone().sub(c).dot(ax); if (t >= lo && t <= hi) { e.add(p); n++; } }
+    return n ? e.multiplyScalar(1 / n) : null;
+  };
+  const endA = endOf(tmin, tmin + 0.003), endB = endOf(tmax - 0.003, tmax);
+  if (!endA || !endB) return { ok: false, why: 'the barrel has no resolvable ends' };
+
+  const trig = new THREE.Vector3().setFromMatrixPosition(
+    new THREE.Matrix4().fromArray(boneInverses[jt]).invert()).applyMatrix4(inv);
+  const dA = endA.distanceTo(trig), dB = endB.distanceTo(trig);
+  const muzzle = dA > dB ? endA : endB;
+  const breech = dA > dB ? endB : endA;
+  const margin = Math.abs(dA - dB) / Math.max(dA, dB);
+  const bore = muzzle.clone().sub(breech).normalize();
+  return {
+    ok: true, bone: 'ShockPistolbarrel',
+    local: muzzle.toArray(), axis: bore.toArray(), breech: breech.toArray(),
+    extent: tmax - tmin, share, margin,
+    trigger: trig.toArray(), dTriggerMuzzle: Math.max(dA, dB), dTriggerBreech: Math.min(dA, dB),
+    /* Below this the two ends are equidistant from the trigger and the rule is not deciding
+       anything. Never fires on the shipped asset (0.256); present so a changed asset says so. */
+    discriminates: margin >= 0.10,
+  };
+}
+
+/**
  * Classify the skinned meshes: kept body, detached prop, sealed interior.
  * Off the armature hierarchy and the `INTERIOR` list — the same two rules the rebind path uses.
  */
@@ -391,18 +566,20 @@ export function buildNative(scene, headGeom = null, opts = {}) {
   const cls = classify(skinned, skel);
   const { props, interior, bodyRoots } = cls;
   /* The pistol is a real, animated part of six of her eleven clips — see the CLIP_FOR header —
-     and on this path it needs no attach logic at all. It is off by default because it does not
-     fit: 1,672 triangles a guard, ×9 guards ×2 (the ink shell) = 30,096 against ~7,000 of
-     headroom. `armed` puts it back for anyone who buys the room elsewhere. */
+     and on this path it needs no attach logic at all.
+     §709: when armed it is built as its OWN geometry rather than merged into the body buffer.
+     That is not tidiness. The body's ink shell is a second `SkinnedMesh` over the body's own
+     geometry object (`Outline.js` shares it by reference), so anything merged into that buffer is
+     drawn twice — and 1,672 × 9 × 2 = 30,096 against 7,030 triangles of headroom is exactly why
+     this shipped off. Kept separate the pistol is drawn once, for one extra draw call a guard. */
   const armed = !!opts.pistol;
-  const kept = armed ? [...cls.kept, ...props.map((p) => p.mesh)] : cls.kept;
+  const kept = cls.kept;
   if (!kept.length) throw new Error('carmelita-native: every mesh was classified away');
 
-  /* ---- merge, keeping the source skinIndex values EXACTLY as authored ---- */
-  const groups = [[], []];
-  const regionNames = [[], []];
-  let tris = 0;
-  for (const mesh of kept) {
+  /* One mesh, normalised for the merge, keeping the source skinIndex values EXACTLY as authored.
+     Shared by the body merge and the pistol merge so the two cannot drift apart — a pistol
+     normalised differently from the body it binds beside is a bug with no visible cause. */
+  const normalise = (mesh) => {
     const g = mesh.geometry.clone();
     /* Identity in this asset (measured 0 of 21 non-identity); applied unconditionally because a
        silent double-transform is the failure that looks like a slightly-wrong character. */
@@ -423,8 +600,16 @@ export function buildNative(scene, headGeom = null, opts = {}) {
     }
     g.morphAttributes = {};
     g.morphTargetsRelative = false;
-    tris += (g.index ? g.index.count : nV) / 3;
+    return { g, nV, tris: (g.index ? g.index.count : nV) / 3 };
+  };
 
+  /* ---- merge, keeping the source skinIndex values EXACTLY as authored ---- */
+  const groups = [[], []];
+  const regionNames = [[], []];
+  let tris = 0;
+  for (const mesh of kept) {
+    const { g, nV, tris: t } = normalise(mesh);
+    tris += t;
     const gi = atlasOf(mesh.material);
     groups[gi].push(g);
     regionNames[gi].push({ name: mesh.name, count: nV });
@@ -493,10 +678,55 @@ export function buildNative(scene, headGeom = null, opts = {}) {
     for (let i = 0; i < si.array.length; i++) if (si.array[i] > maxSkinIndex) maxSkinIndex = si.array[i];
   }
 
+  /* ---- §709: the pistol, as its own buffer ----
+     Merged the same way and lifted by the SAME `soleLift`, because the lift is a property of the
+     bind pose and not of the body mesh: applying it to one buffer and not the other would put the
+     gun 0.24 mm below where the arm holding it is, every frame, on every guard.
+     Its own bounds are NOT allowed to move `soleLift` or `height` — measured, the armed and
+     unarmed bind boxes are both y[0.0000, 1.6387], because at bind the pistol parks beside her
+     hip and reaches neither below her soles nor above her head. `Guard._step` grounds on
+     `height` (§697) and this must not disturb it, so the lift is computed from the body alone
+     above and merely applied here. */
+  let pistol = null;
+  if (armed && props.length) {
+    const pGroups = [], pRegions = [];
+    let pTris = 0;
+    for (const { mesh } of props) {
+      const { g, nV, tris: t } = normalise(mesh);
+      pTris += t;
+      pGroups.push(g);
+      pRegions.push({ name: mesh.name, count: nV });
+    }
+    const pMerged = mergeGeometries(pGroups, true);
+    if (pMerged) {
+      /* All three pistol meshes are on the BODY atlas (`atlasOf` → 0 for every one of them), so
+         this is one group and one draw. Asserted rather than assumed: a pistol mesh that ever
+         lands on the head atlas would be textured with her face. */
+      const atlases = [...new Set(props.map((p) => atlasOf(p.mesh.material)))];
+      pMerged.clearGroups();
+      pMerged.addGroup(0, Infinity, 0);
+      if (Math.abs(soleLift) > 1e-9) pMerged.translate(0, soleLift, 0);
+      pMerged.computeBoundingBox();
+      pMerged.computeBoundingSphere();
+      let off = 0;
+      const regs = pRegions.map((r) => { const o = { name: r.name, group: 0, start: off, count: r.count }; off += r.count; return o; });
+      const muzzle = muzzleFromBarrel(scene, boneOrder, boneInverses);
+      /* The muzzle is in `ShockPistolbarrel`'s BIND-LOCAL frame, which `soleLift` never touches —
+         the lift moved vertices, not bones. Nothing to correct, and saying so is cheaper than a
+         reader wondering. */
+      pistol = {
+        geometry: pMerged, regions: regs, tris: Math.round(pTris), muzzle,
+        meshes: props.map((p) => p.mesh.name), atlases,
+        box: [pMerged.boundingBox.min.toArray(), pMerged.boundingBox.max.toArray()],
+      };
+    }
+  }
+
   return {
     geometry: merged,
     boneOrder, boneSpec, boneInverses, regions,
     tris: Math.round(tris),
+    pistol,
     height,
     /* Unrounded, because it is the exact inverse of a transform applied to the vertices and a
        consumer undoing it needs the value, not a display of it. It must be undone BEFORE skinning,
@@ -521,6 +751,13 @@ export function buildNative(scene, headGeom = null, opts = {}) {
       droppedInterior: interior.map((m) => m.name),
       propRule: PROP_ROOT_RULE,
       head: headSplice,
+      pistol: pistol && {
+        tris: pistol.tris, meshes: pistol.meshes, atlases: pistol.atlases,
+        muzzle: pistol.muzzle.ok
+          ? { bone: pistol.muzzle.bone, local: pistol.muzzle.local.map((v) => Math.round(v * 1e5) / 1e5),
+              margin: Math.round(pistol.muzzle.margin * 1e3) / 1e3, discriminates: pistol.muzzle.discriminates }
+          : { why: pistol.muzzle.why },
+      },
     },
   };
 }
@@ -579,7 +816,33 @@ export function instantiateNative(asset, materials, opts = {}) {
   rig.add(mesh);
   mesh.bind(skeleton, new THREE.Matrix4());
 
-  return { root, rig, mesh, bones: byName, boneList: bones, skeleton, scale };
+  /* §709: the pistol, a second `SkinnedMesh` on the SAME skeleton and the same bind matrix. It is
+     a sibling of the body under `rig`, not a child of it — a child would inherit the body's own
+     world matrix on top of the one the shared skeleton already supplies, and double it. Being a
+     separate object is the point: `Guards._applyOutlines` shells `g.mesh`, so the pistol is not
+     duplicated by the ink pass unless something asks for it. Its culling sphere gets the same
+     generous inflation and for the same reason (three never recomputes a SkinnedMesh's sphere,
+     so a tight one pops the gun out of frame mid-clip). */
+  let pistolMesh = null;
+  if (asset.pistol?.geometry) {
+    pistolMesh = new THREE.SkinnedMesh(asset.pistol.geometry, materials);
+    pistolMesh.name = 'guard_pistol';
+    pistolMesh.castShadow = true;
+    pistolMesh.receiveShadow = true;
+    pistolMesh.frustumCulled = true;
+    asset.pistol.geometry.computeBoundingSphere();
+    pistolMesh.boundingSphere = asset.pistol.geometry.boundingSphere.clone();
+    /* Wider than the body's ×2. The body's sphere is fitted to a 1.64 m character and the slack
+       it buys is metres; the pistol's is fitted to a 0.37 m object that the clips carry up to
+       0.9 m away from where the bind pose left it, so the same MULTIPLIER buys far less absolute
+       room. Sized off the body instead, which is what the pistol actually travels with. */
+    pistolMesh.boundingSphere.radius = Math.max(pistolMesh.boundingSphere.radius * 2.0,
+      mesh.boundingSphere.radius);
+    rig.add(pistolMesh);
+    pistolMesh.bind(skeleton, new THREE.Matrix4());
+  }
+
+  return { root, rig, mesh, pistolMesh, bones: byName, boneList: bones, skeleton, scale };
 }
 
 /* ========================================================================== */
@@ -858,8 +1121,23 @@ export async function loadCarmelitaNative(opts = {}) {
         hg.scene.traverse((o) => { if (!head && o.isMesh) head = o.geometry; });
       } catch { head = null; }
     }
+    /* §709: the decimated pistol, a FOURTH fetch, and one whose failure must not cost the gun.
+       `carmelita-guard.glb` already carries the full-resolution pistol, so a failed fetch here
+       falls back to that rather than to no weapon — 1,672 triangles a guard instead of 385, which
+       breaches §1's budget and is recorded in `stats.pistolLP` so a build that took the fallback
+       says so rather than quietly costing 11,000 triangles. */
+    let pistolSplice = null;
+    if (opts.pistol) {
+      try {
+        const pg = await get(opts.pistolUrl || CARMELITA_PISTOL_ASSET);
+        const geos = {};
+        pg.scene.traverse((o) => { if (o.isMesh && PISTOL_MESHES.includes(o.name)) geos[o.name] = o.geometry; });
+        pistolSplice = splicePistolNative(gltf.scene, geos);
+      } catch (e) { pistolSplice = { ok: false, why: `fetch failed: ${e?.message || e}` }; }
+    }
     const asset = buildNative(gltf.scene, head, opts);
-    asset.armed = !!opts.pistol;
+    asset.armed = !!asset.pistol;
+    if (asset.stats) asset.stats.pistolLP = pistolSplice;
     /* The clips are a THIRD fetch. A guard with no clips is still a guard standing at his bind
        pose, which is a far better failure than no garrison. */
     let clips = [];
