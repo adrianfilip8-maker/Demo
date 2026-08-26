@@ -56573,11 +56573,457 @@ draws and 28 unserved verbs, and which of those wins is the owner's ruling to ma
 
 ---
 
-## §712 — "Substitute the coin texture from the godot repo, scale coins 50% larger": the repo has no coin texture, and the size was four literals — IN PROGRESS
+## §712 — "Substitute the coin texture from the godot repo, scale coins 50% larger": the repo has no coin texture, and the size was four literals
 
-**Number claimed; content follows.** Two halves. The texture half rests on a premise that is
-false as stated and the ledger says so before it says anything else: the reference repository
-contains **no coin texture**. The scale half is unambiguous and is the §701 shape again — the
-authored size lives in more than one place, and one of the places is a decorative twin.
+Two halves, and the first one rests on a premise that is false as stated. This entry says so before
+it says anything else, because the cheapest outcome for the owner is to be told plainly and given
+a way to redirect, not to be handed a plausible substitute described as the thing they asked for.
 
-Findings, measurements and frames below.
+### 712.1 — The reference repository contains NO coin texture
+
+Established by reading the scene graph, not by matching filenames — this project's standing rule
+for that repository, and the rule that already resolved two different `Sly_Body.png` and two
+different bottles. At HEAD `a312a99`:
+
+```
+Scenes/Design Tools/pickup_coin.tscn          ← their 3D coin, and the only one
+  ├─ CylinderMesh          top_radius 0.25   bottom_radius 0.25   height 0.1
+  ├─ StandardMaterial3D    albedo_color  (0.926704, 0.754991, 0.193364, 1)
+  │                        emission      (0.925490, 0.756863, 0.192157, 1)
+  │                        roughness 0.5 · diffuse_mode 3 · specular_mode 1
+  │                        rim_enabled true · rim_tint 1.0 · clearcoat_enabled true
+  │                        ** no albedo_texture — no texture reference of any kind **
+  └─ AnimationPlayer       "idle spin": rotation (0,0,−1.5708) → (0, 6.28319, −1.5708)
+```
+
+**Their coin is a procedural, untextured cylinder.** `Assets/Models/Pickups/` holds `BOTTLE.glb`
+and `diamond.glb` and no coin model. A `*coin*` search over the whole repository returns four
+paths and exactly one is an image:
+
+```
+Scripts/pickup_coin.gd            + .uid                          the pickup logic
+Scenes/Design Tools/pickup_coin.tscn                              the untextured cylinder above
+Assets/Textures/Icons/Badge_Coin_V2_-_Sly_Cooper_A_Thief_In_Paris.png     ← the only coin image
+```
+
+That PNG is **339×346, 8-bit RGBA, 47,428 bytes**, 21.0% fully transparent (the corners outside the
+disc): a gold coin struck with an embossed five-pointed star. **It is filed as a UI icon**, under
+`Assets/Textures/Icons/`, and nothing in that repository maps it onto a mesh.
+
+### 712.2 — Two honest readings; which shipped and why
+
+- **(a) the badge as the coin face** — it is the only coin image they have and it is a coin *face*,
+  so it goes on a coin face. **Shipped.**
+- **(b) their material** — the gold albedo/emission/rim/clearcoat above, which IS from the repo and
+  IS what their coin actually looks like in their game. **Evaluated, not shipped.**
+
+(b) was not rejected for being less faithful; it is arguably *more* faithful to "the coin from the
+godot repo". It was rejected because it is a **physically-shaded description** and this build is
+not one. Their look is `emission` at essentially full coin gold plus a `clearcoat` lobe plus a rim
+term, i.e. three continuous highlights doing the modelling. Ours is `bands: 3` through
+`Shading.make()` with an inverted-hull ink outline, and AGENTS.md §2.1 says in as many words: flat
+saturated fills, **no gradients doing the modelling work**, one hard specular notch. Porting their
+material means either quantising it into our ramp — at which point almost nothing of theirs
+survives except a hue our `gold` already is (`0xe8b942` against their `(0.9267, 0.7550, 0.1934)`,
+which is `#ecc031`: a 4/17/17 step in 8-bit) — or bypassing the ramp for one object, which is how
+a pickup stops belonging to the frame.
+
+So (b) would have been a change nobody could see, and (a) is a change you can read at 5 m. **If
+the owner meant (b), or meant something else entirely, the redirect is cheap**: the material's
+numbers are recorded above and in `staging/assets/sly-coin/PROVENANCE.md`, and nothing had to be
+re-derived from their scene to act on them.
+
+**What is NOT claimed:** that this is "the repo's coin texture". It is a UI icon, used as a coin
+face, and that is stated at every site that touches it — `CoinBadge.js`'s header,
+`Pickups._badgeTexture`'s header, the provenance file and the bake tool.
+
+### 712.3 — The UV problem, found before committing to (a)
+
+`coin()` ran its geometry through `boxProjectUVs`, which on the caps is a planar XZ projection —
+the right *shape* for a disc, and useless for an image, because it is in **metres**:
+
+```
+r 0.16 coin, shipped:   cap UVs span u,v ∈ [−0.0800, 0.0800]    (UV_PER_M = 0.5)
+```
+
+A 16%-wide patch straddling the UV origin. Mapped as-is the badge is sampled from four wrapped
+corners of itself. So the answer to "do our coins have usable UVs on their faces" is **the
+projection is correct and the parameterisation is not**, and mapping an image needed UVs authored.
+
+`PropKit.faceProjectCoinUVs` now does that behind a `faceUV` option: caps to a 0..1 disc
+(`u = 0.5 + x/2r`, `v = 0.5 + z/2r`) so the badge lands inscribed exactly — the badge's transparent
+corners fall outside the disc's UV circle and are never sampled — and every rim vertex parked on
+one texel so the coin's edge is flat metal rather than a smear of the die.
+
+**It is an option and not the default, deliberately.** `coin()` has two other callers:
+`Props._treasurePile()` draws **140** loose coins and `Pickups._treasureGeo('eye')` builds the Eye
+of Ra from two discs, and both wear tiling `gold_leaf`. A 0..1 cap remap would stretch one whole
+tile across each face — a visible regression in the hoard, paid for a feature only the collectible
+uses.
+
+### 712.4 — Measured, not assumed: the coin stands UP and spins about the vertical
+
+This decided whether (a) was worth doing at all. `Props.js`'s own comment says *"A coin is a disc
+and has to be laid flat (rx π/2) before it can spin in its own plane"* — **and that is the opposite
+of what the code does.** Measured on the shipped pose `Euler(π/2, 0, θ)` in XYZ order:
+
+```
+θ=  0°  face normal (0.000, 0.000, 1.000)      θ=180°  (−0.000, −0.000, −1.000)
+θ= 90°  face normal (−1.000, 0.000, 0.000)     θ=270°  ( 1.000,  0.000, −0.000)
+                                    |y| = 0.000 at EVERY θ
+```
+
+The face normal is horizontal everywhere and sweeps the full circle in XZ: the coin stands upright
+like a wheel and turns about the vertical, presenting **face, edge, face** to a standing camera.
+That is the classic collectible presentation, it is what `_treasureGeo`'s own Eye-of-Ra note
+describes, and it happens to match the reference exactly — their `MeshInstance3D` carries a −90°
+tilt about Z and their "idle spin" drives a full turn about **Y** with that tilt held.
+
+Two consequences. A face map is worth having, because the face is presented twice per revolution
+rather than only to a camera directly overhead. And `tools/coinfit.mjs`'s pose envelope is a
+**ball** of radius `hypot(r, t/2)`, not a flat disc — which is what makes the interpenetration
+numbers below mean anything. The stale comment is corrected at its site.
+
+### 712.5 — The size was FOUR literals across two files, and one of them is invisible
+
+Read out of the code, not multiplied from the first number found:
+
+| where | before | what it is |
+|---|---|---|
+| `Props._collectibles()` | `coin(0.16, 0.035)` | the **decorative twin** — 44 instances, `name: 'coins'` |
+| `Pickups._build()` | `coinGeo(TUNE.coinRadius, **0.035**)` | the mesh the player sees — radius from TUNE, **thickness a bare literal** |
+| `Pickups.TUNE.coinRadius` | `0.16` | a third copy of the radius |
+| `Pickups.TUNE.collect` | `0.50` | derived: `playerRadius + coinRadius` |
+
+plus three prose derivations in `Pickups.js` and one in `tests/pickups.test.mjs`.
+
+§701 predicted this shape and it was here: the radius had two authorities and the thickness had two
+*different* ones, so the two halves of one number could be scaled apart with nothing failing. And
+the twin is **hidden at runtime** — `Pickups._author()` adopts all 44 of its spots and sets
+`visible = false` — so an edit reaching one file and not the other looks perfect in every frame,
+while `tests/kaykit.test.mjs` P2/P3, which measure the twin, silently measure a coin nobody sees.
+
+Now one authored pair in `PropKit`, which both call sites and `TUNE` read:
+
+```
+COIN_RADIUS      0.16   →  0.24        (×1.5, as asked)
+COIN_THICKNESS   0.035  →  0.0525      (the shipped 0.035/0.16 proportion, held)
+```
+
+Measured on the built mesh, before → after:
+
+```
+pickup_coins geometry bbox   0.32000 × 0.03500 × 0.32000  →  0.48000 × 0.05250 × 0.48000
+                             48 triangles, 76 verts        →  48 triangles, 76 verts (identical)
+```
+
+Their coin is `top_radius 0.25`, so ours lands 0.01 m under theirs. That is a **coincidence, not a
+derivation** — the arithmetic is 0.16 × 1.5 — and it is recorded only because it is a useful sanity
+check on the request.
+
+### 712.6 — The one derived term, RE-DERIVED and not scaled
+
+`TUNE.collect` is a CONTACT radius: `playerRadius + coinRadius`.
+
+```
+RE-DERIVED   0.34 + 0.24  =  0.58        ← shipped
+SCALED       0.50 × 1.5   =  0.75        ← wrong by 0.17 m
+```
+
+§705 is the precedent and this is its mirror image. Scaling would have handed the player 0.17 m of
+reach at which he is touching nothing — silently converting a contact radius into a second, smaller
+magnet and collapsing the snap/catch split §223 drew and `Pickups.js`'s own header states. The
+formula is the value.
+
+`tests/pickups.test.mjs` P1 already asserted `collect === playerRadius + coinRadius`, so **the
+scaled 0.75 would have failed the suite rather than shipping.** That is exactly what pinning a
+derivation rather than a literal buys, and it is why the pin stays where it is.
+
+**Nothing else is coin-derived, checked rather than assumed.** `magnet` 2.40 is
+`Controller.TUNE.pickRange` (a reach, not a size); `fence` 2.20 is derived from the magnet;
+`grabHeight` 0.90 is `Controller.TUNE.height / 2`; `bobAmp` / `spinRate` are motion, not size, and
+follow the bottle precedent where `clueBob` was never height-derived and did not move in either
+direction. None of them moves.
+
+### 712.7 — P2's pre-registration: what moved was the sampling point, not the law
+
+`pickups` P2 failed after the resize: capture speed 9.386 against a registered ~9.99. The registered
+number is a prediction about the **magnet law**, and PREREG-loot1 registered `collectRadius = 0.50`
+in the same block — so 9.99 is `v(0.50)`. `magnetSpeedAt` reads `magnet`, `speedMin`, `speedMax` and
+`curve`, **all four unchanged**; capture simply now happens at 0.58 m, further out on a falling
+curve.
+
+Re-pinning to 9.386 would have quietly converted a pre-registration into a curve fitted to whatever
+shipped, which is the one thing a PREREG block exists to prevent. So P2 now asserts `v(0.50) ≈ 9.99`
+— the law — plus a stated margin on the term that actually pays for the resize (`v(collect) −
+runSpeed > 1.0`, measured 2.19). The PREREG list itself is **left standing with its original
+numbers** and annotated; a record that gets edited to match the present is not a record.
+
+### 712.8 — Reachability: there is no coin equivalent of R1/R2/R3, and that is the finding
+
+Looked for, not assumed. `tests/cluevault.test.mjs` R1 (a real surface under it), R2 (inside the
+magnet from somewhere a player can actually be) and R3 (not reachable from the courtyard floor) are
+**bottle-only** — twelve placements, named in the test. Nothing anywhere asserts the equivalent for
+a coin.
+
+**So: no test establishes that any of the 82 coins rests over anything, or can be reached.** The
+closest existing arms are `kaykit` P3, which proves no collectible's *centre* is inside a solid
+KayKit collider and does the reach arithmetic for the single worst one, and `pickups` P6/P7, which
+are synthetic geometry rather than level placements. That gap is not created by this change and is
+not closed by it; it is recorded so the next person does not assume coins have the coverage bottles
+have. **It is also why the interpenetration sweep below had to be run over all 82 rather than
+trusting a placement test that does not exist.**
+
+What the resize does to P3's own arithmetic, measured: the nearest collectible-to-collider distance
+is a **centre**-to-box distance and does not move when the coin grows — 0.020 m before and after —
+and `reach` 1.61 m still clears `collect` 0.58 and sits inside `magnet` 2.40. P3 passes unchanged.
+
+### 712.9 — Interpenetration, all 82 placements: 13 were already buried, and the resize costs one more
+
+`tools/coinfit.mjs`, built for this and modelled on §701's `bottlefit.mjs` — exact triangle-vs-
+triangle SAT against the **drawn** scene, never rays, for the reason bottlefit's header gives:
+`Raycaster` honours `material.side`, so a ray fired from inside a wall exits its own back face and
+reports a buried coin as one in open air.
+
+The set is **82, and it is not the 44 anyone would guess**: `Props` authors 44 and `Pickups` adopts
+all of them, hides that mesh, and adds **38** more from `Architecture.api.route`. Both coin meshes
+are excluded from the world by name (2,112 soup triangles) or every coin finds itself.
+
+```
+world 62 drawn meshes → 438,550 triangles · 12 yaws × 3 bobs = 36 poses per coin · every one tested
+
+r = 0.16 (before)   13/82 interpenetrate
+r = 0.24 (after)    14/82 interpenetrate      1 new, 0 resolved
+```
+
+**The 13 are pre-existing and are not caused by this change.** `Props._collectibles()` scatters 34
+coins at `R.range(-22,22), R.range(0.6,1.2), R.range(-14,32)` with no regard for architecture, so
+some land inside walls; the route trail adds a few more where the route passes close to masonry.
+
+The one new failure, and the reason it is the one:
+
+```
+NEW   48  route pile 4  (1.0, 7.9, 11.2)  CROSSES arch:court:granite_pink  [yaw 90° bob +0]
+          clearance at r 0.16 was 0.045 m — the tightest clear placement in the whole set
+```
+
+0.045 m of clearance against 0.08 m of added radius. bottlefit's header says a placement at 0.004 m
+"has not failed and is one edit away from failing"; this is that sentence collecting.
+
+Biggest clearance losses among placements that stayed clear:
+
+```
+ 24  props scatter 24     0.806 → 0.522 m   (−0.283)
+ 77  route pile 33        0.882 → 0.613 m   (−0.269)
+ 35  props ledge 1        2.402 → 2.282 m   (−0.119)
+ 79  route single 35      0.659 → 0.548 m   (−0.111)
+ 41  props ledge 7        2.125 → 2.016 m   (−0.110)
+```
+
+**Not fixed here, and that is a decision rather than an oversight.** Re-authoring the scatter would
+move 34 coins the owner did not ask to have moved, and the failure mode is a look defect rather than
+a lost pickup — `kaykit` P3 already establishes that the magnet moves a coin with no collision test,
+so a buried coin is still collected, it just flies out of a wall. The census is now measurable in
+one command, which is what was missing.
+
+### 712.10 — Budget: zero draws, zero triangles, one texture
+
+`tools/budgetattrib.mjs` before and after is **byte-identical** apart from the absolute paths in a
+warning's stack trace. Scene total `86 meshes / 0.652M tris = 54% of the 1.2M cap`, unchanged.
+
+That tool does not build `Pickups` (its own "modules built" line says so), so the live coin cost was
+measured directly. `Engine.stats.drawCalls` was not consulted anywhere: §700.3/§701.11/§705 record
+it returning five distinct frozen plausible values with zero spread in this harness. A draw here is
+one per drawable mesh, and an `InstancedMesh` is one draw whatever its instance count.
+
+```
+pickups root      before                                    after
+  draws           5                                         5
+  instances       97                                        97
+  triangles       7,922                                     7,922
+  materials       5                                         5
+  textures        0                                         1   (256² DataTexture, 256 KiB base)
+```
+
+Scaling costs nothing because the geometry is the same 48 triangles at any radius, and the badge
+costs no draw because the coins were already one `InstancedMesh` — this swaps *which* texture that
+one draw samples. It does not cost a material either: `_mat()` already returned a fresh material per
+call, so coins and treasure were never sharing one.
+
+**One caveat, stated because the headless number understates the win.** `engine.get('textures')` is
+null in a plain-Node boot, so `gold_leaf` is absent and the *before* coin measures 0 textures there.
+In the browser it is not 0. `Textures.get('gold_leaf')` hands back three distinct images — albedo
+512², normal 512², and one packed ORM 256² that fills `roughnessMap`, `aoMap` **and**
+`metalnessMap` (`Textures.js:549-551`, the same object three times) — so the before-coin binds
+**five material slots over three textures**, and the after-coin binds **one slot over one**. The
+tiling detail layer is dropped rather than kept, because it samples `gold_leaf`'s UVs and the coin
+no longer has them: leaving it on would drape a stone-scale normal and roughness pattern across a
+0.48 m face at one tile per coin.
+
+### 712.11 — The HUD icon: coins had no coupling, and the drift was the motif
+
+§700/§701 coupled the clue bottle's world mesh and its toast icon through `BOTTLE_PALETTE`,
+imported from the generated `BottleMesh.js`, so they cannot drift. **Coins had no such coupling** —
+`Icons.coin()` drew from local palette constants and answered to nothing in `src/world/`.
+
+And the drift that opened here is worse than a colour drift: the world coin's die is now a
+five-pointed star, and the glyph was drawing an **ankh**. The motif is the first thing read at a
+glance, so the HUD would have been showing the player a different object from the one on the floor.
+
+So the analogous thing, done the analogous way: `tools/godot2coin.mjs` samples three colours out of
+the badge's own baked texels and exports `COIN_BADGE_PALETTE` — `star #cdb01b` (disc centre),
+`field #ac760b` (darkest opaque texel on a 0.42r ring, i.e. a valley between two arms), `rim
+#f2ca1b` (outermost fully opaque texel on the centre row) — and `Icons.js` imports them exactly as
+it imports `BOTTLE_PALETTE`. The die is a star.
+
+**Colour couples; SIZE does not, and `coin()`'s header now says so at the one place anyone would be
+tempted.** `COIN_RADIUS` went 0.16 → 0.24 in this same change and the glyph did not move: world
+scale is a decision about a 3D object at 5 m, a glyph is a decision about 18 px, and they were never
+the same number. Rendered and read at 170/64/18 px on both sides.
+
+### 712.12 — How the badge ships, and why not as a file
+
+`src/world/CoinBadge.js` — the badge resampled to 256² and baked as base64, decoded at runtime by
+`src/textures/PngCodec.js` into a `DataTexture`. **No URL and no canvas**, both for faults this
+project has already paid for:
+
+- **No URL.** §666's production-only fault class, and worse here: `Props` and `Pickups` both build
+  from this, and a `fetch` of a relative URL in Node *does not reject, it never settles*
+  (`CarmelitaGuard.js:330`) — a missing asset would **hang** the suite rather than fail it.
+- **No canvas.** `PngCodec`'s own header measures a 2D canvas losing up to ±184 on red for any map
+  carrying alpha. This one is 21% transparent, which is precisely that case.
+
+`decodeCoinBadge()` therefore runs identically in the browser and under `node --test`, so the badge
+is something the suite can assert rather than a browser-only branch nothing executes.
+
+Two details that are easy to get wrong and were measured rather than hoped:
+
+- **Alpha bleed.** The transparent region is stored `(0,0,0,0)` — black — so downsampling across the
+  disc edge pulls black into the rim as a dark fringe. 8,344 transparent texels are given the
+  nearest opaque RGB before the resample; alpha itself is untouched.
+- **Row order.** PNG stores rows top-down, three's UV origin is bottom-left. `flipY` is *not* the
+  fix — three has historically ignored it for `DataTexture` — so the rows are reversed in JS, which
+  is deterministic. Verified by rendering the decoded texture: star point up.
+
+`parsePng` requires a square image and the source is 339×346, so the bake costs a **2.06%** stretch
+in x. The source disc measures 338×344 at alpha > 128, so it was never a perfect circle to begin
+with. Source bytes committed verbatim to `staging/assets/sly-coin/` (git-kept, outside Vite's copy
+path) so the numbers are checkable against the bytes and the bake is re-runnable.
+
+The two caps of a cylinder see the same image mirrored. The star is mirror-symmetric about its
+vertical axis so it costs nothing here — noted because it will not be free for an asymmetric die.
+
+### 712.13 — Two pins moved, both measured, neither softened
+
+- **`pickups` P2** — see §712.7. The law is asserted where it was registered.
+- **`kaykit` P2** — a ranking by total overlap, and it reshuffled. Measured on both sides, exactly
+  one row changed:
+
+  ```
+  row 7  barrel_large @(20.6, 4)  [coins]   0 base + 40 body (to 1.03 m)  →  0 + 66 (to 1.11 m)
+  ```
+
+  40 → 66 lifts it past row 16 (62) and row 22 (58), from last to fifth. **The set did not change**:
+  `rows.length` is 7 before and after and the seven indices are the same seven. The pin is kept
+  order-sensitive rather than softened to a set comparison — a reshuffle is exactly the signal that
+  a footprint changed, which is what happened, on purpose.
+
+### 712.14 — Tools added
+
+```
+tools/godot2coin.mjs   badge → staged source + baked module; --import to re-run, bare to measure
+tools/coinfit.mjs      82-placement triangle-vs-triangle interpenetration sweep, JSON= to dump
+tools/coinshot.mjs     frames of the coin on a camera DERIVED from the coin's own face normal
+```
+
+`coinshot` exists because the canonical shots are a fixed contract and none is close enough to read
+a coin face. It does not hand-type a camera: the coin spins, so a hand-typed position photographs
+whatever the spin happened to be doing — on a bad draw, the edge. It reads the instance matrix,
+extracts the face normal, places the camera on it, and **reports the achieved `|n·toCam|` and any
+blocker between camera and coin**, so a frame that came out edge-on says so in its own output. That
+is the `camDot` pre-flight discipline applied to a moving subject, and it is the direct answer to a
+tool on this project that "spent its whole life labelling rear shots front".
+
+### 712.15 — The frames
+
+`shots/coin712-*.png`. Both sides are the same tool, the same camera derivation, the same coin and
+the same standoff — the before side is served from a `git worktree` at `bcca8b1` through
+`coinshot --tree`, so nothing about the framing is a second choice made later.
+
+```
+coin #45 of 82 at (-15.48, 1.16, 8.49)
+camera at (-15.32, 1.26, 9.53), 1.05 m along the coin's own face normal (0.15, 0.00, 0.99)
+PRE-FLIGHT  |n·toCam| = 0.995 on BOTH sides   ·   blockers: none
+```
+
+**`coin712-face-ab.png` is the one to look at, and the before half is a finding in its own right.**
+The old coin is a dark, crazed, cellular disc that reads as weathered stone rather than metal.
+That pattern is `gold_leaf`'s tiling normal/ORM detail sampled at the world-scale box projection —
+**one tile stretched across each 0.32 m face**. It was never legible as a coin, and nothing had
+looked at it closely enough to say so. The badge replaces it and the detail layer is dropped with
+it, because it samples UVs the coin no longer has.
+
+`coin712-level-before/after.png` — the canonical `courtyard` camera, unchanged, showing the coins
+at real placement. Differenced:
+
+```
+pixels differing by >40 (sum-abs):  3,081 of 921,600 = 0.33%   — 14 blobs, all of them coins
+                        BEFORE               AFTER
+  ledge coin  (534, 78)  #1f2128  L 33   →   #405a3b  L 82
+  ledge coin  (790,103)  #b07c5d  L133   →   #dab574  L184
+  ledge coin  (244, 54)  #b28e76  L148   →   #d9c48e  L197
+  ledge coin (1225,143)  #1d2b37  L 41   →   #344c3c  L 70
+```
+
+Every coin gets brighter and more chromatic; the two in shade were **near-black** before and are
+now legible. **The olive cast on shaded faces is not new and is not the badge**: it is §3's blue
+shadow light `(0.142, 0.189, 0.423)` on a gold surface, and before the badge those same faces were
+darker still. Lit faces read as plain gold (`#dab574`, `#d9c48e`).
+
+**A screen-space diameter ratio is deliberately NOT quoted.** The authoritative size number is the
+built geometry — `0.32000 → 0.48000 m`, exactly 1.5 — and an on-frame measurement here is confounded
+by the ink shell, whose width is constant and therefore a larger fraction of a smaller coin. Two
+instruments disagreeing by a knowable amount is not evidence of anything; the geometry is measured
+and the frames are the visual check.
+
+`coin712-icon-ab.png` — the HUD glyph at 170 / 64 / 18 px, ankh → star, same size on both sides.
+
+### 712.16 — Every run quoted, including the ones that failed (§703.2)
+
+```
+ 1  pickups                                          32 tests   31 pass   1 FAIL   P2 drift (see §712.7)
+ 2  pickups                                          32 tests   32 pass   0 fail   after the P2 fix
+ 3  kaykit props cluevault geometry api bundle       85 tests   84 pass   1 FAIL   kaykit P2 ranking (§712.13)
+ 4  kaykit                                           (log capture of P2's rows, after)
+ 5  kaykit @ bcca8b1, clean worktree                 (log capture of P2's rows, before)
+ 6  the same six + pickups                          117 tests  117 pass   0 fail
+ 7  hud hudtruth api epress                          41 tests   41 pass   0 fail
+ 8  pickups (with C1-C4 added)                       36 tests   36 pass   0 fail
+ 9  pickups (after a comment correction)             36 tests   36 pass   0 fail
+10  FULL SUITE, clean worktree @ e986bd4, under
+    the FIFO lock                                  1084 tests 1083 pass   1 FAIL   audiowired A2 — NOT MINE
+11  audiowired @ bbd23d7, clean worktree              2 tests    1 pass   1 FAIL   the same, with none of
+                                                                                   this lane's work present
+```
+
+**Run 10 is not green, and the failure is not this lane's.** `audiowired` A2 forbids any file under
+`src/` from *naming* a path matching `/assets[\/\\](music|effects)[\/\\]/i`. The single file it
+names is **`src/player/SlyModel27.js`**, which belongs to the live Sly-native lane (§711), and the
+match is that file's own line 18:
+
+```
+ * project's `Assets/Music/` or `Assets/Effects/` is read, referenced or emitted (§364.3).
+```
+
+— a comment **asserting compliance** with §364.3, caught by a case-insensitive regex. Nothing is
+read, referenced or emitted; the substantive rule is intact.
+
+Run 11 is the discrimination, and it is the reason this is stated as fact rather than as an alibi:
+at `bbd23d7` — the Sly lane's own first commit, containing **none** of this lane's work — A2
+already fails, identically. The string is present in that commit's own copy of the file, and
+`git log -- src/player/SlyModel27.js` returns only that lane's two commits.
+
+**Not fixed here.** `src/player/*` is the Sly-native lane's and this lane is instructed to stay off
+it. The fix is one word in a comment (their side), and it is flagged rather than taken.
+
+Everything this lane owns is green: `pickups` 36/36, and the six-file adjacency 117/117.
