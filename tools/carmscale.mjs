@@ -201,15 +201,30 @@ const out = await withGame({ width: 640, height: 360, quality: 'low', query: QUE
     const renderer = engine.renderer || engine.get('renderer')?.renderer || window.__GAME?.renderer;
     const gl = renderer?.getContext?.();
     const anyMesh = rows.find((r) => r.bones)?.bones ?? 0;
-    let skinMesh = null;
-    engine.scene.traverse((o) => { if (!skinMesh && o.isSkinnedMesh) skinMesh = o; });
+    /* §442, caught in this tool's own trap-6 number. This used to be
+       `engine.scene.traverse(o => { if (!skinMesh && o.isSkinnedMesh) skinMesh = o; })`, which
+       takes the FIRST SkinnedMesh in the scene — the PLAYER. So the bone-texture row described
+       Sly's 31-bone skeleton (31×4 = 124 texels → 12×12) while the `skeletonBones` row beside it
+       said 199, and the two disagreed in plain sight across both arms of an A/B. The subject of
+       this report is a GUARD, so a guard's mesh is what is read, and the player is reported
+       alongside rather than instead — a number with no companion is how the swap hid. */
+    const guardMesh = guards.guards[0]?.mesh || null;
+    let playerMesh = null;
+    engine.scene.traverse((o) => {
+      if (playerMesh || !o.isSkinnedMesh) return;
+      if (guards.guards.some((g) => g.mesh === o)) return;
+      playerMesh = o;
+    });
+    const texOf = (m) => (m?.skeleton?.boneTexture
+      ? [m.skeleton.boneTexture.image.width, m.skeleton.boneTexture.image.height] : null);
     const budget = {
       skeletonBones: anyMesh,
-      boneTexture: !!skinMesh?.skeleton?.boneTexture,
-      boneTextureSize: skinMesh?.skeleton?.boneTexture
-        ? [skinMesh.skeleton.boneTexture.image.width, skinMesh.skeleton.boneTexture.image.height]
-        : null,
-      boneMatricesLen: skinMesh?.skeleton?.boneMatrices?.length ?? null,
+      subject: guardMesh?.name || null,
+      boneTexture: !!guardMesh?.skeleton?.boneTexture,
+      boneTextureSize: texOf(guardMesh),
+      boneMatricesLen: guardMesh?.skeleton?.boneMatrices?.length ?? null,
+      playerBones: playerMesh?.skeleton?.bones?.length ?? null,
+      playerBoneTextureSize: texOf(playerMesh),
       rendererCaps: renderer?.capabilities ? {
         maxTextures: renderer.capabilities.maxTextures,
         maxVertexTextures: renderer.capabilities.maxVertexTextures,
@@ -299,10 +314,13 @@ console.log(`   drawn h ${f(out.player?.box?.h)}  w ${f(out.player?.box?.w)}  `
 console.log(`   capsule ${JSON.stringify(out.player?.capsule)}`);
 
 console.log('\n── 5. the bone budget (candidate: a truncated bone set) ──');
+console.log(`   subject ....................... ${out.budget.subject} (a GUARD, not the first skin in the scene)`);
 console.log(`   skeleton bones ................ ${out.budget.skeletonBones}`);
 console.log(`   boneMatrices floats ........... ${out.budget.boneMatricesLen}`);
 console.log(`   bone TEXTURE in use ........... ${out.budget.boneTexture} `
   + `${out.budget.boneTextureSize ? `(${out.budget.boneTextureSize.join('×')})` : ''}`);
+console.log(`   the PLAYER, for contrast ...... ${out.budget.playerBones} bones`
+  + `${out.budget.playerBoneTextureSize ? `, texture ${out.budget.playerBoneTextureSize.join('×')}` : ''}`);
 console.log(`   renderer caps ................. ${JSON.stringify(out.budget.rendererCaps)}`);
 console.log(`   gl limits ..................... ${JSON.stringify(out.budget.glLimits)}`);
 

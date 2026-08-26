@@ -19,6 +19,7 @@ this repository has to infer the status of these files. **This is not equivalent
 | `sly-rig.glb` | rigged Sly mesh, 144 joints, 21 meshes, 31,494 tris, 10.6 MB | an alternative to the supplied FBX | **`staging/assets/sly-anim/`** |
 | `sly-cane.glb` | the cane, 1,792 tris | ours is procedural | **`staging/assets/sly-anim/`** |
 | `sly-body.png`, `sly-head.png` | 2048² albedo | the rig's textures | **`staging/assets/sly-anim/`** |
+| `Carmelita_Animations7.fbx` | the master, 16.9 MB | **not copied.** Read in place from the read-only clone for §702's head recovery only; `carmelita-head-lp.glb` is what came back | — |
 
 ### Where these files live, and why some of them left
 
@@ -30,12 +31,27 @@ moved file is absent here and present there so the two cannot be confused.
 
 What stayed, and why:
 
-- `carmelita-guard.glb` — fetched at runtime by `src/ai/CarmelitaGuard.js`.
+- `carmelita-guard.glb` — fetched at runtime by `src/ai/CarmelitaGuard.js` **and** by
+  `src/ai/CarmelitaNative.js` (§704). Both arms read the same body; they differ only in what
+  drives its bones.
+- `carmelita-clips.glb` — **new in §704**, 1.70 MB, fetched at runtime by
+  `src/ai/CarmelitaNative.js`. Her eleven animations and the 199-joint node hierarchy they
+  address, cut out of `carmelita-anims.glb` by `tools/carmelita2native.mjs` with every mesh, skin,
+  material, texture and image dropped — 56% smaller than the scene it came from. It is the exact
+  inverse of `tools/carmelita2guard.mjs`, which keeps the meshes and drops the animations, so the
+  two products cover the source with **no overlap**: neither carries a byte the other has.
+
+  Nothing in it is retargeted. The channels are copied byte-for-byte and addressed by the source's
+  own node names. One source defect is corrected rather than propagated:
+  `Shoot(BodyMovement)` ships **1,194 channels for 597 distinct node/path pairs** — every channel
+  twice — and which duplicate wins in `AnimationMixer` is an ordering accident, so they are
+  collapsed and the count is reported.
 - `sly-anims.glb`, `carmelita-anims.glb` — **build-time inputs**, read at these exact paths by
-  `tools/mixamo2clips.mjs`, `tools/carmelita2clips.mjs` and `tools/carmelita2guard.mjs`, with
-  `tests/carmguard.test.mjs` asserting one of them is present so the tool can be re-run. They ship
-  today and should not; moving them is a four-file change across other people's live work, which
-  is a decision with an owner rather than part of a sweep. They stay on the register meanwhile.
+  `tools/mixamo2clips.mjs`, `tools/carmelita2clips.mjs`, `tools/carmelita2guard.mjs` and
+  `tools/carmelita2native.mjs`, with `tests/carmguard.test.mjs` asserting one of them is present so
+  the tool can be re-run. They ship today and should not; moving them is a four-file change across
+  other people's live work, which is a decision with an owner rather than part of a sweep. They
+  stay on the register meanwhile.
 
 The staged copies carry their own `staging/assets/sly-anim/PROVENANCE.md`, which points back here
 for the full record. **The licence position is unchanged by the move: none stated.**
@@ -200,6 +216,20 @@ state through `Patrol.js` already. Her behaviour wiring (`enemy_carmelita.tscn`,
 `enemy_base_flashlight.gd`, `spotlight_detection.tscn`, `gun.tscn`) is out of scope: the existing
 guard AI stays and only what the guard is *made of* changed. Nothing under `Assets/Music/` or
 `Assets/Effects/` was opened, copied, decoded or referenced.
+
+**5. §704 — the animations, taken as authored.** `carmelita-clips.glb` adds her eleven clips to the
+runtime for the first time. Everything above still holds: the source was read from the read-only
+clone at `a312a99`, nothing was downloaded, nothing was decoded from a format the source did not
+already ship, and **nothing under `Assets/Music/` or `Assets/Effects/` was opened, copied, decoded
+or referenced** (§364.3). `Scripts/carmelita_mesh.gd`'s `AnimationTree` router is still not ported
+— §704 maps her clips onto guard states in `CLIP_FOR`, which is this project's own table over the
+existing `Patrol.js` AI, not a transcription of hers.
+
+One thing §704 measured that this file previously got wrong by omission: **six of her eleven clips
+are two-handed weapon stances**, and the `ShockPistol` armature — dropped by the RIG3 rebind as an
+unattached prop — is animated into her hands by those same clips. The gun is part of the authored
+motion, not scene furniture beside it. It is still not drawn, on a triangle-budget ground recorded
+in §704.5, and `gun.tscn` is still not ported.
 
 **Licence: unchanged and still none stated** — the governing paragraph is in
 `../sly-godot/PROVENANCE.md` and covers these files too.

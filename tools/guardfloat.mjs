@@ -33,7 +33,7 @@
  * assignment carries a `hadGround` of false and a route-baseY fallback that a walked guard does
  * not, which is precisely the state that would fake a floating guard, or hide one.
  *
- *   node tools/guardfloat.mjs [--seconds 180] [--every 0.5]
+ *   node tools/guardfloat.mjs [--seconds 180] [--every 0.5] [--query carm=native]
  *
  * ── TWO FAULTS THIS FILE HAD, both in the instrument and not in the subject ───────────────
  * Recorded because a probe that has been wrong once is the only kind worth trusting, and
@@ -86,9 +86,15 @@ const arg = (k, d) => {
 };
 const SECONDS = arg('--seconds', 180);
 const EVERY = arg('--every', 0.5);
+/* §704: `--query carm=native` re-runs this check on the NATIVE rig. §697's finding must survive a
+   change of character, and the only way to know is to run §697's own instrument against it. */
+const QUERY = (() => {
+  const i = process.argv.indexOf('--query');
+  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : '';
+})();
 const OUT = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : '/tmp/guardfloat.json';
 
-const out = await withGame({ width: 640, height: 360, quality: 'low' }, async ({ page }) => {
+const out = await withGame({ width: 640, height: 360, quality: 'low', query: QUERY }, async ({ page }) => {
   page.setDefaultTimeout(0);
   return page.evaluate(async ([seconds, every]) => {
     let THREE = null;
