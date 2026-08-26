@@ -55370,6 +55370,15 @@ arms × two settle times), of which one earlier pair was discarded because it us
 and framed nobody; and `tools/camdot.mjs` on three candidate cameras, one of which it refused
 (`(0, 4.5, 21)` — SUBJECT OCCLUDED, `arch:court:sandstone_worn` at 1.00 m of 12.68).
 
+### §707.12 A ninth run, after this section was written
+
+`tests/patrol.test.mjs` alone at `14c7a55` — the commit this section ships in, which by then also
+carried §709's rewrite of `src/ai/Guard.js` and `src/ai/CarmelitaNative.js`: **23 / 23**. Quoted
+for the same reason §708.10 quoted its second run: the green in §707.11 was measured at
+`7e3497d`, and a section that only ever quotes the run at its own commit cannot see a lane land
+underneath it. C6 and C7 read the same numbers with the gun in her hands as without.
+
+
 ---
 
 ## §708 — §479.20's gripping watch item, closed with numbers: two of its three clips do not ship, the third's OFF hand hangs 41 cm below the lip, and the cause is the §531 lever on a placed hand
