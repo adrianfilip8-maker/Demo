@@ -2427,15 +2427,21 @@ export class Guards {
       const down = g.state === STATE.KO;
 
       /* --- where the beam starts and which way it throws ---
-         §709 moved the ORIGIN to the muzzle and deliberately did NOT move the aim. The direction
-         below is still `g.forward` pitched down by `TUNE.conePitch`, and the reason is measured:
-         the barrel swings hard through the clips. Across the two walks a guard can reach, the
-         bore's pitch runs +25.2°..+37.8° on `PatrolWalk` and −25.7°..−14.1° on `CasualWalking` —
-         a 63.5° span whose two halves do not even overlap — and its yaw sweeps 101° on `Run` and
-         146° on `HitTaken` (`tools/muzzle.mjs`). A barrel-aimed cone would therefore spend the
-         whole patrol pointed about 31° into the sky, because `PatrolWalk` is a high-ready carry,
-         and would swing a third of a turn during a stagger. It would also change WHAT A GUARD
-         SEES, and the alert ladder was out of scope. */
+         §709 moved the ORIGIN to the muzzle and deliberately did NOT move the aim. `_dir` is
+         still `g.forward` pitched down by `TUNE.conePitch`, for two measured reasons.
+
+         **This cone is a TELEGRAPH of a sensed cone that is defined about `g.forward`.**
+         `Senses.evaluate` tests `angle(forward-flattened, toPlayer)` against `halfAngle`
+         (`Patrol.js`) — it never reads this direction. So aiming the drawn beam down the barrel
+         would not change what a guard can see; it would make the drawn beam LIE about what he
+         can see, which is worse than either. Making it honest would mean moving detection to the
+         barrel as well, and the alert ladder was out of scope.
+
+         **And the barrel is the wrong thing to aim anyway.** Across the clips an armed guard can
+         reach, the bore's pitch spans 121° and its yaw swings up to 321° inside a single clip —
+         and on `PatrolWalk` and `Idle`, the two a guard spends its life in, it sits +25°..+38°
+         ABOVE the horizon, because a high-ready carry is how you hold a gun on patrol
+         (`tools/muzzle.mjs`). A barrel-aimed cone would look at sky for the whole patrol. */
       g._coneApex(_eye);
       const pitch = TUNE.conePitch;
       const cp = Math.cos(pitch);
