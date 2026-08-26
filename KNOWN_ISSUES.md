@@ -54929,9 +54929,446 @@ misstates what the code does is the mechanism above and not a matter of taste.
 
 ---
 
-## §707 — CLAIMED (patrol-clearance lane, in progress)
+## §707 — Five of nine guards could not patrol: the routes were measured against the architecture, and the props arrived afterwards
 
-Reserved while measuring the stalled half of the garrison. Content follows in a later commit.
+The §697 guard-float lane found this while fixing something else, reported it, and correctly did
+not act on it: *"Four of nine guards are stalled against props on their own patrol lines — visible
+in the before arm too (guard2 is stalled and perfectly grounded, both arms). That is a
+route-vs-props defect; `tests/patrol.test.mjs` checks clearance against architecture only."*
+
+Every part of that is right, and the count is low by one. Measured over 200 s of the shipped
+browser build, sampled every 0.5 s, with `npm test` green: **five bodies, four of them from the
+first frame.**
+
+### §707.1 Which guards, where, and against what
+
+`tools/patrolstall.mjs` (new) boots the shipped game — Architecture, Props, KayKit, Collision,
+Guards — parks the player at (600, 0, 600) so nobody chases, drives `Guards.update` for 200 s and
+samples every 0.5 s. Nobody is placed at a `u`; every sample is walked (§435.4), which is the only
+reason guard6 appears in this table at all.
+
+| # | type | route | distance in 200 s | u-span | longest still | jammed on |
+|---|---|---|---|---|---|---|
+| 0 | temple | `south_gate` | 256.9 m | 1.000 | 2.5 s | — walks |
+| 1 | temple | `courtyard_ring` | **5.3 m** | 0.045 | **196.0 s** | brazier at (−18, 22), `props_bronze` |
+| 2 | heavy | `courtyard_ring` | **10.5 m** | 0.079 | **189.5 s** | brazier at (18, 6), `props_bronze` |
+| 3 | temple | `obelisk_watch` | 239.6 m | 1.000 | 2.0 s | — walks |
+| 4 | temple | `pylon_gate` | **0.0 m** | 0.037 | **199.5 s** | `kaykit:solid` at (−5.5, 30.5) — he **spawned inside it** |
+| 5 | temple | `hall_nave` | 239.1 m | 1.000 | 2.5 s | — walks |
+| 6 | heavy | `hall_weave` | **91.9 m, then nothing** | 0.811 | **99.5 s from t = 100 s** | `kaykit:solid` at (−12.5, −33.5) |
+| 7 | temple | `rooftop_run` | 297.0 m | 0.999 | 2.5 s | — walks |
+| 8 | heavy | `tomb_vault` | **0.2 m** | 0.141 | **199.0 s** | `kaykit:solid` at (8.6, −64.4) |
+
+The four walkers are the contrast (§418.3): same instrument, same run, same 400 samples each, and
+every one of them classifies `moving`/`arrived` on every sample and covers 240–297 m. An
+instrument that reported "stalled" for all nine would be measuring itself.
+
+**guard6 is the reason 200 s was the window.** He walks 91.9 m — most of a lap — and jams at
+t = 100.0 s. A spawn-time check calls him healthy. So does a 60 s one. §435.4 is usually about
+*where* a probe stands; here it is about *how long it watches*.
+
+### §707.2 The cause, discriminated rather than assumed
+
+"Stalled" has at least four causes that look identical from outside, and the brief for this lane
+named all four. Each was separated by a measurement rather than by argument.
+
+**`Guard._step` fails in exactly two places, and they split the field.** It returns false when the
+two forward rays clamp `allowed` to zero (**blocked**), and when `groundCheck` finds no walkable
+floor under the next footfall while `hadGround` is set (**nofloor**). The probe replays both
+branches at every sample, in the guard's own travel direction, and records which fired:
+
+```
+guard1  nofloor 393 / 400      guard2  blocked 380 / 400      guard4  blocked 400 / 400
+guard6  blocked 200 / 200 (of the still window)               guard8  blocked 399 / 400
+```
+
+- **A route waypoint inside geometry** — true for guard4 and *only* guard4, and it is why he is the
+  one body that never took a step: `pylon_gate`'s waypoint (−6.2, 31.2) is inside the crate's
+  collider (x −6.9‥−4.1, z 29.1‥31.9). The other four reach their blocker by walking into it.
+- **Two guards colliding** — eliminated by carrying the nearest-other-guard distance on every
+  sample. At their stalls: guard1 16.35 m, guard2 14.49 m, guard4 14.03 m, guard6 16.44 m,
+  guard8 26.45 m. Guards are not in the collision BVH at all, so a guard-vs-guard jam would have
+  to appear as two bodies inside each other's radius with no collider hit; that combination
+  occurs nowhere in the run.
+- **A step past `stepUp`/`stepDown`** — this is what the `nofloor` branch would look like, and
+  guard1 *is* on that branch, so it had to be checked rather than dismissed. His ground record
+  reads `props_bronze` at y = 0.014 with **slope 87.2°** and a step of 0.014 m. The step is 1.4 cm;
+  what fails is `groundSlopeMax`, on the near-vertical face of a brazier tripod. Same prop as the
+  blocked guards, different branch, identical symptom.
+- **A collider with no visible prop** (the §697 lesson, and §701.10 from the other side) — this is
+  the one the probe was built to be able to say. It runs a second, independent instrument: a
+  `THREE.Raycaster` fired along the same direction at the **drawn** scene, characters and ink
+  shells and cone volumes removed. For every stall the two agree that something is there:
+
+  | guard | COLLISION says | DRAWN says |
+  |---|---|---|
+  | guard2 | `props_bronze` at 0.560 m | `props_bronze` at 0.709 m |
+  | guard6 | `kaykit:solid` at 0.560 m | `kaykit:props` at 0.720 m |
+  | guard8 | `kaykit:solid` at 0.560 m | `kaykit:props` at 0.071 m |
+
+  So this is props, and not a collider standing where the art is not.
+
+**A caveat on that table, because it nearly became a wrong finding.** guard4's drawn ray returned
+`null` while COLLISION reported a hit, which is exactly the §697 signature — and it is an artefact
+of the probe, not a fact about the level. He is *inside* the crate, the ray starts inside a
+closed box, and a front-side material is invisible from within. The right control was to fire at
+the crate from outside, which hits it. The lesson is the standing one: an instrument reporting the
+absence of something is only worth what its positive control is worth.
+
+**And the positive control was broken on the first run.** The probe's §418.3 block fired a "must
+hit" ray into the hall's front wall along x = 0 — where the doorway is — so both arms returned
+null and the arm proved nothing while looking like a clean pass. It now fires at two things this
+lane has independently located, one masonry and one prop, and both hit:
+
+```
+MISS open courtyard   (0,0.8,-8)+x     collision null                             drawn null
+HIT  east aisle column (13,1.2,-26)+x  collision proxy:pole        at 2.120 m     drawn arch:hall:column_papyrus at 1.826 m
+HIT  brazier at (18,6) (15.5,1.2,6)+x  collision props_bronze      at 2.064 m     drawn props_bronze            at 2.064 m
+```
+
+That pair is worth reading twice. On the **prop** the two instruments agree to three decimals,
+because `Props._flushBuckets` registers the *visible* merged mesh as its own collider — collider
+and art are literally the same object. On the **column** they disagree by 0.294 m, because
+`proxy:pole` is a separate invisible box that stands proud of the drawn `column_papyrus`. §701.10
+recorded that the crypt piers' proxies are fatter than their art by up to ~0.2 m; the hall's are
+fatter by 0.29 m, and this is a second, independent sighting of it from a lane that was not
+looking for it.
+
+### §707.3 The shape: two constraint sets, neither containing the other
+
+Nothing here is a typo. In every one of the five cases the route and the prop were written to the
+**same round number by two people solving different problems**:
+
+- `Props._courtyardDress`'s eight brazier spots are `[±18, 6], [±18, 22], [±7.5, 32], [±20, −10]`,
+  placed to "light the processional route". `courtyard_ring`'s west leg ran x = −18.
+- `KayKit.PLACEMENTS`' six camera props were grid-searched against **four** tests: real paving,
+  1.4 m from every `pole`, exact-SAT clear of every `wall`, and inside the target shot's frame at
+  6–26 m. Patrol routes are not on that list — and `KayKit.js`'s own header records that the claim
+  *"nothing lands in a column or on a route"* was audited, found to have a false premise, and
+  **narrowed to "nothing lands in a column"**. The route half was retired as unchecked and never
+  re-derived. `barrel_small_stack` sits at x = −12.5; `hall_weave`'s west leg ran x = −12.5.
+- `Patrol.js`'s own header says every waypoint "is measured against the shipped temple", and
+  `tests/patrol.test.mjs` opens by explaining that it builds the shipped level — meaning
+  `Architecture` + `buildEgyptLevel`, harvested out of `arch._colliders`. `Props` and `KayKit` are
+  separate modules, registered after Architecture in `main.js`'s manifest, with their own
+  colliders. The suite never built either.
+
+So the level had two occupancy authorities and no instrument that spanned both. This is §697's
+"one collider gap had two consumers" inverted: here two authorities each had a complete instrument
+and the union had none.
+
+### §707.4 Which side moved, and the one place where no waypoint existed
+
+Moving a prop, moving a waypoint and widening a route are three different costs, and the answer is
+per-conflict rather than a policy.
+
+**What a prop costs.** A brazier carries a point light (intensity 5.5, radius 13), an ember
+emitter and a `hazard` volume, and the eight sit in a symmetric authored list. A KayKit camera
+prop is pinned by *coordinate* in `tests/kaykit.test.mjs` — C1 asserts its annotated shot distance
+to ±0.2 m, and C4 names the courtyard crate's position and its measured `sly-profile` framing
+(4 of 8 corners in NDC, 9.0 % of frame width, 60.5 % of height).
+
+**What a waypoint costs.** Nothing outside `Patrol.js`. This was checked rather than assumed:
+`SHOT_POSE.guard` *solves* for its subject's stand along the lens axis (`minDist` 4.5, `maxDist`
+17) and `SHOTS.alert.stage` carries authored positions in the shot. **No shot in the game reads a
+coordinate out of `ROUTES`.**
+
+So four of the five conflicts are repaired by moving the waypoint, and each is recorded at its
+site in `Patrol.js` with the sweep that chose the number. Two are worth quoting because the
+numbers, not the preference, decided them:
+
+- **`tomb_vault`** — a 5.5 m aisle with a 2.8 m crate in it has exactly one line. Over 20 seeds,
+  x = 10.8 gives 0.754 m of prop clearance against a 0.76 m bar, and x = 11.2 gives 0.697 m of
+  *masonry* clearance against the same bar. **x = 11.0 is the only value that clears both**
+  (prop 0.954, masonry 0.897).
+- **`hall_weave`** — the west aisle has no straight line at all. Sliding the leg gives a window
+  about 0.1 m wide between the barrels and the nave column (x = −10.5 → prop 0.776 / arch 0.626;
+  x = −10.3 → prop 0.979 / arch 0.537) against ±0.22 m of authored jitter. The leg therefore keeps
+  x = −12.5 and **steps out to −14.6** for the 3.5 m the barrels occupy, into the empty bay
+  between the aisle column rows at z = −26 and −38. Measured 1.116 m.
+
+**And one place where no waypoint works, which had to be proved rather than asserted.**
+`courtyard_ring`'s north leg crosses x −8‥8 at z ≈ 29.8, and the courtyard's one near camera prop
+stands at (−5.5, 30.5) in the mouth of the pylon throat — between the west colossus plinth (north
+face z = 28.6) and the throat jambs (x ±7.5 for z ≥ 30.6). On a 0.5 m grid of the shipped
+colliders, the widest centre-line clearance available on any west-bound crossing is:
+
+```
+        x=-7.0  x=-6.5  x=-6.0  x=-5.5  x=-5.0  x=-4.5  x=-4.0        (clearance, metres)
+z=30.0    0.53    0.07    0.39    0.64    0.47    0.27    0.14
+z=29.5    0.73    0.27    0.19    0.20    0.01    0.19    0.38
+z=29.0    0.50    0.46    0.06    0.26    0.45    0.65    0.84
+```
+
+The Heavy's own **radius** is 0.56 m. The best line through the pinch is ~0.46 m. **He does not
+fit** — this is not a margin a bar could be relaxed to accept, the lane is sealed. Going *north*
+of the crate between it and the throat jamb was measured too and is worse (0.80 m at (−7.5, 30.5),
+0.40 m at (−7.5, 31.0)).
+
+Moving the crate was measured, not waved away. 1.0 m north leaves 0.36 m for the ring and 0.25 m
+for `pylon_gate`: the collider is 2.9 m deep along z and the band between the two beats is 2.4 m.
+**There is no position for it that opens both.**
+
+So the ring is now an **open ping-pong** whose two ends sit either side of the crate at
+(±8, 29.5). The guard paces the whole perimeter and about-faces instead of closing the last 16 m —
+which `pylon_gate`'s guard patrols anyway, 3.7 m further north. `obelisk_watch` and `hall_weave`
+are open for the same class of reason and say so in their own comments; this is the third.
+
+**One thing the north leg needed that the west leg did not:** three points holding z ≈ 29.5
+straight. A four-point corner there bulged to z = 29.81 and clipped the stone pile at
+(−12.6, 30.1) — the lane measures 1.00 m of clearance at z = 29.5 and 0.52 m at z = 30.0, so the
+Catmull-Rom overshoot, not the leg, was the violation. That is `Patrol.js` rule 1 for a third
+time, in a third form.
+
+### §707.5 A fifth conflict the fix exposed, in the architecture, and it was always there
+
+`hall_weave` gained three waypoints on its west leg, which shifts every later `r.jitter(0.22)`
+draw in that route's own stream. C1 — green for as long as it has existed — then failed:
+
+```
+hall_weave @ (6.4, -43.6) clear 0.74 m (wall/pole), needs > 0.76      × 6 samples
+```
+
+Nothing about props. The north cross-leg at z = −43.5 had been passing the nave block with
+**0.636 m over a seed sweep**, and C1 measures the single shipped seed and happened to land on
+0.821 m. Adding waypoints changed which member of the family got measured, not the margin.
+
+Repaired rather than tuned back under the bar, because the window's real middle is not where this
+route's own comment said it was. Measured across the window at x 6.5‥9.5: 1.38 m at z = −43.0,
+1.88 at −42.5, **2.38 at −42.0**, 1.88 at −41.5. The widest line is z = −42.0, not "z ≈ −43". The
+route now measures **0.842 m** of masonry clearance over 24 seeds instead of 0.636.
+
+### §707.6 The second half of the question came back NO, and that is worth recording
+
+The brief for this lane asked two things about the suite, not one: *is the architecture-only
+clearance the whole gap, or does it also not run along the route the way a guard walks it? A
+clearance check at waypoints is not a clearance check along segments.*
+
+**The first is the whole gap. The second is not a defect that existed.** C1 has never been a
+waypoint check — `sampleRoute` walks the spline at 400 arc-uniform points and `clearanceAt` is
+evaluated at every one. The suspicion worth testing was subtler: 400 is a fixed COUNT, so the
+spacing is 3.2 cm on `pylon_gate` and 38 cm on `courtyard_ring`, and a long route is measured
+twelve times more coarsely than a short one. Measured — every route's worst architecture
+clearance, at N = 400 against a 5 cm distance-based sweep, same seed:
+
+```
+south_gate     2.392 → 2.391      hall_weave       0.821 → 0.821
+courtyard_ring 0.899 → 0.898      hall_nave        2.247 → 2.247
+obelisk_watch  0.946 → 0.946      rooftop_run      4.193 → 4.193
+pylon_gate     2.256 → 2.256      tomb_vault       1.588 → 1.588
+architrave_ledge 0.635 → 0.635    tomb_scarab      0.769 → 0.769
+```
+
+Nothing moves by more than 0.001 m. At these route lengths and these obstacle sizes, 38 cm is
+fine enough. So the answer is: the props were the entire gap, and the sampling was not hiding
+anything — a hypothesis checked and not confirmed, recorded because "we also fixed the sampling"
+would have been a claim nobody had measured.
+
+Both are nevertheless closed by construction in the new arm. It samples by DISTANCE (≤ 8 cm), so
+resolution stops depending on route length, and **C7 pins the waypoint-vs-segment distinction as
+a live assertion** rather than a property that happens to hold: it plants a crate at the midpoint
+of a leg and fails if a waypoint-only check ever catches it.
+
+### §707.7 The regression arm: `patrol.test.mjs` C6 / CAL-6 / CAL-6b / C7
+
+The fix is half the deliverable. The suite now builds the props.
+
+- **The shipped props, by the shipped code.** `tests/_kaykitboot.mjs` primes three's `Cache` so
+  `GLTFLoader` never reaches the DOM; `Props` needs only an engine stub. Both run their real
+  placement paths on the real assets in **~330 ms**. Nothing retypes a coordinate out of
+  `PLACEMENTS` or `_courtyardDress` — a test that restates the table it checks is a copy.
+- **Triangles, not boxes.** `Props._flushBuckets` registers ONE collider per material for the whole
+  level; `props_bronze`'s AABB spans x ±22, z −74…33. An AABB oracle would call every courtyard
+  route buried inside it and every tomb route clear of it, both wrong. The soup is per-triangle,
+  gridded on XZ: **64,584 guard-blocking triangles**.
+- **Only tags a guard can hit.** `RAY_OPTS` ignores hazard/water/rail/hook/spire/vent, so the
+  brazier's own fire volume is not an obstacle. What stopped guard1 and guard2 was the bronze
+  *geometry*, registered `ground`.
+- **Along the spline by distance** (≤ 8 cm), so a 12 m route and a 152 m one are measured at the
+  same resolution — not at the waypoints, and not at a fixed sample count.
+- **Over the jitter** — worst of 6 seeds, because a clearance that holds only at `0x9a2d10` is not
+  a clearance.
+- **Asserted for routes with a walker; reported for the rest.** §589 took both scarab bodies off
+  the level, so `architrave_ledge` and `tomb_scarab` have nobody on them. `tomb_scarab` is threaded
+  through the tomb hoard *on purpose* and measures 0.000 m against `props_gold`. It is printed
+  every run and becomes an assertion the moment a scarab line is appended to `ROSTER` — which is
+  the right moment for it to matter, and the wrong moment is now: threading a 0.26 m body between
+  a plinth, three pillars and a treasure hoard is design work, not a coordinate nudge, and doing it
+  for a body nobody can see would be tuning against a test rather than against the room.
+
+**CAL-6** plants a 1.4 m crate on `rooftop_run` — 17 m above every prop in the level, the one route
+where a positive arm cannot be confused with a real one — and fails loudly if C6 does not catch it
+(it reads 0.001 m). It has a negative half too: the same crate 6 m off the beat must *not* trip it,
+or the arm is reporting "something exists in the level" rather than "something is on the route".
+
+**CAL-6b** asserts both prop families are present by name, because they register completely
+differently — a KayKit invisible per-item box and a Props visible merged mesh — and an oracle that
+had silently dropped either would still look healthy on the other. It also asserts the hazard
+volumes were registered *and* are absent from the solid set.
+
+**C7** is the "along segments, not at waypoints" claim, demonstrated instead of described: a 1.2 m
+crate at the **midpoint** of `hall_nave`'s longest leg reads `>2.00 m` to a waypoint-only check and
+**0.009 m** to the distance-sampled sweep, against a 0.62 m bar. If a waypoint-only check ever
+caught it, this arm says so and fails.
+
+Shipped state, worst over 6 seeds:
+
+| route | walkers | bar | nearest prop | on |
+|---|---|---|---|---|
+| `south_gate` | temple | 0.62 | 1.240 | `kaykit:solid` |
+| `courtyard_ring` | temple+heavy | 0.76 | 0.864 | `props_stone` |
+| `obelisk_watch` | temple | 0.62 | >2.00 | — |
+| `pylon_gate` | temple | 0.62 | 1.208 | `kaykit:solid` |
+| `hall_weave` | heavy | 0.76 | 1.116 | `props_stone` |
+| `hall_nave` | temple | 0.62 | >2.00 | — |
+| `rooftop_run` | temple | 0.62 | >2.00 | — |
+| `tomb_vault` | heavy | 0.76 | 0.954 | `kaykit:solid` |
+| `architrave_ledge` | *none* | (0.46) | >2.00 | — |
+| `tomb_scarab` | *none* | (0.46) | **0.000** | `props_gold` |
+
+### §707.8 §697's ground fix survives: `guardfloat`, both arms, at the shipped rig
+
+`TUNE.groundProbe = 0.06` and `TUNE.groundSlopeMax = 30` are untouched. The routes moved, so
+§697's own instrument was re-run on both — the before arm is the pre-fix `Patrol.js` restored from
+`113376b`, everything else identical, 200 s, sampled every 0.5 s, on §704's native rig.
+
+| # | type | route | u-span before → after | gap median | worst \|gap\| | patrol % |
+|---|---|---|---|---|---|---|
+| 0 | temple | `south_gate` | 1.00 → 1.00 | −0.001 → −0.003 | 0.087 → 0.068 | 100 → 100 |
+| 1 | temple | `courtyard_ring` | **0.05 → 1.00** | 0.030 → −0.007 | 0.051 → 0.074 | 100 → 100 |
+| 2 | heavy | `courtyard_ring` | **0.08 → 1.00** | 0.004 → −0.005 | 0.033 → 0.079 | 100 → 100 |
+| 3 | temple | `obelisk_watch` | 1.00 → 1.00 | −0.011 → −0.011 | 1.917 → 1.899 † | 100 → 100 |
+| 4 | temple | `pylon_gate` | **0.05 → 1.00** | 0.052 → 0.008 | 0.052 → 0.085 | 100 → 100 |
+| 5 | temple | `hall_nave` | 1.00 → 1.00 | 0.036 → 0.036 | 0.087 → 0.098 | 100 → 100 |
+| 6 | heavy | `hall_weave` | **0.81 → 1.00** | 0.018 → −0.010 | 0.055 → 0.086 | 100 → 100 |
+| 7 | temple | `rooftop_run` | 1.00 → 1.00 | −0.007 → −0.010 | 0.053 → 0.056 | 100 → 100 |
+| 8 | heavy | `tomb_vault` | **0.15 → 1.00** | −0.075 → 0.006 | 0.075 → 0.040 | 100 → 100 |
+
+**Read the "before" maxima with care and they are quoted anyway:** for the five stalled guards a
+`max` over 400 samples of one spot is not a distribution, it is one number counted 400 times.
+guard4's before column is 0.052 at *every* percentile for exactly that reason. Medians are the
+comparable column, and every one is within 3.6 cm in both arms.
+
+**† guard3's 1.9 m is an instrument reading, and it is in BOTH arms.** Two of his 400 samples land
+at (0.03, 2.00, 4.01) — `obelisk_watch`'s own unchanged dwell post — where `guardfloat`'s
+downward raycast of the **drawn** scene passes through the terrace's upper stair opening
+(|x| ≤ 2.6, which that route's comment already documents) and returns `sand_ring0` 1.9 m below.
+His collider record is `proxy:ground` at y = 2.00 and correct. This lane did not touch
+`obelisk_watch`, its seed, or its roster line, and the before arm reads 1.917 against the after
+arm's 1.899 — the same two samples. It is `renderFloor` meeting a hole in the drawn deck, the
+class `guardfloat`'s own header records under "the reference surface was wrong", and it is left
+for whoever owns that tool.
+
+Excluding that, every guard's p99 |gap| is ≤ 0.056 m and the worst single sample in either arm is
+0.098 m (guard5, on `hall_nave`, a route this lane did not touch, 0.087 m in the before arm).
+"Within 8 cm" holds at p99 for all nine; two guards touch 8.5–9.8 cm on one sample each, in both
+arms.
+
+### §707.9 What this change costs, said rather than left to be found
+
+**Two courtyard guards now meet.** `courtyard_ring` carries a temple at u = 0.00 and a heavy at
+u = 0.52 (pre-existing — `hall_weave`'s comment already calls two bodies on one loop "the weakest
+way to spend a second body"). On a closed 152 m ring at their speeds they converge only every
+~460 s; on a 131 m ping-pong they pass head-on every ~97 s. Measured over 200 s of the shipped
+build, guard1 and guard2 are within 0.8 m of each other on **19 of 400 samples**, against 0 in the
+before arm — where both were stalled 12 m apart, so that 0 is not a control. Guards are not in the
+collision BVH, so they interpenetrate. This is a real consequence of opening the ring and it is
+not repaired here: the two fixes available are guard-vs-guard separation (patrol AI) and moving a
+body to another beat (coverage), and both are outside what this lane was asked to change.
+`hall_nave`/`hall_weave` already did this at the hall crossing — 5 samples before, 2 after.
+
+**Not fixed, recorded:** `architrave_ledge` passes a wall proxy at 0.607 m over a seed sweep and
+`tomb_scarab` at 0.710 m, both under their 0.46 m + body bars only on the seed sweep, both with no
+walker. C1 measures one seed and passes them.
+
+### §707.10 The frames
+
+Same camera, two world times, both arms. `guardground.mjs` gains two cameras because every camera
+already in it is aimed at the spot §697 measured a guard *standing on* — which is exactly the wrong
+place for a guard who did not move: aimed at his stall, the after arm frames empty paving and reads
+as "the guard is gone" rather than "the guard is walking". These two hold `pylon_gate`'s whole
+12.1 m beat **and** guard4's pre-fix stand, so one lens contains both arms.
+
+Two stances, not two crops (§466.5), both through the `camDot` pre-flight:
+
+```
+gate-axis     (0, 3.0, 24) -> (0, 1.4, 33.3)     fov 65   enclosed 0/26  nearest 0.800  subject 9.437 m
+gate-oblique  (-1, 2.6, 26.5) -> (-1, 1.4, 33.3) fov 55   enclosed 0/26  nearest 3.349  subject 6.905 m
+```
+
+The garrison WALKS to the shutter in both arms — `guardground` drives the shipped `Guards.update`
+for SETTLE seconds with the player parked at (600, 0, 600); nobody is placed (§435.4). The two
+arms are the same commit with `src/ai/Patrol.js` swapped, captured in a **separate git worktree**
+so the shared checkout — which two other lanes were editing at the time — was never touched.
+
+| arm | world time | guard4's position | `gate-axis` pixel | `gate-oblique` pixel |
+|---|---|---|---|---|
+| **before** | t = 60 s | (−4.931, 31.506) | (744, 360) 107 px | (859, 433) 194 px |
+| **before** | t = 120 s | (−4.931, 31.506) | (744, 360) 107 px | (859, 433) 194 px |
+| **after** | t = 60 s | (1.893, 33.405) | (398, 329) 87 px | (273, 367) 144 px |
+| **after** | t = 120 s | (6.075, 33.234) | (212, 331) 88 px | *out of this lens' x range* |
+
+The before rows are the finding. Sixty more seconds of world time and his position is **identical
+to three decimals and to the pixel, in both cameras** — the frame is not a still of a slow guard,
+it is the same guard in the same place. He is visible in it wedged against the crate stack on the
+right of the gate throat, which is the thing he is inside.
+
+The after rows are the fix: 4.24 m of travel between the two shutters, 186 px across the same
+lens. `gate-oblique` holds x −7.4…5.4 and he is at x = 6.075 by t = 120 s, so it reports NOBODY —
+recorded rather than dropped, because a camera that loses its subject is a fact about the camera.
+
+Committed: `shots/patrol707-{before,after}-t{60,120}-gate-axis.png` and the two `-gate-oblique`
+frames at t = 60. The two omitted (`before-t120-gate-oblique`, identical to `before-t60`, and
+`after-t120-gate-oblique`, which contains nobody) are in the table above instead.
+
+A cross-check worth having: `patrolstall.mjs` independently reports guard4 at (1.837, 33.407) at
+t = 60.02 s and (6.075, 33.234) at t = 120.02 s, from a different process on a different day's
+run. `guardground`'s settle agrees to 6 cm and 0 cm. Two tools, one trajectory.
+
+### §707.11 Every run, not only the green one
+
+Every run this lane made, in order, not only the green one (§703.2). The branch was red from
+another lane for most of them, so each failure is bisected rather than described.
+
+| # | what | where | result |
+|---|---|---|---|
+| 1 | `tests/patrol.test.mjs` | working tree, first version of C6/C7 | **21 / 23** — C1 failed (6 samples at 0.74 m, §707.5) and C6's own `inspected` floor was set above what it inspects |
+| 2 | `tests/patrol.test.mjs` | after both were fixed | **23 / 23** |
+| 3 | full suite | tip `c0889c2` | **1066 / 1068** — `clockfreeze`, `subjhold` |
+| 4 | full suite | `0509c22` | **1060 / 1061** — `bundle` |
+| 5 | full suite | `7e3497d`, capture running | **1060 / 1061** — `framebudget` F3 GC |
+| 6 | `tests/framebudget.test.mjs` alone, unfiltered | `7e3497d` | **2 / 3** — F3 GC again |
+| 7 | `tests/framebudget.test.mjs` alone, unfiltered | `7e3497d` | **3 / 3** |
+| 8 | full suite, nothing else capturing | `7e3497d` | **1061 / 1061, 0 fail** |
+
+Run 8 is the green one, at the commit carrying the route repair and C6/CAL-6/CAL-6b/C7, from a
+worktree with nothing uncommitted in it. Runs 5–7 are F3 GC, the ~1-in-3 flake §703 traced to
+contention, behaving exactly as §703 says it does: red while a capture held the lock, green twice
+over once it did not, and never filtered with `--test-name-pattern`, which makes it fail 100 %.
+
+**Runs 3 and 4 are somebody else's, and that is asserted rather than assumed.** The §709 pistol
+lane was committing into this branch throughout, and each failure was bisected by running only the
+failing file at each commit in turn:
+
+| file | `7e3497d` | `15364e8` | `de3f103` | `0509c22` | `c4ce44c` | `9362193` | `c0889c2` |
+|---|---|---|---|---|---|---|---|
+| `bundle` | pass | pass | **FAIL** | fail | — | — | pass (they re-pinned it) |
+| `subjhold` | pass | — | — | pass | **FAIL** | fail | fail |
+| `clockfreeze` | pass | — | — | pass | pass | **FAIL** | fail |
+
+`7e3497d`, `0509c22` and `72717d8` are §707's three commits; the rest are §709's. Every failure
+appears first at a §709 commit and none at a §707 one — `de3f103` adds an asset the bundle pin did
+not know about, `c4ce44c` rewrites the Carmelita merge `subjhold` reads, and `9362193` adds
+`tools/pistolshot.mjs`, a multi-arm `setShot` runner without a frozen clock, which is precisely
+the register `clockfreeze` keeps. None of them is repaired here; they are named so the next lane
+to see a red branch does not re-derive whose it is.
+
+**Also run, and quoted because they are the measurements this section is built on rather than
+tests:** `tools/patrolstall.mjs` at 200 s twice (before and after the fix) plus a 6 s control-only
+run; `tools/guardfloat.mjs` at 200 s twice (both arms); `tools/guardground.mjs` four times (two
+arms × two settle times), of which one earlier pair was discarded because it used §697's cameras
+and framed nobody; and `tools/camdot.mjs` on three candidate cameras, one of which it refused
+(`(0, 4.5, 21)` — SUBJECT OCCLUDED, `arch:court:sandstone_worn` at 1.00 m of 12.68).
 
 ---
 
