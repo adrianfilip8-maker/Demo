@@ -324,11 +324,17 @@ has('freeze holds a deterministic pose, which the capture harness needs', () => 
 
 /* ─────────────────────────── the revert, and its bounds ─────────────────── */
 
-test('the arm is revertible in one token and defaults to the shipped rebind', () => {
-  assert.equal(GUARD_TUNE.carmelitaNative, 0, 'the shipped default is the RIG3 rebind');
+test('the native arm is the SHIPPED DEFAULT and is revertible in one token', () => {
+  /* The owner asked for the source rig and animations. A default of 0 would have meant that
+     anyone who opened the build saw the rebind, and the answer to "did you do it" would be no. */
+  assert.equal(GUARD_TUNE.carmelitaNative, 1, 'the shipped default is her NATIVE rig');
+  assert.equal(GUARD_TUNE.carmelitaPistol, 0, 'and the pistol is still off — it does not fit');
   const src = readFileSync('src/ai/Guard.js', 'utf8');
-  assert.match(src, /carm=native/, 'the URL token is documented at its site');
+  assert.match(src, /carm=rebind/, 'the revert token is documented at its site');
   assert.match(src, /function wantNative\(\)/, 'and read through one function');
+  /* The rebind must still BUILD, or "revertible" is a word rather than a path. */
+  assert.match(src, /loadCarmelitaGuard\(undefined, \{/, 'the rebind loader is still called');
+  assert.match(src, /falling back to the RIG3 rebind/, 'and is the documented fallback');
   /* §697 is not in this lane. If either constant moves, this test is the tripwire. */
   assert.equal(GUARD_TUNE.groundProbe, 0.06, '§697\'s groundProbe is untouched');
   assert.equal(GUARD_TUNE.groundSlopeMax, 30, '§697\'s groundSlopeMax is untouched');

@@ -2,8 +2,9 @@
 /**
  * carmnativeshot.mjs — the §704 before/after frames, on cameras whose FRONT-ness is measured.
  *
- *   node tools/carmnativeshot.mjs --arm rebind            # writes the camera literals it computed
- *   node tools/carmnativeshot.mjs --arm native --cam <json>   # re-uses them exactly
+ *   node tools/carmnativeshot.mjs --arm rebind             # writes the camera literals it computed
+ *   node tools/carmnativeshot.mjs --arm native --cam <json>    # re-uses them exactly
+ *   node tools/carmnativeshot.mjs --arm default --cam <json>   # NO query — whatever ships
  *
  * ── why the camera is computed and then PASSED IN, rather than computed twice ────────────────
  * A before/after pair is only evidence if the two frames differ by the change and by nothing else.
@@ -31,7 +32,13 @@ const arg = (k, d) => { const i = argv.indexOf(k); return i >= 0 && argv[i + 1] 
 const ARM = arg('--arm', 'rebind');
 const SECONDS = Number(arg('--seconds', 60));
 const CAMIN = arg('--cam', '');
-const QUERY = ARM === 'native' ? 'carm=native' : 'carm=rebind';
+/* `--arm default` passes NO query at all, so the run exercises whatever `TUNE.carmelitaNative`
+   actually ships as. That is a different claim from `--arm native`, which forces the token: one
+   says "the native path works", the other says "the native path is what a player gets". After
+   §704's default flip the second is the one that needed proving, and a forced token cannot
+   prove it. The tool prints `guards.carmelitaNative` either way, so the arm is read back off the
+   built garrison rather than assumed from the flag. */
+const QUERY = ARM === 'native' ? 'carm=native' : ARM === 'rebind' ? 'carm=rebind' : '';
 
 /* Which guards to stand in front of. Two subjects in two quarters, which is §466.5's second
    sample for a visual claim — one guard cannot distinguish "the import is fixed" from "this

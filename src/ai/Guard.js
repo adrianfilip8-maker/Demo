@@ -257,10 +257,11 @@ const TUNE = {
   carmelitaHead: 1,
 
   /* §704 — the owner's "use the source rig and animations rather than trying to modify them".
-     1 = her NATIVE 199-joint skeleton, her own skin weights and her own eleven clips played by
-     `THREE.AnimationMixer` (`src/ai/CarmelitaNative.js`); 0 = the RIG3 rebind exactly as before
-     (the default), which stays byte-for-byte on the shipped path. `?carm=native` / `?carm=rebind`
-     overrides it at the URL, the same shape as `?char=dlraw`/`?char=dl` and `?kaykit=`.
+     **1 = her NATIVE 199-joint skeleton, her own skin weights and her own eleven clips**, played
+     by `THREE.AnimationMixer` (`src/ai/CarmelitaNative.js`) — **the default, because it is what
+     was asked for**. 0 = the RIG3 rebind exactly as before, byte-for-byte, which is the revert.
+     `?carm=rebind` / `?carm=native` overrides it at the URL, the same shape as
+     `?char=dlraw`/`?char=dl` and `?kaykit=`.
 
      What the two arms differ in is what the guard is MADE OF and what drives its bones, and
      nothing else. `Guard`'s AI — patrol routing, detection, the alert ladder, the swing — is
@@ -268,11 +269,23 @@ const TUNE = {
      integration surface is clip NAMES rather than bone names. §697's `groundProbe` and
      `groundSlopeMax` are not read by either arm and are not touched.
 
-     Two consequences worth stating rather than discovering: the native arm carries 199 bones per
-     guard against 24 (measured cost in §704), and it does NOT apply `GuardAnim`'s ±4.8%
-     squash-and-stretch, so the nine guards measure one height rather than §702's 1.68–1.87 m
-     spread — that spread was the squash and nothing else. */
-  carmelitaNative: 0,
+     **Four consequences of the default, all of them the SOURCE as authored rather than defects,
+     and all of them measured in §704 — stated here so nobody rediscovers them as bugs:**
+
+       1. Six of her eleven clips are TWO-HANDED WEAPON STANCES (hands 0.086 m apart) and the
+          pistol does not fit the triangle cap, so a guard at rest reads as holding an invisible
+          weapon. See `carmelitaPistol` below and §704.5.
+       2. Idle guards stand 1.42–1.47 m against walking guards' 1.74–1.77 m, because the authored
+          idle IS that armed crouch. The bind pose lands at 1.8163 m and the mount scale is
+          uniform, so no proportion moved — §704.4.
+       3. `walk_patrol` plays `CasualWalking`, and the clip NAMED `PatrolWalk` is unused, because
+          `PatrolWalk` is a crouched sneak. Judged by measurement, not by name — §704.6.
+       4. 199 bones a guard against 24: +222 KB over the garrison and 16.5× the animation update
+          time, which is 2.4% of a 16.7 ms frame against 0.1% — §704.7.
+
+     Correcting any of the first three would be exactly the "trying to modify them" the owner
+     asked us to stop, so none of them is corrected here. */
+  carmelitaNative: 1,
 
   /* Her shock pistol, on the native arm only. §704 measured what §702's header had reasoned
      about: six of her eleven clips are TWO-HANDED WEAPON STANCES — her hands close to 0.086 m

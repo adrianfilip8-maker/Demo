@@ -17,9 +17,11 @@ import { atlasOf, INTERIOR, CARMELITA_HEAD, CARMELITA_ASSET } from './CarmelitaG
  * to the level, and sit her on the floor. Everything it does is a mount decision; none of it is a
  * change to the rig.
  *
- * `src/ai/CarmelitaGuard.js` — the RIG3 rebind — is untouched and still the default. This is the
- * other arm of a one-token A/B (`TUNE.carmelitaNative`, `?carm=native` / `?carm=rebind`), the same
- * shape as `?char=dlraw`/`?char=dl` and `GUARD_TUNE.carmelitaTex`.
+ * **This is the shipped default** (`TUNE.carmelitaNative = 1`), because it is what was asked for.
+ * `src/ai/CarmelitaGuard.js` — the RIG3 rebind — is untouched, still builds, and is the revert:
+ * `TUNE.carmelitaNative = 0` or `?carm=rebind`, the same one-token shape as `?char=dlraw`/`?char=dl`
+ * and `GUARD_TUNE.carmelitaTex`. Neither file imports the other's binding path, so the two arms
+ * cannot drift into each other.
  *
  * ── why this can work at all, which was not obvious and was measured first ───────────────────
  * The rebind exists because the clips were believed to need RIG3's bind. Three facts, each
