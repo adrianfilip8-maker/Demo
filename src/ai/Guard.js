@@ -329,10 +329,12 @@ const TUNE = {
      **The pistol is outlined either way, by the screen-space pass.** `PostFX` runs an ink-edge
      pass over depth and normal discontinuities in the normal prepass ("scene → normals → AO →
      ink edges → bloom → composite", `TUNE.edgeDepth`/`edgeNormal`), and the pistol is an ordinary
-     opaque mesh in that prepass. `shots/pistol709-p1-guard4.png` at 4x shows the gun carrying a
-     silhouette line of the same weight as the boot and trouser leg beside it. What the shell
-     would add on top is the thicker inverted-hull line the character carries —
-     `shots/pistol709-p1i-*` is that comparison.
+     opaque mesh in that prepass. `shots/pistol709-p1-guard1.png` shows the gun carrying a clean
+     silhouette line against the paving behind it, at the same weight as the boot and trouser leg
+     beside it. What the shell would add on top is the thicker inverted-hull line the character
+     carries; `node tools/pistolshot.mjs --pistol 1 --ink 1 --cam <json>` takes that comparison on
+     the same camera, and §709 did not spend the capture lock on it once the frame above had
+     answered the question the comparison was for.
 
      Two earlier versions of this comment got here the wrong way and are worth recording, because
      both were written rather than measured. The first said the pistol is "already bounded by
