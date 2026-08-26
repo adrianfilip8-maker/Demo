@@ -7,7 +7,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {
   buildNative, instantiateNative, spliceHeadNative, headFiducial,
   CarmelitaNativeAnim, CLIP_FOR, CLIP_FOR_ARMED, clipMapFor, UNUSED_CLIPS, ONCE, MOUNT_SCALE,
-  CARMELITA_CLIPS_ASSET, splicePistolNative, muzzleFromBarrel, PISTOL_MESHES,
+  CARMELITA_CLIPS_ASSET, splicePistolNative, muzzleFromBarrel, PISTOL_MESHES, unusedClips,
 } from '../src/ai/CarmelitaNative.js';
 import { GUARD_TUNE } from '../src/ai/Guard.js';
 
@@ -577,6 +577,23 @@ lp('the pistol\'s culling sphere covers where the CLIPS carry it, not where the 
   assert.ok(inst.pistolMesh.boundingSphere.radius - p.worst
     >= (inst.mesh.boundingSphere.radius - b.worst) * 0.9,
     'the pistol\'s margin is no worse than the body\'s');
+});
+
+has('arming makes PatrolWalk reachable and CasualWalking unreachable — the swap, both ways', () => {
+  const all = ANIMS.map((c) => c.name);
+  assert.ok(all.length >= 11, `${all.length} clips inspected`);            // §211.1
+  const un = unusedClips(false, all), ar = unusedClips(true, all);
+  /* The historical constant is exactly the UNARMED answer — which is what it always described,
+     and now says so. This is the assertion that keeps the two from drifting. */
+  assert.deepEqual(un.slice().sort(), UNUSED_CLIPS.slice().sort(),
+    'unusedClips(false) reproduces the UNUSED_CLIPS constant');
+  assert.ok(un.includes('PatrolWalk'), 'unarmed, the clip NAMED PatrolWalk is unused');
+  assert.ok(!ar.includes('PatrolWalk'), 'armed, it is what a guard patrols in');
+  assert.ok(!un.includes('CasualWalking'), 'unarmed, CasualWalking is the walk');
+  assert.ok(ar.includes('CasualWalking'), 'armed, nothing plays it at all');
+  /* Everything else must be identical, or arming changed more than the walk. */
+  const other = (a) => a.filter((n) => n !== 'PatrolWalk' && n !== 'CasualWalking').sort();
+  assert.deepEqual(other(un), other(ar), 'arming changes the walk clips and nothing else');
 });
 
 test('the pistol token is on, and both halves of what pays for it are documented at the site', () => {

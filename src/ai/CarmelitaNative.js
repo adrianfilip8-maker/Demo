@@ -221,8 +221,20 @@ export const CLIP_FOR_ARMED = { ...CLIP_FOR, walk_patrol: 'PatrolWalk', walk_ale
 /** Which map a build uses. `armed` is `TUNE.carmelitaPistol > 0.5`. */
 export function clipMapFor(armed) { return armed ? CLIP_FOR_ARMED : CLIP_FOR; }
 
-/** Her clips that no guard state reaches. Loaded and playable; simply never asked for. */
+/**
+ * Her clips that no guard state reaches on the **UNARMED** map. Loaded and playable; never asked
+ * for. §709: `PatrolWalk` left this set in the shipped build — arming is exactly what reaches it —
+ * so the honest name for this list is now "unused by `CLIP_FOR`", and `unusedClips()` below is
+ * what a caller asking about the running build should use. The constant keeps its meaning and its
+ * value; what changed is which map ships.
+ */
 export const UNUSED_CLIPS = ['Air', 'Jump', 'PatrolWalk', 'Run.001', 'Shoot(GunMovement)'];
+
+/** The clips no guard state reaches, for the map a given build actually runs. */
+export function unusedClips(armed, all) {
+  const used = new Set(Object.values(clipMapFor(armed)));
+  return (all || [...UNUSED_CLIPS, ...Object.values(CLIP_FOR)]).filter((n) => !used.has(n));
+}
 
 /**
  * Guard clips that must not loop — a one-shot reaction, or a state that holds its last frame.
