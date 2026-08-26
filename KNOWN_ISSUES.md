@@ -55222,3 +55222,10 @@ its allocation history and makes F3 fail 100%. `src/` is untouched by this lane,
 here the suite could regress; the runs are the record that nothing did. The second run is from a
 worktree checked out at the commit this section lands in, so the working tree the other live lane is
 editing (`src/ai/Patrol.js`) is not in it.
+
+---
+
+## §709 — CLAIMED (pistol lane, in progress)
+
+Reserved while fitting Carmelita's `ShockPistol` into the triangle budget and moving the vision
+cone's apex to the muzzle. Content follows in a later commit.
