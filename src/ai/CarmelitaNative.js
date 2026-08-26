@@ -675,8 +675,9 @@ export class CarmelitaNativeAnim {
     this._head = rig.bones?.Head || null;
     this._lookYaw = 0; this._lookPitch = 0;
     this._lookTargetYaw = 0; this._lookTargetPitch = 0; this._lookWeight = 0;
-    this._neckRest = this._neck ? this._neck.quaternion.clone() : null;
-    this._headRest = this._head ? this._head.quaternion.clone() : null;
+    /* [neck, head]: the authored quaternion, and the last one this class wrote. See `_compose`. */
+    this._auth = [new THREE.Quaternion(), new THREE.Quaternion()];
+    this._last = [new THREE.Quaternion(NaN, NaN, NaN, NaN), new THREE.Quaternion(NaN, NaN, NaN, NaN)];
 
     this._speedIn = 0; this._turnIn = 0; this._accelIn = 0;
 
@@ -763,7 +764,12 @@ export class CarmelitaNativeAnim {
   }
 
   update(dt) {
-    if (this._frozen) { this._applyLook(0); return; }
+    /* Frozen, the mixer is still re-run at dt = 0. That looks redundant and is not: `_applyLook`
+       MULTIPLIES the authored quaternion, so it is only idempotent if something re-establishes
+       that quaternion first. Without this, every frozen frame composes the gaze on top of the
+       previous one and the head winds around — silently, because at `_lookWeight` 0 the delta is
+       the identity and the defect only appears when a frozen guard is also looking at something. */
+    if (this._frozen) { this.mixer.update(0); this._applyLook(0); return; }
     const a = this.actions.get(this._current);
     if (a) a.setEffectiveTimeScale(this.speed);
     this.mixer.update(dt);
@@ -788,9 +794,35 @@ export class CarmelitaNativeAnim {
     const yaw = THREE.MathUtils.clamp(this._lookYaw, -1.05, 1.05);
     const pitch = THREE.MathUtils.clamp(this._lookPitch, -0.55, 0.55);
     _e.set(pitch * 0.4, yaw * 0.4, 0, 'XYZ');
-    if (this._neck) this._neck.quaternion.multiply(_q.setFromEuler(_e));
+    this._compose(this._neck, 0, _q.setFromEuler(_e));
     _e.set(pitch * 0.6, yaw * 0.6, 0, 'XYZ');
-    if (this._head) this._head.quaternion.multiply(_q.setFromEuler(_e));
+    this._compose(this._head, 1, _q.setFromEuler(_e));
+  }
+
+  /**
+   * `authored × delta`, written so that repeating it cannot wind the joint around.
+   *
+   * ── the three behaviour this exists for, which a plain `quaternion.multiply` walks into ────
+   * `PropertyMixer.apply` ends with an optimisation: it compares the freshly accumulated buffer
+   * against the one it applied last time and **only calls `binding.setValue` if they differ**. So
+   * whenever a clip's value for a joint is unchanged between frames — a paused action, a frozen
+   * pose, a still moment in a cycle — the mixer does not write the bone at all. An overlay that
+   * multiplies into that bone therefore composes on top of its own previous output, every frame,
+   * for as long as the clip holds still. Measured: a frozen guard with a gaze wound his head
+   * through 0.598 in a quaternion component over 120 frames, and `mixer.update(0)` did not undo
+   * it — the same optimisation refuses to restore a bone something else moved.
+   *
+   * The fix is to hold the authored value rather than to hope it is rewritten. If the bone no
+   * longer equals what this function last wrote, the mixer HAS written it and that is the new
+   * authored pose; if it still equals it, the mixer stayed silent and the cached one still
+   * stands. Either way the joint is set, never accumulated.
+   */
+  _compose(bone, slot, delta) {
+    if (!bone) return;
+    const auth = this._auth[slot], last = this._last[slot];
+    if (!last.equals(bone.quaternion)) auth.copy(bone.quaternion);
+    bone.quaternion.copy(auth).multiply(delta);
+    last.copy(bone.quaternion);
   }
 }
 

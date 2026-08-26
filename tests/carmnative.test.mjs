@@ -416,3 +416,54 @@ test('the pistol token exists, is off, and is documented at its site', () => {
   assert.match(src, /carmpistol/, 'the URL token is there');
   assert.match(src, /30,096/, 'and the triangle cost is stated where the decision is made');
 });
+
+has('a frozen guard who is also LOOKING does not wind his head around', () => {
+  if (!ANIMS.length) return;
+  /* `_applyLook` multiplies the authored quaternion, so it is idempotent only if the mixer
+     re-establishes that quaternion first. Frozen, nothing else does. At look weight 0 the delta
+     is the identity and the defect is invisible, which is why the arm sets a real gaze. */
+  const mat = new THREE.MeshBasicMaterial();
+  const rig = instantiateNative(NATIVE, [mat, mat]);
+  const a = new CarmelitaNativeAnim(rig, ANIMS, 0);
+  a.freeze('look_around', 0.5);
+  a.setLook(0.8, 0.3, 1);
+  a.update(1 / 60);
+  const head = rig.bones.Head, neck = rig.bones.Neck2;
+  const h0 = head.quaternion.clone(), n0 = neck.quaternion.clone();
+  for (let i = 0; i < 120; i++) a.update(1 / 60);
+  const d = (p, q) => Math.max(...['x', 'y', 'z', 'w'].map((k) => Math.abs(p[k] - q[k])));
+  assert.ok(d(head.quaternion, h0) < 1e-6, `the head is stable while frozen (drift ${d(head.quaternion, h0)})`);
+  assert.ok(d(neck.quaternion, n0) < 1e-6, `the neck is stable while frozen (drift ${d(neck.quaternion, n0)})`);
+  /* The other arm: the gaze must actually DO something, or this test passes on a no-op. */
+  const b = new CarmelitaNativeAnim(instantiateNative(NATIVE, [mat, mat]), ANIMS, 0);
+  b.freeze('look_around', 0.5);
+  const straight = b.rig.bones.Head.quaternion.clone();
+  b.setLook(0.8, 0.3, 1);
+  b.update(1 / 60);
+  assert.ok(d(b.rig.bones.Head.quaternion, straight) > 1e-3, 'and setLook moves the head at all');
+});
+
+has('the look overlay does not accumulate in NORMAL play either', () => {
+  if (!ANIMS.length) return;
+  /* The frozen case is the loud one, but three skips `setValue` whenever a clip value is
+     unchanged between frames, which happens in ordinary playback too. The check: hold a steady
+     gaze through a full clip cycle and require the head's offset from the un-gazed pose to stay
+     bounded rather than growing. */
+  const mat = new THREE.MeshBasicMaterial();
+  const plain = new CarmelitaNativeAnim(instantiateNative(NATIVE, [mat, mat]), ANIMS, 0);
+  const gazing = new CarmelitaNativeAnim(instantiateNative(NATIVE, [mat, mat]), ANIMS, 0);
+  plain.play('look_around', { fade: 0, restart: true });
+  gazing.play('look_around', { fade: 0, restart: true });
+  gazing.setLook(0.7, 0.25, 1);
+  const d = (p, q) => Math.max(...['x', 'y', 'z', 'w'].map((k) => Math.abs(p[k] - q[k])));
+  let early = 0, late = 0;
+  for (let i = 0; i < 600; i++) {
+    plain.update(1 / 60); gazing.update(1 / 60);
+    const off = d(gazing.rig.bones.Head.quaternion, plain.rig.bones.Head.quaternion);
+    if (i === 60) early = off;
+    if (i >= 540) late = Math.max(late, off);
+  }
+  assert.ok(early > 1e-3, `the gaze is actually applied (offset ${early})`);
+  assert.ok(late < early * 1.35 + 0.02,
+    `and stays bounded over 10 s rather than winding up (early ${early.toFixed(4)}, late ${late.toFixed(4)})`);
+});
