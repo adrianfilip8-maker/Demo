@@ -459,6 +459,11 @@ function measurePole(label, start, target, verb) {
       L: toPole(h.L.palm, p.x, p.z, p.r).gap, R: toPole(h.R.palm, p.x, p.z, p.r).gap,
       wL: toPole(h.L.wrist, p.x, p.z, p.r).gap, wR: toPole(h.R.wrist, p.x, p.z, p.r).gap,
       pL: insideOdd(h.L.palm), pR: insideOdd(h.R.palm),
+      /* Hand-to-hand separation — the quantity §479.20's watch item was written in. Carried so
+         the two readings can be compared on their own terms, not so it decides anything: a lip
+         is a continuous edge metres long and a pole is 36 cm across, so "wider than the prop"
+         is only a failure mode for one of the three props here (§708). */
+      sep: h.L.palm.distanceTo(h.R.palm),
       straddle: sL * sR < 0,
     });
     if (i === 0) {
@@ -473,6 +478,7 @@ function measurePole(label, start, target, verb) {
   const stats = sweepStats(rows);
   stats.wrist = sweepStats(rows.map((r) => ({ L: r.wL, R: r.wR })));
   stats.pen = sweepStats(rows.map((r) => ({ L: r.pL, R: r.pR })));
+  if (rows[0].sep != null) stats.sep = sweepStats(rows.map((r) => ({ L: r.sep, R: r.sep }))).L;
   stats.straddleFrac = +(rows.filter((r) => r.straddle).length / rows.length).toFixed(3);
   return { verb: 'pole_climb', label, clip: CLIP_ORIGIN.pole_climb, prop: { kind: 'cylinder', ...p }, entry: got, stats, live, failBind: bind, palms };
 }
@@ -519,6 +525,7 @@ function measureLedge(label, start, yaw, jumpAt) {
       wL: toLip(h.L.wrist, edge, nx, nz).line, wR: toLip(h.R.wrist, edge, nx, nz).line,
       outL: dL.out, upL: dL.up, outR: dR.out, upR: dR.up,
       pL: insideOdd(h.L.palm), pR: insideOdd(h.R.palm),
+      sep: h.L.palm.distanceTo(h.R.palm),
       /* Height of each grip point above the FEET. `TUNE.hangDrop` (1.62 m) is what puts the feet
          below the lip, and it was derived against the procedural hang — so this is the number
          that says whether the drop still suits the clip that replaced it. */
@@ -538,6 +545,7 @@ function measureLedge(label, start, yaw, jumpAt) {
   const stats = sweepStats(rows);
   stats.wrist = sweepStats(rows.map((r) => ({ L: r.wL, R: r.wR })));
   stats.pen = sweepStats(rows.map((r) => ({ L: r.pL, R: r.pR })));
+  if (rows[0].sep != null) stats.sep = sweepStats(rows.map((r) => ({ L: r.sep, R: r.sep }))).L;
   stats.straddleFrac = +(rows.filter((r) => r.straddle).length / rows.length).toFixed(3);
   stats.aboveFeet = {
     palm: sweepStats(rows.map((r) => ({ L: r.hfL, R: r.hfR }))),
@@ -609,6 +617,7 @@ function measureHook(label, start, target, verb) {
       cane: h.cane ? toRing(h.cane, ring.C, ring.N, RING_R, RING_TUBE).axisCircle : null,
       caneC: h.cane ? h.cane.distanceTo(ring.C) : null,
       pL: insideOdd(h.L.palm), pR: insideOdd(h.R.palm),
+      sep: h.L.palm.distanceTo(h.R.palm),
       /* The rope tilts; the BODY does not follow it (root rotation is yaw only), so hand-to-ring
          grows with the swing angle for reasons that are the STATE's and not the pose's. Recorded
          per frame so the pose can be read at the bottom of the arc, where the two agree. */
@@ -626,6 +635,7 @@ function measureHook(label, start, target, verb) {
   const stats = sweepStats(rows);
   stats.wrist = sweepStats(rows.map((r) => ({ L: r.wL, R: r.wR })));
   stats.pen = sweepStats(rows.map((r) => ({ L: r.pL, R: r.pR })));
+  if (rows[0].sep != null) stats.sep = sweepStats(rows.map((r) => ({ L: r.sep, R: r.sep }))).L;
   stats.tilt = sweepStats(rows.map((r) => ({ L: r.tilt, R: r.tilt }))).L;
   /* The pose read at the bottom of the arc — the frames where the rope is within 10 deg of
      vertical, i.e. where the body and the rope agree and the swing cannot be blamed. */
@@ -736,6 +746,7 @@ for (const r of results.verbs) {
   console.log(`  ${unit} over ${s.n} frames   L min/mean/max ${cm(s.L.min)} / ${cm(s.L.mean)} / ${cm(s.L.max)} cm`
     + `   R ${cm(s.R.min)} / ${cm(s.R.mean)} / ${cm(s.R.max)} cm`);
   console.log(`  nearest hand: mean ${cm(s.best.mean)} cm, WORST MOMENT ${cm(s.bestWorst)} cm   (wrist reading: L mean ${cm(s.wrist.L.mean)} / R mean ${cm(s.wrist.R.mean)} cm)`);
+  if (s.sep) console.log(`  hand-to-hand separation (the watch item's own metric): mean ${cm(s.sep.mean)} cm`);
   if (s.straddleFrac != null) console.log(`  straddle (prop between the hands): ${(s.straddleFrac * 100).toFixed(0)}% of frames`);
   if (s.pen) {
     console.log(`  inside solid? ray parity over 5 directions: L ${s.pen.L.mean.toFixed(1)}/5   R ${s.pen.R.mean.toFixed(1)}/5   (5 = buried, 0 = clear)`);

@@ -89,6 +89,11 @@
       },
       "bestWorst": 0
      },
+     "sep": {
+      "min": 0.8886,
+      "mean": 0.9743,
+      "max": 1.0526
+     },
      "straddleFrac": 1
     },
     "live": {
@@ -184,6 +189,11 @@
        "max": 0
       },
       "bestWorst": 0
+     },
+     "sep": {
+      "min": 0.8886,
+      "mean": 0.9743,
+      "max": 1.0526
      },
      "straddleFrac": 1
     },
@@ -284,6 +294,11 @@
        "max": 0
       },
       "bestWorst": 0
+     },
+     "sep": {
+      "min": 1.2805,
+      "mean": 1.3088,
+      "max": 1.3378
      },
      "straddleFrac": 1,
      "aboveFeet": {
@@ -462,6 +477,11 @@
       },
       "bestWorst": 0
      },
+     "sep": {
+      "min": 1.2539,
+      "mean": 1.3094,
+      "max": 1.3291
+     },
      "straddleFrac": 1,
      "aboveFeet": {
       "palm": {
@@ -638,6 +658,11 @@
        "max": 1
       },
       "bestWorst": 1
+     },
+     "sep": {
+      "min": 1.2613,
+      "mean": 1.29,
+      "max": 1.3304
      },
      "straddleFrac": 1,
      "aboveFeet": {
@@ -819,6 +844,11 @@
       },
       "bestWorst": 0
      },
+     "sep": {
+      "min": 1.3626,
+      "mean": 1.4919,
+      "max": 1.6013
+     },
      "tilt": {
       "min": 0.4716,
       "mean": 40.9817,
@@ -961,6 +991,11 @@
        "max": 0
       },
       "bestWorst": 0
+     },
+     "sep": {
+      "min": 1.3626,
+      "mean": 1.4919,
+      "max": 1.6013
      },
      "tilt": {
       "min": 0.3189,
@@ -1249,6 +1284,11 @@
       },
       "bestWorst": 0
      },
+     "sep": {
+      "min": 0.0311,
+      "mean": 0.2418,
+      "max": 0.5629
+     },
      "straddleFrac": 0
     },
     "live": {
@@ -1344,6 +1384,11 @@
        "max": 0
       },
       "bestWorst": 0
+     },
+     "sep": {
+      "min": 0.0313,
+      "mean": 0.2416,
+      "max": 0.5631
      },
      "straddleFrac": 0
     },
@@ -1444,6 +1489,11 @@
        "max": 5
       },
       "bestWorst": 5
+     },
+     "sep": {
+      "min": 0.4788,
+      "mean": 0.4992,
+      "max": 0.5115
      },
      "straddleFrac": 1,
      "aboveFeet": {
@@ -1622,6 +1672,11 @@
       },
       "bestWorst": 4
      },
+     "sep": {
+      "min": 0.479,
+      "mean": 0.4995,
+      "max": 0.5114
+     },
      "straddleFrac": 1,
      "aboveFeet": {
       "palm": {
@@ -1798,6 +1853,11 @@
        "max": 2
       },
       "bestWorst": 2
+     },
+     "sep": {
+      "min": 0.4785,
+      "mean": 0.4891,
+      "max": 0.5071
      },
      "straddleFrac": 1,
      "aboveFeet": {
@@ -1979,6 +2039,11 @@
       },
       "bestWorst": 5
      },
+     "sep": {
+      "min": 0.1878,
+      "mean": 0.283,
+      "max": 0.3682
+     },
      "tilt": {
       "min": 0.4716,
       "mean": 40.9817,
@@ -2121,6 +2186,11 @@
        "max": 0
       },
       "bestWorst": 0
+     },
+     "sep": {
+      "min": 0.1878,
+      "mean": 0.2829,
+      "max": 0.3682
      },
      "tilt": {
       "min": 0.3189,

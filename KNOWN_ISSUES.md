@@ -54935,7 +54935,283 @@ Reserved while measuring the stalled half of the garrison. Content follows in a 
 
 ---
 
-## §708 — CLAIMED (grip-pose lane, in progress)
+## §708 — §479.20's gripping watch item, closed with numbers: two of its three clips do not ship, the third's OFF hand hangs 41 cm below the lip, and the cause is the §531 lever on a placed hand
 
-Reserved while closing §479.20's gripping watch item: hand-to-prop distance, in situ, per grip
-verb, raw vs matched. Content follows in a later commit.
+§479.20 shipped the raw `Standupright` on the user's ruling and recorded one thing it could not
+close:
+
+> On the **gripping** poses, matched is the geometrically tighter reading (PoleClimbIdle 15.0 cm
+> on their rig → 28.2 raw; CaneSwing Idle 26.7 → 42.3; LedgeGrab Idle 51.1 → 67.5). Those hands
+> are supposed to be closed around a pole, a cane and a ledge lip. Since they ship raw, the
+> in-situ risk is hands wider than the prop they hold — **invisible to a posed take by
+> construction** (§479.4's stated limit).
+
+**"Invisible by construction" was too strong, and that is the correction this section exists to
+make.** A posed take cannot judge a grip BY EYE. But hand-to-prop distance is a number: the hand
+comes out of the pose pipeline and the prop is in the level, and nothing in the project needs a
+renderer to put the two in the same coordinate frame. `tools/gripgap.mjs` does it — every grip
+verb the player can actually reach, driven in situ, both regimes.
+
+Nothing here re-opens the standing ruling and nothing here changes a pose. **No `src/` file is
+edited by this section.**
+
+### §708.1 The measurement, and the three ways it could have been worthless
+
+**The grip point is the artist's glove, not the wrist bone, and that is load-bearing.** On the
+shipped character `handR` sits **19.5 cm** from the glove's own weighted centroid (`handL`
+20.9 cm) — the model is a cartoon fox in oversized gloves and the hand bone is at the cuff, not
+the palm. Measuring `handR.matrixWorld` against a pole would have been wrong by most of a
+forearm, in whichever direction the hand happened to point. The offset is read off the SHIPPED
+model's own skin weights (3433 vertices dominated by each hand bone), which is an input the pose
+system never looks at, and it is corroborated by a completely independent derivation already in
+the file: `SlyModelDLRig._relaxGloves` solves a cane socket from the artist's finger chains and
+lands it at **24.0 cm** from the same bone, i.e. just past the centroid, inside the fist. Fist RMS
+radius **11.6 cm** — that is the scale "closed around it" has to be judged against.
+
+**§435.4 — settled, never teleported.** Every grip is DRIVEN: settle on a stance the real capsule
+ends up `grounded` on, then walk / jump / press. The pole, hook and rail stances are
+`reachcensus.test.mjs`'s measured ones; the three ledge stances were found the same way (search,
+then settle) and each carries the state path its own drive produced, e.g.
+`move@0 jump@8 ledgeHang@18`. **There is no in-situ ledge drive anywhere else in this project** —
+§479.5's ledge frames were posed through `animation.play()` with the machine parked, and §479.4
+listed `ledge_hang` off a real ledge as hardware-sheet material. It is not any more.
+
+**§439/§440 — the two halves do not share an assumption.** The hand comes from
+`buildClipSet → Animation.update → Rig.commit →` the shipped skeleton's FK; the prop comes from
+COLLISION's BVH, the level's colliders and the drawn `hooks:*` InstancedMesh matrices. Checked
+rather than assumed: **ANIMATION has no hand IK** — `_footIK` is the only IK in the file — so no
+code anywhere snaps a hand onto a prop, and a grip that lands is a grip the animator drew.
+
+**§442 — a correct measurement on the wrong subject, twice guarded.** The subject is the SHIPPED
+character (`SlyModelDLRig`, the default `?char=` token), loaded offline by `dlrig.test.mjs`'s
+three mechanical rewrites — not `SlyModel3`, whose skeleton happens to be the same one, because
+"happens to be" is how §442 starts. And a pose sampled before its clip is live **is the bind
+pose**: `assertLive` refuses any sample whose expected clip is not live at w ≥ 0.9, or whose
+delivered skeleton is within 5° of bind everywhere. Every reported sweep records what was live
+(`pole_climb w1`, off-bind 94.9°) beside its numbers.
+
+### §708.2 First correction: two of the three clips the watch item named do not ship
+
+`buildClipSet('godot').unused` — read, not inferred:
+
+    CaneSwing Idle, Crouching stand, LedgeGrab, PoleClimbIdle, PoleGrab, RailrunStand, SpireJump
+
+**`PoleClimbIdle` and `CaneSwing Idle` reach no verb.** `pole_climb` plays `PoleClimbing`
+REVERSED (§479.18's `play_mode = 1`), `hook_swing` plays `CaneSwing` and `hook_grab` plays
+`CaneSwing Grab`. Only `LedgeGrab Idle` — the third name, and the one with the largest quoted gap
+— is a clip a player can actually be looking at. Two thirds of the watch item was about clips that
+were never at risk, and that is worth stating plainly rather than quietly dropping: the sheet the
+numbers came from is a CORPUS census, and a corpus is not a shipped set.
+
+### §708.3 Second correction: hand-to-hand separation does not decide any of these three verbs
+
+The watch item's quantity is hand SEPARATION and its worry is "hands wider than the prop". Measured
+in situ, palm to palm, shipped raw vs `?anim=proc`:
+
+| verb | prop, at its widest | raw sep | proc sep |
+|---|---|---|---|
+| `pole_climb` | drainpipe **0.36 m** across (r 0.18) | 97.4 cm | 24.2 cm |
+| `ledge_hang` | temple lip, a continuous edge **13.2 m** long | 130.9 cm | 49.9 cm |
+| `hook_swing` | ring tube **0.23 m** across (torus r 0.62, tube 0.115) | 149.2 cm | 28.3 cm |
+
+Raw is wider everywhere, exactly as the sheet said. **But "wider than the prop" is only a failure
+mode for one of the three props, and it is not the one that failed.** A ledge lip is metres long,
+so two hands 131 cm apart are both still over it; the pole and the ring are points in plan, so what
+decides them is radial distance, not separation. The proc column also lands where the sheet
+predicted for the ledge (49.9 cm live against the sheet's 51.1 cm matched), which is the agreement
+that says the two instruments are looking at the same poses.
+
+### §708.4 The table the watch item asked for — palm to prop, in situ, raw vs matched
+
+Mean over each site's own sweep (96 frames), in cm. `pole` is palm→shaft surface, `ledge` is
+palm→lip edge line, `hook` is palm→ring tube surface, `rail` is **foot**→line. Negative is inside
+the prop.
+
+| verb · site | raw L | raw R | raw, nearest hand at its worst | proc L | proc R | proc worst |
+|---|---|---|---|---|---|---|
+| `pole_climb` · SE drainpipe (§495.C) | 27.0 | 25.1 | **23.8** | 7.0 | 2.6 | **5.3** |
+| `pole_climb` · obelisk rope (§495.A) | 27.0 | 25.1 | **23.8** | 7.0 | 2.6 | **5.3** |
+| `ledge_hang` · terrace lip, south face | 10.0 | **43.0** | 16.2 | 22.1 | 21.4 | 23.4 |
+| `ledge_hang` · terrace lip, east face | 9.8 | **43.0** | 16.4 | 22.2 | 21.6 | 24.2 |
+| `ledge_hang` · plinth lip, south face | 9.9 | **42.8** | 16.3 | 21.6 | 21.0 | 23.1 |
+| `hook_swing` · main-0 (courtyard) | 131.1 | 134.8 | 231.2 | 138.9 | 136.1 | 254.3 |
+| `hook_swing` · low-2 (return chain) | 100.5 | 32.0 | 77.7 | 40.5 | 50.8 | 96.6 |
+| `rail_walk` · colossi-rope (§495.B) | 12.1 | 26.0 | 17.1 | 8.0 | 8.1 | 12.0 |
+| `rail_walk` · roof-e | 26.9 | 26.8 | 35.2 | 13.9 | 16.7 | 22.7 |
+
+Each row's counterexamples were RUN in the same process (§418.3), never asserted from the
+mechanism:
+
+- **FAIL-A**, the skeleton forced to BIND at the same world placement: pole 61.1 / 61.6, ledge
+  87.3 / 85.4, hook 200.1 / 206.9 cm. The metric reads the pose.
+- **FAIL-B**, the same palms against the wrong prop of the same class — a real second pole, lip or
+  ring from the same level: pole **25.7–26.1 m**, hook **26.1–29.9 m**, ledge **0.18–7.2 m**. The
+  metric reads the prop. The ledge arm's weak instance is named rather than averaged away: a lip is
+  modelled as an infinite horizontal edge line, so the terrace's south and east faces — two lips of
+  the same block meeting at a corner at the same height — are genuinely close to each other and that
+  pair reads 0.18 m. The other two ledge sites read 4.2 and 7.2 m, and the arm discriminates
+  wherever the two lips are not the same lip seen twice.
+
+Two sites per verb minimum, three for the ledge (§466.5), each a different collider and a
+different approach.
+
+### §708.5 The finding: `ledge_hang`'s right hand holds nothing
+
+The two poles are the same number at both sites to 0.1 cm, and that is correct rather than
+suspicious: `PoleClimb.place` puts the body at `p.hold = r + TUNE.radius * 0.8` = 0.452 m from the
+axis whatever pole it is, so the reading is a property of (clip phase, hold distance, radius) and
+not of the site. `pole_climb` is a hand-over-hand CYCLE — one hand reaches while the other holds —
+so the statistic that decides it is the NEAREST hand at the WORST frame, and it is **23.8 cm** off
+the shaft. Against a 11.6 cm fist that is a climb where the knuckles never reach the pipe. Matched
+reads 5.3 cm, which is a grip.
+
+The ledge is the one that is unambiguous, and the split is where it lives. Shipped raw, at all
+three sites:
+
+    LEFT   palm 0.4–1.2 cm outside the wall face,  9.4–9.5 cm ABOVE the lip   → on the lip
+    RIGHT  palm 13.0–13.4 cm outside the face,  40.6–41.0 cm BELOW the lip    → holding nothing
+
+The right hand hangs at chest height in open air while the character's whole weight story is a
+two-handed hang. Ray parity against the level's solid reads 0–1 of 5 for both hands, so nothing is
+buried — the hand is not in the stone, it is simply not on the ledge. Measured as heights above the
+feet (`TUNE.hangDrop` = 162 cm is what puts the feet below the lip, so a grip point at 162 cm is AT
+lip height): **L 171.5 cm, R 121.0 cm**; the wrists are 159.2 / 137.4, so the pose carries a 21.8 cm
+vertical split at the wrist and the hands' own orientations open it to 50.5 cm at the palms.
+
+For scale, `armcross` on the source: `LedgeGrab Idle`'s own two hands sit **0.11 m** apart in
+height in the GLB. Delivered, that is 0.19–0.22 m. The pose the repo authored is a slightly uneven
+two-handed hang; what ships is a one-handed one.
+
+### §708.6 The cause is the §531/§532.2 lever, and §479.10 already wrote down the rule it breaks
+
+`LIMB_OPEN = { elbow: 0.75, knee: 0.60 }` ships set-wide over the godot regime.
+`GODOT_LIMB_OPEN` exempts the three combat slots, the two wall runs and the two standing idles.
+**No grip verb is exempt.** And §479.10 already states the criterion, in the source, in these
+words:
+
+> **the lever may open a FREE limb; it may not straighten a limb whose hand is PLACED.**
+
+A pole climb, a ledge hang and a cane hang are the three poses in the set where both hands are
+placed by definition. The ladder — `tools/gripgap.mjs --limbopen e,0.6`, knee held at §531's
+shipped value so only the elbow moves, one site per verb:
+
+| elbow | pole: nearest hand | pole L | pole R | ledge L palm | ledge R palm | ledge R vs lip | hook R palm¹ | hook crook¹ |
+|---|---|---|---|---|---|---|---|---|
+| 0 (raw, faithful) | **−11.8** | −5.6 | −4.7 | 27.2 | **11.9** | −7.5 | 16.7 | 47.7 |
+| 0.15 | −5.6 | 1.2 | 1.4 | 24.5 | 13.7 | −12.3 | 16.5 | 42.6 |
+| 0.30 | **0.8** | 7.9 | 7.9 | 21.4 | 19.1 | −18.5 | 17.8 | **38.6** |
+| 0.45 | 6.8 | 14.3 | 14.1 | 17.9 | 26.3 | −25.7 | 20.6 | 37.0 |
+| 0.60 | 12.6 | 20.6 | 19.8 | 14.1 | 34.4 | −33.4 | 24.1 | 40.0 |
+| **0.75 — SHIPS** | 18.6 | 27.0 | 25.1 | 10.0 | **43.0** | **−41.0** | 27.7 | 46.0 |
+| 1.00 | 28.5 | 37.7 | 33.5 | 5.1 | 57.3 | −52.2 | 33.9 | 56.7 |
+
+¹ hook columns are taken at the BOTTOM of the arc only — see §708.8.
+
+Monotone in both directions and the mechanism is §532.1's own: opening the fold pushes a hand along
+the forearm's direction, and on a hang that direction is down-and-away. **The lever moves the
+ledge's right hand 33.5 cm further from the lip than the clip the repo authored.** Every rung is a
+real run, not an extrapolation.
+
+### §708.7 The narrowest fix — proposed, not shipped, and the reason it is not shipped
+
+The fix is one row in a table that already exists for exactly this:
+
+```js
+/* §708 — a ledge hang is two PLACED hands, which is the case §479.10's criterion names. */
+ledge_hang: { elbow: 0, knee: 0.60 },
+```
+
+It is narrow in every sense that matters. It cannot touch the standing pose — different keys,
+different clip. `?anim=proc` is unaffected by construction (the regime returns before the lever
+runs). It is bit-exact identity at 0, so it delivers the repo's own authored fold, which is the
+same "raw" the user's §479.20 ruling endorsed. The knee stays at §531's 0.60: legs hang free on a
+ledge and the leg half of that ruling is untouched. Effect, measured: right palm **43.0 → 11.9 cm**
+from the lip, **41.0 → 7.5 cm** below it; left 10.0 → 27.2.
+
+**It is not shipped here, and the reason is the trap this lane was warned about.** Closing the
+elbow narrows the arm silhouette — §532.2's own ladder has hand-spread falling monotonically as
+the lever closes — and "the arms are too tucked in / spread them out more" is a ruling the user has
+now made twice (§531, §532.2). So this fix moves the arms along the exact axis of a standing
+complaint in order to satisfy a contact contract. That collision is real, it is a taste-versus-
+contract call, and §479.15–§479.17 were lost precisely by an agent resolving one of these on its
+own reasoning instead of putting the picture in front of the person who rules. The numbers are
+here, the diff is one line, and the decision is the user's.
+
+**What is NOT proposed, and why, because a proposal with no value in it is worse than none:**
+
+- **`pole_climb` has no good rung.** At 0 the hands are **11.8 cm INSIDE** a 36 cm pipe; at the
+  shipped 0.75 they are 18.6 cm outside it; the zero crossing is ≈ 0.28. So §479.10's criterion —
+  "exempt to 0" — makes the pole *worse*, and the value that works is one I would be choosing. The
+  real mismatch is elsewhere and is named here rather than papered over: `p.hold` is derived from
+  OUR capsule (`r + TUNE.radius * 0.8`), never from the clip, so the body stands at a distance the
+  imported arm was not drawn for. Either a per-clip `hold` or a measured elbow rung would work;
+  neither is a one-line exemption and neither should be picked without the user seeing it.
+- **`hook_swing` is not a hand contract at all and no rung fixes it.** The cane's crook is the
+  thing that goes on the ring, and the crook's centre sits **38.6 cm from the ring's tube axis at
+  its best rung** against a crook radius of 16.8 cm — the C is nowhere near the tube at any lever
+  setting. That is a bigger and differently-shaped problem than a fold (see §708.8), and it is
+  outside "a per-verb exemption for that one clip".
+- **`rail_walk` does not grip.** Its contract is the FEET, and they are 12.1 / 26.0 cm off the
+  line (`rail_slide` on roof-e: 26.9 / 26.8). Reported for completeness and deliberately not folded
+  into the hand table.
+
+### §708.8 One thing this found that is NOT a pose defect, recorded so nobody chases it as one
+
+`hook_swing`'s numbers look catastrophic — palms over a metre from the ring — and most of that is
+the STATE, not the clip. `HookSwing` hangs the body at `TUNE.hookL` 2.2 m along the rope from the
+anchor and lets the rope tilt, but the drawn root only ever carries YAW (`Controller._pushCharacter`
+sets `rotation.set(0, yaw, 0)`), so the body stays vertical while the rope swings out from under
+it. Hand-to-ring therefore grows with the swing angle for reasons no pose can fix. Measured on the
+same sweep: main-0 runs a mean tilt of **41.0°** (max 77.8) and reads 131/135 cm; low-2 runs **9.1°**
+and reads 100/32 cm. Restricted to frames within 10° of vertical — where the body and the rope
+agree and the swing cannot be blamed — low-2 reads L 91.8 / R 27.7 cm and the crook 46.0 cm.
+
+So the honest statement about the cane hang is: **at the bottom of its own arc, on a ring, the
+crook is ~46 cm from the tube it is supposed to be hooked over, and the matched reading (41.4 cm)
+is no better.** This is not a raw-versus-matched question and the watch item's framing does not
+reach it. It is the next real thing to look at on this verb, and it needs a decision about whether
+the body should lean with the rope before any clip is touched.
+
+### §708.9 What this does not say, stated because the numbers flatter themselves
+
+- **No frames.** The acceptance was "numbers first, frames second — frames only where they add
+  something a number cannot". Nothing here is a hand visibly through a pole: ray parity reads
+  0–1 of 5 at every shipped grip point in the file, so no shipped hand is inside the level's solid, and "the right hand
+  is 41 cm below the lip" is a quantity a picture states worse than the number does. A frame is
+  still the right next artefact **for the user's ruling** on §708.7, and it should be a pair —
+  shipped against the one-line exemption — not a single take.
+- **It cannot see fingers.** The glove's curl is baked into the mesh; this measures the fist's
+  centroid. A palm 5 cm from a lip with the fingers modelled straight is still not a grip, and this
+  instrument would call it one.
+- **The parity probe has a stated limit.** The level's colliders are proxy shells and are not
+  guaranteed watertight, so a mid-range vote (2–3 of 5) is inconclusive; only a clean 0 or 5 is
+  quotable. Both readings quoted above are clean.
+- **`?anim=proc`'s ledge hang is its own separate question and is NOT the recommendation.** Its
+  palms read 20–22 cm from the lip edge but on the *inside* of the wall face plane (out −21 cm, up
+  −1 cm), and parity reads 2.5–3.7 of 5 — inconclusive by this file's own rule, so it is recorded as
+  "possibly sunk into the deck, unresolved" and not as a finding. The matched arm is here as a
+  CONTRAST (§418.3), not as a candidate.
+
+**A method note that cost a cycle and is the reason the parity probe exists at all.** The first
+version of the inside/outside test used `Collision._depenetrate` — the routine the player's own
+capsule is resolved against, which looked like the perfect authority. It returned **0, "not
+inside", for every palm in the file**, including ones 21 cm behind a wall face. It is a shallow
+CONTACT resolver: `deepestContact` only finds triangles within the probe's own radius, so a point
+well inside a solid is nowhere near a triangle and reads clear. An instrument that answers
+"healthy" for every input is the §39/§43/§50 family, and it was hand-built here one commit after
+reading the warning. It is written up rather than quietly replaced.
+
+### §708.10 Domains (§418.3) and the runs
+
+**`tools/gripgap.mjs`.** *Passes on:* the shipped level, both regimes, nine driven grips across
+four verbs, each entered by the state machine on its own from a settled stance. *Fails on:* the
+same placements with the skeleton forced to bind (FAIL-A, in-arm) and the same palms against the
+wrong prop of the same class (FAIL-B, in-arm) — both blow up by 0.6–30 m, so neither the pose half
+nor the prop half is decorative. *Cannot discriminate:* finger curl; whether a grip READS as
+closed; anything about the standing idle, which is not driven here.
+
+**Suite.** `node --test "tests/*.test.mjs"` from a CLEAN WORKTREE at the pushed commit `7810ecc`,
+under the FIFO lock: **1057/1057, EXIT=0, 244.9 s.** One run, quoted whole (§703.2); neither
+documented flake (`framebudget` F3 GC ~1-in-3, `padrest` R1b ~1-in-5) fired. `src/` is untouched by
+this section, so there is nothing here the suite could regress; the run is the record that nothing
+did.
