@@ -48,7 +48,12 @@ function qAdd(dst, src) { for (let i = 0; i < 10; i++) dst[i] += src[i]; }
  * @param {number} targetTris         triangles to stop at
  * @param {object} [opt]
  * @returns {{geometry: THREE.BufferGeometry, before: number, after: number, collapses: number,
- *            rejectedFlip: number, maxDev: number, meanDev: number}}
+ *            rejectedFlip: number, boundaryEdges: number}}
+ *
+ * It deliberately returns NO deviation figure. A quadric residual is cheap to compute here and
+ * reads like an error in metres without being one; `tools/pistollp.mjs` measures the real thing
+ * (every original vertex to the nearest point on the decimated SURFACE) and that is the number
+ * anyone should quote.
  */
 export function decimateSkinned(geo, targetTris, opt = {}) {
   const WELD = opt.weld ?? 1e-5;
@@ -86,7 +91,7 @@ export function decimateSkinned(geo, targetTris, opt = {}) {
     faces.push({ w, o, dead: false });
   }
   const before = faces.length;
-  if (before <= targetTris) return { geometry: src, before, after: before, collapses: 0, rejectedFlip: 0, maxDev: 0, meanDev: 0 };
+  if (before <= targetTris) return { geometry: src, before, after: before, collapses: 0, rejectedFlip: 0, boundaryEdges: 0 };
 
   const inc = Array.from({ length: nW }, () => new Set());   // welded id -> face indices
   faces.forEach((f, i) => f.w.forEach((v) => inc[v].add(i)));
@@ -228,15 +233,6 @@ export function decimateSkinned(geo, targetTris, opt = {}) {
     for (const v of nb) push(keep, v);
   }
 
-  /* ---- deviation of the survivors from the original surface, as a sanity number ---- */
-  let maxDev = 0, sumDev = 0, nDev = 0;
-  for (let v = 0; v < nW; v++) {
-    if (!alive[v]) continue;
-    const p = P(v);
-    const d = Math.sqrt(Math.max(0, qEval(Q[v], p[0], p[1], p[2])) / Math.max(1e-12, quadricWeight(Q[v])));
-    if (Number.isFinite(d)) { maxDev = Math.max(maxDev, d); sumDev += d; nDev++; }
-  }
-
   /* ---- emit ---- */
   const used = new Map();                               // original vertex id -> new id
   const outIdx = [];
@@ -264,11 +260,8 @@ export function decimateSkinned(geo, targetTris, opt = {}) {
   }
   out.setIndex(order.length < 65536 ? new THREE.Uint16BufferAttribute(outIdx, 1)
                                     : new THREE.Uint32BufferAttribute(outIdx, 1));
-  return { geometry: out, before, after: outIdx.length / 3, collapses, rejectedFlip,
-           maxDev, meanDev: nDev ? sumDev / nDev : 0, boundaryEdges };
+  return { geometry: out, before, after: outIdx.length / 3, collapses, rejectedFlip, boundaryEdges };
 }
-
-function quadricWeight(q) { return q[9] > 0 ? 1 : 1; }
 
 /** Of `cands` (original vertices at the surviving position) the one whose authored normal is
  *  closest to the corner being replaced. With no normals, the first — deterministic either way. */
