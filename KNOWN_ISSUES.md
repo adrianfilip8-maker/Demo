@@ -54628,7 +54628,38 @@ tail that reads as a fox tail**. She is also visibly shorter, which is §704.5 a
 > — but §702.9 did this better by clearing all four through camDot, and a future round should. The
 > `carmsil-*` frames are the unoccluded evidence for the sculpt, which is why they are listed first.
 
-### §704.9 How to revert
+### §704.9 The suite
+
+`node --test "tests/*.test.mjs"` from a **clean worktree at the pushed commit `de324d1`**, holding
+the FIFO capture lock so no run shared the CPU with a capture, cwd checked from **inside** the
+spawned command rather than after it (§694 — a deleted cwd makes `spawn` accuse the binary):
+
+| run | result | duration | cwd at end |
+|---|---|---|---|
+| 1 | **1056 / 1056**, 0 fail | 247.6 s | exists |
+| 2 | **1056 / 1056**, 0 fail | 243.1 s | exists |
+| 3 | **1056 / 1056**, 0 fail | 240.1 s | exists |
+
+1034 was the baseline; the 22 new arms are `tests/carmnative.test.mjs`. All three runs are quoted
+because that is the rule §703.2 earned, and the rule cuts against me here as much as for anyone:
+`framebudget` F3 GC is a documented ~1-in-3 flake and `padrest` R1b ~1-in-5, so three consecutive
+greens has a prior around 15% even on a tree that is fine. **Three greens is a fact about three
+runs.** It says this tree can pass and says nothing about whether those arms have stopped flaking.
+
+Every one of the 22 new arms can reject, and the ones that gate something exercise BOTH directions
+(§418.3): the head fiducial passes the recovered head at 2.6e-7 m and rejects `Hair_LP` at
+7.6e-2 m; the prop rule drops the three pistol meshes and is shown keeping `Legs` at 3.6% non-body
+weight; the weapon-stance discriminator finds `Idle`/`Lookaround`/`PatrolWalk`/`Shoot` under 0.15 m
+and requires `CasualWalking`/`Run` over 0.30 m; the pistol arm asserts both that it costs exactly
+1,672 triangles and that 30,096 does not fit; the mixer arm requires joints to move under a clip
+and a driver with no clips to move nothing; and both look-overlay arms assert the gaze does
+something before asserting it does not drift, so neither can pass on a no-op.
+
+Two arms read the shipped source rather than restating it — the twelve clip names are grepped out
+of `Guard.js`, and §697's `groundProbe` / `groundSlopeMax` are asserted at 0.06 and 30 so this lane
+cannot quietly move them.
+
+### §704.10 How to revert
 
 One token, and the shipped path is the default:
 
