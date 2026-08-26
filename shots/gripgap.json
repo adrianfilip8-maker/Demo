@@ -1,0 +1,2322 @@
+{
+ "godot": {
+  "regime": "godot",
+  "limbOpen": null,
+  "origin": {
+   "pole_climb": "godot:PoleClimbing",
+   "ledge_hang": "godot:LedgeGrab Idle",
+   "hook_swing": "godot:CaneSwing",
+   "hook_grab": "godot:CaneSwing Grab",
+   "rail_walk": "godot:railrun"
+  },
+  "palm": {
+   "L": 0.2089,
+   "R": 0.195,
+   "fistR": 0.1157
+  },
+  "verbs": [
+   {
+    "verb": "pole_climb",
+    "label": "SE drainpipe (§495.C)",
+    "clip": "godot:PoleClimbing",
+    "prop": {
+     "kind": "cylinder",
+     "x": 21.350000381469727,
+     "z": -2,
+     "r": 0.18,
+     "hold": 0.452,
+     "top": 9.6,
+     "bottom": 0
+    },
+    "entry": {
+     "at": 0,
+     "path": "poleClimb@0",
+     "state": "poleClimb"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": 0.1548,
+      "mean": 0.2698,
+      "max": 0.4671
+     },
+     "R": {
+      "min": 0.1402,
+      "mean": 0.2508,
+      "max": 0.416
+     },
+     "best": {
+      "min": 0.1402,
+      "mean": 0.1857,
+      "max": 0.2377
+     },
+     "bestWorst": 0.2377,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": 0.0953,
+       "mean": 0.2067,
+       "max": 0.3697
+      },
+      "R": {
+       "min": 0.1134,
+       "mean": 0.1894,
+       "max": 0.3341
+      },
+      "best": {
+       "min": 0.0953,
+       "mean": 0.1331,
+       "max": 0.1774
+      },
+      "bestWorst": 0.1774
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 0,
+       "mean": 0.0417,
+       "max": 1
+      },
+      "R": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "best": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "bestWorst": 0
+     },
+     "straddleFrac": 1
+    },
+    "live": {
+     "live": [
+      {
+       "name": "pole_climb",
+       "w": 1,
+       "t": 2.1
+      }
+     ],
+     "offBindDeg": 94.9
+    },
+    "failBind": {
+     "L": 0.6113133880796013,
+     "R": 0.6155697049864939
+    },
+    "failProp": {
+     "peer": "obelisk rope (§495.A)",
+     "L": 25.721213835938592,
+     "R": 26.06979418848858
+    }
+   },
+   {
+    "verb": "pole_climb",
+    "label": "obelisk rope (§495.A)",
+    "clip": "godot:PoleClimbing",
+    "prop": {
+     "kind": "cylinder",
+     "x": 0,
+     "z": 13,
+     "r": 0.18,
+     "hold": 0.452,
+     "top": 20.4,
+     "bottom": 9.6
+    },
+    "entry": {
+     "at": 6,
+     "path": "move@0 poleClimb@6",
+     "state": "poleClimb"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": 0.1548,
+      "mean": 0.2697,
+      "max": 0.4671
+     },
+     "R": {
+      "min": 0.1402,
+      "mean": 0.2507,
+      "max": 0.416
+     },
+     "best": {
+      "min": 0.1402,
+      "mean": 0.1857,
+      "max": 0.2377
+     },
+     "bestWorst": 0.2377,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": 0.0953,
+       "mean": 0.2067,
+       "max": 0.37
+      },
+      "R": {
+       "min": 0.1134,
+       "mean": 0.1895,
+       "max": 0.3342
+      },
+      "best": {
+       "min": 0.0953,
+       "mean": 0.1331,
+       "max": 0.1775
+      },
+      "bestWorst": 0.1775
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "R": {
+       "min": 0,
+       "mean": 0.9375,
+       "max": 5
+      },
+      "best": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "bestWorst": 0
+     },
+     "straddleFrac": 1
+    },
+    "live": {
+     "live": [
+      {
+       "name": "pole_climb",
+       "w": 1,
+       "t": 2.1
+      }
+     ],
+     "offBindDeg": 94.9
+    },
+    "failBind": {
+     "L": 0.6113133880795987,
+     "R": 0.6155697049864914
+    },
+    "failProp": {
+     "peer": "SE drainpipe (§495.C)",
+     "L": 26.10994786854319,
+     "R": 25.758905870910496
+    }
+   },
+   {
+    "verb": "ledge_hang",
+    "label": "temple terrace lip, south face (top 5.20)",
+    "clip": "godot:LedgeGrab Idle",
+    "prop": {
+     "kind": "lip",
+     "edge": [
+      0,
+      5.2,
+      5.4
+     ],
+     "n": [
+      1.2246467991473532e-16,
+      -1
+     ],
+     "y": 5.199999809265137
+    },
+    "entry": {
+     "at": 18,
+     "path": "move@0 jump@8 ledgeHang@18",
+     "state": "ledgeHang"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": 0.0437,
+      "mean": 0.0995,
+      "max": 0.1617
+     },
+     "R": {
+      "min": 0.358,
+      "mean": 0.4301,
+      "max": 0.4962
+     },
+     "best": {
+      "min": 0.0437,
+      "mean": 0.0995,
+      "max": 0.1617
+     },
+     "bestWorst": 0.1617,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": 0.1054,
+       "mean": 0.1183,
+       "max": 0.1388
+      },
+      "R": {
+       "min": 0.3009,
+       "mean": 0.3409,
+       "max": 0.3831
+      },
+      "best": {
+       "min": 0.1054,
+       "mean": 0.1183,
+       "max": 0.1388
+      },
+      "bestWorst": 0.1388
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "R": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "best": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "bestWorst": 0
+     },
+     "straddleFrac": 1,
+     "aboveFeet": {
+      "palm": {
+       "n": 96,
+       "L": {
+        "min": 1.6501,
+        "mean": 1.7149,
+        "max": 1.7806
+       },
+       "R": {
+        "min": 1.1465,
+        "mean": 1.2101,
+        "max": 1.2783
+       },
+       "best": {
+        "min": 1.1465,
+        "mean": 1.2101,
+        "max": 1.2783
+       },
+       "bestWorst": 1.2783
+      },
+      "wrist": {
+       "n": 96,
+       "L": {
+        "min": 1.5457,
+        "mean": 1.592,
+        "max": 1.6396
+       },
+       "R": {
+        "min": 1.3247,
+        "mean": 1.3742,
+        "max": 1.428
+       },
+       "best": {
+        "min": 1.3247,
+        "mean": 1.3742,
+        "max": 1.428
+       },
+       "bestWorst": 1.428
+      },
+      "hangDrop": 1.62
+     },
+     "split": {
+      "outL": {
+       "min": -0.0476,
+       "mean": -0.0098,
+       "max": 0.0194
+      },
+      "upL": {
+       "min": 0.0301,
+       "mean": 0.0949,
+       "max": 0.1606
+      },
+      "outR": {
+       "min": 0.1066,
+       "mean": 0.13,
+       "max": 0.1666
+      },
+      "upR": {
+       "min": -0.4735,
+       "mean": -0.4099,
+       "max": -0.3417
+      }
+     }
+    },
+    "detail": {
+     "L": {
+      "out": 0.0025764440835605766,
+      "up": 0.05153360146478292,
+      "along": 0.6006647001090684,
+      "line": 0.05159796647201118
+     },
+     "R": {
+      "out": 0.16420877777241655,
+      "up": -0.45408165725018,
+      "along": -0.5646103668277588,
+      "line": 0.48286092630133254
+     }
+    },
+    "live": {
+     "live": [
+      {
+       "name": "ledge_hang",
+       "w": 1,
+       "t": 2
+      }
+     ],
+     "offBindDeg": 102.9
+    },
+    "failBind": {
+     "L": 0.873385171976938,
+     "R": 0.8542472060073552
+    },
+    "failProp": {
+     "peer": "temple terrace lip, east face (top 5.20)",
+     "L": 7.200849103808403,
+     "R": 6.052447302444892
+    }
+   },
+   {
+    "verb": "ledge_hang",
+    "label": "temple terrace lip, east face (top 5.20)",
+    "clip": "godot:LedgeGrab Idle",
+    "prop": {
+     "kind": "lip",
+     "edge": [
+      -6.6,
+      5.2,
+      5.85
+     ],
+     "n": [
+      -1,
+      -2.220446049250313e-16
+     ],
+     "y": 5.199999809265137
+    },
+    "entry": {
+     "at": 22,
+     "path": "move@0 jump@12 ledgeHang@22",
+     "state": "ledgeHang"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": 0.0465,
+      "mean": 0.0985,
+      "max": 0.1637
+     },
+     "R": {
+      "min": 0.3554,
+      "mean": 0.4302,
+      "max": 0.4938
+     },
+     "best": {
+      "min": 0.0465,
+      "mean": 0.0985,
+      "max": 0.1637
+     },
+     "bestWorst": 0.1637,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": 0.1067,
+       "mean": 0.1168,
+       "max": 0.1358
+      },
+      "R": {
+       "min": 0.3004,
+       "mean": 0.3403,
+       "max": 0.3805
+      },
+      "best": {
+       "min": 0.1067,
+       "mean": 0.1168,
+       "max": 0.1358
+      },
+      "bestWorst": 0.1358
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "R": {
+       "min": 1,
+       "mean": 1,
+       "max": 1
+      },
+      "best": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "bestWorst": 0
+     },
+     "straddleFrac": 1,
+     "aboveFeet": {
+      "palm": {
+       "n": 96,
+       "L": {
+        "min": 1.6536,
+        "mean": 1.7142,
+        "max": 1.7812
+       },
+       "R": {
+        "min": 1.1514,
+        "mean": 1.2098,
+        "max": 1.2838
+       },
+       "best": {
+        "min": 1.1514,
+        "mean": 1.2098,
+        "max": 1.2838
+       },
+       "bestWorst": 1.2838
+      },
+      "wrist": {
+       "n": 96,
+       "L": {
+        "min": 1.5486,
+        "mean": 1.5916,
+        "max": 1.6404
+       },
+       "R": {
+        "min": 1.3269,
+        "mean": 1.3741,
+        "max": 1.4316
+       },
+       "best": {
+        "min": 1.3269,
+        "mean": 1.3741,
+        "max": 1.4316
+       },
+       "bestWorst": 1.4316
+      },
+      "hangDrop": 1.62
+     },
+     "split": {
+      "outL": {
+       "min": -0.0375,
+       "mean": -0.0118,
+       "max": 0.0289
+      },
+      "upL": {
+       "min": 0.0336,
+       "mean": 0.0942,
+       "max": 0.1612
+      },
+      "outR": {
+       "min": 0.1009,
+       "mean": 0.1293,
+       "max": 0.1558
+      },
+      "upR": {
+       "min": -0.4686,
+       "mean": -0.4102,
+       "max": -0.3362
+      }
+     }
+    },
+    "detail": {
+     "L": {
+      "out": -0.01801289486782562,
+      "up": 0.04683473626872914,
+      "along": 0.6209180848369957,
+      "line": 0.05017924773131569
+     },
+     "R": {
+      "out": 0.1540874195191336,
+      "up": -0.4600901878466237,
+      "along": -0.5758943510925993,
+      "line": 0.4852070834260429
+     }
+    },
+    "live": {
+     "live": [
+      {
+       "name": "ledge_hang",
+       "w": 1,
+       "t": 2
+      }
+     ],
+     "offBindDeg": 102.9
+    },
+    "failBind": {
+     "L": 0.873385171976938,
+     "R": 0.8542472060073549
+    },
+    "failProp": {
+     "peer": "temple terrace lip, south face (top 5.20)",
+     "L": 0.17721869647334104,
+     "R": 1.1243408629356855
+    }
+   },
+   {
+    "verb": "ledge_hang",
+    "label": "temple plinth lip, south face (top 2.00)",
+    "clip": "godot:LedgeGrab Idle",
+    "prop": {
+     "kind": "lip",
+     "edge": [
+      0,
+      2,
+      2.6
+     ],
+     "n": [
+      1.2246467991473532e-16,
+      -1
+     ],
+     "y": 2
+    },
+    "entry": {
+     "at": 39,
+     "path": "move@0 jump@8 wallRun@9 fall@13 ledgeHang@39",
+     "state": "ledgeHang"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": 0.046,
+      "mean": 0.0992,
+      "max": 0.1631
+     },
+     "R": {
+      "min": 0.356,
+      "mean": 0.4279,
+      "max": 0.4934
+     },
+     "best": {
+      "min": 0.046,
+      "mean": 0.0992,
+      "max": 0.1631
+     },
+     "bestWorst": 0.1631,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": 0.1115,
+       "mean": 0.1201,
+       "max": 0.1338
+      },
+      "R": {
+       "min": 0.3006,
+       "mean": 0.3397,
+       "max": 0.3768
+      },
+      "best": {
+       "min": 0.1115,
+       "mean": 0.1201,
+       "max": 0.1338
+      },
+      "bestWorst": 0.1338
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 1,
+       "mean": 1,
+       "max": 1
+      },
+      "R": {
+       "min": 0,
+       "mean": 0.4583,
+       "max": 1
+      },
+      "best": {
+       "min": 0,
+       "mean": 0.4583,
+       "max": 1
+      },
+      "bestWorst": 1
+     },
+     "straddleFrac": 1,
+     "aboveFeet": {
+      "palm": {
+       "n": 96,
+       "L": {
+        "min": 1.6538,
+        "mean": 1.7154,
+        "max": 1.781
+       },
+       "R": {
+        "min": 1.1506,
+        "mean": 1.2135,
+        "max": 1.2825
+       },
+       "best": {
+        "min": 1.1506,
+        "mean": 1.2135,
+        "max": 1.2825
+       },
+       "bestWorst": 1.2825
+      },
+      "wrist": {
+       "n": 96,
+       "L": {
+        "min": 1.5485,
+        "mean": 1.5928,
+        "max": 1.6402
+       },
+       "R": {
+        "min": 1.3276,
+        "mean": 1.3769,
+        "max": 1.4308
+       },
+       "best": {
+        "min": 1.3276,
+        "mean": 1.3769,
+        "max": 1.4308
+       },
+       "bestWorst": 1.4308
+      },
+      "hangDrop": 1.62
+     },
+     "split": {
+      "outL": {
+       "min": -0.0399,
+       "mean": -0.0066,
+       "max": 0.0263
+      },
+      "upL": {
+       "min": 0.0338,
+       "mean": 0.0954,
+       "max": 0.161
+      },
+      "outR": {
+       "min": 0.105,
+       "mean": 0.1336,
+       "max": 0.1613
+      },
+      "upR": {
+       "min": -0.4694,
+       "mean": -0.4065,
+       "max": -0.3375
+      }
+     }
+    },
+    "detail": {
+     "L": {
+      "out": -0.03567786462996995,
+      "up": 0.04465770845102268,
+      "along": 0.6337824451857487,
+      "line": 0.057159609416536465
+     },
+     "R": {
+      "out": 0.1465911319198411,
+      "up": -0.46161586263562526,
+      "along": -0.5829303166183892,
+      "line": 0.48433270031495157
+     }
+    },
+    "live": {
+     "live": [
+      {
+       "name": "ledge_hang",
+       "w": 1,
+       "t": 2
+      }
+     ],
+     "offBindDeg": 102.9
+    },
+    "failBind": {
+     "L": 0.8733851719769379,
+     "R": 0.8542472060073548
+    },
+    "failProp": {
+     "peer": "temple terrace lip, south face (top 5.20)",
+     "L": 4.194956778345504,
+     "R": 4.699981977224079
+    }
+   },
+   {
+    "verb": "hook_swing",
+    "label": "main-0 (courtyard chain)",
+    "clip": "godot:CaneSwing",
+    "prop": {
+     "kind": "ring",
+     "C": [
+      20,
+      14.9,
+      27
+     ],
+     "N": [
+      -0.661,
+      0.01,
+      -0.751
+     ],
+     "R": 0.62,
+     "tube": 0.115,
+     "mesh": "hooks:rings"
+    },
+    "entry": {
+     "at": 9,
+     "path": "move@0 hookSwing@9",
+     "state": "hookSwing"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": 0.6784,
+      "mean": 1.3112,
+      "max": 2.3116
+     },
+     "R": {
+      "min": -0.0455,
+      "mean": 1.3477,
+      "max": 2.6349
+     },
+     "best": {
+      "min": -0.0455,
+      "mean": 1.0239,
+      "max": 2.3116
+     },
+     "bestWorst": 2.3116,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": 0.6139,
+       "mean": 1.2622,
+       "max": 2.1525
+      },
+      "R": {
+       "min": 0.0024,
+       "mean": 1.3069,
+       "max": 2.4507
+      },
+      "best": {
+       "min": 0.0024,
+       "mean": 1.0319,
+       "max": 2.1525
+      },
+      "bestWorst": 2.1525
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 0,
+       "mean": 0.2083,
+       "max": 5
+      },
+      "R": {
+       "min": 0,
+       "mean": 0.3646,
+       "max": 5
+      },
+      "best": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "bestWorst": 0
+     },
+     "tilt": {
+      "min": 0.4716,
+      "mean": 40.9817,
+      "max": 77.8068
+     },
+     "upright": {
+      "n": 12,
+      "L": {
+       "min": 0.7077,
+       "mean": 0.9331,
+       "max": 1.0446
+      },
+      "R": {
+       "min": 0.0275,
+       "mean": 0.4093,
+       "max": 0.7674
+      },
+      "best": {
+       "min": 0.0275,
+       "mean": 0.4093,
+       "max": 0.7674
+      },
+      "bestWorst": 0.7674,
+      "cane": {
+       "min": 0.3212,
+       "mean": 0.6205,
+       "max": 0.9679
+      }
+     },
+     "cane": {
+      "min": 0.2639,
+      "mean": 1.5232,
+      "max": 2.9911
+     },
+     "caneCentre": {
+      "min": 0.357,
+      "mean": 1.7618,
+      "max": 3.2096
+     },
+     "crookRadius": 0.168,
+     "note": "a ring is a point prop; the source hang is ONE-ARMED (§479.8), so hand-to-hand straddle is not the contract — the cane row is"
+    },
+    "live": {
+     "live": [
+      {
+       "name": "hook_swing",
+       "w": 1,
+       "t": 4.1
+      }
+     ],
+     "offBindDeg": 91.9
+    },
+    "failBind": {
+     "L": 2.0011507600093115,
+     "R": 2.069368030475763
+    },
+    "failProp": {
+     "peer": "low-2 (return chain)",
+     "L": 26.094221282143813,
+     "R": 26.61393511999353
+    }
+   },
+   {
+    "verb": "hook_swing",
+    "label": "low-2 (return chain)",
+    "clip": "godot:CaneSwing",
+    "prop": {
+     "kind": "ring",
+     "C": [
+      -6,
+      11.8,
+      14
+     ],
+     "N": [
+      0.7,
+      -0.008,
+      -0.714
+     ],
+     "R": 0.62,
+     "tube": 0.115,
+     "mesh": "hooks:rings"
+    },
+    "entry": {
+     "at": 20,
+     "path": "move@0 tiptoe@4 hookSwing@20",
+     "state": "hookSwing"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": 0.7494,
+      "mean": 1.0047,
+      "max": 1.1935
+     },
+     "R": {
+      "min": -0.0798,
+      "mean": 0.3204,
+      "max": 0.7774
+     },
+     "best": {
+      "min": -0.0798,
+      "mean": 0.3203,
+      "max": 0.7774
+     },
+     "bestWorst": 0.7774,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": 0.6416,
+       "mean": 0.8243,
+       "max": 1.0022
+      },
+      "R": {
+       "min": -0.0163,
+       "mean": 0.1933,
+       "max": 0.5946
+      },
+      "best": {
+       "min": -0.0163,
+       "mean": 0.1933,
+       "max": 0.5946
+      },
+      "bestWorst": 0.5946
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "R": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "best": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "bestWorst": 0
+     },
+     "tilt": {
+      "min": 0.3189,
+      "mean": 9.0639,
+      "max": 14.482
+     },
+     "upright": {
+      "n": 47,
+      "L": {
+       "min": 0.7494,
+       "mean": 0.9183,
+       "max": 1.0917
+      },
+      "R": {
+       "min": -0.0798,
+       "mean": 0.2774,
+       "max": 0.7774
+      },
+      "best": {
+       "min": -0.0798,
+       "mean": 0.2772,
+       "max": 0.7774
+      },
+      "bestWorst": 0.7774,
+      "cane": {
+       "min": 0.1696,
+       "mean": 0.4603,
+       "max": 1.1653
+      }
+     },
+     "cane": {
+      "min": 0.1696,
+      "mean": 0.4639,
+      "max": 1.1653
+     },
+     "caneCentre": {
+      "min": 0.2595,
+      "mean": 0.8817,
+      "max": 1.272
+     },
+     "crookRadius": 0.168,
+     "note": "a ring is a point prop; the source hang is ONE-ARMED (§479.8), so hand-to-hand straddle is not the contract — the cane row is"
+    },
+    "live": {
+     "live": [
+      {
+       "name": "hook_swing",
+       "w": 1,
+       "t": 4.1
+      }
+     ],
+     "offBindDeg": 91.9
+    },
+    "failBind": {
+     "L": 0.9504737148993636,
+     "R": 0.809005888775428
+    },
+    "failProp": {
+     "peer": "main-0 (courtyard chain)",
+     "L": 29.536892314056352,
+     "R": 29.94074778027068
+    }
+   },
+   {
+    "verb": "rail_walk",
+    "label": "colossi-rope (§495.B)",
+    "clip": "godot:railrun",
+    "clipPlayed": "rail_walk",
+    "prop": {
+     "kind": "spline",
+     "len": 12.62
+    },
+    "entry": {
+     "at": 90,
+     "path": "sneak@0 tiptoe@42 railWalk@90",
+     "state": "railWalk"
+    },
+    "stats": {
+     "n": 40,
+     "L": {
+      "min": 0.0243,
+      "mean": 0.1207,
+      "max": 0.1852
+     },
+     "R": {
+      "min": 0.0228,
+      "mean": 0.2602,
+      "max": 0.4514
+     },
+     "best": {
+      "min": 0.0228,
+      "mean": 0.091,
+      "max": 0.1713
+     },
+     "bestWorst": 0.1713,
+     "hands": {
+      "n": 40,
+      "L": {
+       "min": 0.5943,
+       "mean": 0.7121,
+       "max": 0.784
+      },
+      "R": {
+       "min": 0.6621,
+       "mean": 0.7134,
+       "max": 0.7374
+      },
+      "best": {
+       "min": 0.5943,
+       "mean": 0.6888,
+       "max": 0.7374
+      },
+      "bestWorst": 0.7374
+     }
+    },
+    "live": {
+     "live": [
+      {
+       "name": "rail_slide",
+       "w": 1,
+       "t": 1.167
+      },
+      {
+       "name": "rail_walk",
+       "w": 1,
+       "t": 1.901
+      }
+     ],
+     "offBindDeg": 85.4
+    },
+    "note": "FEET, not hands: railWalk has no hand-prop contract — the line is under the soles"
+   },
+   {
+    "verb": "rail_walk",
+    "label": "roof-e",
+    "clip": "godot:railrun",
+    "clipPlayed": "rail_slide",
+    "prop": {
+     "kind": "spline",
+     "len": 31
+    },
+    "entry": {
+     "at": 6,
+     "path": "move@0 railSlide@6",
+     "state": "railSlide"
+    },
+    "stats": {
+     "n": 40,
+     "L": {
+      "min": 0.2318,
+      "mean": 0.2685,
+      "max": 0.352
+     },
+     "R": {
+      "min": 0.2302,
+      "mean": 0.2684,
+      "max": 0.3703
+     },
+     "best": {
+      "min": 0.2302,
+      "mean": 0.2658,
+      "max": 0.352
+     },
+     "bestWorst": 0.352,
+     "hands": {
+      "n": 40,
+      "L": {
+       "min": 0.4975,
+       "mean": 0.5115,
+       "max": 0.5469
+      },
+      "R": {
+       "min": 0.3323,
+       "mean": 0.4258,
+       "max": 0.4692
+      },
+      "best": {
+       "min": 0.3323,
+       "mean": 0.4258,
+       "max": 0.4692
+      },
+      "bestWorst": 0.4692
+     }
+    },
+    "live": {
+     "live": [
+      {
+       "name": "rail_slide",
+       "w": 1,
+       "t": 1.167
+      }
+     ],
+     "offBindDeg": 56.1
+    },
+    "note": "FEET, not hands: railWalk has no hand-prop contract — the line is under the soles"
+   }
+  ]
+ },
+ "proc": {
+  "regime": "proc",
+  "limbOpen": null,
+  "origin": {
+   "pole_climb": "proc",
+   "ledge_hang": "proc",
+   "hook_swing": "proc",
+   "hook_grab": "proc",
+   "rail_walk": "proc"
+  },
+  "palm": {
+   "L": 0.2089,
+   "R": 0.195,
+   "fistR": 0.1157
+  },
+  "verbs": [
+   {
+    "verb": "pole_climb",
+    "label": "SE drainpipe (§495.C)",
+    "clip": "proc",
+    "prop": {
+     "kind": "cylinder",
+     "x": 21.350000381469727,
+     "z": -2,
+     "r": 0.18,
+     "hold": 0.452,
+     "top": 9.6,
+     "bottom": 0
+    },
+    "entry": {
+     "at": 0,
+     "path": "poleClimb@0",
+     "state": "poleClimb"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": 0.0451,
+      "mean": 0.0703,
+      "max": 0.1423
+     },
+     "R": {
+      "min": -0.0186,
+      "mean": 0.0259,
+      "max": 0.0527
+     },
+     "best": {
+      "min": -0.0186,
+      "mean": 0.0258,
+      "max": 0.0527
+     },
+     "bestWorst": 0.0527,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": -0.1195,
+       "mean": -0.055,
+       "max": 0.0703
+      },
+      "R": {
+       "min": -0.1329,
+       "mean": -0.0997,
+       "max": -0.0262
+      },
+      "best": {
+       "min": -0.1329,
+       "mean": -0.0997,
+       "max": -0.0262
+      },
+      "bestWorst": -0.0262
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "R": {
+       "min": 0,
+       "mean": 0.9375,
+       "max": 5
+      },
+      "best": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "bestWorst": 0
+     },
+     "straddleFrac": 0
+    },
+    "live": {
+     "live": [
+      {
+       "name": "pole_climb",
+       "w": 1,
+       "t": 0.661
+      }
+     ],
+     "offBindDeg": 91.7
+    },
+    "failBind": {
+     "L": 0.6113133880796013,
+     "R": 0.6155697049864939
+    },
+    "failProp": {
+     "peer": "obelisk rope (§495.A)",
+     "L": 25.69803077730564,
+     "R": 25.691153978617635
+    }
+   },
+   {
+    "verb": "pole_climb",
+    "label": "obelisk rope (§495.A)",
+    "clip": "proc",
+    "prop": {
+     "kind": "cylinder",
+     "x": 0,
+     "z": 13,
+     "r": 0.18,
+     "hold": 0.452,
+     "top": 20.4,
+     "bottom": 9.6
+    },
+    "entry": {
+     "at": 6,
+     "path": "move@0 poleClimb@6",
+     "state": "poleClimb"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": 0.0444,
+      "mean": 0.0705,
+      "max": 0.1424
+     },
+     "R": {
+      "min": -0.0186,
+      "mean": 0.0257,
+      "max": 0.0527
+     },
+     "best": {
+      "min": -0.0186,
+      "mean": 0.0257,
+      "max": 0.0527
+     },
+     "bestWorst": 0.0527,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": -0.1169,
+       "mean": -0.0542,
+       "max": 0.0704
+      },
+      "R": {
+       "min": -0.1319,
+       "mean": -0.0995,
+       "max": -0.0261
+      },
+      "best": {
+       "min": -0.1319,
+       "mean": -0.0995,
+       "max": -0.0261
+      },
+      "bestWorst": -0.0261
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "R": {
+       "min": 0,
+       "mean": 0.0104,
+       "max": 1
+      },
+      "best": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "bestWorst": 0
+     },
+     "straddleFrac": 0
+    },
+    "live": {
+     "live": [
+      {
+       "name": "pole_climb",
+       "w": 1,
+       "t": 0.684
+      }
+     ],
+     "offBindDeg": 91.5
+    },
+    "failBind": {
+     "L": 0.6113133880795987,
+     "R": 0.6155697049864914
+    },
+    "failProp": {
+     "peer": "SE drainpipe (§495.C)",
+     "L": 26.127867914376505,
+     "R": 26.133143136671205
+    }
+   },
+   {
+    "verb": "ledge_hang",
+    "label": "temple terrace lip, south face (top 5.20)",
+    "clip": "proc",
+    "prop": {
+     "kind": "lip",
+     "edge": [
+      0,
+      5.2,
+      5.4
+     ],
+     "n": [
+      1.2246467991473532e-16,
+      -1
+     ],
+     "y": 5.199999809265137
+    },
+    "entry": {
+     "at": 18,
+     "path": "move@0 jump@8 ledgeHang@18",
+     "state": "ledgeHang"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": 0.1912,
+      "mean": 0.2206,
+      "max": 0.2389
+     },
+     "R": {
+      "min": 0.1842,
+      "mean": 0.214,
+      "max": 0.2335
+     },
+     "best": {
+      "min": 0.1842,
+      "mean": 0.214,
+      "max": 0.2335
+     },
+     "bestWorst": 0.2335,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": 0.0435,
+       "mean": 0.0745,
+       "max": 0.097
+      },
+      "R": {
+       "min": 0.0379,
+       "mean": 0.0906,
+       "max": 0.1283
+      },
+      "best": {
+       "min": 0.0379,
+       "mean": 0.0734,
+       "max": 0.097
+      },
+      "bestWorst": 0.097
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 0,
+       "mean": 3.125,
+       "max": 5
+      },
+      "R": {
+       "min": 0,
+       "mean": 3.6458,
+       "max": 5
+      },
+      "best": {
+       "min": 0,
+       "mean": 3.125,
+       "max": 5
+      },
+      "bestWorst": 5
+     },
+     "straddleFrac": 1,
+     "aboveFeet": {
+      "palm": {
+       "n": 96,
+       "L": {
+        "min": 1.5866,
+        "mean": 1.6137,
+        "max": 1.6503
+       },
+       "R": {
+        "min": 1.5371,
+        "mean": 1.5797,
+        "max": 1.6377
+       },
+       "best": {
+        "min": 1.5371,
+        "mean": 1.5797,
+        "max": 1.6377
+       },
+       "bestWorst": 1.6377
+      },
+      "wrist": {
+       "n": 96,
+       "L": {
+        "min": 1.5287,
+        "mean": 1.549,
+        "max": 1.5771
+       },
+       "R": {
+        "min": 1.4942,
+        "mean": 1.5317,
+        "max": 1.5834
+       },
+       "best": {
+        "min": 1.4942,
+        "mean": 1.5303,
+        "max": 1.5771
+       },
+       "bestWorst": 1.5771
+      },
+      "hangDrop": 1.62
+     },
+     "split": {
+      "outL": {
+       "min": -0.2377,
+       "mean": -0.2192,
+       "max": -0.1909
+      },
+      "upL": {
+       "min": -0.0334,
+       "mean": -0.0063,
+       "max": 0.0303
+      },
+      "outR": {
+       "min": -0.222,
+       "mean": -0.2067,
+       "max": -0.1777
+      },
+      "upR": {
+       "min": -0.0829,
+       "mean": -0.0403,
+       "max": 0.0177
+      }
+     }
+    },
+    "detail": {
+     "L": {
+      "out": -0.19087092530493696,
+      "up": -0.011524830629858762,
+      "along": 0.21227772115925686,
+      "line": 0.19121854472777935
+     },
+     "R": {
+      "out": -0.17773075803483,
+      "up": -0.048322195536114165,
+      "along": -0.2648841666697045,
+      "line": 0.18418267272755526
+     }
+    },
+    "live": {
+     "live": [
+      {
+       "name": "ledge_hang",
+       "w": 1,
+       "t": 2
+      }
+     ],
+     "offBindDeg": 137.7
+    },
+    "failBind": {
+     "L": 0.873385171976938,
+     "R": 0.8542472060073552
+    },
+    "failProp": {
+     "peer": "temple terrace lip, east face (top 5.20)",
+     "L": 6.8122874701762415,
+     "R": 6.335300125071196
+    }
+   },
+   {
+    "verb": "ledge_hang",
+    "label": "temple terrace lip, east face (top 5.20)",
+    "clip": "proc",
+    "prop": {
+     "kind": "lip",
+     "edge": [
+      -6.6,
+      5.2,
+      5.85
+     ],
+     "n": [
+      -1,
+      -2.220446049250313e-16
+     ],
+     "y": 5.199999809265137
+    },
+    "entry": {
+     "at": 22,
+     "path": "move@0 jump@12 ledgeHang@22",
+     "state": "ledgeHang"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": 0.1872,
+      "mean": 0.2224,
+      "max": 0.2469
+     },
+     "R": {
+      "min": 0.18,
+      "mean": 0.2155,
+      "max": 0.242
+     },
+     "best": {
+      "min": 0.18,
+      "mean": 0.2155,
+      "max": 0.242
+     },
+     "bestWorst": 0.242,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": 0.0464,
+       "mean": 0.0763,
+       "max": 0.0988
+      },
+      "R": {
+       "min": 0.0399,
+       "mean": 0.0921,
+       "max": 0.1299
+      },
+      "best": {
+       "min": 0.0399,
+       "mean": 0.075,
+       "max": 0.0988
+      },
+      "bestWorst": 0.0988
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 0,
+       "mean": 2.5417,
+       "max": 4
+      },
+      "R": {
+       "min": 0,
+       "mean": 3,
+       "max": 4
+      },
+      "best": {
+       "min": 0,
+       "mean": 2.5417,
+       "max": 4
+      },
+      "bestWorst": 4
+     },
+     "straddleFrac": 1,
+     "aboveFeet": {
+      "palm": {
+       "n": 96,
+       "L": {
+        "min": 1.589,
+        "mean": 1.6124,
+        "max": 1.6452
+       },
+       "R": {
+        "min": 1.538,
+        "mean": 1.5778,
+        "max": 1.6328
+       },
+       "best": {
+        "min": 1.538,
+        "mean": 1.5778,
+        "max": 1.6328
+       },
+       "bestWorst": 1.6328
+      },
+      "wrist": {
+       "n": 96,
+       "L": {
+        "min": 1.5304,
+        "mean": 1.5482,
+        "max": 1.5738
+       },
+       "R": {
+        "min": 1.4946,
+        "mean": 1.5303,
+        "max": 1.5801
+       },
+       "best": {
+        "min": 1.4946,
+        "mean": 1.529,
+        "max": 1.5738
+       },
+       "bestWorst": 1.5738
+      },
+      "hangDrop": 1.62
+     },
+     "split": {
+      "outL": {
+       "min": -0.245,
+       "mean": -0.2212,
+       "max": -0.1857
+      },
+      "upL": {
+       "min": -0.031,
+       "mean": -0.0076,
+       "max": 0.0252
+      },
+      "outR": {
+       "min": -0.2278,
+       "mean": -0.2086,
+       "max": -0.1796
+      },
+      "upR": {
+       "min": -0.082,
+       "mean": -0.0422,
+       "max": 0.0128
+      }
+     }
+    },
+    "detail": {
+     "L": {
+      "out": -0.21274271061774103,
+      "up": -0.014011000562643261,
+      "along": 0.22054497945967905,
+      "line": 0.21320358594017663
+     },
+     "R": {
+      "out": -0.19907869831651143,
+      "up": -0.051951200231781236,
+      "along": -0.27385795076705927,
+      "line": 0.2057456082858616
+     }
+    },
+    "live": {
+     "live": [
+      {
+       "name": "ledge_hang",
+       "w": 1,
+       "t": 2
+      }
+     ],
+     "offBindDeg": 137.7
+    },
+    "failBind": {
+     "L": 0.873385171976938,
+     "R": 0.8542472060073549
+    },
+    "failProp": {
+     "peer": "temple terrace lip, south face (top 5.20)",
+     "L": 0.22988240457402234,
+     "R": 0.7257198356887152
+    }
+   },
+   {
+    "verb": "ledge_hang",
+    "label": "temple plinth lip, south face (top 2.00)",
+    "clip": "proc",
+    "prop": {
+     "kind": "lip",
+     "edge": [
+      0,
+      2,
+      2.6
+     ],
+     "n": [
+      1.2246467991473532e-16,
+      -1
+     ],
+     "y": 2
+    },
+    "entry": {
+     "at": 39,
+     "path": "move@0 jump@8 wallRun@9 fall@13 ledgeHang@39",
+     "state": "ledgeHang"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": 0.1961,
+      "mean": 0.2163,
+      "max": 0.2351
+     },
+     "R": {
+      "min": 0.1881,
+      "mean": 0.2103,
+      "max": 0.2305
+     },
+     "best": {
+      "min": 0.1881,
+      "mean": 0.2103,
+      "max": 0.2305
+     },
+     "bestWorst": 0.2305,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": 0.0438,
+       "mean": 0.0771,
+       "max": 0.0993
+      },
+      "R": {
+       "min": 0.038,
+       "mean": 0.0929,
+       "max": 0.1306
+      },
+      "best": {
+       "min": 0.038,
+       "mean": 0.0758,
+       "max": 0.0993
+      },
+      "bestWorst": 0.0993
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 1,
+       "mean": 1.6563,
+       "max": 2
+      },
+      "R": {
+       "min": 1,
+       "mean": 1.7604,
+       "max": 2
+      },
+      "best": {
+       "min": 1,
+       "mean": 1.6563,
+       "max": 2
+      },
+      "bestWorst": 2
+     },
+     "straddleFrac": 1,
+     "aboveFeet": {
+      "palm": {
+       "n": 96,
+       "L": {
+        "min": 1.582,
+        "mean": 1.6086,
+        "max": 1.6494
+       },
+       "R": {
+        "min": 1.5333,
+        "mean": 1.5749,
+        "max": 1.6368
+       },
+       "best": {
+        "min": 1.5333,
+        "mean": 1.5749,
+        "max": 1.6368
+       },
+       "bestWorst": 1.6368
+      },
+      "wrist": {
+       "n": 96,
+       "L": {
+        "min": 1.5256,
+        "mean": 1.5456,
+        "max": 1.5765
+       },
+       "R": {
+        "min": 1.4916,
+        "mean": 1.5284,
+        "max": 1.5828
+       },
+       "best": {
+        "min": 1.4916,
+        "mean": 1.5271,
+        "max": 1.5765
+       },
+       "bestWorst": 1.5765
+      },
+      "hangDrop": 1.62
+     },
+     "split": {
+      "outL": {
+       "min": -0.2333,
+       "mean": -0.2145,
+       "max": -0.1948
+      },
+      "upL": {
+       "min": -0.038,
+       "mean": -0.0114,
+       "max": 0.0294
+      },
+      "outR": {
+       "min": -0.2178,
+       "mean": -0.202,
+       "max": -0.1881
+      },
+      "upR": {
+       "min": -0.0867,
+       "mean": -0.0451,
+       "max": 0.0168
+      }
+     }
+    },
+    "detail": {
+     "L": {
+      "out": -0.2312362225986275,
+      "up": -0.019040480467077625,
+      "along": 0.2257659648744433,
+      "line": 0.23201881505192457
+     },
+     "R": {
+      "out": -0.21704702039880977,
+      "up": -0.05773049809405184,
+      "along": -0.27963739816989686,
+      "line": 0.224593453765217
+     }
+    },
+    "live": {
+     "live": [
+      {
+       "name": "ledge_hang",
+       "w": 1,
+       "t": 2
+      }
+     ],
+     "offBindDeg": 137.7
+    },
+    "failBind": {
+     "L": 0.8733851719769379,
+     "R": 0.8542472060073548
+    },
+    "failProp": {
+     "peer": "temple terrace lip, south face (top 5.20)",
+     "L": 4.118345474693435,
+     "R": 4.157457707025049
+    }
+   },
+   {
+    "verb": "hook_swing",
+    "label": "main-0 (courtyard chain)",
+    "clip": "proc",
+    "prop": {
+     "kind": "ring",
+     "C": [
+      20,
+      14.9,
+      27
+     ],
+     "N": [
+      -0.661,
+      0.01,
+      -0.751
+     ],
+     "R": 0.62,
+     "tube": 0.115,
+     "mesh": "hooks:rings"
+    },
+    "entry": {
+     "at": 9,
+     "path": "move@0 hookSwing@9",
+     "state": "hookSwing"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": -0.0214,
+      "mean": 1.3895,
+      "max": 2.5498
+     },
+     "R": {
+      "min": 0.0069,
+      "mean": 1.3607,
+      "max": 2.5429
+     },
+     "best": {
+      "min": -0.0214,
+      "mean": 1.3337,
+      "max": 2.5429
+     },
+     "bestWorst": 2.5429,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": -0.0945,
+       "mean": 1.3475,
+       "max": 2.4612
+      },
+      "R": {
+       "min": -0.0872,
+       "mean": 1.3266,
+       "max": 2.4529
+      },
+      "best": {
+       "min": -0.0945,
+       "mean": 1.3118,
+       "max": 2.4529
+      },
+      "bestWorst": 2.4529
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 0,
+       "mean": 0.2604,
+       "max": 5
+      },
+      "R": {
+       "min": 0,
+       "mean": 0.2604,
+       "max": 5
+      },
+      "best": {
+       "min": 0,
+       "mean": 0.2083,
+       "max": 5
+      },
+      "bestWorst": 5
+     },
+     "tilt": {
+      "min": 0.4716,
+      "mean": 40.9817,
+      "max": 77.8068
+     },
+     "upright": {
+      "n": 12,
+      "L": {
+       "min": 0.0912,
+       "mean": 0.3624,
+       "max": 0.8042
+      },
+      "R": {
+       "min": 0.0069,
+       "mean": 0.3268,
+       "max": 0.7879
+      },
+      "best": {
+       "min": 0.0069,
+       "mean": 0.3266,
+       "max": 0.7879
+      },
+      "bestWorst": 0.7879,
+      "cane": {
+       "min": 0.2736,
+       "mean": 0.5282,
+       "max": 0.9416
+      }
+     },
+     "cane": {
+      "min": 0.0586,
+      "mean": 1.5121,
+      "max": 2.7024
+     },
+     "caneCentre": {
+      "min": 0.2831,
+      "mean": 1.6214,
+      "max": 2.9405
+     },
+     "crookRadius": 0.168,
+     "note": "a ring is a point prop; the source hang is ONE-ARMED (§479.8), so hand-to-hand straddle is not the contract — the cane row is"
+    },
+    "live": {
+     "live": [
+      {
+       "name": "hook_swing",
+       "w": 1,
+       "t": 4.1
+      }
+     ],
+     "offBindDeg": 123.4
+    },
+    "failBind": {
+     "L": 2.0011507600093115,
+     "R": 2.069368030475763
+    },
+    "failProp": {
+     "peer": "low-2 (return chain)",
+     "L": 26.349815657039237,
+     "R": 26.255018860285325
+    }
+   },
+   {
+    "verb": "hook_swing",
+    "label": "low-2 (return chain)",
+    "clip": "proc",
+    "prop": {
+     "kind": "ring",
+     "C": [
+      -6,
+      11.8,
+      14
+     ],
+     "N": [
+      0.7,
+      -0.008,
+      -0.714
+     ],
+     "R": 0.62,
+     "tube": 0.115,
+     "mesh": "hooks:rings"
+    },
+    "entry": {
+     "at": 20,
+     "path": "move@0 tiptoe@4 hookSwing@20",
+     "state": "hookSwing"
+    },
+    "stats": {
+     "n": 96,
+     "L": {
+      "min": -0.1006,
+      "mean": 0.4054,
+      "max": 0.9664
+     },
+     "R": {
+      "min": -0.0645,
+      "mean": 0.5079,
+      "max": 1.0034
+     },
+     "best": {
+      "min": -0.1006,
+      "mean": 0.3843,
+      "max": 0.9664
+     },
+     "bestWorst": 0.9664,
+     "wrist": {
+      "n": 96,
+      "L": {
+       "min": -0.1026,
+       "mean": 0.3848,
+       "max": 0.8972
+      },
+      "R": {
+       "min": -0.0524,
+       "mean": 0.4438,
+       "max": 0.916
+      },
+      "best": {
+       "min": -0.1026,
+       "mean": 0.3728,
+       "max": 0.8972
+      },
+      "bestWorst": 0.8972
+     },
+     "pen": {
+      "n": 96,
+      "L": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "R": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "best": {
+       "min": 0,
+       "mean": 0,
+       "max": 0
+      },
+      "bestWorst": 0
+     },
+     "tilt": {
+      "min": 0.3189,
+      "mean": 9.0639,
+      "max": 14.482
+     },
+     "upright": {
+      "n": 47,
+      "L": {
+       "min": -0.1006,
+       "mean": 0.2395,
+       "max": 0.8601
+      },
+      "R": {
+       "min": -0.0645,
+       "mean": 0.3022,
+       "max": 0.7834
+      },
+      "best": {
+       "min": -0.1006,
+       "mean": 0.1978,
+       "max": 0.7834
+      },
+      "bestWorst": 0.7834,
+      "cane": {
+       "min": 0.0702,
+       "mean": 0.4139,
+       "max": 1.0192
+      }
+     },
+     "cane": {
+      "min": 0.0356,
+      "mean": 0.5068,
+      "max": 1.0219
+     },
+     "caneCentre": {
+      "min": 0.1881,
+      "mean": 0.8345,
+      "max": 1.2817
+     },
+     "crookRadius": 0.168,
+     "note": "a ring is a point prop; the source hang is ONE-ARMED (§479.8), so hand-to-hand straddle is not the contract — the cane row is"
+    },
+    "live": {
+     "live": [
+      {
+       "name": "hook_swing",
+       "w": 1,
+       "t": 4.1
+      }
+     ],
+     "offBindDeg": 123.4
+    },
+    "failBind": {
+     "L": 0.9504737148993636,
+     "R": 0.809005888775428
+    },
+    "failProp": {
+     "peer": "main-0 (courtyard chain)",
+     "L": 29.8662882269203,
+     "R": 29.76121593755778
+    }
+   },
+   {
+    "verb": "rail_walk",
+    "label": "colossi-rope (§495.B)",
+    "clip": "proc",
+    "clipPlayed": "rail_walk",
+    "prop": {
+     "kind": "spline",
+     "len": 12.62
+    },
+    "entry": {
+     "at": 90,
+     "path": "sneak@0 tiptoe@42 railWalk@90",
+     "state": "railWalk"
+    },
+    "stats": {
+     "n": 40,
+     "L": {
+      "min": 0.0445,
+      "mean": 0.0804,
+      "max": 0.1201
+     },
+     "R": {
+      "min": 0.0366,
+      "mean": 0.0807,
+      "max": 0.1255
+     },
+     "best": {
+      "min": 0.0366,
+      "mean": 0.0691,
+      "max": 0.1201
+     },
+     "bestWorst": 0.1201,
+     "hands": {
+      "n": 40,
+      "L": {
+       "min": 0.8607,
+       "mean": 0.9375,
+       "max": 1.1237
+      },
+      "R": {
+       "min": 0.5349,
+       "mean": 0.7395,
+       "max": 0.8899
+      },
+      "best": {
+       "min": 0.5349,
+       "mean": 0.7374,
+       "max": 0.8787
+      },
+      "bestWorst": 0.8787
+     }
+    },
+    "live": {
+     "live": [
+      {
+       "name": "rail_slide",
+       "w": 1,
+       "t": 1.167
+      },
+      {
+       "name": "rail_walk",
+       "w": 1,
+       "t": 2.422
+      }
+     ],
+     "offBindDeg": 75.1
+    },
+    "note": "FEET, not hands: railWalk has no hand-prop contract — the line is under the soles"
+   },
+   {
+    "verb": "rail_walk",
+    "label": "roof-e",
+    "clip": "proc",
+    "clipPlayed": "rail_slide",
+    "prop": {
+     "kind": "spline",
+     "len": 31
+    },
+    "entry": {
+     "at": 6,
+     "path": "move@0 railSlide@6",
+     "state": "railSlide"
+    },
+    "stats": {
+     "n": 40,
+     "L": {
+      "min": 0.1011,
+      "mean": 0.1392,
+      "max": 0.2383
+     },
+     "R": {
+      "min": 0.1413,
+      "mean": 0.1668,
+      "max": 0.2267
+     },
+     "best": {
+      "min": 0.1011,
+      "mean": 0.1368,
+      "max": 0.2267
+     },
+     "bestWorst": 0.2267,
+     "hands": {
+      "n": 40,
+      "L": {
+       "min": 0.5545,
+       "mean": 0.6487,
+       "max": 0.7561
+      },
+      "R": {
+       "min": 0.3311,
+       "mean": 0.3945,
+       "max": 0.441
+      },
+      "best": {
+       "min": 0.3311,
+       "mean": 0.3945,
+       "max": 0.441
+      },
+      "bestWorst": 0.441
+     }
+    },
+    "live": {
+     "live": [
+      {
+       "name": "rail_slide",
+       "w": 1,
+       "t": 1.167
+      }
+     ],
+     "offBindDeg": 60.5
+    },
+    "note": "FEET, not hands: railWalk has no hand-prop contract — the line is under the soles"
+   }
+  ]
+ }
+}
