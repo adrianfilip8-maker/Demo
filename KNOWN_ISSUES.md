@@ -57025,7 +57025,15 @@ and the frames are the visual check.
     the FIFO lock                                  1084 tests 1083 pass   1 FAIL   audiowired A2 — NOT MINE
 11  audiowired @ bbd23d7, clean worktree              2 tests    1 pass   1 FAIL   the same, with none of
                                                                                    this lane's work present
+12  FULL SUITE, clean worktree @ 1ba6cf9 (this
+    section committed), under the FIFO lock       1084 tests 1083 pass   1 FAIL   the same one, again
 ```
+
+Run 12 re-runs the whole suite at the commit that carries this section, because several test files
+read `KNOWN_ISSUES.md` and a ledger append is not automatically inert. Same 1084/1083/1, same single
+failure. No documented flake fired in either full run — `framebudget` F3 and `padrest` R1b both
+passed, which is what taking the lock is for (§703), and `--test-name-pattern` was never used on
+`framebudget` because filtering changes its allocation history and makes it fail 100%.
 
 **Run 10 is not green, and the failure is not this lane's.** `audiowired` A2 forbids any file under
 `src/` from *naming* a path matching `/assets[\/\\](music|effects)[\/\\]/i`. The single file it
