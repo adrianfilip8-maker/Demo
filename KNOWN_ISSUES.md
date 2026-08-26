@@ -57373,3 +57373,66 @@ there was no change to be unsafe.
 committed at one sha and quoted at another is a claim about a tree nobody ran): `d57dade`, clean
 worktree, same lock, same runner — **1084 / 1084, 0 fail, 364.9 s**, pwd `/home/user/wt-713` checked
 inside the command, cwd present at end, zero `not ok` lines. Four runs, four green.
+
+---
+
+## §714 — "Add in the cane combo only if the animations already exist for it": they do not, so it is not added
+
+The owner's instruction is conditional, which makes the existence check the whole job. **Answer: the
+reference repo contains exactly ONE cane attack animation, `Canehit`.** No combo is added. No code
+changed.
+
+### §714.1 What the repo has
+
+Across the whole project at HEAD `a312a99`, not just `SlyCooper_Anims27.gltf`:
+
+| clip | what it is | bound to |
+|---|---|---|
+| `Canehit` | the one attack | `cane_combo_1/2/3`, all three |
+| `CaneSwing` | hook swing (their `swing_state` Swing BlendSpace) | `hook_swing` |
+| `CaneSwing Idle` | same BlendSpace | — |
+| `CaneSwing Grab` | the catch — hands snap to overhead grip in 0.1 s, held from 0.4 | `hook_grab` |
+| `PickPocket` | the steal | `pickpocket` |
+
+The `CaneSwing` family being **not attacks** was established earlier by measurement *at their own
+play sites* rather than from their names, and that reading is what the alias table already encodes.
+A name-led reading would have found three plausible "swing" clips and built a combo out of the rope
+mechanic.
+
+### §714.2 The scan that was blind, and the control that caught it
+
+First pass searched the thirteen `Assets/Animations/*.res` libraries for attack-shaped names and
+returned **0 hits in all thirteen** — a clean, uniform, entirely false negative. Those files begin
+`RSCC`: Godot's **compressed** resource container. `strings` was reading compression noise, and
+would have returned 0 whatever they contained.
+
+The positive control is what exposed it (§418.3): asked to find *any* clip name in
+`Library Sly Walk.res` — a file whose own name promises one — it returned `ZWgM`, `LDDD`, `rhqu`.
+An instrument that cannot find `Walk` in the walk library cannot be trusted to report the absence of
+`Canehit2`.
+
+Re-run against the project's **text** files (`.tscn`, `.tres`, `.gd`), where the instrument
+demonstrably works — the same query surfaced `Canehit` plus dozens of state, hitbox and signal names
+— the only cane *animation* name anywhere is `Canehit`. Singular. Everything else matching "hit" is
+a hitbox, a timer, a state label or a signal handler.
+
+**This is the session's recurring shape in its cheapest form: a null result that looks like an
+answer.** The cost of the control was one command; the cost of believing the null would have been
+reporting "no combo animations exist" on evidence that could not have found them.
+
+### §714.3 What is NOT changed, and why
+
+The three combo slots share one `Canehit` body under three **different** donor cane tracks, so tip
+reach runs 0.607 / 1.332 / 1.504 m across otherwise identical swings. §713 flagged this; the owner's
+earlier ruling — *"cane swings are repeats, should not be combos"* — is honoured in the body and not
+in the cane.
+
+Normalising the cane track is one line and provably no worse than slot 1. **It is not taken here**,
+because the instruction was about *adding* a combo, not removing the remaining variety, and the
+variety is what §479.8 recorded as a deliberate limit. Reading a conditional "add X if Y" as licence
+to do the opposite of X would be inventing a mandate.
+
+**Domain (§418.3).** Answers: does the repo hold distinct combo animations. Does not answer: whether
+one attack clip repeated three times is the right *feel* — that is a play judgement, and the owner
+has the build. Does not license: normalising the cane tracks, which remains one line away and
+undecided.
