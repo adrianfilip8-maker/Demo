@@ -53963,13 +53963,30 @@ as open rather than closed with a plausible sentence.
 
 ## §704 — "use the source rig and animations rather than trying to modify them": the native 199-joint import
 
-**CLAIMED — lane in progress.** Native-Carmelita lane, branch `claude/sly-cooper-ancient-egypt-0koo0u`,
-opened from `e818875`. Scope: import Carmelita's own 199-joint skeleton, her own skin weights, and her
-own eleven clips as authored — no `BONE_MAP`, no bind transfer, no `RIGID_WITH` rigid carry, no
-retarget. The vision cone, the alert ladder and guard interaction are **out of scope by the user's
-explicit instruction** and are not touched.
+The owner, in full: *"Try to import the character again, using the source rig and animations rather
+than trying to modify them. For now, leave the vision cone, alert ladder, and guard interaction
+untouched."*
 
-Findings appended below as they are measured.
+**It works, and it is better.** Her own 199-joint skeleton, her own skin weights carried across
+**bit-identically** (max `skinIndex` difference 0, max `skinWeight` difference 0), and her own
+eleven clips played by `THREE.AnimationMixer` against her own node names. No `BONE_MAP`, no bind
+transfer, no `RIGID_WITH` rigid carry, no retarget. `src/ai/CarmelitaGuard.js` is not modified and
+stays the shipped default; this is the other arm of a one-token A/B.
+
+The vision cone, the alert ladder and guard interaction are **untouched** — `Guard`'s AI is
+identical on both arms, because the native driver implements `GuardAnim`'s interface and the
+integration surface is clip NAMES, not bone names.
+
+**Four things this lane found that were not the job:**
+
+- **`src/ai/GuardClips.js` is imported by nothing.** The retargeted clips two headers claim have
+  been driving the garrison have never been played by anything (§704.2).
+- **Six of her eleven clips are two-handed WEAPON stances**, measured off hand separation, and
+  the clip named `PatrolWalk` is a crouched sneak rather than a patrol (§704.5).
+- **The pistol needs no attach logic** — it is a sibling armature root driven by the same clips —
+  which retires a sentence in `CarmelitaGuard.js`. It still does not fit the triangle cap (§704.5).
+- **Three instrument faults**, two of them mine and one in a §702 tool that had been reporting the
+  player's bone count as a guard's across a whole A/B (§704.3, §704.7).
 
 ---
 
@@ -54243,3 +54260,282 @@ this round held it 3.5 and 7.5 minutes.
   with the checkout rollback; the arm is pinned to a SHA instead, which is stronger provenance,
   but they are not byte-identical to the images §701 described.
 
+
+### §704.1 The answer: the native rig is viable, and three measurements said so before a line was written
+
+The rebind exists because the clips were believed to need RIG3's bind. Every part of that turns
+out to be unnecessary, and the checks are cheap:
+
+- **The rest pose IS the bind pose.** `boneWorld · boneInverse` deviates from the identity by at
+  most **2.4e-6** over all 199 joints; **0 of 199** exceed 1e-4. The GLB's `bindMatrix` is the
+  identity and its `bindMode` is `attached`. The character draws correctly at rest with **no
+  transfer of any kind** — which is exactly what §702's carry was reconstructing, and getting
+  wrong 194 times out of 199.
+- **`carmelita-guard.glb` and `carmelita-anims.glb` are the same rig.** Same 199 bones in the same
+  ORDER; every inverse-bind matrix agrees to **exactly 0**; local rest TRS agrees to 1.05e-3
+  (worst `Toe_CTL_L`, an IK control, sub-millimetre). So clips cut from one drive a skeleton cut
+  from the other with no retarget.
+- **Every clip resolves.** All eleven address all 199 joints and, for all eleven, the number of
+  targets that are not a bone of this skeleton is **0** — as is the number that are not a node of
+  the scene at all. 6,567 of 6,567 tracks bind.
+
+`tools/carmnative.mjs` reports all of it and `tests/carmnative.test.mjs` (20 arms) holds it.
+
+### §704.2 `src/ai/GuardClips.js` IS IMPORTED BY NOTHING, and the guards have never played her clips
+
+This is the §699 shape again and it is the reason the request was worth making.
+
+`src/ai/CarmelitaGuard.js`'s header says *"`GUARD_CLIPS` has been Carmelita's motion since
+`tools/carmelita2clips.mjs` ran: all eleven of her clips … retargeted onto RIG3's bone names."*
+`Guard.js` line 1493 repeats it. **It is false in the shipped runtime.** `grep -rn "GuardClips"
+src/ --include=*.js -l` returns *only the file itself*. Nothing imports it. The 305 KB of
+retargeted keyframes have never been played by anything.
+
+What the guards actually animate on is `GuardAnim.js`'s own hand-authored `CLIPS` table — the
+procedural `idle`/`walk_patrol`/`look_around` set — which `clipsFor()` compiles and which
+`GuardAnim.js` **exports under the same name**:
+
+```js
+export { CLIPS as GUARD_CLIPS, SCARAB_CLIPS as GUARD_SCARAB_CLIPS };   // GuardAnim.js:1216
+export const GUARD_CLIPS = {"Air":{...}}                               // GuardClips.js:18
+```
+
+Two different objects, one exported name, in the same directory. Every reader who checked
+"is `GUARD_CLIPS` wired?" found a `GUARD_CLIPS` that was, and it was the wrong one. The claim was
+written once and then trusted as a measurement, and the name collision is what kept it standing.
+
+**Consequence for this lane:** the owner's "use the source … animations" is not a change of
+animation, it is the *first* time her animations run in this project.
+
+### §704.3 §309's skinIndex off-by-one is ABSENT from the native path — and the first instrument could not have said so
+
+`instantiate()` prepends a synthetic `root` bone while `bindToRig3` built its `boneIndex`
+root-less; every vertex therefore reads one bone early. `instantiateNative()` prepends nothing and
+remaps nothing: the merged geometry carries the source's own `skinIndex` integers and the skeleton
+is rebuilt in `skeleton.bones.map(b => b.name)` verbatim.
+
+**The arm that could not answer.** The obvious test — CPU-skin the BIND pose with the indices
+shifted 0 / +1 / −1, and see which returns the geometry unmoved — measured
+**1.845e-6 / 1.855e-6 / 1.879e-6**. All three are zero, and they are zero for a reason that has
+nothing to do with indices: at the rest pose every bone's skinning matrix is the identity, so
+reading the wrong bone reads another identity. The instrument shared the assumption it was testing
+(§439/§440) and would have passed a thoroughly broken file.
+
+**The arm that did.** Pose the skeleton off a real clip and compare against ground truth **from a
+different object** — the source `SkinnedMesh` in the GLB, skinned by its own skeleton, which owes
+nothing to this import. Both posed from `PatrolWalk` @ 0.37 s, 597 channels written to each,
+6,163 vertices sampled across all sixteen regions:
+
+| skinIndex | largest disagreement with the artist's own file |
+|---|---|
+| **0, as shipped** | **5.812e-8 m** |
+| +1 | 6.884e-1 m |
+| −1 | 5.825e-1 m |
+
+A ten-million-fold separation. The shipped indices reproduce the source exactly; both wrong arms
+are on record as inputs seen to FAIL (§418.3), which "max index is in range" alone cannot give.
+
+**One more instrument fault inside that one.** The first run of the corrected arm read 4.487e-4 m
+on the shipped indices — small, but not zero, and it was mine: the base-origin lift was being
+undone *after* skinning instead of before. The lift lives in the bind pose, so a rotated bone
+carries it off the y axis and a post-hoc `mine.y -= lift` leaves up to **2×** it behind. A 0.237 mm
+translation was presenting as 0.449 mm of disagreement — most of a defect that did not exist.
+
+### §704.4 Scale and ground
+
+**Bind pose, both arms, same source file, measured as the merged geometry the GPU would draw with
+every bone at rest:**
+
+| | height | lowest vertex | soleLift | width |
+|---|---|---|---|---|
+| rebind (RIG3) | 1.8163 m | 0.000000 | 0.05359 | 1.3975 m |
+| native (hers) | 1.6387 m | 0.000000 | **−0.000237** | 1.2347 m |
+
+`MOUNT_SCALE = 1.8163 / 1.6387 = **1.108338**`, uniform, on a group between the guard root and the
+rig so `Guard._step` keeps `root.position` and `GuardAnim` keeps `root.scale`. Native × MOUNT_SCALE
+= **1.8163 m**, the rebind's number to four decimals. Scaled width 1.3685 m against 1.3975 m —
+narrower, because that is her authored proportion; the rebind splayed the arms to reach RIG3's bind.
+
+**She is already base-origin.** The source's lowest vertex sits at 0.000237 m — 0.26 mm once
+scaled. The residual is removed anyway so the property is exact. §697's `groundProbe` (0.06) and
+`groundSlopeMax` (30) are not read, not written and not touched by either arm.
+
+**Drawn, in-game, `tools/carmscale.mjs`, 60 s settle, nobody teleported (§435.4):**
+
+```
+             rebind arm                    native arm
+guard0       1.821  head 40.1%             1.422  head 57.1%   (idle)
+guard1       1.839  head 39.5%             1.426  head 55.5%   (idle)
+guard2       1.819  head 40.7%             1.473  head 55.4%   (idle)
+guard3       1.706  head 39.6%             1.765  head 43.6%   (walking)
+guard4       1.826  head 40.2%             1.470  head 55.4%   (idle)
+guard5       1.890  head 38.4%             1.772  head 43.7%   (walking)
+guard6       1.758  head 38.5%             1.738  head 41.6%   (walking)
+guard7       1.736  head 39.6%             1.750  head 42.1%   (walking)
+guard8       1.824  head 40.3%             1.426  head 55.5%   (idle)
+the player, measured the same way: 1.877 m
+```
+
+**The spread is the finding, and §704.5 is its cause.** Walking guards land at **1.74–1.77 m**,
+inside §702's measured 1.68–1.87 m band. Idle guards land at **1.42–1.47 m**, 0.25–0.35 m below
+it, because the authored idle is a two-handed weapon crouch. Nothing here is scaled wrong: the
+bind pose lands on 1.8163 m exactly and the scale is uniform, so no proportion moved.
+
+**Ground, `tools/guardfloat.mjs`, 100 s, 200 samples a guard, all nine at 100% patrol on both
+arms.** gapC = lowest drawn foot vertex minus topmost up-facing rendered surface:
+
+```
+        rebind med   native med   Δ            rebind range        native range
+guard0     0.010       0.004    -0.006     -0.048 .. 0.133     -0.068 .. 0.056
+guard1     0.020       0.030    +0.010      0.010 .. 0.071     -0.019 .. 0.050
+guard2    -0.005       0.004    +0.009     -0.016 .. 0.044     -0.043 .. 0.036
+guard3    -0.002      -0.011    -0.009     -0.029 .. 0.025     -0.099 .. 1.902
+guard4     0.042       0.052    +0.010      0.036 .. 0.056      0.052 .. 0.052
+guard5     0.038       0.036    -0.002     -0.030 .. 0.078     -0.084 .. 0.057
+guard6     0.003      -0.009    -0.012     -0.037 .. 0.075     -0.074 .. 0.055
+guard7     0.000      -0.009    -0.009     -0.030 .. 0.043     -0.051 .. 0.011
+guard8    -0.085      -0.075    +0.010     -0.091 ..-0.062     -0.079 ..-0.075
+```
+
+**Every median is within 1.2 cm of the rebind's and all nine are inside 8 cm. §697 holds.** Slopes
+are 0.00° on eight of nine (guard7 max 1.60°) with **0** not-walkable samples on all nine.
+
+**The one tail worth naming, and it is two separate things.** guard3's native max reads 1.902 m.
+That figure is wrong and the error is guardfloat's: its in-page raycast reported the rendered floor
+under (−7.811, 6.145) as `sand_ring0` at −0.055, and an offline raycast at the same point through
+`tools/camdot.mjs`'s drawn scene finds `arch:court:paving_courtyard` at **y 2.0030, up 1.000**. The
+terrace is there; the in-page probe missed it in that sample. The true gap is **−0.156 m**.
+
+That leaves a real one: at that instant guard3's lowest foot vertex sat **0.138 m below the guard
+root** (`soleTransformed −0.1382`). A base origin defined at the BIND pose does not bound an
+ANIMATED pose, and her clips go below it by design — `HitTaken` reaches −0.136 m and `Jump`
+−0.212 m in source units. So a foot can enter the floor on a frame where a clip dips. It affects no
+median, it is inside a tail on one of nine guards, and it is recorded **open** rather than closed
+with a plausible sentence: whether it needs a per-frame floor clamp is a decision, not a fact.
+
+### §704.5 SIX OF HER ELEVEN CLIPS ARE TWO-HANDED WEAPON STANCES — and the clip names hide it
+
+The clip names promise a guard set and do not deliver one. Judged by name, `Idle`, `PatrolWalk` and
+`Lookaround` are exactly what a patrolling garrison wants. **Rendered, they are a crouched figure
+with its hands clasped in front of nothing.**
+
+The discriminator is the distance between her two hands, taken off the SOURCE skeleton posed by its
+own clips — no import involved:
+
+| clip | hands apart | pistol→L/R hand | drawn height ×MOUNT_SCALE |
+|---|---|---|---|
+| `Idle` | **0.086 m** | 0.25 / 0.23 | 1.39–1.47 m |
+| `Lookaround` | **0.086 m** | 0.24 / 0.23 | 1.43 m |
+| `PatrolWalk` | **0.086 m** | 0.25 / 0.23 | 1.51 m |
+| `Shoot(BodyMovement)` | **0.086 m** | 0.25 / 0.23 | 1.47 m |
+| `CasualWalking` | 0.40 m | 0.49 / 0.23 | **1.77 m** |
+| `Run` | 0.72 m | 0.77 / 0.23 | 1.48 m |
+| *(the bind pose)* | 0.87 m | 1.38 / 0.67 | 1.82 m |
+
+Her hands close to **8.6 cm** and the `ShockPistol` armature travels from **1.38 m away at rest to
+0.23 m from both hands**. She is holding the gun, and the source animates it there, in six clips of
+eleven. It also explains the height: a two-handed firing stance is a crouch. Nothing is scaled
+wrong.
+
+**This retires a sentence in `CarmelitaGuard.js`.** That header argues re-attaching the pistol
+"would be authoring, not importing", because there is "no hand attach, no holster and no clip that
+draws a gun". The first two are true; **the third is false**. The pistol needs no attach logic at
+all — it is a sibling armature root driven by the same eleven clips. The REBIND could not see this,
+and that is the interesting part: it maps only joints under the body root, so the pistol stayed
+wherever the bind left it, 0.86 m to one side, and a gun lying in mid-air reads as a bug rather
+than as a weapon. §702 dropped it for that reason and was right to, *on that path*.
+
+**It still does not ship, and the reason is arithmetic.** `MainBody` + `Barrel` + `Antennae003` =
+**1,672 triangles a guard**, and every guard is drawn twice for the ink shell:
+1,672 × 9 × 2 = **30,096** against a measured headroom of about **7,000**
+(`tools/budgetattrib.mjs --inpage`: 1.193 M of a 1.200 M cap, 99%). So it is
+`TUNE.carmelitaPistol` / `?carmpistol=1`, default **0**, with the number recorded where the
+decision would be made.
+
+**So the clip map follows the measurement, not the names.** `walk_patrol` and `walk_alert` take
+`CasualWalking` — upright, arms at her sides, 1.768 m drawn — and **the clip named `PatrolWalk`
+goes on the unused list.** Armed, `CLIP_FOR_ARMED` puts it back, because with the weapon in her
+hands it reads as an armed patrol rather than a crouch around nothing.
+
+### §704.6 Which clip each guard state plays
+
+`Guard.js` asks for **twelve** names, all twelve are mapped, and the integration surface is clip
+NAMES — no bone name crosses it, which is what leaves the cone, the alert ladder and guard
+interaction untouched.
+
+| guard state / clip | her clip | note |
+|---|---|---|
+| `idle` | `Idle` | armed stance; the set has no unarmed standing idle |
+| `idle_bored` | `Lookaround` | armed stance, 2.0 s |
+| `walk_patrol` | **`CasualWalking`** | upright, 1.768 m — NOT the clip named for it (§704.5) |
+| `walk_alert` | `CasualWalking` | the set has one upright walk; `Guard.js` already scales `speed` |
+| `run_chase` | `Run` | upright run |
+| `look_around` | `Lookaround` | |
+| `suspicious` | `Lookaround` | sustained, so deliberately NOT in `ONCE` |
+| `alert` | `HitTaken` | one-shot |
+| `stunned` | `HitTaken` | |
+| `ko` | `HitTaken` | clamped on its last frame |
+| `pickpocketed_reaction` | `HitTaken` | one-shot, fired from `_playOneShot` |
+| `attack` | `Shoot(BodyMovement)` | a GUN animation on a garrison that swings — a compromise, not a fit |
+
+Unused: `Air`, `Jump`, `PatrolWalk`, `Run.001`, `Shoot(GunMovement)`. All eleven stay loaded and
+playable by name.
+
+**Two of the twelve were found by the test, not by reading the switch.** `attack` and
+`pickpocketed_reaction` are fired from `_playOneShot` a hundred lines from `_chooseClip`'s switch.
+`tests/carmnative.test.mjs` greps the names out of `Guard.js` rather than restating them, which is
+why it caught them; a hand-written list would have shipped ten of twelve and silently idled on the
+swing.
+
+### §704.7 Cost: triangles and draws are UNCHANGED; bones are 8× and it does not matter
+
+| | rebind | native |
+|---|---|---|
+| triangles a guard | 32,063 | **32,063** |
+| draws a guard | 2 | **2** |
+| merged groups / materials | 2 | 2 |
+| meshes merged | 16 | 16 |
+
+**Identical, because it is the same geometry.** The native path merges the same sixteen meshes into
+the same two groups against the same two materials, so the garrison stays at 18 draws rather than
+the 144 an unmerged per-mesh import would cost. Merging survives the native rig for the reason it
+worked before: every mesh shares one skeleton, so one merged buffer is still one skin — and here it
+needs no index remap at all, because the skinIndex space is already common.
+
+Worst main view is unchanged at **112 draws (45% of 250) / 1.193 M tris (99% of the 1.2 M cap)**.
+
+**Bones: 199 against 24.** Uploaded as a texture on both — three r185 calls
+`skeleton.computeBoneTexture()` unconditionally, so no uniform limit is in play at 199.
+
+| | bone matrices | bone texture | per guard | ×9 |
+|---|---|---|---|---|
+| rebind | 1,536 B | 12×12 RGBA32F = 2,304 B | 3,840 B | 33.8 KB |
+| native | 12,736 B | 32×32 RGBA32F = 16,384 B | 29,120 B | **255.9 KB** |
+
+**+222 KB over the garrison**, and 1,791 bone matrices recomputed per frame against 216. On a
+budget whose binding constraint is 1.193 M triangles, a quarter of a megabyte of bone texture is
+not material, and it is reported rather than waved away.
+
+> **§442, in the tool that produced this row.** `carmscale.mjs` read its bone-texture figure from
+> `engine.scene.traverse(o => { if (!skinMesh && o.isSkinnedMesh) skinMesh = o; })` — the FIRST
+> skinned mesh in the scene, which is **the player**. So it printed `12×12` on both arms while the
+> `skeletonBones` row beside it said 199, and the two disagreed in plain sight across a whole A/B.
+> It now reads a guard's mesh by name and prints the player's row alongside, because a number with
+> no companion is exactly how the swap hid.
+
+### §704.8 How to revert
+
+One token, and the shipped path is the default:
+
+- `GUARD_TUNE.carmelitaNative = 0` — **the shipped default**. The RIG3 rebind, byte-for-byte as
+  before; `src/ai/CarmelitaGuard.js` is not modified by this lane.
+- `?carm=native` / `?carm=rebind` at the URL beats the TUNE, the shape `?char=dlraw`/`?char=dl` and
+  `?kaykit=` already use.
+- `GUARD_TUNE.carmelitaPistol = 0` / `?carmpistol=1` — her shock pistol, off because it does not
+  fit (§704.5).
+
+Deleting `src/ai/CarmelitaNative.js`, `tests/carmnative.test.mjs`, `tools/carmnative.mjs`,
+`tools/carmelita2native.mjs`, `tools/carmnativeshot.mjs`, `public/assets/sly-anim/carmelita-clips.glb`
+and the four `carmelitaNative`/`carmelitaPistol` references in `Guard.js` removes the lane entirely.
+The native arm falls back to the rebind and then to the procedural `blob()` body, so three
+independent failures deep the garrison still stands.
