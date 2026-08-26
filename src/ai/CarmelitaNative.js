@@ -704,7 +704,7 @@ export function buildNative(scene, headGeom = null, opts = {}) {
          lands on the head atlas would be textured with her face. */
       const atlases = [...new Set(props.map((p) => atlasOf(p.mesh.material)))];
       pMerged.clearGroups();
-      pMerged.addGroup(0, Infinity, 0);
+      pMerged.addGroup(0, pMerged.index ? pMerged.index.count : pMerged.attributes.position.count, 0);
       if (Math.abs(soleLift) > 1e-9) pMerged.translate(0, soleLift, 0);
       pMerged.computeBoundingBox();
       pMerged.computeBoundingSphere();
