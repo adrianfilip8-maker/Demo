@@ -160,7 +160,19 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high', query: Q
         }
       }
       const toCam = camPos.clone().sub(centre).normalize();
-      const coneOK = !!conePos && coneCamClear(conePos, coneLook);
+      /* Clear is not the same as USEFUL. A camera can pass every occlusion test and still have
+         nothing in it, which is what happened to `guard1`'s unarmed cone frame: the two arms play
+         different-length walk clips, so on the post-§707 laps the guard was 5.48 m from where the
+         other arm left her and the frame came back as empty paving. So the subject's own drawn
+         box must be inside the frustum of the camera about to photograph it. */
+      const inFrame = (p, look) => {
+        const c2 = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 200);
+        c2.position.copy(p); c2.lookAt(look);
+        c2.updateMatrixWorld(true); c2.updateProjectionMatrix();
+        return new THREE.Frustum().setFromProjectionMatrix(
+          new THREE.Matrix4().multiplyMatrices(c2.projectionMatrix, c2.matrixWorldInverse)).intersectsBox(box);
+      };
+      const coneOK = !!conePos && coneCamClear(conePos, coneLook) && inFrame(conePos, coneLook);
       const toCone = conePos ? conePos.clone().sub(centre).normalize() : new THREE.Vector3(0, 0, 1);
       rows.push({
         id, state: g.state, clip: g.anim?.current || '?',
@@ -237,7 +249,7 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high', query: Q
     /* cone frame — profile, at night so the beam is not faded out by daylight.
        REFUSED rather than written when the camera is buried: a flat field of wall is not
        weaker evidence than a good frame, it is evidence of something else entirely. */
-    if (!r.coneOK) { console.log(`  cone frame REFUSED for ${r.id} — no unoccluded broadside camera found`); continue; }
+    if (!r.coneOK) { console.log(`  cone frame REFUSED for ${r.id} — no clear broadside camera with the subject in frame`); continue; }
     const cpng = await page.evaluate(async (F) => {
       const g = window.__GAME, e = g.engine;
       const ch = e.get('character');
