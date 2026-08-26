@@ -284,3 +284,157 @@ are 2048², 8-bit, colour-type 2, checked in their headers — this file's own n
 **Licence: none stated**, exactly as for everything else taken from these two repositories. The
 paragraph at the top of this file is the governing statement and applies unchanged. Nothing under
 `Assets/Music/` or `Assets/Effects/` was opened, copied, decoded or referenced.
+
+---
+
+# The NATIVE Sly import — `sly27.glb` + `sly27-clips.glb` — 2026-08-26, repo HEAD `a312a99`
+
+Imported on the owner's instruction: *"Pull the new Sly character from the godot repo and attempt
+to use it with the repos rig, textures, etc. There should be some new animations for Sly to import
+and use. Use the godot repo's cane as well."* (§711)
+
+**Licence: none stated**, exactly as for everything else taken from this repository. The paragraph
+at the top of this file is the governing statement and applies unchanged. **Nothing under
+`Assets/Music/` or `Assets/Effects/` was opened, copied, decoded, converted or referenced.**
+
+**Source repository:** <https://github.com/NoahChase/Sly-Cooper--A-Thief-in-Godot> at HEAD
+`a312a997ca7d085a88b7443d754e5d3f57d66311` ("The REAL Godot 4.7 Update") — the **same HEAD** the
+Carmelita and bottle entries above were taken at. Read-only and anonymous; nothing was pushed
+there. **There was no new upstream push**: what is new here is new to *us*.
+
+## The one source file, and what it replaces
+
+```
+Assets/Models/Characters/SlyCooper_Anims27.gltf   (+ .bin)     ← EVERYTHING below
+```
+
+This is the file `sly-godot-moves.glb` already takes its 23 clips from. What is new is that the
+**mesh, the skeleton, the skin weights and the cane** are now taken from it too, instead of only
+the motion. The arrangement it replaces (still shipped, still the default) is:
+
+| | mesh + rig | clips |
+|---|---|---|
+| `?char=godot` (`SlyModelGodot.js`) | `Assets/Temp Imports/tempsly/SlyCooper_Anims4.gltf`, rebound to RIG3 | Anims27, **retargeted** onto RIG3 |
+| `?char=sly27` (`SlyModel27.js`) | **Anims27, native** | **Anims27, native** |
+
+So the incumbent runs Anims27 motion on an Anims4 body across a retarget layer. This takes one
+file whole.
+
+## "The new Sly character" is the SAME SCULPT — measured, not assumed
+
+This was checked before anything was built, because the answer changes what the import is for. All
+21 mesh-bearing **nodes** carry the same names in both files and both total **30,346 triangles**.
+Comparing `POSITION` accessor by accessor:
+
+- **14 of 21 are byte-identical** — every unskinned part (teeth, both eyes, hat, belt, **and the
+  cane**).
+- **7 differ**, and they are exactly the 7 skinned parts. The difference is a **rigid translation
+  of (0.0675, 2.255, ≈−0.03)** with a max residual of 3.7 cm after removing it, compensated by the
+  inverse bind matrices. Skin-space height is 1.6367 m (Anims4) against 1.6372 m (Anims27) — a
+  0.5 mm difference.
+- **All 21 `TEXCOORD_0` sets are byte-identical**, and every node's material assignment matches.
+
+**What IS new** is the rig and the motion: 166 joints against 174 (Anims4's extra 18 are
+`FingerCTL_*`/`Index_CTL_*`/`Thumb_CTL_*` control bones; Anims27 adds 10 `f_index.03.*`), and
+**24 clips against 9** — of which four of Anims4's nine are `[Action Stash]*`, Blender's dump of
+unassigned actions. Sixteen of the 24 have no counterpart in Anims4 at all.
+
+## The cane — and a correction to §479.20
+
+`CaneMat` is one of the four materials, and the cane is **inside the rig**:
+
+```
+metarig/…/shoulder.R/upper_arm.R/forearm.R/hand.R/CaneBone.001/Cane_LowPoly
+```
+
+Established by hierarchy and by skin binding rather than by material name:
+
+- `Cane_LowPoly` is **not skinned** — no `skin`, no `JOINTS_0`. It is a rigid 896-triangle mesh
+  **parented to a bone**.
+- `CaneBone.001` **is** joint #104 of the 166-joint skin, and **zero vertices weight to it**. It is
+  a prop-attachment bone, not a deformer. (`hand.R` itself is also a zero-weight joint on this rig
+  — the glove is skinned to `palm01/04`, `f_index/middle/ring/pinky*` and `thumb01..03`.)
+- **23 of the 24 clips animate it**, and six carry real articulation on it rather than a held
+  constant: Canehit, LedgeGrab, PickPocket, PoleClimbIdle, PoleClimbing, PoleGrab.
+
+So the cane is posed by the clip and needs no attach logic of ours. **§479.20's sentence "their rig
+has no cane bone" is false of the source, and always was** — `SlyCooper_Anims4.gltf` carries the
+same `CaneBone.001` under the same `hand.R`, and it is present in the committed `sly-godot.glb`
+today. The true, narrower statement is that **RIG3** has no cane bone, so `godot2clips.mjs`'s bone
+map had nowhere to send those channels and dropped them.
+
+## The textures — none copied, and why that is the correct answer here
+
+Anims27's own image URIs are an author-local path that **does not exist in the repository**:
+
+```
+Sly Cooper Character anims  July2026/…/Sly Cooper/Textures/Sly_Body.png
+Sly Cooper Character anims  July2026/…/Sly Cooper/Textures/Sly_Head_Paint.png
+```
+
+and its `SlyCooper_Anims27.gltf.import` sets `materials/extract=0`, so **Godot supplies no material
+override to resolve them against** — unlike `SlyCooper_Anims4.gltf.import`, whose override chain is
+what identified the two atlases in the first place. Nothing in the Godot project references Anims27
+at all; it is an orphan asset there.
+
+What settles it is measurement rather than the filename: **all 21 UV sets are byte-identical to
+Anims4's and every material assignment matches**, so the two atlases already committed here are
+pixel-correct for this mesh. `sly27.glb` points its two images at `sly-body.png` and `sly-head.png`
+by URI. Re-copying them under new names would have added 3.3 MB of duplicate bytes and could not
+have been more correct than identical UVs already make them.
+
+**Recorded because it is a live discrepancy, not a clean match.** The committed `sly-body.png` is
+the same 2,053,664 bytes and the same 2048² / 8-bit / colour-type 2 header as
+`Assets/Textures/Sly_Body.png` but is **not byte-identical** to it (first difference at offset 116);
+`sly-head.png` is 1,807,387 bytes and **interlaced**, where `Assets/Textures/Sly_Head_Paint.png` is
+1,390,444 bytes and not. Both committed files are therefore re-encoded derivatives of the source
+rather than the verbatim copies `godot2rig.mjs`'s `--import` writes today. That predates this lane;
+it is written down here so the next person does not spend a round rediscovering it.
+
+Material → atlas, read off the source's own `baseColorTexture`, not typed from memory:
+
+```
+BodyMat → sly-body.png       HeadMat → sly-head.png
+EyeMat  → sly-head.png       CaneMat → sly-head.png   (the cane samples the HEAD atlas)
+```
+
+`Assets/Textures/Sly Cane Metalic.png` is **not** what CaneMat points at and was not taken.
+
+## What is emitted, and how to rebuild it
+
+```
+node tools/godot2sly27.mjs --import --src <checkout root>   # checkout → the two .glb
+node tools/godot2sly27.mjs                                  # measure the committed assets
+node tools/sly27fit.mjs                                     # does it fit the engine? (no renderer)
+node tools/sly27shot.mjs --arm default|godot|sly27          # the frames
+```
+
+| file | what it is |
+|---|---|
+| `sly27.glb` | 1,591 KB — 21 mesh nodes, the 166-joint skin, 4 materials, the full node hierarchy, **0 animations**. The cane is in here. |
+| `sly27-clips.glb` | 3,662 KB — the 24 clips and the node hierarchy they address, **no** meshes/skins/materials/images. |
+
+Both are **fetched by the runtime** (`src/player/SlyModel27.js`) when `?char=sly27` is set, so they
+are shipped assets in the same class as `sly-godot.glb` — not build-time inputs, and correctly
+absent from `tests/bundle.test.mjs`'s `KNOWN_UNSHIPPED_PAYLOAD`.
+
+**297 dead channels were dropped and counted** (23 translation, 14 rotation, 260 scale) — constant
+AND equal to the target node's own rest TRS, so provably no-ops. That is *all* that could be
+dropped: 10,168 of the source's 11,478 samplers hold two keys, but these clips bake an **absolute**
+pose on nearly every joint, so a constant that differs from rest is the clip's static pose and is
+load-bearing. `CaneBone.001` is the proof — every clip pins it ≈148° away from its bind rotation.
+**The clip set genuinely cannot be thinned**, and 3.66 MB is what 24 clips × 166 joints costs.
+
+## What is deliberately NOT taken
+
+- **`KeyAction.001` is kept, not cut.** It has 1 channel and serves no verb of ours. It stays in
+  the emitted file so that "24 clips" means 24 clips — a native import that silently drops a clip
+  is a retarget by another name. `SlyModel27.UNUSED_CLIPS` names it.
+- **`Assets/Textures/Sly Body AO/Normal.png`, `Sly Head AO/Normal.png`,
+  `Sly Head Normal Inverted.png`, `Sly Cane Metalic.png`, `SlyCooper_RigNoPhysics_*`** — the same
+  maps the section above already records as unexamined, plus the `RigNoPhysics` variants of both
+  atlases. None is what any of the four materials points at. Still open, still unexamined.
+- **The separate tail.** Unchanged from the entry above: Godot deletes the glTF's tail on import
+  and plays a physics chain instead; we keep `Tail_LowPoly`.
+- **Anything under `Assets/Music/` or `Assets/Effects/`** — untouchable, per this project's
+  absolute rule. `tools/godot2sly27.mjs` reads one `.gltf` and one `.bin` and nothing else.
