@@ -473,3 +473,26 @@ has('the look overlay does not accumulate in NORMAL play either', () => {
   assert.ok(late < early * 1.35 + 0.02,
     `and stays bounded over 10 s rather than winding up (early ${early.toFixed(4)}, late ${late.toFixed(4)})`);
 });
+
+test('a headless boot is SILENT — the fallback is the designed path, not an anomaly', async () => {
+  /* This is a regression arm for a defect the default flip introduced and two other suites
+     caught: `Guards.init` warned whenever the native load returned null, and headless it ALWAYS
+     returns null by design (no DOM, no fetch, ten suites that build Guards with no network). So
+     every headless boot raised a warning, `guardsuite`'s "init raised no warnings" failed, and
+     `patrol`'s C3 failed with the warning text as its message.
+     §357.1 is the rule it broke: a guard that fires on noise gets switched off, and a guard that
+     is switched off is the defect it was meant to prevent. */
+  const src = readFileSync('src/ai/Guard.js', 'utf8');
+  const i = src.indexOf('the native Carmelita rig did not load');
+  assert.ok(i > 0, 'the warning still exists — it is wanted, in the right case');
+  const before = src.slice(Math.max(0, i - 400), i);
+  assert.match(before, /typeof document !== 'undefined' && typeof window !== 'undefined'/,
+    'and it is gated on a DOM existing, so a headless boot cannot raise it');
+
+  /* Not just the source shape — the behaviour. Build the module in this DOM-less process and
+     confirm the loader takes the silent path rather than throwing or warning. */
+  const { loadCarmelitaNative } = await import('../src/ai/CarmelitaNative.js');
+  assert.equal(typeof document, 'undefined', 'this process really has no DOM');
+  const got = await loadCarmelitaNative({});
+  assert.equal(got, null, 'headless resolves to null rather than throwing — the documented contract');
+});

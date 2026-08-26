@@ -1603,7 +1603,17 @@ export class Guards {
       }
       catch { carmelita = null; }
       if (carmelita) this.carmelitaNative = true;
-      else this.engine.warn('guards: the native Carmelita rig did not load — falling back to the RIG3 rebind');
+      /* A null load HEADLESS is not an anomaly, it is the documented path: `loadCarmelitaNative`
+         returns null immediately when there is no DOM, ten headless suites build `Guards` with no
+         fetch at all, and the rebind and procedural bodies behind it are the designed fallbacks.
+         Warning on it fired on EVERY headless boot and broke two suites that assert `init` is
+         silent — which is the right assertion. §357.1: a guard that fires on noise gets switched
+         off, and a guard that is switched off is the defect it was meant to prevent. So this warns
+         only when a page that COULD have fetched the asset failed to, which is the case that
+         actually wants a human. */
+      else if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+        this.engine.warn('guards: the native Carmelita rig did not load — falling back to the RIG3 rebind');
+      }
     }
     if (!carmelita) {
       try {
