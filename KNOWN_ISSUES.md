@@ -55671,7 +55671,628 @@ editing (`src/ai/Patrol.js`) is not in it.
 
 ---
 
-## §709 — CLAIMED (pistol lane, in progress)
+## §709 — "Add Carmelita's gun and make the vision cone come from the barrel": the geometry was already shipped, the mass was not buying anything, and the barrel is the wrong thing to aim
 
-Reserved while fitting Carmelita's `ShockPistol` into the triangle budget and moving the vision
-cone's apex to the muzzle. Content follows in a later commit.
+The owner: *"Add Carmelita's gun from the godot repo and make the vision cone originate from the
+end of the gun barrel."*
+
+This **lifts a constraint**. §704's brief said to leave the vision cone, the alert ladder and guard
+interactions untouched, and this asks for a cone change. The **origin** is now in scope. The alert
+ladder and the interaction logic are **not**, and §709.8 is the line that keeps them out.
+
+Shipped: `TUNE.carmelitaPistol` 0 → **1**, `carmelita-pistol-lp.glb` (385 triangles), the cone's
+apex on the muzzle, the aim unchanged.
+
+### §709.1 The pistol was never missing — a census of the wrong column said it was
+
+The brief this lane inherited said the geometry had to be re-extracted from the source:
+
+> `public/assets/sly-anim/carmelita-{guard,anims}.glb` contain the `ShockPistol` **node** … but
+> **not** the pistol meshes — `anims.glb`'s 34 meshes are Blender defaults (`Cube.009`,
+> `RetopoFlow.003`, `Torus`, …) and neither file lists `MainBody`, `Barrel` or `Antennae003`.
+
+Both halves of that are true and the conclusion is false. `carmelita-guard.glb` has carried the
+pistol the whole time:
+
+    mesh-bearing NODES in carmelita-guard.glb, by node name
+      MainBody      1108 tris     (glTF mesh name: Cube)
+      Barrel         156 tris     (glTF mesh name: RetopoFlow.007)
+      Antennae003    408 tris     (glTF mesh name: Cylinder.004)
+
+**In this export the mesh names are Blender defaults and the identity is on the NODE.** A census
+that lists `gltf.meshes[].name` sees `Cube`, `RetopoFlow.007`, `Cylinder.004` and correctly reports
+that no mesh is called `MainBody` — while `gltf.nodes[].name` has said `MainBody` all along. The
+second half of the miss is a character: the source node is `Antennae.003`, three's
+`PropertyBinding.sanitizeNodeName` strips the dot, and a grep for `Antennae003` against the raw
+glTF finds nothing while a grep against the loaded scene finds it. `Bone.001`→`Bone001` and
+`antenna.001`→`antenna001` are the same transformation, and the existing `GUARD_DRESS` table has
+been keyed `Antennae003`/`Buckles002` — i.e. loader-side — since it was written.
+
+The clone was fetched anyway and read (`NoahChase/Sly-Cooper--A-Thief-in-Godot` at
+**`a312a997ca7d085a88b7443d754e5d3f57d66311`**, `Assets/Temp Imports/tempcarmelita/`) and confirms
+the same three meshes and the same sub-armature. **Nothing was copied from it.** `PROVENANCE.md`
+records the verification. §364.3 holds: nothing under `Assets/Music/` or `Assets/Effects/` was
+copied, decoded, converted or referenced.
+
+**One correction to §704's own header while here.** It says the three meshes are "100% weighted to
+the `ShockPistol` armature root". They are weighted to a **four-bone sub-armature** under that root:
+
+    MainBody      ShockPistol 57.3%  |  ShockPistolbarrel 33.4%  |  Trigger 9.4%
+    Barrel        ShockPistolbarrel 100.0%
+    Antennae003   ShockpistolRing 60.5%  |  antenna003 30.6%  |  antenna001 5.3%  |  antenna002 3.6%
+
+The claim that matters — that the root is a **sibling** of the body root, not a descendant — is
+correct, and §709.6 is built on the `Barrel` row: 100% on one bone is what makes a single-bone
+frame for the muzzle legitimate rather than convenient.
+
+### §709.2 What it cost, and the four rows that were actually available
+
+`tools/budgetattrib.mjs --inpage` before this section: **1,192,970** of a 1,200,000 cap, **7,030**
+triangles of headroom. Nine humanoid guards, each drawn twice because `Outline.js` builds an ink
+shell as a second mesh over the host's own geometry **object**.
+
+    what                                  added   scene total     %
+    full 1,672, shelled  (x18)          +30,096     1,223,066  101.92%   OVER THE CAP
+    full 1,672, drawn once (x9)         +15,048     1,208,018  100.67%   OVER THE CAP
+    385 decimated, shelled (x18)         +6,930     1,199,900   99.99%
+    385 decimated, drawn once (x9)       +3,465     1,196,435   99.70%   ← SHIPPED
+
+**Row two is the correction worth carrying forward.** The brief offered "skip the ink shell on the
+pistol only — halves it to 15,048" as a candidate fix. 15,048 is right and it is **still 8,018
+triangles over the headroom**: dropping the shell alone was never a solution, only half of one.
+Both halves were needed.
+
+**Why the shell went off rather than the decimation getting gentler:** at the same triangle spend,
+drawing once buys twice the shape. 385-with-shell and 752-without-shell cost the same 6,900-odd
+triangles, and 752 triangles is a 1.85% silhouette error against 385's 6.37%. Turning the shell off
+is not a way of avoiding decimation; it is a 2:1 exchange rate on quality.
+
+**And row three FITS, so this is a governance call and it should be written as one.** 385 triangles
+with the shell lands at 99.99% — inside §1's cap, with **100 triangles of margin for everything that
+comes after it**. Shipping row four instead leaves 3,565. That is the whole difference, and it is a
+choice about what the next change will have room for, not a claim that the shelled version breaks
+anything.
+
+**What the shell costs the gun: less than two wrong answers in a row suggested.** This is worth
+recording as a sequence, because both wrong answers were written rather than measured and each one
+was corrected by measuring the next thing.
+
+*First answer, asserted:* the pistol is held in an inked hand, so it "is already bounded by inked
+geometry on most of its border". **False.** Rasterised depth-buffered through a
+`courtyard`-distance camera over the clips a guard patrols in:
+
+    clip          pistol area   silhouette border   against the body   against background
+    PatrolWalk        263 px           68 px              20.1%              79.9%
+    Idle              269 px           68 px              17.6%              82.4%
+    Lookaround        254 px           64 px              18.6%              81.4%
+
+Four fifths of the border is against open background, not against her hand.
+
+*Second answer, inferred from that number:* therefore the gun has no line at all along four fifths
+of its silhouette. **Also false**, and the frame says so before any argument does. Magnified 4×,
+`shots/pistol709-p1-guard4.png` shows the pistol carrying a silhouette line of the same weight as
+the boot and trouser leg beside it. The reason is that **the shell is not the only outline in this
+renderer**: `PostFX`'s chain is "scene → normals → AO → **ink edges** → bloom → composite", and that
+pass runs on depth and normal discontinuities over everything in the normal prepass. The pistol is
+an ordinary opaque mesh in that prepass, so it is outlined whether or not it carries a hull.
+
+So the shell's real contribution is the extra weight of the inverted hull on top of a line that is
+already there — 3,465 triangles for a heavier version of an edge the gun already has.
+`TUNE.carmelitaPistolInk = 1` restores it in one token, at 99.99% of the cap.
+`node tools/pistolshot.mjs --pistol 1 --ink 1 --cam <json>` takes that comparison on the same
+camera; this lane did not spend the capture lock on it once the frame had answered the question
+the comparison was for, and the token is there for whoever wants it.
+
+### §709.3 The mass was not buying anything, measured before it was cut
+
+The pistol body is a 0.58 m diagonal as drawn. Through every canonical shot's own camera:
+
+    shot         nearest humanoid guard   pistol body diagonal
+    guard              5.7 m                   105.6 px
+    impact            15.2 m                    39.9 px
+    courtyard         11.0 m                    36.3 px      ← the shot that sets the 99% figure
+    hero              14.1 m                    34.7 px
+    combat            22.9 m                    25.0 px
+    night             27.3 m                    17.2 px
+    dunes             64.0 m                     8.5 px
+
+At `courtyard` a 1,108-triangle body is about **two triangles per pixel**. `tools/pistollp.mjs`
+sweeps the decimation and measures what each ratio costs — deviation point-to-triangle (a
+point-to-*vertex* metric flatters decimation exactly where it is worst), and silhouette symmetric
+difference from 24 directions, because the outline is the art style and border error matters more
+than interior error:
+
+    ratio   tris   MainBody Barrel Antennae   max dev   mean dev   silhouette symDiff
+      60%   1002        664       94      244    3.24 mm    0.38 mm         0.95%
+      45%    752        498       70      184    7.58 mm    0.67 mm         1.85%
+      35%    584        387       55      142   15.24 mm    1.09 mm         2.91%
+      28%    467        310       44      113   19.11 mm    1.47 mm         4.19%
+      23%    385        255       36       94   16.98 mm    2.10 mm         6.37%   ← shipped
+      18%    298        198       28       72   27.18 mm    3.68 mm         9.91%
+      12%    200        132       19       49   45.02 mm    6.33 mm        16.75%
+
+**Max deviation is not monotone in the triangle count** — 467 triangles reads 19.11 mm where 385
+reads 16.98 — because it is a single-vertex statistic over a greedy collapse order. The gate is
+therefore stated in the unit that decides it and split across both statistics: at `courtyard`'s
+62.7 px/m, mean ≤ 0.25 px and max ≤ 1.5 px. Shipped: **0.14 px and 1.06 px**. Stated rather than
+buried: at the `guard` portrait (5.7 m) the same max is **3.1 px on a 105.6 px object, 2.9% of it**,
+and that is the one place this decimation is above its own standard.
+
+**And the answer in pixels, which is what "show me" means here.** `pistollp --pixels` rasterises
+the committed 385-triangle pistol and the full 1,672-triangle one into the same coverage grid at
+the size each shot gives them, and counts the pixels that disagree:
+
+    shot        px    side view          front view         three-quarter
+    guard      106    124 px  (5.9%)     61 px  (5.6%)      85 px  (4.1%)
+    impact      40     13 px  (4.4%)     11 px  (7.2%)      11 px  (3.7%)
+    courtyard   36     14 px  (5.7%)      4 px  (3.2%)       6 px  (2.4%)
+    hero        35     18 px  (7.8%)      4 px  (3.5%)      12 px  (5.3%)
+    combat      25     11 px  (9.4%)      4 px  (7.0%)       6 px  (5.2%)
+    night       17      7 px (12.7%)      0 px  (0.0%)       0 px  (0.0%)
+    dunes        9      3 px (20.0%)      2 px (28.6%)       1 px  (7.1%)
+
+Four to eighteen pixels in every shot where the pistol is larger than 25 px across. The far rows'
+percentages are large and their counts are 0–3 px: that is rasterisation dither on a nine-pixel
+object, and it is left in the table rather than trimmed, because a table that stops where it
+flatters the result is not a measurement.
+
+`tools/_decimate.mjs` is a half-edge quadric collapse. Half-edge, i.e. always onto one of the two
+existing endpoints, for one reason: **a blended `skinIndex` is not a thing.** It is an integer bone
+id; averaging two of them produces a third bone. Collapsing onto a surviving vertex means every
+emitted weight is a byte the artist authored, and `pistollp.mjs` refuses to write if any emitted
+(bone, weight) pair is not in the source's set. Attribute splits survive too — welded positions
+drive the collapse, but each welded vertex keeps all its original UV/normal variants and a
+re-pointed corner takes the variant whose authored normal is closest, so hard edges stay hard.
+
+### §709.4 The check a bind-pose joint census cannot make (§442)
+
+Decimation drops joints from the weight table. Measured: `Antennae003` loses `antenna002` (3.6% of
+its weight) below 240 triangles, `MainBody` loses `Trigger` (9.4%) below 160.
+
+**Whether that matters is not a question about the bind pose.** At bind every pistol bone matrix is
+the identity, so a joint census taken there can tell you a joint is *gone* and can never tell you
+what its absence *costs* — the joint only moves when a clip runs. So the gate is a driven one: both
+meshes CPU-skinned through all eleven clips, decimated surface measured against the original
+**posed**, per frame.
+
+That check immediately earned its place. It reads 29.12 mm on `Shoot(GunMovement)` against 16.98 mm
+at bind — and the cause is worth recording, because it is a property of the source nobody had
+noticed: **`Shoot(GunMovement)` scales the pistol bones up to 2.243×** and `Shoot(BodyMovement)` to
+1.442×, while the other nine clips hold every pistol scale track at exactly **1.000**. Geometric
+error is multiplied by that scale.
+
+`Shoot(GunMovement)` is in `UNUSED_CLIPS` and no guard state reaches it, so the gate runs over the
+clips `CLIP_FOR_ARMED` actually names — read off the shipped map, not restated. Over those six the
+driven worst is 16.98 mm, i.e. the bind reading: on every reachable clip the decimated pistol tracks
+the animation to within the static error, and the dropped `antenna002` costs nothing a guard can
+ever be seen with.
+
+Note the map is read for a second reason: **armed, `CasualWalking` becomes unreachable and
+`PatrolWalk` becomes reachable.** Gating on the unarmed map would have tested one clip that no
+longer plays and skipped the one this change introduces.
+
+### §709.5 "In her hands" is a number too
+
+The frames show the gun held; this is the same claim in metres, so it does not depend on anyone
+agreeing about a picture. Nearest pistol **surface** vertex to each hand bone, driven, over 24
+poses of every clip (★ = reachable in the armed build):
+
+    clip                    R hand   L hand   hands apart
+  ★ Idle                    0.080 m  0.064 m     0.096 m
+  ★ PatrolWalk              0.080 m  0.066 m     0.096 m
+  ★ Lookaround              0.080 m  0.056 m     0.103 m
+  ★ Shoot(BodyMovement)     0.080 m  0.058 m     0.103 m
+  ★ HitTaken                0.080 m  0.066 m     0.446 m
+  ★ Run                     0.079 m  0.479 m     0.740 m
+    ─ the §442 control ─
+    BIND, no clip running   0.691 m  0.645 m
+
+On the four clips a standing or patrolling guard plays, **both** hand bones are 5.6–8.0 cm from the
+pistol's surface with the hands 9.6–10.3 cm apart: a two-handed grip, at the thickness of a hand.
+`Run` and `HitTaken` keep the right hand on it at 8.0 cm and let the left go, which is a one-handed
+carry and is correct. The right hand is 0.080 m on every reachable clip to three decimal places —
+it is the grip hand and it does not move relative to the gun.
+
+**Un-driven, the same arithmetic says 0.69 m and 0.65 m.** Nothing is in anyone's hands at bind.
+
+**And it is textured by the artist, not by us.** All three pistol meshes carry `BodyMat` and reach
+the body atlas through their own dedicated UV island at `u[0.731, 0.977] v[0.555, 0.812]`, which
+no body mesh occupies. Sampled out of the committed `carmelita-body.png`, that island's mean is
+**RGB (105, 81, 6)** — the saturated orange-gold the gun reads as in the frame — against the coat
+island's (62, 43, 35) brown. Nothing here paints the pistol; `GUARD_DRESS` gains geometry for its
+three long-dormant `MainBody`/`Barrel`/`Antennae003` entries and applies them only when
+`TUNE.guardArt` is on, which it is not.
+
+### §709.6 The muzzle: a point in a bone's frame, never a world offset
+
+`Barrel` is 100% weighted to `ShockPistolbarrel`. The muzzle is therefore expressed as a point in
+**that bone's bind-local frame**, and `bone.matrixWorld · muzzle` is the muzzle on any frame of any
+clip, with no per-frame skinning and nothing to keep in sync.
+
+    muzzle   (-0.00014, 0.08432, -0.07882) in ShockPistolbarrel bind-local
+    barrel extent along its own principal axis   176.8 mm
+    bore axis  (-0.0021, 0.0166, -0.9999)  — essentially -z in that frame
+
+**Which end.** Two derivations that share no reasoning, and they must agree:
+
+- *Static, shipped* (`muzzleFromBarrel`): of the two ends along the barrel's own principal axis, the
+  muzzle is the one **further from the `Trigger` bone** — a trigger sits at the grip. Measured:
+  0.2415 m against 0.1803 m, a **25.4%** margin, and the function reports the margin so a future
+  asset that does not discriminate says so instead of picking quietly.
+- *Driven, independent* (`tools/muzzle.mjs`): the muzzle is the end **further from her chest** when a
+  clip is actually holding the gun out. Over the reachable clips, **276/276 decisive poses agree**.
+  Poses where the two ends are within ±2% of equidistant are counted as *not deciding* rather than
+  as agreement — an instrument that cannot tell should not get a vote.
+
+`Shoot(GunMovement)` inverts on all 48 of its poses and is excluded with its reason: it animates the
+**gun bones only**, so the chest it is measured against never leaves the bind pose. It is also
+unreachable. A 0/48 row in a table is explained rather than filtered.
+
+**§442's counterexample, printed by the tool on every run.** At the bind pose the same arithmetic
+puts the muzzle at **(−0.928, 0.503, 0.229) — 0.93 m out to her side**, bore pitched 87° at the sky.
+That is what a "muzzle" captured as a baked world offset from an undriven rig would be, and it looks
+entirely plausible in a still. The apex is local-plus-bone precisely so that failure is unavailable.
+
+The decimation does not move it: the muzzle derived from the 36-triangle barrel and from the
+156-triangle one agree to **five decimal places**, and the extent to 0.1 mm.
+
+**And the apex lands on the gun that is actually drawn.** Reading the apex back out of the same
+transform that placed it would be measuring this file's arithmetic (§439/§440), so the check is
+against the CPU-SKINNED surface instead — which is built from `skinIndex`/`skinWeight` and every
+`boneInverse`, not from the one bone matrix the apex uses. Over 12 poses of each reachable clip:
+
+    apex → nearest DRAWN barrel vertex        0.8 mm, on every clip
+    apex → nearest drawn pistol vertex        0.8 mm, on every clip
+    barrel vertices BEHIND the apex along the bore    7.3%
+
+0.8 mm off a surface whose own vertex spacing is millimetres, with 93% of the barrel behind it: the
+apex sits on the front face of the barrel, not inside it and not floating off it.
+
+### §709.7 The aim did NOT move, and the barrel swing is why
+
+The request was for the cone to *originate* at the barrel. Whether it should also *aim* along it is
+a real question, and the answer is a table. Bore direction across the clips a guard can reach:
+
+    clip                  bore pitch          yaw span within the clip
+    PatrolWalk          +25.2° .. +37.8°            2.9°
+    Idle                +35.7° .. +37.8°            2.8°
+    Lookaround          +33.4° .. +48.9°           36.3°
+    Run                 -32.1° .. +73.4°          101.0°
+    HitTaken            +37.8° .. +86.5°          145.6°
+    Shoot(BodyMovement) +35.3° .. +89.1°          320.6°
+    (unreachable armed) CasualWalking  -25.7° .. -14.1°, 17.9°
+
+**On the two clips a guard spends its life in, the barrel points 25–38° above the horizon.**
+`PatrolWalk` is a high-ready carry — which is the correct way to hold a gun on patrol and the worst
+possible place to point a detection cone. A barrel-aimed cone would spend the entire patrol looking
+at sky, sweep 101° during a run and a third of a turn during a stagger, and the unarmed walk
+(-25.7°..-14.1°) does not even overlap the armed one.
+
+**And there is a second reason, which is the one that actually settles it.** A first draft of this
+section claimed that aiming the cone at the barrel "changes what a guard can see". **That is
+false, and it is worth writing down as false**, because it is the intuitive answer. The drawn cone
+does not feed detection at all: `Senses.evaluate` tests `angle(forward-flattened, toPlayer)` against
+`halfAngle` and reads `sense.forward`, which `_step` sets to `this.forward` — it never sees
+`_updateCones`'s `_dir`. `_dir` reaches only the rendered beam and `Senses.updateReach`, which
+clips the beam's visible length.
+
+So the real objection is sharper: **the cone is a telegraph, and aiming it at the barrel would make
+it lie.** The player would read a beam pointed 31° into the sky and be detected by a horizontal fan
+he could not see. Making it honest would mean moving detection onto the barrel too — which is the
+alert ladder, and out of scope, and which the pitch table says would be bad design regardless.
+
+So: **apex moved, aim unchanged.** The cone still throws along `g.forward` pitched down by
+`TUNE.conePitch`, and it still telegraphs exactly the volume `Senses` tests.
+
+### §709.8 What was and was not allowed to move, in one line each
+
+`_eyePosition` feeds `sense.eye` at `Guard.js:971`, which is the origin of the line-of-sight ray the
+whole alert ladder turns on. **It is untouched.** A second method, `_coneApex`, is what
+`_updateCones` reads, and it falls back to `_eyePosition` whenever there is no pistol — the scarab,
+the rebind arm, an unarmed build, a refused muzzle derivation — so the unarmed build is what it was.
+
+One consequence had to move with the apex and is easy to miss: the ground pool's `onset` divided
+`cfg.eyeHeight` (1.66 m) by `tan(pitch + halfAngle)` to find where the beam's lower rim meets the
+floor. With the apex at the muzzle that height is **0.67–0.70 m** on the patrol clips, so the
+unchanged arithmetic would have started the pavement wedge 2.4× too far from a beam that now leaves
+the gun. It reads the apex's own height, and falls back to `cfg.eyeHeight` exactly when there is no
+pistol.
+
+**§178 is not made moot — it is satisfied more strongly.** `coneEyeFwd`/`coneEyeUp` exist because a
+cone starting inside the head washes additive haze over the chest. The muzzle sits **0.50–0.52 m in
+front of her root** on the patrol clips, and the worst-pose distance from the muzzle to the nearest
+vertex of her CPU-skinned body across all reachable clips is **0.112 m** (0.124 m as drawn). It
+clears the whole body, not merely the skull. Checked rather than assumed, because a muzzle apex sits
+in front of the body and that was the point of the offset.
+
+**And the revert is exact.** `buildNative` gained a `normalise()` helper so the body merge and the
+pistol merge cannot drift apart, which means the shared code path changed for the unarmed build
+too. Built from the same asset at `7e3497d` (the commit before this lane) and at this one,
+unarmed, the two geometries agree on **every one of 92,340 position values, 92,340 normals, 61,560
+UVs, 123,120 skin indices, 123,120 skin weights and 96,189 indices — zero differences** — with
+`height`, `soleLift` and the region table identical. `?carmpistol=0` is the build that was there
+before, not an approximation of it.
+
+### §709.9 §707.9's interpenetration, asked of the new apex — and it is the smaller exposure
+
+§707 opened the sealed north lane, and §707.9 records that guards 1 and 2 now pass head-on and
+interpenetrate, because this build has no guard-vs-guard collision. That is out of scope there and
+out of scope here — but it bears on a cone apex that lives in front of the body, so it gets one
+measurement rather than a redesign.
+
+Over 400 s of the shipped `Guards.update` path, 400 samples, nine guards, 72 ordered pairs each:
+
+    closest any two guards came                       0.038 m   (they do co-locate)
+    pair-samples with centres within 0.8 m                314
+    apex inside another guard's capsule, of 28,800 tests:
+      HEAD-BONE apex (what shipped before §709)          314   1.090%   worst 0.243 m
+      MUZZLE apex   (§709, shipped)                        2   0.007%   worst 0.070 m
+
+**§709 did not create this exposure; it reduced it 157-fold.** The mechanism is geometric and not
+a coincidence: `_eyePosition` puts the apex on the guard's own forward axis (`forward × 0.45`), so
+a guard walking straight at another puts its apex straight into him — which is why the 314 is
+exactly the number of pair-samples within 0.8 m. The muzzle sits **0.37 m off** that axis, so the
+same approach carries it past his shoulder instead.
+
+**Two limits, stated.** Headless the garrison takes its procedural body, so this reconstructs both
+apexes from the measured stance offsets rather than reading `_coneApex`; and the target is a
+capsule (`TUNE.radius` 0.42 temple / 0.56 heavy), not the drawn hull. It answers "is this a NEW
+problem" — no, and it is a smaller one than before — not "exactly how often". Left as a recorded
+observation, per §707.9's own disposition.
+
+### §709.10 The crouch: turning the gun on changes how tall a patrolling guard is
+
+`CLIP_FOR_ARMED` swaps `walk_patrol` and `walk_alert` from `CasualWalking` to `PatrolWalk`. That is
+the clip named for the job and the one the source authored for an armed guard — and it is a
+**visible change**:
+
+    CasualWalking   drawn height 1.768 m   arms at her sides
+    PatrolWalk      drawn height 1.508 m   crouched, hands closed around the pistol
+
+A patrolling guard is **~26 cm shorter and visibly crouched** in the asset's own units — driven and
+CPU-skinned over the cycle the two clips measure 1.458–1.512 m and 1.731–1.776 m, which reproduces
+§704's 1.508 / 1.768 — and **~29 cm on screen**, because `MOUNT_SCALE` is 1.108. In the running
+build on one camera and one settle, `guard4` reads **1.7405 m unarmed against 1.4679 m armed:
+27.3 cm** (§709.12). §704.6 chose
+`CasualWalking` precisely because `PatrolWalk` "is a crouched sneak" that reads as a crouch around
+nothing; with the weapon drawn it reads as an armed patrol instead.
+
+**Grounding does not move, and the swap makes it slightly better.** `guardfloat`'s sole column is
+the lowest CPU-skinned body vertex relative to the root that `_step` snaps to the floor. Driven over
+40 poses of each cycle:
+
+    CasualWalking (was)   sole -18.2 mm .. +4.8 mm
+    PatrolWalk    (now)   sole -10.6 mm .. +0.8 mm
+    HitTaken              sole -143.9 mm  ← the worst clip in the set, and unchanged by this lane
+
+The armed walk sinks 7.6 mm LESS than the walk it replaces. The armed and unarmed bind boxes are
+both `y[0.0000, 1.6387]`, `soleLift` is identical to the last digit, and §697's `groundProbe` 0.06 /
+`groundSlopeMax` 30 are untouched and asserted so by two tests.
+
+**And `tools/guardfloat.mjs` was re-run in situ at HEAD**, because this lane changed the clip the
+guards walk in AND §707 changed the routes they walk — and no table existed with both. 360 samples
+a guard along the whole lap, against §697's recorded one:
+
+    #  id       route              u-span            gapC med          gapC min .. max
+                              §697 → now        §697 → now         §697 → now
+    0  guard0   south_gate     1.00 → 0.99     0.010 → 0.006     -0.052..0.124 → -0.078..0.055
+    1  guard1   courtyard_ring 0.05 → 1.00     0.020 → -0.002    -0.023..0.073 → -0.100..0.053
+    2  guard2   courtyard_ring 0.08 → 0.90    -0.006 → -0.001    -0.021..0.032 → -0.084..0.051
+    3  guard3   obelisk_watch  1.00 → 1.00    -0.002 → -0.005    -0.027..0.026 → -0.093..0.003
+    4  guard4   pylon_gate     0.06 → 1.00     0.042 → 0.007      0.036..0.056 → -0.012..0.036
+    5  guard5   hall_nave      1.00 → 1.00     0.041 → 0.047     -0.029..0.078 → -0.071..0.055
+    6  guard6   hall_weave     0.81 → 1.00     0.008 → -0.004    -0.048..0.124 → -0.056..0.055
+    7  guard7   rooftop_run    1.00 → 1.00    -0.001 → -0.004    -0.030..0.042 → -0.077..0.016
+    8  guard8   tomb_vault     0.15 → 1.00    -0.085 → 0.014     -0.091..-0.049 → -0.015..0.033
+                                                                        all nine at 100% patrol
+
+**Every median is within 1 cm of §697's, and the two that moved most moved TOWARD zero** —
+`guard4` 4.2 cm → 0.7 cm and `guard8` −8.5 cm → +1.4 cm. All nine patrol 100% of their lap in both
+tables.
+
+**The widened min/max is not this lane's.** Five guards were stalled in §697's table: `guard1`
+covered 0.05 of its route parameter, `guard2` 0.08, `guard4` 0.06, `guard8` 0.15, `guard6` 0.81.
+They now cover 0.90–1.00, because §707 (and 7e3497d before it) unstalled them. A guard confined to
+5% of its lap samples one patch of floor; one that walks the whole lap meets every surface on it,
+so the EXTREMES widen while the median holds. Reading that widening as a grounding regression would
+be reading a route fix as a floor bug.
+
+What this table cannot separate is the clip swap from the route fix, because both are in the same
+HEAD. The clip's own contribution is isolated by the CPU-skinned figures directly above, which hold
+the route constant by not involving it at all: `PatrolWalk` sits 7.6 mm HIGHER off the root than
+`CasualWalking`.
+
+### §709.11 The instrument that was pointed at the wrong subject (§442)
+
+`budgetattrib.mjs --inpage` derived `CARMELITA_TRIS` by calling **`bindToRig3`** — `CarmelitaGuard.js`,
+the REBIND arm. The shipped default has been the native arm since §704. The two agree at **32,063**
+on today's assets, so no number it ever printed was wrong; the **instrument** was, and a correct
+measurement on the wrong subject is §442 exactly. It now builds the shipped arm through
+`buildNative`, splices the low-poly pistol the way `loadCarmelitaNative` does, gates the pistol on
+the shipped `TUNE`, and warns loudly rather than quoting a figure it did not measure if the
+low-poly asset is missing.
+
+### §709.12 In the page, not only in Node
+
+Everything above is offline. `tools/pistolshot.mjs` boots the real build and reads the same
+quantities off a settled garrison (§435.4: the guards WALK the settle window on the shipped
+`Guards.update` path; nobody is teleported). **Re-taken after §707**, because that section
+unstalled five of nine guards and the first set was therefore evidence about a build that no
+longer exists — and with `{ dt: 0 }` on every `setShot`, which the first set also lacked (§709.13).
+
+    ?carmpistol=1   native=true  armed=true  asset pistol 385 tris
+    low-poly splice: {ok: true, before: 1672, after: 385}
+    muzzle: {bone: ShockPistolbarrel, local: [-0.00014, 0.08432, -0.07882], margin: 0.254}
+
+      guard4  clip walk_patrol  drawn h 1.4679 m   pistol YES 385 tris, shelled=false
+          cone apex    (2.0853, 0.6700, 33.7520)   0.670 m above his feet
+          head-bone eye (2.1818, 1.2192, 33.4280)  — apex moved 0.6449 m
+      guard1  clip walk_patrol  drawn h 1.4798 m   pistol YES 385 tris, shelled=false
+          cone apex    (16.3981, 0.6794, -2.2373)  0.679 m above his feet
+          head-bone eye (16.7340, 1.2351, -2.0837) — apex moved 0.6672 m
+
+    ?carmpistol=0   native=true  armed=false  muzzle: null
+
+      guard4  clip walk_patrol  drawn h 1.7405 m   pistol no   muzzle bone —
+          cone apex    (2.0056, 1.4753, 33.4054)   1.475 m above his feet
+          head-bone eye (2.0056, 1.4753, 33.4054)  — apex moved 0 m
+      guard1  clip walk_patrol  drawn h 1.7560 m   pistol no   muzzle bone —
+          cone apex    (16.5035, 1.4966, 3.2455)   — apex moved 0 m
+
+Four things fall out, none of which a picture can state:
+
+- The muzzle the page derives is the muzzle Node derived, **to all five decimals**.
+- **The apex moved 0.6449 m on `guard4` and 0.6672 m on `guard1`** — 80 cm down from the head-bone
+  eye and out in front. Unarmed the same method reads `apex moved 0 m` and the apex IS the eye
+  componentwise: the fallback leg, confirmed in the running build rather than only in a test.
+- **The crouch, on the same camera and settle:** `guard4` 1.7405 → 1.4679 m, **27.3 cm shorter**.
+  (`guard1` reads 1.7560 → 1.4798, but see below — its two arms are not at the same point of the
+  lap, so that number is two stances rather than one comparison.)
+- **Every draw and triangle figure in this section is `budgetattrib`'s, computed offline.**
+  `pistolshot` also prints `guards.stats`, the GUARDS MODULE's own bookkeeping — what it believes
+  it added — not a renderer reading. `Engine.stats.drawCalls` is not quoted anywhere here and must
+  not be: §700.3, §701.11 and §705 between them caught it returning four distinct frozen plausible
+  values in this harness (1, 180, 188, 153), each with zero spread and each with a delta that
+  agreed with the right answer.
+
+**The frames, and the two that are deliberately missing.**
+
+    shots/pistol709-p0-guard4.png       shots/pistol709-p1-guard4.png       the gun, before → after
+                                        shots/pistol709-p1-guard1.png       second armed subject
+    shots/pistol709-cone-p0-guard4.png  shots/pistol709-cone-p1-guard4.png  the apex, before → after
+                                        shots/pistol709-cone-p1-guard1.png  second armed cone subject
+
+Face cameras are front views by MEASUREMENT — `dot +0.994` and `+0.993`, refused below 0.90. Cone
+cameras are deliberate **profiles** (`dot 0.276` / `−0.307`), labelled as such because you cannot
+see where a beam starts by standing in it.
+
+`pistol709-p1-guard1.png` is the clearest of the set: the shock pistol in her gloved hand, its gold
+muzzle, star emblem and antenna prong all legible, in the crouched `PatrolWalk` stance — carrying a
+clean dark silhouette line against the orange paving, which is the 80% of the border §709.2
+measured as "against background" and which the screen-space ink pass outlines anyway.
+`pistol709-cone-p1-guard1.png` is the cone: the wedge converges to a bright point **at her hands**,
+with her head dark above it. Against `cone-p0-guard4.png`, where the same glow sits **at the head**,
+that pair is the whole change in two pictures.
+
+**`guard1`'s two UNARMED frames do not exist, and the tool refused both rather than shipping them.**
+The face frame came back at `dot −0.984`: on the longer post-§707 lap she had walked past the fixed
+camera and was facing away, and the 0.90 gate caught it — §702.9's failure, prevented. The cone
+frame is the more interesting one: **the camera was clear and simply had nothing in it.** The two
+arms play different-length walk clips (`CasualWalking` 0.83 s against `PatrolWalk` 1.00 s), so at
+t = 60 s `guard1` was **5.48 m** from where the armed arm left her. `guard4`'s two arms differ by
+0.36 m, which is exactly why that subject's pair is sound and this one's is not.
+
+That gap was in this lane's tool and the earlier camera fix could not have caught it, because it
+only asked whether the camera was BURIED. **Clear is not the same as useful.** The cone camera now
+also requires the subject's own drawn box to be inside its frustum. What the evidence therefore
+rests on: the before/after PAIR is `guard4`, on both claims; `guard1` is a second ARMED sample of
+both, and its numeric apex move (0.6672 m) is a second sample of the measurement.
+
+### §709.13 Three tests this lane broke, and why two of them are different things
+
+The patrol lane bisected three failures to this lane's commits and said so rather than absorbing
+them. All three are confirmed here by counterexample — a run at the commit BEFORE each — because
+"the bisect says it is mine" and "it is mine" are different claims and only one is cheap to check.
+
+    test         before           at the commit          now
+    bundle       15364e8  PASS    de3f103  FAIL          PASS
+    subjhold     0509c22  PASS    c4ce44c  FAIL          PASS (fixed here)
+    clockfreeze  d20ebe6  n/a     9362193  FAIL          PASS (fixed here)
+
+**`bundle` was real for exactly one commit and needed no fix.** `de3f103` committed
+`carmelita-pistol-lp.glb` and the tooling that makes it; the code that FETCHES it landed in
+`c4ce44c`. For one commit the asset was shipped-but-unreferenced payload, which is precisely what
+`KNOWN_UNSHIPPED_PAYLOAD` exists to catch, and it caught it. The lesson is about commit ordering —
+an asset and its first consumer belong in the same commit — not about the asset.
+
+**`subjhold`'s `guardfix` pin was a real break and stayed broken for four commits.** It greps
+`src/ai/Guard.js` for `!g.getAttribute('color')` and `new Float32Array(n * 3).fill(1)`, protecting
+§290: sanitized import geometry has no `color`, and an unbound attribute under a
+`vertexColors: true` material multiplies albedo by (0,0,0) — the black-mannequin guard. §709
+refactored that check into a `withColour()` helper so it could cover the pistol buffer as well,
+**kept the behaviour, and moved the text the pin reads**. The source now carries the pinned shape
+again and the pin itself is untouched. What the episode actually exposes is the pin's reach: it
+could not have seen the new buffer at all, so `carmnative.test.mjs` gains a BEHAVIOURAL assertion
+over both geometries — including the precondition that neither merge emits a `color` attribute of
+its own, without which that test would pass vacuously.
+
+**`clockfreeze` was a real defect in this lane's own instrument, and the most embarrassing of the
+three.** `pistolshot.mjs` is a multi-arm runner whose entire purpose is that its two arms differ by
+one token — and it called `setShot` without `{ dt: 0 }`, so each call advanced `engine.time` by
+~0.28 s and moved every flame, mote and shader phase between arms. A tool built to isolate one
+variable, quietly varying the world. Frozen at all three call sites; **not** added to
+`KNOWN_RUNNING_CLOCK`, because that register is for runs that were mitigated rather than repaired.
+
+### §709.14 Domains (§418.3) and the runs
+
+**`tools/_decimate.mjs` / `tools/pistollp.mjs`.** *Passes on:* the committed
+`carmelita-guard.glb`, whose three pistol meshes decimate to 385 triangles with every emitted
+(bone, weight) pair a byte the source authored — checked, 0 invented pairs across 407 emitted
+vertices. *Fails on:* a metric that cannot see error — `--selftest` refuses unless deviation and
+silhouette both read exactly 0 against the identity AND blow up against the same pistol scaled
+1.05 (they read 2.36–8.94 mm and 10.8–12.1%); a decimation whose driven deviation exceeds 1.50 px
+at `courtyard`; and, before the limits were restated in pixels, this gate rejected a 385-triangle
+bake three times running, which is how the 2.243× scale on `Shoot(GunMovement)` was found.
+*Cannot discriminate:* whether the pistol is the right SHAPE — it measures agreement with the
+source mesh, not with a gun.
+
+**`tools/muzzle.mjs`.** *Passes on:* the shipped rig, where two derivations sharing no reasoning
+(further from the `Trigger` bone; further from the chest when driven) name the same barrel end on
+**276/276** decisive poses over the six reachable clips. *Fails on:* the bind pose, which it prints
+as its own counterexample (muzzle 0.93 m out to her side, bore 87° at the sky); a barrel that is
+not single-bone, which `muzzleFromBarrel` refuses; a `Trigger` margin under 10%; and a muzzle
+inside her body on any reachable pose. *Cannot discriminate:* `Shoot(GunMovement)`, which animates
+the gun bones only so the chest it measures against never leaves bind — excluded by name, with the
+reason, rather than filtered quietly.
+
+**`tools/pistollp.mjs --pixels`.** *Passes on:* the committed low-poly asset against the
+full-resolution meshes, 4–18 disagreeing pixels in every shot where the pistol is over 25 px.
+*Fails on:* nothing yet — it is a reporting mode, and its 20–29% rows on the 9 px `dunes` view are
+the honest reading of rasterisation dither and are printed rather than trimmed.
+
+**`tools/budgetattrib.mjs --inpage`.** Was measuring `bindToRig3`, the arm the build does not use
+(§709.11). Now builds the shipped one. *Fails on:* a missing `carmelita-pistol-lp.glb`, where it
+warns loudly and quotes the FULL-resolution pistol rather than a figure it did not measure.
+
+**`tools/pistolshot.mjs`.** *Passes on:* a settled garrison on the shipped path, both subjects at
+facing dot +0.993. *Fails on:* any face camera below dot 0.90, and any cone camera that is enclosed
+(>3 of 14 rays hitting within 0.6 m) or whose subject is occluded — both refused rather than
+photographed. *Has already failed once, in the subject's favour and against the record:* its first
+version had no cone-camera test at all and photographed the inside of a pillar. *Cannot
+discriminate:* whether a frame is well composed, or whether the settle landed on a flattering pose
+— which is why it prints the clip and the stance beside every frame.
+
+**`tools/guardfloat.mjs`** (not this lane's instrument; re-run because this lane changed the clip
+the guards walk in). *Passes on:* the shipped garrison, all nine at 100% patrol, every median within
+1 cm of §697's. *Cannot discriminate:* the clip swap from the concurrent route fix, because both are
+in the same HEAD — which is why the clip's own contribution is measured separately and offline,
+where no route is involved.
+
+**Suite.** `node --test "tests/*.test.mjs"` from a CLEAN WORKTREE, under the FIFO lock, cwd checked
+INSIDE the command (§694). Every run this lane made, not only the green one (§703.2):
+
+    commit    what it was                     result        time     note
+    3c257c8   before the failures were known  1066/1068   361.8 s   EXIT=1, and CONTENDED — its
+                                                                    wait raced a gap between two
+                                                                    captures and it ran beside one
+    3c257c8   the same, uncontended, full log 1066/1068   250.6 s   EXIT=1 — named the two:
+                                                                    clockfreeze and subjhold
+    994df54   after both fixes                1068/1069   254.5 s   EXIT=1 — `F3 GC` only, the
+                                                                    documented ~1-in-3 flake
+    994df54   the same commit again           1069/1069   256.1 s   **EXIT=0**
+
+The first run is quoted although it is the least informative, because a contended run that agrees
+with an uncontended one is worth recording and a lane that only quotes its last run is choosing
+which evidence exists. The third and fourth are the same commit twice: `framebudget`'s F3 GC is
+contention-sensitive (§703) and is run **unfiltered** — `--test-name-pattern` changes its
+allocation history and makes it fail 100%, so filtering it to "check just that one" is the one
+thing that cannot be done. `padrest` R1b, the other documented flake, did not fire in any run.
+
+Test count moved 1068 → 1069 because this lane added tests; §707's own final run was 1061/1061 at
+`7e3497d`, before both lanes' additions.
+
+**Bisect runs**, quoted because §709.13's attributions rest on them and a claim of the form "it
+was already broken" is worthless without the run that shows it was not:
+
+    bundle    15364e8 pass 8/8   de3f103 FAIL 7/8   c4ce44c pass 8/8
+    subjhold  0509c22 pass 4/4   c4ce44c FAIL 3/4   d20ebe6 FAIL 3/4
