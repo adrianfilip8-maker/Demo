@@ -140,20 +140,50 @@ test('sly27: the source clip with trailing whitespace is reachable, and clipKey 
 
 /* ─────────────────────────────── the runtime side ──────────────────────────────────────────── */
 
+const strip = (p) => {
+  const { json, bin } = fromGLB(readFileSync(p));
+  for (const m of json.materials || []) delete m.pbrMetallicRoughness?.baseColorTexture;
+  delete json.textures; delete json.images; delete json.samplers;
+  const b = toGLB(json, bin);
+  return new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength), '');
+};
+const parsed = have ? await Promise.all([strip(bodyP), strip(clipP)]) : null;
+
 const built = have ? await (async () => {
-  const strip = (p) => {
-    const { json, bin } = fromGLB(readFileSync(p));
-    for (const m of json.materials || []) delete m.pbrMetallicRoughness?.baseColorTexture;
-    delete json.textures; delete json.images; delete json.samplers;
-    const b = toGLB(json, bin);
-    return new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength), '');
-  };
-  const [gltf, clips] = await Promise.all([strip(bodyP), strip(clipP)]);
+  const [gltf, clips] = parsed;
   const warnings = [];
-  const model = new SlyModel({ scene: new THREE.Group(), warn: (m) => warnings.push(m), get: () => null, emit: () => {} });
+  const scene = new THREE.Group();
+  const model = new SlyModel({ scene, warn: (m) => warnings.push(m), get: () => null, emit: () => {} });
   await model.init({ gltf, clips, noTextures: true });
-  return { model, warnings };
+  return { model, warnings, scene };
 })() : null;
+
+test('sly27: the model ATTACHES ITSELF to the engine scene — the one thing no offline probe sees', async () => {
+  /* This test exists because its absence shipped. The first `?char=sly27` capture came back as an
+     empty courtyard: the character built correctly, scaled correctly, posed correctly, stood at
+     the right world position — and was never added to the scene. Every offline instrument passed,
+     because `sly27fit.mjs`, `godot2sly27.mjs` and every assertion above traverse `model.root`,
+     which is a perfectly good object with or without a parent. §439/§440: the instruments shared
+     the subject's assumption and could not falsify it. Only a rendered frame could, and a frame
+     costs ten minutes of capture lock.
+
+     So the attachment is asserted here, cheaply, in both directions. */
+  const { model, scene } = built;
+  /* PASS ARM: after init the root is a child of the engine's scene. */
+  assert.equal(model.root.parent, scene, 'init() must add root to engine.scene');
+  assert.ok(scene.children.includes(model.root));
+  /* FAIL ARM: dispose takes it back out, so the assertion above is testing attachment rather
+     than merely testing that a Group has some parent. Built on its own instance so the shared
+     `built` model is left attached for the tests that follow. */
+  const [g2, c2] = await Promise.all([strip(bodyP), strip(clipP)]);
+  const scene2 = new THREE.Group();
+  const m2 = new SlyModel({ scene: scene2, warn: () => {}, get: () => null, emit: () => {} });
+  await m2.init({ gltf: g2, clips: c2, noTextures: true });
+  assert.equal(m2.root.parent, scene2);
+  m2.dispose();
+  assert.equal(m2.root.parent, null, 'dispose() must detach the root');
+  assert.ok(!scene2.children.includes(m2.root));
+});
 
 test('sly27: the model builds, resolves its cane, and holds the rest clip', () => {
   assert.ok(built, 'the assets are missing, so the model could not be built');

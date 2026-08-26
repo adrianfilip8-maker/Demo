@@ -196,6 +196,19 @@ export class SlyModel {
     this.root.updateMatrixWorld(true);
     this.root.userData.height = RIG3.TUNE.height;
 
+    /* ---- 5. INTO THE SCENE ---------------------------------------------------------------
+     *
+     * `SlyModelGodot` and `SlyModelDLRig` both do this and nothing else does it for them: the
+     * character module owns its own attachment. Leaving it out builds a complete, correctly
+     * scaled, correctly posed character that renders NOTHING, and — this is the part worth
+     * writing down — **no offline instrument can see it**. `sly27fit.mjs`, `tools/godot2sly27
+     * .mjs` and every assertion in `tests/sly27.test.mjs` traverse `model.root`, which is a
+     * perfectly good object whether or not it has a parent. They all passed on a build that drew
+     * an empty courtyard. That is §439/§440 exactly: the instruments shared the subject's
+     * assumption — that `root` is what matters — and could not falsify it. Only the frame could.
+     * `tests/sly27.test.mjs` now asserts the attachment, in both directions. */
+    this.engine?.scene?.add(this.root);
+
     this.mesh = skinned[0];
     this.cane = findNode(scene, 'Cane_LowPoly');
     this.caneBone = findNode(scene, 'CaneBone.001');
@@ -287,6 +300,7 @@ export class SlyModel {
     for (const d of this._disposables) d?.dispose?.();
     this._disposables.length = 0;
     this._matCache.clear();
+    this.engine?.scene?.remove(this.root);
     this.root.parent?.remove(this.root);
   }
 }
