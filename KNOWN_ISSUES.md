@@ -57341,3 +57341,30 @@ from a compact upright crouch with visibly less extension. The imported clip is 
 **§10 is not regressed, checked on the pictures rather than argued:** in all four frames the cane is
 inside the fist — grip in the glove, no gap, no float, no detachment — across two arms, two verbs
 and two very different arm poses.
+
+### §713.6 The suite — every run quoted (§703.2)
+
+`node --test "tests/*.test.mjs"` from the clean detached worktree at the **pushed** commit
+`57a3394`, holding the FIFO capture lock for all three runs, cwd checked from **inside** the
+spawned command (§694). Three runs, all three green:
+
+| run | commit | result | duration | pwd inside command | cwd at end |
+|---|---|---|---|---|---|
+| 1 | `57a3394` | **1084 / 1084**, 0 fail | 368.1 s | `/home/user/wt-713` | exists |
+| 2 | `57a3394` | **1084 / 1084**, 0 fail | 364.7 s | `/home/user/wt-713` | exists |
+| 3 | `57a3394` | **1084 / 1084**, 0 fail | 359.9 s | `/home/user/wt-713` | exists |
+
+**Neither documented flake fired.** `framebudget` F3 GC (~1-in-3) and `padrest` R1b (~1-in-5) both
+passed three-for-three, which is what holding the lock is for (§703). `--test-name-pattern` was
+never used — on `framebudget` it changes allocation history and makes F3 fail 100%.
+
+The runner writes each complete TAP stream to a file and greps `not ok` **out of the file**, rather
+than piping the run through `tail`. That is §711.1's own lesson taken literally: the F-set there lost
+the identity of its single failure because the `not ok` line sat above a 40-line window. All three
+streams here contain zero `not ok` lines, checked over the whole stream and not over a window.
+
+Three-for-three green is expected rather than lucky, and the reason is worth stating: **this lane
+changed no code.** The diff against `97d51e3` is `KNOWN_ISSUES.md`, `PROVENANCE.md` and four capture
+PNGs — nothing under `src/`, `tests/`, `tools/` or `public/assets/*.glb`. The suite is evidence that
+the tree it was run on is the tree that was measured, not evidence that a change was safe, because
+there was no change to be unsafe.
