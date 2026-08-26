@@ -56340,3 +56340,14 @@ are Anims27 retargeted onto RIG3.
 Unlike §704 this ships **behind a token, default OFF**, because Sly is the player and §479.20's
 static-pose ruling, the camera containment instruction and the §708 grip numbers are all tuned
 around the current body. Findings, frames and measurements below.
+
+---
+
+## §712 — "Substitute the coin texture from the godot repo, scale coins 50% larger": the repo has no coin texture, and the size was four literals — IN PROGRESS
+
+**Number claimed; content follows.** Two halves. The texture half rests on a premise that is
+false as stated and the ledger says so before it says anything else: the reference repository
+contains **no coin texture**. The scale half is unambiguous and is the §701 shape again — the
+authored size lives in more than one place, and one of the places is a decorative twin.
+
+Findings, measurements and frames below.
