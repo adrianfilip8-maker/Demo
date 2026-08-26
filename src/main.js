@@ -58,6 +58,13 @@ const CHAR_MODELS = {
      A/B round; this arrives as a token so that round has something to run against. It is the only
      model here with a real ringed tail on the rig that ships (§226) and the only one that blinks. */
   godot: ['./player/SlyModelGodot.js', 'SlyModel'],
+  /* The SAME repository's character taken NATIVELY — his own 166-joint rig, his own skin weights,
+     his own 24 clips and his own cane, with no retarget (`?char=sly27`, §711). DEFAULT OFF, and
+     that is deliberate: `godot` above rebinds to RIG3 and so keeps the whole procedural layer,
+     while this path hands posing to an AnimationMixer and stands that layer down. Sly is the
+     player and §479.20's static pose, the camera's containment rule and §708's grip numbers are
+     all tuned around the incumbent, so this arrives as a token for measurement first. */
+  sly27: ['./player/SlyModel27.js', 'SlyModel'],
 };
 function characterModule() {
   let raw = '';
