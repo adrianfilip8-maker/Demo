@@ -153,8 +153,16 @@ try {
          is anything between the camera and the coin. */
       const toCam = eye.clone().sub(pos).normalize();
       const dot = Math.abs(nrm.dot(toCam));
+      /* `Raycaster` does NOT honour `object.visible` — it tests layers and geometry and nothing
+         else — so this walk up the parents is load-bearing rather than defensive. `Props` keeps a
+         decorative TWIN of the coin set at the same 44 spots and `Pickups` hides it; without this
+         filter the pre-flight reports the subject's own invisible double as a blocker 0.98 m in
+         front of it, on every single close-up, and the one instrument that is supposed to catch a
+         bad frame cries wolf on the good ones. (Same family as bottlefit's note that `Raycaster`
+         DOES honour `material.side`: this class does what it does, and it is worth checking which.) */
+      const shown = (o) => { for (let p = o; p; p = p.parent) if (p.visible === false) return false; return true; };
       const ray = new T.Raycaster(eye, pos.clone().sub(eye).normalize(), 0.01, dist * 0.98);
-      const hits = ray.intersectObject(E.scene, true).filter((h) => h.object !== mesh);
+      const hits = ray.intersectObject(E.scene, true).filter((h) => h.object !== mesh && shown(h.object));
       await G.step(6, 0);
       return {
         png: G.capture(),

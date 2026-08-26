@@ -1065,8 +1065,9 @@ export function bannerMast(opts = {}) {
  * held a third copy of the radius. **`Pickups` took its radius from `TUNE` and its thickness from
  * a bare literal**, so the two could be scaled apart with nothing failing anywhere — and the twin
  * is HIDDEN at runtime, so an edit reaching one file and not the other looks perfect in every
- * frame while `tests/kaykit.test.mjs` P3, which measures the twin, silently measures a different
- * coin from the one on screen. That is §701's bottle defect exactly, one collectible over.
+ * frame while `tests/kaykit.test.mjs` P2 and P3, which both measure the twin, silently measure a
+ * different coin from the one on screen. That is §701's bottle defect exactly, one collectible
+ * over.
  *
  * So both call sites read these, and `Pickups.TUNE.coinRadius` reads `COIN_RADIUS`. Anything
  * derived from the size is **RE-DERIVED from the formula, never scaled** — §705's rule, and the
