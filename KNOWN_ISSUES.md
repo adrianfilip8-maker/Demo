@@ -54516,6 +54516,51 @@ Worst main view is unchanged at **112 draws (45% of 250) / 1.193 M tris (99% of 
 budget whose binding constraint is 1.193 M triangles, a quarter of a megabyte of bone texture is
 not material, and it is reported rather than waved away.
 
+**The half that could actually have stopped this: update time.** Nine mixers against nine
+`GuardAnim`s, each stepped through its own SHIPPED update path, the two arms **interleaved** over
+three passes — a thermal or GC drift landing entirely on whichever arm ran second is an instrument
+and not a result (§439) — with **every run printed**, never the flattering one (§703.2):
+
+```
+rebind (GuardAnim, 24 bones)   0.0341, 0.0234, 0.0241 ms/frame   median 0.0241
+native (Mixer, 199 bones)      0.4063, 0.3933, 0.3979 ms/frame   median 0.3979
+```
+
+**16.5×**, and **2.4% of a 16.7 ms frame against 0.1%**. Both numbers matter and neither alone is
+honest: the ratio says the native driver is an order of magnitude dearer, the absolute says it
+costs a fortieth of a frame for the whole garrison. `tools/carmnative.mjs` §6b re-runs it.
+
+### §704.7a The look overlay was winding the head around, and three's own optimisation is why
+
+Found while the frames were rendering, fixed, and worth its own block because the mechanism will
+catch the next person who writes an overlay on top of an `AnimationMixer`.
+
+`THREE.PropertyMixer.apply` ends with:
+
+```js
+for ( let i = stride, e = stride + stride; i !== e; ++ i ) {
+  if ( buffer[ i ] !== buffer[ i + stride ] ) { binding.setValue( buffer, offset ); break; }
+}
+```
+
+**It only writes the bone when the animated value CHANGED between frames.** A paused action, a
+frozen pose, a still moment in a cycle — in all of them the mixer leaves the bone alone. So
+`_applyLook`, which multiplied the gaze into the neck and head quaternions, was composing on top
+of its own previous output for as long as the clip held still. Measured: a frozen guard with a
+gaze wound his head through **0.598** in a quaternion component over 120 frames.
+
+**The obvious fix does not work, and the same optimisation is why.** Calling `mixer.update(0)`
+before the overlay looks like it should re-establish the authored pose. It does not: set a bone to
+the identity by hand, call `mixer.update(0)`, and it is still the identity — the comparison above
+sees no change in the animated value and skips the write.
+
+`_compose` holds the authored quaternion instead of hoping it is rewritten: if the bone no longer
+equals what this class last wrote, the mixer HAS written it and that is the new authored pose; if
+it still equals it, the mixer stayed silent and the cache stands. Either way the joint is **set**,
+never accumulated. Two arms hold it — a frozen gaze over 120 frames and a steady gaze over a 10 s
+cycle against an un-gazed twin — and both also assert the gaze does something, so neither can pass
+on a no-op.
+
 > **§442, in the tool that produced this row.** `carmscale.mjs` read its bone-texture figure from
 > `engine.scene.traverse(o => { if (!skinMesh && o.isSkinnedMesh) skinMesh = o; })` — the FIRST
 > skinned mesh in the scene, which is **the player**. So it printed `12×12` on both arms while the
