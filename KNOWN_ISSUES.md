@@ -54470,35 +54470,62 @@ decision would be made.
 goes on the unused list.** Armed, `CLIP_FOR_ARMED` puts it back, because with the weapon in her
 hands it reads as an armed patrol rather than a crouch around nothing.
 
-### §704.6 Which clip each guard state plays
+### §704.6 Which clip each guard state plays — and why two of these look like bugs
 
-`Guard.js` asks for **twelve** names, all twelve are mapped, and the integration surface is clip
-NAMES — no bone name crosses it, which is what leaves the cone, the alert ladder and guard
-interaction untouched.
+**This is the shipped map** (`CLIP_FOR` in `src/ai/CarmelitaNative.js`). `Guard.js` asks for
+**twelve** names, all twelve are mapped, and the integration surface is clip NAMES — no bone name
+crosses it, which is what leaves the cone, the alert ladder and guard interaction untouched.
 
-| guard state / clip | her clip | note |
+| guard state / clip | her clip | why THIS clip |
 |---|---|---|
-| `idle` | `Idle` | armed stance; the set has no unarmed standing idle |
+| `idle` | `Idle` | the authored idle. It is an armed crouch — see below |
 | `idle_bored` | `Lookaround` | armed stance, 2.0 s |
-| `walk_patrol` | **`CasualWalking`** | upright, 1.768 m — NOT the clip named for it (§704.5) |
-| `walk_alert` | `CasualWalking` | the set has one upright walk; `Guard.js` already scales `speed` |
-| `run_chase` | `Run` | upright run |
-| `look_around` | `Lookaround` | |
-| `suspicious` | `Lookaround` | sustained, so deliberately NOT in `ONCE` |
-| `alert` | `HitTaken` | one-shot |
+| `walk_patrol` | **`CasualWalking`** | **upright, hands 0.40 m apart, 1.768 m drawn.** NOT `PatrolWalk` |
+| `walk_alert` | `CasualWalking` | the set contains exactly one upright walk; `Guard.js` already scales `speed` 0.5–1.5 per state, and that is the difference that was available |
+| `run_chase` | `Run` | upright run, hands 0.72 m apart |
+| `look_around` | `Lookaround` | authored for exactly this |
+| `suspicious` | `Lookaround` | a sustained state, so deliberately NOT in `ONCE` — a guard who plants to look suspicious and then freezes on the last frame is worse than one who keeps looking |
+| `alert` | `HitTaken` | one-shot; the only sharp whole-body reaction in the set |
 | `stunned` | `HitTaken` | |
 | `ko` | `HitTaken` | clamped on its last frame |
 | `pickpocketed_reaction` | `HitTaken` | one-shot, fired from `_playOneShot` |
-| `attack` | `Shoot(BodyMovement)` | a GUN animation on a garrison that swings — a compromise, not a fit |
+| `attack` | `Shoot(BodyMovement)` | a GUN animation on a garrison that swings — a compromise, and stated as one rather than as a fit |
 
-Unused: `Air`, `Jump`, `PatrolWalk`, `Run.001`, `Shoot(GunMovement)`. All eleven stay loaded and
-playable by name.
+Unused: **`Air`, `Jump`, `PatrolWalk`, `Run.001`, `Shoot(GunMovement)`.** All eleven stay loaded and
+playable by name, so a later state can reach one without touching this file.
+
+> ### Two entries in that table will read as bugs. They are not, and here is the reasoning, on the
+> ### same page as the table so nobody has to go looking for it.
+>
+> **1. `walk_patrol` plays `CasualWalking`, and the clip literally named `PatrolWalk` is unused.**
+>
+> Judged by its name, `PatrolWalk` is obviously the patrol clip and picking anything else is
+> perverse. Judged by measurement, `PatrolWalk` is a **crouched sneak with both hands clasped around
+> a pistol** — hands 0.086 m apart, drawn height 1.508 m — and `CasualWalking` is a person walking
+> upright with their arms at their sides at 1.768 m. §704.5 has the full table and the discriminator.
+> The clip names in this asset describe a playable stealth character, not a garrison guard, and
+> **a name is not a measurement** (§699). If the pistol is ever enabled the choice flips back
+> automatically: `CLIP_FOR_ARMED` restores `PatrolWalk`, because with the weapon visible the same
+> pose reads as an armed patrol instead of a crouch around nothing.
+>
+> **2. `idle`, `idle_bored`, `look_around` and `suspicious` all resolve to armed stances, so an idle
+> guard reads as holding an invisible pistol and stands 1.42–1.47 m instead of 1.74–1.77 m.**
+>
+> The set contains **no unarmed standing idle**. There is nothing to pick that would fix this, and
+> the two fixes that exist are both the thing the owner asked us to stop: authoring a new idle, or
+> scaling the crouch away. `CasualWalking` frozen would be a walk frame with one leg forward, which
+> is worse. So the authored stance ships, and the consequence is written down in three places — here,
+> `TUNE.carmelitaNative`'s own comment, and §704.4's height table — rather than left to be found.
+>
+> The real remedy is the pistol, and it is arithmetic that blocks it, not principle: 30,096 triangles
+> against ~7,000 of headroom (§704.5). `TUNE.carmelitaPistol` is the switch, and if the cap ever
+> moves, turning it on fixes **both** rows of this box at once.
 
 **Two of the twelve were found by the test, not by reading the switch.** `attack` and
-`pickpocketed_reaction` are fired from `_playOneShot` a hundred lines from `_chooseClip`'s switch.
-`tests/carmnative.test.mjs` greps the names out of `Guard.js` rather than restating them, which is
-why it caught them; a hand-written list would have shipped ten of twelve and silently idled on the
-swing.
+`pickpocketed_reaction` are fired from `_playOneShot` a hundred lines away from `_chooseClip`'s
+switch. `tests/carmnative.test.mjs` greps the names out of `Guard.js` rather than restating them,
+which is why it caught them — a hand-written list would have shipped ten of twelve and silently
+idled on the swing.
 
 ### §704.7 Cost: triangles and draws are UNCHANGED; bones are 8× and it does not matter
 
