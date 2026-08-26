@@ -12,6 +12,7 @@
  */
 
 import { BOTTLE_PALETTE } from '../world/BottleMesh.js';
+import { COIN_BADGE_PALETTE } from '../world/CoinBadge.js';
 
 /**
  * The only colours anything in the UI is allowed to use (AGENTS.md §2.2).
@@ -44,6 +45,13 @@ export const C = {
   bottleGlass: BOTTLE_PALETTE.glass,
   bottleCork:  BOTTLE_PALETTE.cork,
   bottleLabel: BOTTLE_PALETTE.label,
+  /* The coin's three, on the same terms as the bottle's three and for the same reason (§712).
+     The world coin is textured with the reference project's coin badge; these are sampled out of
+     that badge's own texels at bake time by `tools/godot2coin.mjs`. Colour couples — SIZE does
+     not, and `coin()` below says so at the one place anyone would be tempted. */
+  coinStar:    COIN_BADGE_PALETTE.star,
+  coinField:   COIN_BADGE_PALETTE.field,
+  coinRim:     COIN_BADGE_PALETTE.rim,
 };
 
 /** SVG text needs a real family name; this container only ships DejaVu / Liberation. */
@@ -66,19 +74,40 @@ const wrap = (vb, inner, cls = '', extra = '') => {
 /* ------------------------------------------------------------------ coin */
 
 /**
- * A struck gold coin seen slightly from above: rim thickness below, flat face, ankh die,
+ * A struck gold coin seen slightly from above: rim thickness below, flat face, **star die**,
  * one hard glint. Small enough to still read at 18 px.
+ *
+ * ── The die is a star because the world coin's die is a star (§712) ─────────────────────────
+ * It was an ankh, which was the right guess while the coin was untextured Egyptian gold. The
+ * world coin is now struck with the reference project's own coin badge — a five-pointed star —
+ * so an ankh here would be the HUD showing the player a different object from the one lying on
+ * the floor. That is exactly the drift `BOTTLE_PALETTE` was introduced to prevent for the clue
+ * bottle, one collectible over, and it is worse for the coin than a colour drift would be: the
+ * motif is the first thing read at a glance.
+ *
+ * The three golds are **imported, not chosen** — `C.coinStar` / `C.coinField` / `C.coinRim` are
+ * sampled out of the badge's own texels by `tools/godot2coin.mjs`, so a re-bake moves the toast
+ * and the world together.
+ *
+ * ── What must NOT follow the world: size ───────────────────────────────────────────────────
+ * `PropKit.COIN_RADIUS` went 0.16 → 0.24 in the same change that put this star here, and this
+ * glyph **did not move**. World scale is a gameplay-legibility decision about a 3D object at 5 m;
+ * a HUD glyph is a screen-space decision about 18 px, and the two were never the same number.
+ * §700/§701 settled this for the bottle; it is restated here because the temptation recurs at
+ * every resize. The viewBox, the radii and the stroke widths below are all screen-space.
  */
 export function coin(cls = '') {
+  /* Point-up five-pointed star, circumradius 11.6 about the face centre (23, 22.4) — inside the
+     13.4 inner ring so the struck border still reads. Inner/outer 0.4817 is the classic pentagram
+     ratio; anything fatter stops reading as a star at 18 px. */
+  const STAR = 'M23.00 10.80 L26.28 17.88 L34.03 18.82 L28.31 24.13 L29.82 31.78 '
+             + 'L23.00 27.99 L16.18 31.78 L17.69 24.13 L11.97 18.82 L19.72 17.88 Z';
   return wrap('0 0 46 46', `
     <circle cx="23" cy="26.4" r="18.6" fill="${C.goldD}" stroke="${C.ink}" stroke-width="3.4"/>
-    <circle cx="23" cy="22.4" r="18.6" fill="${C.gold}" stroke="${C.ink}" stroke-width="3.4"/>
-    <circle cx="23" cy="22.4" r="13.4" fill="none" stroke="${C.goldD}" stroke-width="2.1" opacity=".85"/>
-    <g fill="${C.goldD}">
-      <circle cx="23" cy="16.6" r="4.1" fill="none" stroke="${C.goldD}" stroke-width="2.7"/>
-      <rect x="21.6" y="20.2" width="2.9" height="10.6" rx="1.2"/>
-      <rect x="16.6" y="22.4" width="12.9" height="2.9" rx="1.3"/>
-    </g>
+    <circle cx="23" cy="22.4" r="18.6" fill="${C.coinRim}" stroke="${C.ink}" stroke-width="3.4"/>
+    <circle cx="23" cy="22.4" r="14.6" fill="${C.coinField}"/>
+    <circle cx="23" cy="22.4" r="13.4" fill="none" stroke="${C.goldD}" stroke-width="1.6" opacity=".55"/>
+    <path d="${STAR}" fill="${C.coinStar}" stroke="${C.ink}" stroke-width="1.5" stroke-linejoin="round"/>
     <path d="M11.6 15.6A14 14 0 0 1 20.4 9.2" stroke="${C.goldSpec}" stroke-width="3.1"
           stroke-linecap="round" opacity=".9"/>
   `, cls);

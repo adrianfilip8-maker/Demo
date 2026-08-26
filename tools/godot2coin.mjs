@@ -153,6 +153,26 @@ function bake(srcRoot) {
   console.log(`rim texel     x=${rimX} of ${SIZE} on the centre row: ` +
     `rgba(${sq.data[rimO]}, ${sq.data[rimO + 1]}, ${sq.data[rimO + 2]}, ${sq.data[rimO + 3]}) — first fully opaque`);
 
+  /* Three colours SAMPLED out of the badge, so `src/ui/Icons.js` can draw the HUD coin from the
+     same source the world coin is textured from instead of retyping hexes. That is the exact
+     arrangement `BOTTLE_PALETTE` already has with the clue bottle, and it exists for the same
+     reason: a hand-typed hex is how a toast and the object it stands for drift apart.
+       star  — the disc centre, which for a point-up five-pointed star is inside the star
+       field — the darkest opaque texel on a ring at 0.42r, i.e. a valley between two arms
+       rim   — the outermost fully opaque texel on the centre row, the struck edge */
+  const at = (x, y) => { const o = (((y | 0) * SIZE + (x | 0)) << 2); return [sq.data[o], sq.data[o + 1], sq.data[o + 2], sq.data[o + 3]]; };
+  const hex = (c) => '#' + c.slice(0, 3).map((v) => v.toString(16).padStart(2, '0')).join('');
+  const lum = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  const star = at(SIZE / 2, SIZE / 2);
+  let field = null;
+  for (let a = 0; a < 360; a += 3) {
+    const t = a * Math.PI / 180;
+    const c = at(SIZE / 2 + Math.cos(t) * SIZE * 0.42, SIZE / 2 + Math.sin(t) * SIZE * 0.42);
+    if (c[3] < 250) continue;
+    if (!field || lum(c) < lum(field)) field = c;
+  }
+  if (!field) throw new Error('godot2coin: found no opaque texel on the 0.42r sampling ring');
+
   const enc = PNG.sync.write(sq, { deflateLevel: 9 });
   fs.mkdirSync(STAGE, { recursive: true });
   fs.writeFileSync(STAGE_PNG, raw);                      // the SOURCE bytes, verbatim
@@ -195,6 +215,26 @@ export const COIN_BADGE_SIZE = ${SIZE};
  * one way a face map on a cylinder looks obviously wrong.
  */
 export const COIN_BADGE_RIM_UV = [${((rimX + 0.5) / SIZE).toFixed(6)}, 0.5];
+
+/**
+ * The badge's own three colours, SAMPLED from the baked texels — not chosen, and not retyped.
+ *
+ * \`src/ui/Icons.js\` imports these to draw the HUD coin, exactly as it imports \`BOTTLE_PALETTE\`
+ * from \`BottleMesh.js\` to draw the clue-bottle toast. The world coin and the coin on the HUD are
+ * required to be one object; a hand-typed hex here is precisely how they stop being one.
+ *
+ *   star  — the disc centre (inside the star, which is point-up)
+ *   field — darkest opaque texel on a ring at 0.42r: a valley between two of the star's arms
+ *   rim   — outermost fully opaque texel on the centre row: the struck edge
+ *
+ * **Colour couples; SIZE does not.** The world coin's radius is \`PropKit.COIN_RADIUS\` and it has
+ * been resized on request; the glyph is drawn to be legible at 18 px and must not follow it.
+ */
+export const COIN_BADGE_PALETTE = {
+  star:  '${hex(star)}',
+  field: '${hex(field)}',
+  rim:   '${hex(at(rimX, SIZE / 2))}',
+};
 
 const BADGE_B64 = '${b64}';
 
