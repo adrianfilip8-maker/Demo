@@ -48,6 +48,19 @@
  * 23 usable clips against 52 verbs the game asks for, and the layers above lose their subject.
  * `tools/sly27fit.mjs` reports the coverage per verb.
  *
+ * ── NO INK OUTLINE, and it is a measured constraint rather than an oversight (§711) ─────────
+ * Every other character shells itself: `SlyModelDLRig` calls `shading.outline()` on its body and
+ * its cane, `SlyModelGodot` on its body, face and cane. This file makes no such call, so the
+ * native arm draws with the toon ramp but without the build's inverted-hull ink.
+ *
+ * That is deliberate and it is a budget fact. §709's in-page worst view is 1,192,970 of a
+ * 1,200,000 triangle cap — **7,030 spare**. Unshelled, this character is 30,346 against the
+ * incumbent's 28,838 (13,063 body + 1,356 cane + both their shells): **+1,508, and it fits.**
+ * Shelling all 21 parts doubles it to 60,692 — **+31,854, a breach of about 24,800.** So the
+ * native player and the house outline do not both fit today. Do not "finish" this by adding the
+ * shells without re-measuring: decimation, shelling only the silhouette parts, or a cap change
+ * are the three routes, and all three are the owner's call.
+ *
  * ── §442, the trap this file is built around ────────────────────────────────────────────────
  * Every clip pins `CaneBone.001` about 148° away from its bind rotation, and the same is true of
  * much of the body. **The bind pose of this asset is not a pose the source game ever shows.** An

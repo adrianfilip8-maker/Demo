@@ -56432,15 +56432,50 @@ default, and it is not fixable by importing harder — the clips do not exist up
 | with ink shells (`Shading.outline`, one per mesh) | 10 | **42** |
 | uniform scale applied | ×1.0839 | ×1.0875 |
 
-**The one real regression is draw calls: +16 slots, +32 with ink shells.** `SlyModelGodot` merges
-per material into 3 objects; the native path cannot, and that is not laziness — 14 of the 21 parts
-are rigid meshes parented to *different bones*, which is precisely the mechanism that makes the
-cane ride the hand for free. Merging them would take the cane back off its bone. The worst
-main-view shot is 86 draws of a 250 budget (`tools/budgetattrib.mjs`, which excludes the character
-by §216), so +32 lands around 118 — 47 % of the cap, and not a breach.
+**Draw calls: +11 slots against the shipped incumbent, +16 against `?char=godot`.**
+`SlyModelGodot` merges per material into 3 objects and `SlyModelDLRig` into 4; the native path
+cannot, and that is not laziness — 14 of the 21 parts are rigid meshes parented to *different
+bones*, which is precisely the mechanism that makes the cane ride the hand for free. Merging them
+would take the cane back off its bone.
 
-**Triangles are unchanged in the shipped build, because the default is unchanged.** The scene total
-is 0.652 M against the 1.2 M cap (54 %), and this lane moves it by zero.
+### The triangle budget — against the number that actually BINDS
+
+**Two different figures are in circulation and only one of them binds this case.**
+`tools/budgetattrib.mjs` reports the scene at **0.652 M, 54 % of the 1.2 M cap** — but that run is
+offline and **excludes the character entirely** (§216: `SlyModelDLRig` resolves its FBX through
+`import.meta.glob` and cannot load in plain Node), and its guards fall back to procedural bodies.
+The figure that includes them is §709's in-page one: **1,192,970 of 1,200,000 — 99.70 %, with
+7,030 triangles of headroom.** A player character is one body, so that is the number to size
+against, and 54 % is the wrong denominator for this decision.
+
+Measured, per arm, from `tools/charmat.mjs`'s in-page census of the shipped player and this lane's
+own census of the native one:
+
+| | shipped `dlrig` | `?char=sly27` |
+|---|---|---|
+| body | 13,063 (1 mesh, 4 groups) | 30,346 (21 meshes, 21 groups) |
+| cane | 1,356 (its own mesh) | **included above** — it is part of the rig |
+| ink shells | 13,063 + 1,356 | **none — see below** |
+| **total drawn** | **28,838** | **30,346** |
+
+**As it stands the swap costs +1,508 triangles and fits**, with 5,522 of the 7,030 headroom left.
+
+**But it has no ink outline, and that is the real finding.** The house ink is an inverted-hull
+shell attached per mesh by an explicit `shading.outline(mesh)` call, and every other character
+makes those calls itself — `SlyModelDLRig` shells its body and its cane, `SlyModelGodot` shells its
+body, face and cane. **`SlyModel27` makes no such call**, so the native arm draws with the toon
+ramp but without the build's outline. It is visible in `shots/sly27-sly27-front.png` next to
+`shots/sly27-default-front.png`.
+
+Shelling it to match would double the character: **60,692 triangles, +31,854 against the
+incumbent, against 7,030 of headroom — a breach of roughly 24,800.** So the native player and the
+house ink outline **do not both fit at the current cap**, and that is a genuine constraint rather
+than an omission I can quietly close. It is left unshelled and reported rather than shelled and
+over, because the token is OFF and the trade is the owner's to make. Three ways out exist and none
+is free: decimate the 21 parts (the §709 pistol precedent), shell only the silhouette-carrying
+parts rather than all 21, or raise the cap.
+
+**The shipped build's triangle count is unchanged by this lane, because the default is unchanged.**
 
 ### The frames, and `Standupright` — the pose §479.20 ruled on
 
