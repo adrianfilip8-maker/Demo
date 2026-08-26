@@ -57135,3 +57135,9 @@ already fails, identically. The string is present in that commit's own copy of t
 it. The fix is one word in a comment (their side), and it is flagged rather than taken.
 
 Everything this lane owns is green: `pickups` 36/36, and the six-file adjacency 117/117.
+
+---
+
+## §713 — the six cane and thief clips were already shipped; the cane bone is measured and refused
+
+_Claimed. Content follows in the next commit._
