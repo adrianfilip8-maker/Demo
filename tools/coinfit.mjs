@@ -229,6 +229,17 @@ async function run(radii) {
     }
     process.stdout.write(`\n  VERDICT r=${r}: ${bad.length ? `${bad.length}/${rows.length} INTERPENETRATE` : `${rows.length}/${rows.length} clear of world geometry`}\n`);
     results[r] = rows;
+    /* `JSON=<path>` writes the full per-placement table. The printed report deliberately shows
+       only the crossings and the twelve tightest — 82 rows of "clear" is a wall, not a report —
+       and picking a camera subject or quoting a margin needs all 82. */
+    if (process.env.JSON) {
+      const out = process.env.JSON.replace('{r}', String(r));
+      fs.writeFileSync(out, JSON.stringify(rows.map((x) => ({
+        i: x.i, label: x.label, x: x.spot[0], y: x.spot[1], z: x.spot[2],
+        cross: x.cross ? x.cross.who : null, clear: Number.isFinite(x.clear) ? x.clear : null, who: x.who,
+      }))));
+      process.stdout.write(`  wrote ${out}\n`);
+    }
   }
 
   /* The delta is the whole point when more than one radius was run. */
