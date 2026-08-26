@@ -1578,8 +1578,11 @@ export class Guards {
     /* ---- Carmelita replaces the procedural body for the two humanoid types ----
      *
      * Owner instruction: "replace the created guard with the downloaded Carmelita model along with
-     * relevant files and animations". The animations were already hers — `GUARD_CLIPS` has carried
-     * her eleven retargeted clips since `tools/carmelita2clips.mjs` ran — so this is the mesh.
+     * relevant files and animations". This line used to add "the animations were already hers —
+     * `GUARD_CLIPS` has carried her eleven retargeted clips since `tools/carmelita2clips.mjs` ran".
+     * **That was false**: `src/ai/GuardClips.js` is imported by nothing, and the `GUARD_CLIPS` that
+     * IS imported is `GuardAnim.js`'s own procedural table under the same name (§706). This branch
+     * loads the MESH; the animation half arrived with §704's native arm.
      *
      * `loadCarmelitaGuard` resolves to `null` rather than throwing when the asset is missing or the
      * environment has no fetch, and the procedural `blob()` body stays as the fallback. That is not

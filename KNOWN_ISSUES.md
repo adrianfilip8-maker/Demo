@@ -54281,31 +54281,18 @@ out to be unnecessary, and the checks are cheap:
 
 `tools/carmnative.mjs` reports all of it and `tests/carmnative.test.mjs` (20 arms) holds it.
 
-### §704.2 `src/ai/GuardClips.js` IS IMPORTED BY NOTHING, and the guards have never played her clips
+### §704.2 The retarget was never wired — moved to §706
 
-This is the §699 shape again and it is the reason the request was worth making.
+Checking what a native import would have to retarget *from* turned up something bigger than this
+lane: **`src/ai/GuardClips.js` is imported by nothing**, two headers say it drives the garrison, and
+the reason the claim survived eighteen days is that `GuardAnim.js` exports its own procedural table
+under the same name from the same directory. **Her clips had never played until §704's native arm.**
 
-`src/ai/CarmelitaGuard.js`'s header says *"`GUARD_CLIPS` has been Carmelita's motion since
-`tools/carmelita2clips.mjs` ran: all eleven of her clips … retargeted onto RIG3's bone names."*
-`Guard.js` line 1493 repeats it. **It is false in the shipped runtime.** `grep -rn "GuardClips"
-src/ --include=*.js -l` returns *only the file itself*. Nothing imports it. The 305 KB of
-retargeted keyframes have never been played by anything.
+It is a defect in the guard animation wiring rather than in the character import, so it has its own
+section: **§706**. Both false header sentences are corrected in place.
 
-What the guards actually animate on is `GuardAnim.js`'s own hand-authored `CLIPS` table — the
-procedural `idle`/`walk_patrol`/`look_around` set — which `clipsFor()` compiles and which
-`GuardAnim.js` **exports under the same name**:
-
-```js
-export { CLIPS as GUARD_CLIPS, SCARAB_CLIPS as GUARD_SCARAB_CLIPS };   // GuardAnim.js:1216
-export const GUARD_CLIPS = {"Air":{...}}                               // GuardClips.js:18
-```
-
-Two different objects, one exported name, in the same directory. Every reader who checked
-"is `GUARD_CLIPS` wired?" found a `GUARD_CLIPS` that was, and it was the wrong one. The claim was
-written once and then trusted as a measurement, and the name collision is what kept it standing.
-
-**Consequence for this lane:** the owner's "use the source … animations" is not a change of
-animation, it is the *first* time her animations run in this project.
+The consequence for this lane is worth keeping here: the owner's *"use the source … animations"* is
+not a change of animation. It is the first time her animations run in this project at all.
 
 ### §704.3 §309's skinIndex off-by-one is ABSENT from the native path — and the first instrument could not have said so
 
@@ -54706,8 +54693,94 @@ independent failures deep the garrison still stands.
 
 ## §706 — `GuardClips.js` is imported by nothing, and two headers say it drives the garrison
 
-**CLAIMED — being written now.** Promoted out of §704.2, which found it. It is a defect in the
-guard ANIMATION WIRING, not in the Carmelita import, and a reader chasing "why do the guards move
-like that" should not have to read a ten-subsection import writeup to reach it.
+Promoted out of §704.2, which found it while checking whether a native import would have anything
+to retarget *from*. It is a defect in the guard ANIMATION WIRING, not in the Carmelita import, and
+a reader chasing "why do the guards move like that" should not have to read a ten-subsection import
+writeup to reach it.
 
-Findings below.
+## The finding
+
+**`src/ai/GuardClips.js` is imported by nothing.**
+
+```
+$ grep -rn "GuardClips" src/ --include=*.js -l
+(only the file itself)
+```
+
+305 KB of retargeted keyframes — all eleven of Carmelita's clips, folded onto RIG3's bone names by
+`tools/carmelita2clips.mjs` — that **no module has ever loaded**. Not once, since the tool ran on
+2026-08-08.
+
+**Her clips have never played until now.** The guards have animated on `GuardAnim.js`'s own
+hand-authored procedural table for the entire life of the import, and the first time anything in
+this project has actually played Carmelita's authored animation is §704's native arm.
+
+## Two headers say the opposite, and they are the interesting part
+
+`src/ai/CarmelitaGuard.js:15`:
+
+> *"`GUARD_CLIPS` has been Carmelita's motion since `tools/carmelita2clips.mjs` ran: all eleven of
+> her clips — including `PatrolWalk` and `Lookaround`, the two a stealth guard cannot do without —
+> retargeted onto RIG3's bone names. What was still procedural was only the **mesh**."*
+
+`src/ai/Guard.js:1493` repeats it:
+
+> *"The animations were already hers — `GUARD_CLIPS` has carried her eleven retargeted clips since
+> `tools/carmelita2clips.mjs` ran — so this is the mesh."*
+
+Both false. And `carmelita2guard.mjs` acts on the belief, dropping all eleven animations from the
+emitted asset with the comment *"already in `src/ai/GuardClips.js`"* — true, and irrelevant, because
+nothing reads that file.
+
+## Why it survived: the lie was plausible AND adjacent to the truth
+
+There are two `GUARD_CLIPS` in `src/ai/`, exported from two files in the same directory:
+
+```js
+// src/ai/GuardAnim.js:1216   — the hand-authored procedural table, and what the guards ACTUALLY play
+export { CLIPS as GUARD_CLIPS, SCARAB_CLIPS as GUARD_SCARAB_CLIPS };
+
+// src/ai/GuardClips.js:18    — Carmelita's eleven, retargeted, and read by nobody
+export const GUARD_CLIPS = {"Air":{"dur":0.5,...
+```
+
+`Guard.js` imports `GuardAnim`. `GuardAnim.clipsFor()` compiles its own `CLIPS`. So anyone checking
+"is `GUARD_CLIPS` wired up?" found a `GUARD_CLIPS` that was **thoroughly** wired up — imported,
+compiled, sampled every frame, driving nine guards — and stopped. The name resolved. The symbol was
+live. The guards moved.
+
+This is §699's shape exactly: **a claim written once and then trusted as a measurement**. What makes
+it worth its own section rather than a line in §704 is *why* it lasted eighteen days across at least
+four sections that cite it. It did not survive because nobody checked. It survived because the
+check that a careful reader would run — grep the symbol, confirm it is imported and used — **returns
+a true and reassuring answer about a different object**. The falsehood was one identifier away from
+a fact, in the same directory, under the same name.
+
+That is the failure mode to generalise: a wrong claim is dangerous in proportion to how closely its
+neighbourhood resembles the right one. `§700.3`'s frozen `drawCalls` is the same animal — a plausible
+number in the reassuring direction — and so is `§442`'s measurement performed on the wrong subject.
+Here the wrong subject was a same-named export.
+
+**Domain (§418.3).** Passes on: `grep -rn "GuardClips" src/ --include=*.js -l`, which returns only
+the file itself, and on reading `GuardAnim.clipsFor()`, which resolves to the local `CLIPS`. Fails
+on: `grep GUARD_CLIPS src/`, which is what was presumably run and which returns four files and looks
+like confirmation. Does not discriminate: whether the retarget output is any *good* — nothing has
+ever rendered it, so nobody knows.
+
+## What this does and does not change
+
+**It does not invalidate §702.** That section is about the MESH — the bind transfer and the missing
+head — and every number in it stands. What it invalidates is the framing shared by §698 and §702
+that the animation half of the import was already done.
+
+**It does not make the retarget useless.** `GuardClips.js` is a working product of a working tool;
+it has simply never been connected. §704 did not connect it either — the native arm plays the source
+clips through an `AnimationMixer` and does not read `GuardClips.js` at all — so after §704 the file
+is still imported by nothing.
+
+**Left open, deliberately.** Whether to wire `GuardClips.js` into `GuardAnim`, delete it, or leave
+it is not this lane's call: it is 305 KB of committed build output whose only consumer would be a
+path §704 has now superseded. It is recorded as dead rather than removed, because "delete it" and
+"we never finished wiring it" are different conclusions and the evidence here does not choose
+between them. The two false header sentences ARE corrected, in place, because a comment that
+misstates what the code does is the mechanism above and not a matter of taste.

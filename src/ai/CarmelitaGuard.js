@@ -11,12 +11,21 @@ import { RIG3 } from '../player/SlyModel3.js';
  * stated** — are in `public/assets/sly-anim/PROVENANCE.md`. `tools/carmelita2guard.mjs` cuts the
  * body out of the source scene and `tests/carmguard.test.mjs` guards this binding.
  *
- * ── Half of this job was already done ────────────────────────────────────────────────────────
- * `GUARD_CLIPS` has been Carmelita's motion since `tools/carmelita2clips.mjs` ran: all eleven of
- * her clips — including `PatrolWalk` and `Lookaround`, the two a stealth guard cannot do without —
- * retargeted onto RIG3's bone names. What was still procedural was only the **mesh**, the metaball
- * `blob()` construction in `GuardModel.js`. So this file is the second half: her geometry, over the
- * bones her own animation already drives.
+ * ── "Half of this job was already done" — IT WAS NOT, and this header said so for eighteen days ─
+ * This block used to read: *"`GUARD_CLIPS` has been Carmelita's motion since
+ * `tools/carmelita2clips.mjs` ran … What was still procedural was only the **mesh**."* **False.**
+ * `src/ai/GuardClips.js` is imported by nothing in `src/` — `grep -rn "GuardClips" src/ -l` returns
+ * only the file itself — so its 305 KB of retargeted keyframes have never been loaded, and the
+ * guards this file dresses animate on `GuardAnim.js`'s own hand-authored procedural table.
+ *
+ * The sentence survived because `GuardAnim.js` exports ITS table under the same name
+ * (`export { CLIPS as GUARD_CLIPS }`), one file away, so checking "is `GUARD_CLIPS` wired?" returns
+ * a true and reassuring answer about a different object. §706 has the full account and the
+ * generalisation; it is corrected here rather than only there because a comment that misstates what
+ * the code does is the mechanism, not a matter of taste.
+ *
+ * So this file is the MESH, and only ever was: her geometry, over bones that a procedural clip set
+ * drives. §704's native arm is the first thing in this project to play her authored animation.
  *
  * ── Why the target skeleton is RIG3 and not the guard rig ───────────────────────────────────
  * `GuardModel.humanoidSkeleton()` and `RIG3` share every humanoid bone name — hips, spine, chest,
