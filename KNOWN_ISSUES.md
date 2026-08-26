@@ -57436,3 +57436,16 @@ to do the opposite of X would be inventing a mandate.
 one attack clip repeated three times is the right *feel* — that is a play judgement, and the owner
 has the build. Does not license: normalising the cane tracks, which remains one line away and
 undecided.
+
+---
+
+## §715 — "Add all the required animations from the godot repo": the thirteen sealed libraries are opened, and every verb the repo can supply is bound
+
+**Interpretation, stated here first so a redirect is cheap:** bind every verb of the DEFAULT
+playable character (RIG3 + GodotClips) that the reference repo can actually supply, and report
+the irreducible remainder — §714's own conditional logic, "add it only if the animations exist,"
+applied across the whole verb table. The `?char=sly27` preview arm is out of scope. §479.20's
+raw `Standupright` idle stays by ruling; §708's grips are re-measured and reported, not fixed;
+the three cane-combo slots stay on one `Canehit` body per the owner's "repeats, not combos."
+
+(Section under construction — heading committed first per §700.9; content follows.)
