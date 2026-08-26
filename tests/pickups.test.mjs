@@ -54,9 +54,10 @@ import { TUNE as CTUNE } from '../src/player/Controller.js';
  * The coins were scaled 50% larger on request: `coinRadius` 0.16 → **0.24**, so `collectRadius`
  * re-derives to `0.34 + 0.24` = **0.58 m**. The `0.50` on the line above is left standing because
  * it is what was registered, and a pre-registration that gets edited to match what shipped has
- * stopped being one. What the tests below enforce is the **derivation**, not the literal — P1
- * asserts `collect === playerRadius + coinRadius` whatever those are, which is exactly why a
- * resize could not silently break the contact/magnet split §223 draws.
+ * stopped being one. What the tests below enforce is the **derivation**, not the literal — the
+ * PREREG arm asserts `collect === playerRadius + coinRadius` whatever those are, and C2 names the
+ * scaled value as its fail input. That is exactly why a resize could not silently break the
+ * contact/magnet split §223 draws.
  *
  * P2's `~9.99` is likewise a prediction about the LAW, evaluated at the 0.50 m it was registered
  * at. `magnetSpeedAt` depends on `magnet`, `speedMin`, `speedMax` and `curve` and on none of the

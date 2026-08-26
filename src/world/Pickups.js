@@ -110,8 +110,9 @@ export const TUNE = {
    * states. The formula is the value; `stepPickup` measures the capsule centre against the coin
    * centre and the term is `playerRadius + coinRadius` and nothing else.
    *
-   * `tests/pickups.test.mjs` P1 asserts exactly this equality, so a scaled 0.75 fails the suite
-   * rather than shipping — which is the whole reason the derivation is pinned there and not here.
+   * `tests/pickups.test.mjs`'s PREREG arm asserts exactly this equality (and C2 names the scaled
+   * value as its fail input), so a scaled 0.75 fails the suite rather than shipping — which is the
+   * whole reason the derivation is pinned there and not here.
    */
   collect:       0.58,
   magnet:        2.40,   // Controller.TUNE.pickRange
