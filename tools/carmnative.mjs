@@ -30,8 +30,12 @@
  *
  *  3. **The scale and the ground numbers**, both arms side by side, from the same measurement.
  *
- *  4. **The bone cost**, in the units that matter: nine skeletons' worth of bone matrices and the
- *     bone texture the renderer uploads per skeleton per frame.
+ *  4. **The bone cost**, in both units that matter: nine skeletons' worth of bone matrices and
+ *     bone texture, and — the half that could actually stop this shipping — the per-frame UPDATE
+ *     TIME of nine 199-bone mixers against nine 25-bone `GuardAnim`s, each stepped through its own
+ *     shipped update path. The two arms are interleaved over three passes and every run is
+ *     printed, because a drift that lands entirely on whichever arm ran second is an instrument
+ *     rather than a result (§439), and quoting only the flattering run is §703.2.
  *
  * ── §442, in a tool that reads two files that look alike ────────────────────────────────────
  * `carmelita-anims.glb` and `carmelita-guard.glb` are the same rig and differ only in what was cut
@@ -43,7 +47,7 @@ import * as THREE from 'three';
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { buildNative, instantiateNative, headFiducial, spliceHeadNative, MOUNT_SCALE, CLIP_FOR, UNUSED_CLIPS, CARMELITA_CLIPS_ASSET } from '../src/ai/CarmelitaNative.js';
+import { buildNative, instantiateNative, headFiducial, spliceHeadNative, CarmelitaNativeAnim, MOUNT_SCALE, CLIP_FOR, UNUSED_CLIPS, CARMELITA_CLIPS_ASSET } from '../src/ai/CarmelitaNative.js';
 import { bindToRig3, spliceHead } from '../src/ai/CarmelitaGuard.js';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -240,6 +244,48 @@ console.log('\n══ 6. bone cost, nine guards ══');
   console.log(`  per guard: native ${per(nB)} B vs rebind ${per(nR)} B  → ×9 = ${(per(nB) * 9 / 1024).toFixed(1)} KB vs ${(per(nR) * 9 / 1024).toFixed(1)} KB`);
   console.log(`  Δ over the garrison: ${((per(nB) - per(nR)) * 9 / 1024).toFixed(1)} KB`);
   console.log(`  bone matrices recomputed per frame per guard: ${nB} vs ${nR}  → garrison ${nB * 9} vs ${nR * 9}`);
+}
+
+console.log('\n══ 6b. bone cost in UPDATE TIME, nine guards at 60 Hz ══');
+{
+  /* The memory half of the bone question is arithmetic; this half is not, and it is the half
+     that could actually stop this shipping. Both drivers are stepped through their own SHIPPED
+     update path — `CarmelitaNativeAnim.update` and `GuardAnim.update` — never a synthetic loop.
+     The two arms are INTERLEAVED and run three passes each, because a thermal or GC drift that
+     lands entirely on whichever arm ran second is an instrument, not a result (§439), and every
+     run is printed rather than the best one (§703.2). */
+  const { instantiate } = await import('../src/ai/GuardModel.js');
+  const { GuardAnim } = await import('../src/ai/GuardAnim.js');
+  const mat = new THREE.MeshBasicMaterial();
+  const N = 9, FRAMES = 1800;
+  const cg = existsSync(A('carmelita-clips.glb')) ? await load(A('carmelita-clips.glb')) : null;
+  if (!cg) console.log('  carmelita-clips.glb is absent — skipped');
+  else {
+    const nativeSet = [], rebindSet = [];
+    for (let i = 0; i < N; i++) {
+      const r = instantiateNative(native, [mat, mat]);
+      const a = new CarmelitaNativeAnim(r, cg.animations, i * 3.17 + 0.61);
+      a.play('walk_patrol', { fade: 0 });
+      nativeSet.push(a);
+      const r2 = instantiate(rebind, [mat, mat]);
+      const a2 = new GuardAnim(r2.bones, 'temple', i * 3.17 + 0.61);
+      a2.play('walk_patrol', { fade: 0 });
+      rebindSet.push(a2);
+    }
+    const bench = (set) => {
+      for (let f = 0; f < 300; f++) for (const a of set) a.update(1 / 60);
+      const t0 = process.hrtime.bigint();
+      for (let f = 0; f < FRAMES; f++) for (const a of set) a.update(1 / 60);
+      return Number(process.hrtime.bigint() - t0) / 1e6 / FRAMES;
+    };
+    const nres = [], rres = [];
+    for (let pass = 0; pass < 3; pass++) { rres.push(bench(rebindSet)); nres.push(bench(nativeSet)); }
+    const med = (a) => a.slice().sort((x, y) => x - y)[1];
+    console.log(`  rebind (GuardAnim, ${rebind.stats.bones} bones)  ms/frame for all nine: ${rres.map((x) => x.toFixed(4)).join(', ')}   median ${med(rres).toFixed(4)}`);
+    console.log(`  native (Mixer, ${s.bones} bones)      ms/frame for all nine: ${nres.map((x) => x.toFixed(4)).join(', ')}   median ${med(nres).toFixed(4)}`);
+    console.log(`  ratio ${(med(nres) / med(rres)).toFixed(2)}×  — of a 16.7 ms frame: `
+      + `${(med(rres) * 6).toFixed(1)}% vs ${(med(nres) * 6).toFixed(1)}%`);
+  }
 }
 
 console.log('\n══ 7. clips ══');
