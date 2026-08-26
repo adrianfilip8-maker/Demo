@@ -664,9 +664,23 @@ export const SHOTS = {
        `guard`/`guard2` are the field names `alertframe.score()` reads; `stage` is what
        `Guards._poseForShot` reads. One set of coordinates, two consumers, no second copy.
 
-       Both stands are real `courtyard_ring` waypoints (`Patrol.js`: [-18.0, 16.0] and
+       Both stands were real `courtyard_ring` waypoints (`Patrol.js`: [-18.0, 16.0] and
        [-18.0, 1.0]) walked by roster #1 and #2 — a staged frame that puts a guard somewhere his
-       beat never takes him is a picture of a level that does not exist. */
+       beat never takes him is a picture of a level that does not exist.
+
+       ── §707 MOVED THAT BEAT AND THESE TWO COORDINATES DID NOT FOLLOW ────────────────────
+       `courtyard_ring`'s west leg ran x = -18 because that is where the west colonnade is; so do
+       two of `Props`' braziers, and roster #1 covered 5.3 m in 200 s while roster #2 covered
+       10.5 m. The leg is now x = -15.8 and both guards patrol. The stands below are therefore
+       2.2 m WEST of the beat they are supposed to belong to — still on clear paving, still
+       framing correctly, but no longer the sentence above.
+
+       Left at the old coordinates deliberately, and the trade is stated rather than hidden:
+       moving them 2.2 m east re-stages a frame whose composition was measured twice against a
+       framing constant that turned out to be a proxy (see the paragraph above this one), and
+       re-certifying it with `alertframe` is a capture job, not a coordinate edit. So the
+       coordinates keep the certified frame and this comment stops asserting something false.
+       Whoever re-stages `alert` next should move both to x = -15.8. */
     guard: [-18.0, 0, 16.0],
     guard2: [-18.0, 0, 1.0],
     stage: [

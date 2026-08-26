@@ -270,7 +270,10 @@ async function main() {
     });
 
     check('an open route pauses at its own turn-around, not just in the middle', () => {
-      // Four of the ten routes ping-pong, and the about-face is the beat the player counts.
+      // Five of the ten routes ping-pong (§707 opened `courtyard_ring`, whose north lane a
+      // KayKit camera prop seals for a 0.56 m body), and the about-face is the beat the player
+      // counts. Derived from ROSTER/ROUTES below rather than from this count, so the number in
+      // this sentence can go stale without the arm going quiet.
       const open = ROSTER.map((e, i) => ({ e, i })).filter(({ e }) => !ROUTES[e.route].closed);
       assert(open.length > 0, 'no open routes in the roster to check');
       let checked = 0;
