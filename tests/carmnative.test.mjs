@@ -530,6 +530,55 @@ lp('the muzzle is derived in the BONE\'s frame, and the derivation refuses when 
   assert.equal(muzzleFromBarrel(gone, built.boneOrder, built.boneInverses).ok, false);
 });
 
+lp('the pistol\'s culling sphere covers where the CLIPS carry it, not where the bind pose parks it', async () => {
+  /* three never recomputes a `SkinnedMesh`'s bounding sphere, so it is fitted to the BIND pose —
+     and the pistol's bind pose is 0.93 m out to her side, nowhere near where any clip holds it.
+     A sphere sized to the pistol would therefore cull the gun out of frame mid-animation, which
+     is a bug that only appears in motion. It is sized off the BODY instead, and this is the
+     assertion that says so with driven numbers rather than with the argument. */
+  const scene = (await parse(ASSET)).scene;
+  const geos = {};
+  (await parse(PISTOL_LP)).scene.traverse((o) => { if (o.isMesh && PISTOL_MESHES.includes(o.name)) geos[o.name] = o.geometry; });
+  splicePistolNative(scene, geos);
+  const built = buildNative(scene, null, { pistol: true });
+  const inst = instantiateNative(built, [new THREE.MeshBasicMaterial(), new THREE.MeshBasicMaterial()]);
+  inst.root.updateMatrixWorld(true);
+  assert.ok(inst.pistolMesh, 'the armed rig has a pistol mesh');
+  if (!ANIMS.length) return;
+
+  const mixer = new THREE.AnimationMixer(inst.rig);
+  const reach = (mesh) => {
+    const pos = mesh.geometry.attributes.position;
+    const step = Math.max(1, Math.floor(pos.count / 120));
+    const inv = new THREE.Matrix4(), v = new THREE.Vector3();
+    let worst = 0, n = 0;
+    for (const c of ANIMS) {
+      mixer.stopAllAction();
+      mixer.clipAction(c).reset().play();
+      for (let i = 0; i < 8; i++) {
+        mixer.setTime(c.duration * i / 8);
+        inst.rig.updateMatrixWorld(true);
+        inv.copy(mesh.matrixWorld).invert();
+        for (let k = 0; k < pos.count; k += step) {
+          v.fromBufferAttribute(pos, k); mesh.applyBoneTransform(k, v); mesh.localToWorld(v); v.applyMatrix4(inv);
+          worst = Math.max(worst, v.distanceTo(mesh.boundingSphere.center)); n++;
+        }
+      }
+    }
+    return { worst, n };
+  };
+  const p = reach(inst.pistolMesh);
+  assert.ok(p.n > 1000, `inspected ${p.n} driven pistol vertices`);   // §211.1
+  assert.ok(p.worst <= inst.pistolMesh.boundingSphere.radius,
+    `the driven pistol reaches ${p.worst.toFixed(3)} m from its sphere centre against a `
+    + `${inst.pistolMesh.boundingSphere.radius.toFixed(3)} m radius — it would pop out of frame`);
+  /* and the control: the pistol must not be scraping by on a margin the body would fail on */
+  const b = reach(inst.mesh);
+  assert.ok(inst.pistolMesh.boundingSphere.radius - p.worst
+    >= (inst.mesh.boundingSphere.radius - b.worst) * 0.9,
+    'the pistol\'s margin is no worse than the body\'s');
+});
+
 test('the pistol token is on, and both halves of what pays for it are documented at the site', () => {
   assert.equal(GUARD_TUNE.carmelitaPistol, 1);
   assert.equal(GUARD_TUNE.carmelitaPistolInk, 0);
