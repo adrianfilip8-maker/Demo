@@ -41,7 +41,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {
-  buildNative, instantiateNative, splicePistolNative, muzzleFromBarrel,
+  buildNative, instantiateNative, splicePistolNative,
   PISTOL_MESHES, CLIP_FOR, CLIP_FOR_ARMED, MOUNT_SCALE,
 } from '../src/ai/CarmelitaNative.js';
 
@@ -136,7 +136,6 @@ console.log('  Every number below is from a DRIVEN rig; if any of them resembles
 /* ── driven ─────────────────────────────────────────────────────────────────────────────── */
 const REACHABLE = new Set(Object.values(CLIP_FOR_ARMED));
 const UNARMED = new Set(Object.values(CLIP_FOR));
-const byName = Object.fromEntries(clips.map((c) => [c.name, c]));
 const rows = [];
 let endDisagreements = 0, endChecks = 0;
 /* Below this the chest test is not deciding anything: the barrel is broadside to the chest and
@@ -147,7 +146,7 @@ for (const c of clips) {
   mixer.stopAllAction();
   mixer.clipAction(c).reset().play();
   const yaws = [], pitches = [], hs = [], xs = [], zs = [], endMargin = [];
-  let clearMin = Infinity, aheadMin = Infinity, clipChecks = 0, clipDisagree = 0, clipMute = 0;
+  let clearMin = Infinity, clipChecks = 0, clipDisagree = 0, clipMute = 0;
   for (let i = 0; i < POSES; i++) {
     mixer.setTime(c.duration * i / POSES);
     inst.rig.updateMatrixWorld(true);
@@ -167,7 +166,6 @@ for (const c of clips) {
     if (Math.abs(marg) < BAND) clipMute++;
     else if (marg < 0) { endDisagreements++; clipDisagree++; }
     if (i % 6 === 0) clearMin = Math.min(clearMin, bodyClearance(pM));
-    aheadMin = Math.min(aheadMin, pM.z);
   }
   /* yaw is circular — spread it about its own circular mean, not about zero */
   const mean = Math.atan2(yaws.reduce((s, v) => s + Math.sin(v * Math.PI / 180), 0),
@@ -249,8 +247,14 @@ console.log('Both are a high-ready carry, which is the correct way to hold a gun
 console.log('worst possible place to point a detection cone: a barrel-aimed cone would spend the entire');
 console.log(`patrol looking at sky. Across every reachable clip the pitch spans ${(pHi - pLo).toFixed(1)}° and the yaw swings`);
 console.log(`up to ${ySpan.toFixed(0)}° within a single clip, so the cone would also sweep like a searchlight during a`);
-console.log('stagger. And aim is not only a look: `_updateCones` hands the same direction to');
-console.log('`Senses.updateReach`, and the alert ladder was out of scope for this change.');
+console.log('stagger.');
+console.log('');
+console.log('And the objection is sharper than "it would change detection", which is the intuitive');
+console.log('answer and is FALSE: `Senses.evaluate` reads `sense.forward`, which `_step` sets from');
+console.log('`this.forward`, and never sees the direction `_updateCones` draws with. The drawn cone is');
+console.log('a TELEGRAPH of a volume defined about `g.forward` — aiming it down the barrel would make');
+console.log('it lie about what the guard can see. Making it honest would mean moving detection too,');
+console.log('and the alert ladder was out of scope for this change.');
 
 if (clear <= 0) throw new Error('the muzzle is INSIDE her body on some reachable pose — §178\'s haze problem, moved');
 
