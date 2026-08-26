@@ -56326,3 +56326,17 @@ sampled at waypoints) stays in force, and a guard walking through a *crate* is s
 world geometry, a guard inside the player, or the head-on crossing becoming *worse* than measured —
 19/400 is the number on the record, and a later change that makes it 200/400 is a new fact, not a
 thing this ruling already covers.
+
+---
+
+## §711 — "Pull the new Sly character from the godot repo": the native rig for the player — IN PROGRESS
+
+**Number claimed; content follows.** This lane is doing for the player what §704 did for Carmelita:
+importing `Assets/Models/Characters/SlyCooper_Anims27.gltf` from the godot repo natively — its own
+166-joint skeleton, its own skin weights, its own 24 clips — instead of the current arrangement,
+where the mesh comes from the OLD `Assets/Temp Imports/tempsly/SlyCooper_Anims4.gltf` and the clips
+are Anims27 retargeted onto RIG3.
+
+Unlike §704 this ships **behind a token, default OFF**, because Sly is the player and §479.20's
+static-pose ruling, the camera containment instruction and the §708 grip numbers are all tuned
+around the current body. Findings, frames and measurements below.
