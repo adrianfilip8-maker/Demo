@@ -56296,3 +56296,33 @@ was already broken" is worthless without the run that shows it was not:
 
     bundle    15364e8 pass 8/8   de3f103 FAIL 7/8   c4ce44c pass 8/8
     subjhold  0509c22 pass 4/4   c4ce44c FAIL 3/4   d20ebe6 FAIL 3/4
+
+---
+
+## §710 — Owner ruling: guard-to-guard collision is out of scope, and §707.9 closes unfixed
+
+§707 opened the courtyard ring's sealed north lane, which turned a stalled loop into a working
+back-and-forth and — as that lane recorded rather than left to be found — put guards 1 and 2 on a
+head-on crossing. This build has **no guard-to-guard collision at all**, so they interpenetrate:
+within 0.8 m on **19 of 400 samples**.
+
+§707.9 declined to fix it, correctly: the available fixes are patrol AI or coverage redesign, and
+neither was in that lane's scope.
+
+**The owner's ruling, verbatim: "Don't worry about guard to guard collision."**
+
+So §707.9 is **CLOSED — WONTFIX by owner decision**, not closed by a fix and not left open. The
+measurement stands and is not retracted: two guards do pass through each other on that lane, and
+anyone who sees it in play is seeing a known, accepted behaviour rather than a new defect. That
+distinction is the entire value of writing it down — §707 could have quietly left the crossing
+undiscovered, and the next person to notice would have spent a round rediscovering it.
+
+**What this does NOT license.** It is a ruling about guards overlapping *each other*. It says
+nothing about guards overlapping the player, props, or architecture — §707's own regression arm
+(C6/CAL-6/CAL-6b/C7, clearance harvested per triangle and swept along route segments rather than
+sampled at waypoints) stays in force, and a guard walking through a *crate* is still a defect.
+
+**Domain (§418.3).** Applies to: two patrol bodies sharing space. Does not apply to: a guard inside
+world geometry, a guard inside the player, or the head-on crossing becoming *worse* than measured —
+19/400 is the number on the record, and a later change that makes it 200/400 is a new fact, not a
+thing this ruling already covers.
