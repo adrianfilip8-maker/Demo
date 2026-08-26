@@ -57273,7 +57273,7 @@ hand, so it is put here with its numbers for the user to settle rather than take
   (sha256 `a8ba715b4875fdb5`, dur 4, 81 keys, loop) and so is the entire 23-clip baked set.
   `idle_confident` and `idle_look` still alias it with `{ elbow: 0, knee: 0 }`. Untouched.
 - **The budget.** No clip, asset, mesh or bone changed; the only files this lane writes are
-  `KNOWN_ISSUES.md` and `PROVENANCE.md`. Delta against §709's binding in-page figure is **0** —
+  `KNOWN_ISSUES.md`, `PROVENANCE.md` and four capture PNGs under `shots/`. Delta against §709's binding in-page figure is **0** —
   1,192,970 of 1,200,000, 7,030 spare, unmoved. (`Engine.stats.drawCalls` stays unusable here.)
 - **§708, the grip poses — re-measured and reported, NOT fixed**, as instructed. `tools/gripgap.mjs`,
   palm→prop in cm, shipped (raw) against `?anim=proc`; since the baked set is bit-identical these
@@ -57296,3 +57296,48 @@ rail_walk  · roof-e                            26.9    26.8      35.2  |   13.9
   `CaneSwing Idle` is one of the clips §708 flagged and it remains **unbound to any verb** — our hook
   family is `hook_grab`/`hook_swing`/`hook_release` and there is no hanging-idle verb for it to fill,
   so it stays one of the seven baked-but-unused clips rather than being bound to manufacture a use.
+
+### §713.5 The frames — the attack and the steal, both arms, one camera
+
+`tools/canelook.mjs` from a clean detached worktree at the pushed `1ece1b0` (`git worktree add
+--detach`, `node_modules` symlinked), both arms, **16 frames each, errs 0**. Camera is the tool's
+own: az 145° off the character's yaw, 2.7 m out, eye 1.25 m, subject at (0, 0, 30).
+
+**camDot pre-flight on exactly that placement** — `node tools/camdot.mjs 1.5487 1.25 27.7883 0 0.95
+30`:
+
+```
+enclosed 0/26   nearest 1.245 m   forward null m (sky)   subject at 2.717 m
+VERDICT: ok
+```
+
+Nothing stands between the lens and the subject, and the near field is clear. This is the check a
+tool here once failed for its whole life by labelling rear shots "front"; the frames were then read
+rather than assumed, and the view is a three-quarter rear — his back and tail are toward camera, the
+cane hand is the far one. That framing is the tool's, kept because a pair must differ by the regime
+token alone; it is stated here so the next reader does not mistake it for a hero angle.
+
+```
+shots/cane713-combo1-f6-godot.png        shots/cane713-combo1-f6-proc.png
+shots/cane713-pickpocket-t045-godot.png  shots/cane713-pickpocket-t045-proc.png
+```
+
+(The full 32-frame pair is `shots/cane713/`, which `.gitignore` holds as working output; the four
+above are the curated record, the same arrangement §712's coin frames use.)
+
+**The attack, f6.** The godot arm is pitched forward into the swing with the right arm driven out
+and across and the crook leading the hand — a strike, unmistakably, at its own declared contact
+(f6 = t 0.100). The proc arm at the *same offset* is still standing upright with the shaft angled
+down across the legs, because the house's own `cane_hit` is at t 0.15 (f9): the pair samples the
+same clock, not the same beat, and §479.8 fixed those offsets deliberately so a pair cannot move
+its own sample points. Read as "is the imported swing legible at its contact", the imported clip
+wins clearly. Read as "which contact pose is better" the frames do not settle it, and that is
+stated rather than papered over.
+
+**The steal, t 0.45.** The godot arm commits — body low and long, off hand well out, tail streaming
+back as counterweight, cane trailing clear of the reaching hand. The proc arm makes the same gesture
+from a compact upright crouch with visibly less extension. The imported clip is the stronger read.
+
+**§10 is not regressed, checked on the pictures rather than argued:** in all four frames the cane is
+inside the fist — grip in the glove, no gap, no float, no detachment — across two arms, two verbs
+and two very different arm poses.
