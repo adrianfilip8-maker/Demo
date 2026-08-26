@@ -54932,3 +54932,10 @@ misstates what the code does is the mechanism above and not a matter of taste.
 ## §707 — CLAIMED (patrol-clearance lane, in progress)
 
 Reserved while measuring the stalled half of the garrison. Content follows in a later commit.
+
+---
+
+## §708 — CLAIMED (grip-pose lane, in progress)
+
+Reserved while closing §479.20's gripping watch item: hand-to-prop distance, in situ, per grip
+verb, raw vs matched. Content follows in a later commit.
