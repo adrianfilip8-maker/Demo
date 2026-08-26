@@ -323,22 +323,28 @@ const TUNE = {
      rather than discovered. */
   carmelitaPistol: 1,
 
-  /* Whether the pistol gets its own ink shell. **0, and this is a budget decision, not an art
-     one — the honest version of it is in §709 and it is not free.**
+  /* Whether the pistol gets its own INVERTED-HULL ink shell. 0 — and the reason it can be 0 is
+     that the shell is not what outlines it.
 
-     Shelling the pistol doubles its 3,465 triangles to 6,930 and takes the worst main view from
-     99.70% of §1's cap to 99.99%, leaving 100 triangles of margin for everything that comes
-     after. Both fit; only one of them leaves room.
+     **The pistol is outlined either way, by the screen-space pass.** `PostFX` runs an ink-edge
+     pass over depth and normal discontinuities in the normal prepass ("scene → normals → AO →
+     ink edges → bloom → composite", `TUNE.edgeDepth`/`edgeNormal`), and the pistol is an ordinary
+     opaque mesh in that prepass. `shots/pistol709-p1-guard4.png` at 4x shows the gun carrying a
+     silhouette line of the same weight as the boot and trouser leg beside it. What the shell
+     would add on top is the thicker inverted-hull line the character carries —
+     `shots/pistol709-p1i-*` is that comparison.
 
-     What it costs is measured rather than waved away. An earlier draft of this comment claimed
-     the pistol "is already bounded by inked geometry on most of its border" because it is held
-     in an inked hand. **That was written and not checked, and it is false.** Rasterised at the
-     `courtyard` distance over the clips a guard patrols in, the pistol covers ~263 px with a
-     ~68 px silhouette border, and only **18–20% of that border touches the body** — the other
-     80% is against open background, where the missing line is a real difference from every other
-     object in the frame.
+     Two earlier versions of this comment got here the wrong way and are worth recording, because
+     both were written rather than measured. The first said the pistol is "already bounded by
+     inked geometry on most of its border" because an inked hand holds it — **false**: rasterised
+     depth-buffered at `courtyard` distance over the patrol clips, the pistol covers ~263 px with
+     a ~68 px silhouette border and only **18-20% of that border touches the body**. The second
+     concluded from that number that the gun would therefore have no line at all — also false,
+     because it reasoned about the shell and forgot the screen-space pass.
 
-     Set to 1 to put it back; the before/after frames are in §709. */
+     What turning this on actually costs: 3,465 triangles doubled to 6,930, taking the worst main
+     view from 99.70% of §1's cap to 99.99% and leaving 100 triangles of margin for everything
+     that comes after. Both fit. This ships at 0 because the outline does not depend on it. */
   carmelitaPistolInk: 0,
 
   /* (B) the cone. coneShape 1 takes the structured-beam branch in BEAM_FRAG (uConeShape);
