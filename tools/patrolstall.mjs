@@ -347,12 +347,20 @@ const out = await withGame({ width: 640, height: 360, quality: 'low', query: QUE
 
     if (parked && mv?.position) mv.position.copy(parked);
 
-    /* ---- controls (§418.3): a point known to be clear and one known to be inside stone ----- */
+    /* ---- controls (§418.3): rays that MUST miss and rays that MUST hit -----------------------
+       The first cut of this block fired at a hall front wall that has a doorway on the axis, so
+       BOTH arms returned null and the positive half proved nothing — an instrument reporting
+       "no blocker" while unable to report one. The targets are now things this probe has
+       independently located: `tests/patrol.test.mjs` CAL-1's east aisle column (x 15.1‥17.9,
+       z −27.4‥−24.6), and the brazier at (18, 6) that guard2 was pinned against. One masonry,
+       one PROP, because the whole point of this tool is that those are different sets. */
     const ctl = {
       openCourt: colAlong(0, 0.8, -8, 1, 0, 3.0, RAY_OPTS),
       openCourtDrawn: drawnAlong(0, 0.8, -8, 1, 0, 3.0),
-      intoHallWall: colAlong(0, 1.2, -16.0, 0, -1, 4.0, RAY_OPTS),
-      intoHallWallDrawn: drawnAlong(0, 1.2, -16.0, 0, -1, 4.0),
+      intoAisleColumn: colAlong(13.0, 1.2, -26.0, 1, 0, 6.0, RAY_OPTS),
+      intoAisleColumnDrawn: drawnAlong(13.0, 1.2, -26.0, 1, 0, 6.0),
+      intoBrazier: colAlong(15.5, 1.2, 6.0, 1, 0, 4.0, RAY_OPTS),
+      intoBrazierDrawn: drawnAlong(15.5, 1.2, 6.0, 1, 0, 4.0),
     };
 
     return { rows, ctl, modules, targetCount: targets.length,
@@ -368,11 +376,16 @@ console.log(`collision records: ${out.colliderCount}   kaykit:solid boxes: ${out
 console.log('\ncollider census (name|tag -> count):');
 for (const c of out.census.slice(0, 24)) console.log(`   ${String(c.n).padStart(5)}  ${c.k}`);
 
-console.log('\ncontrol (§418.3) — a ray that must miss and a ray that must hit:');
-console.log(`   open courtyard (0,0.8,-8)+x : collision ${JSON.stringify(out.ctl.openCourt)}`);
-console.log(`                                 drawn     ${JSON.stringify(out.ctl.openCourtDrawn)}`);
-console.log(`   into hall front (0,1.2,-16)-z: collision ${JSON.stringify(out.ctl.intoHallWall)}`);
-console.log(`                                 drawn     ${JSON.stringify(out.ctl.intoHallWallDrawn)}`);
+console.log('\ncontrol (§418.3) — one ray that must MISS, two that must HIT (one masonry, one prop):');
+console.log(`   MISS open courtyard   (0,0.8,-8)+x   collision ${JSON.stringify(out.ctl.openCourt)}`);
+console.log(`                                        drawn     ${JSON.stringify(out.ctl.openCourtDrawn)}`);
+console.log(`   HIT  east aisle column (13,1.2,-26)+x collision ${JSON.stringify(out.ctl.intoAisleColumn)}`);
+console.log(`                                        drawn     ${JSON.stringify(out.ctl.intoAisleColumnDrawn)}`);
+console.log(`   HIT  brazier at (18,6) (15.5,1.2,6)+x collision ${JSON.stringify(out.ctl.intoBrazier)}`);
+console.log(`                                        drawn     ${JSON.stringify(out.ctl.intoBrazierDrawn)}`);
+if (!out.ctl.intoAisleColumn?.d || !out.ctl.intoBrazier?.d) {
+  console.log('   ^^ A POSITIVE CONTROL RETURNED NOTHING — this run\'s "no blocker" readings are void.');
+}
 
 console.log(`\n=== ${SECONDS} s of patrol, sampled every ${EVERY} s — did the body move? ===`);
 console.log('#  id       type   route            dist(m) route(m) uSpan patrol%  longest-still  minNN  branches');

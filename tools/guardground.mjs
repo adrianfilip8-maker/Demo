@@ -130,6 +130,30 @@ const FRAMES = {
     note: 'from the south-east at 5.7 m, the one bearing where the crate stack does not hide his boots. post ~280 px, pre ~295 px',
   },
 
+  /* ---- §707: PATROL MOTION, which is a different claim from ground contact --------------
+   *
+   * Everything above frames a guard's SOLE against a surface, and every camera is aimed at the
+   * spot the subject was standing on when §697 measured him. That is exactly wrong for §707,
+   * whose subject is a guard who did not move: aimed at his stall, the after arm frames an empty
+   * patch of paving and reads as "the guard is gone" rather than "the guard is walking". Run at
+   * SETTLE=60 and again at SETTLE=120, these two hold `pylon_gate`'s WHOLE 12.1 m beat plus
+   * guard4's pre-fix stall stand at (-4.93, 31.5), so one camera contains both arms and the
+   * evidence is the same body in two different places at two different times.
+   *
+   * Two stances rather than two crops (§466.5): 9.4 m down the axis and 6.9 m from the
+   * south-west. Both cleared `camDot` — `gate-axis` nearest 0.800 m enclosed 0/26 subject 9.437 m,
+   * `gate-oblique` nearest 3.349 m enclosed 0/26 subject 6.905 m. */
+  'gate-axis': {
+    pos: [0, 3.0, 24], look: [0, 1.4, 33.3], fov: 65, tod: 0.78,
+    about: ['guard4 temple/pylon_gate'],
+    note: 'north up the processional axis at 9.4 m between the colossi plinths; holds x -10.6..10.6 at the gate',
+  },
+  'gate-oblique': {
+    pos: [-1.0, 2.60, 26.5], look: [-1.0, 1.40, 33.3], fov: 55, tod: 0.78,
+    about: ['guard4 temple/pylon_gate'],
+    note: 'the same beat from lower and 1 m west at 6.9 m — a different stance, not a re-crop; holds x -7.4..5.4',
+  },
+
   /* ---- PORTRAIT: head AND torso in one frame, on two DIFFERENT guards (§698) ------------
    *
    * The atlas split is decided by the source project's material remap (`MATERIAL_ATLAS`), and
