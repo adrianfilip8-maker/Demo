@@ -1728,10 +1728,12 @@ export class Guards {
          multiplies the albedo by (0,0,0), which rendered every roster guard as the §290
          black-gloss mannequin. Synthesize the identity so map × vColor = map. The procedural
          scarab keeps its real colours; only geometry that lost the attribute gets ones. */
-      const withColour = (geo) => {
-        if (!geo || geo.getAttribute('color')) return;
-        const n = geo.getAttribute('position').count;
-        geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+      const withColour = (g) => {
+        if (!g) return;
+        if (!g.getAttribute('color')) {
+          const n = g.getAttribute('position').count;
+          g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+        }
       };
       withColour(carmelita.geometry);
       /* §709: the pistol is a second buffer and needs the same identity colour channel. Missing

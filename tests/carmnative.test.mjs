@@ -530,6 +530,38 @@ lp('the muzzle is derived in the BONE\'s frame, and the derivation refuses when 
   assert.equal(muzzleFromBarrel(gone, built.boneOrder, built.boneInverses).ok, false);
 });
 
+lp('§290 protection reaches the SECOND buffer too — the pistol cannot render black', async () => {
+  /* `tests/subjhold.test.mjs` pins the SOURCE of the colour synthesis, which is how §709 broke it:
+     a refactor kept the behaviour and moved the text. This asserts the behaviour instead, and
+     over the buffer that pin cannot see — the pistol is a geometry that did not exist when it was
+     written. An unbound `color` under a `vertexColors: true` material multiplies albedo by
+     (0,0,0), so the failure mode is a BLACK GUN beside a correct body: the hardest kind to spot,
+     because everything else in the frame is right. */
+  const scene = (await parse(ASSET)).scene;
+  const geos = {};
+  (await parse(PISTOL_LP)).scene.traverse((o) => { if (o.isMesh && PISTOL_MESHES.includes(o.name)) geos[o.name] = o.geometry; });
+  splicePistolNative(scene, geos);
+  const built = buildNative(scene, null, { pistol: true });
+  /* Neither buffer carries `color` out of the merge — which is the precondition that makes the
+     synthesis load-bearing rather than decorative. Assert it, or this test passes vacuously on a
+     day the merge starts emitting one. */
+  assert.equal(built.geometry.getAttribute('color'), undefined, 'the body merge emits no colour attribute');
+  assert.equal(built.pistol.geometry.getAttribute('color'), undefined, 'nor does the pistol merge');
+
+  /* `Guards.init` is what synthesizes it. Headless it takes the procedural fallback, so the
+     synthesis is exercised directly here in the shape `Guard.js` uses. */
+  const src = readFileSync('src/ai/Guard.js', 'utf8');
+  assert.match(src, /withColour\(carmelita\.geometry\)/, 'the body geometry is passed through the synthesis');
+  assert.match(src, /withColour\(carmelita\.pistol\?\.geometry\)/, 'and so is the pistol geometry');
+  for (const geo of [built.geometry, built.pistol.geometry]) {
+    const n = geo.getAttribute('position').count;
+    geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+    const c = geo.getAttribute('color');
+    assert.equal(c.count, n, 'one colour per vertex');
+    assert.ok(Array.from(c.array).every((v) => v === 1), 'and every channel is the identity');
+  }
+});
+
 lp('the pistol\'s culling sphere covers where the CLIPS carry it, not where the bind pose parks it', async () => {
   /* three never recomputes a `SkinnedMesh`'s bounding sphere, so it is fitted to the BIND pose —
      and the pistol's bind pose is 0.93 m out to her side, nowhere near where any clip holds it.

@@ -51,7 +51,11 @@ const QUERY = `carmpistol=${PISTOL}`;
 const out = await withGame({ width: 1280, height: 720, quality: 'high', query: QUERY }, async ({ page }) => {
   page.setDefaultTimeout(0);
   await page.evaluate(([shot, ink]) => {
-    window.__GAME.setShot(shot);
+    /* §251: `{ dt: 0 }` on EVERY setShot. This is a multi-arm runner — the whole point is that the
+       two arms differ by the pistol token and by nothing else — and `setShot` defaults `dt` to
+       1/60 across 17 settle frames, so an unfrozen clock advances `engine.time` ~0.28 s per call
+       and moves every flame, mote and shader phase in the frame between arms. */
+    window.__GAME.setShot(shot, { dt: 0 });
     /* The ink knob is a TUNE poke, the Lighting.js precedent this project already uses for
        capture brackets — the shells are (re)built below by re-running `_applyOutlines`. */
     const g = window.__ENGINE.get('guards');
@@ -238,7 +242,7 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high', query: Q
       const g = window.__GAME, e = g.engine;
       const ch = e.get('character');
       if (ch?.root) ch.root.visible = false;
-      await g.setShot('night');
+      await g.setShot('night', { dt: 0 });
       const aim = () => {
         e.camera.fov = 40;
         e.camera.position.set(...F.cam.conePos);
@@ -253,7 +257,7 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high', query: Q
     const cfile = path.join(ROOT, 'shots', `pistol709-cone-${TAG}-${r.id}.png`);
     await writeFile(cfile, Buffer.from(cpng.split(',')[1], 'base64'));
     console.log(`  → shots/pistol709-cone-${TAG}-${r.id}.png`);
-    await page.evaluate(async (s) => { await window.__GAME.setShot(s); }, SHOT);
+    await page.evaluate(async (s) => { await window.__GAME.setShot(s, { dt: 0 }); }, SHOT);
   }
   return staged;
 });
