@@ -56329,17 +56329,247 @@ thing this ruling already covers.
 
 ---
 
-## §711 — "Pull the new Sly character from the godot repo": the native rig for the player — IN PROGRESS
+## §711 — "Pull the new Sly character from the godot repo": the character is the same sculpt, the rig and the cane are not, and §479.20's cane sentence was never true
 
-**Number claimed; content follows.** This lane is doing for the player what §704 did for Carmelita:
-importing `Assets/Models/Characters/SlyCooper_Anims27.gltf` from the godot repo natively — its own
-166-joint skeleton, its own skin weights, its own 24 clips — instead of the current arrangement,
-where the mesh comes from the OLD `Assets/Temp Imports/tempsly/SlyCooper_Anims4.gltf` and the clips
-are Anims27 retargeted onto RIG3.
+The owner, in full: *"Pull the new Sly character from the godot repo and attempt to use it with the
+repos rig, textures, etc. There should be some new animations for Sly to import and use. Use the
+godot repo's cane as well."*
 
-Unlike §704 this ships **behind a token, default OFF**, because Sly is the player and §479.20's
-static-pose ruling, the camera containment instruction and the §708 grip numbers are all tuned
-around the current body. Findings, frames and measurements below.
+**It works, it ships behind `?char=sly27`, and it is DEFAULT OFF. Frames:
+`shots/sly27-default-front.png` against `shots/sly27-sly27-front.png`, same camera, both at
+facing dot +1.000.** That is the opposite of §704's
+ruling for Carmelita and it is deliberate: she is nine background bodies, he is the player, and
+§479.20's static-pose ruling, the camera's containment instruction and §708's grip numbers are all
+tuned around the incumbent. The measurements are below; the flip is the owner's call, not mine.
+
+### The first thing to know: the CHARACTER is not new
+
+`Assets/Models/Characters/SlyCooper_Anims27.gltf` and the `Assets/Temp Imports/tempsly/
+SlyCooper_Anims4.gltf` we already ship as `?char=godot` are **the same sculpt**. Checked before
+anything was built, because the answer changes what the import is for:
+
+- 21 mesh-bearing **nodes**, same names, **30,346 triangles** on both sides.
+- **14 of 21 `POSITION` accessors are byte-identical** — every unskinned part, the cane included.
+- The other **7 are exactly the skinned parts**, and they differ by a **rigid translation of
+  (0.0675, 2.255, ≈−0.03)** with a 3.7 cm max residual, compensated by the inverse bind matrices.
+  Skin-space height 1.6367 m against 1.6372 m — half a millimetre.
+- **All 21 `TEXCOORD_0` sets are byte-identical** and every material assignment matches, which is
+  what made "import no new textures" a measurement rather than a shortcut.
+
+**What IS new is the rig and the motion.** 166 joints against 174 (Anims4's extra 18 are
+`FingerCTL_*`/`Index_CTL_*`/`Thumb_CTL_*` control bones), and **24 clips against 9** — four of
+Anims4's nine being `[Action Stash]*`, Blender's unassigned-action dump. Sixteen of the 24 have no
+counterpart in Anims4 at all. Against what the *player* currently sees the character is entirely
+new, because the shipped default is not the godot mesh at all: it is the owner-supplied
+`src/assets/sly-dl/sly.fbx` on RIG3 (`SlyModelDLRig`). `?char=godot` has never been the default.
+
+### THE CANE — and §479.20's sentence is withdrawn
+
+§479.20 records that our cane "hangs at his side rather than planting, **because their rig has no
+cane bone**". The clause after "because" is **false of the source, and always was.**
+
+```
+metarig/…/shoulder.R/upper_arm.R/forearm.R/hand.R/CaneBone.001/Cane_LowPoly
+```
+
+Established by hierarchy and skin binding, not by the material name:
+
+- `Cane_LowPoly` is **not skinned** — no `skin`, no `JOINTS_0`. A rigid 896-triangle mesh
+  **parented to a bone**. (The brief for this lane guessed "weighted inside the same skeleton";
+  that guess was wrong, and checking it was the point.)
+- `CaneBone.001` **is** joint #104 of the skin and **zero vertices weight to it** — a prop mount,
+  not a deformer.
+- **23 of the 24 clips animate it**; six articulate it rather than holding a constant.
+
+`SlyCooper_Anims4.gltf` carries the same `CaneBone.001` under the same `hand.R`, and **it is in the
+committed `sly-godot.glb` today**. The true statement is narrower: **RIG3** has no cane bone, so
+`godot2clips.mjs`'s bone map had nowhere to send those channels and dropped them. This is the §709
+shape again — geometry reported absent that was shipped all along.
+
+**Does it plant or hang?** Both, per clip, and the clip decides. Swept at 1/60 across each clip's
+whole duration (a midpoint sample said nothing — these are 4-second idles whose midpoint is a
+hold), reporting the closest the tip comes to the ground, soles at y=0:
+
+| clip | tip at t=0 | min tip | at t | verdict |
+|---|---|---|---|---|
+| `Standupright` | 0.357 | 0.346 | 2.50 | held clear — **hangs at his side** |
+| `Walk` | 0.556 | 0.474 | 0.27 | carried high |
+| `Run` | 0.113 | **−0.116** | 0.32 | **PLANTS** |
+| `Canehit` | 0.409 | **0.064** | 0.33 | **PLANTS** |
+| `CaneSwing` | 1.183 | 1.177 | 0.67 | carried high (the hook swing — overhead) |
+| `LedgeGrab` | 0.845 | 0.774 | 0.50 | carried high |
+| `PickPocket` | 0.315 | 0.233 | 0.52 | held clear |
+
+So the answer to §479.20 is: **on the pose the owner chose, it still hangs — because that is what
+the authored clip does**, not because anything of ours failed to carry it. It plants on `Run` and
+`Canehit`, and none of that needs attach logic: `Cane.js`, `CaneAsset.js` and the Sketchfab
+`sly-cane.glb` (licence *unknown*, weaker than this repo's *none stated*) are all **unused** on
+this path.
+
+### Is the native rig viable for the PLAYER? Yes as a body, no as a whole character — and the number that settles it
+
+`Rig.js` states the contract the engine needs: **RIG3 bone names, identity bind rotations, +X left,
++Z forward, origin at the feet.** A Blender metarig satisfies none of them. So `SlyModel27` exposes
+**no `bones` map and an empty `boneNames`**, which is the documented way to make `Animation._bind()`
+return false — the 52-clip blend tree, foot IK, the tail spring, look-at, cap/ear overshoot and hit
+impulses all stand down, and the mixer is the only thing posing the body. That is the honest
+arrangement: driving RIG3 Euler poses onto Blender-oriented bones is exactly the mangling a
+retarget exists to avoid.
+
+**The cost, stated as a number rather than a worry: 24 native clips against 52 verbs.** Today those
+52 are drawn by 23 imported motions *spliced into procedural poses*; the native path has no
+procedural half, so 28 verbs have no source at all. That is the reason this is a token and not a
+default, and it is not fixable by importing harder — the clips do not exist upstream.
+
+### Cost, measured
+
+| | `?char=godot` | `?char=sly27` |
+|---|---|---|
+| joints | 174 | 166 |
+| triangles | 30,806 (incl. its Sketchfab cane) | 30,346 (incl. **the source cane**) |
+| **mesh objects drawn** | **3** | **21** |
+| draw slots (material groups) | 5 | 21 |
+| with ink shells (`Shading.outline`, one per mesh) | 10 | **42** |
+| uniform scale applied | ×1.0839 | ×1.0875 |
+
+**The one real regression is draw calls: +16 slots, +32 with ink shells.** `SlyModelGodot` merges
+per material into 3 objects; the native path cannot, and that is not laziness — 14 of the 21 parts
+are rigid meshes parented to *different bones*, which is precisely the mechanism that makes the
+cane ride the hand for free. Merging them would take the cane back off its bone. The worst
+main-view shot is 86 draws of a 250 budget (`tools/budgetattrib.mjs`, which excludes the character
+by §216), so +32 lands around 118 — 47 % of the cap, and not a breach.
+
+**Triangles are unchanged in the shipped build, because the default is unchanged.** The scene total
+is 0.652 M against the 1.2 M cap (54 %), and this lane moves it by zero.
+
+### The frames, and `Standupright` — the pose §479.20 ruled on
+
+Two arms, **the same two cameras**, computed once on the default arm and passed to the other
+verbatim so the pair differs by the change and nothing else. The facing dot is printed for the
+camera each arm actually used, never inherited (§466.5, §702.9):
+
+| | `shots/sly27-default-*.png` | `shots/sly27-sly27-*.png` |
+|---|---|---|
+| built | `SlyModelDLRig` root `slydlrig` | `SlyModel27` root `sly27` |
+| joints | 31 (RIG3) | **166 (native)** |
+| RIG3 `boneNames` | 31 | **0** — the switch, working |
+| posed by | `freezePose("idle_confident")` | **native mixer, `"Standupright"`** |
+| cane object in the rig | **absent** (socketed Sketchfab prop) | **PRESENT** (`Cane_LowPoly`) |
+| drawn height | 1.8816 m | 1.7849 m |
+| drawn y | −0.046 … 1.8356 | 0.0094 … 1.7943 |
+| `front` camera dot | **+1.000** | **+1.000** |
+| `closeup` camera dot | +0.839 | +0.849 |
+
+**`Standupright` comes through faithfully.** On this path it is the authored clip played by an
+`AnimationMixer` against the rig it was authored for — no retarget, no `openLimbs` §531 lever in
+between — and the frame shows the cap, mask, ears, backpack straps, belt, gloves and boots all
+reading correctly, with **the source cane hanging in his right hand**, which is exactly what the
+swept table above says that clip does. It is a *different pose* from the incumbent frame because
+the incumbent frame is a different clip on a different model; it is not a degraded one.
+
+**Camera containment is not made worse.** The native body draws **9.7 cm shorter** and its feet sit
+at y +0.0094 where the incumbent's dip to −0.046, so he occupies slightly *less* of the frame on
+the identical camera. The owner's standing "Sly should always remain in frame" instruction is
+therefore not put at risk by the swap; if anything the margin grows. Not a licence to skip
+re-checking the camera work if the default ever flips — one shot is not the camera suite.
+
+**Note on the world clock.** `setShot` was called without `opts.dt`, so each boot's clock advances
+0.283 s — the §251 hazard. It does not bite here: each arm is a **separate boot** running an
+identical sequence, so both are photographed at the same phase. It would bite a two-arms-in-one-boot
+runner, which this is not.
+
+### §708's grip point, RE-DERIVED — reported, not fixed
+
+The owner's instruction not to work on grip poses stands; nothing here changes one.
+
+- **`gripgap.mjs` on the shipped arm is unchanged**, as it must be with the default untouched:
+  `ledge_hang` raw L 9.8–10.0 cm / R 42.8–43.0 cm across all three ledge sites, `pole_climb` raw
+  27 / 25.1, `rail_walk` roof-e 26.9 / 26.8. §708's "41 cm below the lip" is a different metric
+  from this table's palm-to-prop and both are on the record.
+- **On the native mesh the offset is 13.46 cm**, against §708's ~20 cm on the incumbent. Derived,
+  not carried, and the derivation had to change shape to be correct at all — **`handR` and `handL`
+  carry zero skin weight on this rig.** §708 measured "3433 vertices dominated by each hand bone"
+  on the incumbent; here the glove is skinned to `palm01/04`, `f_index/middle/ring/pinky*` and
+  `thumb01..03`, and the hand bone is a structural parent exactly like `CaneBone.001`. An
+  instrument that asks "which vertices are weighted to the hand bone" returns the empty set on a
+  hand that visibly exists — which is what the first version of this section did.
+- **`gripgap.mjs` cannot measure the native arm at all.** It draws its hand from the pose pipeline
+  (`buildClipSet` → `Animation.update` → `Rig.commit`), which is stood down here. Measuring grips
+  on this path needs a different instrument; that is a fact about the tool, not a defect in it.
+
+### THE ONE THAT MATTERS: every offline instrument passed on a build that drew nothing
+
+The first `?char=sly27` capture came back as **an empty courtyard**. The model had built with 166
+joints, 24 clips, the cane resolved, the right uniform scale, soles on the floor and the drawn box
+sitting at exactly the right world position — and `SlyModel27.init()` never called
+`engine.scene.add(this.root)`. `SlyModelGodot` and `SlyModelDLRig` each do that for themselves and
+nothing does it for them.
+
+**Ten offline assertions and two instruments passed on that build**, and they could not have done
+otherwise: `sly27fit.mjs`, `godot2sly27.mjs` and every test above traverse `model.root`, which is a
+perfectly good `Object3D` whether or not it has a parent. That is **§439/§440 in its purest form** —
+the instruments shared the subject's assumption, that `root` is the thing that matters, so no
+arrangement of them could falsify it. The only instrument that *could* was a rendered frame, and a
+frame costs ten minutes of capture lock behind a FIFO queue.
+
+The lesson is not "write more tests". It is that **a chain of probes that all start from the same
+handle tests everything except that handle**, and the cheapest possible check of it — `assert.equal
+(model.root.parent, scene)` — now exists, with a fail arm, and runs in a second.
+
+### One more warning that is right about itself and wrong about the world
+
+On this path `Animation.js` emits:
+
+```
+ANIMATION: freezePose("idle_confident") is active but the rig never bound —
+character and cane are rendering the bind pose, not the clip.
+```
+
+The first clause is **true and by design** (that is the switch). The second is **false here** — the
+native mixer is posing the character, so it is rendering `Standupright`, not bind. The warning is
+correct about its own subsystem and wrong about the frame, because it was written when "the rig
+never bound" could only mean nobody was posing. Left in place deliberately rather than edited:
+`Animation.js` is on the shipped path for every other arm, and §35's symptom is real there. Noted
+so the next reader of a `?char=sly27` capture does not chase it.
+
+### Three more instrument faults, all caught by discipline already written down
+
+1. **§442 in its purest form.** The bind pose of this asset is **not a pose the source ever
+   shows** — every clip pins `CaneBone.001` ≈148° off its bind rotation. Anything that samples the
+   character before a clip is evaluated measures the rest pose and sees a cane through his arm.
+   `SlyModel27.init()` therefore evaluates the mixer at t=0 before handing the character over, and
+   the bind reading (cane tip 0.0791 m) is quoted in the report **as itself** so a frame taken too
+   early is recognisable rather than mistaken for a broken import.
+2. **§709, twice.** three's `GLTFLoader` **de-dots node names**: `CaneBone.001` arrives as
+   `CaneBone001`. `getObjectByName('CaneBone.001')` returns undefined against a file that plainly
+   contains that bone — the same shape as the pistol census that reported shipped geometry absent.
+   And the source clip is literally spelled **`"Crouching stand   "`**, three trailing spaces, so
+   asking for `"Crouching stand"` reports a shipped clip as missing. Both now go through
+   `nodeVariants`/`clipKey`, which the runtime and `sly27fit.mjs` **share** so they cannot drift.
+3. **A threshold that returned the empty set** — the `w > 0.5` grip derivation above.
+
+And one hypothesis raised and **falsified**, which is worth recording because the instinct was
+right: `sly27fit.mjs` first stepped the mixer with `setTime`, a teleport, where the engine walks it
+with `update(dt)` (§435.4). Walked and teleported were compared on ten clip/time pairs and **agree
+to six decimals**, so the teleport was not the fault — the repeated readings that prompted the
+check were a real property of the data (these clips bake an *absolute* pose on nearly every joint,
+so two clips that leave the right arm alone give bit-identical cane positions). The tool walks
+anyway, because that is what the runtime does.
+
+### How to revert
+
+Nothing to revert — **the default is untouched**. `?char=sly27` is additive: one row in
+`main.js`'s `CHAR_MODELS`, one new module, two new assets, three new tools and one new test file.
+Deleting the row removes the path entirely. `?char=godot` and the shipping `dlrig` default are
+byte-identical to what they were.
+
+### Domain (§418.3)
+
+Applies to: the character mesh, skeleton, skin weights, clips and cane of
+`SlyCooper_Anims27.gltf`, imported natively and drawn by its own mixer. Does **not** apply to: the
+shipped default (unchanged), the retargeted `GodotClips.js` regime (unchanged), any grip pose, or
+the claim that the native path is *better* — it is more faithful to the source and it costs 32 more
+draws and 28 unserved verbs, and which of those wins is the owner's ruling to make.
 
 ---
 
