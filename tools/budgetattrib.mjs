@@ -78,33 +78,55 @@ const warnings = [];
  * §702 moved it twice in one change — the shock pistol left (−1,672) and the recovered face
  * arrived (+4,968) — and a literal here would have gone on reporting the old number in the
  * REASSURING direction, which is §700.3's lesson and §310's before it. So it is no longer a
- * literal: it is read from the same `bindToRig3` the game calls, over the same committed assets,
- * with the same head splice. If the asset or the bind changes again this moves with it.
+ * literal: it is read from the code the game calls, over the same committed assets, with the same
+ * head splice. If the asset or the bind changes again this moves with it.
+ *
+ * **§709 corrected WHICH ARM it reads (§442).** It called `bindToRig3` — `CarmelitaGuard.js`, the
+ * REBIND. The shipped default has been `TUNE.carmelitaNative = 1` since §704, i.e. `buildNative`.
+ * The two happen to agree at 32,063 on today's assets, so the figure was never wrong; the
+ * INSTRUMENT was, and a correct number measured on the wrong subject is §442 exactly. It now
+ * builds the shipped arm, and the pistol with it, so a change to either shows up here.
  *
  * `.tris` is what `Guard.js` adds to `this.stats.tris`, so this is the number the runtime uses,
  * not a re-derivation of it. Falls back to the historical literal only if the assets are absent,
  * and says so loudly rather than quoting a number it did not measure. */
-const CARMELITA_TRIS = await (async () => {
+const { CARMELITA_TRIS, PISTOL_TRIS } = await (async () => {
   try {
     const { readFileSync } = await import('node:fs');
     const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
-    const { bindToRig3, spliceHead } = await import('../src/ai/CarmelitaGuard.js');
+    const { buildNative, splicePistolNative, PISTOL_MESHES } = await import('../src/ai/CarmelitaNative.js');
+    const { GUARD_TUNE } = await import('../src/ai/Guard.js');
     const parse = async (p) => {
       const b = readFileSync(p);
       return new Promise((res, rej) => new GLTFLoader().parse(
         b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength), '', res, rej));
     };
     const scene = (await parse('public/assets/sly-anim/carmelita-guard.glb')).scene;
+    let head = null;
     try {
       const h = await parse('public/assets/sly-anim/carmelita-head-lp.glb');
-      let geo = null;
-      h.scene.traverse((o) => { if (!geo && o.isMesh) geo = o.geometry; });
-      if (geo) spliceHead(scene, geo);
+      h.scene.traverse((o) => { if (!head && o.isMesh) head = o.geometry; });
     } catch { /* the stub head is the documented fallback; the count below reports what it got */ }
-    return bindToRig3(scene).tris;
+    /* The pistol is measured only when the shipped TUNE actually draws it, and through the same
+       splice `loadCarmelitaNative` performs — so a build that turned it off, or one whose
+       low-poly asset went missing, is quoted at what it would really cost. */
+    const armed = GUARD_TUNE.carmelitaPistol > 0.5;
+    if (armed) {
+      try {
+        const lp = await parse('public/assets/sly-anim/carmelita-pistol-lp.glb');
+        const geos = {};
+        lp.scene.traverse((o) => { if (o.isMesh && PISTOL_MESHES.includes(o.name)) geos[o.name] = o.geometry; });
+        const sp = splicePistolNative(scene, geos);
+        if (!sp.ok) warnings.push(`the low-poly pistol did not splice (${sp.why}) — quoting the FULL-resolution pistol`);
+      } catch (e) {
+        warnings.push(`carmelita-pistol-lp.glb not read (${e.message}) — quoting the FULL-resolution pistol`);
+      }
+    }
+    const a = buildNative(scene, head, { pistol: armed });
+    return { CARMELITA_TRIS: a.tris, PISTOL_TRIS: a.pistol ? a.pistol.tris : 0 };
   } catch (e) {
     warnings.push(`carmelita mass NOT measured (${e.message}) — falling back to the 2026-08-08 literal 29791`);
-    return 29791;
+    return { CARMELITA_TRIS: 29791, PISTOL_TRIS: 0 };
   }
 })();
 const CARMELITA_DRAWS = 2;         // merged geometry, two material groups
@@ -214,6 +236,7 @@ if (INPAGE) {
   for (const g of built.guards?.guards || []) if (g.mesh) typeOf.set(g.mesh.uuid, g.type);
 
   const shells = [];
+  const pistols = [];
   for (const it of items) {
     if (it.module !== 'guards') continue;
     const type = typeOf.get(it.obj?.uuid);
@@ -223,12 +246,22 @@ if (INPAGE) {
       it.extraDraws = CARMELITA_DRAWS - 1;      // two material groups = two draws
       it.owner = 'guards/carmelita_body';
     }
-    /* `Guard.js:1496` shells every guard, scarabs included. Shells never cast (main.js opts
-       `isOutlineShell` out of the sweep), so they cost the beauty and prepass passes only. */
+    /* `Guard.js`'s `_applyOutlines` shells every guard, scarabs included. Shells never cast
+       (main.js opts `isOutlineShell` out of the sweep), so they cost the beauty and prepass
+       passes only. */
     shells.push({ module: 'guards', owner: `${it.owner} [ink shell]`, tris: it.tris,
       sphere: it.sphere, box: it.box, caster: false, obj: null });
+    /* §709: the shock pistol, pushed AFTER the shell for this guard is built, which is the whole
+       point — it is its own `SkinnedMesh` and `_applyOutlines` does not shell it, so it appears
+       ONCE where the body appears twice. That halving is what let it fit. If
+       `TUNE.carmelitaPistolInk` is ever turned on, this row needs a shell beside it and the
+       arithmetic below stops matching the build. */
+    if (HUMANOID_TYPES.has(type) && PISTOL_TRIS > 0) {
+      pistols.push({ module: 'guards', owner: 'guards/carmelita_pistol', tris: PISTOL_TRIS,
+        sphere: it.sphere, box: it.box, caster: true, obj: null });
+    }
   }
-  items.push(...shells);
+  items.push(...shells, ...pistols);
 }
 
 /* ------------------------------------------------------------ cascades --- */

@@ -21,6 +21,24 @@ this repository has to infer the status of these files. **This is not equivalent
 | `sly-body.png`, `sly-head.png` | 2048² albedo | the rig's textures | **`staging/assets/sly-anim/`** |
 | `Carmelita_Animations7.fbx` | the master, 16.9 MB | **not copied.** Read in place from the read-only clone for §702's head recovery only; `carmelita-head-lp.glb` is what came back | — |
 
+### The source, re-checked at §709
+
+The clone was re-fetched to answer "where does the shock pistol geometry live", and the answer
+turned out to be **here already** — so this section records a verification, not an import.
+
+- **Repository:** `NoahChase/Sly-Cooper--A-Thief-in-Godot`, HEAD **`a312a997ca7d085a88b7443d754e5d3f57d66311`**
+  (`GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1`).
+- **Path read:** `Assets/Temp Imports/tempcarmelita/` — specifically `Carmelita_Animations7.gltf`
+  and its `.bin`, opened read-only to check the pistol's node hierarchy and skin weights.
+- **What was taken from it: nothing.** `carmelita-guard.glb` on this register was already carrying
+  `MainBody` (1,108 tris), `Barrel` (156) and `Antennae003` (408). An earlier reading had concluded
+  the pistol meshes were absent from our assets; that reading listed glTF **mesh** names, which in
+  this export are Blender defaults (`Cube`, `RetopoFlow.007`, `Cylinder.004`), while the identity is
+  carried by the **node** names. The source confirms the same three meshes and the same four-bone
+  `ShockPistol` sub-armature we already ship.
+- **§364.3 holds:** nothing under the source's `Assets/Music/` or `Assets/Effects/` was copied,
+  decoded, converted or referenced, at §709 or at any point in this lane.
+
 ### Where these files live, and why some of them left
 
 `public/` is copied into `dist/` verbatim, referenced or not, so an asset staged here without being
@@ -46,6 +64,17 @@ What stayed, and why:
   `Shoot(BodyMovement)` ships **1,194 channels for 597 distinct node/path pairs** — every channel
   twice — and which duplicate wins in `AnimationMixer` is an ordering accident, so they are
   collapsed and the count is reported.
+- `carmelita-pistol-lp.glb` — **new in §709**, 27.9 kB, fetched at runtime by
+  `src/ai/CarmelitaNative.js` when `TUNE.carmelitaPistol` is on (it is, by default). Her shock
+  pistol — `MainBody` + `Barrel` + `Antennae003` — decimated from **1,672 triangles to 385** by
+  `tools/pistollp.mjs`, which splices it back over the full-resolution meshes that
+  `carmelita-guard.glb` already carries.
+
+  **No new source bytes were taken for this file.** Its entire input is `carmelita-guard.glb`,
+  already in this directory and already on this register; nothing was re-fetched from the source
+  repository to produce it, and it addresses the same 199-joint order and the same `skinIndex`
+  values as the meshes it replaces. `tools/pistollp.mjs` re-derives it from the committed asset,
+  so it can be rebuilt at any time without the clone.
 - `sly-anims.glb`, `carmelita-anims.glb` — **build-time inputs**, read at these exact paths by
   `tools/mixamo2clips.mjs`, `tools/carmelita2clips.mjs`, `tools/carmelita2guard.mjs` and
   `tools/carmelita2native.mjs`, with `tests/carmguard.test.mjs` asserting one of them is present so

@@ -7,7 +7,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {
   buildNative, instantiateNative, spliceHeadNative, headFiducial,
   CarmelitaNativeAnim, CLIP_FOR, CLIP_FOR_ARMED, clipMapFor, UNUSED_CLIPS, ONCE, MOUNT_SCALE,
-  CARMELITA_CLIPS_ASSET,
+  CARMELITA_CLIPS_ASSET, splicePistolNative, muzzleFromBarrel, PISTOL_MESHES,
 } from '../src/ai/CarmelitaNative.js';
 import { GUARD_TUNE } from '../src/ai/Guard.js';
 
@@ -328,7 +328,10 @@ test('the native arm is the SHIPPED DEFAULT and is revertible in one token', () 
   /* The owner asked for the source rig and animations. A default of 0 would have meant that
      anyone who opened the build saw the rebind, and the answer to "did you do it" would be no. */
   assert.equal(GUARD_TUNE.carmelitaNative, 1, 'the shipped default is her NATIVE rig');
-  assert.equal(GUARD_TUNE.carmelitaPistol, 0, 'and the pistol is still off — it does not fit');
+  /* §709 turned the pistol on. It fits now because it is 385 triangles and is drawn once, not
+     1,672 drawn twice — see `the pistol fits, and the arithmetic that says so` below. */
+  assert.equal(GUARD_TUNE.carmelitaPistol, 1, 'and §709 turned the pistol on');
+  assert.equal(GUARD_TUNE.carmelitaPistolInk, 0, 'with its ink shell off — that halving is what pays for it');
   const src = readFileSync('src/ai/Guard.js', 'utf8');
   assert.match(src, /carm=rebind/, 'the revert token is documented at its site');
   assert.match(src, /function wantNative\(\)/, 'and read through one function');
@@ -393,34 +396,164 @@ has('the armed clips are identified by MEASUREMENT, not by their names', () => {
   })();
 });
 
-has('the pistol is available, priced, and off by default', () => {
+has('the pistol is its OWN buffer, and the body is byte-for-byte what it was unarmed', () => {
   const bare = buildNative(SCENE, null);
   assert.equal(bare.stats.armed, false);
+  assert.equal(bare.pistol, null, 'unarmed there is no pistol at all');
   assert.ok(bare.stats.propTris > 1600 && bare.stats.propTris < 1700,
-    `the pistol is ${bare.stats.propTris} triangles a guard`);
-  /* 9 guards, each drawn twice for the ink shell, against ~7,000 triangles of headroom. */
-  const cost = bare.stats.propTris * 9 * 2;
-  assert.ok(cost > 7000, `and ${cost} over the garrison, which does not fit — this is why it is 0`);
+    `the full-resolution pistol is ${bare.stats.propTris} triangles a guard`);
 
   const fresh = buildNative(SCENE, null, { pistol: true });
   assert.equal(fresh.stats.armed, true);
-  assert.equal(fresh.stats.kept, 19, 'armed keeps the three pistol meshes');
-  assert.equal(fresh.tris - bare.tris, bare.stats.propTris, 'and costs exactly the pistol');
+  /* §709's structural claim, and the one everything else rests on: arming adds a SECOND
+     geometry and does not touch the first. Merged in, the pistol would ride the body's ink
+     shell and be drawn twice. */
+  assert.equal(fresh.stats.kept, bare.stats.kept, 'the body keeps exactly the meshes it kept unarmed');
+  assert.equal(fresh.tris, bare.tris, 'and the body buffer costs exactly what it cost unarmed');
+  assert.equal(fresh.geometry.attributes.position.count, bare.geometry.attributes.position.count);
   for (const n of ['MainBody', 'Barrel', 'Antennae003']) {
-    assert.ok(fresh.regions.some((r) => r.name === n), `${n} is in the armed build`);
-    assert.ok(!bare.regions.some((r) => r.name === n), `${n} is NOT in the default build`);
+    assert.ok(!fresh.regions.some((r) => r.name === n), `${n} is NOT in the body buffer`);
+    assert.ok(fresh.pistol.regions.some((r) => r.name === n), `${n} IS in the pistol buffer`);
   }
+  assert.equal(fresh.pistol.tris, bare.stats.propTris, 'the pistol buffer is exactly the pistol');
+  assert.deepEqual(fresh.pistol.atlases, [0], 'all three sit on the BODY atlas — one group, one draw');
+  assert.equal(fresh.pistol.geometry.groups.length, 1);
+
+  /* The ground property §697 depends on must not move. At bind the pistol parks beside her hip,
+     reaching neither below her soles nor above her head — measured, not assumed. */
+  assert.equal(fresh.height, bare.height, 'arming does not change her drawn height');
+  assert.equal(fresh.soleLift, bare.soleLift, 'nor the sole lift `Guard._step` grounds on');
+
   /* Armed, the patrol walk goes back to the clip named for it. */
   assert.equal(clipMapFor(true).walk_patrol, 'PatrolWalk');
   assert.equal(clipMapFor(false).walk_patrol, 'CasualWalking');
   assert.equal(CLIP_FOR_ARMED.run_chase, CLIP_FOR.run_chase, 'and nothing else changes');
 });
 
-test('the pistol token exists, is off, and is documented at its site', () => {
-  assert.equal(GUARD_TUNE.carmelitaPistol, 0);
+/* ───────────────────────────── §709: the pistol fits ─────────────────────── */
+
+const PISTOL_LP = 'public/assets/sly-anim/carmelita-pistol-lp.glb';
+const hasLP = existsSync(PISTOL_LP);
+const lp = (t, fn) => test(t, { skip: (present && hasLP) ? false : `${PISTOL_LP} is absent` }, fn);
+
+lp('the low-poly pistol splices, and the gate is shown able to REFUSE (§418.3)', async () => {
+  const geos = {};
+  (await parse(PISTOL_LP)).scene.traverse((o) => { if (o.isMesh && PISTOL_MESHES.includes(o.name)) geos[o.name] = o.geometry; });
+  assert.equal(Object.keys(geos).length, 3, 'the baked asset carries all three meshes');
+
+  /* PASSES on: the committed asset. */
+  const scene = (await parse(ASSET)).scene;
+  const ok = splicePistolNative(scene, geos);
+  assert.equal(ok.ok, true, ok.why);
+  assert.equal(ok.before, 1672, 'the full-resolution pistol is 1,672 triangles');
+  assert.equal(ok.after, 385, 'and the shipped one is 385');
+
+  /* FAILS on: a replacement that addresses a joint the original never did. This is the failure
+     with no other symptom — it binds, it draws, and the gun is somewhere else on the rig. */
+  const wrongScene = (await parse(ASSET)).scene;
+  const wrong = { ...geos };
+  const bad = geos.Barrel.clone();
+  const si = bad.attributes.skinIndex;
+  si.array[0] = 7;                       // a body joint, not one of the pistol's four
+  wrong.Barrel = bad;
+  const refused = splicePistolNative(wrongScene, wrong);
+  assert.equal(refused.ok, false, 'a replacement addressing a foreign joint must be refused');
+  assert.match(refused.why, /Barrel/, 'and the refusal names the mesh');
+  /* and refusing must leave NOTHING half-swapped — a low-poly MainBody beside a full Barrel is
+     a worse state than either whole one */
+  let stillFull = 0;
+  wrongScene.traverse((o) => { if (o.isMesh && PISTOL_MESHES.includes(o.name)) stillFull += o.geometry.index.count / 3; });
+  assert.equal(stillFull, 1672, 'a refused splice writes nothing at all');
+
+  /* FAILS on: nothing supplied. */
+  assert.equal(splicePistolNative((await parse(ASSET)).scene, null).ok, false);
+});
+
+lp('the pistol fits, and the arithmetic that says so is here rather than in a comment', async () => {
+  const scene = (await parse(ASSET)).scene;
+  const geos = {};
+  (await parse(PISTOL_LP)).scene.traverse((o) => { if (o.isMesh && PISTOL_MESHES.includes(o.name)) geos[o.name] = o.geometry; });
+  splicePistolNative(scene, geos);
+  const armed = buildNative(scene, null, { pistol: true });
+  assert.equal(armed.pistol.tris, 385);
+
+  /* `tools/budgetattrib.mjs --inpage`, the commit before §709: 1,192,970 of a 1,200,000 cap.
+     These four rows are the decision, and three of them do not fit. */
+  const BASE = 1192970, CAP = 1200000, GUARDS = 9;
+  const full = 1672;
+  assert.ok(BASE + full * GUARDS * 2 > CAP, 'the full pistol, shelled, is over the cap');
+  assert.ok(BASE + full * GUARDS > CAP,
+    'and the full pistol drawn ONCE is STILL over it — dropping the shell alone was never enough');
+  assert.ok(BASE + armed.pistol.tris * GUARDS * 2 < CAP,
+    'decimated and shelled would just fit, at 99.99% — no margin for anything else');
+  const shipped = BASE + armed.pistol.tris * GUARDS;
+  assert.ok(shipped < CAP, 'decimated and drawn once fits');
+  assert.ok(shipped / CAP < 0.998, `and lands at ${(100 * shipped / CAP).toFixed(2)}% with room in hand`);
+});
+
+lp('the muzzle is derived in the BONE\'s frame, and the derivation refuses when it cannot decide', async () => {
+  const scene = (await parse(ASSET)).scene;
+  const built = buildNative(scene, null, { pistol: true });
+  const m = built.pistol.muzzle;
+  assert.equal(m.ok, true, m.why);
+  assert.equal(m.bone, 'ShockPistolbarrel');
+  assert.ok(m.share > 0.999, 'the barrel is 100% weighted to that one bone — which is what makes a single-bone frame legitimate');
+  assert.ok(m.discriminates, `the trigger rule decides by ${(m.margin * 100).toFixed(1)}%`);
+  assert.ok(m.dTriggerMuzzle > m.dTriggerBreech, 'the muzzle is the end further from the trigger');
+  assert.ok(Math.abs(m.extent - 0.1767) < 0.002, `the barrel is ${(m.extent * 1000).toFixed(1)} mm long`);
+
+  /* §442, as an assertion rather than a note. The muzzle is a BIND-LOCAL point, so it must NOT
+     be anywhere near the world position the pistol parks at — that parked spot is 0.93 m out to
+     her side, and a "muzzle" baked as a world offset would sit there and look plausible. */
+  assert.ok(Math.hypot(...m.local) < 0.2,
+    `the muzzle is a local offset (|${m.local.map((v) => v.toFixed(3))}| = ${Math.hypot(...m.local).toFixed(3)} m), `
+    + 'not a baked world position');
+
+  /* FAILS on: a barrel whose weights are spread, where a single-bone frame would not track it. */
+  const bad = (await parse(ASSET)).scene;
+  bad.updateMatrixWorld(true);
+  let b = null;
+  bad.traverse((o) => { if (o.isSkinnedMesh && o.name === 'Barrel') b = o; });
+  const g = b.geometry.clone();
+  const sw = g.attributes.skinWeight;
+  for (let i = 0; i < sw.count; i++) { sw.setX(i, 0.5); sw.setY(i, 0.5); }
+  const si = g.attributes.skinIndex;
+  for (let i = 0; i < si.count; i++) si.setY(i, 0);
+  b.geometry = g;
+  const refused = muzzleFromBarrel(bad, built.boneOrder, built.boneInverses);
+  assert.equal(refused.ok, false, 'a barrel that is not single-bone must be refused');
+  assert.match(refused.why, /weighted/);
+
+  /* FAILS on: no barrel at all. */
+  const gone = (await parse(ASSET)).scene;
+  gone.traverse((o) => { if (o.isSkinnedMesh && o.name === 'Barrel') o.name = 'NotTheBarrel'; });
+  assert.equal(muzzleFromBarrel(gone, built.boneOrder, built.boneInverses).ok, false);
+});
+
+test('the pistol token is on, and both halves of what pays for it are documented at the site', () => {
+  assert.equal(GUARD_TUNE.carmelitaPistol, 1);
+  assert.equal(GUARD_TUNE.carmelitaPistolInk, 0);
   const src = readFileSync('src/ai/Guard.js', 'utf8');
   assert.match(src, /carmpistol/, 'the URL token is there');
-  assert.match(src, /30,096/, 'and the triangle cost is stated where the decision is made');
+  assert.match(src, /30,096/, 'the cost that kept it off is stated where the decision is made');
+  assert.match(src, /1,196,435/, 'and so is where turning it on lands');
+  /* The crouch is a VISIBLE consequence of arming and must be stated, not discovered. */
+  assert.match(src, /1\.508 m/, 'PatrolWalk\'s drawn height is on record at the token');
+  assert.match(src, /1\.768 m/, 'and so is the CasualWalking height it replaces');
+});
+
+test('the cone apex moved and the SENSING eye did not — the alert ladder is untouched', () => {
+  const src = readFileSync('src/ai/Guard.js', 'utf8');
+  /* The one line that decides scope. `sense.eye` feeds `Senses.evaluate`, which is the ladder. */
+  assert.match(src, /sense\.eye = this\._eyePosition\(_eye\)/,
+    'detection still reads _eyePosition, not the muzzle');
+  assert.match(src, /g\._coneApex\(_eye\)/, 'and the drawn cone reads _coneApex');
+  assert.match(src, /_coneApex\(out\) \{/, 'which exists');
+  /* `_coneApex` must fall back, or a scarab and the rebind arm lose their cone entirely. */
+  assert.match(src, /return this\._eyePosition\(out\);/, 'and falls back to the eye when there is no pistol');
+  /* §697 is not in this lane either. */
+  assert.equal(GUARD_TUNE.groundProbe, 0.06, '§697\'s groundProbe is untouched');
+  assert.equal(GUARD_TUNE.groundSlopeMax, 30, '§697\'s groundSlopeMax is untouched');
 });
 
 has('a frozen guard who is also LOOKING does not wind his head around', () => {
