@@ -54926,3 +54926,9 @@ path §704 has now superseded. It is recorded as dead rather than removed, becau
 "we never finished wiring it" are different conclusions and the evidence here does not choose
 between them. The two false header sentences ARE corrected, in place, because a comment that
 misstates what the code does is the mechanism above and not a matter of taste.
+
+---
+
+## §707 — CLAIMED (patrol-clearance lane, in progress)
+
+Reserved while measuring the stalled half of the garrison. Content follows in a later commit.
