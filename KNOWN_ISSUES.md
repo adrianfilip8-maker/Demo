@@ -59302,3 +59302,8 @@ A fourth run, at the commit that carries this section, is recorded in the commit
 §712/§713/§715/§716/§717 precedent: a suite table committed at one sha and quoted at another is a
 claim about a tree nobody ran.
 
+**Run 4, at `6b43285` (the section's own commit), a fresh worktree at that sha
+(`/home/user/wt-719b`), same lock, same runner: 1089 / 1089, 0 fail**, 257.8 s, zero `not ok` lines
+over the whole stream, pwd checked from inside the command (`/home/user/wt-719b`), cwd present at
+the end. Four runs, four quoted; no flake fired in any of them and no test went red in any of them.
+
