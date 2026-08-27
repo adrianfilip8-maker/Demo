@@ -59343,3 +59343,550 @@ acquisition volume on the hook-ring magnet. §605's ring geometry, hook anchors 
 points do not move under either arm — this is tuning, not level editing. §697's ground tuning,
 §716's combo, §717's idles and §719's gold hook are untouched and their revert tokens keep
 working.)*
+
+### §720.1 The two answers, first, so a redirect is cheap (§705)
+
+**Arm A — the climb.** The reference's pole state has TWO inputs and we had wired one. `pole_state`
+input 1 ("pole_walk") is `PoleClimbing`, which §479.18 bound and correctly plays REVERSED; input 0
+("pole_idle") is **`PoleClimbIdle`**, which reached no verb, so a player who stopped on a rope or a
+pipe kept climbing on the spot for as long as he hung there — §715.2 named that in those words and
+could not close it, because closing it needs a VERB and that was outside its brief. Their **`PoleGrab`**
+was unbound for the same reason. Both are now bound, with a third change nobody had asked about
+and the measurements forced: §531's limb lever was holding the glove **10.4 cm off the shaft** on
+every pole verb, which is §479.10's placed-hand criterion applied to a slot it had never been
+applied to.
+
+**Arm B — the magnet.** Delivered at the owner's 50%: the hanging rings' acquisition volume goes
+**3.30 → 1.65** (courtyard chain) and **3.07 → 1.535** (lower chain). **The chain still completes,
+and the reason is not luck** — `HookSwing`'s own fly-through clause (`!grounded && distance <=
+hookAuto 2.9`) is what actually catches on a chain, and the magnet's remaining sphere at 1.65 still
+exceeds the catch window `catchSwing` 1.4387, so every arc the assist would have rescued it still
+rescues. Bisected: the ring chain's reach is unchanged all the way down to a **90% cut**. The
+visual cue does not track the volume and never did.
+
+### §720.2 The refusal that does not transfer, re-derived in the pole's own frame
+
+§717.5 refused `PoleClimbIdle` at **+27.9 cm of floating feet**, signed against the rig's bind
+contact. That number is correct and it is the answer to a different question. §717.5's own
+paragraph says why, and it is quoted here rather than paraphrased because the whole re-derivation
+turns on it: *"these are poses their game plays while the feet are on a PROP — a rail, a pole, a
+spire — not on the ground."* On a pole the feet are off the ground **by design**. A ground idle's
+contract cannot decide a pole verb in either direction, so the refusal is not inherited and it is
+not overturned — it is replaced by the contract that applies.
+
+`tools/polemeasure.mjs` builds that contract out of the state's own source, with nothing chosen by
+hand: `PoleClimb.place()` puts the capsule origin on a circle of radius `hold` around the shaft
+facing it, and `PoleClimb.enter()` sets `hold = max(0.18, r) + TUNE.radius 0.34 x 0.8`. So in the
+rig's frame **the pole is a vertical line `hold` metres straight ahead**, and every reading is a
+distance to that line minus the shaft radius: **0 cm = the hand is ON the rope**, negative = closed
+round it. The rig's forward axis is DERIVED per run from the bind pose's toe-ahead-of-heel (+23.6 cm,
+so +Z) and printed, never assumed. The level offers r 0.15 (clamped to 0.18) to r 0.40, so both ends
+are tabulated; the rope column is below.
+
+```
+  clip                    worse hand   best boot   hand dY   sweep      what it is
+  (BIND POSE, §442)          47.9 cm     18.5 cm     0.0 cm    0.0 deg/s
+  pole_climb  [proc]         -7.5        -9.3       17.4      39.7      the procedural incumbent
+  PoleClimbing [gltf]        12.9        -4.8       27.2     102.2      the climb's raw source (see §720.4:
+                                                                          the LEVER shipped it at 23.3)
+  PoleClimbIdle [gltf]        8.8        -8.7       27.7       2.4      <- BOUND, the hang
+  PoleGrab     [gltf]        27.8 mean   11.2       22.3     110.2      <- BOUND, the catch
+  ledge_hang  [proc]          6.8         5.9        1.1       3.1      a hang that ships
+  wall_cling  [proc]          0.4        -6.5        4.5       1.8      a cling that ships
+  ---- §418.3 FAIL ARM: ground idles carried into the pole frame ----
+  Standupright [gltf]        43.6        12.3        1.6       3.8      arms closed on air
+  Idle Anim 1  [lib]         34.2        33.4       12.3      14.9      arms closed on air
+  SpireJump    [gltf]        62.9        19.4        4.7      88.5
+  LedgeGrab    [gltf]        44.4        29.2       19.6     135.6
+```
+
+**`PoleClimbIdle` grips the rope 4.1 cm TIGHTER than the clip the state shows there today** (8.8
+against `PoleClimbing`'s 12.9) and clamps a boot 3.9 cm further round it (−8.7 against −4.8), at
+**2.4 deg/s of joint motion against 102.2**. A hang, not a climb, holding the shaft harder than the
+climb does — which is the verb, exactly. Its hands sit a constant 27.7 cm apart vertically (range
+27.7 → 27.9 over the whole cycle) where the climb alternates through 45.6: a staggered static hold
+against a stroke. Every ground idle in the corpus, measured on the same instrument in the same
+frame, reads **34–44 cm** — arms closed on air, because their hands are not placed. That is the
+instrument's fail arm and it is in the table rather than in a sentence.
+
+**Nothing here contradicts §717.5.** Both readings are of the same clip: its feet are 27.9 cm off
+the FLOOR and 8.7 cm INSIDE the SHAFT. On a rail those are the same fact and the fact is a defect;
+on a rope they are the same fact and the fact is the pose.
+
+### §720.3 `PoleGrab` — a mount that had no animation at all, and the seam it lands on
+
+A one-shot is judged where it ENDS, because it hands over to a loop. `PoleGrab`'s hands travel from
+**52.6 cm off the shaft to 8.5 cm** over 0.67 s — they close onto the pipe, which is what a catch
+is, and it is the only clip in the corpus that does it. The handover, worst-bone:
+
+```
+  mount one-shot                     -> pole_climb (as shipped)   -> PoleClimbIdle
+  pole_climb, i.e. what fired before   0.0 deg (it IS the loop)     75.5 deg @lowerArmR
+  PoleGrab                            41.3 deg @footL              32.8 deg @shoulderR
+```
+
+**The 0.0 is not a good seam, it is the ABSENCE OF A MOUNT.** `PoleClimb.enter` fired
+`oneShot('pole_climb')` on top of a base clip of `pole_climb`; under the godot regime both resolve
+to the same authored motion, and §525's rule refuses to layer a clip on its own `source` — so the
+one-shot coalesced into the loop and **the mount played nothing**. Sly arrived already climbing.
+`PoleGrab` is a different source, so it layers, and it lands 32.8 deg from the hang it hands over
+to — inside the shipped idle family's own fade band (§717 quotes 42.1 / 65.7 for the pair it
+shipped).
+
+**Neither new row carries an `events` line, and that is the contract rather than an omission.**
+`spliceClip` fills a swapped clip's events from the PROCEDURAL donor when the source has none, and
+**no clip in the reference carries any** — so the risk here is an INHERITED event, not a missing
+one. `pole_climb`'s donor has two `footstep` beats (the climb's hand-beat); inherited by the hang
+they would be a climb rhythm with no climb. And `PoleClimb.enter` already emits `poleMount` with
+the surface material for AUDIO and FX, so a mount event in the clip would announce one contact
+twice. Both donors are authored `events: []` for those two reasons, and `poleanim.test` asserts the
+zeros WITH `pole_climb`'s own non-zero count as the positive control, so "the fill stopped running"
+cannot pass as "the contract holds". No `dur`, `rate` or `trim` either: both play at their authored
+0.67 s, which is the timing their own tree gives them.
+
+### §720.4 §531's lever was taking a PLACED hand off the shaft, on every pole verb
+
+Not a discovery this lane went looking for — it fell out of measuring the two new rows' lever rung,
+which the brief asked for. No pole verb has ever carried a `GODOT_LIMB_OPEN` row, so all of them
+take the set-wide 0.75 / 0.60. Swept through the shipped `buildClipSet` seam (grip cm to the rope
+surface, worse hand mean / worst frame):
+
+```
+  verb          elbow 0 / knee 0     0.45 / 0        0.75 / 0.60 (what shipped)
+  pole_climb    12.9 / 16.8         16.3 / 25.2      23.3 / 33.4
+  pole_slide     7.0 / 10.7         14.2 / 18.0      19.3 / 23.1
+  pole_swing    24.6 / 32.3         28.1 / 37.6      31.0 / 41.2
+```
+
+Monotone in the wrong direction on all three, and on the verb the owner asked about it is **10.4 cm
+of daylight between the glove and the rope**: the ported climb was landing visibly not holding on.
+The knee half does the same to the boots — the best foot goes from −4.8 cm (wrapped round the
+shaft) to **+10.3 cm** (off it). §479.10 already states the criterion this is a case of, and it
+states it as a general rule rather than as a wall-run exception: *the lever may open a FREE limb;
+it may not straighten a limb whose hand is PLACED.* A palm on a wall earned `wall_run_*` its cap. A
+glove on a rope is placed by the same argument, and nobody had asked.
+
+**The family argument is what makes this not optional.** §717 pinned `idle_bored` NOT because the
+lever hurt that clip but because `Moveset.js` crossfades three clips into one slot and a lever on
+one of three spreads the arms 10.7 cm mid-idle. The same shape is far tighter here:
+`PoleClimb.update` re-picks between `pole_idle`, `pole_climb` and `pole_slide` **every frame, off
+the stick**, with a 0.16 s fade. Exempting the two new verbs and leaving the two incumbents would
+pop the hands 10.4 cm off the rope the instant the player pushed up. Either all four take the lever
+or none do, and the sweep says none. There is no rung between: unlike `crouch_walk`, where 0.45 kept
+real outboard daylight, every rung above 0 here moves a placed hand off its contact, so §479.10's
+"largest rung that still clears" is 0.
+
+**`pole_swing` is measured above and deliberately NOT given a row.** It is a different state
+(`PoleSwing`, entered on attack) and a ONE-ARMED orbit — the body flings out horizontal with the
+free arm trailing — so the worse-hand reading the sweep uses is not that verb's contract, and 24.6 cm
+at rung 0 is the free arm rather than a failed grip. Measuring it properly needs a best-hand
+instrument and a ruling on a launch the owner did not ask about. The numbers are here so the next
+lane starts from them instead of from this sentence.
+
+The in-state seam this buys, at the transition the player crosses on every push and release:
+`pole_idle` ↔ `pole_climb` reads **42.6 deg @upperLegR** on the shipped default, against 127.4 deg
+@upperArmL for the pair the reverted arm would show. Inside §717's own shipped band.
+
+### §720.5 Arm A, driven — the play sites, not the table
+
+`buildClipSet` will happily report `pole_idle -> godot:PoleClimbIdle` in a build where the state
+machine never asks for it; that is §715.6's gap restated, since the clip was baked and reachable
+the whole time. So the load-bearing arm walks Sly into the shipped drainpipe at (21.35, ·, −2) —
+r 0.18, bottom 0, **the only climbable in the level whose foot is on the ground**, which is what lets
+the mount be walked into instead of jumped at — and reads what `Controller.baseClip` and
+`Controller.oneShot` were actually handed, frame by frame (§435.4: settled, walked, never
+teleported). `tests/poleanim.test.mjs`:
+
+```
+  walked-in mount at frame 18:  one-shots ["pole_grab"]
+  held stationary               ["pole_idle"]
+  holding up                    ["pole_climb"]
+  holding crouch                ["pole_slide"]
+```
+
+**The fail input is RUN, in a child process** (§418.3). The play sites read a module-load constant,
+exactly as §716's and §717's tokens do, so one process cannot hold both arms and asserting the flag
+instead would be §418.9's failure mode written out. The child sets `__POLE_AB` **before** the
+import — a first draft set it in the child's own top-level code, where the hoisted static imports
+had already read it, and the "reverted" child returned the default's answers: a fail input that
+silently was not one, which is the only way this arm could have lied. Corrected:
+
+```
+  default      mount ["pole_grab"]   stationary ["pole_idle"]
+  ?pole=climb  mount ["pole_climb"]  stationary ["pole_climb"]   <- §715.2's sentence, reproduced
+```
+
+Three instrument faults were found by their own guards while building this and are recorded because
+each one would have produced a plausible reading: the mount one-shot filtered on `c.stateName` came
+back EMPTY (`StateMachine.set` runs `enter()` before `onStateChanged` assigns the name, so it was
+attributed to the state being left); drive 2 onward never settled (`hardReset` rebuilds the moveset
+with `sm.current = null`, so `PoleClimb.exit`'s `c.attached = null` never runs); and the "still"
+settle frames inherited the previous drive's held stick and walked into the pipe during them.
+
+### §720.6 Arm B — which terms moved, which did not, and the derivation handled
+
+```
+  MAG.volumeSwing   3.30 -> 1.65     NEW ROW. The courtyard chain's acquisition radius, which is
+                                     what `swingTarget` used to take from `MAG.volume` by default.
+  MAG.volumeLow     3.07 -> 1.535    the lower chain.
+  MAG.volume        3.30  UNCHANGED  the general acquisition radius — spires and the wall notch.
+  MAG.catchSwing  1.4387  UNCHANGED  a TIME window in metres, not a distance.
+  MAG.hookL          2.2  UNCHANGED
+```
+
+**Scope.** The owner's sentence names the *hanging rings*, and that is `swingTarget` — the 11 rings
+of the two courtyard chains, `arrive: 'hookSwing'`, `userData.kind: 'hook'`. It is **not** every
+target carrying `group: 'swing'`: `spireTarget` shares that group tag, and a spire tip is reached by
+a jump off a pole top with `catchJump` 1.008, on §8.1's Ninja Spire Landing. Halving those would
+break a beat nobody asked about, so they keep 3.30 — asserted in `magvolume.test`, not merely
+described, because a future reader halving "the swing group" by the `group` field is a plausible
+mistake and the assertion is what stops it.
+
+**`catchSwing`, and why it was left.** It is not a distance a designer chose; it is a TIME window
+expressed in metres — √(2·24·hookL 2.2) × `jumpBufferMs` 0.140 — how far a body on our rope travels
+during the 140 ms the input layer already forgives. Halving it would be halving `jumpBufferMs` for
+one move only, which is a different request from the one that was made. So the no-self-recapture
+invariant **`catchSwing 1.4387 < hookL 2.2` holds unchanged on both sides of this section, because
+neither term moved.** What DID change is its relation to the volume, and that is a real consequence
+rather than bookkeeping: the acquisition sphere was **2.29×** the catch window and is now **1.147×**
+it. The volume was almost never the binding test; now it usually is. `magvolume.test` pins the
+ratio in both directions, so a later widening of `catch` cannot silently overtake the volume.
+
+**`volumeLow`'s derivation, handled explicitly, because this is the project's recurring defect.**
+§589 left a draw-call comment reading 11 guards after two were removed; §705 and §710 each corrected
+arithmetic that had been believed rather than checked. The old comment was not decoration — the
+value WAS its derivation: the pairwise rule caps the lower chain at
+`(tightest ring gap 6.36 − magSnapRadius 0.20625) / 2 = 3.0769`, and 3.07 was that cap rounded down.
+**1.535 is half of 3.07 and is no longer the cap.** `level.test`'s own instrument confirms the
+consequence: the tightest clear air in the registry goes from **0.225 m to 3.295 m**, so the
+constraint that produced the old number is slack by a factor of fifteen and does not determine this
+one. The comment now says that in those words — cap quoted, slack quoted, and the value attributed
+to the owner's 50% — and `magvolume.test` asserts BOTH halves (the cap still re-derives to 3.0769;
+the value is far below it; the clear air is 3.29 m), so the sentence cannot rot back into a claim.
+The cap is kept in the text because it still BOUNDS any future widening.
+
+### §720.7 The measurement — and why the two named instruments could not see it
+
+**`spawn2eye` and `telegraph`, before and after, per arm:**
+
+```
+  arm                            spawn2eye                          telegraph
+  BASELINE, at 5dcbdf2           19/19 legs, 5883 f (98.0 s)        11/11 · T8 7/7 bail, 2/7 crouch
+                                 cam: out 0 of 5883, clamp 2831f    T11 chain 4/4, bails [156,12,24]
+  ARM A only, at 193d0ed         19/19 legs, 5883 f                 11/11 · T8 7/7, 2/7
+                                 BYTE-IDENTICAL — every leg's       T11 4/4, bails [156,12,24]
+                                 frame number and arrival
+                                 position equal to the baseline
+  ARM B on top, the tree that     19/19 legs, 5883 f                11/11 · T8 7/7, 2/7
+  became 4923e41                  BYTE-IDENTICAL again              T11 4/4, bails [156,12,24]
+```
+
+Both instruments pass in both arms with every leg, every frame number and every arrival position
+unchanged. **That is a WEAK pass and it is reported as one.** Both drive the chain through
+`HookSwing`'s own fly-through clause — `!grounded && distance <= hookAuto 2.9` — which never
+consults the magnet at all, so neither is sensitive to the quantity Arm B changed. An arm that
+cannot move is not evidence that nothing moved (§442), and quoting their green as "the halving is
+free" would be the mistake.
+
+`telegraph` did move ONE number, and the arm it belongs to is MEASURED rather than inferred — its
+driven auto-grab lead, run at all three shas:
+
+```
+  BASELINE 5dcbdf2      telegraph@26 -> hookGrab@63 = 37 frames (0.62 s)
+  ARM A     193d0ed     telegraph@26 -> hookGrab@63 = 37 frames (0.62 s)   <- unchanged, to the frame
+  ARM B on top          telegraph@26 -> hookGrab@49 = 23 frames (0.38 s)
+```
+
+So it is Arm B's, entirely. **The mark did not move; the catch came sooner.** With the magnet out
+of the way Sly falls into `hookAuto` instead of being flown in by the slower homing law, arrives 14
+frames earlier, and the warning window shrinks with the FLIGHT rather than with the cue — which
+§720.8 measures directly, in both arms, on the same frame count.
+
+**`tools/magreach.mjs` measures the magnet on its own terms**: the chain leg ring-3 → ring-4
+(8.16 m, `telegraph` T8's own leg and `spawn2eye`'s leg 5a), released with the aim displaced
+progressively to the SIDE of the destination ring, best of three release phases, three arrival
+speeds. §435.4 throughout — the sample flies, and the stick is held, because a bare `velocity.set()`
+on a falling capsule is erased within a frame by air control (the first draft measured a dead drop
+and reported the same 4.38 m closest approach at every offset and speed).
+
+```
+  off(m)           8 m/s        12 m/s       16 m/s          arm
+       0          auto@53      auto@47     magnet@71        ?mag=wide (volume 3.30)
+     0.8          auto@54      auto@48     magnet@72
+     1.6          auto@56      auto@49       auto@61
+     2.4          auto@61      auto@52       auto@65
+     3.2         missed 3.28    auto@68     missed 2.90
+     4.0         missed        missed       missed
+    12.0         missed        missed       missed         <- §418.3 fail input, RUN
+  -> caught 13/21 (magnet 2, auto 11) · widest aim error still caught 3.20 m
+
+       0          auto@53      auto@47       auto@58        DEFAULT (volume 1.65)
+     0.8          auto@54      auto@48       auto@59
+     1.6          auto@56      auto@49       auto@61
+     2.4          auto@61      auto@52       auto@65
+     3.2         missed 3.28    auto@68     missed 2.90
+     4.0         missed        missed       missed          (identical to the wide arm)
+    12.0         missed        missed       missed          <- §418.3 fail input, RUN
+  -> caught 13/21 (magnet 0, auto 13) · widest aim error still caught 3.20 m
+```
+
+**Identical reach, identical cell-by-cell outcome. The only difference is the MECHANISM**: two
+catches move from `magnet` to `auto`, and they land sooner when they do.
+
+**The bisect the brief asked for — what reduction the chain tolerates.** A uniform scale applied to
+the halved volumes, on the live registry (the `1.00x` row reproduces the shipped default exactly,
+which is the cross-check that the two paths agree):
+
+```
+  scale   ring volume   caught   widest aim error still caught
+  1.00x       1.650      13/21              3.20 m
+  0.75x       1.237      13/21              3.20 m
+  0.50x       0.825      13/21              3.20 m
+  0.40x       0.660      13/21              3.20 m
+  0.30x       0.495      13/21              3.20 m
+  0.20x       0.330      13/21              3.20 m
+```
+
+**The answer is: all of them.** Down to 0.33 m — a **90% cut** from the original 3.30 — the ring
+chain's reach does not move, because `hookAuto` 2.9 subsumes the magnet's role on the ring-to-ring
+beat entirely. The owner's 50% is not near any edge.
+
+`level.test`'s own live magnetism grid agrees, and it is the arm that DOES depend on the magnet:
+**"magnetism OFF caught 0/30 · ON caught 13/30 · genuine near misses 10, rescued 10"** — the same
+line, word for word, before and after. The mechanism for that is arithmetic rather than luck: a
+rescue needs `miss <= catchSwing 1.4387`, and **1.65 still exceeds 1.4387**, so every arc the catch
+gate admits is still inside the acquisition sphere when it gets there. What the halving removes is
+the *lead time*: the shell from 3.30 to 1.65 is 0.10 s of homing at 16 m/s, six frames the assist
+no longer has to steer in. Nothing in the level needed them.
+
+### §720.8 The cue — measured in both arms, because this was the dangerous one
+
+The coordinator's question: if the volume halves and the sparkle still advertises the old radius,
+the player is told they can catch a ring they cannot, and that reads as a bug rather than as
+difficulty. **The answer is no, and it is measured rather than read off the wiring.**
+
+`SparkleField` draws §2.1.6's diamonds from COLLISION's affordance query, and `Controller._telegraph`
+emits from `afford(kind)` — whose hook range is `AFFORD.hook.range = TUNE.hookGrab` **9.0**. Neither
+reads `magVolume` at any point. So the cue never advertised 3.30 in the first place; it advertises
+the territory of `hookGrab` 9.0 and `hookAuto` 2.9, and `hookAuto` is what actually performs the
+catch on a chain (§720.7). Driven, both arms, same fall onto ring 3:
+
+```
+                       telegraph   hookGrab   warning       magnet locked
+  DEFAULT  (1.65)      frame 27    frame 50   23 frames     false
+  ?mag=wide (3.30)     frame 27    frame 63   36 frames     true
+```
+
+**The mark fires on the same frame in both.** The warning window shrinks only because the catch
+arrives 13 frames sooner, and `magnet locked: false vs true` is the direct evidence that the assist
+no longer engages on that approach while the catch still lands. The cue is still describing the
+mechanism that does the work, so the halving cannot turn it into a promise the game will not keep.
+
+The one place the cue and the magnet DO share a spot is `Particles._onTargetLocked`, the burst FX,
+and that fires ON the lock — so it reflects whatever the magnet does by construction and cannot
+over-advertise. §605's guarantee that a target's `point` coincides with its collider's
+`userData.point` is untouched: no point moved.
+
+### §720.9 What was verified unchanged
+
+- **§605's rings.** No geometry, hook anchor or affordance point moved. `level.test`'s
+  "every authored point sits on a registered affordance" arm passes at 15 targets, each coincident
+  with a 22-point collider set; `[recapture] 209 release positions checked; closest 2.200 m vs catch
+  1.4387 (margin 0.761 m)` is unchanged. This is a tuning change; the level is the level.
+- **§697's ground tuning** (`groundProbe` 0.06, `groundSlopeMax` 30) untouched; **`src/ai/*` untouched** —
+  neither appears in this section's diff.
+- **§716's `?combo=mono`, §717's `?idle=pose` (all four slots) and §719's `?hook=cream`** are
+  untouched and still work: none of their code is in the diff, and `anim.test`'s regime arms
+  (44 pass) exercise the `idle` and `combo` seams in the same process as §720's new rows.
+- **GRIPS — measured, NOT fixed (report-only), and the pole numbers moved exactly as the brief
+  predicted they would.** `tools/gripgap.mjs`, full run, raw (shipped godot) L / R / worst, palm to
+  prop in cm:
+
+  ```
+                                          BASELINE 5dcbdf2         AFTER §720 (0b9411b)
+    pole_climb · SE drainpipe (§495.C)     27   / 25.1 / 23.8   ->  -6.6 / -3.5 / -7.9
+    pole_climb · obelisk rope (§495.A)     27   / 25.1 / 23.8   ->  -6.6 / -3.5 / -7.9
+    ledge_hang · terrace lip, south        10   / 43   / 16.2   ->   9.9 / 42.8 / 16.5
+    ledge_hang · terrace lip, east          9.8 / 43   / 16.4   ->   9.9 / 43   / 16.2
+    ledge_hang · plinth lip, south          9.9 / 42.8 / 16.3   ->   9.9 / 43   / 16.4
+    hook_swing · main-0 (courtyard)       131.1 /134.8 /231.2   -> 131.1 /134.8 /231.2
+    hook_swing · low-2 (return)           100.5 / 32   / 77.7   -> 100.5 / 32   / 77.7
+    rail_walk  · colossi-rope (§495.B)     12.1 / 26   / 17.1   ->  12.4 / 26.6 / 19.1
+    rail_walk  · roof-e                    26.9 / 26.8 / 35.2   ->  26.5 / 26.5 / 33.7
+  ```
+
+  The baseline column reproduces §713.4 and §715.8 exactly, which is what makes the after column
+  worth reading. **The pole grip goes NEGATIVE** — the palms now sit inside the shaft's surface,
+  i.e. closed round it, a **33.6 cm improvement on the left hand** — and that is §720.4's lever
+  removal read on a completely independent instrument: `gripgap` measures the artist's own glove
+  centroid (off the model's skin weights) against the level's collider geometry, and shares no
+  mechanism with `polemeasure`. Two instruments, one verdict. **Nothing was fixed to achieve it and
+  no grip gap was edited.** §708's ledge OFF-hand 43 cm stays open exactly as §708 says to leave it,
+  and the hook rows are unchanged to the digit.
+
+  **The ledge and rail rows differ in their third digit and the cause is measured, not waved at.**
+  `gripgap` measures all four verbs in ONE process on a shared `engine.time`, and §720 makes the
+  pole site wait out the new 0.67 s mount one-shot before sampling, which shifts every later site's
+  clip PHASE. Re-run in isolation (`node tools/gripgap.mjs --verb ledge,rail`), the two trees are
+  **byte-identical on every ledge and rail row** — 9.9/42.9/16.4, 9.9/43/16.2, 9.9/43/16.4,
+  12.3/26/17.6, 26.7/26.7/35.2 in both. So the shift belongs to the harness's clock and not to any
+  pose. Recorded rather than dismissed because "small numbers moved and I assumed it was noise" is
+  how §589 happened.
+
+- **`gripgap` itself needed one change and it is not a bar move.** Its `assertLive` refused the pole
+  sample — correctly — because `pole_grab` was still at w1 beside `pole_climb`, and two clips at w1
+  is not a reading of either. It now waits for the mount one-shot to retire rather than for a fixed
+  30-frame settle that happened to be long enough before. The predicate is the track's EXISTENCE,
+  not its weight: `play()` adds a track at weight 0 with a target of 1, so a `w > 0.01` test fell
+  straight through on the very frame it was meant to catch.
+- **The budget.** No mesh, bone, triangle or asset changed; `git diff --stat` over `public/` is
+  empty, so no `prodboot` was due (§666). `tools/budgetattrib.mjs`: worst main-view **86 draws
+  (34% of 250), 0.652 M tris (54% of 1.2 M)**, exit 0 — §715.8's figures to the digit. Delta 0.
+  (`Engine.stats.drawCalls` stays unusable here.)
+- **`level.test`'s overlap CALIBRATION went dark and is re-derived, not deleted or widened.** Its
+  control grew every volume 25% and required an overlap; once the tightest pair went from 0.225 m
+  of clear air to 3.295, 25% overlapped nothing and the control could no longer fire — §442's shape
+  in the calibration itself. 1.25 was never a property of the system, only a number that happened to
+  exceed the old headroom, so it now asks the LEVEL for its own first-overlap scale. **It fires in
+  both trees: 1.01x at the baseline, 2.01x after**, naming the same pair (`hook-low-2/hook-low-3`)
+  each time.
+- **The sealed clip count** goes 52 → 54 because §720 ADDED two verbs. Both are in `Clips.js`'s
+  `REQUIRED` list, so `anim.test`'s "every §4.7 required clip survives every regime" arm actually
+  holds them, and the census still fails on anything arriving or disappearing. A new arm asserts the
+  count is identical across `?pole=` arms — a revert that shipped a different clip count would be a
+  different game, not the same game reverted.
+
+### §720.10 The frames — driven onto a real pipe, camDot-verified, clip asserted at the shutter
+
+`tools/poleshot.mjs`, at the pushed `4923e41` under the capture lock: **8 frames, errs 0**, in
+`shots/pole720/`. §717.9 posed pole clips on a character standing in the courtyard, which is the
+right instrument for "what does this clip look like" and the wrong one for a claim about a hand on
+a shaft — a pole clip photographed with no pole in it cannot show whether the glove reaches. So
+every frame is driven onto the shipped drainpipe with the pipe in the picture.
+
+**camDot PRE-FLIGHT, before the browser was launched, and it changed the shot.** The obvious +35°
+front-three-quarter camera is **inside a sandstone block** — nearest surface 0.045 m — because this
+pipe runs up a building and the whole western half of the circle is masonry; +90 reads 0.10 m and
+everything from 120 to 180 refuses. A full sweep picked −35 and −90, which are clean at 1.504 m and
+0.808 m of air with the subject unoccluded, and cos(−35°) = 0.82 still satisfies §479.14's front
+test. Left at +35 out of symmetry this would have been §603 again.
+
+```
+node tools/camdot.mjs 19.6722 1.15 -3.4913  21.8020 1.05 -2.0     (pole front34)
+  enclosed 0/26  nearest 1.504 m  forward 2.957 m (arch:court:sandstone_block)  subject at 2.602 m  ok
+node tools/camdot.mjs 21.8020 1.15 -4.6     21.8020 1.05 -2.0     (pole profile)
+  enclosed 0/26  nearest 0.808 m  forward 3.188 m (arch:court:sandstone_block)  subject at 2.602 m  ok
+node tools/camdot.mjs 19.6722 2.65 -3.4913  21.8020 2.55 -2.0     (pole climb, front34)
+  enclosed 0/26  nearest 2.186 m  forward 2.967 m (arch:court:sandstone_block)  subject at 2.602 m  ok
+node tools/camdot.mjs 9.1145 17.2278 4.4383  5.9151 17.3778 4.5   (ring catch, front34)
+  enclosed 0/26  nearest 7.584 m  forward — (sky)  subject at 3.204 m  ok
+node tools/camdot.mjs 7.6997 17.2278 1.8438  5.9151 17.3778 4.5   (ring catch, profile)
+  enclosed 0/26  nearest 3.557 m  forward 37.856 m (arch:court:hieroglyph_wall)  subject at 3.204 m  ok
+node tools/camdot.mjs -0.3048 16.0863 6.7066  2.0127 16.2363 4.5  (ring swing, front34)
+  enclosed 0/26  nearest 3.388 m  forward — (sky)  subject at 3.203 m  ok
+```
+
+Those are the cameras the shutter ACTUALLY used, re-run afterwards, not the ones the offline
+prediction placed: a driven subject does not land where a prediction puts him — the ring catch
+happens 3.6 m above the hang position the pre-flight assumed — and a pre-flight of a place the
+camera did not go is §603 wearing a clean shirt.
+
+**THE LIVE CLIP NAME IS ASSERTED AT EVERY SHUTTER.** A frame captioned `pole_idle` that is showing
+`pole_climb` would be exactly the lie this section is about, so the heaviest live track is read off
+the mixer and compared before the PNG is written. It fired once, on this lane: `ring-catch` was
+captioned `hook_swing` and the mixer was showing `hook_grab` at w1. The caption was wrong, not the
+game — `hook_grab` IS the catch and `hook_swing` is the hang after it — and both beats are now
+photographed under their own names.
+
+```
+  frame                     clip           w      state       cam·facing
+  pole-grab-front34         pole_grab      0.83   poleClimb      0.82
+  pole-idle-front34         pole_idle      1.00   poleClimb      0.82
+  pole-idle-profile         pole_idle      1.00   poleClimb      0.00
+  pole-climb-front34        pole_climb     1.00   poleClimb      0.82
+  ring-catch-front34        hook_grab      1.00   hookSwing      0.82
+  ring-catch-profile        hook_grab      1.00   hookSwing      0.00
+  ring-swing-front34        hook_swing     1.00   hookSwing      0.82
+  revert-idle-front34       pole_climb     1.00   poleClimb      0.82   (?pole=climb)
+```
+
+**What the frames show, read rather than assumed:**
+
+- **`pole-idle`** — Sly clamped to the drainpipe, motionless: the upper glove's fingers visibly
+  wrapped around the shaft, the lower hand closed on it at chest height, body pressed to the pipe,
+  knees tucked. The profile confirms it from the side — both hands on the shaft in silhouette, the
+  torso against it. This is the stationary hang the state had never had.
+- **`revert-idle`**, the same stance, the same camera, `?pole=climb`: his right arm is **thrown wide
+  out into open air**, well clear of the pipe, cane brandished — mid climb-stroke while standing
+  still. That single pair is the whole of §715.2's sentence and §720.4's 10.4 cm, in two pictures.
+- **`pole-grab`** — both arms up and out, the right hand reaching past the shaft, cane crook raised:
+  the moment of the catch, before the hands close. There was no animation here at all before.
+- **`pole-climb`** — 1.5 m up the pipe with both hands ON it, which is the lever removal on camera.
+- **`ring-catch`** — airborne over the courtyard with the cane thrown crook-first at the ring, the
+  chain cable and the ring itself in frame, **with the halved acquisition volume live** (the run
+  asserts `ring volume 1.65, MAG.volumeSwing 1.65, volumeLow 1.535, general 3.3` in the same
+  process that took the picture). The catch still lands and it looks like a catch.
+
+### §720.11 The revert tokens — two, independent, both exercised
+
+- **`?pole=climb`** (or `globalThis.__POLE_AB = 'climb'`) — Arm A. Restores the pole state exactly
+  as it shipped: `oneShot('pole_climb')` at the mount, `pole_climb` while stationary, and the
+  set-wide §531 lever back on `pole_climb` and `pole_slide`. Both halves live in two files
+  (`Moveset.js`'s play sites, `Animation.js`'s table) and one token moves both; a test asserts the
+  table half and a child-process drive asserts the play-site half. Exercised through the URL in the
+  browser as well (`revert-idle-front34`, §720.10).
+- **`?mag=wide`** (or `globalThis.__MAG_AB = 'wide'`) — Arm B. Restores 3.30 on the courtyard chain
+  and 3.07 on the lower one, verbatim, leaving every other term in `MAG` alone.
+- **They are independent, asserted rather than promised** — all four combinations are driven in
+  `magvolume.test`: default `(1.65, ported)`, `?mag=wide` `(3.30, ported)`, `?pole=climb`
+  `(1.65, reverted)`, both `(3.30, reverted)`. The constants in `MAG` stay halved under `?mag=wide`
+  and only `swingVolume()` moves, which is asserted too — because that is precisely what would make
+  a printed diagnostic lie about which arm it is in, and `tools/magreach.mjs` had that bug before
+  the arm was written.
+
+Deleting `tests/poleanim.test.mjs`, `tests/magvolume.test.mjs`, `tools/polemeasure.mjs`,
+`tools/magreach.mjs`, `tools/poleshot.mjs`, the two `def()`s in `Clips.js`, the two `GODOT_ALIAS`
+rows, the four `GODOT_LIMB_OPEN` pole rows and the `POLE_PORTED` / `swingVolume` references removes
+the section entirely.
+
+### §720.12 Bounds — what this section did NOT do
+
+- **`pole_slide` and `pole_swing` gained no source.** §715 found none and this section found none;
+  both stay procedural. `pole_slide`'s LEVER moved with the rest of the climb state (§720.4);
+  `pole_swing`'s did not, and the reason and the numbers are there.
+- **No ring, hook anchor, affordance point or collider moved.** §605 is settled and confirmed by the
+  owner; this is tuning.
+- **No new payload.** Both clips were already in `public/assets/sly-godot/sly-godot-moves.glb` from
+  §479's extract — nothing was newly baked, so `PROVENANCE.md` is unchanged and correct as it
+  stands (reference HEAD `a312a99`, licence NONE STATED, the owner's standing instruction on
+  record, in those words).
+- **`hookAuto` was not touched**, and §720.7 is the argument for leaving it: it is doing the work the
+  magnet was assumed to be doing. Whether the ring chain should depend on the magnet at all is a
+  real design question this section answers with numbers and does not rule on.
+- **Nothing was quietly softened.** The owner asked for 50% and got 50%; the bisect is reported as
+  information, not as a substitute.
+
+### §720.13 The suite — every run quoted (§703.2)
+
+| run | commit | result | duration | pwd inside the command | cwd at end |
+|---|---|---|---|---|---|
+| 1 | `0b9411b` | **1099 / 1099, 0 fail** | 266.0 s | `/home/user/wt-720b` | exists |
+| 2 | `0b9411b` | **1099 / 1099, 0 fail** | 267.0 s | `/home/user/wt-720b` | exists |
+| 3 | `0b9411b` | **1099 / 1099, 0 fail** | 264.0 s | `/home/user/wt-720b` | exists |
+
+`node --test "tests/*.test.mjs"` from a clean detached worktree at the **pushed** `0b9411b`
+(`git worktree add --detach`, `node_modules` symlinked), the FIFO capture lock held across all three
+runs, cwd checked from INSIDE the spawned command (§694). Each complete TAP stream went to a file
+and `not ok` was counted over the FILE — **0 / 0 / 0** — never over a window. `--test-name-pattern`
+was never used: on `framebudget` it changes allocation history and makes F3 fail 100%.
+
+**Neither documented flake fired in any of the three**, and that is reported as luck rather than as
+a result: `framebudget` F3 GC is ~1-in-3 and `padrest` R1b ~1-in-5, so three clean runs is an
+ordinary outcome and says nothing about either. 1089 → **1099** is §720's own ten arms
+(`poleanim` 4, `magvolume` 6); every one of them is in the stream, and the §720 console lines
+(`[§720] walked-in mount at frame 18 …`, `[§720 token] …`, `[§720 cue] …`) are in the TAP files
+rather than only in this section.
+
+A fourth run, at the commit that carries this section, is recorded in the commit after it — the
+§712/§713/§715 precedent: a suite table committed at one sha and quoted at another is a claim about
+a tree nobody ran.

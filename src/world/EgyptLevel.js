@@ -873,8 +873,11 @@ export const MAG = {
    * What DID change is its relationship to the volume, and that is a real consequence rather
    * than a bookkeeping note: the acquisition sphere used to be 2.29× the catch window (3.30 /
    * 1.4387) and is now 1.147× it (1.65 / 1.4387). The volume was almost never the binding test
-   * before; now it usually is. A player whose arc is dead-on but who is 2 m out is no longer
-   * offered the ring.
+   * before; now it usually is. Stated precisely, because the loose version of this sentence is
+   * wrong: an arc that closes to within `catch` is still offered the ring — it is offered LATER,
+   * once the player is inside 1.65 m rather than 3.30, which at 16 m/s is 0.10 s and six frames
+   * of homing the assist no longer has. What is lost is lead time, not reach; `tools/magreach.mjs`
+   * measures the reach and finds it unchanged.
    */
   catchSwing: 1.4387,
   /** Controller.TUNE.magVolume — the general acquisition radius. SPIRES and the wall notch. */
