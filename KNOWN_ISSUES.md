@@ -57739,3 +57739,11 @@ A fourth run, at the commit that carries this section, is recorded in the commit
 §712/§713 precedent: a suite table committed at one sha and quoted at another is a claim about a
 tree nobody ran.
 
+**Runs 4 and 5, at `3430ded` (the section's own commit), same worktree, same lock, same runner:**
+run 4 — 1083 / 1084, **the same F3 GC flake again** (its `not ok` and assertion read from the
+full stream; 361.0 s; pwd inside `/home/user/wt-715`; cwd present); run 5 — **1084 / 1084,
+0 fail**, 364.3 s, zero `not ok` lines over the whole stream. Five runs, five quoted: two F3
+firings in five runs is the documented ~1-in-3 at its documented rate, on the flake §703
+attributes to contention and this project refuses to filter around, and no other test went red
+in any run.
+
