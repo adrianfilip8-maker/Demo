@@ -205,6 +205,57 @@ try {
     console.log(`[gait ${verb}] speed ${spMean.toFixed(2)} · stride ${stride} · phase ${rate.toFixed(2)} cyc/s · skate ${tele.gaits[verb].skate} m/s`);
   }
 
+  /* ---- crouch: idle + walk through the REAL crouch state (§715) ---------------------------
+   * The crouch pair now plays the recovered library clips (`Idle Crouch 2` / `Walk Crouch 4`),
+   * so the acceptance frames drive the shipped state itself: ControlLeft held (the real crouch
+   * bind), stick injected like the gaits above, phase-matched frames per §466.5, and the same
+   * skate telemetry — the tree rate-matches crouch_walk by its derived stride exactly as it
+   * does walk/run. The idle gets two frames at different beats of its 6.7 s fidget. */
+  if (TAKES.includes('crouch')) {
+    await reset();
+    await page.keyboard.down('ControlLeft');
+    await page.evaluate(() => { window.__MOVEMAG = 0.6; });
+    await sim(SETTLE);
+    const rows = [];
+    let f = 0;
+    const stride = await page.evaluate(async () => (await import('/src/player/Animation.js')).ACTIVE.crouch_walk.stride);
+    const atPhase = async (target) => {
+      for (let guard = 0; guard < 300; guard++) {
+        const s = await probe();
+        rows.push({ f, ...s });
+        const ph = s.phase % 1;
+        if (Math.abs(ph - target) < 0.02) return s;
+        await sim(1); f++;
+      }
+      return probe();
+    };
+    await atPhase(0.25); await snap(`crouchwalk-a${TAG}`);
+    await atPhase(0.75); await snap(`crouchwalk-b${TAG}`);
+    const spMean = rows.reduce((s, r) => s + r.sp, 0) / rows.length;
+    let dphi = 0;
+    for (let i = 1; i < rows.length; i++) {
+      let d = rows[i].phase - rows[i - 1].phase;
+      if (d < -0.5) d += 1;
+      dphi += d;
+    }
+    const rate = dphi / ((rows.length - 1) / 60);
+    tele.crouch = {
+      stride, speed: +spMean.toFixed(3), phaseRate: +rate.toFixed(3),
+      skate: +(Math.abs(spMean - rate * stride)).toFixed(3),
+      state: rows[rows.length - 1].st,
+    };
+    console.log(`[crouch walk] speed ${spMean.toFixed(2)} · stride ${stride} · phase ${rate.toFixed(2)} cyc/s · skate ${tele.crouch.skate} m/s · state ${tele.crouch.state}`);
+    await page.evaluate(() => { window.__MOVEMAG = null; });
+    await sim(100);
+    await snap(`crouchidle-a${TAG}`);
+    const idleProbe = await probe();
+    await sim(110);                                   // ~1.8 s on — a different beat of the fidget
+    await snap(`crouchidle-b${TAG}`);
+    tele.crouch.idleState = idleProbe.st;
+    tele.crouch.idleTracks = idleProbe.tracks;
+    await page.keyboard.up('ControlLeft');
+  }
+
   /* ---- jump family: rise / fall / land, keyed off live state ------------------------------- */
   if (TAKES.includes('jump')) {
     await reset();

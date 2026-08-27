@@ -461,3 +461,55 @@ load-bearing. `CaneBone.001` is the proof — every clip pins it ≈148° away f
   and plays a physics chain instead; we keep `Tail_LowPoly`.
 - **Anything under `Assets/Music/` or `Assets/Effects/`** — untouchable, per this project's
   absolute rule. `tools/godot2sly27.mjs` reads one `.gltf` and one `.bin` and nothing else.
+
+---
+
+# §715 — the sealed animation libraries, opened, and five clips extracted
+
+**Source:** `NoahChase/sly-cooper--a-thief-in-godot` at `a312a99` (same tree, licence NONE STATED —
+the owner's standing instruction on record covers the whole reference).
+
+The repo's `Assets/Animations/*.res` are Godot COMPRESSED resource containers (`RSCC` magic,
+mode 2 = Zstd) that §714.2 proved unreadable by `strings` — the §715 lane wrote the reader
+(`tools/godotlib2clips.mjs`: container decompress, then the Godot 4.3 binary-resource format,
+ver 6). It is OUR code reading THEIR data — an asset importer, not a ported mechanic. The full
+fourteen-library census (13 under `Assets/Animations/` + `Assets/Temp Imports/tempsly/
+SlyCooper_Anims4_Anims.res`) is in `KNOWN_ISSUES.md` §715.2.
+
+**Extracted** into `sly-godot-lib.glb` (300 KB, node hierarchy + tracks, no meshes — an OFFLINE
+intermediate like `sly-godot-moves.glb`; the runtime consumes the baked `GodotLibClips.js` and
+never fetches it):
+
+| clip | from | how identified |
+|---|---|---|
+| `Idle Anim 1` | `Library Sly MASTER 005.res` | the 8.7 s animated standing idle (16 cm lateral weight shift; loop seam 1.4°) |
+| `Idle Look` | `Library Sly Idle.res` | the 9.2 s lookout scan; loop_mode 1 authored |
+| `Idle Crouch 2` | `Library Sly MASTER 005.res` | the deep crouch idle (hips −0.467 delivered — the only crouch source within 6 cm of the verb's incumbent) |
+| `Walk Crouch 4` | `Library Sly MASTER 005.res` | the crouch walk with cleanly alternating contacts (R@0.34/L@0.77 of the cycle) |
+| `Run 1` | `Library Sly MASTER 005.res` | the faster of the two sprint takes (4.10 m/s, stride 3.01) |
+
+All five target the `%GeneralSkeleton` HUMANOID retarget these libraries share (none of them is
+referenced by any scene or script in the reference project — authored shelf stock, never wired
+into their game; their tree plays `Library_Sly_19`/`_14` + two inline libraries only). The rest
+pose comes from the same library's `00 T-Pose` one-key bake; `MASTER 005` is canonical because
+001 is an older generation (11 clips differ) and 002–005 differ only in `Idle Teeter` (four saves
+iterating one clip — data hashes in §715.2).
+
+**Rebuild:**
+
+```
+node tools/godotlib2clips.mjs --extract --src <checkout root>   # checkout → sly-godot-lib.glb
+node tools/godotlib2clips.mjs                                   # measure the committed GLB
+node tools/godotlib2clips.mjs --write src/player/GodotLibClips.js
+```
+
+**Deliberately NOT taken** (each with its §715 measurement): `Fall Glide` (prone skydive, hips
+pitch 84.6° — the paraglide verb hangs under the cane), `Jump Pounce` (a forward pounce; the dive
+verb plunges vertically), `RailrunStand` (both ankles float 0.46 m in clip space), `Walk Sneak
+Slow`/`Walk Sneaky` (0.17 m/s creep against a 1.4 m/s verb), `Idle Air Hit` (a 4.4 s travelling
+loop; `hurt` is a 0.62 s impulse), `Idle Teeter` (an about-to-fall alarm, not a calm balance),
+`Cane Hit`/`Cane Hit 2` (exist — §714's existence answer is corrected in §715.2 — but the combo
+binding is the owner's standing "repeats, not combos" ruling), the four disguise walks, the two
+posture walks, `Idle Stand Carry`, the air poses (1 ms holds), and `mixamorig1_HeadTop_End` plus
+all 150 finger channels (RIG3 has no such bones). Nothing under the reference's audio directories
+was read, listed, or opened — the tool touches `Assets/Animations/*.res` and nothing else.

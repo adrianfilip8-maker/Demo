@@ -1,0 +1,80 @@
+{
+  "sha": "af735b6",
+  "W": 1600,
+  "H": 900,
+  "errs": [],
+  "log": [
+    {
+      "frame": "idle715-repo-confident-front34",
+      "az": 35,
+      "camDot": 0.82,
+      "view": "front",
+      "sepCm": 106.2,
+      "outL": 39.6,
+      "outR": 36.5
+    },
+    {
+      "frame": "idle715-repo-confident-profile",
+      "az": 90,
+      "camDot": 0,
+      "view": "profile",
+      "sepCm": 106.2,
+      "outL": 39.6,
+      "outR": 36.5
+    },
+    {
+      "frame": "idle715-repo-look-front34",
+      "az": 35,
+      "camDot": 0.82,
+      "view": "front",
+      "sepCm": 75,
+      "outL": 26.2,
+      "outR": 17.9
+    },
+    {
+      "frame": "idle715-repo-look-profile",
+      "az": 90,
+      "camDot": 0,
+      "view": "profile",
+      "sepCm": 75,
+      "outL": 26.2,
+      "outR": 17.9
+    },
+    {
+      "frame": "idle715-pose-confident-front34",
+      "az": 35,
+      "camDot": 0.82,
+      "view": "front",
+      "sepCm": 70.7,
+      "outL": 20.2,
+      "outR": 17.7
+    },
+    {
+      "frame": "idle715-pose-confident-profile",
+      "az": 90,
+      "camDot": 0,
+      "view": "profile",
+      "sepCm": 70.7,
+      "outL": 20.2,
+      "outR": 17.7
+    },
+    {
+      "frame": "idle715-pose-look-front34",
+      "az": 35,
+      "camDot": 0.82,
+      "view": "front",
+      "sepCm": 70.7,
+      "outL": 20.3,
+      "outR": 17.6
+    },
+    {
+      "frame": "idle715-pose-look-profile",
+      "az": 90,
+      "camDot": 0,
+      "view": "profile",
+      "sepCm": 70.7,
+      "outL": 20.3,
+      "outR": 17.6
+    }
+  ]
+}

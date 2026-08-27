@@ -7,6 +7,7 @@ import { PoseBuffer } from '../src/player/Rig.js';
 import { MIXAMO_CLIPS } from '../src/player/MixamoClips.js';
 import { buildClipSet, ACTIVE, CLIP_REGIME, CLIP_ORIGIN, LIMB_OPEN, GODOT_LIMB_OPEN } from '../src/player/Animation.js';
 import { GODOT_CLIPS } from '../src/player/GodotClips.js';
+import { GODOT_LIB_CLIPS } from '../src/player/GodotLibClips.js';
 import { TUNE } from '../src/player/Controller.js';
 
 /**
@@ -82,7 +83,12 @@ test('regime: the shipped default is `godot` — the audited swaps ride on Clips
     } else {
       const m = /^godot:(.+)$/.exec(CLIP_ORIGIN[n]);
       assert.ok(m, `swapped "${n}" has origin "${CLIP_ORIGIN[n]}", not godot:*`);
-      assert.ok(GODOT_CLIPS[m[1]], `swapped "${n}" names source "${m[1]}", which GodotClips.js does not carry`);
+      /* §715: the godot source table is two generated modules — the gltf bake plus the clips
+         recovered from the repo's sealed .res libraries. A name must exist in exactly one. */
+      assert.ok(GODOT_CLIPS[m[1]] || GODOT_LIB_CLIPS[m[1]],
+        `swapped "${n}" names source "${m[1]}", which neither GodotClips.js nor GodotLibClips.js carries`);
+      assert.ok(!(GODOT_CLIPS[m[1]] && GODOT_LIB_CLIPS[m[1]]),
+        `source "${m[1]}" exists in BOTH generated modules — the spread in buildClipSet would shadow one`);
       assert.notEqual(ACTIVE[n], CLIPS[n], `swapped "${n}" is still the procedural object — the splice did not run`);
       swapped++;
     }
@@ -616,7 +622,14 @@ test('limb lever (§531): ships OPEN on both joints, and zero is still bit-exact
     const kneeDelta = Math.abs(knee(shipped[n], 0.5 * shipped[n].dur) - knee(faithful[n], 0.5 * faithful[n].dur));
     assert.ok(kneeDelta < 0.01, `${n}: the knee lever moved the stance ${kneeDelta.toFixed(1)}° — §479.20 ships the endorsed frame, knee 0`);
   }
-  for (const n of ['sneak_walk', 'sneak_idle', 'crouch_walk', 'crawl']) {
+  /* §715 removed `crouch_walk` from this witness set: it now plays the recovered
+     `Walk Crouch 4` (CLIP_ORIGIN says godot:), so shipped-vs-proc on it compares two different
+     clips and says nothing about the lever — the same re-derivation §479.20 forced on the
+     idles above. The three remaining names still witness §470's claim (the lever must not
+     move a non-distal channel of a proc-sourced clip), and the guard below asserts the set
+     stays proc-sourced so a future swap re-derives rather than silently weakens it. */
+  for (const n of ['sneak_walk', 'sneak_idle', 'crawl']) {
+    assert.equal(CLIP_ORIGIN[n], 'proc', `${n} left the procedural set — re-derive this §470 witness`);
     for (const bone of ['upperArmL', 'upperArmR', 'head', 'neck', 'hips', 'chest']) {
       const a = shipped[n].bones.find((x) => x.name === bone);
       const b = procT[n].bones.find((x) => x.name === bone);
@@ -1503,39 +1516,33 @@ test('idle variants (§479.11): the boredom timer reaches the tree, and both lat
   assert.equal(a.idlePrev, 'idle_confident', 'the outgoing variant is not being held under the incoming one');
 });
 
-test('idle arm spread (§479.20): the standing idle IS the repo\'s Standupright, at the raw retarget\'s own spread', async () => {
-  /* The user's ruling, after seeing §479.15's hand-on-hip: *"the default pose seems to be worse.
-     For the pose, have arms spread further out to the side to be more similar to the default
-     pose of the character in Sly 2."*
+test('idle slots (§479.20 → §715): the repo idle plays by the conditional ruling, and the endorsed static is one token away', async () => {
+  /* HISTORY, kept because the axis is the most litigated in the project (§479.15–.20): the user
+     ruled on a contact sheet — "I like the raw standupright more" — and both standing slots
+     shipped the repo's static `Standupright`, raw, elbow/knee 0. Four rounds were lost
+     narrowing a pose the user kept asking to widen, so the numbers below stay signed and
+     per-arm: "outboard of your own shoulder" is the thing that was once false (§479.16's cane
+     hand tucked behind the torso), and the §479.17 matched pose at 47.7 cm is the failure the
+     spread bar must keep catching.
 
-     THE BAR IS THE REFERENCE'S, MEASURED, not a number anyone picked. `tools/idleref.mjs` reads
-     their default standing idle — `Standupright`, resolved off their own graph (`floor_state`
-     input 3 "idle stand"; both crouch inputs take `Crouching stand` instead) — and it carries
-     each hand ~10 cm outboard of its own shoulder with the hands 47.7 cm apart. Ours delivered
-     43.6 cm, and the RIGHT hand sat 3.6 cm *inboard* of its own shoulder: the cane arm was
-     behind the torso, which is why the pose read narrow from the front however wide the left
-     arm went. The assertion is therefore per-arm and signed — "outboard of your own shoulder" is
-     the thing that was false — plus the spread itself.
+     §715 SUPERSEDES THE BINDING, NOT THE NUMBERS. The owner's later instruction is conditional
+     — "if the repo has its own idle, use it" — and the opened .res libraries met the condition:
+     `Idle Anim 1` (8.7 s, real weight shifts) and `Idle Look` (9.2 s lookout scan) are
+     ANIMATED idles no glTF carried. So the DEFAULT arm now asserts the repo pair is in force,
+     that it really animates (the ruling's own criterion — an idle, not a held pose), and that
+     it has not been matched back down toward the §479.17 pose; the POSE arm
+     (`buildClipSet('godot', { idle: 'pose' })` — the `?idle=pose` token) asserts §479.20's
+     original predicates VERBATIM, at its original hold frame, so the endorsed static remains a
+     shipped, tested behaviour rather than history.
 
-     Measured on the DELIVERED table (`buildClipSet('godot')`), because the shipped idles are
-     procedural clips that STILL pass through §531's limb lever (Animation.js), so `CLIPS.idle_*`
-     is not what the player sees — the raw clip reads 14.1 cm where the delivered pose reads 24.8.
-
-     §479.20 INVERTS THE SPREAD HALF OF THIS ARM, on the user's own ruling off the §479.19
-     contact sheet: *"I like the raw standupright more"*. Both standing slots now alias to the
-     repo's `Standupright` and play it RAW, so the delivered spread is no longer their 47.7 cm
-     but the retarget's own ~66 cm — our rest arms sit ~14.5° wider (§479.6) and the world-delta
-     method composes their motion onto that rest. Matching it back down was the four-round
-     mistake: the user's complaint was always that the arms were too tucked in, and every match
-     pulled them further in. The old band is kept below as the CONTRAST arm, not deleted.
-
-     DOMAIN (§418.3) — passes on: the shipped `idle_confident` / `idle_look` (RUN below — both
-     godot-sourced, both hands outboard, spread inside the raw band); fails on: the §479.17
-     matched pose, RUN below by splicing its arm chain into the same clip and re-measuring —
-     it lands on 47.7 and falls outside the raw band, which is the same predicate inverted
-     rather than a re-pinned number. Cannot discriminate: whether the pose READS right — that is
-     the user's call, and they have now made it on frames (shots/idle19-*, shots/idle20-*,
-     front-verified through the §479.14 camDot guard). */
+     DOMAIN (§418.3) — passes on: the shipped default (repo pair, measured below) and the pose
+     arm (66.3 cm / +21.3 / +18.4 — §479.20's own recorded figures, reproduced to the decimal).
+     Fails on: the §479.17 matched pose (contrast arm — 47.7 cm, under every spread bar here,
+     and STATIC, under the animation bar too); a slot that silently fell back to proc (origin
+     asserted); a regenerated lib module whose idle stopped moving (the animation bar).
+     Cannot discriminate: whether the repo idle READS right — its elbows fold ~30° more than
+     the endorsed static and its hands pass near each other mid-shift (min sep 22.9 cm) — that
+     is the owner's call, made on frames (shots/idle715-*), not on these numbers. */
   const { SlyModel } = await import('../src/player/SlyModel.js');
   const engine = {
     quality: 'high', scene: new THREE.Scene(), debug: {}, stats: {}, warnings: [],
@@ -1546,7 +1553,7 @@ test('idle arm spread (§479.20): the standing idle IS the repo\'s Standupright,
   const pb = new PoseBuffer(sly.boneNames);
   const at = (n) => new THREE.Vector3().setFromMatrixPosition(sly.bones[n].matrixWorld);
 
-  /** hand-outboard per arm (cm, + = outboard of its OWN shoulder) and hand-to-hand spread. */
+  /** hand-outboard per arm (cm, + = outboard of its OWN shoulder), spread, and hips offset. */
   const carry = (clip, t) => {
     pb.clear();
     sampleInto(clip, t, pb, 1);
@@ -1561,60 +1568,72 @@ test('idle arm spread (§479.20): the standing idle IS the repo\'s Standupright,
     const lat = at('upperArmL').sub(at('upperArmR')); lat.y = 0; lat.normalize();
     const out = (S) => (S === 'L' ? 1 : -1)
       * at(`hand${S}`).sub(at(`upperArm${S}`)).dot(lat) * 100;
-    return { L: out('L'), R: out('R'), sep: at('handL').sub(at('handR')).dot(lat) * 100 };
+    return { L: out('L'), R: out('R'), sep: at('handL').sub(at('handR')).dot(lat) * 100, hipsX: pb.pos.x };
+  };
+  /** cycle statistics over N samples — an animated idle has no single representative frame. */
+  const cycle = (clip, N = 24) => {
+    const m = { L: 0, R: 0, sep: 0, hipsXmin: 1e9, hipsXmax: -1e9 };
+    for (let i = 0; i < N; i++) {
+      const c = carry(clip, (i / N) * clip.dur);
+      m.L += c.L / N; m.R += c.R / N; m.sep += c.sep / N;
+      m.hipsXmin = Math.min(m.hipsXmin, c.hipsX); m.hipsXmax = Math.max(m.hipsXmax, c.hipsX);
+    }
+    m.sway = (m.hipsXmax - m.hipsXmin) * 100;
+    return m;
   };
 
-  const REF_SEP = 47.7;                       // Standupright, measured on THEIR rig — history now
-  /* §479.17 CHANGES THE SHAPE OF THIS BAR, and the change is the user's, not a loosening.
-     §479.16 read "further out to the side" as a direction and made the reference a FLOOR
-     (`sep >= 47.7`, delivered 61.7). The user then looked at the result: "The static pose does
-     not appear to be the same as the godot repo." So the reference is now the TARGET, and a
-     floor is the wrong predicate for a target — being 14 cm wider than Sly 2 passes a floor and
-     fails the ruling. The band is ±2.5 cm (~5%), which is wider than the solve's residual
-     (47.1–47.7 across both idles' cycles) and far tighter than either failure it must catch:
-     §479.15's 43.6 cm narrow pose and §479.16's 61.7 cm splayed one both sit outside it.
-     The per-arm "outboard of your own shoulder" checks are UNCHANGED — that is §479.16's real
-     find, it survives the retarget of the goalposts, and it is the one thing the coordinator
-     asked be kept whatever the reference says. */
-  /* The raw port's own delivered spread, with room for the cycle and the donor splice but far
-     tighter than the failure it must catch: the §479.17 matched pose sits at 47.7, eighteen
-     centimetres below the floor. */
-  const RAW_MIN = 60;
-  const shipped = buildClipSet('godot').table;
+  const REF_SEP = 47.7;   // their static Standupright measured on THEIR rig — the §479.17 target, history
+  const RAW_MIN = 60;     // the raw port's own delivered spread band floor (§479.20)
+  const MEAN_MIN = 55;    // the repo idles' cycle-mean floor: measured 63.5 / 69.9; the matched pose's 47.7 fails it
+  const SWAY_MIN = 5;     // cm of hips lateral travel that separates an IDLE from a held pose (measured 15.6 vs 0.0)
+
+  /* ---- ARM A: the shipped default — the repo pair, animated, not matched back down ---- */
+  const repo = buildClipSet('godot');
   const bad = [];
-  for (const name of ['idle_confident', 'idle_look']) {
-    const c = shipped[name];
-    const m = carry(c, c.hold);
-    /* the source must be the repo clip — a slot that quietly fell back to the procedural idle
-       would still pass a spread number if someone later widened the procedural pose */
-    if (!String(CLIP_ORIGIN[name] || '').startsWith('godot:Standupright')) {
-      bad.push(`${name}: origin is ${CLIP_ORIGIN[name]} — §479.20 ships the repo's Standupright in both standing slots`);
+  for (const [name, want] of [['idle_confident', 'godot:Idle Anim 1'], ['idle_look', 'godot:Idle Look']]) {
+    if (repo.origin[name] !== want) {
+      bad.push(`${name}: origin ${repo.origin[name]} — §715 binds ${want} while the repo idle is in force`);
     }
-    if (m.L <= 2) bad.push(`${name}: left hand ${m.L.toFixed(1)} cm — not outboard of its shoulder`);
-    if (m.R <= 2) bad.push(`${name}: right (cane) hand ${m.R.toFixed(1)} cm — tucked behind the torso, the §479.16 defect`);
+    const m = cycle(repo.table[name]);
+    if (m.sep < MEAN_MIN) bad.push(`${name}: cycle-mean spread ${m.sep.toFixed(1)} cm — matched back down toward §479.17's 47.7`);
+    if (m.L <= 2) bad.push(`${name}: left hand mean ${m.L.toFixed(1)} cm — not outboard of its shoulder over the cycle`);
+    if (m.R <= 2) bad.push(`${name}: right (cane) hand mean ${m.R.toFixed(1)} cm — the §479.16 defect, on the cycle mean`);
+  }
+  const sway = cycle(repo.table.idle_confident).sway;
+  if (sway < SWAY_MIN) bad.push(`idle_confident: hips travel ${sway.toFixed(1)} cm over the cycle — a held pose, not the animated idle the ruling asked for`);
+  assert.deepEqual(bad, [], 'the default idle arm is not the repo idle the §715 ruling put in force');
+
+  /* ---- ARM B: `?idle=pose` — §479.20's own predicates, verbatim, at its own hold frame ---- */
+  const pose = buildClipSet('godot', { idle: 'pose' });
+  const badP = [];
+  for (const name of ['idle_confident', 'idle_look']) {
+    if (!String(pose.origin[name] || '').startsWith('godot:Standupright')) {
+      badP.push(`${name}: origin is ${pose.origin[name]} — the pose arm ships §479.20's Standupright in both slots`);
+    }
+    const c = pose.table[name];
+    const m = carry(c, c.hold);
+    if (m.L <= 2) badP.push(`${name}: left hand ${m.L.toFixed(1)} cm — not outboard of its shoulder`);
+    if (m.R <= 2) badP.push(`${name}: right (cane) hand ${m.R.toFixed(1)} cm — tucked behind the torso, the §479.16 defect`);
     if (m.sep < RAW_MIN) {
-      bad.push(`${name}: hands ${m.sep.toFixed(1)} cm apart — below the raw port's own ${RAW_MIN} cm, i.e. matched back down`);
+      badP.push(`${name}: hands ${m.sep.toFixed(1)} cm apart — below the raw port's own ${RAW_MIN} cm, i.e. matched back down`);
     }
   }
-  assert.deepEqual(bad, [], 'the standing idle is not the raw Standupright the user ruled on');
+  assert.deepEqual(badP, [], 'the ?idle=pose arm no longer reproduces the §479.20 endorsed static');
 
-  /* CONTRAST, RUN: the §479.17 MATCHED pose — the one this ruling replaces — is still in
-     `Clips.js` and still reachable as `?anim=proc`, so the contrast needs no reconstruction:
-     it is a shipped artefact, measured through the same path. It must FAIL the raw bar while
-     PASSING both per-arm checks, which is the honest statement of what this arm can and cannot
-     see: hands-outboard alone never distinguished the matched pose from the raw one — only the
-     spread does, and that is the quantity the user was ruling on all along.
-     (The previous contrast spliced the pre-§479.16 arm chain onto `shipped.idle_confident`.
-     That stopped being meaningful the moment the slot changed clip: those triples on the repo's
-     torso read +11.1 cm, not the −3.6 they read on the procedural body they were authored for.
-     Re-derived rather than re-pinned.) */
+  /* ---- CONTRAST, RUN: the §479.17 MATCHED pose — still in Clips.js, still `?anim=proc` — must
+     FAIL the spread bars while PASSING both per-arm checks (hands-outboard alone never
+     distinguished the matched pose from the raw one), and it is STATIC, so it fails the sway
+     bar too — which is exactly what the sway bar is for. */
   const matched = buildClipSet('proc').table.idle_confident;
   const before = carry(matched, matched.hold);
-  console.log(`    [contrast] §479.17 matched pose: spread ${before.sep.toFixed(1)} cm, hands out L ${before.L.toFixed(1)} R ${before.R.toFixed(1)}`);
+  const beforeCyc = cycle(matched);
+  console.log(`    [contrast] §479.17 matched pose: spread ${before.sep.toFixed(1)} cm, hands out L ${before.L.toFixed(1)} R ${before.R.toFixed(1)}, sway ${beforeCyc.sway.toFixed(1)} cm`);
   assert.ok(before.sep < RAW_MIN, `contrast arm: the §479.17 matched pose reads ${before.sep.toFixed(1)} cm — `
     + `expected it below the ${RAW_MIN} cm raw bar, proving this predicate discriminates the two poses`);
   assert.ok(Math.abs(before.sep - REF_SEP) < 2.5, `contrast arm: the matched pose should still sit on the reference's `
     + `${REF_SEP} cm (read ${before.sep.toFixed(1)}) — if it moved, this contrast is measuring something else`);
+  assert.ok(beforeCyc.sep < MEAN_MIN, `contrast arm: the matched pose's cycle mean ${beforeCyc.sep.toFixed(1)} must sit under the ${MEAN_MIN} cm mean bar`);
+  assert.ok(beforeCyc.sway < SWAY_MIN, `contrast arm: the matched pose sways ${beforeCyc.sway.toFixed(1)} cm — the sway bar cannot tell pose from idle`);
   assert.ok(before.L > 2 && before.R > 2, 'contrast arm: the matched pose passes both per-arm checks — '
     + 'that is the point, the per-arm bars cannot tell the two poses apart and only the spread can');
 });

@@ -88,10 +88,9 @@ page.on('pageerror', (e) => errs.push(`pageerror: ${e.message}`));
 page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
 
 const log = [];
-try {
-  await page.goto(`http://127.0.0.1:${port}/?shot=1&q=high`, { waitUntil: 'domcontentloaded', timeout: 120000 });
-  await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null, { timeout: 600000, polling: 500 });
-  await page.evaluate(() => {
+/* the in-page probes, as a function because §715's mode re-navigates (the `?idle=` token is a
+   module-load seam, so each arm is a fresh page) and needs them re-installed each time */
+const installProbes = () => page.evaluate(() => {
     window.__ENGINE.stopLoop();
     window.__GAME.hideHud(true);
     window.__ENGINE.debug.freeCam = false;
@@ -121,7 +120,16 @@ try {
       const hl = wp(B.handL), hr = wp(B.handR);
       return { sepCm: +(dot(hl, hr) * 100).toFixed(1), outL: +(dot(hl, ua) * 100).toFixed(1), outR: +(-dot(hr, ub) * 100).toFixed(1) };
     };
-  });
+});
+
+const boot = async (extraQuery = '') => {
+  await page.goto(`http://127.0.0.1:${port}/?shot=1&q=high${extraQuery}`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+  await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null, { timeout: 600000, polling: 500 });
+  await installProbes();
+};
+
+try {
+  await boot();
   const sim = (n = 1) => page.evaluate((k) => window.__simStep(k, 1 / 60), n);
   const snap = async (name, az) => {
     const tel = await page.evaluate(([azDeg]) => {
@@ -153,7 +161,45 @@ try {
      `play_mode = 1` node plays it — against the FORWARD source it used to be. Posed through the
      real play() seam (movement parked) because the moveset needs a real drainpipe to enter the
      state, which is the hardware sheet's half. Two phases per arm (§466.5). */
-  if (process.env.MODE === 'pole') {
+  /* MODE=idle715 (§715): the owner's conditional ruling put the recovered repo idles in the two
+     standing slots, with §479.20's endorsed static one token away. This shoots BOTH ARMS on the
+     §479.20 cameras — front-three-quarter (az 35, camDot-guarded) and profile (az 90) — both
+     slots each, so the before/after the ruling asks for is eight frames of the same rig on the
+     same lens. Each arm is a fresh page: the `?idle=` token is a module-load seam, like
+     `?anim=`, and the live CLIP_ORIGIN is asserted per arm so a frame cannot be labelled with a
+     regime it is not showing. */
+  if (process.env.MODE === 'idle715') {
+    /* (−4, 0, 26), not the default (0, 0, 30): market props have accumulated on the old spot
+       since idle20 and the first §715 take photographed the pose behind a stack of pots —
+       camdot's chest ray passed while the limbs were covered, so the spot was re-preflighted
+       on BOTH cameras (front34 and profile, VERDICT ok) and the frames re-read. */
+    for (const arm of ['repo', 'pose']) {
+      if (arm === 'pose') await boot('&idle=pose');
+      await sim(40);
+      /* yaw is PINNED to the preflighted geometry, not left to the settle: the az-relative
+         cameras follow m.yaw, and the first two takes proved the point in both directions —
+         a stray yaw put the "profile" camera inside the west arcade with the ceiling filling
+         60% of the frame. yaw 0 is what the camdot preflight of this spot actually tested. */
+      await page.evaluate(() => { const m = window.__ENGINE.get('movement'); m.position.set(-4, 0, 26); m.velocity.set(0, 0, 0); m.yaw = 0; });
+      await sim(120);
+      await page.evaluate(() => { const m = window.__ENGINE.get('movement'); m.yaw = 0; });
+      const org = await page.evaluate(async () => (await import('/src/player/Animation.js')).CLIP_ORIGIN.idle_confident);
+      const want = arm === 'repo' ? 'godot:Idle Anim 1' : 'godot:Standupright';
+      if (org !== want) throw new Error(`idle715: arm "${arm}" boots with idle_confident=${org}, expected ${want}`);
+      await page.evaluate(() => { window.__SKIPMOVE = true; });
+      await sim(4);
+      for (const slot of ['idle_confident', 'idle_look']) {
+        await page.evaluate(async (n) => {
+          const A = await import('/src/player/Animation.js');
+          window.__ENGINE.get('animation').play(n, { fade: 0, loop: A.ACTIVE[n].loop, speed: 1 });
+        }, slot);
+        await sim(40);
+        const tag = slot.replace('idle_', '');
+        await snap(`idle715-${arm}-${tag}-front34`, 35);
+        await snap(`idle715-${arm}-${tag}-profile`, 90);
+      }
+    }
+  } else if (process.env.MODE === 'pole') {
     const phases = [0.25, 0.6];
     await page.evaluate(() => { window.__SKIPMOVE = true; });
     await sim(4);

@@ -234,6 +234,7 @@ const KNOWN_UNSHIPPED_PAYLOAD = [
   'sly-anim/sly-anims.glb',
   'sly-godot/bottle.glb',
   'sly-godot/sly-godot-anims.glb',
+  'sly-godot/sly-godot-lib.glb',    // §715 — the opened .res libraries' extract; the runtime consumes GodotLibClips.js, this is the offline rebuild intermediate, same standing as -moves.glb below
   'sly-godot/sly-godot-moves.glb',
   ...KAYKIT_UNUSED,
   ...TOMBCHASER_ALL,

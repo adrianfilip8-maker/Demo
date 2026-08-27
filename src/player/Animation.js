@@ -3,6 +3,7 @@ import { Rig, PoseBuffer, eulerDeg } from './Rig.js';
 import { CLIPS, CLIP_NAMES, MISSING, compile, sampleInto, sampleCane } from './Clips.js';
 import { MIXAMO_CLIPS } from './MixamoClips.js';
 import { GODOT_CLIPS } from './GodotClips.js';
+import { GODOT_LIB_CLIPS } from './GodotLibClips.js';
 
 /**
  * Animation.js — the ANIMATION module (AGENTS.md §4.7).
@@ -159,6 +160,36 @@ export const ANIM_TUNE = {
  */
 const JUMP_NATURAL_RATE = 0.75;   // their TimeScale/scale for jump_floor, verbatim
 
+/**
+ * §715 — the sealed libraries are open, and the repo turned out to HAVE its own idles. The
+ * owner's instruction is conditional — "if the repo has its own idle, use it" — and the
+ * existence check now answers YES: `godotlib2clips` decompressed the thirteen RSCC containers
+ * §714.2 could not read, and `Library Sly MASTER 005` + `Library Sly Idle` carry genuinely
+ * ANIMATED idles no glTF ever held (`Idle Anim 1`: 8.7 s, 16.2 cm of lateral weight shift,
+ * loop seam 1.4°; `Idle Look`: 9.2 s crouched lookout scan). So the two standing slots move
+ * off §479.20's static `Standupright` BY THAT RULING — the clip itself is untouched in
+ * GodotClips.js, only the binding changes — and the §479.20 behaviour stays one token away:
+ * `?idle=pose` (URL) or `globalThis.__IDLE_AB = 'pose'` (runners) restores the endorsed static
+ * pose in both slots; flipping IDLE_DEFAULT restores it in source. Stated for the next reader,
+ * because the axis is litigated (§479.15–.20): the animated idle's elbows fold ~30° MORE than
+ * the endorsed static (125/115° vs 151/153°), its hand separation is 1.3 cm WIDER (72.0 vs
+ * 70.7 cm), and its left hand carries ~28 cm further inboard at the deepest of its weight
+ * shifts — the frames in shots/ show both on the same cameras. `idle_bored` stays procedural:
+ * the libraries hold no bored-family idle (fight stances and a teeter, not a fidget), so on
+ * that slot the conditional's answer is no, and §479.20's variety reasoning stands.
+ */
+const IDLE_DEFAULT = 'repo';
+function idleRegime() {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('idle') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__IDLE_AB != null) raw = String(globalThis.__IDLE_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  const t = String(raw).trim().toLowerCase();
+  return t === 'pose' || t === 'repo' ? t : IDLE_DEFAULT;
+}
+const IDLE_REPO = idleRegime() === 'repo';
+
 const GODOT_ALIAS = {
   /* game name       source + delivered timing (see the window derivation above).
      THE AUDITED SET (§479): each row is a verb where the repo authored a clip for the same
@@ -169,7 +200,22 @@ const GODOT_ALIAS = {
   double_jump:   { src: 'FrontFlip', dur: 0.41 },
   walk:          'Walk',
   run:           'Run',
-  run_fast:      'Run',            // no second run in the source; the tree needs the node filled
+  /* §715 — the sealed MASTER libraries hold a second run after all ("no second run in the
+     source" was true of the glTF and false of the repo): `Run 1`, the sprint of the recovered
+     pair (4.10 vs 3.51 m/s, stride 3.01 vs 2.58), baked in GodotLibClips with its footfalls
+     phase-rotated onto Run's own beat. It was bound here, measured IN STATE, and REFUSED on
+     the tree's own contract: the locomotion tree runs ONE shared phase over the weighted MEAN
+     stride of the live nodes, so adjacent speed nodes carrying 6.195 m (Run) and 3.01 m
+     (Run 1) cannot both be honest in the blend band — at a driven 6.87 m/s the sprint node
+     under-cranked (1.58 cyc/s delivered vs 2.28 wanted) and skated 2.1 m/s, 31% of travel,
+     against the ~7–12% residual §316 records as the tolerated ceiling, on the instrument
+     (moveslook's skate column) the incumbent duplicate passes near-zero by construction
+     (equal strides ⇒ the mean IS the clip). The duplicate keeps the slot; the sprint LOOK
+     stays a rate-scaled Run. Equalising the family's strides (their Run's 6.195 m is a
+     cartoon-bound figure — 12.4 m/s of foot speed) would be a tree retune, which "add the
+     animations" does not license (§714.3's line). `Run 1` stays baked for the day an owner
+     rules on that retune. */
+  run_fast:      'Run',
   jump_rise:     { src: 'Jump', rate: JUMP_NATURAL_RATE },
   jump_fall:     'Falling',
   land_soft:     'Landing',
@@ -199,8 +245,30 @@ const GODOT_ALIAS = {
      is precisely the tucked-in look this ruling rejects. `idle_bored` is deliberately NOT
      aliased: it authors its own arm channels, already delivers the widest of the three
      (56.6 cm), and its fidget is the idle's remaining variety. */
-  idle_confident: 'Standupright',
-  idle_look:      'Standupright',
+  /* §715 supersedes the two rows below WHEN THE REPO IDLE IS IN FORCE (the default): the owner's
+     conditional — "if the repo has its own idle, use it" — is met by the opened libraries, so
+     `idle_confident` plays `Idle Anim 1` (their 8.7 s weight-shifting standing idle) and
+     `idle_look` plays `Idle Look` (their 9.2 s lookout scan — a crouched-forward posture, hips
+     −0.25, stated because Moveset.js:141 parks the 13-second stare on this slot). The rows
+     here are the REPO pair; the `?idle=pose` override that restores §479.20's raw
+     `Standupright` in both slots lives in `buildClipSet` (one substitution, so a test can hold
+     both arms in one process), and the token itself is derived above the table. */
+  idle_confident: 'Idle Anim 1',
+  idle_look:      'Idle Look',
+
+  /* §715 — the crouch pair, from the opened libraries. `Idle Crouch 2` is the deep crouch
+     (hips −0.467 vs the procedural incumbent's −0.52 — within 5 cm on the axis that defines
+     the stance; `Idle Crouch 1` at −0.198 and the glTF's `Crouching stand` at −0.115 both
+     LOST on it: their game plays `Crouching stand` as its default STANDING idle, and a
+     default stance under our lowered crouch capsule reads as standing, not crouching).
+     `Walk Crouch 4` alternates cleanly (footfalls R@0.34/L@0.77, already the godot Walk
+     family's phase neighbourhood) where `Walk Crouch 2` — same depth, same speed — is an
+     asymmetric prowl whose right stance wraps the loop seam and whose footfalls cluster
+     30 ms apart; the take comparison lives in godotlib2clips' KEEP comment. Both rows carry
+     their own derived contacts, and both pin the LIMB lever's knee at 0 below — the fold IS
+     the crouch. */
+  crouch_idle:   'Idle Crouch 2',
+  crouch_walk:   'Walk Crouch 4',
 
   /* §479.8 — the combat + pickpocket port ("check to see if the attack and pickpocket
      animations were properly ported"). Their ground attack is ONE clip — `Canehit`, fired on
@@ -438,6 +506,25 @@ export const GODOT_LIMB_OPEN = {
      §531's leg ruling is untouched everywhere else in the set. */
   idle_confident: { elbow: 0, knee: 0 },
   idle_look: { elbow: 0, knee: 0 },
+
+  /* §715 — the recovered crouch pair. KNEE 0 by the criterion the rows above earned case by
+     case: the lever may open a FREE limb; it may not straighten a limb whose fold IS the
+     pose's function, and a crouch is DEFINED by its knee fold (`Idle Crouch 2` holds 114–125°;
+     the set-wide 0.60 would open that past 50° and un-crouch the stance — §531 wanted limbs
+     spread, not the crouch removed, and its own text already exempts function). The ELBOWS
+     were measured per clip rather than assumed either way, because the lever's direction on a
+     crouch is exactly §479.16's mechanism — straightening a forearm that hangs inward-down
+     swings the hand TOWARD the midline:
+       · `Idle Crouch 2`: opening the elbow moves the hands INBOARD monotonically (worst left
+         hand vs knee line: −22.1 cm at 0, −24.7 at 0.45, −26.5 at 0.75) — the lever only
+         narrows this pose, so it ships at 0, the idle rows' own conclusion re-measured.
+       · `Walk Crouch 4`: 0.45 is the largest rung with real outboard daylight (hands +8.8/
+         +9.7 cm outside the knee line; at the set-wide 0.75 they land ON it, −1.0/+0.9 cm) —
+         §479.10's rung, found by §479.10's method.
+     The two §715 idles are NOT listed — the idle rows above already pin both slots at 0/0,
+     and the token swaps the SOURCE those slots play, not their lever. */
+  crouch_idle: { elbow: 0, knee: 0 },
+  crouch_walk: { elbow: 0.45, knee: 0 },
 };
 
 function limbOpenFor(game) {
@@ -626,8 +713,14 @@ function animRegime() {
 }
 
 /** Build the table this module samples. Exported so tests can build any regime without a URL. */
-export function buildClipSet(raw) {
+export function buildClipSet(raw, opts = {}) {
   const regime = normaliseRegime(raw);
+  /* §715 — which pair fills the two standing slots. 'repo' (the default): the recovered
+     `Idle Anim 1` / `Idle Look`, per the owner's conditional ruling now that the libraries are
+     open. 'pose': §479.20's raw `Standupright` in both, bit-exact — the endorsed static. The
+     module-load token (`?idle=` / `__IDLE_AB`) decides for ACTIVE; `opts.idle` lets a test
+     hold both arms in one process. */
+  const idleMode = opts.idle === 'pose' || opts.idle === 'repo' ? opts.idle : (IDLE_REPO ? 'repo' : 'pose');
   const table = Object.create(null);
   const origin = Object.create(null);
   for (const n in CLIPS) { table[n] = CLIPS[n]; origin[n] = 'proc'; }
@@ -642,8 +735,16 @@ export function buildClipSet(raw) {
      anim.test. */
   const fill = !regime.endsWith('-pure');
   const godot = regime.startsWith('godot');
-  const SRC = godot ? GODOT_CLIPS : MIXAMO_CLIPS;
-  const ALIAS = godot ? GODOT_ALIAS : MIXAMO_ALIAS;
+  /* §715: the godot source table is the gltf bake PLUS the clips recovered from the repo's
+     sealed .res libraries (GodotLibClips.js — a separate generated module, so GodotClips.js
+     stays byte-identical and §479.20's bit-exactness check keeps meaning). Names cannot
+     collide: the lib set's five names exist in no gltf. */
+  const SRC = godot ? { ...GODOT_CLIPS, ...GODOT_LIB_CLIPS } : MIXAMO_CLIPS;
+  const ALIAS = godot
+    ? (idleMode === 'pose'
+      ? { ...GODOT_ALIAS, idle_confident: 'Standupright', idle_look: 'Standupright' }  // §479.20's endorsed static
+      : GODOT_ALIAS)
+    : MIXAMO_ALIAS;
   const tag = godot ? 'godot' : 'mixamo';
   const used = new Set();
   for (const [game, spec] of Object.entries(ALIAS)) {
