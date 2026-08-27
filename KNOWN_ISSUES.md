@@ -58038,8 +58038,446 @@ live and why this section re-verifies it: `?idle=pose` (URL) or `globalThis.__ID
 (runners) restores §479.20's raw `Standupright` in the standing slots, bit-exact. No asset
 changes under this ruling — only which verb plays which already-authored clip.
 
-*(Section claimed at this heading before its content was written — §700.9. Body follows in the
-next commits.)*
+
+### §717.2 The census, re-run under the ruling — and two corrections to §715.2's shelf
+
+The ruling turns on what the corpus actually holds, so all fourteen libraries were re-opened and
+every clip enumerated through godotlib2clips' own container reader (the tool, not a second
+scanner — §714.2's lesson): **247 clips in the thirteen `Assets/Animations` containers carrying
+66 distinct track-data payloads, plus the 9 in the fourteenth** (the one under Temp Imports —
+Godot 4.4 blend-shape era, whose track layout this parser refuses rather than guesses past, so
+it is enumerated by name and length only: `CrouchingStand`, `Jump`, `Run`, `UprightStand`,
+`Walk` and four `_Action Stash]`. Its two standing candidates are the glTF's already-baked
+`Standupright` and `Crouching stand` under other names, so it contributes no idle). Reference
+HEAD `a312a99`, verified by `git rev-parse` on the checkout itself rather than taken from the
+clone command's word.
+
+Two of §715.2's rows do not survive contact:
+
+- **`Idle Crouch 1` IS `Idle Look`.** The MASTER libraries' `Idle Crouch 1` (9.2 s, 54 tracks)
+  and `Library Sly Idle`'s `Idle Look` (9.2 s, 53 tracks) differ by exactly one track — the
+  stray `mixamorig1_HeadTop_End` leaf, which RIG3 drops at extract anyway — and their
+  **retargeted output is BIT-IDENTICAL**: same 185 emitted keys, same 21 moving bones, worst
+  per-channel difference **0.000000** across the whole clip, checked channel by channel and not
+  by a summary statistic. §715 measured them as two candidates and had `Idle Crouch 1` "lose on
+  the depth axis" to `Idle Crouch 2`; it lost to nothing — it was already bound, under its other
+  name, to `idle_look`. **The shelf is one clip smaller than the census row count suggests**, and
+  that matters here because `Idle Crouch 1` was the most promising unbound idle on paper.
+- **`Idle Stand 1` and `Idle POSE` are one pose re-rooted.** Identical rotations on every bone,
+  different hips position tracks (`[0.037, −0.163, −0.068]` vs `[−0.065, −0.044, −0.257]`). Both
+  are 1-key holds and both fail the ruling's own bar — an idle POSE, not an idle ANIMATION.
+
+What the corpus does hold, complete. Every clip in every library that is (a) longer than a
+frame, (b) idle-class rather than gait-class by the step detector below, and (c) on the humanoid
+skeleton this project can retarget:
+
+| clip | dur | bound to | hips | contact | hips sway / surge | arm swing | seam |
+|---|---|---|---|---|---|---|---|
+| `Idle Anim 1` | 8.70 | `idle_confident` (§715) | 0.810 | −3.0 cm | 6.4 / 15.3 cm | 74.2 cm | 1.4° |
+| `Idle Look` ≡ `Idle Crouch 1` | 9.20 | `idle_look` (§715) | 0.797 | −4.2 cm | 17.6 / 13.9 cm | 29.1 cm | 0.0° |
+| `Idle Crouch 2` | 6.70 | `crouch_idle` (§715) | 0.528 | **+6.2 cm** | 1.1 / 1.8 cm | 2.3 cm | 0.1° |
+| **`Idle Fight 1`** | 4.67 | **`idle_bored` (§717)** | 0.847 | −4.7 cm | **18.3** / 4.2 cm | 6.8 cm | 0.1° |
+| `Idle Fight 2` | 3.97 | — (measured, refused) | 0.693 | +1.5 cm | 7.4 / 2.0 cm | 14.2 cm | 0.0° |
+| **`Idle Teeter`** | 3.67 | **`balance_idle` (§717)** | 1.047 | +2.2 cm | 0.0 / 0.0 cm | **34.4 cm** | 0.0° |
+
+(hips in world metres on the shipped rig; contact signed against the rig's own bind foot; sway
+and surge are the root track's excursion over the cycle AFTER §715's `centerYaw` re-base — see
+the axis note in §717.3, which matters more than it looks; arm swing is the hand-separation
+range. Every one of these clips animates; they animate on different channels, which is why one
+motion bar would have been the wrong instrument and each row below names its own.)
+
+Six animated idles, and that is the whole shelf. `Idle Air 1/2`, `Idle Air Pose`, `Idle Air Hit`
+are air poses; `Idle Stand 1`, `Idle Stand Carry`, `Idle POSE` are holds; `Walk Posture UP/DOWN`
+and `Walk Sneak Slow`/`Walk Sneaky` are gaits (below). **Nothing in the corpus is a bored idle,
+a stationary sneak, or a braced ledge perch** — that is the census's answer and every refusal
+below rests on it rather than on taste.
+
+One finding worth its own line, because it is the reference's own emphasis: **`Idle Teeter` is
+the ONE clip they iterated.** MASTER 001–005 carry five DISTINCT track-data hashes of it
+(`72ec4290…`, `1430cc31…`, `26cfd0c7…`, `58486194…`, `1c7416c1…`) where the other 31 clips
+are straight re-saves — 001 differs from the 002–005 line on eleven clips, all one older
+generation, and 002–005 differ from each other on Teeter and nothing else. Five saves of one
+balance loop is what an animator does to a clip they care about. 005 is read, per the census
+rule §715 set (canonical latest).
+
+### §717.3 The instruments — including the one that agreed with its subject, and was caught
+
+Three, and what each is NOT is stated because two of the three could have been the §442 mistake:
+
+- **The candidate bench.** §715's importer could only measure clips it had already committed to
+  baking (`KEEP_LIB_CLIPS` is the shipped GLB's contents), so a binding decision could not be
+  made before the binding. `tools/godotlib2clips.mjs --asset <scratch> --keep <json>` runs the
+  SAME extract → retarget → stride math over an arbitrary candidate list into a scratch GLB.
+  The shipped asset path is the default and `--asset` refuses to name it. Thirteen candidates
+  went through it for this section.
+- **`idlemeasure`** — the shipped rig (`SlyModel`), the shipped `compile()`/`sampleInto()`,
+  `_posecarry.mjs`'s `carry()` (the ONE copy the §479 rulings are quoted against, imported not
+  re-typed) and idlecensus' classifier axes. §442's guard is a row, not a claim: the run prints
+  the BIND POSE through the same code path (hips 0.995, sep 96.0, fold 172/172, sweep 0.0) and
+  every clip row differs from it, which an instrument that had CPU-skinned the bind pose could
+  not have produced. What it adds over both: **ground contact on OUR rig**, signed against the
+  rig's own bind foot — "the ankles float" measured where the player sees it rather than in the
+  importer's clip space.
+- **`seam`** — cycle-mean pose distance and hips step between a clip and the clip it fades to
+  and from. §715 refused `Run 1` on a contract with its blend partner rather than on its own
+  numbers; every idle verb here has such a partner and it fires constantly.
+
+**AN AXIS THAT MOVED UNDER A PUBLISHED NUMBER, caught by a control run.** A first draft of the
+`idle_bored` row claimed `Idle Fight 1`'s 18.3 cm of lateral weight shift was "2.9× `Idle Anim
+1`'s 6.4". It is not — the two numbers are on different axes, and the control that showed it was
+re-extracting `Idle Anim 1` with `centerYaw` turned OFF. `Idle Anim 1`'s take is authored 54.2°
+off the controller's facing; §715's re-base rotates its root track into our frame, which turns
+most of its shift from side-to-side into fore-aft. **Raw: sway 16.1 / surge 6.1 — which is
+§715's own published 16.2 cm, reproduced to a tenth. Re-based: 6.4 / 15.3.** Same motion,
+relabelled axis; §715 published the pre-re-base figure and the tool centred the clip afterwards,
+so anyone comparing that 16.2 against a number measured on the shipped table today would
+conclude the idle had gone quiet. It has not. `Idle Fight 1` carries only −5.4° of offset, so
+its raw 18.2 and re-based 18.3 barely differ: **in the clips' own frames the two idles are a
+near tie; in ours, `Idle Fight 1` is the lateral shifter.** Both statements are true and only
+the second is about what ships.
+
+**The instrument that was caught agreeing with itself (§439/§440).** The first `idlemeasure`
+run reported a loop seam of **0.0° for every clip in the table, including clips whose seams
+differ** — because it read the seam as pose(dur) vs pose(0) through `sampleInto`, which WRAPS
+(`t % dur`), so pose(dur) IS pose(0) by construction. The metric could not have returned
+anything else. Re-derived on the AUTHORING KEYS (first key vs last key, world rotation per
+bone), it immediately reproduced §715's own published figure for `Idle Anim 1` — **1.4°
+worst-bone at `lowerArmL`** — which is the positive control that says the repair works, and gave
+`Idle Fight 1` 0.1° at `neck` and `Idle Teeter` 0.0°. A seam column of all zeros looked like
+good news for a full run before anyone asked what it was measuring.
+
+### §717.4 `idle_bored` ← `Idle Fight 1` — what it costs, and the pop it removes
+
+**What it costs, first, because it is a character change and not only a source change.** This is
+their FIGHT guard. After six seconds of standing still Sly now settles into a forward-leaning
+ready stance — chest-over-hips **30.0°** off vertical against the procedural fidget's **6.8°**,
+hands 62.9 cm apart against 53.8, elbows 133/125° against 125/149° — instead of shifting his
+weight and looking bored — and it carries 18.3 cm of lateral weight shift in our frame, the
+largest side-to-side travel of any idle in the table (read the axis note in §717.3 before
+comparing that against §715's published 16.2). **`idle_bored` no longer reads as bored.** The reference authored no
+bored idle (§717.2), the ruling says take the ported one, and this is the ported one that is
+left. That is the owner's call to have made and the sentence is here so it is visible.
+
+**What it buys, and this was not predicted — it was measured.** `Moveset.js:142` rotates
+`idle_confident` → `idle_bored` → `idle_look` on a 0.3 s crossfade at 6 s and 13 s. §715 moved
+the two outer slots to ported clips and left the middle one procedural, and the ported idles sit
+**15 cm lower** than the procedural one:
+
+| rotation | hips step at 6 s | hips step at 13 s | worst bone | worst bone |
+|---|---|---|---|---|
+| §715's mixed rotation (SHIPPED until now) | **+15.3 cm** | **−16.6 cm** | 70.1° | 127.4° |
+| §717, `Idle Fight 1` in the middle | **+3.7 cm** | **−4.9 cm** | 42.1° | 65.7° |
+
+A standing player has been watching Sly rise 15 cm at six seconds and drop 17 cm at thirteen,
+twice per idle, since §715 shipped. Nobody measured the rotation as a rotation. The ruling and
+the tree agree on this slot.
+
+**The inputs seen to fail (§418.3), on the same instrument, in-arm:**
+
+- `Idle Fight 2` (3.97 s) — the corpus's other unbound animated idle, and the one that is MOST
+  distinct from its neighbours, which is why it was the first candidate. It loses on the seam:
+  **−11.8 / +10.5 cm** of hips step, worst bone **116.2° / 142.3°** — a squat 11.8 cm below both
+  its neighbours, so the rotation would dip and rise inside one state.
+- `Idle Teeter` scored for this slot — **+23.7 / −25.0 cm**, WORSE than the procedural incumbent
+  it would replace, because it stands 5.2 cm taller than the bind pose. This is the arm the
+  shipped test carries as its contrast.
+- **Reuse** — `Idle Anim 1` or `Idle Look` in two slots seams beautifully (−1.3 cm, worst 85.5°)
+  and deletes the variety the slot exists for. §479.20 recorded that variety as deliberate and
+  §479.10 recorded why it is watched: a stationary player reaches `idle_look` at 13 s, so the
+  rotation is something someone actually sits through. Reuse was available and was not taken,
+  because a genuinely distinct ported clip existed.
+
+Loop: `Idle Fight 1` carries `loop_mode 0` in the source and seams at **0.1°** worst-bone —
+`Idle Anim 1`'s case exactly (a loop saved without the flag), so `loop: true` rests on the
+measurement, not on the header.
+
+### §717.5 `balance_idle` ← `Idle Teeter` — a fit refusal that the ruling inverts, and one that it does not
+
+§715 refused TWO sources for this verb. **Only one of the refusals survives the ruling, and the
+difference between them is exactly the line the instruction drew.**
+
+**`RailrunStand` — REFUSED THEN AND NOW.** Its feet do not touch anything. §715 measured
+0.462–0.517 in the importer's clip space; re-measured this section on a different instrument —
+the shipped rig, signed against the rig's own bind contact — it reads **+43.3 cm**, with the
+toes at 0.466/0.481 world. Two instruments that do not share a frame of reference, one verdict.
+`SpireJumpIdle` (+43.6), `PoleClimbIdle` (+27.9) and `Crouching stand` (+26.7) are the same
+class, and the class has an explanation: these are poses their game plays while the feet are on
+a PROP — a rail, a pole, a spire — not on the ground. **"Use the ported one" does not ask for a
+floating character**, so these stay refused, which is the whole content of the brief's
+hard-defect side.
+
+**`Idle Teeter` — REFUSED THEN ON FIT, and the ruling inverts that default.** §715's words were
+*"a perpetual about-to-fall alarm as the calm default stand"* — a judgement about mood, made
+against a slot description, not a measurement. Re-measured:
+
+| | proc `balance_idle` (incumbent) | `Idle Teeter` |
+|---|---|---|
+| ground contact vs bind foot | −2.7 cm | **+2.2 cm** (`Idle Crouch 2` SHIPS at +6.2) |
+| torso off vertical | 5.7° | **5.5°** |
+| hand separation | 116.0 cm, static within 2.1 | **99.8 cm mean, swinging 81.1 → 115.5** |
+| hands outboard of own shoulder | +44.2 / +43.7 cm | **+37.2 / +35.6 cm** |
+| toe lift (step detector) | 4.3 / 3.3 cm | **0.0 / 0.0 cm** |
+| loop | authored | **authored (`loop_mode 1`), 0.0° seam** |
+
+It is the same pose family as the incumbent — upright, arms straight out wide — with 34 cm of
+authored windmill where the incumbent is static within 2 cm. **A teeter is what a balance verb
+DOES;** §715 refused it against a slot it was never going to fill.
+
+The seam against its own gait partner **improves**: proc `balance_idle` → `railrun` measures
+68.2° mean / 137.2° worst today; `Idle Teeter` → `railrun` measures **38.9° / 76.1°**. The hips
+step goes the other way — +0.6 cm → **−9.6 cm** — and is reported rather than buried; it is
+roughly half the §715 pair's own **+18.4 cm** (`Idle Crouch 2` → `Walk Crouch 4`, 70.5° mean /
+174.5° worst), which is the shipped band this is judged against.
+
+**The cane pole survives by construction, and it is asserted rather than assumed.** §715
+singled this verb out as the only one of the three whose prop does its job — the cane held out
+as a balance pole. The source carries no cane channel at all (§715.3: the humanoid libraries
+have none), so `spliceClip`'s donor fill supplies the procedural def's `CANE.out`, time-scaled
+to the new duration. The shipped test now fails if `balance_idle` arrives without a cane track.
+
+### §717.6 The two verbs the ruling reaches and cannot be given a clip
+
+Reported with numbers and left, exactly as §715 left `paraglide`.
+
+**`sneak_idle` — REFUSED.** The reference authored exactly ONE stealth-class clip family:
+`Walk Sneak Slow` (MASTER) = `Walk Sneaky` (Walk library), the same take re-saved. **It is a
+gait.** The step detector — per-toe vertical excursion over the cycle, which separates every
+gait in the shipped set from every idle in it — reads:
+
+```
+  clip                      stepL   stepR
+  sneak_idle   [proc]         3.0     3.0     ← the incumbent
+  perch_idle   [proc]         5.5     5.1
+  idle_bored   [proc]         1.6     0.8
+  ---------------------------------------- the gait floor
+  Walk Posture DOWN            9.4     6.7
+  Walk Posture UP             10.6     9.4
+  crouch_walk  [proc]         13.0    13.0
+  sneak_walk   [proc]         14.9    14.9
+  Walk Sneak Slow             15.6    12.6     ← the only stealth clip in the corpus
+  Run 1                       36.3    41.1
+```
+
+`Walk Sneak Slow` lifts its toes as far as our own `sneak_walk` does. Bound to a stationary verb
+it steps in place. Wrong motion class — §715's `Fall Glide` / `Jump Pounce` refusal exactly, and
+the ruling does not ask for it. (§715 refused the same clip for `sneak_walk` on a different
+number: 0.173 m/s of authored travel against a verb that runs at 1.4. Both refusals stand, for
+different reasons, on the same clip.)
+
+The nearest ported clip by STANCE is `Idle Fight 2` — hips 0.693 against the incumbent's 0.696,
+a **3 mm** match, and 1.0 cm from `sneak_walk`'s 0.683. It is an upright combat squat where the
+verb is a forward-leaning prowl (torso **7.0°** off vertical against **25.4°**), and it more than
+doubles the seam against its own gait partner: **23.4° / 48.8° → 55.5° / 125.0°**, at a
+transition that fires on every stop and start of sneaking (`Moveset.js:176`, 0.2 s fade) — the
+tightest seam in the shipped idle family traded for one of the loosest. Reuse costs more:
+`Idle Crouch 2` **+15.6 cm** of hips step at that seam, `Idle Look` **−11.4 cm**.
+
+Stated plainly because the brief asked for the line to be drawn honestly: the `Idle Fight 2`
+half of this is closer to a fit judgement than the `Walk Sneak Slow` half is. It is one alias row
+away either way, the numbers are above, and the alias row itself carries them. **One thing a
+future lane must not do is flip it silently:** `sneak_idle` is a §470 witness in `anim.test`
+(the guard that the §531 lever never moves a non-distal channel of a proc-sourced clip), so
+binding it means RE-DERIVING that witness — which is what §715 did when `crouch_walk` left the
+procedural set, and what §717's own test now asserts in so many words.
+
+**`perch_idle` — REFUSED.** Its defining geometry is a glove braced on the stone: the lowest
+hand sits **47.7 cm** above the contact plane and **36.0 cm forward** of the hips. Nothing in the
+corpus braces anything:
+
+```
+  clip                lowest hand above contact   furthest hand forward of hips
+  perch_idle [proc]              47.7 cm                    36.0 cm   ← the target
+  Idle Crouch 2                  37.8                       33.9      (hands out to the SIDES: 90.6 cm apart)
+  Idle Look                      60.5                       36.2
+  Idle Fight 1                   61.9                       41.9
+  Idle Fight 2                   85.3                       39.7
+  Idle Teeter                    92.6                       33.4
+  RailrunStand                   45.1                       43.3      (and +43.3 cm of floating feet)
+  LedgeGrab Idle                143.4                       29.0      (their ledge verb — a HANG, already on `ledge_hang`)
+```
+
+A ledge perch is not in the reference at all. Their ledge pose is a hang with the hands overhead;
+`Idle Crouch 2` gets the hand height roughly right and then puts both hands out to the sides,
+which is a squat, not a brace, and it is 16.6 cm deeper than the perch besides. This is the
+`paraglide` case from §715.6 — no compatible source exists, rather than a compatible source
+declined. (`perch_idle` is also the hero shot, with `SlyModel.js`'s head-count documentation
+built on its exact figure and a cane aim settled against a silhouette over several rounds; that
+is a reason to be careful, not the reason it is refused. The census is the reason.)
+
+### §717.7 The §531 lever, measured per clip rather than inherited
+
+Through the shipped `buildClipSet` + `__LIMB_OPEN` seam, at four rungs, with the exempt rows
+(`idle_confident`, `crouch_idle`) as the positive control that the plumbing works — they do not
+move at any rung.
+
+`idle_bored` (`Idle Fight 1`) at the set-wide 0.75/0.60: hand separation **62.9 → 73.6 cm**, both
+hands further OUTBOARD (**+4.9 L, +5.9 R**), elbows 133/125° → 166/164°, knees 138/131° →
+160/157°, and the feet stay grounded (**−4.6 → −2.6 cm**). *The mechanism check ran the other way
+from the guess* — straightening a knee with the hips position track untouched was expected to
+drive the foot DOWN through the floor, and it raises it; the number decided, not the reasoning.
+
+So the lever does this pose no harm, and it is pinned at **0/0 anyway, on the FAMILY**: those
+three clips crossfade into each other inside one state, and with the lever live the middle rung
+becomes the WIDEST of the three — **63.5 / 73.6 / 69.9** where its two neighbours are pinned by
+§479.20 and §715. The arms would spread 10.7 cm at six seconds and close again at thirteen,
+inside a single idle. Pinned, the family reads **63.5 / 62.9 / 69.9**. §479.20's own words for
+the rows above apply verbatim — *the clip, as it lands* — which is also what "use the ported
+idle pose" asks for. Reversing it is one number and the number it delivers is above.
+
+`balance_idle` (`Idle Teeter`) gets **no row**, deliberately: the lever is nearly a no-op on it
+(sep 99.5 → 100.2, contact 2.2 → 2.1), so there is nothing to exempt it from and §531's ruling
+takes the slot as it takes the rest of the set.
+
+### §717.8 What was verified unchanged
+
+- **`Standupright`, bit-identical.** `GodotClips.js` is byte-untouched (`git status` clean on
+  it), and the clip hashes **`a8ba715b4875fdb5`** — sha256 of the entry, §713's method — dur 4,
+  81 keys, loop, over all 23 baked clips. This section changes bindings; it never touches the
+  asset.
+- **`?idle=pose` still works, and now reverts MORE.** §715's token restored the static in the
+  two standing slots because those were the only slots it had moved. §717 moves two more, so the
+  token drops those alias rows too: the state it reproduces is the idle family exactly as
+  §479.20 shipped it — the static in both standing slots, the PROCEDURAL clip in `idle_bored`
+  and `balance_idle`. A partial revert is not a revert. Re-verified LIVE in the capture below
+  (§717.9), which asserts `CLIP_ORIGIN` per arm per slot before any shutter fires and reproduces
+  §479.20's own hand figures on the §479.20 cameras.
+- **§716's cane combo — untouched.** Slots 1/2 `Canehit`, slot 3 `Cane Hit 2`, windows
+  0.28/0.28/0.505, `?combo=mono` revert. Zero lines of the combo block appear in this section's
+  diff (checked by grepping the diff for every one of those literals, not by memory).
+- **§708 grips — re-measured (`tools/gripgap.mjs`) and REPORTED, not fixed**, per the owner's
+  standing instruction. Every figure of §713.4/§715.8 reproduced exactly: raw 27/25.1/23.8 on
+  both poles; 10/43/16.2, 9.8/43/16.4, 9.9/42.8/16.3 on the three ledges; 131.1/134.8/231.2 and
+  100.5/32/77.7 on the hooks; 12.1/26/17.1 and 26.9/26.8/35.2 on the rails; the proc arm
+  identical too. None of this section's bindings touches a gripping verb, and the numbers agree.
+  Stated so it is not over-read: gripgap enters the rail sites through `rail_slide`/`rail_walk`,
+  so it does not exercise `balance_idle` — the cane on that verb is checked on the frames and by
+  the donor-fill assertion in the test, not by this table.
+- **The budget — delta 0.** No mesh, bone or triangle changed; two clips joined a generated
+  pose-data module. `tools/budgetattrib.mjs`: **worst main-view 86 draws (34% of 250), 0.652 M
+  tris (54% of 1.2 M), exit 0** — §715.8's figures to the digit. (`Engine.stats.drawCalls` stays
+  unusable here — five distinct frozen plausible values so far.)
+- **prodboot** (`node tools/prodboot.mjs`, due because `sly-godot-lib.glb` regenerated): boot
+  completed past module 30 **TRUE**, zero 4xx/5xx **TRUE**, 21 kaykit aborts in the known
+  not-gated class. **PASS.**
+- **The seven clips already in the library bake are byte-identical after regeneration.** The GLB
+  itself is not (its header length and chunk boundaries move — the JSON chunk grew), and that
+  distinction is drawn here rather than glossed: what was compared is the emitted module, entry
+  by entry, against the committed one. Seven of seven identical; two added.
+- **No dead payload.** Only the two bound clips are baked. The refused candidates —
+  `Idle Fight 2`, `Walk Sneak Slow`, `Walk Posture UP/DOWN`, `Idle Stand 1`, `Idle POSE` — are
+  reproducible in one command through the bench (`--asset` + `--keep`) and the shipped test
+  asserts they are NOT in `GODOT_LIB_CLIPS`, so a future lane cannot un-refuse one by accident.
+
+### §717.9 The frames — both slots, both arms, two phases each, camDot-verified
+
+`tools/idlevsref.mjs MODE=idle717` (a new mode beside §715's, same tool, same lens, same spot, so
+the two sections' frames are comparable), from the clean tree at the pushed `0a3373a` under the
+capture lock. **16 frames, errs 0.** Two arms × two slots × two phases × two cameras.
+
+**camDot PRE-FLIGHT, run before the browser was ever launched** (§466.5 — a tool here labelled
+rear shots "front" for its entire life, and §715's own frames caught authored facing offsets up
+to 64°). Subject at (−4, 0, 26), yaw pinned to 0, which is the placement §715 re-preflighted
+after the first take photographed the pose behind a stack of pots. Both placements re-checked
+for this section:
+
+```
+node tools/camdot.mjs -2.6234 1.15 27.966  -4 0.95 26     (front34, az 35)
+  enclosed 0/26   nearest 1.117 m   forward 5.242 m (arch:court:sandstone_block)   subject at 2.408 m
+  VERDICT: ok
+node tools/camdot.mjs -1.6 1.15 26        -4 0.95 26     (profile, az 90)
+  enclosed 0/26   nearest 1.124 m   forward 4.044 m (arch:court:sandstone_block)   subject at 2.408 m
+  VERDICT: ok
+```
+
+In-frame the runner's own guard held on every shutter: cam·facing **0.82** on all eight `front34`
+frames (a "front" name that measures below 0.3 throws) and **0.00** on all eight `profile`.
+`CLIP_ORIGIN` was asserted per arm per slot BEFORE any shutter — `godot:Idle Fight 1` /
+`godot:Idle Teeter` in the repo arm, `proc` / `proc` in the pose arm — so a frame cannot be
+labelled with a regime it is not showing.
+
+Live hand geometry at each shutter (the tool's `__handProbe`, in the pose's own shoulder-line
+frame — the same probe §479.17 and §715 quote):
+
+```
+                       phase a                          phase b
+repo   idle_bored      sep 63.8  outL 11.8  outR 20.0    sep 68.5  outL 14.7  outR 20.9
+repo   balance_idle    sep 127.1 outL 49.7  outR 44.8    sep 90.8  outL 30.4  outR 28.4
+pose   idle_bored      sep 53.9  outL 19.1  outR  1.9    sep 54.9  outL 19.4  outR  1.8
+pose   balance_idle    sep 128.3 outL 50.5  outR 43.4    sep 125.7 outL 44.3  outR 48.2
+```
+
+**What the frames show, read rather than assumed** (`shots/idle717/`):
+
+- `repo` **`idle_bored`** — a forward-leaning ready stance, knees bent, head low and forward, both
+  feet planted on the paving in both phases. The cane is in the right fist with the crook clear
+  of the body (§10, checked on the picture, not on the alias row). It reads unmistakably as
+  **on guard**, not as bored, which is the cost §717.4 states in words; the frames are the
+  evidence for that sentence rather than a decoration on it.
+- `repo` **`balance_idle`** — the tightrope silhouette: standing tall, torso upright, both arms
+  straight out, and **the cane held out horizontally as the balance pole**, crook and shaft
+  clear. That pole is the donor fill doing its job on a source with no cane channel at all, and
+  the two phases show it swinging: 127.1 cm of hand separation at phase a, 90.8 at phase b — the
+  34 cm windmill, on camera. The feet are together and planted.
+- `pose` **both slots** — the procedural clips, i.e. exactly what `?idle=pose` restores. The
+  bored fidget stands upright with the cane held low across the body; balance holds its arms out
+  and does not move (128.3 → 125.7, a 2.6 cm change across a third of its cycle, against the
+  ported clip's 36.3).
+
+**One finding the frames handed over that no offline table had asked for.** In the `pose` arm the
+procedural `idle_bored` carries its cane hand **1.9 and 1.8 cm** outboard of its own shoulder.
+That is *below* the `> 2 cm` bar §479.20's shipped test applies to the two standing slots — the
+bar whose failure it names *"the §479.16 defect, tucked behind the torso."* Four rounds of §479
+litigation were about exactly that hand, and they never reached this slot, because `idle_bored`
+was "deliberately NOT aliased" and so was never measured against the predicate the other two
+idles must pass. The ported clip carries the same hand at **20.0 / 20.9 cm**. Nobody set out to
+fix that; the ruling did it on the way past, and it is recorded here so the credit lands on the
+ruling and not on this lane's judgement.
+
+### §717.10 `?idle=pose`, re-verified LIVE — the protection, not a claim about it
+
+The token is the owner's one-token escape from this ruling, so it is re-run rather than reasoned
+about. `tools/idlevsref.mjs MODE=idle715` — §715's own capture mode, unmodified — at this
+section's tree, `shots/idle717-poseverify/`:
+
+```
+[vsref] lock · sha 0a3373a
+  -> idle715-pose-confident-front34.png  sep 70.8 cm  outL 20.3  outR 17.7  (cam·facing 0.82)
+  -> idle715-pose-confident-profile.png  sep 70.8 cm  outL 20.3  outR 17.7  (cam·facing 0)
+  -> idle715-pose-look-front34.png       sep 70.6 cm  outL 20.3  outR 17.6  (cam·facing 0.82)
+  -> idle715-pose-look-profile.png       sep 70.6 cm  outL 20.3  outR 17.6  (cam·facing 0)
+[vsref] done · 8 frames · errs 0
+```
+
+**§715 recorded 70.9 / 70.6. This reads 70.8 / 70.6.** The second is exact; the first is 1 mm
+off and the difference is NOT rounded away here, because a figure quoted to the decimal in two
+sections should be quoted the same way in the third. The clip is static, so the millimetre is
+settle: `play(fade: 0)` is followed by 40 simulated frames and the donor-filled channels the
+source does not carry — tail, cape, ears — are still coming to rest under them. Both slots clear
+every bar §479.20's shipped test applies: hands 70.8 / 70.6 cm apart against its 60 cm floor,
+and both hands outboard of their own shoulders (**+20.3 / +17.7** and **+20.3 / +17.6**) against
+its `> 2 cm` per-arm bar — the bar whose failure it names *"the §479.16 defect."*
+
+The escape hatch works, it reaches further than it did before (all four idle slots, not two —
+§717.8), and it still shows the frame the owner endorsed. If the narrower reading of this
+ruling was the intended one, `?idle=pose` is where the owner sees it and `IDLE_DEFAULT` in
+`Animation.js` is the one token that makes it the default.
+
+### §717.11 What this section did NOT do, stated so nobody reads more into it than is here
+
+- It did not touch any asset. `GodotClips.js` is byte-untouched and `Standupright` still hashes
+  `a8ba715b4875fdb5`; the library GLB regenerated to add two clips and the seven already in it
+  re-emit byte-identically. The ruling changes which verb plays which already-authored clip and
+  nothing else.
+- It did not retune the tree, add a verb, or change a state. `Moveset.js` is untouched; the
+  idle rotation's 6 s / 13 s thresholds and its 0.3 s crossfade are §479.10's, unmoved.
+- It did not touch §716's cane combo, `src/ai/*`, or §697's `groundProbe`/`groundSlopeMax`.
+- It did not fix a grip. `tools/gripgap.mjs` ran and every figure is reported above; the owner's
+  standing instruction on that file is measure, never fix, and it was followed.
+- **It did not settle whether a fight guard should be the third rung of an idle rotation.** That
+  is a look, the frames are in `shots/idle717-*`, and it is one alias row either way. The
+  numbers say the binding is grounded, animated, loops cleanly and improves the rotation's
+  geometry; they cannot say it reads right, and this section does not pretend otherwise.
+
 
 ---
 

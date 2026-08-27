@@ -307,9 +307,20 @@ const GODOT_ALIAS = {
      idle nobody had bound, and the ruling makes it this slot's:
 
        `Idle Fight 1` — 4.67 s, grounded (lowest contact −4.7 cm against the bind foot, inside
-       the shipped band: `Idle Crouch 2` ships at +6.2), 18.3 cm of lateral hip weight shift
-       (2.9× `Idle Anim 1`'s 6.4 — the largest in the corpus), 1.6/1.4 cm of toe lift (an idle,
-       not a gait: our own `sneak_walk` reads 14.9), loop seam 0.1° worst-bone at `neck`.
+       the shipped band: `Idle Crouch 2` ships at +6.2), **18.3 cm of lateral hip weight shift in
+       the frame the player sees** — the largest side-to-side travel of any idle in the table —
+       1.6/1.4 cm of toe lift (an idle, not a gait: our own `sneak_walk` reads 14.9), loop seam
+       0.1° worst-bone at `neck`.
+       ONE COMPARISON THIS ROW DELIBERATELY DOES NOT MAKE, because a control run falsified it
+       mid-section: 18.3 is NOT "2.9× `Idle Anim 1`'s 6.4". Those two numbers are on different
+       axes. `Idle Anim 1`'s take was authored 54.2° off the controller's facing and §715's
+       `centerYaw` re-base rotates its root track into our frame, which turns most of its shift
+       from side-to-side into fore-aft: re-extracted with `centerYaw` OFF it reads sway 16.1 /
+       surge 6.1 — §715's published 16.2 cm, reproduced — and with it ON, 6.4 / 15.3. Same
+       motion, relabelled axis. `Idle Fight 1` carries only −5.4° of offset, so its 18.2 (raw)
+       and 18.3 (re-based) barely differ. In the clips' OWN frames the two are a near tie; in
+       OURS this one is the lateral shifter. Both statements are true and only the second one
+       is about what ships.
 
      WHAT IT COSTS, stated because it is a character change and not only a source change: this
      is their FIGHT guard, not a fidget. After 6 seconds of standing still Sly now settles into
