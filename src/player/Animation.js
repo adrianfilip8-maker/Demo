@@ -302,8 +302,10 @@ const GODOT_ALIAS = {
      one row). §715 left this slot procedural because "the libraries hold no bored-family idle";
      the census re-run under the ruling confirms that and goes further — the corpus holds no
      bored idle ANYWHERE, and `Idle Crouch 1` turned out to be `Idle Look` re-saved under a
-     second name (identical on all nineteen measured columns), so the shelf is one clip smaller
-     than §715.2's row count suggests. What it does hold is ONE more genuinely animated standing
+     second name — one source track apart (a Mixamo head-tip leaf this pipeline drops anyway)
+     and BIT-IDENTICAL after retarget, worst per-channel difference 0.000000 over all 185
+     emitted keys — so the shelf is one clip smaller than §715.2's row count suggests, and it
+     was §715's most promising unbound idle on paper. What it does hold is ONE more genuinely animated standing
      idle nobody had bound, and the ruling makes it this slot's:
 
        `Idle Fight 1` — 4.67 s, grounded (lowest contact −4.7 cm against the bind foot, inside
