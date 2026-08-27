@@ -40,7 +40,10 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const OUT = process.env.OUT || `${ROOT}/shots/cane1`;
 const W = Number(process.env.W || 1600), H = Number(process.env.H || 900);
 const AB = process.env.AB || '';
-const ARM = AB || 'godot';
+/* §716 — COMBO=mono captures the revert arm (`?combo=mono`): the §716 A/B pair is duo-vs-mono
+   on the godot regime, differing by that one token alone. Frame names carry the arm. */
+const COMBO = process.env.COMBO || '';
+const ARM = AB || (COMBO ? `godot-${COMBO}` : 'godot');
 
 /* Q is the render-quality token, `high` by default like every other capture tool here. It is
    env-tunable for one reason: on a saturated box the boot is dominated by compiling the
@@ -113,7 +116,7 @@ page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
 
 const log = [];
 try {
-  await page.goto(`http://127.0.0.1:${port}/?shot=1&q=${Q}${AB ? `&anim=${AB}` : ''}`,
+  await page.goto(`http://127.0.0.1:${port}/?shot=1&q=${Q}${AB ? `&anim=${AB}` : ''}${COMBO ? `&combo=${COMBO}` : ''}`,
     { waitUntil: 'domcontentloaded', timeout: 120000 });
   await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null, { timeout: 600000, polling: 500 });
   const regime = await page.evaluate(async () => (await import('/src/player/Animation.js')).CLIP_REGIME);
