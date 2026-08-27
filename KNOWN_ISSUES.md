@@ -59331,3 +59331,15 @@ written — all 306 vertices exactly white. That is the point of authoring it on
 revert path is a multiply by one, not a missing attribute, so it cannot become the black cane the
 PREREG-guardfix defect produced.
 
+---
+
+## §720 — "Integrate the animation for the rope and pipe climbing from the godot repo over the current one. Reduce the magnetic distance of the move to hook onto the hanging rings by 50%"
+
+*(Section claimed at this heading before its content was written — §700.9. Body follows in the
+next commits. TWO independent arms, measured separately and then together, because both touch
+ring/pole traversal and both are read by the same traversal instruments: if they land as one
+change a failing leg cannot be attributed. Arm A: the pole/rope climbing clips. Arm B: the
+acquisition volume on the hook-ring magnet. §605's ring geometry, hook anchors and affordance
+points do not move under either arm — this is tuning, not level editing. §697's ground tuning,
+§716's combo, §717's idles and §719's gold hook are untouched and their revert tokens keep
+working.)*
