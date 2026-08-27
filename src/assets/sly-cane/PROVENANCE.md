@@ -48,6 +48,15 @@ laundered.
   bytes still ship inside the .glb (a glb is one file); only the draw skips it.
 - **`Cane.baseColor` (image 3, the 64 KB jpg) ships** as the albedo `map` on the house cel
   material `slydlrig:cane` (colour 0xffffff, TUNE bands/rim/outline — the body-texture pattern).
+  **What it paints, measured per triangle (§719, `node tools/canehook.mjs`):** the file has two
+  albedo regions and only two. All 154 crook triangles, all 60 collar triangles and all 28 butt
+  ferrule triangles sample one FLAT `#ffe29c` — a pale cream, clipped in red; the 16 shaft
+  triangles sample a dark brown around `#3f291e`. There is no gradient and no detail in the cream:
+  every percentile of it from p05 to p95 is the same value. **§719 tints the CROOK only**, by a
+  per-vertex `COLOR_0` multiplier that carries `#ffe29c` onto the house gold `0xe8b942` exactly,
+  which leaves the collar and the ferrule at the asset's paler cream — faithful to "the hook
+  specifically", and recorded here because it is the first thing a reader will ask about.
+  Revert with `?hook=cream`; the asset's own bytes are not touched either way.
 - **The metalRough and normal images stay unwired**, and not as an oversight: the cel shader
   replaces three's light loop (§221) so the maps have no input to bind to, and their VALUES
   (metal 0.80 / rough 0.25) were captured against pre-registered bars and **FAILED** — the cane's
