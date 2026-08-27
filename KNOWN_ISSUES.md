@@ -59890,3 +59890,34 @@ rather than only in this section.
 A fourth run, at the commit that carries this section, is recorded in the commit after it — the
 §712/§713/§715 precedent: a suite table committed at one sha and quoted at another is a claim about
 a tree nobody ran.
+
+**Runs 4 and 5, at `c952f3b` — the commit that carries this section**, same worktree re-pointed at
+that sha, same lock, same runner: run 4 **1099 / 1099, 0 fail**, 264.0 s; run 5 **1099 / 1099,
+0 fail**, 262.0 s. Zero `not ok` over each complete stream, pwd `/home/user/wt-720b` read from
+inside the command, cwd present. **Five runs, five quoted, five green.** Recorded because
+"behaviour-neutral, so I did not re-test it" is the sentence §717 named and it is not going to
+appear here either.
+
+### §720.14 `?mag=wide`, exercised through the URL and not only against a flag
+
+`tests/magvolume.test.mjs` drives the token through `globalThis.__MAG_AB`, because that is the half
+an offline guard can reach. The half it cannot reach is `location.search` — and this project has
+shipped a token that never fired (§718.14 records the reference project's own dead camera tag), so
+§719.12's standard applies to this one too. `EgyptLevel.js` reads its token at MODULE LOAD and the
+module is loaded by ARCHITECTURE during boot, so the only way to know the query string arrives is to
+boot the page with it. `tools/magtoken.mjs`, at `c952f3b`, under the capture lock:
+
+```
+  DEFAULT     search "?shot=1&q=low"           rings 11  live main 1.65 / low 1.535 / spire 3.3
+                                               swingVolume() 1.65 , 1.535   MAG [1.65, 1.535, 3.3, 1.4387]
+  ?mag=wide   search "?shot=1&q=low&mag=wide"  rings 11  live main 3.3  / low 3.07  / spire 3.3
+                                               swingVolume() 3.3  , 3.07    MAG [1.65, 1.535, 3.3, 1.4387]
+```
+
+Three things that arm deliberately reads, each because the obvious alternative would have lied:
+the LIVE registry rather than the constant (`MAG.volumeSwing` stays 1.65 under the token by design —
+only `swingVolume()` moves — so a probe printing the constant would report the halved value in both
+arms and look like a token that does nothing); the SPIRE volume (3.3 in both, so the scope holds
+through the real boot and not only in a unit); and the ring COUNT (11 in both, so the token cannot
+be "working" by dropping targets). `?pole=climb`'s own URL exercise is §720.10's `revert-idle`
+frame, taken in the same browser.
