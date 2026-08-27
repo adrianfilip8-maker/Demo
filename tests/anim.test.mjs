@@ -1747,6 +1747,153 @@ test('idle slots (§479.20 → §715): the repo idle plays by the conditional ru
     + 'that is the point, the per-arm bars cannot tell the two poses apart and only the spread can');
 });
 
+test('idle family (§717): the ported clip takes every idle slot that has one, the two that do not are refused on measured defects, and one token reverts all four', async () => {
+  /* THE RULING: *"Use the ported idle pose always over the generated one"* — read as a standing
+     PRECEDENCE rule over the whole idle family rather than as a one-off binding, with the
+     narrower "revert §715's animated idle to the static" reading stated and rejected in §717.1.
+     §715 had bound four idle-family verbs and left four procedural on case-by-case reasoning;
+     this re-opens all four and inverts the default, so the arms below are what "always" means
+     when it meets a corpus that does not contain every pose our moveset performs.
+
+     TWO NEW BINDINGS, both refused by §715 on FIT rather than on a defect:
+       `idle_bored`   ← `Idle Fight 1`  (their fight guard — the corpus has NO bored idle, and
+                                         the census re-run under the ruling also found that
+                                         `Idle Crouch 1` IS `Idle Look` re-saved, so the shelf
+                                         held exactly one unbound animated standing idle)
+       `balance_idle` ← `Idle Teeter`   (the rail/beam stand — a teeter is what the verb does)
+     TWO REFUSALS, both on defects rather than on taste, and both re-asserted here so a future
+     lane re-derives them instead of quietly flipping them:
+       `sneak_idle`   — the corpus's only stealth clip is a stepping GAIT
+       `perch_idle`   — nothing in the corpus braces a hand on anything
+
+     DOMAIN (§418.3) — passes on: the shipped default (the two origins, both clips animating,
+     both grounded inside the band `Idle Crouch 2` already ships at) and the pose arm (all four
+     verbs back to §479.20's state). Fails on, IN ARM below: `RailrunStand` — §715's own
+     floating-feet refusal, measured here on the shipped rig rather than in the importer's clip
+     space, at +43 cm where the bound clips sit inside ±10; and `Idle Teeter` scored for
+     `idle_bored`, which fails the rotation's hips-step bar at ±24 cm where the bound clip sits
+     at ±5. Cannot discriminate: whether a fight guard READS as the third rung of an idle
+     rotation — that is the owner's call, made on the frames (shots/idle717-*), not here. */
+  const { SlyModel } = await import('../src/player/SlyModel.js');
+  const engine = {
+    quality: 'high', scene: new THREE.Scene(), debug: {}, stats: {}, warnings: [],
+    warn: () => {}, get: () => null, has: () => false, on: () => () => {}, emit: () => {},
+  };
+  const sly = new SlyModel(engine);
+  await sly.init();
+  const pb = new PoseBuffer(sly.boneNames);
+  const at = (n) => new THREE.Vector3().setFromMatrixPosition(sly.bones[n].matrixWorld);
+  const FEET = ['footL', 'footR', 'toeL', 'toeR'];
+
+  /* the ground reference is the rig's OWN bind contact, read through the same code path — an
+     instrument that never posed the rig would report every clip at exactly this value (§442). */
+  for (const n of sly.boneNames) { const b = sly.bones[n]; if (b) { b.quaternion.identity(); b.scale.set(1, 1, 1); } }
+  { const base = sly.bp('hips'); sly.bones.hips.position.set(base.x, base.y, base.z); }
+  sly.root.updateMatrixWorld(true);
+  const BIND_FOOT = Math.min(...FEET.map((f) => at(f).y));
+
+  /** cycle statistics: hips height, lowest contact vs bind, lateral sway, hand-separation swing */
+  const cyc = (clip, N = 32) => {
+    let hips = 0, foot = 1e9, xmin = 1e9, xmax = -1e9, smin = 1e9, smax = -1e9;
+    for (let i = 0; i < N; i++) {
+      pb.clear();
+      sampleInto(clip, (i / N) * clip.dur, pb, 1);
+      for (const n of sly.boneNames) {
+        const b = sly.bones[n]; if (!b) continue;
+        if (pb.w[n] > 0) b.quaternion.copy(pb.q[n]); else b.quaternion.identity();
+        if (pb.sw[n] > 0) b.scale.copy(pb.s[n]); else b.scale.set(1, 1, 1);
+      }
+      const base = sly.bp('hips');
+      sly.bones.hips.position.set(base.x + pb.pos.x, base.y + pb.pos.y, base.z + pb.pos.z);
+      sly.root.updateMatrixWorld(true);
+      hips += at('hips').y / N;
+      foot = Math.min(foot, ...FEET.map((f) => at(f).y));
+      const h = at('hips');
+      xmin = Math.min(xmin, h.x); xmax = Math.max(xmax, h.x);
+      const lat = at('upperArmL').sub(at('upperArmR')); lat.y = 0; lat.normalize();
+      const sep = at('handL').sub(at('handR')).dot(lat) * 100;
+      smin = Math.min(smin, sep); smax = Math.max(smax, sep);
+    }
+    return { hips, contactCm: (foot - BIND_FOOT) * 100, swayCm: (xmax - xmin) * 100, sepSwingCm: smax - smin };
+  };
+  /** a source clip scored as if it had been bound — the fail arms below are built this way */
+  const asBound = (raw) => cyc(compile('candidate', raw));
+
+  const GROUND_CM = 10;    // |contact| bar: `Idle Crouch 2` SHIPS at +6.2, `RailrunStand` reads +43
+  const STEP_CM = 8;       // hips step across an idle-rotation fade; the shipped mixed rotation was 15.3/16.6
+  const MOVE_CM = 5;       // an idle ANIMATES: the ruling's own criterion, §715's bar, reused
+
+  const repo = buildClipSet('godot');
+  const bad = [];
+
+  /* ---- ARM A: the two new bindings ---- */
+  for (const [verb, want] of [['idle_bored', 'godot:Idle Fight 1'], ['balance_idle', 'godot:Idle Teeter']]) {
+    if (repo.origin[verb] !== want) bad.push(`${verb}: origin ${repo.origin[verb]} — §717 binds ${want} under the precedence ruling`);
+    const m = cyc(repo.table[verb]);
+    if (Math.abs(m.contactCm) > GROUND_CM) {
+      bad.push(`${verb}: lowest contact ${m.contactCm.toFixed(1)} cm off the bind foot — "use the ported one" does not ask for a floating character`);
+    }
+    /* ANIMATED, by whichever channel the clip actually uses: the guard shifts its weight, the
+       teeter windmills its arms with the hips locked. One bar per clip, each named. */
+    const moves = verb === 'idle_bored' ? m.swayCm : m.sepSwingCm;
+    if (moves < MOVE_CM) bad.push(`${verb}: ${moves.toFixed(1)} cm of motion over the cycle — a held pose, not the animated idle the ruling asked for`);
+  }
+  /* §715 singled out the balance verb's cane-out pole as the one prop doing its job. The source
+     carries NO cane channel at all, so this survives only through spliceClip's donor fill —
+     which is a claim about the seam, not about the clip, and is asserted rather than assumed. */
+  if (!repo.table.balance_idle.cane) bad.push('balance_idle lost its cane track — the donor fill is what carries the balance pole, and it is gone');
+
+  /* THE ROTATION, which is the reason this slot was worth changing at all: Moveset.js:142
+     crossfades confident → bored → look, and §715's MIXED rotation stepped the hips 15.3 cm up
+     at 6 s and 16.6 cm down at 13 s because a procedural clip sat between two ported ones. */
+  const hipsOf = (v) => cyc(repo.table[v]).hips;
+  const step1 = Math.abs(hipsOf('idle_bored') - hipsOf('idle_confident')) * 100;
+  const step2 = Math.abs(hipsOf('idle_look') - hipsOf('idle_bored')) * 100;
+  if (step1 > STEP_CM || step2 > STEP_CM) {
+    bad.push(`idle rotation hips steps ${step1.toFixed(1)} / ${step2.toFixed(1)} cm — the rotation pops`);
+  }
+  assert.deepEqual(bad, [], 'the §717 idle bindings are not what the precedence ruling put in force');
+
+  /* ---- ARM B: the inputs seen to FAIL, on the same instrument (§418.3) ---- */
+  const floating = asBound(GODOT_CLIPS.RailrunStand);
+  assert.ok(floating.contactCm > 30,
+    `contrast arm: §715 refused RailrunStand for feet that float and it reads ${floating.contactCm.toFixed(1)} cm here — `
+    + 'if it ever measures grounded, this ground bar has stopped discriminating and the refusal needs re-deriving');
+  const teeterAsBored = Math.abs(asBound(GODOT_LIB_CLIPS['Idle Teeter']).hips - hipsOf('idle_confident')) * 100;
+  assert.ok(teeterAsBored > 20,
+    `contrast arm: Idle Teeter scored for the idle_bored slot steps the hips ${teeterAsBored.toFixed(1)} cm — `
+    + 'it is expected to FAIL the rotation bar the bound clip passes, which is why the slot went to Idle Fight 1');
+
+  /* ---- ARM C: `?idle=pose` reverts ALL FOUR, not just the two standing slots ---- */
+  const pose = buildClipSet('godot', { idle: 'pose' });
+  const badP = [];
+  for (const v of ['idle_bored', 'balance_idle']) {
+    if (pose.origin[v] !== 'proc') badP.push(`${v}: origin ${pose.origin[v]} — the pose arm restores the idle family as §479.20 shipped it, and these two were procedural then`);
+    /* NOT asserted by identity, and the first draft of this test was wrong to try: §531's lever
+       reaches every proc-sourced clip inside the godot REGIME, so the pose arm returns the
+       procedural clip OPENED, which is exactly what it returned before §717 too. What must hold
+       is that the SOURCE is procedural again; `?anim=proc` is where identity is the predicate,
+       and the §531 test above already asserts it there. */
+    if (pose.table[v].source) badP.push(`${v}: the pose arm still carries source ${pose.table[v].source} — the alias row was not dropped`);
+  }
+  for (const v of ['idle_confident', 'idle_look']) {
+    if (!String(pose.origin[v] || '').startsWith('godot:Standupright')) badP.push(`${v}: origin ${pose.origin[v]} — §479.20's static must still fill both standing slots in the pose arm`);
+  }
+  assert.deepEqual(badP, [], '`?idle=pose` no longer reverts the whole idle family — it is the owner\'s escape hatch from this ruling and must reach every slot the ruling moved');
+
+  /* ---- ARM D: the two refusals, re-asserted so a flip is a re-derivation and not a silence ---- */
+  for (const v of ['sneak_idle', 'perch_idle']) {
+    assert.equal(CLIP_ORIGIN[v], 'proc',
+      `${v} took a ported clip — §717 refused it on a measured defect (a stepping gait for the sneak, no braced pose anywhere for the perch). `
+      + 'Binding it is the owner\'s to rule; re-derive this guard rather than deleting it.');
+  }
+  /* and the source that refusal rests on must stay OUT of the bake, or the refusal is one alias
+     row away from being undone by accident rather than by a ruling */
+  for (const n of ['Walk Sneak Slow', 'Walk Sneaky', 'Idle Fight 2']) {
+    assert.ok(!GODOT_LIB_CLIPS[n], `${n} is baked but bound to nothing — §717 deliberately bakes only what it binds, so the runtime carries no dead payload`);
+  }
+});
+
 test('play direction (§479.18): pole_climb runs BACKWARDS, the way their tree plays it', () => {
   /* THE DEFECT THIS HOLDS, and it is the §479.8 class one layer deeper. `pole_climb` was
      name-correct and content-wrong: their `pole_state` input 1 ("pole_walk") reaches

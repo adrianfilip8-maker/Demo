@@ -96,7 +96,17 @@ import { RIG3 } from '../src/player/SlyModel3.js';
 import { toGLB } from './godot2rig.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const ASSET = path.join(ROOT, 'public/assets/sly-godot/sly-godot-lib.glb');
+const SHIPPED_ASSET = path.join(ROOT, 'public/assets/sly-godot/sly-godot-lib.glb');
+/* §717 — the CANDIDATE BENCH. A binding decision needs a clip driven through the real importer
+ * BEFORE it is bound, and §715's tool could only measure clips it had already committed to
+ * (KEEP_LIB_CLIPS is baked into the shipped GLB). `--asset <path>` redirects both stages to a
+ * scratch GLB and `--keep <json>` replaces the keep list for that run, so a candidate is
+ * measured on the SAME extract + retarget + stride math the shipped clips get — never on a
+ * second, agreeing instrument (§439/§440). The shipped asset path is the default and is what
+ * every unflagged invocation still reads and writes. */
+let ASSET = SHIPPED_ASSET;
+let KEEP_OVERRIDE = null;
+const keepList = () => KEEP_OVERRIDE || KEEP_LIB_CLIPS;
 const LIB_DIR = 'Assets/Animations';
 const REST_LIB = 'Library Sly MASTER 005.res';   // canonical latest (001 older gen; 002–005 differ only in Idle Teeter)
 
@@ -136,6 +146,31 @@ export const KEEP_LIB_CLIPS = [
    * constant mean; the swing's own yaw sweep survives, centered. Not loops: one-shot attacks. */
   { lib: 'Library Sly MASTER 005.res', clip: 'Cane Hit', centerYaw: true },
   { lib: 'Library Sly MASTER 005.res', clip: 'Cane Hit 2', centerYaw: true },
+  /* §717 — the owner's precedence ruling ("use the ported idle pose always over the generated
+   * one") re-opened every idle verb §715 left procedural, and these are the two clips that
+   * survived it. Appended rather than inserted, and the claim that buys is checked rather than
+   * assumed: the GLB's own header length and chunk boundaries move (the JSON chunk grew), but
+   * every one of the seven clips above re-emits BYTE-IDENTICAL into GodotLibClips.js, compared
+   * entry by entry against the committed module before this line was written.
+   *   · `Idle Fight 1` → `idle_bored`. The census settled that no bored-family idle exists
+   *     ANYWHERE in the corpus (§717.2), so the slot's real choice was between the corpus's
+   *     one remaining ANIMATED standing idle and reusing a clip already bound. This one is
+   *     grounded (contact −4.7 cm against the bind foot, inside the shipped band), carries the
+   *     largest lateral weight shift of any idle in the corpus (18.3 cm — 2.9× `Idle Anim 1`),
+   *     and seams at 0.1° worst-bone: a loop saved without the flag, exactly `Idle Anim 1`'s
+   *     case, hence `loop: true` on the measurement rather than on the header.
+   *   · `Idle Teeter` → `balance_idle`. §715 refused it on FIT ("an alarm") for the calm
+   *     default stand; the ruling inverts that default, and the verb it actually lands on is
+   *     the rail/beam stand, where a teeter is the motion. loop_mode 1 in the source and 0.0°
+   *     seam measured. It is the ONE clip the reference iterated across libraries — MASTER
+   *     001–005 carry five DISTINCT track-data hashes of it (72ec4290…/1430cc31…/26cfd0c7…/
+   *     58486194…/1c7416c1…) where every other MASTER clip is a straight re-save; 005 is read
+   *     per the census rule (canonical latest), and the four earlier saves are what the
+   *     `--keep`/`--asset` bench re-measures in one command.
+   * Both are mocap-style takes with a small authored facing offset (−5.4° and −2.9° — two
+   * orders below the ±54–64° the §715 idles carried, but the same class), so both centre. */
+  { lib: 'Library Sly MASTER 005.res', clip: 'Idle Fight 1', loop: true, centerYaw: true },
+  { lib: 'Library Sly MASTER 005.res', clip: 'Idle Teeter', loop: true, centerYaw: true },
 ];
 /* WHICH crouch walk, measured (§715.3): `Walk Crouch 2` and `4` tie on depth (hips −0.274 vs
  * −0.283) and speed (1.45 vs 1.47 m/s); the discriminator is contact geometry. 2 is an authored
@@ -256,7 +291,7 @@ function parseRSRC(buf, label) {
 }
 
 /** All Animation resources of a library file, keyed by resource_name. */
-function readLibrary(srcDir, relName) {
+export function readLibrary(srcDir, relName) {
   const file = path.join(srcDir, LIB_DIR, relName);
   if (!existsSync(file)) throw new Error(`godotlib2clips: missing ${file} — --src must be the reference checkout root`);
   const { resources } = parseRSRC(rsccDecompress(readFileSync(file), relName), relName);
@@ -266,7 +301,7 @@ function readLibrary(srcDir, relName) {
 }
 
 /** Decode one Animation's tracks: [time, transition, x,y,z(,w)] interleaved floats per key. */
-function decodeTracks(anim, label) {
+export function decodeTracks(anim, label) {
   const tracks = [];
   for (let i = 0; ; i++) {
     const type = anim.props.get(`tracks/${i}/type`);
@@ -381,7 +416,7 @@ function doExtract(srcDir) {
   const animations = [];
   const dropped = { fingers: 0, leaves: 0, positions: 0, kept: 0 };
   const libCache = new Map();
-  for (const keep of KEEP_LIB_CLIPS) {
+  for (const keep of keepList()) {
     const anims = keep.lib === REST_LIB ? restAnims
       : (libCache.get(keep.lib) || libCache.set(keep.lib, readLibrary(srcDir, keep.lib)).get(keep.lib));
     const anim = anims.get(keep.clip);
@@ -736,6 +771,19 @@ async function doRetarget(writePath) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const argv = process.argv.slice(2);
+  const ai = argv.indexOf('--asset');
+  if (ai !== -1) {
+    if (!argv[ai + 1]) throw new Error('godotlib2clips --asset needs a path');
+    ASSET = path.resolve(argv[ai + 1]);
+    if (ASSET === SHIPPED_ASSET) throw new Error('godotlib2clips --asset must name a SCRATCH path, not the shipped asset');
+  }
+  const ki = argv.indexOf('--keep');
+  if (ki !== -1) {
+    if (!argv[ki + 1]) throw new Error('godotlib2clips --keep needs a json file of keep-shaped entries');
+    if (ai === -1) throw new Error('godotlib2clips --keep is a BENCH flag and requires --asset <scratch path>');
+    KEEP_OVERRIDE = JSON.parse(readFileSync(path.resolve(argv[ki + 1]), 'utf8'));
+    if (!Array.isArray(KEEP_OVERRIDE) || !KEEP_OVERRIDE.length) throw new Error('godotlib2clips --keep: not a non-empty array');
+  }
   if (argv.includes('--extract')) {
     const i = argv.indexOf('--src');
     if (i < 0 || !argv[i + 1]) throw new Error('godotlib2clips --extract needs --src <checkout-root>');
