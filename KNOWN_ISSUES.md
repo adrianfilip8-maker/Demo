@@ -58912,3 +58912,393 @@ section, and the reason it must not is restated in `SlyModelDLRig.js` where the 
 built. No geometry moves: `hookPoint`, `tipPoint`, `centerline` and `gripSpan` are the same
 numbers before and after, so §605's settled rings read exactly what they read yesterday.)*
 
+### §719.1 The answer, first, so a redirect is cheap (§705)
+
+The hook was never a lighting problem and never a metal problem. **The owner-supplied
+`sly-cane.glb` paints its crook a flat `#ffe29c`** — a pale cream, already clipped in red — and
+that is what has been read off frames as silver. The house gold `0xe8b942` is darker and far more
+saturated, and it survives the tonemap because it has chroma to spend.
+
+So the crook's albedo is carried the rest of the way to the house gold by a **per-vertex multiplier
+on `COLOR_0`**. `Cane.js` already does exactly this for the procedural grip, and its header already
+says why: *a value shift on one surface rather than a second draw call.*
+
+| | |
+|---|---|
+| what is tinted | the crook: **188 of 306 vertices, 154 of 258 triangles** — a connected component of the adopted mesh, not a threshold on a coordinate |
+| the tint | `(0.8070, 0.6379, 0.1639)` linear, which takes `#ffe29c` to `#e8b942` **exactly** |
+| the hook's own pixels | **saturation +27.2 % relative, luminance −23.9 L**, on `sly-closeup` at 1600×900 |
+| draw calls | **unchanged.** 270 calls / 2,328,401 triangles on `sly-closeup` at both commits, measured in steady state on both |
+| §266 | **untouched.** No `metal`, `gloss`, `spec`, `rough` or `detail` value moves, and the instrument asserts it every run |
+| revert | `?hook=cream` — and it is **bit-identical**, not approximate |
+| geometry | nothing moves. `hookPoint (0, 0.4956, 0.1445)`, `tipPoint y −0.796`, `centerline` and `gripSpan` are the same numbers, so §605's settled rings read what they read yesterday |
+
+### §719.2 What was actually wrong, and it was in the asset the whole time
+
+The standing account was that the cane "reads silver because the asset's authored albedo IS the
+colour". That is right about the mechanism and was never checked about the colour. It has now been
+measured, twice, by two routes that share nothing:
+
+- **offline**, rasterising every triangle's UVs into the decoded baseColour jpg;
+- **in-page** (`tools/canehook.mjs` section B), sampling the very `ImageBitmap` the shipped
+  material is holding, per triangle, at each triangle's UV centroid.
+
+Both give the same answer, and it is not "silver":
+
+| region | triangles | authored albedo |
+|---|---|---|
+| the crook | 154 | `#ffe29c`, **flat** — every percentile p05…p95 identical |
+| the collar | 60 | `#ffe29c` |
+| the butt ferrule | 28 | `#ffe29c` |
+| the shaft | 16 | dark brown, `#3f291e` and neighbours |
+
+`#ffe29c` is `(255, 226, 156)`: **already clipped in red**, only 39 % saturated, and bright enough
+that the key blows it toward white and it blooms. That is the "silver". The house gold `#e8b942`
+is `(232, 185, 66)` — 72 % saturated and darker — and the whole of §719 is the multiplier that
+carries one to the other:
+
+```
+linear(#ffe29c) = (1.0000, 0.7605, 0.3325)
+linear(#e8b942) = (0.8070, 0.4851, 0.0545)
+tint            = (0.8070, 0.6379, 0.1639)      <- the quotient, clamped at 1
+```
+
+`Cane.albedoTint(want, base)` is that division, done in LINEAR because that is the space three's
+`<color_fragment>` (`diffuseColor *= vColor`) multiplies in — dividing in sRGB would be a different
+and wrong number, the same class of error §3 records for the shadow mix. It is **clamped at 1** so
+this path can never make a surface brighter than its own albedo: brightness on this prop is §266's
+question and stays refused. `tests/dlrig.test.mjs` asserts the identity `#ffe29c × tint = #e8b942`
+rather than inferring it from a frame, which also makes it the guard on both constants — a
+re-exported cane, or a moved house gold, turns it red instead of silently painting the wrong colour.
+
+**The one consequence worth stating plainly:** the collar and the butt ferrule carry the same cream
+and are NOT tinted, so they now sit a shade paler than the crook. That is faithful to the
+instruction — *the hook specifically* — and it is a decision the owner can reverse in one line if he
+wants the whole gold family moved together. Recorded rather than quietly fixed.
+
+### §719.3 Finding the crook: a connected component, not a threshold on a coordinate
+
+`Cane._tagHook` splits the adopted mesh into connected components over the index buffer, welding
+vertices that share a position (the export duplicates them per face to keep its hard edges). **The
+asset is four islands, and they are exactly the four parts of a cane:**
+
+| component | verts | tris | y (conformed, metres) | z | max radius off the shaft axis |
+|---|---|---|---|---|---|
+| butt ferrule | 34 | 28 | −0.814 … −0.663 | ±0.013 | 0.013 |
+| shaft | 18 | 16 | −0.670 … 0.108 | ±0.019 | 0.019 |
+| collar | 66 | 60 | 0.052 … 0.112 | ±0.030 | 0.030 |
+| **the crook** | **188** | **154** | **0.106 … 0.701** | **−0.073 … 0.239** | **0.239** |
+
+The crook is selected as **the component owning the vertex farthest from the shaft axis**. That axis
+is the local Y axis by construction — `adoptAsset` has just put it there, and it *refuses the adopt
+outright* if the top of the prop is not laterally offset — so this selects on a quantity the conform
+has already proved exists rather than on a number somebody picked. There is no tuned threshold
+anywhere in the classifier.
+
+**It is checked rather than trusted, and that is §418.3.** The component must also own the prop's
+highest vertex, must not be the whole mesh, and must not be a sliver; on any of those it refuses,
+writes an all-white `COLOR_0`, and the cane renders exactly as it did before §719. Both of §418.3's
+inputs are arms, not comments:
+
+- **PASSES** — the shipped asset: 4 components, 188/306, owns y-max and r-max. `tests/dlrig.test.mjs`
+  pins all four numbers, and the browser's own boot line now carries the count:
+  `hook 188/306 verts gold (§719)`.
+- **FAILS** — the same geometry with a degenerate fan welding every island into one component: the
+  classifier refuses with *"one connected component — nothing separates the crook from the shaft"*
+  and leaves all 306 vertices exactly white. Asserted in the same test.
+
+**The corroboration that matters comes from a different attribute than the one the classifier
+reads** (§439/§440: an instrument sharing an assumption with its subject cannot falsify it). The
+classifier looks at POSITION and TOPOLOGY. The asset's own author separated the same surfaces in the
+UV LAYOUT: all 154 triangles of the topological crook land in the cream shell, and every brown-shell
+triangle is in the shaft component. The two partitions agree with no exceptions, and neither was
+derived from the other.
+
+### §719.4 The ramp is on HEIGHT, and a radial ramp would have striped the hook white
+
+The gold does not switch on at a seam; it ramps in over the stretch where the crook is still running
+up the shaft axis, and **the end of the ramp is derived too** — the first crook vertex standing more
+than twice as far off the axis as any part of the shaft ever does. On the shipped asset that is
+y 0.1057 → 0.1986, a 9.3 cm ramp with 18 vertices strictly inside it.
+
+**The obvious parameterisation is wrong, and the geometry says so.** A ramp on distance-from-axis
+looks natural — the gold arrives as the tube leaves the shaft — and it fails, because *this crook
+curls back over itself*: its far end returns to within 5 mm of the shaft axis. Measured, **18 of the
+crook's vertices sit closer to the axis than the shaft's own radius (0.030 m)**. A radial ramp leaves
+every one of them white, i.e. it paints a white stripe across the top of the hook. Height is monotone
+along this arc and does not. This was caught by measuring the classifier's output before any capture
+existed, which is the only reason it is a note here rather than a frame nobody could explain.
+
+### §719.5 The measurement — including a bar I registered that FAILED
+
+`node tools/canehook.mjs sly-closeup --w 1600 --h 900`, one boot at `fc8170c`, rendered at the
+shots' own resolution. Every arm is a live poke of the geometry's `color` attribute, so no
+recompile can reorder draws between arms, and `setShot(..., { dt: 0 })` freezes the pose (§251).
+
+**The "before" arm is EXACT, not approximate.** Pushing the crook's `COLOR_0` back to white
+reproduces the pre-§719 albedo bit for bit: the material multiplies by it and `1 + (c − 1)·0` is
+exactly 1 on any driver. The same property that makes `?hook=cream` a bit-identical revert makes
+this A/B's null arm an equality (§3's `shadowHold: 0` note records it for the same reason).
+
+**Instrument, all green:** `I2` (nothing poked, twice) **0 px**. `I4` (restore vs base) **0 px**.
+`I5` — `uSpec 0.25, uGloss 32, uMetal 0, roughness 0.62` read off the live material before the
+first arm and after the last, **identical**, so the run cannot be reporting a colour result
+contaminated by the metal question. `I3` — the footprint fires: 58,403 px, bbox 280×340 at
+x 508…787, y 242…581, which is the crook and nothing else.
+
+**The population, and why it needed a sweep.** The footprint is obtained by tagging the crook's own
+vertices magenta and differencing — `canegold.mjs`'s I3 trick one level down. But making the hook a
+different colour also changes how much it BLOOMS, and bloom is a global operator, so the raw
+footprint carries a halo that is not the hook. Registered before this run scored it: the guards are
+evaluated at tag-delta **T = 32**, and the whole sweep is printed so a threshold-dependent
+conclusion cannot hide.
+
+| population | n px | mean L flat → gold | Δ L | sat flat → gold | Δ sat (relative) | ΔR | ΔG | ΔB | Δ(R−B) |
+|---|---|---|---|---|---|---|---|---|---|
+| T=1 — footprint **and its bloom halo** | 58,403 | 90.3 → 85.1 | −5.2 | 0.323 → 0.360 | +0.037 (**+11.4 %**) | −6 | −5 | −2 | −4.4 |
+| T=16 — ≈ the whole drawn stroke | 11,624 | 131.2 → 115.0 | −16.2 | 0.291 → 0.337 | +0.046 (**+15.8 %**) | −16 | −17 | −12 | −4.3 |
+| **T=32 — the stroke's core (SCORED)** | **3,615** | **155.1 → 131.2** | **−23.9** | **0.265 → 0.338** | **+0.072 (+27.2 %)** | **−19** | **−25** | **−27** | **+7.7** |
+| T=64 | 2 | — | — | — | — | | | | |
+
+**What the hook's own pixels did.** On the stroke's core: **saturation +27.2 % relative, luminance
+−23.9 L (−15.4 %)**. The darkening is not incidental and not a defect — the house gold is a darker
+colour than the cream it replaces, and asking for gold is asking for that.
+
+**The channel deltas are the mechanism, confirmed one channel at a time.** The tint is
+`(0.807, 0.638, 0.164)`, so blue must fall most and red least. Measured on the core: **R −11 %,
+G −16 %, B −21 %** — the predicted order, in roughly the predicted ratio. No single summary
+statistic shows that; the three channels together do.
+
+#### C1 — registered before any data existed, and it FAILED
+
+I registered two bars in the instrument before this candidate had ever been rendered. One of them
+said *the rendered red-minus-blue rises by more than 8*. It rose by **7.7**. It is quoted as a
+FAIL, not rewritten, and the tool still prints `DO NOT SHIP` on it.
+
+**The near-miss is not the interesting part. This is:** R−B is **not stable across the sweep** —
+`+7.7` at T=32, `−4.3` at T=16, `−4.4` at T=1. A statistic that changes SIGN with its population is
+not measuring the thing it was chosen for. The cause is structural rather than noisy: R−B is an
+ABSOLUTE spread, this change also darkens the surface by 15 %, and a proportional darkening drags an
+absolute spread down even while the hue moves. **Saturation is the RELATIVE spread**, and it is
+positive at every population in the sweep. That reasoning is written into `tools/canehook.mjs`
+above the guard, and it was written there BEFORE this run scored it — which is the only thing that
+makes it a finding rather than an excuse.
+
+**Why a failed bar does not block this, said carefully, because §266 is exactly the cautionary tale
+being invoked.** §266's bar was on the OUTCOME its candidate existed to produce — the cane reading
+as metal — and the candidate failed to produce it, in the opposite direction to its forecast. C1 is
+a PROXY for an outcome that is independently verifiable: the crook's albedo **is** `#e8b942`, and
+that is an identity asserted offline (`asset albedo × tint = house gold`, exact), not an inference
+from a frame. The proxy was badly chosen for a change that also darkens. Had the proxy been the
+only evidence available, the honest answer would have been "not shown" — and it is not the only
+evidence.
+
+#### The second instrument, which shares none of the first one's mechanism (§439/§440)
+
+The in-page arms poke `COLOR_0` live, so they share their subject's entire mechanism: if the
+vertex-colour path did something other than what it is believed to do, those arms would be wrong in
+exactly the same way. So the same question is asked again of two PNGs captured from two different
+COMMITS through `tools/shot.mjs`, by code that boots nothing and pokes nothing.
+
+**A cross-boot pair is not a bar, and the numbers say why:** 22.0 % of the `sly-closeup` frame
+differs between the two boots — 78 % of pixels identical, 92 % within 2, and still 33,558 px at 8 or
+more, spread over the whole frame. `tests/canegold3.test.mjs` already forbids reading a frame off
+disk for a pixel bar (§294(2)) and is right to. So the population is the hook's own footprint,
+dumped by the in-page run at the same 1600×900, and applied to both frames:
+
+```
+before e4a8dea -> after 213a156, over the hook's 58,403 px footprint
+  mean L  90.5 -> 85.3   (-5.1)
+  sat    0.322 -> 0.358  (+0.035, +10.9 %)
+```
+
+That agrees with the same-boot T=1 row to **0.1 L and 0.002 saturation**, from two commits, two
+boots, and an instrument with none of the other's machinery. The two instruments agree.
+
+#### Nothing far from the hook moved — and the halo that did is the bloom
+
+Base vs flat, outside the footprint: **4,816 px changed, every one of them inside a 16 px dilation
+of the footprint, FAR = 0.** That halo is real and it is worth naming rather than hiding: the pale
+cream crook was bright enough to BLOOM, and a less-blown hook blooms less. In the 3× crops the
+before frame has a visible glow spilling off the crook onto the masonry behind it and the after
+frame does not. A global operator responding to a local change is the operator working, not a leak —
+but it does mean §719 changes a few thousand pixels that are not the hook, and that is stated here
+rather than left for a critic to find.
+
+### §719.6 §266 is untouched, and here is what that sentence is worth
+
+§266 refused to make the cane read as METAL by material response: at `metal 0.85` the shader kills
+68 % of the diffuse, the cane is unmapped for metalness so nothing masks that kill, and with
+`uSpecNormPow` at 0 a higher gloss makes the highlight smaller rather than brighter. The candidate
+went **darker**, −37.5 L at p99, against a registered bar of +10 L.
+
+**That refusal is about a material response. This is an albedo.** They are different changes and this
+section does not touch the first one. Concretely, and asserted rather than promised:
+
+- `tools/canehook.mjs` reads `uSpec`, `uGloss`, `uMetal` and `roughness` off the live material before
+  its first arm and after its last, and **voids the whole run** if they differ. Shipped and measured,
+  unchanged across every arm: `spec 0.25, gloss 32, metal 0, rough 0.62`.
+- No `detail: 'metal'` either. The triplanar detail samples at `slyWorldPos()` — world space — so on
+  a prop carried in a hand the grain swims across the surface.
+- Nothing here unblocks §266 and nothing here re-opens it. When `uSpecNormPow` ships,
+  `node tools/canegold.mjs` is still the run to make, and a saturated gold albedo underneath it can
+  only help: a stepped specular lobe has to sit on top of something.
+
+**If a future lane believes §266 was wrong, that is a separate finding and needs its own
+pre-registration.** This section did not test it and makes no claim about it.
+
+### §719.7 Draw calls and triangles — and why the manifest column could not answer it
+
+The cane's own cost is unchanged and is asserted on the live scene graph: **one geometry group, one
+material, 306 vertices, 774 indices, 258 triangles**, before and after. The ink shell is still built
+AFTER the adopt so it wraps the triangles that render, still shares the geometry, and — this is the
+one that could have gone wrong — **its material is a `ShaderMaterial` with `vertexColors` false**, so
+the ink cannot read `COLOR_0` and the line does not move with the albedo. Measured, not assumed:
+`{"name":"slyInk_2.5@1080","vertexColors":false,"sharesGeometry":true,"isShader":true}`.
+
+**The frame-level column needed care, and the first reading of it was wrong.**
+`shots/<run>/report.json` recorded 274 draws / 2,329,211 triangles on `sly-closeup` before and
+272 / 2,328,441 after, which reads as a real −2 / −770. It is not. That column is the FIRST frame of
+a boot, and the first frame carries a warm-up term:
+
+| measurement | draws | triangles |
+|---|---|---|
+| `shot.mjs` manifest, before commit `e4a8dea`, **first** frame | 274 | 2,329,211 |
+| `shot.mjs` manifest, after commit `213a156`, **first** frame | 272 | 2,328,441 |
+| `canehook` boot at the after commit, **first** frame | 272 | 2,328,441 |
+| `canehook` boot at the after commit, **steady state** (base2 / tag / flat / restore) | **270** | **2,328,401** |
+| `inforead` boot at the **before** commit, three consecutive frames | **270 / 270 / 270** | **2,328,401 ×3** |
+
+**Steady state at both commits: 270 draws, 2,328,401 triangles. Identical.** The 274/272 difference
+is a boot-dependent warm-up term — at the before commit a different tool's first frame reads 270 —
+so comparing two runs' first frames is not a like-for-like measurement, and this table is the
+evidence rather than the assertion. `hero` reproduced its manifest figure exactly at both commits
+(280 draws, 2,480k triangles), which is what made the `sly-closeup` difference look real enough to
+chase; chasing it is what found the warm-up term.
+
+`node tools/budgetattrib.mjs --inpage` is **byte-identical** before and after. `node tools/gripgap.mjs`
+is byte-identical apart from BVH build timings — no hand number moves, which is expected because no
+vertex does, and it is run and reported rather than assumed.
+
+The one thing that DOES move is **programs: 100 → 102**. `vertexColors: true` is a new shader variant
+(`USE_COLOR`), and the cane draws in the beauty pass and the normal prepass, so it costs two compiled
+programs. That is a load-time cost, not a per-frame one, and it is the honest price of the mechanism.
+
+### §719.8 The frames
+
+Two samples per visual claim (§466.5), every camera through the `camDot` pre-flight, everything
+driven through the shipped pipeline (§435.4).
+
+| shot | figure | view° | camDot | what it is for |
+|---|---|---|---|---|
+| `sly-closeup` | 605 px | 33° | ok — nearest surface 1.449 m, subject at 3.612 m | the before/after pair: close enough to read the hook |
+| `combat` | 351 px | 45° | ok — nearest 2.363 m, subject at 5.877 m | gameplay distance, cane mid-swing |
+| `hero` | 295 px | 73° | ok **to the character** — see below | gameplay distance |
+| `traversal` | 184 px | 59° | ok — nearest 2.394 m, subject at 10.313 m | gameplay distance, cane hooked on a ring |
+
+`shots/719-before/{sly-closeup,hero}.png` at `e4a8dea`; `shots/719-after/{sly-closeup,hero}.png` at
+`213a156`, `{traversal,combat}.png` at `fc8170c`. The commits between those two touch `src/` only
+with the `?hook=cream` token (whose default path is the same expression) and a `.md`; the `canehook`
+run at `fc8170c` re-derives the same 188/306 and the same tint, so the frames describe one build.
+
+**A `camDot` note worth keeping.** `hero` REFUSES its own pre-flight — *"SUBJECT OCCLUDED: the look
+target is 16.75 m away but arch:court:hieroglyph_gilded stands at 8.03 m"* — and that refusal is
+correct about what it measures and irrelevant to what the frame is for. `hero`'s look TARGET is an
+architectural aim point deep in the courtyard, not the character; the character stands **6.33 m** from
+the lens with the first surface along that ray at **9.61 m**. Re-flighted against where Sly actually
+is, it passes. Recorded because the next person to point `camDot` at `hero` will get the same refusal
+and should not conclude the frame is unusable — §442's shape exactly: a correct measurement of the
+wrong subject.
+
+**What the frames show, including the part that is not flattering.**
+
+- At `sly-closeup` (605 px) the change is unmistakable at 1:1. Before: the crook is a near-white
+  cream with a visible bloom halo spilling onto the masonry behind it. After: a warm gold, and the
+  halo is gone.
+- **At gameplay distance the answer is more limited and the owner should see it as such.** At
+  `combat`'s 351 px the crook is a thin stroke between two ink lines and the hull takes most of its
+  width, so the colour is a tint on a few interior pixels rather than a read; the impact flash washes
+  that region further. At `traversal`'s 184 px the crook is behind the ring it is hooked on. At
+  `hero`'s 295 px `perch_idle` tucks the cane and the crook is barely presented at all.
+- **So: the gold reads at character-sheet range and is a subtle warm tint at play range.** That is a
+  property of a ~12 px prop drawn with a 2.5 px ink line, not of the tint, and no albedo change fixes
+  it. If the owner wants the hook to READ at play range the lever is size or line weight, not colour —
+  and that is a separate instruction, not something to take on unasked.
+
+### §719.9 Bounds — what this section does not do
+
+- **Only the crook's albedo changes.** The collar and the ferrule keep the asset's paler cream, the
+  shaft keeps its brown, and `sly-cane.glb` is byte-identical — nothing is baked, converted or
+  re-exported.
+- **No geometry moves.** `hookPoint`, `tipPoint`, `centerline` and `gripSpan` are the same numbers, so
+  §605's rings and every clip authored against the frame are untouched. The grip solve is untouched
+  (22.2 mm in both boot lines).
+- **§716's cane combo and §717's idle bindings are not touched**, and neither is `src/ai/*` nor
+  §697's ground tuning.
+- **Nothing under the reference repo's excluded directories is read, referenced or named**, by this
+  section or by `tools/canehook.mjs`.
+- **This is not a fix for §266** and does not claim to be. The cane still does not read as metal; it
+  now reads as gold-coloured, which is what was asked for.
+- **The asset's metalRough and normal images stay unwired**, exactly as `CaneAsset.js` records.
+
+### §719.10 Two failures of my own, and the second one is the instructive one
+
+**The first is a rule this ledger already has.** I edited `src/player/SlyModelDLRig.js` twice while a
+`canehook` capture held the lock. `harness.mjs`'s `onLocked` comment states the mechanism — *the
+bundler reads the tree at boot, and the FIFO wait can be an hour* — for runs that install a source
+arm deliberately. The passive form is the one that bit: **while a capture holds the lock the tree
+belongs to that capture, and every other edit waits.** The run had to be voided; roughly 30 minutes
+of exclusive lock went on nothing, with every other lane queued behind it.
+
+**The second is worse, because it is an instrument that returns the same answer for every input.** I
+convinced myself that run had crashed on this evidence:
+
+```
+pgrep -c chromium   ->   0
+```
+
+and killed it. **That number is 0 whether the browser is alive or dead.** `pgrep` without `-f`
+matches the process NAME, and Playwright's browser is named `chrome`; the string "chromium" appears
+only in its *path* and arguments. The run I killed had 11 live browser processes — `pgrep -fc
+chromium` returns 11 for exactly the state where `pgrep -c chromium` returns 0.
+
+That is the §39 / §43 / §50 family, and the same shape as the `echo "(empty = safe to append)"` that
+`tools/preappend.sh` exists to replace: **a check whose conclusion does not depend on its
+measurement.** I had used the same command earlier in this section's work and read a healthy run as
+dead then too, without noticing, because that run really had ended.
+
+Voiding the run was still right — I had edited the tree under it, and its I2/I4 controls can catch a
+contaminated result but not a run that never finishes. But it was right for a reason I had not
+established, and the evidence I acted on was worthless. Re-run cleanly at `fc8170c` with the tree
+frozen; every number in §719.5 is from that run.
+
+### §719.11 The suite — every run quoted (§703.2)
+
+`node --test "tests/"*.test.mjs` from a clean detached worktree at the **pushed** commit
+(`git worktree add --detach /home/user/wt-719 fc8170c`, `node_modules` symlinked), the FIFO capture
+lock **held across all three runs** (§703: the F3 flake is contention-driven and holding the lock is
+what the lock is for — this run queued 2,172 s behind this section's own captures before taking it,
+which is the queue working). cwd checked from INSIDE the spawned command (§694). Each complete TAP
+stream written to its own file and `not ok` counted over the FILE, never a window (§711.1).
+`--test-name-pattern` was never used — on `framebudget` it changes allocation history and makes F3
+fail 100 %.
+
+The suite is **1089 tests** now. §717 left it at 1086; §719's three are the classifier arm (with its
+welded-mesh refusal), the tint identity, and the `?hook=cream` calibration. That accounting is stated
+because a test count that moves without an owner is how a deleted test hides.
+
+| run | commit | result | duration | pwd inside command | cwd at end |
+|---|---|---|---|---|---|
+| 1 | `fc8170c` | **1089 / 1089**, 0 fail | 271.1 s | `/home/user/wt-719` | exists |
+| 2 | `fc8170c` | **1089 / 1089**, 0 fail | 279.3 s | `/home/user/wt-719` | exists |
+| 3 | `fc8170c` | **1089 / 1089**, 0 fail | 260.9 s | `/home/user/wt-719` | exists |
+
+`not ok` counted over the FILE: **0 / 0 / 0**. Neither documented flake fired: `framebudget` F3 GC
+(~1-in-3) nor `padrest` R1b (~1-in-5). Three clean runs is not evidence that either flake is gone —
+holding the lock across all three is the condition under which F3 is expected not to fire, and that
+is what was done.
+
+A fourth run, at the commit that carries this section, is recorded in the commit after it — the
+§712/§713/§715/§716/§717 precedent: a suite table committed at one sha and quoted at another is a
+claim about a tree nobody ran.
+
