@@ -58040,3 +58040,14 @@ changes under this ruling — only which verb plays which already-authored clip.
 
 *(Section claimed at this heading before its content was written — §700.9. Body follows in the
 next commits.)*
+
+---
+
+## §718 — "Anything the godot repo did better or more efficiently that could easily be ported": a survey of all 5,365 lines of their GDScript, ranked, with the licence line held
+
+*(Section claimed at this heading before its content was written — §700.9. Body follows in the
+next commits. This is a **survey**, not an implementation: no game behaviour changes under it.
+The reference repo states no licence, so the standing rule applies unchanged — design references
+and adapted mechanics only, nothing pasted or transliterated, and the owner's word "ported" is
+read throughout as **adapted**. Findings that cannot be stated as an idea without reproducing
+their implementation are excluded and the exclusion is recorded rather than the finding.)*
