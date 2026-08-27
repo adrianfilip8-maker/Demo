@@ -162,6 +162,31 @@ function gripMode() {
 }
 const GRIP_MODE = gripMode();
 
+/**
+ * §719 — the cane hook's gold, and the token that reverts it.
+ *
+ * `?hook=cream` (or `globalThis.__HOOK_AB = 'cream'`) hands the crook back its authored albedo:
+ * `Cane._tagHook` is then asked for no colour, writes an all-white `COLOR_0`, and the material
+ * multiplies by 1 — which is not "approximately what shipped before §719", it is BIT-IDENTICAL to
+ * it, because `1 + (c - 1) * 0` is exactly 1 on every driver. That exactness is the point: it
+ * makes the A/B's null arm an equality rather than a tolerance, the same property §3's
+ * `shadowHold: 0` note records for the same reason.
+ *
+ * Read when the cane is BUILT rather than at module load — unlike `?char=` and `?grip=` above,
+ * which have to be constants because module-scope tables are built from them. There is nothing to
+ * gain by freezing it earlier and one thing to lose: read at build time, an offline guard can set
+ * `globalThis.__HOOK_AB` before `init()` and exercise the revert without a second module load.
+ * Either way it cannot be poked after boot, because the attribute is authored during `init()`.
+ */
+function hookGoldOn() {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('hook') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__HOOK_AB != null) raw = String(globalThis.__HOOK_AB);
+  } catch { /* plain-module hosts have no location; that is the offline path */ }
+  return String(raw).trim().toLowerCase() !== 'cream';
+}
+
 const TEX_BY_PART = { body: 'sly_body', eyeball: 'sly_eyeball', head: 'sly_head', tail: 'sly_tail' };
 const FALLBACK = { body: 0x2f5fc4, eyeball: 0xd9821a, head: 0xcfcdc4, tail: 0x8d8b84 };
 
@@ -991,7 +1016,7 @@ export class SlyModel {
      * `Cane._tagHook` always writes one on the adopted geometry, INCLUDING on every refusal; and
      * the assertion after the adopt takes the flag off rather than draw a black cane if both of
      * those were somehow untrue. */
-    const hookColor = albedoTint(0xe8b942, asset?.texture ? ASSET_HOOK_ALBEDO : 0xe8b942);
+    const hookColor = hookGoldOn() ? albedoTint(0xe8b942, asset?.texture ? ASSET_HOOK_ALBEDO : 0xe8b942) : null;
     /* The material follows the same fork as the geometry. With the asset: its authored albedo
        as `map` (colour 0xffffff so the texture is the albedo, exactly the body-material
        pattern), and since §719 `vertexColors` — the glb carries no COLOR_0 of its own, so the

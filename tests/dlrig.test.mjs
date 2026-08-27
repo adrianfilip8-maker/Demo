@@ -263,6 +263,39 @@ test('§719: the tint is the quotient that lands the crook exactly on the house 
     'albedoTint(x, x) is not identity — the no-texture fork would double-darken the crook');
 });
 
+test('CALIBRATION §719: `?hook=cream` reverts the crook, and the revert is bit-identical', async () => {
+  /* The project's own pattern (see `?grip=open` above): a revert token is worth nothing unless
+     something demonstrates it actually reverts. This builds a SECOND character with the token
+     set and asserts the crook comes back white — and white here is exact, not approximate:
+     `_tagHook` is handed no colour and writes 1.0 into every channel, so the material's multiply
+     is the identity rather than a near-identity. That is what makes the A/B's null arm an
+     equality (§3's `shadowHold: 0` note records the same property for the same reason). */
+  const prev = globalThis.__HOOK_AB;
+  globalThis.__HOOK_AB = 'cream';
+  let reverted;
+  try {
+    reverted = await build('hook-cream');
+  } finally {
+    if (prev === undefined) delete globalThis.__HOOK_AB; else globalThis.__HOOK_AB = prev;
+  }
+  const tag = reverted.model.cane.hookTag;
+  /* The CLASSIFICATION is unaffected — the token withholds the colour, not the geometry work —
+     so a future reader can still see which vertices would have been tinted. */
+  assert.equal(tag.tinted, false, 'the token did not revert: the crook was still tinted');
+  assert.match(tag.why, /no hook colour/);
+  const col = reverted.model.cane.mesh.geometry.attributes.color;
+  assert.ok(col, 'the revert dropped COLOR_0 entirely — that is the black-cane path');
+  for (let i = 0; i < col.count; i++) {
+    if (col.getX(i) !== 1 || col.getY(i) !== 1 || col.getZ(i) !== 1) {
+      assert.fail(`vertex ${i} is (${col.getX(i)}, ${col.getY(i)}, ${col.getZ(i)}) — not exactly white`);
+    }
+  }
+  /* CONTRAST, RUN: the default build in the same process IS tinted, so this arm can say "no". */
+  const shipped = await build();
+  assert.equal(shipped.model.cane.hookTag.tinted, true,
+    'the default build is not tinted either — this calibration cannot discriminate');
+});
+
 test('critic 7 #6: the crook FRAME is a sampled arc, not three straight segments', async () => {
   /* Since §294 the RENDERED crook is the owner's asset (pinned above); this centerline is the
      frame the aim system and hookPoint contract still run on, and it must stay an open arc —
