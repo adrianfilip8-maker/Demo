@@ -48,6 +48,27 @@ import * as THREE from 'three';
 
 const GLB_URL = new URL('../assets/sly-cane/sly-cane.glb', import.meta.url);
 
+/**
+ * The flat albedo the shipped asset paints across the CROOK's UV shell (§719).
+ *
+ * MEASURED, not read off a swatch, and re-derivable: `node tools/canehook.mjs` rasterises every
+ * triangle's UVs into the decoded baseColour image IN-PAGE — the same `ImageBitmap` the shipped
+ * material is holding — and prints the distribution per triangle. All 154 crook triangles land in
+ * one shell whose every percentile from p05 to p95 is this same value: the author painted it flat,
+ * so a single hex is the whole of it rather than a mean standing in for a range.
+ *
+ * It lives here, beside the parse, because it is a property of the FILE and not of the character.
+ * §719 divides the house gold by it to get the vertex tint, so if the owner re-exports the cane
+ * with different artwork this number moves, `canehook.mjs`'s B guards say so, and the tint follows
+ * from the new value instead of silently painting the wrong gold.
+ *
+ * WORTH KNOWING BEFORE ANYONE EXTENDS §719: the collar and the butt ferrule carry this SAME cream,
+ * and only the shaft is brown (#3f291e and neighbours). So a hook-only tint leaves those two
+ * smaller pieces a shade paler than the crook. That is faithful to the instruction — "the hook
+ * specifically" — and is recorded here rather than quietly fixed.
+ */
+export const ASSET_HOOK_ALBEDO = 0xffe29c;
+
 /* glTF componentType ids, named so the guards below read as sentences. */
 const F32 = 5126, U32 = 5125, U16 = 5123;
 

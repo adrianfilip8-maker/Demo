@@ -180,6 +180,61 @@ test('§294: the owner-supplied sly-cane.glb is what renders, adopted into the p
   assert.ok(Math.abs(model.cane.tipPoint.y - -0.796) < 1e-9, 'tipPoint moved off the CANE_TUNE contract');
 });
 
+test('§719: the crook is tagged on the adopted mesh, and the classifier refuses rather than guesses', async () => {
+  /* The hook's gold is a per-vertex albedo multiplier, so "which vertices" IS the change, and it
+     is pinned here rather than left to a capture to discover. Offline there is no image decoder,
+     so `asset.texture` is null, the material is already the house gold and `albedoTint` comes out
+     as identity — the CLASSIFICATION still runs, and it is what this asserts. Every number below
+     is a property of the shipped `.glb` conformed into `Cane.js`'s frame. */
+  const { model } = await build();
+  const tag = model.cane.hookTag;
+  assert.ok(tag, 'no hookTag — Cane.adoptAsset no longer classifies the crook');
+  assert.equal(tag.verts, 306);
+  assert.equal(tag.comps, 4, 'the asset is four islands: butt ferrule, shaft, collar, crook');
+  assert.equal(tag.hook, 188, 'the crook component is 188 of the 306 vertices');
+  assert.equal(tag.tinted, true, `the classifier refused: ${tag.why}`);
+
+  /* THE ATTRIBUTE ALWAYS EXISTS. `vertexColors: true` over an unbound COLOR_0 multiplies to
+     black (the PREREG-guardfix defect), so this is the guard that keeps the cane from going
+     black, not a completeness check. */
+  const geo = model.cane.mesh.geometry;
+  assert.ok(geo.attributes.color, 'the adopted geometry carries no COLOR_0 — a vertex-colour '
+    + 'material over this geometry would multiply to black');
+  assert.equal(geo.attributes.color.count, 306);
+
+  /* The tagged set owns the TOP of the prop and the part reaching farthest off the shaft axis,
+     and it does not reach down into the hand. Read off the geometry, not off the tag. */
+  geo.computeBoundingBox();
+  assert.ok(Math.abs(tag.yTop - geo.boundingBox.max.y) < 1e-6,
+    'the tagged component does not own the top of the prop');
+  assert.ok(tag.yLo > 0.05,
+    `the crook is tagged from y ${tag.yLo.toFixed(3)} — that is down at the grip, not the crook`);
+  assert.ok(tag.rFar > tag.rShaft * 5,
+    `the crook reaches ${tag.rFar.toFixed(3)} off the axis against a shaft radius of `
+    + `${tag.rShaft.toFixed(3)} — not different enough to be a hook and a stick`);
+  /* The ramp exists and is short: gold by the time the tube has left the axis, no hard seam. */
+  assert.ok(tag.ramp > 0, 'no vertex is part-way up the ramp — the transition is a hard seam');
+  assert.ok(tag.yRamp > tag.yLo && tag.yRamp < tag.yTop, 'the ramp does not sit inside the crook');
+
+  /* §418.3 — the input this is SEEN to fail on, in the arm rather than in a comment. Welded into
+     one component, nothing separates the crook from the shaft, and the answer must be a REFUSAL
+     with an all-white attribute: never a guess, and never a black cane. Run on a private `Cane`
+     so the shared cached build above is not mutated. */
+  const { Cane } = await import('../src/player/Cane.js');
+  const welded = geo.clone();
+  const ix = Array.from(welded.index.array);
+  for (let i = 1; i < welded.attributes.position.count; i++) ix.push(0, i, i);   // degenerate fan
+  welded.setIndex(new THREE.BufferAttribute(new Uint32Array(ix), 1));
+  const probe = new Cane(null, {});
+  const refused = probe._tagHook(welded, new THREE.Color(0.5, 0.5, 0.5));
+  assert.equal(refused.tinted, false, 'a single-component mesh was tinted anyway — the control does not fire');
+  assert.match(refused.why, /one connected component/);
+  const c2 = welded.attributes.color;
+  let anyTinted = false;
+  for (let i = 0; i < c2.count; i++) if (c2.getX(i) < 0.999) anyTinted = true;
+  assert.equal(anyTinted, false, 'the refusal left a non-white COLOR_0 behind — that is the black-cane path');
+});
+
 test('critic 7 #6: the crook FRAME is a sampled arc, not three straight segments', async () => {
   /* Since §294 the RENDERED crook is the owner's asset (pinned above); this centerline is the
      frame the aim system and hookPoint contract still run on, and it must stay an open arc —

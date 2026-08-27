@@ -37,8 +37,8 @@ import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RIG3 } from './SlyModel3.js';
-import { Cane, CANE_TUNE } from './Cane.js';
-import { loadCaneAsset } from './CaneAsset.js';
+import { Cane, CANE_TUNE, albedoTint } from './Cane.js';
+import { loadCaneAsset, ASSET_HOOK_ALBEDO } from './CaneAsset.js';
 
 const FBX_URL = new URL('../assets/sly-dl/sly.fbx', import.meta.url);
 const TEX_FILES = import.meta.glob('../assets/sly-dl/*.png', { eager: true, query: '?url', import: 'default' });
@@ -961,26 +961,65 @@ export class SlyModel {
      * `slyWorldPos()` — WORLD space — so on a prop that moves with the hand the grain swims
      * across the surface. That is very likely why no character material carries one.
      */
+    /* §719 — THE HOOK'S GOLD, AND WHY IT IS AN ALBEDO TINT AND NOTHING ELSE.
+     *
+     * The owner asked for "the gold color on the cane hook". That is a request about COLOUR, and
+     * it is a DIFFERENT request from the one the block above refuses, which was about making the
+     * cane read as METAL and which failed measurement in the opposite direction to its forecast.
+     * Nothing under §719 touches `metal`, `gloss`, `spec`, `rough` or `detail`: the refusal above
+     * stands exactly as written, and `tools/canehook.mjs` asserts on every run that those values
+     * are identical before and after its arms, so a lane that drifts into the metal question
+     * voids its own colour result instead of quietly reporting a contaminated one.
+     *
+     * WHAT WAS ACTUALLY WRONG WITH THE COLOUR, measured rather than assumed. The asset's authored
+     * albedo is not neutral and never was. The crook's UV shell is a FLAT `ASSET_HOOK_ALBEDO`
+     * (#ffe29c) — a pale cream already clipped in red — which tonemaps toward white under the key
+     * and is why the hook has been read off frames as silver. The house gold (0xe8b942, the same
+     * hex this material already falls back to below) is darker and far more saturated, and it
+     * survives the tonemap because it has chroma to spend. So the fix is to carry the crook's
+     * albedo the rest of the way to the house gold, and a vertex-colour multiply is exactly the
+     * instrument for that — `Cane.js` already does it for the procedural grip, one draw call.
+     *
+     * `albedoTint` divides in LINEAR, the space `<color_fragment>` multiplies in, and clamps at 1
+     * so this path can never make a surface brighter than its own albedo. Where there is no
+     * texture the cane is ALREADY the house gold, so `want` equals `base`, the ratio is (1,1,1),
+     * and the crook is tinted by nothing: one expression covers both forks with no branch to get
+     * wrong. `Cane._tagHook` decides WHICH vertices; see its header.
+     *
+     * THE COLOR_0 TRAP IS CLOSED IN THREE PLACES, because this is the defect the note below was
+     * written about. `Body.js` always writes a `color` attribute on the procedural build;
+     * `Cane._tagHook` always writes one on the adopted geometry, INCLUDING on every refusal; and
+     * the assertion after the adopt takes the flag off rather than draw a black cane if both of
+     * those were somehow untrue. */
+    const hookColor = albedoTint(0xe8b942, asset?.texture ? ASSET_HOOK_ALBEDO : 0xe8b942);
     /* The material follows the same fork as the geometry. With the asset: its authored albedo
        as `map` (colour 0xffffff so the texture is the albedo, exactly the body-material
-       pattern) and NO vertexColors — the glb carries no COLOR_0 attribute, and a vertex-colour
-       material over an unbound attribute multiplies to black (the PREREG-guardfix defect).
-       Everything else stays at the house TUNE response per the refusal above; the asset's
-       metal/rough VALUES are what §266 measured and declined. Without: today's gold,
+       pattern), and since §719 `vertexColors` — the glb carries no COLOR_0 of its own, so the
+       attribute is AUTHORED by `Cane._tagHook`, which is what makes the flag safe here (a
+       vertex-colour material over an unbound attribute multiplies to black, the PREREG-guardfix
+       defect). Everything else stays at the house TUNE response per the refusal above; the
+       asset's metal/rough VALUES are what §266 measured and declined. Without: today's gold,
        byte-for-byte, vertex colours darkening the procedural grip. */
     const gold = shading?.make
       ? shading.make({
         name: 'slydlrig:cane',
-        ...(asset ? { color: asset.texture ? 0xffffff : 0xe8b942, map: asset.texture || null }
+        ...(asset ? { color: asset.texture ? 0xffffff : 0xe8b942, map: asset.texture || null, vertexColors: true }
           : { color: 0xe8b942, vertexColors: true }),
         bands: RIG3.TUNE.bands, rim: RIG3.TUNE.rim, rimColor: RIG3.TUNE.rimColor,
         outline: RIG3.TUNE.outline, outlineColor: RIG3.TUNE.outlineColor,
       })
       : new THREE.MeshStandardMaterial(asset
-        ? { color: asset.texture ? 0xffffff : 0xe8b942, map: asset.texture || null, metalness: 0.85, roughness: 0.3 }
+        ? { color: asset.texture ? 0xffffff : 0xe8b942, map: asset.texture || null, vertexColors: true, metalness: 0.85, roughness: 0.3 }
         : { color: 0xe8b942, vertexColors: true, metalness: 0.85, roughness: 0.3 });
     this.cane.build([gold]);
-    const adopted = asset ? this.cane.adoptAsset(asset) : false;
+    const adopted = asset ? this.cane.adoptAsset(asset, { hookColor }) : false;
+    /* Belt and braces on the trap above. If anything upstream ever hands this material a geometry
+       with no COLOR_0, drop the flag rather than draw a black cane — a pale hook is a defect, a
+       black cane is a broken build. */
+    if (gold.vertexColors && !this.cane.mesh.geometry.attributes.color) {
+      gold.vertexColors = false;
+      this.engine?.warn?.('SlyModelDLRig: the cane geometry carries no COLOR_0 — vertex colours disabled (§719)');
+    }
     this._caneMaterial = gold;          // passed in, so Cane.dispose() does not own it
     socket.add(this.cane.object);
     this.bones.handR.add(socket);
@@ -990,9 +1029,15 @@ export class SlyModel {
        the asset's own baked outline shell (`shader` prim) is deliberately not drawn — one ink
        system, critic 7 #3, see CaneAsset.js. */
     shading?.outline?.(this.cane.mesh, { thickness: 1.25 });
+    /* The hook's classification goes in the boot line, not just into a tool: a capture's own log
+       is where the next person looks, and a refusal that only a tool can see is a refusal nobody
+       reads (§699 — a claim written once and then trusted). */
+    const ht = this.cane.hookTag;
     this.engine?.warn?.(`SlyModelDLRig: staff submesh dropped (${staffTris} tris), `
       + `${adopted ? `${this.cane.assetCane} (§294)` : 'Cane.js'} socketed to handR `
-      + `(grip ${(gripR * 1000).toFixed(1)} mm, ${this.cane.triangles} tris)`);
+      + `(grip ${(gripR * 1000).toFixed(1)} mm, ${this.cane.triangles} tris`
+      + `${ht ? `, hook ${ht.tinted ? `${ht.hook}/${ht.verts} verts gold (§719)`
+        : `NOT tinted — ${ht.why}`}` : ''})`);
   }
 
   /**

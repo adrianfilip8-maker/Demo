@@ -11,7 +11,9 @@ import { MeshBuilder, addTube, addEllipsoid, addHardBox, superEllipse } from './
  *
  * One material, not two: the whole prop draws in a single call and the grip is the same gold
  * dropped to a dark bronze by vertex colour. The character budget is 12 draw calls and the
- * body already spends 9 of them.
+ * body already spends 9 of them. §719 applies that same trick to the ADOPTED mesh — the crook
+ * carries a gold tint in `COLOR_0` and nothing else does — for the same reason and at the same
+ * cost: no second material group, no second draw.
  *
  * Local frame: **grip at the origin, shaft along +Y, hook curling toward +Z (forward).**
  * `hookPoint` is where a ring sits when the cane catches it.
@@ -72,6 +74,31 @@ export const CANE_TUNE = {
 const PAL = {
   gold: 0xe8b942,
 };
+
+/**
+ * The multiplier that carries an albedo a surface ALREADY has onto the colour it should read as.
+ *
+ * Vertex colour MULTIPLIES the albedo — that is the entire mechanism, and it is why this returns
+ * a ratio rather than a colour. `base` is what the surface is today (the asset's authored albedo
+ * where a map is bound, the material's own colour where one is not); `want` is what it should be;
+ * the quotient is what `COLOR_0` has to hold for the product to land on `want`.
+ *
+ * BOTH SIDES ARE LINEAR. `THREE.Color` decodes an sRGB hex into the working colour space, which is
+ * the space three's `<color_fragment>` (`diffuseColor *= vColor`) does the multiply in. Dividing
+ * in sRGB would give a different and wrong number — the same class of mistake §3 records for the
+ * shadow mix, where a lerp performed in the wrong space left the shadow light magenta.
+ *
+ * CLAMPED AT 1, deliberately. A quotient above 1 is a request to make a surface BRIGHTER than its
+ * own albedo, and brightness on this prop is §266's question, measured and refused. This function
+ * will not smuggle it in through the albedo: `want` darker than `base` in a channel is a colour
+ * change and passes; `want` brighter is silently held at parity, and the caller gets a hue shift
+ * without a gain. A base channel at zero has no ratio at all and returns 1 rather than Infinity.
+ */
+export function albedoTint(want, base) {
+  const w = new THREE.Color(want), b = new THREE.Color(base);
+  const q = (a, c) => (c > 1e-4 ? Math.min(1, a / c) : 1);
+  return new THREE.Color(q(w.r, b.r), q(w.g, b.g), q(w.b, b.b));
+}
 
 /* module scope: build() must not allocate per vertex */
 const _grip = new THREE.Color();
@@ -255,8 +282,13 @@ export class Cane {
    *     turned onto +Z — this frame's "hook curls forward". Measured sign, not assumed
    *     (the asset curls in +X; a wrong sign here is a backwards cane in his hand).
    *   · translation = shaft axis onto the Y axis, butt onto the procedural butt.
+   *
+   * `opts.hookColor` (§719) is an optional LINEAR multiplier for the crook. It is a colour and
+   * nothing else: no vertex moves under it, `hookPoint` / `tipPoint` / `centerline` / `gripSpan`
+   * are the same numbers with it and without it, and the triangle and draw counts do not change.
+   * See `_tagHook` for how the crook is identified and for what happens when it cannot be.
    */
-  adoptAsset(asset) {
+  adoptAsset(asset, opts = {}) {
     if (!asset?.geometry || !this.mesh) return false;
     const old = this.mesh.geometry;
     old.computeBoundingBox();
@@ -289,6 +321,9 @@ export class Cane {
     /* one group over everything, so the mesh's material ARRAY keeps working */
     geo.clearGroups();
     geo.addGroup(0, geo.index ? geo.index.count : pos.count, 0);
+    /* §719: the crook's gold, as ONE attribute on that same single group. Runs before the mesh
+       takes the geometry, so a material with `vertexColors` never sees an unbound COLOR_0. */
+    this._tagHook(geo, opts.hookColor || null);
 
     const i = this._disposables.indexOf(old);
     if (i >= 0) this._disposables.splice(i, 1);
@@ -298,6 +333,127 @@ export class Cane {
     this.triangles = asset.triangles;
     this.assetCane = asset.source || true;
     return true;
+  }
+
+  /**
+   * Author `COLOR_0` on the adopted geometry: the crook carries `hookColor`, everything else
+   * stays (1, 1, 1) so the asset's own albedo survives there untouched (§719).
+   *
+   * WHY A VERTEX ATTRIBUTE AND NOT A SECOND MATERIAL GROUP. The same reason the procedural grip
+   * above is a colour ramp rather than a draw: *a value shift on one surface rather than a second
+   * draw call*. The whole prop draws in ONE call and the character budget is 12.
+   *
+   * THE ATTRIBUTE IS ALWAYS WRITTEN, INCLUDING ON EVERY REFUSAL BELOW. The material that draws
+   * this geometry sets `vertexColors: true`, and a vertex-colour material over an UNBOUND
+   * attribute multiplies to black — the PREREG-guardfix defect, recorded on the material in
+   * `SlyModelDLRig.js`. So the failure mode of everything in this method is "the cane looks
+   * exactly as it did before §719", never "the cane is black".
+   *
+   * HOW THE CROOK IS FOUND — measured, with no tuned threshold anywhere in it:
+   *
+   *   1. The mesh is split into connected components over the INDEX buffer, welding vertices that
+   *      share a position (the export duplicates them per face to keep its hard edges). This
+   *      asset is four islands: butt ferrule, shaft, collar, crook.
+   *   2. The crook is the component owning the vertex FARTHEST FROM THE SHAFT AXIS. That axis is
+   *      the local Y axis by construction — `adoptAsset` above has just put it there, and it
+   *      REFUSES the adopt outright if the top of the prop is not laterally offset, so this
+   *      selects on a quantity the conform has already proved exists rather than on a guess.
+   *   3. It is then checked rather than trusted, which is the whole of §418.3: the component must
+   *      also own the prop's highest vertex, must not be the entire mesh, and must not be a
+   *      sliver. A classifier that tags everything, or nothing, is caught by its own control, and
+   *      `tools/canehook.mjs` re-runs all three against the live geometry on every capture.
+   *
+   * WHY THE RAMP IS ON HEIGHT AND NOT ON DISTANCE-FROM-AXIS, which is not a detail: this crook
+   * curls back over itself, and its far end returns to within 7 mm of the shaft axis — measured,
+   * 18 vertices sit closer to the axis than the shaft's own radius. A radial ramp therefore paints
+   * a WHITE STRIPE across the top of the hook. Height is monotone along this arc and does not.
+   * The end of the ramp is derived too — the first crook vertex standing more than twice as far
+   * off the axis as any part of the shaft ever does — so the gold arrives exactly where the tube
+   * stops running up the shaft and starts being the C, with no seam and no constant to tune.
+   *
+   * @param {THREE.BufferGeometry} geo   the conformed geometry, groups already set
+   * @param {THREE.Color|null} hookColor LINEAR multiplier for the crook; null = write white only
+   * @returns {object} the tag record, also parked on `object.userData.hookTag`
+   */
+  _tagHook(geo, hookColor) {
+    const pos = geo.attributes.position;
+    const n = pos.count;
+    const col = new Float32Array(n * 3).fill(1);
+    const tag = { verts: n, comps: 0, hook: 0, ramp: 0, tinted: false, why: 'no hook colour supplied' };
+    const done = () => {
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      this.hookTag = tag;
+      this.object.userData.hookTag = tag;
+      return tag;
+    };
+    if (!hookColor || !geo.index) {
+      if (!geo.index) tag.why = 'the adopted geometry is not indexed';
+      return done();
+    }
+
+    /* ---- weld, then connected components (union-find over the index buffer) ---- */
+    geo.computeBoundingBox();
+    const span = Math.max(geo.boundingBox.max.y - geo.boundingBox.min.y, 1e-6);
+    const q = span * 1e-5;                    // ~15 µm on this prop: far under any real edge
+    const wk = new Map(); const weld = new Int32Array(n);
+    for (let i = 0; i < n; i++) {
+      const k = `${Math.round(pos.getX(i) / q)},${Math.round(pos.getY(i) / q)},${Math.round(pos.getZ(i) / q)}`;
+      let w = wk.get(k);
+      if (w === undefined) { w = wk.size; wk.set(k, w); }
+      weld[i] = w;
+    }
+    const parent = new Int32Array(wk.size);
+    for (let i = 0; i < parent.length; i++) parent[i] = i;
+    const find = (a) => { while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a]; } return a; };
+    const join = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; };
+    const ix = geo.index.array;
+    for (let t = 0; t + 2 < ix.length; t += 3) {
+      join(weld[ix[t]], weld[ix[t + 1]]);
+      join(weld[ix[t + 1]], weld[ix[t + 2]]);
+    }
+    const roots = new Set();
+    for (let i = 0; i < parent.length; i++) roots.add(find(i));
+    tag.comps = roots.size;
+
+    /* ---- the crook: farthest off the shaft axis, and it must also BE the top of the prop ---- */
+    let hookRoot = -1, rFar = -1, topRoot = -2, yTop = -Infinity;
+    for (let i = 0; i < n; i++) {
+      const y = pos.getY(i), r = Math.hypot(pos.getX(i), pos.getZ(i)), root = find(weld[i]);
+      if (r > rFar) { rFar = r; hookRoot = root; }
+      if (y > yTop) { yTop = y; topRoot = root; }
+    }
+    let hook = 0, yLo = Infinity, rShaft = 0;
+    for (let i = 0; i < n; i++) {
+      if (find(weld[i]) === hookRoot) { hook++; yLo = Math.min(yLo, pos.getY(i)); }
+      else rShaft = Math.max(rShaft, Math.hypot(pos.getX(i), pos.getZ(i)));
+    }
+    tag.hook = hook; tag.rFar = rFar; tag.rShaft = rShaft; tag.yLo = yLo; tag.yTop = yTop;
+
+    /* §418.3 as an arm rather than as a comment: the inputs this is SEEN to fail on. */
+    if (hook >= n) { tag.why = 'one connected component — nothing separates the crook from the shaft'; return done(); }
+    if (hookRoot !== topRoot) { tag.why = 'the farthest-off-axis piece is not the top of the prop'; return done(); }
+    if (hook < n * 0.05) { tag.why = `the crook came out as ${hook}/${n} vertices — a sliver, not a hook`; return done(); }
+
+    /* ---- where the ramp ends: twice as far off the axis as the shaft ever gets ---- */
+    let yRamp = Infinity;
+    for (let i = 0; i < n; i++) {
+      if (find(weld[i]) !== hookRoot) continue;
+      if (Math.hypot(pos.getX(i), pos.getZ(i)) > rShaft * 2) yRamp = Math.min(yRamp, pos.getY(i));
+    }
+    if (!Number.isFinite(yRamp) || yRamp <= yLo) yRamp = yLo;   // leaves the axis at once: no ramp
+    tag.yRamp = yRamp;
+
+    for (let i = 0; i < n; i++) {
+      if (find(weld[i]) !== hookRoot) continue;
+      const w = yRamp > yLo ? THREE.MathUtils.smoothstep(pos.getY(i), yLo, yRamp) : 1;
+      if (w > 0 && w < 1) tag.ramp++;
+      col[i * 3] = 1 + (hookColor.r - 1) * w;
+      col[i * 3 + 1] = 1 + (hookColor.g - 1) * w;
+      col[i * 3 + 2] = 1 + (hookColor.b - 1) * w;
+    }
+    tag.tinted = true;
+    tag.why = '';
+    return done();
   }
 
   _fallbackMaterials() {
