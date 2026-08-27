@@ -59307,3 +59307,9 @@ claim about a tree nobody ran.
 over the whole stream, pwd checked from inside the command (`/home/user/wt-719b`), cwd present at
 the end. Four runs, four quoted; no flake fired in any of them and no test went red in any of them.
 
+**Run 5, at `f958386`** — the tip after this section, which adds `tools/inforead.mjs` and touches no
+`src/` and no test. Same worktree re-pointed at that sha, same lock, same runner: **1089 / 1089,
+0 fail**, 261.4 s, zero `not ok` over the whole stream, pwd `/home/user/wt-719b` from inside the
+command. Recorded because "behaviour-neutral, so I did not re-test it" is the sentence §717 named
+and it is not going to appear here.
+
