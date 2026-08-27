@@ -123,6 +123,19 @@ export const KEEP_LIB_CLIPS = [
   { lib: 'Library Sly MASTER 005.res', clip: 'Idle Crouch 2', loop: true, centerYaw: true },
   { lib: 'Library Sly MASTER 005.res', clip: 'Walk Crouch 4', loop: true },
   { lib: 'Library Sly MASTER 005.res', clip: 'Run 1', loop: true, rotate: 0.196 },
+  /* §716 — the two library attacks, for the combo the owner's conditional now licenses
+   * (§715.2 falsified §714's "exactly ONE cane attack"). Identical bytes in MASTER 001–005
+   * (per-track hashes 9b4f12ec… / 67a9308a…, measured), so 005 is read per the census rule.
+   * NEITHER carries any cane/prop channel (54 tracks each: 53 rotation + the Hips position —
+   * profile bones, fingers, one Mixamo leaf; verified by listing, not by the header's word),
+   * so the per-slot donor cane tracks are the only cane articulation available by
+   * construction. centerYaw: both are mocap-style takes facing WELL off-axis — hips yaw
+   * circular mean +65.6° (`Cane Hit`, sweep 13→140°) and +80.1° (`Cane Hit 2`, sweep
+   * 62→102°) against the T-pose's 0.0° — the idles' §715.3 class exactly: played raw, the
+   * strike would land ~65–80° off the controller's facing. The re-base removes the take's
+   * constant mean; the swing's own yaw sweep survives, centered. Not loops: one-shot attacks. */
+  { lib: 'Library Sly MASTER 005.res', clip: 'Cane Hit', centerYaw: true },
+  { lib: 'Library Sly MASTER 005.res', clip: 'Cane Hit 2', centerYaw: true },
 ];
 /* WHICH crouch walk, measured (§715.3): `Walk Crouch 2` and `4` tie on depth (hips −0.274 vs
  * −0.283) and speed (1.45 vs 1.47 m/s); the discriminator is contact geometry. 2 is an authored

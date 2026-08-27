@@ -509,7 +509,35 @@ verb plunges vertically), `RailrunStand` (both ankles float 0.46 m in clip space
 Slow`/`Walk Sneaky` (0.17 m/s creep against a 1.4 m/s verb), `Idle Air Hit` (a 4.4 s travelling
 loop; `hurt` is a 0.62 s impulse), `Idle Teeter` (an about-to-fall alarm, not a calm balance),
 `Cane Hit`/`Cane Hit 2` (exist — §714's existence answer is corrected in §715.2 — but the combo
-binding is the owner's standing "repeats, not combos" ruling), the four disguise walks, the two
+binding is the owner's standing "repeats, not combos" ruling; **superseded by §716 below: the
+owner's later conditional fires, both are now extracted, and `Cane Hit 2` is bound**), the four
+disguise walks, the two
 posture walks, `Idle Stand Carry`, the air poses (1 ms holds), and `mixamorig1_HeadTop_End` plus
 all 150 finger channels (RIG3 has no such bones). Nothing under the reference's audio directories
 was read, listed, or opened — the tool touches `Assets/Animations/*.res` and nothing else.
+
+---
+
+# §716 — the two library attacks, extracted for the cane combo
+
+**Source:** the same `NoahChase/sly-cooper--a-thief-in-godot` checkout at `a312a99` (licence NONE
+STATED — the owner's standing instruction on record covers the whole reference), read by the same
+`tools/godotlib2clips.mjs` pipeline as §715. The owner's conditional — *"Add in the cane combo
+only if the animations already exist for it"* — is answered YES by §715.2's census, so the two
+attacks join `sly-godot-lib.glb` (now 346 KB, seven clips; the §715 five re-extract
+byte-identically, verified per entry against the shipped module):
+
+| clip | from | what it is (measured on RIG3, §716) |
+|---|---|---|
+| `Cane Hit 2` | `Library Sly MASTER 005.res` | 1.03 s heavy forward swing — contact t 0.375 (hand arrives at 13.5 m/s, reach 0.726 m), lunge depth −0.159, recovery 0.44 s. **Bound to `cane_combo_3`.** |
+| `Cane Hit` | `Library Sly MASTER 005.res` | 1.37 s overhead roundhouse — body yaw sweeps 125°, hand crosses the front sector OVERHEAD (y 1.63 m) mid-spin; its max-forward-reach moment (t 0.971) is the unwind at 5.5 m/s, not a strike. **Baked, NOT bound** (`Run 1`'s standing): the §479.8 contact measure cannot locate a strike to hang the `cane_hit` contract on. |
+
+Both are identical bytes in MASTER 001–005 (per-track hashes in KNOWN_ISSUES §716), so MASTER 005
+is read per the census rule. NEITHER clip carries any cane/prop channel — 54 tracks each: 53
+rotations + the Hips position over profile bones, fingers and the one Mixamo leaf, verified by
+listing — so the shipped per-slot donor cane tracks remain the only cane articulation, by
+construction rather than by preference. Both takes carry the idles' authored facing offset
+(hips-yaw circular mean +67.0° / +80.4°, removed by the same `centerYaw` re-base §715.3
+documents; the gaits' facing stays proven by travel). Fingers and the head-tip leaf are dropped
+and counted at extract, exactly as §715's five. Nothing under the reference's audio directories
+was read, listed, or opened.
