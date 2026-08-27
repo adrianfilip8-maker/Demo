@@ -93,7 +93,10 @@ test('regime: the shipped default is `godot` — the audited swaps ride on Clips
       swapped++;
     }
   }
-  assert.equal(kept + swapped, 52, `expected the 52 clip names, saw ${kept + swapped}`);
+  /* 52 -> 54 at §720, which ADDED two verbs (`pole_idle`, `pole_grab`) rather than moved a bar
+     to pass: both are in `Clips.js`'s REQUIRED list, so the arm below still fails if either is
+     lost, and this census still fails if anything else appears or disappears. */
+  assert.equal(kept + swapped, 54, `expected the 54 clip names, saw ${kept + swapped}`);
   assert.ok(CLIP_ORIGIN.double_jump?.startsWith('godot:'),
     'double_jump is the P1 deliverable — the default regime must swap it');
 
@@ -225,12 +228,23 @@ test('registration: the alias map names only clips that exist on both sides', ()
 });
 
 test('registration: every §4.7 required clip survives every regime', () => {
-  /* The whole point of a 16-clip set standing in for a 52-clip one is that the other 38 keep
-     working. `Shots.js` freezes on these names by contract. */
+  /* The whole point of a 16-clip set standing in for a 54-clip one is that the rest keep
+     working. `Shots.js` freezes on these names by contract. (52 -> 54 at §720: `pole_idle` and
+     `pole_grab` are new VERBS and are named in REQUIRED, so the loop above is what actually
+     holds them and this count still catches an arrival or a disappearance.) */
   for (const r of REG) {
     const { table } = buildClipSet(r);
     for (const n of REQUIRED) assert.ok(table[n], `regime "${r}" lost required clip "${n}"`);
-    assert.equal(Object.keys(table).length, 52, `regime "${r}" has ${Object.keys(table).length} clips, not 52`);
+    assert.equal(Object.keys(table).length, 54, `regime "${r}" has ${Object.keys(table).length} clips, not 54`);
+  }
+  /* §720 — the token must not change the SHAPE of the table, only what fills two rows: a revert
+     that shipped a different clip count would be a different game, not the same game reverted. */
+  for (const mode of ['port', 'climb']) {
+    const { table, origin } = buildClipSet('godot', { pole: mode });
+    assert.equal(Object.keys(table).length, 54, `?pole=${mode} has ${Object.keys(table).length} clips, not 54`);
+    for (const n of ['pole_idle', 'pole_grab']) assert.ok(table[n], `?pole=${mode} lost "${n}"`);
+    const want = mode === 'port' ? 'godot:PoleClimbIdle' : 'proc';
+    assert.equal(origin.pole_idle, want, `?pole=${mode} sources pole_idle from "${origin.pole_idle}", not "${want}"`);
   }
 });
 

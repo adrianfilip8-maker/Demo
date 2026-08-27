@@ -443,7 +443,25 @@ function measurePole(label, start, target, verb) {
   const p = { x: c.pole.x, z: c.pole.z, r: c.pole.r, hold: c.pole.hold, top: c.pole.top, bottom: c.pole.bottom };
   /* Climb for a beat so the cycle is genuinely running, then sweep 96 frames (1.6 s — longer
      than the clip) while he keeps climbing. A grip on a pole is what the hands do THROUGHOUT
-     the cycle, not at one frame. */
+     the cycle, not at one frame.
+
+     §720 — WAIT OUT THE MOUNT ONE-SHOT FIRST. `PoleClimb.enter` now fires `pole_grab` (their
+     `PoleGrab`, 0.67 s, non-looping) where it used to fire `pole_climb`, which under the godot
+     regime coalesced into the base clip by §525's same-source rule and so was never a second
+     live track. A fixed 30-frame settle (0.5 s) left the catch still at w1 and `assertLive`
+     refused the sample — correctly: two clips at w1 is not a reading of either. This waits for
+     the one-shot to actually retire rather than for a frame count that happened to be long
+     enough, so the numbers below stay the same quantity §713.4 and §715.8 quote. */
+  /* `t.w > 0.01` would be the obvious predicate and it is WRONG here: `play()` adds the track
+     with weight 0 and a target of 1, so on the frame the mount fires the catch is present and
+     weightless. Tested that way the wait fell straight through, the 30 frames below took the
+     clip to w1, and `assertLive` refused the first sample — the guard catching a settle that had
+     not settled. The predicate is therefore the track's EXISTENCE, which is what `_advance`
+     clears when a one-shot finishes. */
+  const grabLive = () => anim.tracks.some((t) => t.clip && t.clip.name === 'pole_grab');
+  let settle = 0;
+  while (grabLive() && settle < 180) { step((inp) => { inp.move.y = 0.5; }); settle++; }
+  if (settle >= 180) throw new Error(`gripgap ${label}: the mount one-shot never retired in 3 s`);
   for (let i = 0; i < 30; i++) step((inp) => { inp.move.y = 0.5; });
   const rows = []; let live = null; let bind = null; let palms = null;
   for (let i = 0; i < 96; i++) {

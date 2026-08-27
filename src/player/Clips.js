@@ -177,7 +177,7 @@ jump_rise jump_apex jump_fall double_jump land_soft land_hard land_roll
 wall_run_l wall_run_r wall_jump wall_cling
 ledge_hang ledge_shimmy_l ledge_shimmy_r ledge_climb
 hook_grab hook_swing hook_release
-rail_slide rail_walk pole_climb pole_slide pole_swing
+rail_slide rail_walk pole_climb pole_idle pole_grab pole_slide pole_swing
 spire_land spire_balance
 cane_combo_1 cane_combo_2 cane_combo_3 dive_attack dive_impact
 pickpocket paraglide hurt ko victory
@@ -2040,6 +2040,86 @@ def('pole_climb', {
     }, pos: [0, -0.06, 0.08] },
     { t: 1.00, e: 'out', P: PC_A, pos: [0, -0.10, 0.08], cane: [130, 26, -10] },
   ].map((k) => ({ ...k, t: k.t * 0.9 })),
+});
+
+/**
+ * `pole_idle` — §720. The STATIONARY hang: clung to the rope or pipe, going nowhere.
+ *
+ * ── Why the verb exists at all ────────────────────────────────────────────────────────────
+ * `PoleClimb.update` had exactly two clips — `pole_climb` and (on crouch) `pole_slide` — so a
+ * player who stopped on a rope kept climbing on the spot forever. §715.2 named that gap in its
+ * own words (*"our pole state shows the climbing loop while stationary where their game
+ * idles"*) and left it open because closing it needed a VERB, which was outside that brief.
+ * The reference has idled here since their first tree: `pole_state` input 0 is "pole_idle" and
+ * plays `PoleClimbIdle` (§479.18 read the same graph to find the climb's `play_mode = 1`), so
+ * this slot is not an invention — it is the half of their two-input pole state we never wired.
+ *
+ * ── NO EVENTS, and that is load-bearing rather than an omission ───────────────────────────
+ * `pole_climb` above carries two `footstep` events — the climb's hand-beat. `spliceClip` fills a
+ * swapped clip's events from THIS donor when the source has none (Animation.js says so at the
+ * fill), and no clip in the reference carries events at all. So a donor with footsteps in it
+ * would have the ported hang beating out a climb rhythm while hanging motionless. The empty
+ * array is the contract; do not "restore" it by symmetry with the row above.
+ *
+ * ── The pose ──────────────────────────────────────────────────────────────────────────────
+ * PC_A is `pole_climb`'s own contact key — the staggered hold, left hand high on the shaft,
+ * right folded lower, both knees clamped — which is precisely the pose a climb PASSES THROUGH
+ * and an idle HOLDS. So the hang is that key, held, with 1.5 cm of breathing drift on the hips
+ * and the tail, and the seam is 0° by construction (first key and last key are the same object).
+ */
+def('pole_idle', {
+  dur: 2.4, loop: true, hold: 0,
+  events: [],
+  keys: [
+    { t: 0.0, e: 'smooth', P: PC_A, pos: [0, -0.10, 0.08], cane: [130, 26, -10] },
+    { t: 1.2, e: 'smooth', P: {
+      hips: [-12, -8, 0], chest: [12, 8, 0], neck: [-25, -4, 0], head: [-28, -6, 0],
+      lowerArmL: [-44, -20, -22], lowerArmR: [-100, 22, 20],
+      upperLegL: [-62, 24, 10], upperLegR: [-32, -24, -10],
+      tailA: [-15, 11, 0], tailB: [-22, 16, 0], tailC: [-10, 10, 0], tailD: [8, -7, 0],
+    }, pos: [0, -0.085, 0.08], cane: [130, 24, -10] },
+    { t: 2.4, e: 'smooth', P: PC_A, pos: [0, -0.10, 0.08], cane: [130, 26, -10] },
+  ],
+});
+
+/**
+ * `pole_grab` — §720. The CATCH: arms open, then closing onto the shaft as he takes hold.
+ *
+ * `PoleClimb.enter` fired `oneShot('pole_climb')` — the climb loop, played as a one-shot on top
+ * of the climb loop. Under the godot regime both are the same authored motion, and `play()`
+ * refuses to layer a clip on itself by `source` (§525), so the mount had NO animation of its own:
+ * Sly arrived already climbing. Their game does have one — `PoleGrab`, which §479's census
+ * identified as "the pole mount" while measuring the attack — and this is the donor for it.
+ *
+ * NO EVENTS, for a second reason on top of `pole_idle`'s: `PoleClimb.enter` already emits
+ * `poleMount` on the bus with the surface material, and AUDIO/FX subscribe there. A clip event
+ * at the same beat would be the same contact announced twice.
+ *
+ * The shape is the catch and nothing else — reach, close, settle onto PC_A, which is where
+ * `pole_climb` and `pole_idle` both begin, so the one-shot hands over to either without a step.
+ */
+const PG_REACH = P({
+  hips: [-4, -6, 0], spine: [4, 3, 0], chest: [8, 6, 0], neck: [-18, -3, 0], head: [-22, -5, 0],
+  shoulderL: [-22, 10, -44], upperArmL: [-30, 24, -152], lowerArmL: [-14, -12, -14], handL: [18, -16, -18],
+  shoulderR: [-14, -10, 30], upperArmR: [-34, -22, 96], lowerArmR: [-30, 16, 14], handR: [16, 16, 14],
+  upperLegL: [-30, 18, 8], lowerLegL: [44, 0, 0], footL: [-2, -16, 0], toeL: [12, 0, 0],
+  upperLegR: [-14, -18, -8], lowerLegR: [30, 0, 0], footR: [0, 16, 0], toeR: [12, 0, 0],
+  tailA: [-24, -10, 0], tailB: [-34, -14, 0], tailC: [-16, -9, 0], tailD: [12, 7, 0],
+});
+def('pole_grab', {
+  dur: 0.42, loop: false, hold: 0.42,
+  events: [],
+  keys: [
+    { t: 0.00, e: 'out', P: PG_REACH, pos: [0, -0.02, -0.05], cane: [104, -16, -10] },
+    { t: 0.24, e: 'smooth', P: {
+      hips: [-10, -8, 0], chest: [10, 8, 0], head: [-26, -6, 0],
+      upperArmL: [-22, 20, -130], lowerArmL: [-28, -16, -18],
+      upperArmR: [-28, -18, 74], lowerArmR: [-64, 20, 18],
+      upperLegL: [-50, 22, 10], lowerLegL: [72, 0, 0], upperLegR: [-24, -22, -10], lowerLegR: [46, 0, 0],
+      tailA: [-21, 4, 0], tailB: [-30, 6, 0], tailC: [-14, 4, 0], tailD: [11, -3, 0],
+    }, pos: [0, -0.07, 0.05], cane: [118, 10, -10] },
+    { t: 0.42, e: 'soft', P: PC_A, pos: [0, -0.10, 0.08], cane: [130, 26, -10] },
+  ],
 });
 
 /* Pole slide: he lets go and drops, gripping loose, boots squeezing the pole, leaning back. */

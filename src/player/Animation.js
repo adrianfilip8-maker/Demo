@@ -223,6 +223,30 @@ function comboRegime() {
 }
 const COMBO_DUO = comboRegime() === 'duo';
 
+/**
+ * §720 — the rope/pipe climbing arm, and the token that reverts it. The owner: *"Integrate the
+ * animation for the rope and pipe climbing from the godot repo over the current one."*
+ *
+ * 'port' (default): the pole state plays the reference's own two-input pole graph — `PoleGrab`
+ * on the mount, `PoleClimbIdle` while stationary, `PoleClimbing` (reversed, §479.18) while
+ * actually climbing — and the four verbs of that state are exempt from §531's limb lever, which
+ * was taking their PLACED hands off the shaft (the sweep is on the `GODOT_LIMB_OPEN` rows).
+ * 'climb' (`?pole=climb` / `globalThis.__POLE_AB='climb'`): exactly what shipped before — the
+ * climb loop in all three places and the set-wide lever back on. One token, both halves; the
+ * play sites read `POLE_PORTED` from `Moveset.js`, the table halves read it here.
+ */
+const POLE_DEFAULT = 'port';
+function poleRegime() {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('pole') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__POLE_AB != null) raw = String(globalThis.__POLE_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  const t = String(raw).trim().toLowerCase();
+  return t === 'climb' || t === 'port' ? t : POLE_DEFAULT;
+}
+export const POLE_PORTED = poleRegime() === 'port';
+
 /** §479.8's slot-3 row, verbatim — what `?combo=mono` restores (and what shipped before §716). */
 const COMBO_MONO_ROW = {
   src: 'Canehit',
@@ -266,6 +290,59 @@ const GODOT_ALIAS = {
      name; the clip is directional (35.4° worst forward-vs-reversed), so forward was a visibly
      different climb. Their pole IDLE is `PoleClimbIdle` on input 0, forward — ours already is. */
   pole_climb:    { src: 'PoleClimbing', reverse: true },
+
+  /* §720 — the other half of their pole state, and the mount that never had a clip.
+     §715.6 listed both as "real functions our moveset performs implicitly [that] could take
+     someday WITH a verb added"; the owner asked for the climbing animation, so the verbs are
+     added and these are the rows.
+
+     THE FRAME THIS WAS JUDGED IN, because it is not the one §717 used and the difference is the
+     whole finding. §717.5 refused `PoleClimbIdle` at **+27.9 cm of floating feet** — measured
+     against the rig's bind CONTACT, which is the right question for `balance_idle` (a rail
+     stand) and the wrong one here. §717.5's own sentence says why: *"these are poses their game
+     plays while the feet are on a PROP — a rail, a pole, a spire — not on the ground."* On a
+     pole the feet are off the ground BY DESIGN, so that number does not transfer and it is not
+     inherited. `tools/polemeasure.mjs` re-asks it in the state's own frame, built from
+     `PoleClimb.place()`/`enter()`: the capsule origin faces the shaft and the shaft is a
+     vertical line `hold = r + TUNE.radius x 0.8` straight ahead, so every reading below is a
+     distance to that line minus the shaft radius — 0 = the hand is ON the rope.
+
+       clip                worse hand    best boot    hand dY    sweep
+       PoleClimbing         12.9 cm       -4.8 cm     27.2 cm   102.2 deg/s   <- the incumbent
+       PoleClimbIdle         8.8           -8.7        27.7       2.4         <- bound below
+       PoleGrab             27.8 mean     11.2        22.3      110.2         <- bound below
+       (fail arm) Standupright 43.6        12.3         1.6       3.8
+       (fail arm) Idle Anim 1  34.2        33.4        12.3      14.9
+
+     `PoleClimbIdle` grips the rope **4.1 cm TIGHTER than the clip the state shows there today**
+     and clamps a boot 3.9 cm further round it, at 2.4 deg/s against 102.2 — a hang, not a
+     climb, which is exactly the verb. The two ground idles are the §418.3 fail arm: carried into
+     this frame they read 34-44 cm, arms closed on air, because their hands are not placed.
+
+     `PoleGrab` is judged where a one-shot is judged — at its END, because it hands over to a
+     loop. Its hands travel from **52.6 cm off the shaft to 8.5 cm** over 0.67 s: that is a
+     catch, and it is the only clip in the corpus that closes onto a pole. The handover:
+
+       mount one-shot        -> pole_climb (as shipped)   -> PoleClimbIdle
+       pole_climb (today)      0.0 deg  (it IS the loop)    75.5 deg @lowerArmR
+       PoleGrab               80.6 deg @lowerArmL          32.8 deg @shoulderR
+
+     The 0.0 is not a good seam, it is the ABSENCE OF A MOUNT: `enter` one-shot `pole_climb` on
+     top of a base clip of `pole_climb`, and §525's rule refuses to layer a motion on itself by
+     `source`, so under the godot regime the mount played nothing at all and Sly arrived already
+     climbing. `PoleGrab` lands 32.8 deg from the hang it hands over to — inside the shipped
+     idle family's own fade band (§717 quotes 42.1/65.7 as the pair it shipped).
+
+     NO `events` ROW ON EITHER, and it is deliberate twice over. `spliceClip` fills a swapped
+     clip's events from the PROCEDURAL donor when the source carries none, and no clip in the
+     reference carries any — so an inherited row is the real risk here, not a missing one. The
+     donors are authored with `events: []` for that reason: `pole_climb`'s two `footstep` beats
+     on a motionless hang would be a climb rhythm with no climb, and `PoleClimb.enter` already
+     emits `poleMount` with the surface material for AUDIO and FX, so a mount event in the clip
+     would announce one contact twice. No `dur`/`rate`/`trim` either: both play at their authored
+     length (0.67 s), which is the timing their own tree gives them. */
+  pole_idle:     'PoleClimbIdle',
+  pole_grab:     'PoleGrab',
   rail_walk:     'railrun',
   spire_balance: 'SpireJumpIdle',
   spire_land:    'SpireJumplanding',
@@ -741,13 +818,59 @@ export const GODOT_LIMB_OPEN = {
      and the token swaps the SOURCE those slots play, not their lever. */
   crouch_idle: { elbow: 0, knee: 0 },
   crouch_walk: { elbow: 0.45, knee: 0 },
+
+  /* §720 — THE POLE STATE, exempted on §479.10's own criterion rather than on a new one.
+     That criterion, verbatim from the row above: *the lever may open a FREE limb; it may not
+     straighten a limb whose hand is PLACED.* A palm on a wall earned `wall_run_*` its cap; a
+     hand on a rope is placed by the same argument, and nothing here had ever been asked. Every
+     pole verb was taking the set-wide 0.75/0.60, and `tools/polemeasure.mjs` sweeps what that
+     does to the grip (cm to the rope surface, 0 = on the shaft, worse hand / worst frame):
+
+       verb          elbow 0 / knee 0      0.45 / 0        0.75 / 0.60 (set-wide, shipped)
+       pole_climb    12.9 / 16.8          16.3 / 25.2      23.3 / 33.4
+       pole_slide     7.0 / 10.7          14.2 / 18.0      19.3 / 23.1
+       pole_swing    24.6 / 32.3          28.1 / 37.6      31.0 / 41.2
+
+     Monotone in the wrong direction on all three, and on the verb the owner asked about it is
+     **10.4 cm of daylight between the glove and the rope** — the ported climb was landing
+     visibly not holding on. The knee half does the same to the boots (clamp +10.3 cm shipped
+     against -4.8 raw, i.e. the legs come off the shaft they are meant to squeeze), so both
+     halves go to 0 and the delivered pose is the authored one. There is no rung between: unlike
+     `crouch_walk`, where 0.45 kept real outboard daylight, every rung above 0 here moves a
+     placed hand off its contact, so §479.10's "largest rung that still clears" is 0.
+
+     THE FAMILY ARGUMENT, which is what makes this not optional: §717 pinned `idle_bored` NOT
+     because the lever hurt it but because `Moveset.js` crossfades that slot's three clips into
+     each other and a lever on one of three spreads the arms 10.7 cm mid-idle. The same shape is
+     far tighter here — `PoleClimb.update` picks between `pole_idle`, `pole_climb` and
+     `pole_slide` **on every frame, off the stick**, with a 0.16 s fade. Exempting the two new
+     verbs and leaving the two incumbents would pop the hands 10.4 cm off the rope the instant
+     the player pushed up. Either all four take the lever or none do, and the sweep says none.
+
+     `pole_swing` is measured above and DELIBERATELY NOT LISTED. It is a different state
+     (`PoleSwing`, entered on attack), and it is a ONE-ARMED orbit — the body flings out
+     horizontal with the free arm trailing, so the "worse hand" reading the sweep uses is not
+     that verb's contract and 24.6 cm at rung 0 is the free arm, not a failed grip. Measuring it
+     properly means a best-hand instrument and a ruling on a launch the owner did not ask about;
+     the numbers are here so the next lane starts from them instead of from this sentence. */
+  pole_climb: { elbow: 0, knee: 0 },
+  pole_idle:  { elbow: 0, knee: 0 },
+  pole_grab:  { elbow: 0, knee: 0 },
+  pole_slide: { elbow: 0, knee: 0 },
 };
 
-function limbOpenFor(game) {
+/** §720's revert reaches these two: the verbs that HAD the set-wide lever before this section. */
+const POLE_LEVER_NEW = new Set(['pole_climb', 'pole_slide']);
+
+function limbOpenFor(game, poleMode = 'port') {
   let over = null;
   try { over = globalThis.__LIMB_OPEN || null; } catch { /* plain hosts have no globalThis knob */ }
   const base = { ...LIMB_OPEN, ...(over || {}) };
-  const per = GODOT_LIMB_OPEN[game] || {};
+  /* §720's revert: drop the two exemptions this section ADDED to verbs that already shipped, so
+     `?pole=climb` puts the set-wide lever back exactly where it was. The two NEW verbs keep
+     their rows unconditionally — in the reverted arm nothing plays them, so there is nothing
+     for a row to change, and a conditional there would only be a second thing to get wrong. */
+  const per = poleMode === 'climb' && POLE_LEVER_NEW.has(game) ? {} : (GODOT_LIMB_OPEN[game] || {});
   const clamp = (v) => (v > 0 ? Math.min(v, 1) : 0);
   return { elbow: clamp(per.elbow ?? base.elbow), knee: clamp(per.knee ?? base.knee) };
 }
@@ -942,6 +1065,13 @@ export function buildClipSet(raw, opts = {}) {
      shape as `idle`: the module-load token decides for ACTIVE; `opts.combo` lets a test hold
      both arms in one process. */
   const comboMode = opts.combo === 'mono' || opts.combo === 'duo' ? opts.combo : (COMBO_DUO ? 'duo' : 'mono');
+  /* §720 — which pole state ships. 'port' (the default): their two-input graph, `PoleGrab` on
+     the mount and `PoleClimbIdle` on the hang, with the pole family exempt from §531's lever.
+     'climb': the state exactly as it shipped before — the climb loop everywhere and the
+     set-wide lever back on. Same seam shape as `idle` and `combo`: the module-load token decides
+     for ACTIVE, `opts.pole` lets one process hold both arms. The PLAY SITES are `Moveset.js`'s
+     and read the exported `POLE_PORTED`; this half is the table's. */
+  const poleMode = opts.pole === 'climb' || opts.pole === 'port' ? opts.pole : (POLE_PORTED ? 'port' : 'climb');
   const table = Object.create(null);
   const origin = Object.create(null);
   for (const n in CLIPS) { table[n] = CLIPS[n]; origin[n] = 'proc'; }
@@ -976,6 +1106,15 @@ export function buildClipSet(raw, opts = {}) {
     delete ALIAS.balance_idle;
   }
   if (godot && comboMode === 'mono') ALIAS = { ...ALIAS, cane_combo_3: COMBO_MONO_ROW };  // §716's revert arm
+  /* §720's revert arm. Dropping the rows is how a verb goes back to procedural (the §717 idiom):
+     the table was seeded from CLIPS and only an ALIAS row overwrites it. Nothing plays these two
+     under `?pole=climb`, so the procedural donors sit in the table unused — the same standing as
+     every other unswapped verb, and what keeps the two arms' clip COUNT identical. */
+  if (godot && poleMode === 'climb') {
+    ALIAS = { ...ALIAS };
+    delete ALIAS.pole_idle;
+    delete ALIAS.pole_grab;
+  }
 
   const tag = godot ? 'godot' : 'mixamo';
   const used = new Set();
@@ -995,7 +1134,7 @@ export function buildClipSet(raw, opts = {}) {
     else if (o && o.rate) timed = retimeRaw(timed, +(timed.dur / o.rate).toFixed(4));
     if (o && o.events) timed = { ...timed, events: o.events };
     let built = spliceClip(game, timed, CLIPS[game], fill);
-    if (godot) built = openLimbs(built, limbOpenFor(game));     // §531 — the spread ruling
+    if (godot) built = openLimbs(built, limbOpenFor(game, poleMode));   // §531 — the spread ruling
     /* SOURCE IDENTITY, carried on the clip itself rather than looked up in a side table (§525).
        Two game clips with the same `source` are the SAME authored motion under two names — which
        is the normal case for an imported set with fewer clips than we have verbs (their tree has
@@ -1028,7 +1167,7 @@ export function buildClipSet(raw, opts = {}) {
       /* `origin` names PROVENANCE — which source the motion came from — and the lever is a
          transform, not a source, so it deliberately does not retag. The arms that derive the
          swapped set from CLIP_ORIGIN stay correct. */
-      table[n] = openLimbs(table[n], limbOpenFor(n));
+      table[n] = openLimbs(table[n], limbOpenFor(n, poleMode));
     }
   }
   return { table, origin, regime, unused: Object.keys(SRC).filter((n) => !used.has(n)) };
@@ -1073,7 +1212,7 @@ const AIRBORNE = new Set([
   'wall_run_l', 'wall_run_r', 'wall_jump', 'wall_cling',
   'ledge_hang', 'ledge_shimmy_l', 'ledge_shimmy_r',
   'hook_grab', 'hook_swing', 'hook_release',
-  'pole_climb', 'pole_slide', 'pole_swing',
+  'pole_climb', 'pole_idle', 'pole_grab', 'pole_slide', 'pole_swing',
   'rail_slide', 'rail_walk', 'balance_idle',
   'spire_land', 'spire_balance', 'perch_idle',
   'dive_attack', 'roll', 'land_roll', 'crawl', 'ko',

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { State } from './States.js';
 import { TUNE } from './Controller.js';
-import { ACTIVE } from './Animation.js';
+import { ACTIVE, POLE_PORTED } from './Animation.js';
 
 /**
  * Moveset — one class per move in AGENTS.md §6. Each move owns its own rules and nothing else's.
@@ -1404,7 +1404,15 @@ class PoleClimb extends State {
     c.grounded = false;
     c.position.y = Math.min(Math.max(c.position.y, p.bottom + 0.05), p.top - 0.25);
     this.place(c);
-    c.oneShot('pole_climb');
+    /* §720 — the MOUNT. This was `oneShot('pole_climb')`, which under the godot regime played
+       nothing at all: `update` re-asserts `pole_climb` as the base on the very next frame, and
+       §525's rule refuses to layer a clip on top of its own `source`, so the one-shot coalesced
+       into the loop and Sly arrived already climbing. `pole_grab` is a different motion (the
+       reference's `PoleGrab` — hands travelling 52.6 cm to 8.5 cm off the shaft over 0.67 s),
+       so it layers, and it ends 32.8 deg from the hang it hands over to. `?pole=climb` restores
+       the old call verbatim. The `poleMount` emit below is unchanged and is still the ONLY
+       announcement of this contact — the clip deliberately carries no event (Animation.js). */
+    c.oneShot(POLE_PORTED ? 'pole_grab' : 'pole_climb');
     c.engine.emit('poleMount', { pos: c.position, material: a.rec?.material });
   }
   place(c) {
@@ -1427,10 +1435,23 @@ class PoleClimb extends State {
     // Spin around the shaft; climb, descend, or slide.
     if (Math.abs(c.wishRaw.x) > 0.3) p.angle += -c.wishRaw.x * TUNE.poleSpin * dt;
     let vy = 0;
-    let clip = 'pole_climb';
+    /* §720 — THE STATIONARY HANG. This read `let clip = 'pole_climb'` and only the crouch branch
+       ever moved it, so a player who stopped on a rope or a pipe kept climbing on the spot for
+       as long as he hung there. §715.2 named it in those words and could not close it, because
+       closing it needs a VERB and that was outside its brief.
+
+       The shape is the reference's own: their `pole_state` is a two-input transition — input 0
+       "pole_idle" -> `PoleClimbIdle`, input 1 "pole_walk" -> `PoleClimbing` — and §479.18 read
+       that same graph to find the climb's backwards play_mode. We had wired input 1 and not
+       input 0. The discriminator is `vy`, which is this state's own answer to "is he climbing":
+       stick up or down climbs, crouch slides, anything else is a hang. Spinning around the
+       shaft (`wishRaw.x`, above) deliberately does NOT count as climbing — it rotates the whole
+       body about the pole, which reads as motion whatever the arms are doing, and their tree
+       has no third input for it either. `?pole=climb` restores the single-clip original. */
+    let clip = POLE_PORTED ? 'pole_idle' : 'pole_climb';
     if (c.down('crouch')) { vy = -TUNE.poleDown; clip = 'pole_slide'; }
-    else if (c.wishRaw.z > 0.3) vy = TUNE.poleUp;
-    else if (c.wishRaw.z < -0.3) vy = -TUNE.poleUp;
+    else if (c.wishRaw.z > 0.3) { vy = TUNE.poleUp; clip = 'pole_climb'; }
+    else if (c.wishRaw.z < -0.3) { vy = -TUNE.poleUp; clip = 'pole_climb'; }
     c.position.y += vy * dt;
     c.velocity.set(0, vy, 0);
 
