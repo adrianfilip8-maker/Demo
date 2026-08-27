@@ -58901,3 +58901,14 @@ opened*, by me or by the tool.
   theirs appears at all — the 4.89:1 remap ratio and the phase values 2/3/4 — are census output
   about file contents, not tuning.
 
+---
+
+## §719 — "Apply the gold color to the cane hook": the crook is a connected component of the adopted mesh, and the tint is one vertex attribute
+
+*(Section claimed at this heading before its content was written — §700.9. Body follows in the
+next commits. Scope: the ALBEDO of the crook on the owner-supplied `sly-cane.glb` only. §266's
+metal refusal stands untouched — no `metal`, `gloss`, `spec` or `detail` value moves under this
+section, and the reason it must not is restated in `SlyModelDLRig.js` where the material is
+built. No geometry moves: `hookPoint`, `tipPoint`, `centerline` and `gripSpan` are the same
+numbers before and after, so §605's settled rings read exactly what they read yesterday.)*
+
