@@ -58009,3 +58009,34 @@ claim about a tree nobody ran.
 **1085 / 1085, 0 fail**, 363.2 s, zero `not ok` lines over the whole stream, pwd checked inside
 the command (`/home/user/wt-716`), cwd present at end. Four runs, four green, and neither
 documented flake fired in any of them.
+
+---
+
+## §717 — "Use the ported idle pose always over the generated one": the ruling read as a precedence rule, applied verb by verb across the idle family
+
+### §717.1 The interpretation, stated first so a redirect is cheap (§705)
+
+The owner's ruling, verbatim: *"Use the ported idle pose always over the generated one"*.
+
+**I read it as a general precedence rule: wherever an idle verb could play either a clip ported
+from the reference repo or a procedurally generated one, the ported clip wins.** The operative
+word is "always" — a standing preference over the whole idle family, not a one-off binding of
+one slot. §715 bound four idle-family verbs to ported clips and left the rest procedural on
+case-by-case reasoning; this ruling re-opens every one of those and inverts the default.
+
+**The narrower reading I considered and rejected.** "The ported idle pose" could name the static
+`Standupright` specifically — the §479.20 pose the owner endorsed off a contact sheet — and the
+instruction could then mean *revert §715's animated idle back to that pose*. Rejected, for two
+reasons stated so the owner can see the fork: (a) they asked for the repo's own idle **one
+instruction earlier** ("if the rep has its own idle, use it"), §715 delivered exactly that, and
+an owner wanting it undone one instruction later would say *revert*, or name the pose arm that
+already exists for it; (b) "always … over the generated one" is comparative language about a
+*class* of alternatives, which the static-pose reading does not need and does not use.
+
+**If I have this backwards the fix is one token**, which is exactly why §715 kept `?idle=pose`
+live and why this section re-verifies it: `?idle=pose` (URL) or `globalThis.__IDLE_AB='pose'`
+(runners) restores §479.20's raw `Standupright` in the standing slots, bit-exact. No asset
+changes under this ruling — only which verb plays which already-authored clip.
+
+*(Section claimed at this heading before its content was written — §700.9. Body follows in the
+next commits.)*
