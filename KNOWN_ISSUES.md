@@ -57439,13 +57439,303 @@ undecided.
 
 ---
 
-## §715 — "Add all the required animations from the godot repo": the thirteen sealed libraries are opened, and every verb the repo can supply is bound
+## §715 — "Add all the required animations from the godot repo": the fourteen sealed libraries are opened, every verb the repo can supply is bound, and the remainder is measured
 
-**Interpretation, stated here first so a redirect is cheap:** bind every verb of the DEFAULT
+### §715.1 The interpretation, and the mid-run ruling that widened it
+
+"Add all the required animations from the godot repo," read as: **bind every verb of the DEFAULT
 playable character (RIG3 + GodotClips) that the reference repo can actually supply, and report
-the irreducible remainder — §714's own conditional logic, "add it only if the animations exist,"
-applied across the whole verb table. The `?char=sly27` preview arm is out of scope. §479.20's
-raw `Standupright` idle stays by ruling; §708's grips are re-measured and reported, not fixed;
-the three cane-combo slots stay on one `Canehit` body per the owner's "repeats, not combos."
+the irreducible remainder** — §714's own conditional logic applied across the whole verb table.
+The `?char=sly27` preview arm is out of scope. Mid-run the owner added a second conditional,
+relayed verbatim: *"If the rep has its own idle, use it."* Both conditionals turn on the same
+existence check, and the check could not be answered until someone opened the thirteen sealed
+libraries §714.2 proved unreadable by `strings`. That opening is this section's first
+deliverable; every binding and every refusal below follows from what was inside.
 
-(Section under construction — heading committed first per §700.9; content follows.)
+### §715.2 The libraries, opened — the census nobody had
+
+`tools/godotlib2clips.mjs` reads the containers (`RSCC` magic, mode 2 = **Zstd**, block 4096;
+payload = the Godot 4.3 binary-resource body, ver_format 6, whose RSRC magic the outer loader
+consumes — measured on the bytes, every block inflating to its declared size across all fourteen
+files). §714.2's positive-control discipline carried over: the walk library must yield walk
+clips, and it yields nine. The census at reference HEAD `a312a99` — **fourteen** sealed
+libraries: the thirteen under `Assets/Animations/` plus one more found bound to their player
+under `Assets/Temp Imports/tempsly/`:
+
+| library | clips | contents |
+|---|---|---|
+| `Library Sly MASTER 005` | 32 | **the canonical humanoid set**: `00 T-Pose`, `Air Pose 1`, `Cane Hit`, **`Cane Hit 2`**, `Front Flip 1/2`, `Idle Air 1/2`, `Idle Air Hit`, `Idle Air Pose`, **`Idle Anim 1`**, **`Idle Crouch 1/2`**, `Idle Fight 1/2`, `Idle Stand 1`, `Idle Stand Carry`, `Idle Teeter`, `Jump 1`, `Jump Full`, **`Run 1/2`**, `Run Front Flip`, **`Walk Crouch 1–4`**, `Walk Disguise 1–4`, `Walk Sneak Slow` |
+| `Library Sly MASTER 002–004` | 32 each | differ from 005 **only in `Idle Teeter`** — four saves iterating one clip (per-clip track-data hashes) |
+| `Library Sly MASTER 001` | 32 | an older generation — 11 clips differ from the 002–005 line |
+| `Library Sly Idle` | 3 | **`Idle Look`** (9.2 s scan, loop), `Idle POSE` (1 ms), `RESET` |
+| `Library Sly Walk` | 9 | `Disguise Walk Carry/Casual/Funny/Relaxed`, `Walk Crouch 1/2` (= MASTER's 3/4 re-saved), `Walk Posture DOWN/UP`, `Walk Sneaky` (= `Walk Sneak Slow`) |
+| `Library Sly Air` | 4 | `Air Pose` (1 ms), `Front Flip` (0.5 s), `Jump Animation` (0.27 s), `RESET` |
+| `Library_Sly_air_anims_01` | 3 | `Fall Air Pose`, **`Fall Glide`** (12.1 s), **`Jump Pounce`** (0.6 s) |
+| `Library Sly MASTER 006` | 24 | **exactly the glTF 24** (metarig) — the shipped set's own names, `KeyAction_001` included |
+| `Library_Sly_19` | 20 | metarig subset — what their tree mostly binds |
+| `Library_Sly_14` | 13 | metarig subset + `Crouching stand 2`, `CrouchingstandStand`, `UprightStand` |
+| `Library_SlyCooper_Anims6` | 11 | Anims4/6-era: `CrouchingStand`, `Jump`, `UprightStand`, `Walk`, 7 × `_Action Stash]` |
+| `SlyCooper_Anims4_Anims` (Temp Imports) | 9 | Godot 4.4, blend-shape era (150 tracks) — bound to their player (`sly_cooper_anims_4.tscn:48477`) but referenced by no state |
+
+Two findings correct the record:
+
+- **§714's existence answer is falsified for the combo.** `Cane Hit` (1.37 s) and **`Cane Hit
+  2`** (1.03 s) are distinct attack animations, present in every MASTER library. §714 answered
+  "exactly ONE cane attack" from the text files because the containers were sealed — and its own
+  §714.2 said a scan that cannot read the container proves nothing about the contents. The
+  binding does NOT change: the owner's standing ruling — *"cane swings are repeats, should not
+  be combos"* — predates and survives the discovery, so all three slots stay on one `Canehit`
+  body, and the two library attacks are recorded for the owner to rule on (measured for that
+  ruling: `Cane Hit 2`'s strike hand peaks 0.66 m in front of the hips at t 0.32 of 1.03 s — a
+  slower, heavier swing than the shipped 0.5 s `Canehit`; with the facing conjugated the same
+  peak lands BEHIND, which is this import's §418.3 fail arm).
+- **The humanoid libraries are shelf stock.** MASTER 001–005, Air, Idle, Walk and air_anims_01
+  are referenced by **no scene and no script** in their project — their tree plays
+  `Library_Sly_19`/`_14` plus two inline libraries only. Everything taken below is "authored by
+  the reference project," not "delivered by their game"; PROVENANCE.md says so per clip.
+
+### §715.3 The method: retargeting a .res with no model file
+
+The humanoid libraries target `%GeneralSkeleton` — Godot bone-profile names, a Mixamo-format
+source betrayed by one stray `mixamorig1_HeadTop_End` leaf — and **no model file in their repo
+carries that skeleton**. What the MASTER libraries do carry is `00 T-Pose`: a one-key bake of
+every bone's local rest rotation plus the hips rest position (zero deviation across its keys).
+That is sufficient by construction: the world-delta retarget needs rest and animated world
+ROTATIONS (which compose from locals — bone offsets never enter) plus the hips position track,
+which is what makes a .res with no model retargetable at all. Three additions to godot2clips'
+math, each measured before it was coded (derivations in the tool header):
+
+- **Arm rest alignment.** Their T-pose holds the arms horizontal; RIG3's bind arm points
+  down-and-out. Uncorrected, the humanoid runs carried ~50–58° of spurious upperArm Z against
+  the shipped metarig Run's −3.6/+11.1 **while the legs agreed** (both rests vertical — the
+  observation that isolated the skew). D′ = D·C⁻¹ over the arm chain, C = the minimal rotation
+  from ±X to RIG3's own bind upperArm→lowerArm direction (42.6° per side — a constant of our
+  rig, not a fitted number). After: Run 1's upperArm Z means sit within 2–12° of the shipped
+  Run — §479.6's style band.
+- **Facing and yaw, measured not assumed.** The metarig import needed a 180° conjugation; this
+  one does not (nine gaits travel +Z as-is; the tool re-derives the check from the committed
+  GLB on every run and throws on a sign flip). The three idles then turned out to carry a
+  CONSTANT authored facing offset — −54.2° (`Idle Anim 1`), +64.4° mean under a ±55° scan
+  (`Idle Look`), +61.0° (`Idle Crouch 2`) — mocap-style takes their project never wired and so
+  never had to normalize; played raw, the character stood ~55° off the controller's yaw and
+  snapped straight on every idle→gait blend. **The frames caught it before it shipped** (the
+  first take's "profile" photographed his back). The bake now removes each idle's circular-mean
+  hips yaw — a rigid re-base of the same authored motion, the FLIP conjugation's class with the
+  angle measured per clip and printed; the scan's ±55° sweep survives, centered. Gaits are not
+  touched — their facing is proven by travel.
+- **Phase.** The tree runs ONE shared stride phase, so a gait joining it must put its footfalls
+  where the family puts theirs. `Walk Crouch 4` needs nothing (native R@0.34/L@0.77, already
+  the godot Walk family's neighbourhood). The rotation machinery built for `Run 1` (loop
+  re-indexed on the captured sample array — re-driving the mixer at wrapped times is
+  godot2clips' documented clampWhenFinished trap) landed it R@0.27/L@0.77 against Run's
+  0.267/0.767, and then the binding was refused anyway (§715.4) — the machinery and its
+  printed-footfall verification stay, because the direction of a shift like this once shipped
+  backwards (§479.8).
+
+The five kept clips travel as `public/assets/sly-godot/sly-godot-lib.glb` (300 KB, an offline
+rebuild intermediate registered in bundle.test's unshipped-payload table with the same standing
+as `sly-godot-moves.glb`; the runtime consumes the baked `src/player/GodotLibClips.js` and
+fetches nothing new) and join the godot regimes as `{ ...GODOT_CLIPS, ...GODOT_LIB_CLIPS }` —
+**GodotClips.js is byte-untouched**, which is what keeps §479.20's bit-exactness check
+meaningful (§715.8).
+
+### §715.4 The bindings — and the sprint that measured out
+
+| verb | plays | the measurement that decided it |
+|---|---|---|
+| `idle_confident` | **`Idle Anim 1`** | §715.5 — the owner's conditional, answered yes |
+| `idle_look` | **`Idle Look`** | §715.5 |
+| `crouch_idle` | **`Idle Crouch 2`** | hips −0.467 vs the proc incumbent's −0.52 — within 5 cm on the axis that defines the stance; `Idle Crouch 1` (−0.198) and the glTF's `Crouching stand` (−0.115, their DEFAULT standing idle — their script plays it whenever all floor rays hit) both lost on the same axis; 6.7 s of authored fidget vs the proc 2.8 s breathing loop |
+| `crouch_walk` | **`Walk Crouch 4`** | ties `Walk Crouch 2` on depth (−0.283 vs −0.274) and speed (1.47 vs 1.45 m/s); wins on contact geometry — clean alternation R@0.34/L@0.77 where 2 is an authored asymmetric prowl (right stance wraps the loop seam 65→39% of the cycle, left only toe-taps 69–83%, footfalls clustering 30 ms apart); `Walk Crouch 1` (−0.148) and `3` (−0.226, a two-stride bake) lost on depth |
+| `run_fast` | `Run` (UNCHANGED) | the challenger was bound, driven in state, and **refused on the tree's own contract** — below |
+
+**The `Run 1` refusal, in full, because it is the section's §418.3 centrepiece.** The recovered
+sprint (4.10 m/s and stride 3.01 vs `Run 2`'s 3.51/2.58 — it IS the sprint of the pair) was
+bound to `run_fast`, phase-rotated onto Run's beat, and driven through the REAL states by
+`tools/moveslook.mjs`. The locomotion tree runs one shared phase over the weighted MEAN stride
+of the live nodes, so adjacent speed nodes carrying 6.195 m (`Run`) and 3.01 m (`Run 1`)
+cannot both be honest in the blend band: at a driven 6.87 m/s the sprint under-cranked
+(1.58 cyc/s delivered against 2.28 wanted) and **skated 2.1 m/s — 31% of travel — against the
+~7–12% residual §316 records as the tolerated ceiling**, on the instrument the incumbent
+duplicate passes near-zero by construction (equal strides ⇒ the mean IS the clip). The
+incumbent lost nothing and keeps the slot; the tree keeps its contract. Equalising the family's
+strides (their Run's 6.195 m is a cartoon-bound figure — 12.4 m/s of foot travel per cycle) is
+a TREE RETUNE, and "add the animations" does not license one (§714.3's line). `Run 1` stays
+baked in GodotLibClips for the day an owner rules on that retune; the Animation.js row records
+the numbers at the slot itself.
+
+Levers (`GODOT_LIMB_OPEN`), measured by §479.10's method: both crouch rows pin **knee 0** (the
+fold IS the crouch — `Idle Crouch 2` holds 114–125°, and the set-wide 0.60 would open it past
+50° and un-crouch the stance; §531 wanted limbs spread, not the crouch removed, and its own
+text already exempts function). Elbows per clip: `crouch_idle` 0 — opening moves the hands
+INBOARD monotonically (worst left hand vs the knee line −22.1 → −24.7 → −26.5 cm across rungs
+0/0.45/0.75 — §479.16's mechanism re-measured); `crouch_walk` 0.45 — the largest rung with real
+outboard daylight (+8.8/+9.7 cm; at the set-wide 0.75 the hands land ON the knee line,
+−1.0/+0.9). The idle slots keep §479.20's 0/0 rows, which the token swap deliberately does not
+touch.
+
+**In-state acceptance** (`tools/moveslook.mjs`, a `crouch` take added — the real crouch state
+under a held ControlLeft and an injected stick, phase-matched frames, the same skate telemetry
+as the gait takes; both arms of every number, §418.3):
+
+```
+                         godot (shipped)                 proc (?anim=proc)
+crouch_walk   speed 1.02 · stride 1.371 · skate 0.02   speed 1.02 · stride 1.55 · skate 0.015   state: crouch, both
+run_fast      6.87 m/s · Run 1 · skate 2.118  ← the refusal's number (r5, clean lane)
+              6.27 m/s · proc run_fast · skate 0.319   (and the shipped Run duplicate mixes at near-zero by construction)
+```
+
+One capture note recorded honestly: three sprint takes launched from z 30/34 stalled at
+0.6–0.9 m/s in the godot arm while the proc arm cleared the same lane at 6.27 — the arms'
+phase-seek loops consume different frame counts, so world time and the patrol positions
+diverge between arms; the refusal rests on the CLEAN r5 run from the tool's own default lane
+(z 40), where the sprint reached 6.87 m/s. Frames: `shots/moves715-*` (crouch idle deep-crouch
+pair + crouch walk phase pair, godot and proc arms).
+
+### §715.5 The idle conditional: answered YES, and what the frames show
+
+Their game's own wired standing idle was already known (`Standupright` static on
+`floor_idle_stand`; `Crouching stand` on plain ground). The ruling's question was about the
+LIBRARIES, and the answer is yes: **`Idle Anim 1`** (MASTER 005, 8.7 s) is a genuine animated
+standing idle — **16.2 cm of lateral hip weight-shift, loop seam 1.4° worst-bone with identical
+root** — and **`Idle Look`** (Idle library, 9.2 s, authored loop) is an animated lookout scan.
+`Idle POSE`/`Idle Stand 1`/`Idle Stand Carry` are 1 ms holds and fail the ruling's own bar ("an
+animation, not a held pose"); `Idle Fight 1/2` are combat guards; `Idle Teeter` is an alarm. So:
+
+- **`idle_confident` ← `Idle Anim 1`** — the primary standing idle.
+- **`idle_look` ← `Idle Look`** — name, content and slot function agree (`Moveset.js:141` parks
+  the 13-second stare here). Stated plainly: it is a CROUCHED-FORWARD scan (hips −0.25, pitch
+  ~65°) — after 13 s of standing still Sly drops into a lookout crouch and scans ±55°. That
+  posture departure from the endorsed static is the mapping decision this lane made under the
+  ruling's "slot mapping is yours"; the frames show exactly what it looks like.
+- **`idle_bored` stays procedural** — the libraries hold no bored-family idle, so on that slot
+  the conditional's answer is no and §479.20's variety reasoning stands.
+
+**The §479.20 interaction, on the litigated axis, numbers first.** The endorsed static delivers
+66.3 cm hand separation (out +21.3/+18.4, fold 154/154) — reproduced LIVE this session at
+70.9/70.6 on the §479.20 cameras, the idle20 record to the decimal, which is also the proof the
+token arm still ships the endorsed frame. `Idle Anim 1` delivers over its cycle: **mean
+separation 63.5 cm — 2.8 cm NARROWER than the endorsed static on average — swinging 22.9 to
+105.6 cm across its beats; mean outboard L +15.2 / R +21.6 with the left hand dipping 13 cm
+inboard at the deepest weight shift; elbow fold 125/115° against the endorsed 151/153° — the
+arms DO read ~30° more folded.** The later conditional ruling wins and the repo idle ships, but
+that axis is §479.15–.20's litigation, so it is stated here and photographed rather than left
+to the controller.
+
+**The frames** — `tools/idlevsref.mjs MODE=idle715`, both ARMS × both slots ×
+front-three-quarter (camDot 0.82, §479.14-guarded) + profile (0.00), same lens same spot, eight
+frames, errs 0: `shots/idle715-{repo,pose}-{confident,look}-{front34,profile}.png`. The subject
+spot moved to (−4, 0, 26) — market props have grown over idle20's (0, 0, 30) and the first take
+photographed the pose behind a stack of pots (camdot's chest ray passed while the limbs were
+covered — the frame is the authority the ray is not), and yaw is pinned to the preflighted
+geometry after a stray settle-yaw put one "profile" inside the west arcade. What they show: the
+repo idle's big beat is a showman's flourish — left palm presented, cane over the right
+shoulder — and its weight shifts read as ATTITUDE rather than idleness-in-place; the Look scan
+is a genuine Sly lookout, cane guarded across the chest, alert eyes; the pose arm is the
+§479.20 static exactly as endorsed. The cane sits in the fist in all eight (§10, checked on the
+pictures).
+
+**The revert is one token.** `?idle=pose` (URL) or `globalThis.__IDLE_AB='pose'` (runners)
+restores §479.20's raw `Standupright` in both slots — bit-exact, asserted live during capture;
+`IDLE_DEFAULT` in Animation.js is the source flip. The §479.20 test survives INSIDE that arm:
+`anim.test.mjs`'s idle test now holds both arms in one process (`buildClipSet('godot',
+{ idle })`) — the default arm asserts the repo pair, that it really ANIMATES (hips sway ≥ 5 cm;
+the static and the §479.17 matched pose both read ~0 and fail it), and that it has not been
+matched back down (cycle-mean separation ≥ 55 vs the matched pose's 47.7); the pose arm asserts
+§479.20's original predicates verbatim at its original hold frame. The §470 witness list
+re-derives with `crouch_walk`'s departure (it now guards that its three remaining names STAY
+proc-sourced, so a future swap re-derives rather than silently weakens).
+
+### §715.6 The refusals — function measured, names refused
+
+- **`Fall Glide` → `paraglide`: REFUSED.** The name promised the one verb with no source
+  anywhere; the data is a PRONE skydive — hips pitched 84.6° (body horizontal), hands at hip
+  height. Our paraglide hangs vertically under the cane (pitch −16°, cane −92° overhead);
+  binding would put a prone body under an overhead donor cane — a §10 grip break by
+  construction. `paraglide` stays procedural, honestly: no compatible source exists.
+- **`Jump Pounce` → `dive_attack`: REFUSED.** A forward pounce — arms thrown up-forward
+  (upperArm −109/−97°), 0.8 m of drop while reaching AHEAD (hands at z +0.8). The dive verb
+  plunges vertically, cane speared down, into `dive_impact`'s crater contract. Trajectory
+  family mismatch at the state's own flight path.
+- **`RailrunStand` → `balance_idle`: REFUSED on the feet** — both ankles float 0.462–0.517 in
+  clip space and never descend; the shipped `railrun` (same author, bound to `rail_walk`)
+  bottoms at 0.175, so the stand would hover ~0.29 above its own walking neighbour's contact.
+  **`Idle Teeter` → same verb: REFUSED on function** — a perpetual about-to-fall alarm as the
+  calm default stand. `balance_idle` stays procedural (of the three it is also the only one
+  whose prop does its job — the cane-out balance pole).
+- **`Walk Sneak Slow`/`Walk Sneaky` → `sneak_walk`: REFUSED on the stride** — 0.173 m/s of
+  authored travel against a verb that runs at TUNE.sneakSpeed 1.4: a 4.5× overcrank to keep
+  up. The proc sneak also carries §522's arm-phase repair (0% ipsilateral), an incumbent asset.
+- **`Idle Air Hit` → `hurt`: REFUSED** — a 4.4 s LOOP that drifts (~2.7 m/s in the stride fit);
+  `hurt` is a 0.62 s grounded impulse with authored pupils, ears, jaw and knockback.
+- **`LedgeGrab` → `ledge_climb`: REFUSED** — their tree wires it as jump_state input
+  `"ledge_grab"`: the mid-air CATCH (hands rising to 1.17/1.34 world-y, hips barely moving),
+  not a climb-up. No catch verb exists; manufacturing one is §713's line.
+- **`Idle Air 1/2`, `Fall Air Pose` → `jump_apex`: not taken** — all are tucked falls (knees
+  111–129°, hips −0.4..−0.55), alternates of the already-bound `Falling`; nothing in the corpus
+  floats like an apex.
+- **`perch_idle`: not touched** — the hero-shot pose, with SlyModel.js's head-count
+  documentation built on its exact figure; an owner-seen pose this lane does not move without a
+  ruling naming it.
+- **`Cane Hit`/`Cane Hit 2` → combos: exist, recorded, not bound** (the standing ruling —
+  §715.2).
+
+The godot regime's baked-but-unused set, stated: `CaneSwing Idle` (§713), `Crouching stand`,
+`LedgeGrab`, `PoleClimbIdle`, `PoleGrab`, `RailrunStand`, `SpireJump`, `Run 1` (§715.4), and —
+while the repo idle is in force — `Standupright`, which the `?idle=pose` arm plays. Three of
+those name real functions our moveset performs implicitly and could take someday WITH a verb
+added (`PoleClimbIdle` — our pole state shows the climbing loop while stationary where their
+game idles; `PoleGrab` — their pole-jump catch; `SpireJump` — their spire spin-jump launch);
+adding verbs was outside this brief, and §713's restraint applies until an owner asks.
+
+### §715.7 The irreducible remainder
+
+Verbs that stay procedural because the reference — the glTFs AND all fourteen opened libraries
+— holds no compatible source: `run_fast`-as-a-distinct-look (refused on the tree contract),
+`sneak_idle`, `sneak_walk`, `balance_idle`, `perch_idle`, `idle_bored` (the conditional's own
+no), `jump_apex`, `turn_l/r`, `skid_stop`, `roll`, `land_hard`, `land_roll`, `crawl`,
+`wall_run_l/r`, `wall_cling`, `wall_jump`, `ledge_shimmy_l/r`, `ledge_climb`, `hook_release`,
+`rail_slide`, `pole_slide`, `pole_swing`, `dive_attack`, `dive_impact`, `paraglide`, `hurt`,
+`ko`, `victory` (those last two also have no play site in our own Moveset — nothing requests
+them). **27 of the 49 procedural, 22 playing reference data.** That is the complete answer to
+"add ALL the required animations": everything the repo can supply is bound; this list is what
+it cannot supply, each entry with its reason above.
+
+### §715.8 What was verified unchanged
+
+- **§479.20's baked clip.** `GodotClips.js` byte-untouched; `Standupright` hashes
+  `a8ba715b4875fdb5` (sha256 of the entry, §713's method), dur 4, 81 keys, loop. Two facts,
+  separately: the clip is bit-identical; WHICH VERB plays it changed by the owner's conditional
+  ruling, and `?idle=pose` plays it in both slots.
+- **§708 grips — re-measured (`tools/gripgap.mjs`) and reported, NOT fixed.** Every figure of
+  §713.4's table reproduced exactly (raw 27/25.1/23.8 on the poles, 10/43/16.2 · 9.8/43/16.4 ·
+  9.9/42.8/16.3 on the ledges, 131.1/134.8/231.2 and 100.5/32/77.7 on the hooks, 12.1/26/17.1
+  and 26.9/26.8/35.2 on the rails; proc arm identical to §713's too) — none of this lane's
+  bindings touches a gripping verb. The ledge off hand's 43 cm stays open; §708 says leave it.
+- **The budget.** No mesh, bone or triangle changed — the only new runtime payload is a 319 KB
+  generated pose-data module (and a 300 KB offline GLB the runtime never fetches, registered).
+  `tools/budgetattrib.mjs`: worst main-view 86 draws (34% of 250), 0.652 M tris (54% of 1.2 M),
+  exit 0. (`Engine.stats.drawCalls` stays unusable here.)
+- **prodboot** (`node tools/prodboot.mjs`, the new public/ file makes it due): boot completed
+  past module 30 TRUE, zero 4xx/5xx TRUE, 19 kaykit aborts in the known not-gated class. PASS.
+
+### §715.9 The suite — every run quoted (§703.2)
+
+| run | commit | result | duration | pwd inside command | cwd at end |
+|---|---|---|---|---|---|
+| 1 | `dc181aa` | 1083 / 1084, **1 fail — `framebudget` F3 GC**, the documented ~1-in-3 flake, identified from the full stream (its `not ok` line and assertion read out of the TAP file, §711.1) | 358.3 s | `/home/user/wt-715` | exists |
+| 2 | `dc181aa` | **1084 / 1084**, 0 fail | 355.7 s | `/home/user/wt-715` | exists |
+| 3 | `dc181aa` | **1084 / 1084**, 0 fail | 355.4 s | `/home/user/wt-715` | exists |
+
+`node --test "tests/*.test.mjs"` from a clean detached worktree at the **pushed** `dc181aa`
+(`git worktree add --detach`, `node_modules` symlinked), the FIFO capture lock held across all
+three runs, cwd checked from INSIDE the spawned command (§694). Each complete TAP stream went to
+a file and `not ok` was counted over the FILE (1 / 0 / 0), never a window. `--test-name-pattern`
+was never used — on `framebudget` it changes allocation history and makes F3 fail 100%. The one
+red is the documented flake at its documented rate, and its identity is quoted, not presumed
+(§703.2: every run quoted, not only the green ones). `padrest` R1b never fired.
+
+A fourth run, at the commit that carries this section, is recorded in the commit after it — the
+§712/§713 precedent: a suite table committed at one sha and quoted at another is a claim about a
+tree nobody ran.
+
