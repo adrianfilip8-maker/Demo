@@ -46,6 +46,7 @@
  *   node tools/canehook.mjs                 # sly-closeup
  *   node tools/canehook.mjs hero            # any canonical shot
  */
+import { writeFileSync, readFileSync } from 'node:fs';
 import { withGame } from './harness.mjs';
 import { shipVerdict, verdictLine } from './gate.mjs';
 import { readPNG } from './png.mjs';
@@ -60,23 +61,57 @@ const argv = process.argv.slice(2);
  * subject's entire mechanism: if the vertex-colour path were doing something other than what it
  * is believed to do, that arm would report the same numbers and be equally wrong (§439/§440).
  * This mode shares none of it. It reads two PNGs captured from two different COMMITS through
- * `tools/shot.mjs`, takes the pixels that differ as the population, and reports the colour of
- * that population in both. Nothing here boots a game, pokes a uniform, or knows what a cane is.
+ * `tools/shot.mjs` and reports the colour of the hook's pixels in both. Nothing here boots a
+ * game, pokes a uniform, or knows what a cane is.
  *
- *   node tools/canehook.mjs --frames shots/719-before/sly-closeup.png shots/719-after/sly-closeup.png
+ * IT NEEDS A MASK, AND THAT IS THE POINT RATHER THAN A LIMITATION. Two frames from two separate
+ * BOOTS are not bit-comparable in this renderer: measured on this very pair, 22.0 % of the frame
+ * differs and the delta histogram decays smoothly from 0 with no floor to threshold at — 78 % of
+ * pixels identical, 92 % within 2, and still 33 558 pixels at 8 or more, spread over the whole
+ * frame. `tests/canegold3.test.mjs` already forbids exactly this as a bar ("no frame is read back
+ * off disk for a pixel bar", §294(2)), and it is right to. So this mode does NOT take "the pixels
+ * that differ" as its population — that population is mostly renderer noise. It takes the hook's
+ * own footprint, dumped by the in-page run below at the same resolution, and reports the two
+ * frames over it. The unmasked diff is still printed, as the honest statement of how noisy a
+ * cross-boot pair is.
+ *
+ *   node tools/canehook.mjs sly-closeup --w 1600 --h 900 --maskout /tmp/hook.json
+ *   node tools/canehook.mjs --frames shots/719-before/sly-closeup.png \
+ *                                    shots/719-after/sly-closeup.png --mask /tmp/hook.json
  * ------------------------------------------------------------------------------------------ */
+const optArg = (name, dflt = null) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : dflt; };
 const fi = argv.indexOf('--frames');
 if (fi >= 0) {
   const [A, B] = argv.slice(fi + 1, fi + 3);
   const a = readPNG(A), b = readPNG(B);
   if (a.w !== b.w || a.h !== b.h) throw new Error(`size mismatch: ${a.w}x${a.h} vs ${b.w}x${b.h}`);
   const ch = a.ch;
+  const maskFile = optArg('--mask');
+  let mask = null;
+  if (maskFile) {
+    mask = JSON.parse(readFileSync(maskFile, 'utf8'));
+    if (mask.w !== a.w || mask.h !== a.h) {
+      throw new Error(`mask is ${mask.w}x${mask.h} but the frames are ${a.w}x${a.h} — `
+        + 're-run the in-page mode at the frames\' own resolution');
+    }
+  }
+  /* the unmasked diff, reported so the noise is stated rather than hidden */
+  let raw = 0, hist = new Array(64).fill(0);
+  for (let i = 0; i < a.data.length; i += ch) {
+    const d = Math.max(Math.abs(a.data[i] - b.data[i]), Math.abs(a.data[i + 1] - b.data[i + 1]),
+      Math.abs(a.data[i + 2] - b.data[i + 2]));
+    if (d) raw++;
+    hist[Math.min(63, d)]++;
+  }
   const idx = [];
   let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+  const want = mask ? new Uint8Array(a.w * a.h) : null;
+  if (mask) for (const p of mask.idx) want[p] = 1;
   for (let y = 0; y < a.h; y++) {
     for (let x = 0; x < a.w; x++) {
-      const i = (y * a.w + x) * ch;
-      if (a.data[i] === b.data[i] && a.data[i + 1] === b.data[i + 1] && a.data[i + 2] === b.data[i + 2]) continue;
+      const p = y * a.w + x, i = p * ch;
+      if (mask ? !want[p]
+        : (a.data[i] === b.data[i] && a.data[i + 1] === b.data[i + 1] && a.data[i + 2] === b.data[i + 2])) continue;
       idx.push(i);
       if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
     }
@@ -97,7 +132,13 @@ if (fi >= 0) {
   const SA = stat(a.data), SB = stat(b.data);
   const f = (x, d = 1) => (x == null ? '   —  ' : x.toFixed(d).padStart(7));
   console.log(`\n### §719 frame pair — ${A}  ->  ${B}   (${a.w}x${a.h})`);
-  console.log(`  pixels changed ${idx.length} of ${a.w * a.h} (${(100 * idx.length / (a.w * a.h)).toFixed(3)}%)`
+  const tot = a.w * a.h;
+  const atLeast = (d) => hist.slice(d).reduce((s, v) => s + v, 0);
+  console.log(`  CROSS-BOOT NOISE, unmasked: ${raw} of ${tot} px differ at all (${(100 * raw / tot).toFixed(3)}%);`
+    + ` within 1: ${(100 * (tot - atLeast(2)) / tot).toFixed(1)}%,  within 2: ${(100 * (tot - atLeast(3)) / tot).toFixed(1)}%,`
+    + `  still >=8: ${atLeast(8)} px.  This is why the population below is a MASK and not "what changed".`);
+  console.log(`  population: ${mask ? `the hook's own footprint from ${maskFile}` : 'every differing pixel (NOT a bar — see the header)'}`
+    + ` — ${idx.length} px`
     + `   bbox ${x1 < 0 ? '(none)' : `x ${x0}..${x1}  y ${y0}..${y1}  (${x1 - x0 + 1}x${y1 - y0 + 1})`}`);
   console.log(`  ${'frame'.padEnd(10)}${'meanL'.padStart(8)}${'p50'.padStart(8)}${'p90'.padStart(8)}${'p99'.padStart(8)}`
     + `${'sat'.padStart(8)}${'R'.padStart(7)}${'G'.padStart(7)}${'B'.padStart(7)}${'R-B'.padStart(8)}`);
@@ -110,9 +151,15 @@ if (fi >= 0) {
   process.exit(0);
 }
 
-const SHOT = argv.find((a) => !a.startsWith('--')) || 'sly-closeup';
+/* `--w/--h` exist so the footprint can be dumped at the RESOLUTION THE SHOTS WERE TAKEN AT —
+   a mask is a set of pixel indices and does not survive a resize. */
+const positional = argv.filter((a, i) => !a.startsWith('--') && !argv[i - 1]?.startsWith('--'));
+const SHOT = positional[0] || 'sly-closeup';
+const WIDTH = Number(optArg('--w', 1280));
+const HEIGHT = Number(optArg('--h', 720));
+const MASKOUT = optArg('--maskout');
 
-const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page }) => {
+const out = await withGame({ width: WIDTH, height: HEIGHT, quality: 'high' }, async ({ page }) => {
   await page.evaluate(() => {
     const W = window;
     W.__CAP = {};
@@ -305,9 +352,20 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
   const mask = await page.evaluate(() => {
     const d = window.__diff('base', 'tag', true);
     window.__MASK = d.idx;
-    return { n: d.n };
+    const A = window.__CAP.base;
+    let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+    for (const i of d.idx) {
+      const p = i / 4, x = p % A.w, y = (p / A.w) | 0;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    return { n: d.n, w: A.w, h: A.h, box: [x0, y0, x1, y1], idx: d.idx.map((i) => i / 4) };
   });
   R.I3 = mask.n;
+  R.box = mask.box;
+  if (MASKOUT) {
+    writeFileSync(MASKOUT, JSON.stringify({ shot: SHOT, w: mask.w, h: mask.h, idx: mask.idx }));
+    console.log(`· hook footprint (${mask.n} px at ${mask.w}x${mask.h}) written to ${MASKOUT}`);
+  }
 
   /* --- C1 the pre-§719 albedo: the hook's COLOR_0 back to white ------------------------- */
   await page.evaluate(([s]) => { window.__setHook([1, 1, 1]); return window.__snap('flat', s); }, [SHOT]);
@@ -351,8 +409,8 @@ else {
 }
 
 console.log('\nC. PIXELS');
-console.log(`   |hook footprint| = ${out.I3} px    (I2 null ${out.I2} px, I4 restore ${out.I4} px, `
-  + `pixels moved outside the mask ${out.flatOutside})`);
+console.log(`   |hook footprint| = ${out.I3} px  bbox ${JSON.stringify(out.box)}`
+  + `    (I2 null ${out.I2} px, I4 restore ${out.I4} px, pixels moved outside the mask ${out.flatOutside})`);
 console.log(`   ${'arm'.padEnd(22)}${'meanL'.padStart(8)}${'p50'.padStart(8)}${'p90'.padStart(8)}${'p99'.padStart(8)}`
   + `${'sat'.padStart(8)}${'R'.padStart(7)}${'G'.padStart(7)}${'B'.padStart(7)}${'R-B'.padStart(8)}`);
 const row = (nm, s) => console.log(`   ${nm.padEnd(22)}${f(s.mean)}${f(s.p50)}${f(s.p90)}${f(s.p99)}`
