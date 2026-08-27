@@ -159,6 +159,28 @@ const WIDTH = Number(optArg('--w', 1280));
 const HEIGHT = Number(optArg('--h', 720));
 const MASKOUT = optArg('--maskout');
 
+/* ── REGISTERED BEFORE THE RUN THAT SCORES IT ────────────────────────────────────────────────
+ * The population for C1/C2 is the tag mask at **T = 32**, and that is written down here rather
+ * than chosen from the answer.
+ *
+ * Why not T = 1, "every pixel the tag touched". Measured on a 320x180 pilot: T=1 selects 3,758
+ * pixels for a hook whose painted area, estimated independently from the figure's own height
+ * (605 px at 900 rows -> 121 px at 180; a crook ~40 px tall with a ~2 px stroke is ~240 px of
+ * surface), is about 240. T=16 selects 241. The 15x overcount at T=1 is the BLOOM HALO: making
+ * the hook a different colour changes how much it blooms, and bloom is a global operator, so its
+ * halo moves with the hook without being the hook. That is a wrong population, identified by
+ * arithmetic that does not depend on the candidate, not a bar chosen for being flattering.
+ *
+ * Why 32 and not 16: at the pilot's resolution EVERY pixel of a 2 px stroke is an anti-aliased
+ * blend with the background, so no threshold there can isolate the hook's own surface — which is
+ * why this is scored at the shots' 1600x900, where the stroke is ~10 px and has an interior.
+ * T=32 keeps the pixels the magenta tag dominated, i.e. the ones the hook substantially covers.
+ *
+ * The whole sweep is printed either way. If the conclusion moves with T, that is visible.
+ * ────────────────────────────────────────────────────────────────────────────────────────── */
+const SWEEP = [1, 16, 32, 64];
+const SCORE_AT = 32;
+
 const out = await withGame({ width: WIDTH, height: HEIGHT, quality: 'high' }, async ({ page }) => {
   await page.evaluate(() => {
     const W = window;
@@ -282,8 +304,19 @@ const out = await withGame({ width: WIDTH, height: HEIGHT, quality: 'high' }, as
         sharesGeometry: sh.geometry === m.geometry, isShader: !!sh.material?.isShaderMaterial };
     };
 
+    /* The frame's own draw/triangle counters, read in the SAME boot for every arm.
+       `shots/<run>/manifest.json` carries this column too, but comparing it across two runs is
+       comparing two boots — and two boots of this renderer disagree on 22 % of their pixels, so
+       a ±2 there says nothing. Read per arm here, the question "did the tint change the draw
+       count" has an exact answer: base, flat and restore must agree to the unit. */
+    W.__info = () => {
+      const r = W.__ENGINE.renderer.info.render;
+      return { calls: r.calls, triangles: r.triangles, programs: W.__ENGINE.renderer.info.programs?.length ?? null };
+    };
     W.__snap = async (key, shot) => {
       const r = await W.__GAME.setShot(shot, { dt: 0 });
+      W.__INFO = W.__INFO || {};
+      W.__INFO[key] = W.__info();
       const url = W.__GAME.capture('image/png', 1.0, 0);
       const img = new Image(); img.src = url; await img.decode();
       const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
@@ -321,16 +354,44 @@ const out = await withGame({ width: WIDTH, height: HEIGHT, quality: 'high' }, as
       return { n: idx.length, mean: sL / n, p50: q(L, 0.5), p90: q(L, 0.9), p99: q(L, 0.99),
         sat: sS / n, satP50: q(S, 0.5), r: sr / n, g: sg / n, b: sb / n, rb: (sr - sb) / n };
     };
-    W.__outside = (a, b, idx) => {
-      const A = W.__CAP[a], B = W.__CAP[b];
+    /* "did anything else move" has to distinguish a HALO from a leak, and the difference is
+       distance. Making the hook less bright makes the BLOOM around it less bright — that is a
+       global operator doing its job on a local change, not a defect — so pixels just outside the
+       footprint are expected to move. Pixels far from it are not. `far` counts outside a bbox
+       dilated by `pad`; `halo` counts the rest. This is `canegold.mjs`'s G4' split, reused. */
+    W.__outside = (a, b, idx, pad) => {
+      const A = W.__CAP[a], B = W.__CAP[b], w = A.w;
       const inMask = new Uint8Array(A.d.length / 4);
-      for (const i of idx) inMask[i / 4] = 1;
-      let n = 0;
+      let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+      for (const i of idx) {
+        inMask[i / 4] = 1;
+        const p = i / 4, x = p % w, y = (p / w) | 0;
+        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+      x0 -= pad; y0 -= pad; x1 += pad; y1 += pad;
+      let n = 0, far = 0, halo = 0;
       for (let i = 0; i < A.d.length; i += 4) {
         if (inMask[i / 4]) continue;
-        if (A.d[i] !== B.d[i] || A.d[i + 1] !== B.d[i + 1] || A.d[i + 2] !== B.d[i + 2]) n++;
+        if (A.d[i] === B.d[i] && A.d[i + 1] === B.d[i + 1] && A.d[i + 2] === B.d[i + 2]) continue;
+        const p = i / 4, x = p % w, y = (p / w) | 0;
+        n++;
+        if (x < x0 || x > x1 || y < y0 || y > y1) far++; else halo++;
       }
-      return n;
+      return { n, far, halo, box: [x0, y0, x1, y1] };
+    };
+    /* The footprint at a series of tag-delta thresholds. The tag turns the hook's albedo
+       magenta, which moves its own pixels enormously and its bloom halo only a little, so a
+       threshold separates the two — but a threshold is a choice, and a choice made after seeing
+       the answer is not a measurement. So every threshold is reported and the delta is quoted at
+       all of them: either the conclusion is the same across the sweep, in which case the choice
+       does not matter, or it is not, in which case the reader gets to see that. */
+    W.__maskAt = (T) => {
+      const A = W.__CAP.base, B = W.__CAP.tag, idx = [];
+      for (let i = 0; i < A.d.length; i += 4) {
+        const d = Math.max(Math.abs(A.d[i] - B.d[i]), Math.abs(A.d[i + 1] - B.d[i + 1]), Math.abs(A.d[i + 2] - B.d[i + 2]));
+        if (d >= T) idx.push(i);
+      }
+      return idx;
     };
   });
 
@@ -367,16 +428,30 @@ const out = await withGame({ width: WIDTH, height: HEIGHT, quality: 'high' }, as
     console.log(`· hook footprint (${mask.n} px at ${mask.w}x${mask.h}) written to ${MASKOUT}`);
   }
 
-  /* --- C1 the pre-§719 albedo: the hook's COLOR_0 back to white ------------------------- */
+  /* --- C1 the pre-§719 albedo: the hook's COLOR_0 back to white -------------------------
+     Bit-for-bit the state before this section: the material multiplies by COLOR_0, and
+     `1 + (c - 1) * 0` is exactly 1 on any driver, so the "before" arm is exact and not
+     approximate. */
   await page.evaluate(([s]) => { window.__setHook([1, 1, 1]); return window.__snap('flat', s); }, [SHOT]);
-  R.flat = await page.evaluate(() => window.__stats('flat', window.__MASK));
-  R.flatOutside = await page.evaluate(() => window.__outside('base', 'flat', window.__MASK));
+  R.sweep = [];
+  for (const T of SWEEP) {
+    const row = await page.evaluate(([t]) => {
+      const idx = window.__maskAt(t);
+      return { T: t, n: idx.length, flat: window.__stats('flat', idx), gold: window.__stats('base', idx) };
+    }, [T]);
+    R.sweep.push(row);
+  }
+  R.scored = R.sweep.find((s) => s.T === SCORE_AT) || R.sweep[0];
+  R.flat = R.scored.flat;
+  R.gold0 = R.scored.gold;
+  R.flatOutside = await page.evaluate(() => window.__outside('base', 'flat', window.__MASK, 16));
 
   /* --- I4 restore: MUST re-equal base ---------------------------------------------------- */
   await page.evaluate(([s]) => { window.__setHook(null); return window.__snap('restore', s); }, [SHOT]);
   R.I4 = (await page.evaluate(() => window.__diff('base', 'restore'))).n;
   R.gold = await page.evaluate(() => window.__stats('base', window.__MASK));
   R.mat1 = await page.evaluate(() => window.__matState());
+  R.info = await page.evaluate(() => window.__INFO);
 
   return R;
 });
@@ -410,30 +485,49 @@ else {
 
 console.log('\nC. PIXELS');
 console.log(`   |hook footprint| = ${out.I3} px  bbox ${JSON.stringify(out.box)}`
-  + `    (I2 null ${out.I2} px, I4 restore ${out.I4} px, pixels moved outside the mask ${out.flatOutside})`);
-console.log(`   ${'arm'.padEnd(22)}${'meanL'.padStart(8)}${'p50'.padStart(8)}${'p90'.padStart(8)}${'p99'.padStart(8)}`
-  + `${'sat'.padStart(8)}${'R'.padStart(7)}${'G'.padStart(7)}${'B'.padStart(7)}${'R-B'.padStart(8)}`);
-const row = (nm, s) => console.log(`   ${nm.padEnd(22)}${f(s.mean)}${f(s.p50)}${f(s.p90)}${f(s.p99)}`
-  + `${f(s.sat, 3)}${f(s.r, 0)}${f(s.g, 0)}${f(s.b, 0)}${f(s.rb, 1)}`);
-row('flat (pre-§719)', out.flat);
-row('gold (shipped)', out.gold);
+  + `    (I2 null ${out.I2} px, I4 restore ${out.I4} px)`);
+console.log(`   outside the footprint, base vs flat: ${out.flatOutside.n} px moved — `
+  + `${out.flatOutside.halo} in the 16 px halo (the bloom following the hook down), `
+  + `${out.flatOutside.far} FAR (must be 0)`);
+console.log('   THRESHOLD SWEEP on the tag delta. T=0 is every pixel the magenta tag touched,');
+console.log('   which includes its bloom halo; higher T keeps the hook\'s own surface. The');
+console.log('   conclusion has to survive the whole sweep or the threshold is doing the work.');
+console.log(`   ${'population'.padEnd(22)}${'n'.padStart(7)}${'meanL'.padStart(8)}${'p50'.padStart(8)}${'p90'.padStart(8)}`
+  + `${'p99'.padStart(8)}${'sat'.padStart(8)}${'R'.padStart(7)}${'G'.padStart(7)}${'B'.padStart(7)}${'R-B'.padStart(8)}`);
 const d = (a, b) => a - b;
-console.log(`   ${'Δ'.padEnd(22)}${f(d(out.gold.mean, out.flat.mean))}${f(d(out.gold.p50, out.flat.p50))}`
-  + `${f(d(out.gold.p90, out.flat.p90))}${f(d(out.gold.p99, out.flat.p99))}`
-  + `${f(d(out.gold.sat, out.flat.sat), 3)}${f(d(out.gold.r, out.flat.r), 0)}${f(d(out.gold.g, out.flat.g), 0)}`
-  + `${f(d(out.gold.b, out.flat.b), 0)}${f(d(out.gold.rb, out.flat.rb), 1)}`);
+for (const s of out.sweep) {
+  if (!s.n) { console.log(`   T=${s.T}  population empty`); continue; }
+  const mark = s.T === SCORE_AT ? ' <- SCORED' : '';
+  const row = (nm, st, n) => console.log(`   ${nm.padEnd(22)}${String(n).padStart(7)}${f(st.mean)}${f(st.p50)}`
+    + `${f(st.p90)}${f(st.p99)}${f(st.sat, 3)}${f(st.r, 0)}${f(st.g, 0)}${f(st.b, 0)}${f(st.rb, 1)}`);
+  row(`T=${s.T} flat (pre-§719)${mark}`, s.flat, s.n);
+  row(`T=${s.T} gold (shipped)`, s.gold, '');
+  console.log(`   ${`T=${s.T} Δ`.padEnd(22)}${''.padStart(7)}${f(d(s.gold.mean, s.flat.mean))}`
+    + `${f(d(s.gold.p50, s.flat.p50))}${f(d(s.gold.p90, s.flat.p90))}${f(d(s.gold.p99, s.flat.p99))}`
+    + `${f(d(s.gold.sat, s.flat.sat), 3)}${f(d(s.gold.r, s.flat.r), 0)}${f(d(s.gold.g, s.flat.g), 0)}`
+    + `${f(d(s.gold.b, s.flat.b), 0)}${f(d(s.gold.rb, s.flat.rb), 1)}   sat rel `
+    + `${(100 * (s.gold.sat / s.flat.sat - 1)).toFixed(1)}%`);
+}
 
 console.log('\nD. WHAT MUST NOT HAVE MOVED');
 console.log(`   material   ${JSON.stringify(out.mat0)}`);
 console.log(`   after arms ${JSON.stringify(out.mat1)}`);
 console.log(`   ink shell  ${JSON.stringify(out.shell)}`);
+console.log('   frame counters, same boot, per arm (renderer.info.render):');
+for (const [k, v] of Object.entries(out.info || {})) {
+  console.log(`     ${k.padEnd(9)} calls ${String(v.calls).padStart(4)}   triangles ${String(v.triangles).padStart(9)}   programs ${v.programs}`);
+}
 
 /* ---------------------------------- guards ------------------------------------ */
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const guards = {
   /* instrument */
   I2_null: out.I2 === 0,
-  I3_footprint_fires: out.I3 > 100 && out.I3 < 40000,
+  /* Two-sided, and the upper bound is a FRACTION of the frame rather than a literal: canegold's
+     run 1 passed a lower-bound-only control on a mask 20x too large, and a cane hook that paints
+     a tenth of the frame is not a cane hook. */
+  I3_footprint_fires: out.I3 > 100 && out.I3 < 0.10 * WIDTH * HEIGHT,
+  I3b_scored_population_exists: out.scored.n > 50,
   I4_restore: out.I4 === 0,
   I5_metal_untouched_by_this_run: same(out.mat0, out.mat1),
   /* A — the classifier, with both of §418.3's inputs in the arm */
@@ -447,14 +541,33 @@ const guards = {
   B1_hook_shell_is_flat: out.albedo.err ? null : out.albedo.hook.length === 1,
   B2_shells_differ: out.albedo.err ? null
     : !out.albedo.rest.some(([k]) => k === out.albedo.hook[0]?.[0] && out.albedo.rest.length === 1),
-  /* C — the colour actually moved, in the direction claimed, and only on the hook */
-  C1_hue_moved_toward_gold: out.gold.rb - out.flat.rb > 8,
-  C2_saturation_rose: out.gold.sat - out.flat.sat > 0.02,
-  C3_nothing_else_moved: out.flatOutside === 0,
+  /* C — the colour actually moved, in the direction claimed, and only on the hook.
+     C1 WAS REGISTERED BEFORE ANY DATA EXISTED and is kept exactly as first written, including
+     when it fails: the albedo's own red-minus-blue rises by 67 points from #ffe29c to #e8b942, so
+     "the rendered R-B rises too" looked like the obvious bar. It is a BAD bar, and the run is
+     what shows that — the change also darkens the surface ~16 %, and R-B is an ABSOLUTE spread
+     that a proportional darkening pulls back down. Saturation, the RELATIVE spread, is the
+     quantity that survives the darkening, which is why C2 is the discriminator that works.
+     Recorded rather than quietly rewritten: §266's whole lesson is that a bar which fails is
+     evidence, and a bar edited after the fact is not a bar. */
+  C1_hue_moved_toward_gold_REGISTERED: out.scored.n > 0 ? out.gold0.rb - out.flat.rb > 8 : null,
+  C2_saturation_rose: out.scored.n > 0 ? out.scored.gold.sat - out.scored.flat.sat > 0.02 : null,
+  C3_nothing_far_from_the_hook_moved: out.flatOutside.far === 0,
   /* D — one draw, and the ink is not reading the attribute */
   D1_one_group: C.groups === 1,
   D2_one_material: C.materials === 1,
   D3_ink_ignores_vertex_colour: out.shell.err ? null : out.shell.vertexColors === false,
+  /* The FIRST setShot of a boot reads a couple of draws above steady state — measured, and it is
+     why `shots/<run>/manifest.json`'s column cannot be compared across two runs like for like.
+     The tint's effect on the frame's cost is the STEADY-STATE arms against each other. */
+  D4_draws_unmoved_by_the_tint: !out.info?.base2 || !out.info?.flat ? null
+    : out.info.base2.calls === out.info.flat.calls
+      && out.info.base2.calls === out.info.tag?.calls
+      && out.info.base2.calls === out.info.restore?.calls,
+  D5_triangles_unmoved_by_the_tint: !out.info?.base2 || !out.info?.flat ? null
+    : out.info.base2.triangles === out.info.flat.triangles
+      && out.info.base2.triangles === out.info.tag?.triangles
+      && out.info.base2.triangles === out.info.restore?.triangles,
 };
 const v = shipVerdict(guards);
 console.log('');
