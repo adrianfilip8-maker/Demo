@@ -58481,6 +58481,41 @@ ruling was the intended one, `?idle=pose` is where the owner sees it and `IDLE_D
 
 ---
 
+### §717.12 The suite — every run quoted (§703.2)
+
+`node --test "tests/"*.test.mjs` from a clean detached worktree at the **pushed** commit
+(`git worktree add --detach /home/user/wt-717`, `node_modules` symlinked), the FIFO capture lock
+**held across all three runs** (§703: the F3 flake is contention-driven and holding the lock is
+what the lock is for — this run queued 244 s behind this section's own capture before taking it,
+which is the queue working). cwd checked from INSIDE the spawned command (§694). Each complete
+TAP stream written to its own file and `not ok` counted over the FILE, never a window (§711.1).
+`--test-name-pattern` was never used — on `framebudget` it changes allocation history and makes
+F3 fail 100%.
+
+The suite is **1086 tests** now. §716's arm left it at 1085; §717's `idle family` test is the +1,
+and that accounting is stated because a test count that moves without an owner is how a deleted
+test hides.
+
+| run | commit | result | duration | pwd inside command | cwd at end |
+|---|---|---|---|---|---|
+| 1 | `f9b9fbb` | 1085 / 1086, **1 fail — `padrest` R1b**, the documented ~1-in-5 flake, identified from the full stream rather than presumed (its `not ok` line, its file and line — `tests/padrest.test.mjs:235` — and its assertion read out of the TAP file: *"the input layer integrated 0.5075 s of dtReal across 0.5039 s of real time"*) | 261.0 s | `/home/user/wt-717` | exists |
+| 2 | `f9b9fbb` | **1086 / 1086**, 0 fail | 268.4 s | `/home/user/wt-717` | exists |
+| 3 | `f9b9fbb` | **1086 / 1086**, 0 fail | 263.3 s | `/home/user/wt-717` | exists |
+
+`not ok` counted over the FILE: **1 / 0 / 0**. The one red is a documented flake at its
+documented rate, and its identity is QUOTED rather than assumed — §703.2 asks for every run, not
+only the green ones, and §699's lesson is that "presumably the same flake" is not a finding.
+`framebudget` F3 GC (~1-in-3) never fired in any of the three, which is what holding the lock
+across all three is for.
+
+A fourth run, at the commit that carries this section, is recorded in the commit after it — the
+§712/§713/§715/§716 precedent: a suite table committed at one sha and quoted at another is a
+claim about a tree nobody ran. That matters more than usual here, because the commits between
+`f9b9fbb` and this section's own do touch `src/` — one comment block in `Animation.js`, which is
+behaviour-neutral and is therefore exactly the kind of change a lane talks itself out of
+re-testing.
+
+
 ## §718 — "Anything the godot repo did better or more efficiently that could easily be ported": a survey of all 5,388 lines of their GDScript, ranked, with the licence line held
 
 *(Section claimed at this heading before its content was written — §700.9. Body follows in the
