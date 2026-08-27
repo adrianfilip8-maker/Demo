@@ -58043,7 +58043,7 @@ next commits.)*
 
 ---
 
-## §718 — "Anything the godot repo did better or more efficiently that could easily be ported": a survey of all 5,365 lines of their GDScript, ranked, with the licence line held
+## §718 — "Anything the godot repo did better or more efficiently that could easily be ported": a survey of all 5,388 lines of their GDScript, ranked, with the licence line held
 
 *(Section claimed at this heading before its content was written — §700.9. Body follows in the
 next commits. This is a **survey**, not an implementation: no game behaviour changes under it.
@@ -58051,3 +58051,374 @@ The reference repo states no licence, so the standing rule applies unchanged —
 and adapted mechanics only, nothing pasted or transliterated, and the owner's word "ported" is
 read throughout as **adapted**. Findings that cannot be stated as an idea without reproducing
 their implementation are excluded and the exclusion is recorded rather than the finding.)*
+
+### §718.1 The answer, first, so a redirect is cheap (§705)
+
+**Nothing in the reference project rises to RECOMMEND.** Four things are worth the owner's
+attention as CONSIDER, three are REJECT with reasons, one is a shared gap rather than a finding,
+their import conventions are a null result, and eleven things I checked we already do as well or
+better — several of them because a previous lane already read the same file and said so.
+
+That is the honest shape of it, and it is the shape prior lanes predicted. The reference is a
+real, working, ambitious project with genuine craft in places, and it is also full of dead
+branches, inverted booleans, per-frame allocations and mechanisms that were built and then
+commented out. A finding of "they do this better" needed evidence here, and most candidates did
+not survive being asked for it.
+
+**Ranked, cheapest-highest-value first:**
+
+| # | Finding | Verdict |
+|---|---|---|
+| 1 | A **negative** surface tag — one authored mark that *removes* an affordance (their `SLIP`, read by three subsystems) | CONSIDER |
+| 2 | Air control **decaying over the duration of a fall**, so a long plummet commits you | CONSIDER (feel; test-coupled) |
+| 3 | A **global frame-phase counter** so expensive per-object work is amortised across N frames | CONSIDER (mechanism, no measured need) |
+| 4 | Rope deflection as a **blend between two baked poses**, not a solver | CONSIDER (low) |
+| 5 | A shot **wind-up** plus a scripted miss-then-hit aim ladder | REJECT — nothing shoots here |
+| 6 | **Distance-scaled character upscaling** for silhouette legibility | REJECT — hack with a visible cost |
+| 7 | A welded **position-only shadow mesh** for the depth pass | REJECT — three does not swap geometry per pass |
+| — | Guard-to-guard **alert propagation** | Neither project has it. A shared gap, not a port. |
+| — | Their **import conventions** | Null result: three non-default values in 170 sidecars. |
+
+### §718.2 The census, so the numbers below are measurements and not assertions
+
+`Controller.js:221` states the rule this section has to satisfy — *a claim about what is in a
+file is only a measurement if something re-reads it*. `tools/godotsurvey.mjs` re-derives every
+count quoted here from a fresh checkout:
+
+```
+node tools/godotsurvey.mjs <path-to-reference-checkout>
+```
+
+At their HEAD `a312a99`: **52 GDScript files, 5,388 lines** (`wc -l`), plus 7 shader sources not
+surveyed. 59 scenes, **28 of them in one `Design Tools` folder**. 170 scene import sidecars. Two
+of the 52 scripts are **divergent copies of the same 23/25-line file** under two directories.
+
+The tool emits counts, flag values and identifiers only — never a line of their source — which
+is why its output is safe to quote here. It selects sidecars by their `importer=` field rather
+than by path, so no path under §364.3's exclusion is named in it, matched against, or opened;
+§711 tripped `audiowired`'s A2 scan twice by spelling such a path in a comment, and nothing in
+that file or this section spells one.
+
+### §718.3 CONSIDER — a tag that takes an affordance away, which our vocabulary cannot express
+
+**What theirs is.** `project.godot` declares a `[global_group]` vocabulary of 14 capability tags
+placed on level colliders. One of them, `SLIP`, is read by **three different subsystems**: the
+player's floor test, the guard's floor test, and — the interesting one — the ledge-grab
+acquisition, which refuses a ledge whose ray landed on a `SLIP` collider. A designer marks a
+sloping roof once and it stops being walkable, stops being walkable *for guards too*, and stops
+being a ledge.
+
+**What we do.** `Collision.js` has eleven tags — `ground, wall, ledge, rail, pole, hook, spire,
+vent, water, hazard, misc`. **Every one of them grants an affordance; not one removes one.** A
+surface that should not be grabbable is expressed here by *not registering* a `ledge` rec on it,
+which is an authoring omission rather than an authoring statement — invisible in the F3 collider
+view, invisible to a reader, and impossible to assert a test against.
+
+**Why theirs is better: structural, and I am marking it as such.** I have no measurement. The
+argument is that a vocabulary of only-positive tags cannot say "this looks like a ledge and is
+not one", and our level has exactly the geometry that raises the question — battered temple
+faces, parapet copings, and the §514.3 pole gate that already had to draw a line between "a pole
+you can mount" and "a column you cannot".
+
+**Only half of it is proposable, and this is the constraint that matters.** Their slide half
+works by switching the body's walkable angle between 0° and 45° **every frame** off a ray
+quorum. §697's ground tuning is untouchable, and that is precisely the surface it would touch.
+So the slide half is out. The veto half is not: `Collision.js:999` already refuses an affordance
+entry at *build* time for a solid that is not climbable, so the seam for "solid, but not a
+ledge" exists and the change is one predicate at that seam plus a tag in `TAG_NAMES` /
+`TAG_COLOR`.
+
+**Cost:** one tag, one build-time predicate, and level authoring. Nothing per-frame changes, so
+nothing in MOVEMENT can regress.
+**Falsifier (§418.3):** if the level has no surface that reads as a ledge and should not be one,
+this buys nothing. I did not enumerate the level's ledge recs against that question, so the
+finding is a mechanism gap, not a demonstrated defect.
+
+### §718.4 CONSIDER — air control that decays over a long fall
+
+**What theirs is.** While falling with the near floor-ray clear, an air-control multiplier eases
+toward one-eighth of full authority; past a fall-speed threshold it eases at a different rate;
+any upward velocity resets it to full. A short hop is fully steerable, a long plummet
+progressively commits you. Their damage path forces the same multiplier to zero outright, so a
+knockback cannot be steered out of.
+
+**What we do.** `TUNE.airControl` 0.55 is a flat constant, read at exactly one site
+(`Moveset.js:341`). There is no time term and no depth term: air authority at 0.2 s into a fall
+and at 3 s into a fall is identical. `_airControlled` exists but is a **boolean about how the
+fall began**, consumed only by the hard-landing test (`Moveset.js:276`) — a different axis
+entirely.
+
+The knockback half we already match, and by a cleaner route: our `Hurt` state runs `gravity` and
+`move` but **never `accelerate`**, so steering is not reduced during a knockback, it is absent.
+
+**Why theirs is better: structural and contestable.** Commitment on a long fall is a
+stealth-platformer virtue — it makes a mistimed leap a consequence rather than a thing you
+correct. It also takes away a correction the player currently has, which is a feel decision of
+exactly the class `Controller.js:39` refused to make unilaterally for accel/decel.
+
+**Cost, and the coupling that makes it not a constant edit.** One state variable, one term in
+`Fall.update`. But `tests/level.test.mjs` mirrors `accelerate` term-for-term in its offline
+ballistic instrument (`arcMin`, the `worst < 0.30 m` agreement assertion), so any change to air
+acceleration is a coordinated change across MOVEMENT and that test — the same finding
+`Controller.js:39` already wrote down about the accel curve.
+**Falsifier:** if the level's long falls are all fatal or all rescued by a target lock, decaying
+authority changes nothing a player experiences. Not measured.
+
+### §718.5 CONSIDER — a global frame-phase counter, wanted as a mechanism rather than as a fix
+
+**What theirs is, measured.** An autoload cycles a small integer every physics frame. **Five
+call sites across four systems** gate expensive per-object work on it, at **three different
+phases (2, 3, 4)** — so the staggering is real across systems, not bunching. Two of the sites
+put a **distance early-out in front of the phase test**, which is the cheaper half of the idea
+and the half that costs nothing to state.
+
+The pattern is used for a curve closest-point query, a path re-anchor, a HUD text rebuild and a
+detection poll — i.e. exactly the class of work that is expensive, per-object, and does not need
+a 60 Hz answer.
+
+**Their own implementation bunches within a system.** Every instance of a given script tests the
+same phase, so twenty poles all do their query on the same frame. The correct version stages by
+object index; theirs does not. The idea survives that; the code does not.
+
+**What we do.** Nothing. `Engine` publishes no frame counter, and every `update(dt, t)` in
+`src/world/*` and `src/ai/*` runs its whole body every frame.
+
+**Why this is only CONSIDER and not RECOMMEND, stated plainly.** *I did not find a hot spot it
+would fix.* The two obvious candidates are already cheap: guard sensing is two BVH raycasts per
+guard per frame (`Patrol.js:888`, `:939`), and `Collision.update()` is a dirty-flag rebuild that
+does nothing on a clean frame. Recommending a mechanism against no measured need is
+gold-plating, and this section is not going to do that. What it is worth is the shape: about ten
+lines on `Engine` (a frame integer and a `phase(n, k)` helper), opt-in per consumer, nothing
+changing until a consumer opts in — so the *first* expensive per-object system this project adds
+does not have to invent it under pressure.
+**Falsifier (§418.3):** a profile showing any `src/world` or `src/ai` `update()` taking a
+measurable share of frame time would move this to RECOMMEND immediately. I did not run that
+profile, and the claim is marked structural because of it.
+
+### §718.6 CONSIDER (low) — a rope that deflects by blending two baked poses
+
+**What theirs is.** At load, a rope stores its authored curve points **and** a sagged copy of
+them, derived once from the curve's own vertical extent with a per-point weight that peaks at
+the middle. Per frame it lerps each point between the two sets by a factor derived from the
+player's distance. There is no solver, no integration, and no stability question.
+
+**What we do.** We own seven `rail` recs (§572, `EgyptLevel.js:85`) and **nothing deflects**. A
+rope in this level is as rigid as the masonry.
+
+**Why theirs is better: structural.** Two baked pose sets and a blend weight is the cheapest
+honest way to make a traversal line respond to being stood on, and it degrades to the authored
+shape exactly when nobody is on it.
+
+**Their implementation has a real defect worth knowing before anyone copies the shape.** The two
+global blend scalars are re-lerped **inside** the per-point loop, so the blend rate is a
+function of the point count — a ten-point rope and a thirty-point rope settle at different
+speeds from the same authored numbers. And the rebuild runs for every rope every frame; the
+distance cull they wrote lives on a different code path.
+
+**Cost:** a second baked point set per rail and a blend in whatever draws them. This is a new
+visual behaviour, not an efficiency, and it is ranked last of the CONSIDERs for that reason.
+
+### §718.7 REJECT — the shot wind-up and the miss-then-hit aim ladder
+
+This is the best *design* idea in their project and it does not apply.
+
+**What theirs is.** Their gun requires a sustained window of continuous shooting intent before
+the first round leaves the barrel, and the counter resets to zero the instant intent drops — so
+breaking line of sight for one frame costs the guard the whole wind-up. On top of that the enemy
+sequences four shots in which the early ones are aimed deliberately high or half-offset and only
+the last uses full velocity lead. The aim error is drawn from an **asymmetric** range biased
+upward, so misses go over your head where you can see them.
+
+**Why it is REJECT.** *Nothing in this project shoots.* `src/ai/CarmelitaGuard.js` has no shoot,
+fire, or projectile path at all — a grep for any of them returns nothing. §709 settled the gun
+as **geometry** and moved the vision cone off the barrel; it did not add a weapon. There is no
+system here to improve, and adding one is a scope decision for the owner rather than a port.
+
+**And their ladder is largely inert in their own build**, which is worth recording so nobody
+takes it on faith: the aim offset is only non-zero on the single frame their aim RNG changes,
+while the aim call runs every frame with an offset of zero. The mechanism is written; it mostly
+does not fire.
+
+### §718.8 REJECT — scaling a character up with distance to keep the silhouette readable
+
+**What theirs is.** One character's mesh scale ramps with camera distance across a stated
+near/far band, ending well above its authored size at range.
+
+**Why it is tempting here.** §2 of this ledger is *open*: "at a glance the masonry reads as
+high-frequency rectangular noise rather than as coherent stone, so the big architectural shapes
+stop reading." A guard at 40 m is a small silhouette in that frame.
+
+**Why it is REJECT anyway.** The character is never at his authored scale — he is already
+oversized at the near end of the band — and he visibly grows as the camera pulls back, which is
+the one artefact a smoothly-moving camera guarantees the player will see. It also desynchronises
+the mesh from everything in world space: cone origin, hurtbox, and the shadow the §1 work spent
+five capture cycles making legible.
+
+Recorded rather than dropped **because §2 is open and the next person to look at silhouette
+legibility will otherwise re-find it and have to re-reject it.**
+
+### §718.9 REJECT — a welded, position-only shadow mesh
+
+Their importer generates a separate deduplicated shadow-only mesh for every scene (170 of 170 —
+and see §718.11, that is the engine default, not a decision). The saving is genuine in principle:
+welding vertices that differ only in normal or UV cuts the vertex count the depth pass pays.
+
+**It does not transfer.** three binds one geometry per mesh for every pass; there is no per-pass
+geometry swap, so the equivalent is a parallel shadow-only scene graph maintained alongside the
+real one. `KayKit.js` already **merges** prop geometry into single buffers, which removes the
+draw-call half of the argument, and §1's shadow work is settled at `splitLambda 0.78` with
+`PCFShadowMap`. Cost far exceeds value.
+
+### §718.10 Neither project has it: guard-to-guard alert propagation
+
+Their enemy carries two functions in which a guard with no target notices a **neighbour** in
+chase, adopts that neighbour's target, and enters search or chase. Alert spreads.
+
+**Every call site is commented out.** The mechanism exists in their source and does not run in
+their game, so "theirs is better" is not available as a claim.
+
+**Ours is absent too, and I checked properly.** `Guard.js:1131` emits `guardAlert` on every state
+transition and it has **five subscribers — `Audio.js`, `Particles.js`, `Health.js`, `HUD.js`,
+`Pickups.js` — and not one of them is another guard.** A guard shouting is heard by the score,
+the particles, the HUD, the player's charm accounting and the pickups, and by no guard.
+
+Recorded as a shared gap rather than a finding. Two constraints on anyone who picks it up:
+guards are a **settled system**, and §710 already ruled guard-to-guard *collision* out of scope —
+which is a different question (physical, not informational) but sits close enough that it should
+be put to the owner rather than assumed.
+
+### §718.11 Null result — their import conventions are the Godot defaults
+
+§698 and §702 both recovered real facts from importer sidecars, so this was the most promising
+place to look. It is a null result, and the census is what establishes that.
+
+Across **170 scene sidecars**: `generate_lods` true ×168, `create_shadow_meshes` true ×170,
+`ensure_tangents` true ×170, `remove_immutable_tracks` true ×170, `animation/fps` 30 ×169.
+**All five of those values are the Godot 4 defaults.** A 170-of-170 majority is not a decision,
+it is nobody having opened the dock.
+
+The entire non-default surface is three files:
+
+- **two skyline meshes with auto-LOD off** — decimation would eat a silhouette that is nothing
+  but silhouette. A sound instinct, and one we have no equivalent problem for;
+- **one animation source resampled at 60 rather than 30** — their player's clip source. This is
+  provenance only: we read the glTF directly, which carries its own keyframe times, so their
+  engine's resampling target never touches our data.
+
+Their water meshes look like a third decision — auto-LOD off — and are not. They arrive through a
+different importer whose default for that flag is already false.
+
+**The one genuine manual decision is material remapping, and we already beat it.** 176 material
+slots across 73 scenes are pointed at **36 shared materials** — a 4.89:1 dedup, and every one of
+those had to be set by hand. `KayKit.js` merges prop geometry into single buffers drawn with
+**one** atlas material (`KayKit.js:349-351, 465, 595`), which is strictly further than a remap.
+No finding.
+
+### §718.12 Checked, and we already do it as well or better
+
+This list is the point of the exercise as much as the findings are. Several entries are here
+because a previous lane read the same file and wrote the comparison down at the time.
+
+| Theirs | Ours | Standing |
+|---|---|---|
+| Coyote time as a **frame** count plus a second grace stage | `TUNE.coyote` 0.110 s, a *time* — same forgiveness at any frame rate | Ours, already recorded at `Controller.js:76` |
+| Accel as a speed-dependent step; decel exponential | Flat cap, deliberately unchanged after comparison | Compared and settled, `Controller.js:39`. Their speed factor reads `velocity.y` where `.z` is meant — a bug in the source, and the reason none of their constants were imported |
+| Traversal target chosen by distance plus a facing term | Chosen by **predicted ballistic miss** (`Targets.js:336`) | Ours is the better estimator |
+| A jump boost when a traversal lock fails | Already adapted — `Targets.js:74 failBoost`, cited to their two failure paths | Already taken |
+| An 8 s watchdog that only runs while a floor ray is hitting | `_stuck()` + `safePoint` + `voidY` (`Controller.js:1084`–`1127`), `stuckTime` 3.0 derived from the longest legitimate stationary airborne beat | Ours, and reasoned |
+| Smashable respawn gated on a five-ray occupancy check | Surveyed and **declined** — `Smashables.js:42`–`51`: "Nothing here respawns, so none of it is carried" | Already surveyed |
+| Air control forced to zero during a knockback | `Hurt` runs `gravity` and `move` and never `accelerate` — steering is absent, not reduced | Ours, cleaner |
+| Camera occlusion by an authored volume that hides the object | Lateral **and** vertical boom whiskers (`CameraRig.js:426`–`427`) shorten the boom before it enters geometry | Ours, upstream of the problem |
+| Tail as a lerp chain, stiffening with speed | Spring-damper chain with per-segment stiffness falloff, hip-velocity whip and a whip clamp (`Rig.js:31`–`38`) | Ours. Theirs *stiffens* with speed where ours *drags*; both deliberate |
+| Material dedup at import (4.89:1) | Geometry merged, one atlas material | Ours |
+| Prefabs with exported properties in a `Design Tools` folder | `movement.addTarget(spec)` / `registerTarget` — the same data-vs-code split without an editor | Equivalent |
+
+**One correction to the ledger while I am here.** §364.3's neighbourhood records that "the
+reference has no live audio-playback code at all … There is no music state machine there to learn
+from." The first half is not quite right: `music_manager.gd` **is** a three-stem state machine,
+and its fades are asymmetric on purpose — slow out, fast in, so stems overlap rather than gap.
+**The conclusion still holds, for a better reason:** it calls `create_tween()` on all three stems
+**every physics frame**, so it allocates on the order of 180 tweens a second, forever. There is
+nothing to take. That note's file count (44 `.gd`) is also stale; the census reports 52.
+
+### §718.13 Excluded on licence grounds, and why each one could not be stated as an idea
+
+The standing rule is design references and adapted mechanics only — nothing pasted or
+transliterated. Four candidates failed it. They are listed rather than silently dropped, because
+"we looked and could not say it" is information.
+
+- **Their pendulum integrator.** The swing has a non-linear restoring term and a fade curve on
+  the pump input, and those two expressions *are* the finding — everything that would justify
+  "theirs feels better" is the arithmetic. There is no way to say what is distinctive about it
+  without writing it down. Excluded.
+- **Their stair-ascent solver**, in both the player and the enemy. A priority-ordered ray pick
+  feeding a vertical velocity target through three different clamps depending on wall contact.
+  Same problem: the justification is the expression. Excluded — and moot regardless, because
+  §697's ground tuning is untouchable and this is what it would touch.
+- **Their `Curve` resource for mid-air jump boost.** The idea is stateable and is stated in
+  §718.4's neighbourhood — *a mid-air jump's boost is read off an authored curve indexed by
+  current vertical speed* — but the curve's control points are their tuning, and transcribing
+  them is transcribing it. The shape is taken; the numbers are not.
+- **Their cable script in full.** It carries an attribution header naming a **third-party
+  repository**, so it is not theirs to have been read for design either — a second licence hop on
+  top of the first. Nothing from it is used. Its one idea (a settled simulation switching off its
+  own physics callback) is broken there anyway: nothing ever switches it back on.
+
+### §718.14 Evidence that the reference is not uniformly better, since the brief asked for it
+
+Five defects found while reading, recorded so no future lane treats a reference behaviour as
+intentional:
+
+- **Their camera's "ignore me" tag is dead code.** The exclusion test is `not in group A or not
+  in group B`, which is false only for a node in *both* groups — and one of the two names is
+  mis-cased against the group actually declared. The tag has never excluded anything.
+- **A second camera branch has one constant outcome.** It selects a pitch target by asking
+  whether the surface overhead is in a group that **is not declared anywhere in the project**;
+  the census confirms the group it *does* declare for that purpose is mentioned by **0 scripts**.
+- **Their "is the player moving" debounce oscillates.** The decrement is nested inside the
+  below-threshold branch, so at rest the counter alternates between the grace value and one less
+  and the flag flips every other frame. `CameraRig.js:1679` already recorded a related symptom
+  from the other end.
+- **A patrol branch is unreachable** — a `return` sits above it in the same block.
+- **The clue-bottle zero-count bug is confirmed** exactly as `Props.js`'s header records it, and
+  two divergent copies of one 23/25-line script live under two directories.
+
+### §718.15 Coverage — what I actually read, and what I did not
+
+Stated so the section's reach is not overclaimed.
+
+**Read in full.** All **52** GDScript files, **5,388 lines** — every script in the project.
+`project.godot` entire, including the input map, `[global_group]`, `[layer_names]`, physics and
+rendering. `Assets/Bone Maps/sly_bone_map.tres` (63 lines), a Godot humanoid retarget profile
+mapping their rig's bone names to standard slots — the class of file §698 and §702 already mined,
+and `tools/godot2rig.mjs` is the standing consumer.
+
+**Read by census rather than by eye.** All 170 scene import sidecars — the flag histogram and the
+material-remap ratio in §718.11 are the whole of what they contain that matters.
+
+**Sampled, not read exhaustively: the 59 `.tscn` scenes.** I opened one (a greybox block palette:
+standard-size platform primitives, each with its own collision and a rim-lit gradient material)
+and took the rest as counts and folder names. This is a deliberate limit, not laziness: **a
+`.tscn` is a node graph with inline sub-resources, and reading them exhaustively is reading their
+scene composition line by line — the thing the licence line forbids most directly.** Every
+structural claim this section makes about their scenes is a count, and the census produces it.
+
+**Not read.** `Assets/` binaries — meshes, textures, animation libraries. §715 opened the
+libraries, the owner has authorised asset imports separately, and they are not this task's
+subject. The 7 `.gdshader` sources: a rendering-lane question, and our PostFX/toon chain is
+settled work with its own sections.
+
+**Not opened at all.** Anything under their audio tree — §364.3, absolute. The census selects
+sidecars by `importer=` rather than by path *precisely so that no such path is named, matched, or
+opened*, by me or by the tool.
+
+### §718.16 Bounds — what this section does not do
+
+- **No game behaviour changes under §718.** It is a survey; the only files it writes are this
+  section and `tools/godotsurvey.mjs`, which is read-only and touches nothing in `src/`.
+- **Nothing here is a decision.** Every CONSIDER is a proposal for the owner to rule on, and two
+  of them (§718.3's slide half, §718.4) run into standing rulings that are named where they bite.
+- **No constant of theirs is imported by this section**, and the two places where a number of
+  theirs appears at all — the 4.89:1 remap ratio and the phase values 2/3/4 — are census output
+  about file contents, not tuning.
+
