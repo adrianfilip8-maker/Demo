@@ -57747,3 +57747,8 @@ firings in five runs is the documented ~1-in-3 at its documented rate, on the fl
 attributes to contention and this project refuses to filter around, and no other test went red
 in any run.
 
+---
+
+## §716 — "Add in the cane combo only if the animations already exist for it": §715 met the condition, so the combo is built
+
+(claimed — content follows)
