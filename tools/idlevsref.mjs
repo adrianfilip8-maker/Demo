@@ -199,6 +199,48 @@ try {
         await snap(`idle715-${arm}-${tag}-profile`, 90);
       }
     }
+  } else if (process.env.MODE === 'idle717') {
+    /* MODE=idle717 (§717): the owner's precedence ruling — "use the ported idle pose always over
+       the generated one" — moved TWO more slots (`idle_bored` ← `Idle Fight 1`, `balance_idle` ←
+       `Idle Teeter`), so the before/after it asks for is those two slots in BOTH arms. Same spot,
+       same lens and the same two cameras as MODE=idle715 above, which is what makes the two
+       sections' frames comparable; the spot's camdot pre-flight was re-run for this section on
+       both placements — front34 (−2.6234, 1.15, 27.966) and profile (−1.6, 1.15, 26), subject
+       (−4, 0.95, 26) — and came back `enclosed 0/26, VERDICT ok` on each.
+       TWO PHASES per slot per arm (§466.5), because the claim these frames carry is that the
+       ported clips ANIMATE — one frame of an animated idle and one frame of a held pose are the
+       same picture. Phases are taken at 0.20 and 0.60 of each clip's OWN duration, so the pair
+       spans a real part of the cycle rather than a fixed wall-clock gap.
+       In the `pose` arm both slots are back to the PROCEDURAL clip — that is what `?idle=pose`
+       now restores (§717) — so the arm label names what is playing, and CLIP_ORIGIN is asserted
+       per arm per slot before any shutter fires. */
+    for (const arm of ['repo', 'pose']) {
+      if (arm === 'pose') await boot('&idle=pose');
+      await sim(40);
+      await page.evaluate(() => { const m = window.__ENGINE.get('movement'); m.position.set(-4, 0, 26); m.velocity.set(0, 0, 0); m.yaw = 0; });
+      await sim(120);
+      await page.evaluate(() => { const m = window.__ENGINE.get('movement'); m.yaw = 0; });
+      for (const [slot, want] of [['idle_bored', arm === 'repo' ? 'godot:Idle Fight 1' : 'proc'],
+        ['balance_idle', arm === 'repo' ? 'godot:Idle Teeter' : 'proc']]) {
+        const org = await page.evaluate(async (n) => (await import('/src/player/Animation.js')).CLIP_ORIGIN[n], slot);
+        if (org !== want) throw new Error(`idle717: arm "${arm}" boots with ${slot}=${org}, expected ${want}`);
+      }
+      await page.evaluate(() => { window.__SKIPMOVE = true; });
+      await sim(4);
+      for (const slot of ['idle_bored', 'balance_idle']) {
+        const dur = await page.evaluate(async (n) => (await import('/src/player/Animation.js')).ACTIVE[n].dur, slot);
+        for (const [pTag, phase] of [['a', 0.20], ['b', 0.60]]) {
+          await page.evaluate(async (n) => {
+            const A = await import('/src/player/Animation.js');
+            window.__ENGINE.get('animation').play(n, { fade: 0, loop: A.ACTIVE[n].loop, speed: 1 });
+          }, slot);
+          await sim(Math.max(2, Math.round(phase * dur * 60)));
+          const tag = slot.replace('idle_', '').replace('_idle', '');
+          await snap(`idle717-${arm}-${tag}-${pTag}-front34`, 35);
+          await snap(`idle717-${arm}-${tag}-${pTag}-profile`, 90);
+        }
+      }
+    }
   } else if (process.env.MODE === 'pole') {
     const phases = [0.25, 0.6];
     await page.evaluate(() => { window.__SKIPMOVE = true; });

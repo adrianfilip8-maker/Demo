@@ -541,3 +541,45 @@ construction rather than by preference. Both takes carry the idles' authored fac
 documents; the gaits' facing stays proven by travel). Fingers and the head-tip leaf are dropped
 and counted at extract, exactly as §715's five. Nothing under the reference's audio directories
 was read, listed, or opened.
+
+---
+
+# §717 — two more idles, extracted under the owner's precedence ruling
+
+**Source:** the same `NoahChase/sly-cooper--a-thief-in-godot` checkout at HEAD `a312a99`
+(verified with `git rev-parse` on the checkout itself, not taken from the clone command;
+licence NONE STATED — the owner's standing instruction on record covers the whole reference),
+read by the same `tools/godotlib2clips.mjs` pipeline as §715 and §716. The owner's ruling —
+*"Use the ported idle pose always over the generated one"* — is read as a standing precedence
+rule over the idle family (KNOWN_ISSUES §717.1), so every idle verb §715 left procedural was
+re-opened. Two clips survived that pass and join `sly-godot-lib.glb` (now 439 KB, nine clips;
+the earlier seven re-extract **byte-identically**, verified entry by entry against the shipped
+module before this line was written — the GLB's own header length and chunk boundaries do move,
+because the JSON chunk grew, and that distinction is drawn rather than glossed):
+
+| clip | from | what it is (measured on RIG3, §717) |
+|---|---|---|
+| `Idle Fight 1` | `Library Sly MASTER 005.res` | 4.67 s standing fight guard — forward-leaning ready stance (torso 30.0° off vertical), the largest lateral hip weight shift in the whole corpus at 18.3 cm, feet grounded (lowest contact −4.7 cm against the rig's bind foot), toe lift 1.6/1.4 cm (an idle, not a gait), loop seam 0.1° at `neck`. **Bound to `idle_bored`** — the reference authored no bored idle anywhere, and this is the corpus's one remaining unbound animated standing idle. |
+| `Idle Teeter` | `Library Sly MASTER 005.res` | 3.67 s balance loop — stands tall and upright (torso 5.5°), hips locked (0.0 cm of translation), arms straight out and windmilling through 34.4 cm of hand separation (81.1 → 115.5), grounded (+2.2 cm), authored `loop_mode 1`, seam 0.0°. **Bound to `balance_idle`**, the rail/beam stand. |
+
+`Idle Teeter` is the **only** clip the reference iterated: MASTER 001–005 carry five DISTINCT
+track-data payloads of it where every other MASTER clip is a straight re-save (per-clip hashes in
+KNOWN_ISSUES §717.2). MASTER 005 is read per the census rule (canonical latest); the four earlier
+saves are reproducible through the importer's `--asset`/`--keep` bench in one command.
+
+Neither clip carries any cane or prop channel — the humanoid libraries have none — so the shipped
+per-slot donor cane tracks remain the only cane articulation by construction; on `balance_idle`
+that donor fill is what carries the cane-out balance pole, and the shipped test asserts it
+arrives. Both are mocap-style takes with a small authored facing offset (hips-yaw circular mean
+−5.4° and −2.9°, two orders below the ±54–64° the §715 idles carried but the same class), removed
+by the same `centerYaw` re-base §715.3 documents. Fingers and the one Mixamo head-tip leaf are
+dropped and counted at extract, exactly as the seven before them.
+
+**A correction to §715's census, recorded here because it changes what this directory is
+believed to hold:** `Idle Crouch 1` (MASTER libraries) and `Idle Look` (`Library Sly Idle.res`)
+are the SAME TAKE under two names — they differ by exactly one source track, the stray Mixamo
+head-tip leaf this pipeline drops anyway, and their retargeted output is bit-identical (worst
+per-channel difference 0.000000 across all 185 emitted keys). Only one of them was ever a
+candidate; `Idle Look` is the one already baked.
+
+Nothing under the reference's audio directories was read, listed, or opened.
