@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { State } from './States.js';
 import { TUNE } from './Controller.js';
+import { ACTIVE } from './Animation.js';
 
 /**
  * Moveset — one class per move in AGENTS.md §6. Each move owns its own rules and nothing else's.
@@ -1662,13 +1663,32 @@ class SpireLand extends State {
 /* combat + interaction                                                    */
 /* ====================================================================== */
 
+/**
+ * §716 — the combo state window, DERIVED from the bound clip rather than tuned around it.
+ * `TUNE.comboTimes` was tuned on bodies whose contacts sit at 0.10–0.21 s; §716 put a 1.03 s
+ * heavy on slot 3 whose contact is at 0.375 s, and a state that ends at the tuned 0.40 would
+ * hand the body back 25 ms after the strike with none of its follow-through shown. The rule:
+ * the window is the tuned floor, or the clip's own `cane_hit` plus `comboFollow` — whichever
+ * is longer. `comboFollow` is 0.13 because that is the LARGEST constant that leaves every
+ * previously shipped arm bit-identical (the binding constraint is proc combo_1: window 0.28 −
+ * contact 0.15 = 0.13; godot/mono 0.10+0.13 and proc slots 2/3 all clear their floors) — so
+ * proc, mono and slots 1/2 deliver exactly [0.28, 0.28, 0.40] as before, and only §716's
+ * slot 3 moves: 0.505 s (= 0.375 + 0.13). Reading ACTIVE (the boot table) is what makes
+ * `?combo=mono` a ONE-token revert: the window follows the clip automatically.
+ * Exported for the test arm; pure so it can be asserted without driving the machine.
+ */
+export function comboStateTime(index) {
+  const ev = ACTIVE[`cane_combo_${index}`]?.events?.find((e) => e.n === 'cane_hit');
+  return Math.max(TUNE.comboTimes[index - 1], (ev ? ev.t : 0) + TUNE.comboFollow);
+}
+
 class Combo extends State {
   canEnter(c) { return c.grounded && c.pressed('attack'); }
   enter(c) { this.swing(c); }
   swing(c) {
     c.comboIndex = c.comboIndex >= 3 ? 1 : c.comboIndex + 1;
-    c.comboTimer = TUNE.comboWindow + TUNE.comboTimes[c.comboIndex - 1];
-    this._t = TUNE.comboTimes[c.comboIndex - 1];
+    this._t = comboStateTime(c.comboIndex);                       // §716 — derived, see above
+    c.comboTimer = TUNE.comboWindow + this._t;
     this._elapsed = 0;
     c.oneShot(`cane_combo_${c.comboIndex}`);
     // Each hit lunges — Sly's combo covers ground, which is why it doubles as a movement tool.

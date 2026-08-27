@@ -215,7 +215,14 @@ export const TUNE = {
 
   /* ---- combat ---- */
   comboWindow: 0.34,
+  /* §716: these are FLOORS, not the delivered windows — `Moveset.comboStateTime` returns
+     `max(comboTimes[i], clip contact + comboFollow)` so a slot whose bound clip strikes late
+     (slot 3's `Cane Hit 2`, contact 0.375) gets 0.505 s instead of having its strike cut,
+     while every arm whose contacts sit at 0.10–0.21 s (proc, `?combo=mono`, slots 1/2)
+     delivers exactly these numbers as it always did. comboFollow 0.13 is the largest constant
+     that keeps that bit-exactness — the binding case is proc combo_1 (0.28 − 0.15). */
   comboTimes:  [0.28, 0.28, 0.40],
+  comboFollow: 0.13,
   comboLunge:  [2.4, 2.6, 3.8],
   diveSpeed:   18,
   diveRadius:  1.2,

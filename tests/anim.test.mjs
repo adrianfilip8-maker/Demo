@@ -743,9 +743,15 @@ test('cane contact (§479.8): the swing\'s contact moment is where `cane_hit` fi
     + `declares cane_hit at ${declared.toFixed(3)}s — the metric is not measuring contact, so nothing below it means anything`);
 
   /* ---- the shipped godot combos: contact within a frame of the event -------------------- */
+  /* §716 re-derived the origin column, not the claim: slots 1/2 stay on `Canehit` (the jab)
+     and slot 3 plays the library's `Cane Hit 2` (the heavy — contact t 0.375, the hand still
+     carrying ~13.5 m/s through it where the jab has already ARRIVED at its 0.108). The
+     contact-vs-event coincidence below is the §479.8 contract and now holds per slot on two
+     different bodies. */
+  const SLOT_SRC = { cane_combo_1: 'godot:Canehit', cane_combo_2: 'godot:Canehit', cane_combo_3: 'godot:Cane Hit 2' };
   for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3']) {
     const c = g[n];
-    assert.equal(CLIP_ORIGIN[n], 'godot:Canehit', `${n} is not sourced from Canehit (origin ${CLIP_ORIGIN[n]})`);
+    assert.equal(CLIP_ORIGIN[n], SLOT_SRC[n], `${n} is not sourced from ${SLOT_SRC[n]} (origin ${CLIP_ORIGIN[n]})`);
     const ev = c.events.find((e) => e.n === 'cane_hit');
     assert.ok(ev, `${n} lost its cane_hit event — a swap must never mute the contact beat`);
     const k = contactOf(c);
@@ -809,6 +815,83 @@ test('combat/pickpocket/hook wiring (§479.8): sourced from the reference, whole
   }
 });
 
+test('cane combo (§716): the second body ships on slot 3, the window derives from the clip, and ?combo=mono is the whole revert', async () => {
+  /* The owner's conditional — "Add in the cane combo only if the animations already exist for
+     it" — was answered NO by §714 (correctly, on evidence that could not read the sealed
+     libraries) and YES by §715.2 (the libraries hold `Cane Hit` and `Cane Hit 2`). §716 binds
+     `Cane Hit 2` to slot 3; this arm pins the three contracts that binding makes:
+     the mapping, the derived state window, and the one-token revert.
+     DOMAIN (§418.3) — passes on: the shipped duo table (slot 3 = whole `Cane Hit 2`, events at
+     its measured 0.375 contact; windows 0.28/0.28/0.505) and the mono table (§479.8's row,
+     verbatim, windows 0.28/0.28/0.40). Fails on: a synthetic slot-3 clip with a late contact
+     under the FLOOR rule alone (RUN below — the window must follow the contact, 1.03 ≠ 0.40),
+     and a slot-3 clip with no cane_hit at all (RUN below — the floor must hold, not NaN).
+     Cannot discriminate: whether the heavy READS as a finisher at game framing — the
+     shots/cane716 frames carry that — or the feel of the 0.505 s commitment, which is the
+     owner's to play. */
+  const { GODOT_LIB_CLIPS } = await import('../src/player/GodotLibClips.js');
+  const { comboStateTime } = await import('../src/player/Moveset.js');
+  const { TUNE } = await import('../src/player/Controller.js');
+
+  /* ---- the duo (default) mapping ---- */
+  const duo = buildClipSet('godot', { combo: 'duo' });
+  assert.ok(GODOT_LIB_CLIPS['Cane Hit 2'], 'GodotLibClips.js no longer carries "Cane Hit 2" — re-run tools/godotlib2clips.mjs');
+  assert.ok(GODOT_LIB_CLIPS['Cane Hit'], 'GodotLibClips.js no longer carries "Cane Hit" — it is baked-not-bound (§716), and losing the bake silently is §714\'s blindness returning');
+  assert.equal(duo.origin.cane_combo_3, 'godot:Cane Hit 2', 'slot 3 lost the §716 heavy');
+  assert.equal(duo.table.cane_combo_3.dur, GODOT_LIB_CLIPS['Cane Hit 2'].dur,
+    'cane_combo_3 no longer delivers Cane Hit 2 whole — a trim or retime crept in without a measurement');
+  const ev3 = duo.table.cane_combo_3.events.find((e) => e.n === 'cane_hit');
+  assert.equal(ev3?.t, 0.375, `slot 3's cane_hit moved off the measured contact (${ev3?.t}) — §479.8's contract`);
+  assert.equal(ev3?.d?.index, 3, 'slot 3 lost its index — Particles scales ×1.35 and Audio picks the layer by it');
+  /* `Cane Hit` stays UNBOUND: no verb resolves to it (the §418.3 refusal — its contact is not
+     measurable by the calibrated instrument, so no cane_hit contract can be written for it) */
+  for (const [game, origin] of Object.entries(duo.origin)) {
+    assert.notEqual(origin, 'godot:Cane Hit', `"${game}" plays Cane Hit — §716 refused that binding (unmeasurable contact); re-derive before binding it`);
+  }
+
+  /* ---- the derived window: max(floor, contact + comboFollow) ---- */
+  assert.equal(TUNE.comboFollow, 0.13,
+    'comboFollow moved — 0.13 is the LARGEST constant that keeps proc/mono windows bit-exact (binding case: proc combo_1, 0.28 − 0.15); re-derive, do not tune');
+  const saved = {};
+  const swap = (table) => { for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3']) { saved[n] = ACTIVE[n]; ACTIVE[n] = table[n]; } };
+  const restore = () => { for (const n of Object.keys(saved)) ACTIVE[n] = saved[n]; };
+  try {
+    swap(duo.table);
+    assert.deepEqual([1, 2, 3].map(comboStateTime), [0.28, 0.28, 0.505],
+      'duo windows are not [0.28, 0.28, 0.505] — the slot-3 strike (0.375) plus its 0.13 follow no longer fits the state');
+    swap(buildClipSet('godot', { combo: 'mono' }).table);
+    assert.deepEqual([1, 2, 3].map(comboStateTime), [0.28, 0.28, 0.40],
+      'mono windows are not the shipped [0.28, 0.28, 0.40] — the revert arm no longer restores §479.8\'s cadence');
+    swap(buildClipSet('proc').table);
+    assert.deepEqual([1, 2, 3].map(comboStateTime), [0.28, 0.28, 0.40],
+      'proc windows are not the shipped [0.28, 0.28, 0.40] — ?anim=proc must stay bit-exact under the derivation');
+    /* FAIL arms for the derivation itself (§418.3): a late contact must widen the window past
+       the floor; a missing event must fall back TO the floor. */
+    ACTIVE.cane_combo_3 = { ...duo.table.cane_combo_3, events: [{ t: 0.9, n: 'cane_hit', d: { index: 3 } }] };
+    assert.ok(Math.abs(comboStateTime(3) - 1.03) < 1e-9,
+      `a contact at 0.9 must derive a 1.03 window, got ${comboStateTime(3)} — the derivation is dead and a late strike would be cut`);
+    ACTIVE.cane_combo_3 = { ...duo.table.cane_combo_3, events: [] };
+    assert.equal(comboStateTime(3), 0.40, 'an event-less slot must fall back to the tuned floor');
+  } finally { restore(); }
+
+  /* ---- the revert row is §479.8's, verbatim ---- */
+  const mono = buildClipSet('godot', { combo: 'mono' });
+  assert.equal(mono.origin.cane_combo_3, 'godot:Canehit', 'mono does not restore the all-Canehit chain');
+  assert.equal(mono.table.cane_combo_3.dur, GODOT_CLIPS.Canehit.dur, 'mono slot 3 is not Canehit whole');
+  assert.deepEqual(mono.table.cane_combo_3.events,
+    [{ t: 0.10, n: 'cane_hit', d: { index: 3 } }, { t: 0.10, n: 'land', d: { force: 0.5 } }],
+    'mono slot 3 events are not §479.8\'s — the revert is not the shipped-before state');
+  /* slots 1/2 are IDENTICAL between the arms — §716 touched only slot 3 */
+  for (const n of ['cane_combo_1', 'cane_combo_2']) {
+    assert.equal(duo.origin[n], mono.origin[n], `${n} differs between duo and mono — §716's surface grew silently`);
+  }
+  /* and the two arms differ ONLY at slot 3 across the whole table */
+  for (const n of Object.keys(duo.table)) {
+    if (n === 'cane_combo_3') continue;
+    assert.equal(duo.origin[n], mono.origin[n], `"${n}" origin differs between combo arms — the token is leaking outside the combo`);
+  }
+});
+
 test('combo chain seam (§525): a motion is never layered on top of itself, and every strike in a mash delivers its full reach', async () => {
   /* THE DEFECT THIS GUARDS. Their tree has exactly ONE ground attack — established in §525 by
      censusing all 24 clips of `SlyCooper_Anims27.gltf` BY CONTENT rather than by name, plus the
@@ -825,13 +908,24 @@ test('combo chain seam (§525): a motion is never layered on top of itself, and 
      hand relative to the hips. It is calibrated in the arm above against the house's own
      `cane_hit`, so a number out of it means something.
 
+     §716 RE-DERIVED THE YARDSTICK, not the claim. The chain is no longer three copies of one
+     arc: slots 1/2 share `Canehit` and slot 3 plays `Cane Hit 2`, so the seam rule now fires
+     through BOTH of its inputs on one chain — `source` coalesces 1→2 (same arc) and `excl`
+     hands off 2→3 (same action slot, different arcs). A single `clean` scalar measured on
+     slot 1 was the right yardstick only while the slots were identical; measuring slot 3's
+     0.726 m body against slot 1's 0.924 m is §526.1's exact artefact, so each slot is now
+     held to ITS OWN clip's solo peak, the same correction the procedural arm below has
+     carried since §526.
+
      DOMAIN (§418.3) — passes on: the shipped godot table under a mashed chain at the real
-     cadence (`Combo.update` re-swings at `_elapsed >= _t*0.55`, `TUNE.comboTimes`), where each
-     of the three slots delivers a peak within 2% of a clean single swing and no more than two
-     tracks are ever live. Fails on: the SAME table with `source` AND `excl` stripped, RUN BELOW
-     as the control — that is exactly the pre-§525 mixer (those two fields are the rule's whole
-     input), and it reproduces the defect at three live tracks and strikes 2 and 3 short of the
-     clean peak.
+     cadence (`Combo.update` re-swings at `_elapsed >= _t*0.55`), where every slot delivers a
+     peak within 2% of ITS OWN clip's clean solo and no more than two tracks are ever live.
+     Fails on: the SAME table with `source` AND `excl` stripped, RUN BELOW as the control —
+     that is exactly the pre-§525 mixer (those two fields are the rule's whole input), and it
+     reproduces the defect at three live tracks with at least one strike ≥5% short of its own
+     solo (with the long slot-3 body the depressed strikes are the EARLY ones, whose contacts
+     overlap live neighbours; slot 3's own contact lands after the short tracks expire, which
+     is why the control no longer pins slot 3 by name).
      Cannot discriminate: whether the chain READS as three hits at game framing, whether the
      cross-fade during the brief 2-track overlap is the right length, or anything about the
      torso, feet or lunge — this reads one hand. `shots/chain1-{before,after}-*` carry the picture. */
@@ -887,19 +981,32 @@ test('combo chain seam (§525): a motion is never layered on top of itself, and 
     } finally { for (const n of Object.keys(saved)) ACTIVE[n] = saved[n]; }
   };
 
-  /* A clean single swing is the yardstick every slot is measured against. */
-  let clean = -Infinity;
-  for (let t = 0; t <= g.cane_combo_1.dur + 1e-9; t += DT) {
-    pb.clear();
-    sampleInto(g.cane_combo_1, Math.min(t, g.cane_combo_1.dur), pb, 1);
-    for (const n of RIG3.BONE_ORDER) {
-      const b = rig.bones[n]; if (!b) continue;
-      if (pb.w[n] > 0) b.quaternion.copy(pb.q[n]); else b.quaternion.identity();
+  /* Each slot's clean solo is the yardstick IT is measured against (§716: two different bodies
+     share the chain now, so a single scalar would compare slot 3's 0.726 m clip to slot 1's
+     0.924 m one — §526.1's artefact, corrected the same way the procedural arm corrected it). */
+  const soloOf = (clip) => {
+    let best = -Infinity;
+    for (let t = 0; t <= clip.dur + 1e-9; t += DT) {
+      pb.clear();
+      sampleInto(clip, Math.min(t, clip.dur), pb, 1);
+      for (const n of RIG3.BONE_ORDER) {
+        const b = rig.bones[n]; if (!b) continue;
+        if (pb.w[n] > 0) b.quaternion.copy(pb.q[n]); else b.quaternion.identity();
+      }
+      rig.rt.updateMatrixWorld(true);
+      best = Math.max(best, wp('handR').z - wp('hips').z);
     }
-    rig.rt.updateMatrixWorld(true);
-    clean = Math.max(clean, wp('handR').z - wp('hips').z);
+    return best;
+  };
+  const solo = { 1: soloOf(g.cane_combo_1), 2: soloOf(g.cane_combo_2), 3: soloOf(g.cane_combo_3) };
+  for (const s of [1, 2, 3]) {
+    assert.ok(solo[s] > 0.2, `slot ${s}'s clean reach (${solo[s].toFixed(4)}) is implausible — the yardstick is broken, so nothing below means anything`);
   }
-  assert.ok(clean > 0.2, `the clean swing's reach (${clean.toFixed(4)}) is implausible — the yardstick is broken, so nothing below means anything`);
+  /* the premise of the §716 mapping, asserted where it is consumed: slots 1/2 are ONE body
+     (identical solos), slot 3 is ANOTHER (its own solo, measurably different) */
+  assert.equal(solo[1], solo[2], 'slots 1 and 2 no longer share a body — the per-slot yardstick derivation must be revisited');
+  assert.ok(Math.abs(solo[3] - solo[1]) > 0.05,
+    `slot 3's solo (${solo[3].toFixed(3)}) is within noise of slot 1's (${solo[1].toFixed(3)}) — the chain is one body again and this arm's §716 shape is stale`);
 
   /* ---- CONTROL: strip the rule's INPUTS and the defect must come back ---------------------- */
   /* Both of them. The rule's input was `source` alone at §525; §526 added `excl` for the
@@ -912,19 +1019,21 @@ test('combo chain seam (§525): a motion is never layered on top of itself, and 
   for (const n of ['cane_combo_1', 'cane_combo_2', 'cane_combo_3']) { const { source, excl, ...rest } = g[n]; stripped[n] = rest; }
   const before = mash(stripped);
   assert.equal(before.maxLive, 3,
-    `CONTROL FAILED: with \`source\`+\`excl\` stripped the mixer should layer three copies of Canehit (that is the pre-§525 build), but maxLive was ${before.maxLive} — `
+    `CONTROL FAILED: with \`source\`+\`excl\` stripped the mixer should layer all three strikes (that is the pre-§525 build), but maxLive was ${before.maxLive} — `
     + `the control no longer reproduces the defect, so the pass below is not evidence of anything`);
-  assert.ok(before.peak[3] < clean * 0.95,
-    `CONTROL FAILED: the layered build's third strike reached ${before.peak[3].toFixed(4)} of a clean ${clean.toFixed(4)} — the defect did not reproduce`);
+  const worstRatio = Math.min(...[1, 2, 3].map((s) => before.peak[s] / solo[s]));
+  assert.ok(worstRatio < 0.95,
+    `CONTROL FAILED: the layered build's worst strike still delivered ${(worstRatio * 100).toFixed(1)}% of its own solo `
+    + `(peaks ${[1, 2, 3].map((s) => before.peak[s].toFixed(3)).join(' / ')} vs solos ${[1, 2, 3].map((s) => solo[s].toFixed(3)).join(' / ')}) — the defect did not reproduce`);
 
   /* ---- the shipped table: at most a cross-fade, and every strike whole -------------------- */
   const after = mash(g);
   assert.ok(after.maxLive <= 2,
-    `the shipped chain put ${after.maxLive} tracks of the same source on the body at once — a motion is being layered on itself again`);
+    `the shipped chain put ${after.maxLive} tracks of the combat slot on the body at once — a motion is being layered on itself again`);
   for (const slot of [1, 2, 3]) {
-    assert.ok(after.peak[slot] >= clean * 0.98,
-      `strike ${slot} of a mashed chain delivered ${after.peak[slot].toFixed(4)} m of reach against ${clean.toFixed(4)} for a clean single swing `
-      + `(${((after.peak[slot] / clean - 1) * 100).toFixed(1)}%) — the chain is smearing strikes together again`);
+    assert.ok(after.peak[slot] >= solo[slot] * 0.98,
+      `strike ${slot} of a mashed chain delivered ${after.peak[slot].toFixed(4)} m of reach against ${solo[slot].toFixed(4)} for its own clean solo `
+      + `(${((after.peak[slot] / solo[slot] - 1) * 100).toFixed(1)}%) — the chain is smearing strikes together again`);
   }
 
   /* The procedural set still carries no `source` — the swap-back must restore procedural DATA,

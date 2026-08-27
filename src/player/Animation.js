@@ -190,6 +190,37 @@ function idleRegime() {
 }
 const IDLE_REPO = idleRegime() === 'repo';
 
+/**
+ * §716 — the cane combo, and the token that reverts it. The owner's conditional — "Add in the
+ * cane combo only if the animations already exist for it" — was answered NO by §714 on evidence
+ * that could not read the sealed libraries, and YES by §715.2 once they were opened: `Cane Hit`
+ * and `Cane Hit 2` are distinct attacks in every MASTER library. The conditional is later than
+ * the "repeats" ruling and now fires, so the chain gains a second body (the mapping and its
+ * measurements are on the alias rows below). 'duo' (default): slots 1/2 play `Canehit`, slot 3
+ * plays the library's `Cane Hit 2`. 'mono' (`?combo=mono` / `globalThis.__COMBO_AB='mono'`):
+ * all three slots play `Canehit` exactly as §479.8 shipped them — the one-token revert. The
+ * combo state window derives from the bound clip's own contact (Moveset.comboStateTime), so the
+ * token reverts the timing with the clip and nothing else needs to move.
+ */
+const COMBO_DEFAULT = 'duo';
+function comboRegime() {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('combo') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__COMBO_AB != null) raw = String(globalThis.__COMBO_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  const t = String(raw).trim().toLowerCase();
+  return t === 'mono' || t === 'duo' ? t : COMBO_DEFAULT;
+}
+const COMBO_DUO = comboRegime() === 'duo';
+
+/** §479.8's slot-3 row, verbatim — what `?combo=mono` restores (and what shipped before §716). */
+const COMBO_MONO_ROW = {
+  src: 'Canehit',
+  events: [{ t: 0.10, n: 'cane_hit', d: { index: 3 } },
+           { t: 0.10, n: 'land', d: { force: 0.5 } }],
+};
+
 const GODOT_ALIAS = {
   /* game name       source + delivered timing (see the window derivation above).
      THE AUDITED SET (§479): each row is a verb where the repo authored a clip for the same
@@ -273,7 +304,11 @@ const GODOT_ALIAS = {
   /* §479.8 — the combat + pickpocket port ("check to see if the attack and pickpocket
      animations were properly ported"). Their ground attack is ONE clip — `Canehit`, fired on
      every square press (`Hit Transition/hit_floor`, player__sly.gd:640, no TimeScale) — so all
-     three combo slots play it, whole and at natural rate, exactly as their tree fires it.
+     three combo slots played it, whole and at natural rate, exactly as their tree fires it.
+     [§716: "their TREE has one attack" stayed true; "the repo has one attack" did not — the
+     sealed libraries held two more, and slot 3 now plays one of them (the block on the combo
+     rows below). Slots 1/2 and everything else in this comment are unchanged, and the whole
+     §479.8 wiring is restorable via `?combo=mono`.]
 
      WHERE THE CONTACT IS, measured, not derived (§442.3). An earlier pass of this same port
      read `Canehit`'s peak hand SPEED (14.8 m/s, authored t 0.42) as the strike and trimmed
@@ -297,16 +332,63 @@ const GODOT_ALIAS = {
      proc's events by dur ratio (0.15 → 0.163 here), which would sit 63 ms past the real
      contact. combo_3 keeps its paired `land` stomp on the same beat. Lunge, damage and shake
      stay the moveset's. LIMIT, stated not hidden: their tree has one ground attack, so our
-     three chain slots are the same swing three times — faithful to the reference, and less
-     varied than the proc set it replaces.
+     three chain slots were the same swing three times — faithful to the reference, and less
+     varied than the proc set it replaced. [§716 lifts that limit on slot 3 only.]
 
      `PickPocket` keeps its natural reach (max extension at t 0.25, settled by ~0.6) and cuts
      the export's 4 s idle-bake tail at 1.1 s — the proc clip's own window (pickTime 0.55 exits
      the state; the one-shot's remainder holds the reach over the fade). */
+  /* §716 — the combo gains its second body. §715.2 opened the libraries and found what §714's
+     text-file scan could not: TWO more attacks, `Cane Hit` (1.37 s) and `Cane Hit 2` (1.03 s),
+     distinct from `Canehit` BY CONTENT, not name — time-normalised hand-path divergence vs the
+     shipped swing: mean 0.75 m / 0.57 m, on a comparator whose self-test reads 0.000 (§714's
+     lesson applied to the positive case). The owner's conditional ("add the combo only if the
+     animations already exist") now fires. The mapping, decided by measurement:
+
+       slot 1  `Canehit`     the jab — contact t 0.108, reach 0.924 m, the hand ARRIVES by
+       slot 2  `Canehit`     contact (3.3 m/s there; its 19 m/s peak is the recovery yank,
+                             §479.8) and holds extended 0.10–0.40. Chain cadence intact: a
+                             chained slot's gate opens at 0.55·_t, so its strike needs only
+                             _t ≥ 0.196 — inside the shipped 0.28 windows. The two slots stay
+                             distinct through their own donor cane tracks (tip reach 0.607 /
+                             1.332 m, §713.3).
+       slot 3  `Cane Hit 2`  the heavy — contact t 0.375 with the hand still carrying
+                             13.5 m/s THROUGH the target (a swing, where the jab is a snap),
+                             reach 0.726 m, lunge depth −0.159, recovery 0.44 s. It sits on
+                             the slot the game already treats as the finisher: ×1.35
+                             particles (`Particles._onCaneHit`), shake 0.16, lunge 3.8.
+
+     `Cane Hit 2` CANNOT sit on a chained slot at natural rate: gate ≥ contact needs
+     _t ≥ 0.375/0.55 = 0.682 — a 2.4× slowdown of the whole chain — so it is the finisher or
+     nothing. It plays WHOLE at natural rate (their tree never wired these clips, so no
+     delivered TimeScale exists to be faithful to; §479.7's precedent reads the tree, and the
+     tree is silent). The state window is DERIVED from the contact rather than tuned around
+     it — Moveset.comboStateTime, `max(comboTimes[i], contact + comboFollow)` — so slot 3 runs
+     0.505 s under this row and the shipped 0.28/0.28/0.40 under every other arm (proc, mono),
+     bit-exact.
+
+     `Cane Hit` (the third attack) is baked in GodotLibClips and NOT bound — `Run 1`'s
+     standing (§715.4). It is a 1.37 s overhead roundhouse whose body yaw sweeps 125° and
+     whose front-sector crossing happens OVERHEAD (hand y 1.63 m, mid-spin): the §479.8
+     contact measure lands on its UNWIND (max reach t 0.971 at 5.5 m/s — a strike arrives
+     with speed, and 5.5 is the settle), so there is no measured moment to hang the
+     `cane_hit` contract on, and a guessed event is how this project once shipped an attack
+     backwards. Its numbers are in §716 for the owner.
+
+     Events are hand-carried (the donor-inherit rule would time-scale proc's 0.21 onto 0.35);
+     contact 0.375 was measured through the shipped compile/sample path at 240 Hz, calibrated
+     on the proc set's own declared contact (measure 0.150 vs declared 0.150) with a
+     conjugated-facing fail arm reading −0.726 m (§418.3, both arms). combo_3 keeps its
+     paired `land` stomp on the strike beat, as both prior sets had it. The donor cane track
+     is UNCHANGED — the library source carries ZERO cane channels (54 tracks, listed:
+     53 rotations + Hips position), so there is nothing to prefer over the §713-measured
+     donor slam, and the splice's time-scale lands the donor cane's impact key at 0.35 of the
+     delivered clip — 25 ms before contact, the same cane-leads-the-strike relation §713.3
+     measured on every shipped slot. */
   cane_combo_1:  { src: 'Canehit', events: [{ t: 0.10, n: 'cane_hit', d: { index: 1 } }] },
   cane_combo_2:  { src: 'Canehit', events: [{ t: 0.10, n: 'cane_hit', d: { index: 2 } }] },
-  cane_combo_3:  { src: 'Canehit', events: [{ t: 0.10, n: 'cane_hit', d: { index: 3 } },
-                                            { t: 0.10, n: 'land', d: { force: 0.5 } }] },
+  cane_combo_3:  { src: 'Cane Hit 2', events: [{ t: 0.375, n: 'cane_hit', d: { index: 3 } },
+                                               { t: 0.375, n: 'land', d: { force: 0.5 } }] },
   pickpocket:    { src: 'PickPocket', until: 1.1 },
 
   /* The `CaneSwing` family turned out NOT to be attacks — measured at their own play sites:
@@ -436,6 +518,9 @@ export const LIMB_OPEN = { elbow: 0.75, knee: 0.60 };
  * timing is a gameplay contract and the combo work is parked on the user's ears besides, so the
  * three chain slots keep the repo's fold and the ruling takes the rest of the set. Recorded
  * here rather than in a comment on the test, because the exemption is the shipped behaviour.
+ * §716 re-measured the exemption on slot 3's new body rather than inheriting it: at the
+ * set-wide 0.75/0.60 rung `Cane Hit 2`'s contact drifts 0.375 → 0.392 s — 17 ms, at the same
+ * 20 ms bar — so the row stays 0/0 on its own number, not on `Canehit`'s.
  */
 export const GODOT_LIMB_OPEN = {
   cane_combo_1: { elbow: 0, knee: 0 },
@@ -721,6 +806,11 @@ export function buildClipSet(raw, opts = {}) {
      module-load token (`?idle=` / `__IDLE_AB`) decides for ACTIVE; `opts.idle` lets a test
      hold both arms in one process. */
   const idleMode = opts.idle === 'pose' || opts.idle === 'repo' ? opts.idle : (IDLE_REPO ? 'repo' : 'pose');
+  /* §716 — which body fills the third combo slot. 'duo' (the default): the library's
+     `Cane Hit 2`. 'mono': §479.8's all-`Canehit` chain, verbatim — the revert arm. Same seam
+     shape as `idle`: the module-load token decides for ACTIVE; `opts.combo` lets a test hold
+     both arms in one process. */
+  const comboMode = opts.combo === 'mono' || opts.combo === 'duo' ? opts.combo : (COMBO_DUO ? 'duo' : 'mono');
   const table = Object.create(null);
   const origin = Object.create(null);
   for (const n in CLIPS) { table[n] = CLIPS[n]; origin[n] = 'proc'; }
@@ -740,11 +830,10 @@ export function buildClipSet(raw, opts = {}) {
      stays byte-identical and §479.20's bit-exactness check keeps meaning). Names cannot
      collide: the lib set's five names exist in no gltf. */
   const SRC = godot ? { ...GODOT_CLIPS, ...GODOT_LIB_CLIPS } : MIXAMO_CLIPS;
-  const ALIAS = godot
-    ? (idleMode === 'pose'
-      ? { ...GODOT_ALIAS, idle_confident: 'Standupright', idle_look: 'Standupright' }  // §479.20's endorsed static
-      : GODOT_ALIAS)
-    : MIXAMO_ALIAS;
+  let ALIAS = godot ? GODOT_ALIAS : MIXAMO_ALIAS;
+  if (godot && idleMode === 'pose') ALIAS = { ...ALIAS, idle_confident: 'Standupright', idle_look: 'Standupright' };  // §479.20's endorsed static
+  if (godot && comboMode === 'mono') ALIAS = { ...ALIAS, cane_combo_3: COMBO_MONO_ROW };  // §716's revert arm
+
   const tag = godot ? 'godot' : 'mixamo';
   const used = new Set();
   for (const [game, spec] of Object.entries(ALIAS)) {
