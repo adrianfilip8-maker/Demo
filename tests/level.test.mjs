@@ -438,12 +438,29 @@ test('level: no two trigger volumes overlap, and the pair test can see an overla
     'trigger volumes are close enough for acquisition to flicker');
 
   /* CALIBRATION — the arm that MUST move. Grow every volume and at least one pair has to trip,
-     or this test is asserting a property of the arithmetic rather than of the level. */
-  const grown = overlapPairs(1.25);
-  console.log(`[volumes] calibration: at 1.25x volume, ${grown.length} pairs trip ` +
-              `(${grown.slice(0, 3).map((p) => `${p.a}/${p.b}`).join(', ')})`);
-  assert.ok(grown.length > 0,
-    'growing every volume by 25% produced no overlap at all — the pair test cannot detect one');
+     or this test is asserting a property of the arithmetic rather than of the level.
+
+     §720 — THE FIXED 1.25 WENT DARK AND IS RE-DERIVED RATHER THAN DELETED OR WIDENED. Halving
+     the hook rings' acquisition volume took the tightest pair from 0.225 m of clear air to
+     3.295, and at that spacing a 25% growth overlaps nothing: the control stopped being able to
+     fire, which is §442's shape in the calibration itself. 1.25 was never a property of the
+     system — it was a number that happened to exceed the old level's 0.22 m headroom — so the
+     repair is to ask the level for its OWN first-overlap scale instead of asserting a constant
+     against it. `firstTrip` must exist and must be > 1; it printed 1.25-ish before this section
+     and prints a much larger figure after, and BOTH readings are the control working. */
+  let firstTrip = null, tripped = [];
+  for (let s = 101; s <= 4000 && !firstTrip; s++) {
+    const g = overlapPairs(s / 100);
+    if (g.length) { firstTrip = s / 100; tripped = g; }
+  }
+  console.log(`[volumes] calibration: the smallest uniform growth that overlaps ANY pair is `
+    + `${firstTrip === null ? 'none below 40x' : `${firstTrip.toFixed(2)}x`}, tripping ${tripped.length} pairs `
+    + `(${tripped.slice(0, 3).map((p) => `${p.a}/${p.b}`).join(', ')})`);
+  assert.ok(firstTrip !== null,
+    'no uniform growth up to 40x produced an overlap at all — the pair test cannot detect one, '
+    + 'so its green above is a property of the arithmetic rather than of the level');
+  assert.ok(firstTrip > 1,
+    `the level already overlaps at ${firstTrip}x — the bar above should have caught it first`);
 });
 
 /* ====================================================================== */

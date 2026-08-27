@@ -826,27 +826,117 @@ function hookPoint(A, x, y, z) {
  * authoring the point somewhere it cannot safely go.
  *
  * ── `volume` ──────────────────────────────────────────────────────────────────────────────
- * `magVolume` 3.30 m (half a full-speed jump's reach), except the lower chain: its tightest
- * ring gap is 6.36 m and two 3.30 spheres would overlap there. The rule is that two trigger
- * volumes must be separated by at least one `magSnapRadius` (0.20625 m — the smallest distance
- * this system resolves) of clear air, which caps the lower chain at (6.36 − 0.20625)/2 = 3.077.
- * `tests/level.test.mjs` asserts the whole registry against that rule pairwise.
+ * `magVolume` 3.30 m (half a full-speed jump's reach) is the general acquisition radius and is
+ * what the spire tips and the wall notch still carry. **The hook rings no longer do**: §720
+ * halved theirs on the owner's instruction — 1.65 on the courtyard chain, 1.535 on the lower one
+ * — and the whole of that change, its scope and its revert token, is at `MAG` below.
+ *
+ * The rule that shaped the lower chain's number is unchanged and still binds any future
+ * widening: two trigger volumes must be separated by at least one `magSnapRadius` (0.20625 m —
+ * the smallest distance this system resolves) of clear air, and the lower chain's tightest ring
+ * gap is 6.36 m, so nothing above (6.36 − 0.20625)/2 = 3.077 is legal there. At 3.07 that rule
+ * was tight (0.22 m of air); at 1.535 it is slack by 3.29 m and is no longer what decides the
+ * value. `tests/level.test.mjs` asserts the whole registry against the rule pairwise.
+ */
+/**
+ * §720 — "Reduce the magnetic distance of the move to hook onto the hanging rings by 50%."
+ *
+ * The owner's sentence names ONE quantity and one set of targets, and both halves of that matter:
+ *
+ *   · "magnetic distance" is `volume`, the ACQUISITION SPHERE — the radius inside which
+ *     `TargetField.acquire` will even consider a point. It is not `catch` (a time-derived miss
+ *     window, below) and not `magSnapRadius` (the arrival tolerance).
+ *   · "the hanging rings" is `swingTarget` — the 11 hook rings of the two courtyard chains,
+ *     `arrive: 'hookSwing'`, `userData.kind: 'hook'`. It is NOT every target carrying
+ *     `group: 'swing'`: `spireTarget` shares that group tag and is a spire TIP reached by a jump
+ *     off a pole top, with `catchJump` rather than `catchSwing`. Nobody asked for the spires and
+ *     halving them would break §8.1's Ninja Spire Landing, so they keep 3.30 and are named here
+ *     rather than left to be discovered. The wall notch (`group: 'notch'`) likewise.
+ *
+ * So the halving lands on `volumeSwing`/`volumeLow`, and `volume` stays where it was as the
+ * general acquisition radius for everything that is not a ring. `?mag=wide` restores the rings'
+ * old pair in one token; the arithmetic is at `swingVolume()` below.
  */
 export const MAG = {
   /** Controller.TUNE.magCatch: runSpeed 7.2 × jumpBufferMs 0.140. Spires. */
   catchJump: 1.008,
-  /** √(2 · 24 · hookL 2.2) × jumpBufferMs 0.140 — the same sentence at pendulum speed. Rings. */
+  /**
+   * √(2 · 24 · hookL 2.2) × jumpBufferMs 0.140 — the same sentence at pendulum speed. Rings.
+   *
+   * §720 DELIBERATELY DID NOT TOUCH THIS, and the reason is what it is made of: it is a TIME
+   * window expressed in metres — how far a body on our rope travels during the 140 ms the input
+   * layer already forgives — not a distance the designer chose. Halving it would be halving
+   * `jumpBufferMs` for one move only, which is a different request from the one that was made.
+   * The invariant `catchSwing 1.4387 < hookL 2.2` therefore holds unchanged, on both sides of
+   * this section, because neither term moved.
+   *
+   * What DID change is its relationship to the volume, and that is a real consequence rather
+   * than a bookkeeping note: the acquisition sphere used to be 2.29× the catch window (3.30 /
+   * 1.4387) and is now 1.147× it (1.65 / 1.4387). The volume was almost never the binding test
+   * before; now it usually is. A player whose arc is dead-on but who is 2 m out is no longer
+   * offered the ring.
+   */
   catchSwing: 1.4387,
-  /** Controller.TUNE.magVolume. */
+  /** Controller.TUNE.magVolume — the general acquisition radius. SPIRES and the wall notch. */
   volume: 3.30,
-  /** Lower chain: (tightest ring gap 6.36 − magSnapRadius 0.20625) / 2 = 3.0769. */
-  volumeLow: 3.07,
+  /**
+   * §720 — the rings' acquisition radius: **half** of `volume`, 3.30 → 1.65, which is the
+   * owner's 50% applied to the number their sentence names. Every `swingTarget` takes this
+   * unless it is given the low-chain value below.
+   */
+  volumeSwing: 1.65,
+  /**
+   * The lower chain, and the comment here is a WARNING as much as a value.
+   *
+   * WHAT IT USED TO BE: a CAP, not a choice. The rule at the head of this section is that two
+   * trigger volumes must be separated by at least one `magSnapRadius` (0.20625 m) of clear air;
+   * the lower chain's tightest ring gap is 6.36 m, so the widest legal radius there was
+   * (6.36 − 0.20625) / 2 = **3.0769**, and 3.07 was that cap rounded down. The general 3.30 did
+   * not fit.
+   *
+   * WHAT IT IS NOW, and this sentence is the point: **1.535 is half of 3.07, and it is no longer
+   * the cap.** At 1.535 the pairwise rule has 6.36 − 2 × 1.535 = **3.29 m** of clear air where it
+   * used to have 0.22 — the constraint that produced the old number is slack by a factor of
+   * fifteen and does not determine this one. The value follows from the owner's 50%, applied to
+   * the same ring set as `volumeSwing`, and from nothing else.
+   *
+   * This is spelled out because a stale derivation beside a changed number is this project's
+   * recurring defect — §589's draw-call comment still read "11 guards" after two were removed;
+   * §705 and §710 each corrected arithmetic that had been believed rather than checked. The cap
+   * is kept in the text because it still BOUNDS any future widening: anything above 3.077 here
+   * re-introduces overlapping spheres on the tightest gap in the level.
+   */
+  volumeLow: 1.535,
   /** §6 hook pendulum length. `catchSwing < hookL` is the no-self-recapture invariant. */
   hookL: 2.2,
   /** §6: "spire land — jump from it gets ×1.25 height". A target standing in for a spire must
    *  carry the same multiplier or the assist would quietly nerf the move it exists to enable. */
   spireJumpMult: 1.25,
 };
+
+/**
+ * §720's revert token, and the one place the halving is applied.
+ *
+ * `?mag=wide` (or `globalThis.__MAG_AB = 'wide'`) restores the rings' pre-§720 pair — 3.30 on the
+ * courtyard chain, 3.07 on the lower one — leaving everything else in `MAG` alone. It is
+ * INDEPENDENT of §720's other token (`?pole=climb`, the climb animation): the two arms of this
+ * section were measured separately and they revert separately, so a build can carry either, both
+ * or neither. Read at module load, the same seam as `?anim=` / `?idle=` / `?combo=` / `?pole=`.
+ */
+const MAG_WIDE = (() => {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('mag') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__MAG_AB != null) raw = String(globalThis.__MAG_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  return String(raw).trim().toLowerCase() === 'wide';
+})();
+
+/** The acquisition radius a hook ring ships with. `low` picks the lower chain's value. */
+export function swingVolume(low = false) {
+  if (MAG_WIDE) return low ? 3.07 : MAG.volume;      // the pre-§720 pair, verbatim
+  return low ? MAG.volumeLow : MAG.volumeSwing;
+}
 
 /**
  * Register one authored point. The spec goes on `A.api.targets` **and** onto the bus.
@@ -866,7 +956,7 @@ function magnet(A, spec) {
 }
 
 /** A hook ring's magnetism point: the ring itself. See the `point` section above. */
-function swingTarget(A, id, x, y, z, volume = MAG.volume) {
+function swingTarget(A, id, x, y, z, volume = swingVolume()) {
   return magnet(A, {
     id,
     point: new THREE.Vector3(x, y, z),
@@ -2356,9 +2446,11 @@ function courtyardTraversal(A) {
        weakest two in the level. They are authored anyway, and the reason is that the unit of
        this grammar is the *chain*, not the ring: every ring wears the same §2.1.6 sparkle, and
        magnetism that worked on two of four would make that sparkle a lie on the other two.
-       Consistency inside one set piece beats a per-ring audit. Volume 3.07, not 3.30 — this
-       chain's tightest gap is 6.36 m, see MAG. */
-    swingTarget(A, `hook-low-${i}`, x, y, z, MAG.volumeLow);
+       Consistency inside one set piece beats a per-ring audit. This chain takes a narrower
+       radius than the courtyard one — 1.535 against 1.65 since §720, 3.07 against 3.30 before
+       it — because its tightest ring gap is 6.36 m; the derivation, and the fact that the cap it
+       came from no longer binds, are at `MAG.volumeLow`. */
+    swingTarget(A, `hook-low-${i}`, x, y, z, swingVolume(true));
     A.add('court', 'bronze_dark', K.place(K.chain({ len: 0.85, r: 0.055, links: 4 }), { x, y: y + 1.6, z }));
   }
   A.instance('gold_leaf', ringGeo, mats, 'hooks:rings');
