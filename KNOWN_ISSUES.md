@@ -58004,3 +58004,8 @@ lock, which is what holding it is for (§703); `--test-name-pattern` was never u
 A fourth run, at the commit that carries this section, is recorded in the commit after it —
 the §712/§713/§715 precedent: a suite table committed at one sha and quoted at another is a
 claim about a tree nobody ran.
+
+**Run 4, at `0f5f91f` (the section's own commit), same worktree, same lock, same runner:**
+**1085 / 1085, 0 fail**, 363.2 s, zero `not ok` lines over the whole stream, pwd checked inside
+the command (`/home/user/wt-716`), cwd present at end. Four runs, four green, and neither
+documented flake fired in any of them.
