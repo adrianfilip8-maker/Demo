@@ -235,6 +235,34 @@ test('§719: the crook is tagged on the adopted mesh, and the classifier refuses
   assert.equal(anyTinted, false, 'the refusal left a non-white COLOR_0 behind — that is the black-cane path');
 });
 
+test('§719: the tint is the quotient that lands the crook exactly on the house gold', async () => {
+  /* The whole colour claim is one identity — asset albedo x tint = house gold — and it is checked
+     here rather than inferred from a frame. It is also the guard on the two constants: if the
+     owner re-exports the cane with different artwork, or the house gold moves, this goes red and
+     the tint has to be re-derived instead of silently painting the wrong colour. */
+  const { albedoTint } = await import('../src/player/Cane.js');
+  const { ASSET_HOOK_ALBEDO } = await import('../src/player/CaneAsset.js');
+  const GOLD = 0xe8b942;
+  const tint = albedoTint(GOLD, ASSET_HOOK_ALBEDO);
+  const base = new THREE.Color(ASSET_HOOK_ALBEDO);
+  const got = new THREE.Color(base.r * tint.r, base.g * tint.g, base.b * tint.b);
+  assert.equal(got.getHex(), GOLD,
+    `asset albedo #${base.getHexString()} x tint (${tint.toArray().map((v) => v.toFixed(4))}) `
+    + `= #${got.getHexString()}, wanted #${GOLD.toString(16)}`);
+
+  /* NEVER BRIGHTER THAN ITS OWN ALBEDO. A tint channel above 1 would be a gain, and gain on this
+     prop is §266's question, measured and refused. The clamp is what keeps a colour change from
+     smuggling one in, so it is asserted rather than trusted. */
+  for (const [k, v] of Object.entries({ r: tint.r, g: tint.g, b: tint.b })) {
+    assert.ok(v > 0 && v <= 1, `tint.${k} = ${v} — outside (0, 1]`);
+  }
+  /* Identity when there is nothing to move: no texture means the material is already the house
+     gold, and the crook must then be tinted by exactly nothing. */
+  const idem = albedoTint(GOLD, GOLD);
+  assert.deepEqual([idem.r, idem.g, idem.b], [1, 1, 1],
+    'albedoTint(x, x) is not identity — the no-texture fork would double-darken the crook');
+});
+
 test('critic 7 #6: the crook FRAME is a sampled arc, not three straight segments', async () => {
   /* Since §294 the RENDERED crook is the owner's asset (pinned above); this centerline is the
      frame the aim system and hookPoint contract still run on, and it must stay an open arc —
