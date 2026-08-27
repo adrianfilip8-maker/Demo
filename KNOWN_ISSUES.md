@@ -59313,3 +59313,21 @@ the end. Four runs, four quoted; no flake fired in any of them and no test went 
 command. Recorded because "behaviour-neutral, so I did not re-test it" is the sentence §717 named
 and it is not going to appear here.
 
+### §719.12 The revert token, exercised in the browser and not only against a flag
+
+`tests/dlrig.test.mjs`'s calibration arm drives `?hook=cream` through `globalThis.__HOOK_AB`,
+because that is the half an offline guard can reach. The half it cannot reach is the URL, and this
+project has shipped a token that never fired before (§718.14 records the reference project's dead
+camera tag; ours has its own history). So both arms were booted, in the browser, and the cane's
+`COLOR_0` read straight off the live geometry:
+
+| arm | vertices | non-white | darkest COLOR_0 | `hookTag` |
+|---|---|---|---|---|
+| default, no query | 306 | **180** | `(0.80695, 0.63791, 0.16387)` — the tint, exactly | `{comps: 4, hook: 188, ramp: 18, tinted: true}` |
+| **`?hook=cream`** | 306 | **0** | `(1, 1, 1)` | `{hook: 0, tinted: false, why: "no hook colour supplied"}` |
+
+`vertexColors` stays **true** on the reverted arm, and the attribute is still bound and still
+written — all 306 vertices exactly white. That is the point of authoring it on every refusal: the
+revert path is a multiply by one, not a missing attribute, so it cannot become the black cane the
+PREREG-guardfix defect produced.
+
