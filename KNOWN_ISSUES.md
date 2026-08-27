@@ -57751,4 +57751,256 @@ in any run.
 
 ## §716 — "Add in the cane combo only if the animations already exist for it": §715 met the condition, so the combo is built
 
-(claimed — content follows)
+### §716.1 The conditional chain, stated so nobody re-litigates it
+
+The owner's instruction is conditional, and the condition's answer CHANGED between sections.
+§714 answered NO — correctly on its evidence: the thirteen `.res` libraries were sealed
+(`strings` returned a uniform false negative that §714.2's own positive control exposed), and
+the text files hold exactly one cane attack name. §715.2 then opened all fourteen containers
+and falsified the headline: **`Cane Hit` (1.37 s) and `Cane Hit 2` (1.03 s) are distinct attack
+animations, present in every MASTER library.** That lane recorded them, measured `Cane Hit 2`'s
+strike, and deliberately did not bind — deferring to the older *"cane swings are repeats,
+should not be combos"* ruling. The owner's conditional is explicit and LATER than the repeats
+ruling; with the existence answer now YES, the conditional fires and this section builds the
+combo. §714's answer was right on its evidence and wrong in fact — that is what a sealed
+container does to a scan, and the §714.2 lesson (a null from an instrument that cannot see is
+not an answer) is the reason §715 re-asked the question at all.
+
+### §716.2 Identity by content: three DISTINCT attacks, not one under three names
+
+The §714 lesson applied in the positive direction — names prove nothing, so the library clips
+were compared to the shipped `godot:Canehit` BY CONTENT before any design was chosen. All three
+bodies compiled through the shipped `compile()`/`sampleInto` and driven through RIG3's own FK;
+the comparator is the time-normalised right-hand path (200 samples/clip), with per-bone
+max quaternion angle beside it. Its self-test (A vs A) reads 0.000 m / 0° on every bone.
+
+| pair | hand-path divergence (mean / max) | worst bone angles |
+|---|---|---|
+| `Canehit` vs `Cane Hit` | **0.749 / 1.372 m** | hips 83°, upperArmR 99° |
+| `Canehit` vs `Cane Hit 2` | **0.574 / 1.236 m** | upperArmR 126°, handR 85° |
+| `Cane Hit` vs `Cane Hit 2` | 0.466 / 0.821 m | — |
+
+**Verdict: the libraries' `Cane Hit` is NOT the glTF's `Canehit`** — no rate change reconciles
+paths 0.75 m apart under time normalisation — and none of the three is any other. The repo
+holds three distinct cane attacks. Raw-container facts, measured before retargeting: both
+library clips are identical bytes across MASTER 001–005 (per-track hashes `9b4f12ec…`/
+`67a9308a…`), both carry 54 tracks (53 rotations + the Hips position — profile bones, fingers,
+one Mixamo leaf), and **neither has any cane/prop channel**, so the source cannot articulate
+the cane at all. Both takes face off-axis like §715.3's idles (hips-yaw circular mean +65.6° /
++80.1° against the T-pose's 0.0°) and get the same measured `centerYaw` re-base (−67.0° /
+−80.4° printed at extract).
+
+### §716.3 What each clip IS, and the mapping that follows
+
+Measured on RIG3 through the shipped pipeline, 240 Hz; contact = max forward reach of the
+strike hand relative to the hips — §479.8's measure, re-calibrated in-run on the proc set's own
+declared contact (measured 0.150 vs declared 0.150, PASS) with a flat-clip fail arm (range
+0.0000 m — the measure cannot invent a strike):
+
+| body | dur | contact | reach | hand speed AT contact | recovery after contact | hips depth | yaw sweep |
+|---|---|---|---|---|---|---|---|
+| `Canehit` (shipped) | 0.500 | **0.108** | 0.924 m | **3.3 m/s** (arrived; 19 m/s peak is the recovery yank, §479.8) | 0.333 s | −0.108 | 44° |
+| `Cane Hit 2` | 1.033 | **0.375** | 0.726 m | **13.5 m/s** (still driving THROUGH the target) | 0.442 s | −0.159 | 40° |
+| `Cane Hit` | 1.367 | *not locatable* (§716.6) | 0.438 m at its max | 5.5 m/s there | — | −0.210 | **125°** |
+
+The chain-gate arithmetic decides which slots can hold which body: `Combo.update` accepts the
+next press from `0.55·_t`, so a CHAINED slot must show its strike before the gate opens —
+minimum `_t` = contact/0.55. `Canehit` needs 0.196 s (inside the shipped 0.28 windows);
+`Cane Hit 2` would need **0.682 s — a 2.4× slowdown of the whole chain** — so it can only be
+the finisher, which nothing chains past.
+
+**The mapping: slots 1/2 keep `Canehit` (the jab), slot 3 plays `Cane Hit 2` (the heavy).**
+The heavy lands on the slot the game already treats as the finisher — `Particles._onCaneHit`
+scales ×1.35 at index ≥ 3, the moveset's lunge ladder peaks there (3.8 m/s) and the shake fires
+there. Escalation is in MOMENTUM, not reach: the finisher trades 3% of peak reach (comboseam:
+0.7214/0.7214/0.6989 hips-frame) for 4× the hand speed at contact, 47% more lunge depth and
+double the duration. Slots 1/2 keep their §713.3 variety through their own donor cane tracks
+(tip reach 0.607 / 1.332 m).
+
+### §716.4 The binding, and its contracts
+
+`GODOT_ALIAS.cane_combo_3 = { src: 'Cane Hit 2', events: [cane_hit index 3 @ 0.375, land
+force 0.5 @ 0.375] }` — whole, natural rate (their tree never wired these clips, so no
+delivered TimeScale exists to be faithful to; the closest §479.7-style authority is silence).
+Events are hand-carried, not donor-inherited (the donor rule would scale proc's 0.21 to 0.35).
+The `land` stomp stays paired on the strike beat as both prior sets had it, and delivers the
+same `force 9` through `_fire`'s ×18 convention that the proc and mono arms deliver. Driven
+through the real mixer, the pair fires in the frame window containing 0.375 with `index: 3`
+intact — the field `Guard.js`/`Smashables.js` (press-time engine event, unchanged) and
+`Audio.js`/`Particles.js` (anim event) key on.
+
+**Strike direction, both arms (§418.3):** contact reach +0.726 m forward; the same pose under
+a 180° facing conjugation reads **−0.726 m (BEHIND)** — the fail arm §715.2 specified for this
+import, reproduced at the exact contact time. The §479.8 disaster class (strike deleted,
+recovery kept) is structurally excluded: no trim exists on the row.
+
+**The cane: donor tracks kept on all three slots, by construction.** The source has ZERO cane
+channels (§716.2's census), so there is nothing to prefer over the §713-measured donor tracks
+(which already out-swing the source's own metarig cane 163–180° vs 130.6°). Composed through
+the SHIPPED model, prop and FK (`SlyModel` + `sampleInto` + `sampleCane` — §713.3's
+instrument; its controls reproduced: walk handR range 0.229 m, §713.3's own 0.225 figure):
+
+```
+                    handR peak      crook peak      tip peak        cane track
+cane_combo_1 (duo)  0.753 @ 0.105   1.280 @ 0.350   0.607 @ 0.075   163.4°     = §713.3 mono, unchanged
+cane_combo_2 (duo)  0.753 @ 0.105   1.290 @ 0.105   1.332 @ 0.275   179.6°     = §713.3 mono, unchanged
+cane_combo_3 (duo)  0.627 @ 0.375   1.105 @ 0.360   0.639 @ 0.455   180.0°     declared contact 0.375
+cane_combo_3 (mono) 0.753 @ 0.105   1.234 @ 0.350   1.504 @ 0.090   179.4°     = §713.3's row exactly
+```
+
+The crook LEADS the declared contact by 15 ms on the new slot 3 — the same cane-leads-the-
+strike relation §713.3 measured on every shipped slot (−25/0/−10 ms) — because the splice's
+time-scale lands the donor cane's impact key at 0.35 of the delivered clip. §713.3's
+observation that the three slots' only variety was the cane is superseded the right way round:
+variety now lives in the BODY, which is what the owner's conditional bought. The §715.2
+footnote measuring `Cane Hit 2`'s peak at "0.66 m at t 0.32" is consistent with this section's
+0.726 @ 0.375 — that probe read the pre-centerYaw take at coarser sampling; both place the
+strike in the same beat, and the shipped number is the one measured through the shipped
+pipeline on the delivered clip.
+
+The §531 limb-open exemption was RE-MEASURED on the new body rather than inherited: at the
+set-wide 0.75/0.60 rung `Cane Hit 2`'s contact drifts 0.375 → 0.392 (17 ms, at the same 20 ms
+bar that decided `Canehit`'s 21 ms exemption), so `GODOT_LIMB_OPEN.cane_combo_3` stays `0/0`
+on its own number.
+
+### §716.5 The combo windows: derived from the clip, and what moved
+
+`TUNE.comboTimes [0.28, 0.28, 0.40]` was tuned on bodies whose contacts sit at 0.10–0.21 s; a
+0.375 s contact under the tuned 0.40 would hand the body back 25 ms after the strike. The
+window is now **derived**: `Moveset.comboStateTime(i) = max(comboTimes[i], contact +
+comboFollow)`, reading the bound clip's own `cane_hit` out of ACTIVE. `comboFollow = 0.13` is
+not a taste value — it is the LARGEST constant that leaves every previously shipped arm
+bit-identical (binding case: proc combo_1, window 0.28 − contact 0.15; all other slots clear
+their floors with room). Delivered windows, asserted in-arm across three regimes plus two
+synthetic fail arms (a 0.9 contact must widen to 1.03; an event-less clip must fall back to
+the floor):
+
+```
+duo (ships)     0.28 / 0.28 / 0.505     ← the ONE number that moved: slot 3, 0.40 → 0.505
+mono (?combo=)  0.28 / 0.28 / 0.40      bit-exact to §479.8
+proc (?anim=)   0.28 / 0.28 / 0.40      bit-exact
+```
+
+`comboTimer` (the chain-reset memory) follows the derived `_t`, so it too is unchanged
+everywhere but the duo finisher. The chain cadence between presses is untouched — slots 1/2
+gates still open at 0.154 s — and the finisher commits the player for 0.505 s where the old
+one committed 0.40: stated as the feel change it is, for the owner's ears (the state hands
+control back 0.13 s after the strike; the remaining 0.4 s of authored recovery plays out over
+the tree fade exactly as the proc finisher's did). Mash telemetry through the real mixer at
+the real cadence (`tools/comboseam.mjs`): 0 three-track frames, max summed weight 1.00, every
+slot +0.0% vs its own solo — the seam rule now fires through BOTH inputs on one chain
+(`source` coalesces 1→2, `excl` hands off 2→3).
+
+### §716.6 The `Cane Hit` refusal — measured, not tasted
+
+The third attack is baked in GodotLibClips (`Run 1`'s standing) and NOT bound. It is a 1.37 s
+overhead roundhouse: the body coils to −53°, the hand sweeps overhead (y 1.63–1.74 m) crossing
+the front sector mid-spin at 8.9 m/s, the body unwinds through +72° — 125° of yaw in all. The
+§479.8 contact measure lands on its UNWIND (max forward reach t 0.971 of 1.367, at 5.5 m/s —
+a strike arrives with speed, and 5.5 m/s is the settle), the energetic beats are overhead or
+right-LATERAL (x +0.35 m at the comedown, 2.9 m/s), and no moment combines reach + speed +
+front. There is no measured contact to hang the `cane_hit` contract on, and this project has
+shipped an attack backwards once by guessing at one (§479.8). As a chained slot it would need
+_t ≈ 1.18 s (a 4.2× chain slowdown); as a finisher its event would be an invention. Recorded
+with its numbers for an owner who wants a spin-finisher badly enough to rule on where its hit
+should read; the anim.test §716 arm asserts no verb resolves to it, so binding it is a
+deliberate act, not a drift.
+
+### §716.7 The revert — one token
+
+**`?combo=mono`** (URL) or **`globalThis.__COMBO_AB = 'mono'`** (runners) restores §479.8's
+all-`Canehit` chain: the slot-3 row verbatim (`COMBO_MONO_ROW` in Animation.js — asserted
+deep-equal in the test arm), and — because the window derives from the clip — the 0.40 s state
+with it. `COMBO_DEFAULT` in Animation.js is the source flip. The two arms differ at
+`cane_combo_3` and nowhere else (asserted across the whole table). `?anim=proc` is untouched
+by the token entirely.
+
+### §716.8 What was verified unchanged
+
+- **§715's idle bindings and §479.20's clip.** `GodotClips.js` untouched (last commit
+  `cd5d8a0`); `Standupright` hashes `a8ba715b4875fdb5` — dur 4, 81 keys, loop, bit-identical.
+  `idle_confident`/`idle_look` still play `Idle Anim 1`/`Idle Look`; `?idle=pose` untouched;
+  the §715 idle test holds both arms green in the suite below.
+- **The §715 bake.** The five kept clips re-extract BYTE-IDENTICAL through the extended tool
+  (per-entry JSON hashes compared: `Idle Anim 1` f3973fba…, `Idle Look` 88558482…,
+  `Idle Crouch 2` c4686d6c…, `Walk Crouch 4` 3aa941d9…, `Run 1` 9ed134d9… — shipped ==
+  regenerated), so extending KEEP_LIB_CLIPS moved nothing that was already bound.
+- **Grips (§708), report-only:** `tools/gripgap.mjs` reproduces §715.8's table to the decimal
+  on every row (raw 27/25.1/23.8 · 10/43/16.2 · 9.8/43/16.4 · 9.9/42.8/16.3 ·
+  131.1/134.8/231.2 · 100.5/32/77.7 · 12.1/26/17.1 · 26.9/26.8/35.2; proc arm identical). No
+  gripping verb was touched and no hand number moved.
+- **The budget.** Clips add no triangles; the only asset that changed is the offline
+  `sly-godot-lib.glb` (300 → 346 KB, never fetched at runtime) and the baked module it
+  regenerates. `tools/budgetattrib.mjs`: worst main-view **86 draws (34% of 250), 0.652 M tris
+  (54% of 1.2 M)** — §715.8's figures unchanged, delta 0.
+- **prodboot (§666, due because a `public/` file changed):** boot past module 30 TRUE, zero
+  4xx/5xx TRUE, 15 kaykit aborts in the known not-gated class. PASS.
+- **§364.3:** nothing under the reference's audio directories was read, listed, or opened; the
+  extract touches `Assets/Animations/*.res` only.
+
+### §716.9 The frames — the three hits, both arms, camDot-verified
+
+`tools/canelook.mjs` from the clean detached worktree at the pushed `53b35f2`/`5994ab5`
+(`git worktree add --detach`, `node_modules` symlinked), the REAL drive — KeyF through the real
+machine at the chain's own cadence — errs 0 in both arms, `DIRTY` flag clear, Q high. Swing 3
+gained f23/f30 in BOTH arms (per-swing offsets, never per-arm — the §713.5 pair rule holds:
+a pair differs by the regime token alone). Camera is the tool's own three-quarter REAR (az 145°,
+2.7 m, eye 1.25) — §713.5's framing, stated again so nobody reads it as a hero angle.
+
+**camDot pre-flight on exactly that placement, both ends of the chain's lunge sweep** —
+`node tools/camdot.mjs 1.5487 1.25 27.7882 0 0.95 30` and the same geometry advanced 1.5 m
+along the lunge: `enclosed 0/26, nearest 1.245/1.227 m, VERDICT: ok` twice. Nothing stands
+between the lens and the subject anywhere the chain carries him.
+
+The curated record (full runs in `shots/cane716/`, gitignored as working output):
+
+```
+shots/cane716-combo1-f6-godot.png     hit 1 at its contact — the jab, crook leading, impact FX
+shots/cane716-combo2-f6-godot.png     hit 2 at its contact — chained, ground covered
+shots/cane716-combo3-f12-godot.png    the heavy WINDING — cane behind the hip, shoulders coiled
+shots/cane716-combo3-f23-godot.png    the heavy's CONTACT — full extension, lunge stance
+shots/cane716-combo3-f30-godot.png    follow-through — recovery up across the chest, smear FX
+shots/cane716-combo3-f23-godot-mono.png  the revert arm at the SAME offset — §479.8's chain,
+                                         long past its own 0.10 contact (recovery), the pair
+                                         that shows what the token trades
+```
+
+Read off the pictures, not the numbers: the duo swing 3 telegraphs (f6 square and loading, f12
+deep wind), lands a full-extension strike at f23 — the playhead beside that frame reads 0.367,
+the declared 0.375 inside the frame — and recovers through f30 with the impact dust still
+hanging. §10 is not regressed: the cane is inside the fist in every curated frame, both arms.
+The telemetry beside the frames shows the §525/§526 seam live: at every chain boundary exactly
+TWO tracks (the outgoing fade + the incoming swing), never three — and the derived window live
+in state: at f30 the mono arm reads `st=idle` (its 0.40 window ended at f24) while the duo arm
+is still `st=combo` under its 0.505.
+
+The `combat` staged shot — a scored critic framing whose frozen pose this lane moved — was
+re-rendered (`tools/shot.mjs combat`, same worktree): `shots/cane716-combat-staged.png`. The
+freeze lands at the splice-derived hold 0.3665, 8 ms before contact with the donor cane already
+at its impact orientation, and the frame reads as the impact it is captioned as — cane arriving
+low with the flash at the point. (The delivered `hold` moved 0.177 → 0.3665 with the clip; a
+follow-through freeze became an arrival freeze, stated so the next critic pass knows why the
+combat frame changed character.)
+
+### §716.10 The suite — every run quoted (§703.2)
+
+`node --test "tests/"*.test.mjs` from the clean detached worktree at the **pushed** `5994ab5`
+(`git worktree add --detach`, `node_modules` symlinked), the FIFO capture lock held across all
+three runs, cwd checked from INSIDE the spawned command (§694), each complete TAP stream
+written to a file and `not ok` counted over the FILE (§711.1 — never a window). The suite is
+1085 tests now — §716's own arm is the +1 over §715's 1084.
+
+| run | commit | result | duration | pwd inside command | cwd at end |
+|---|---|---|---|---|---|
+| 1 | `5994ab5` | **1085 / 1085**, 0 fail | 358.9 s | `/home/user/wt-716` | exists |
+| 2 | `5994ab5` | **1085 / 1085**, 0 fail | 364.7 s | `/home/user/wt-716` | exists |
+| 3 | `5994ab5` | **1085 / 1085**, 0 fail | 362.5 s | `/home/user/wt-716` | exists |
+
+Zero `not ok` lines over all three full streams. **Neither documented flake fired** —
+`framebudget` F3 GC (~1-in-3) and `padrest` R1b (~1-in-5) passed three-for-three under the held
+lock, which is what holding it is for (§703); `--test-name-pattern` was never used (on
+`framebudget` it changes allocation history and makes F3 fail 100%).
+
+A fourth run, at the commit that carries this section, is recorded in the commit after it —
+the §712/§713/§715 precedent: a suite table committed at one sha and quoted at another is a
+claim about a tree nobody ran.
