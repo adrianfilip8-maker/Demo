@@ -58515,6 +58515,12 @@ claim about a tree nobody ran. That matters more than usual here, because the co
 behaviour-neutral and is therefore exactly the kind of change a lane talks itself out of
 re-testing.
 
+**Run 4, at `5721cbd` (the section's own commit), a fresh worktree at that sha
+(`/home/user/wt-717b`), same lock, same runner: 1086 / 1086, 0 fail**, 265.0 s, zero `not ok`
+lines over the whole stream, pwd checked from inside the command, cwd present at the end.
+Four runs, four quoted; one documented flake in four, at its documented rate; no other test went
+red in any of them.
+
 
 ## §718 — "Anything the godot repo did better or more efficiently that could easily be ported": a survey of all 5,388 lines of their GDScript, ranked, with the licence line held
 
