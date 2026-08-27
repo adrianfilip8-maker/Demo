@@ -198,7 +198,11 @@ try {
      The same three offsets are used for the proc arm, where the house's own `cane_hit` sits at
      0.15/0.13/0.21 (f9/f8/f13) — deliberately NOT re-pinned per arm, because a pair that moves
      its own sample points cannot be compared frame to frame. The playhead is in the telemetry
-     beside every frame, so each arm's phase is readable without trusting the offsets. */
+     beside every frame, so each arm's phase is readable without trusting the offsets.
+     §716 — swing 3's contact moved by DESIGN (`Cane Hit 2` strikes at 0.375 ≈ f22.5), so that
+     swing gains f23 (its contact) and f30 (follow-through) IN BOTH ARMS — per-swing offsets,
+     never per-arm ones, so the pair still differs by the regime token alone. The original three
+     offsets are kept so the frames stay comparable against the §479.9/§713 records. */
   for (let swing = 1; swing <= 3; swing++) {
     mark(`swing ${swing} — KeyF down`);
     await page.keyboard.down('KeyF');
@@ -208,6 +212,10 @@ try {
     await sim(1); await snap(`combo${swing}-f3`);
     await sim(3); await snap(`combo${swing}-f6`);
     await sim(6); await snap(`combo${swing}-f12`);
+    if (swing === 3) {
+      await sim(11); await snap(`combo${swing}-f23`);
+      await sim(7); await snap(`combo${swing}-f30`);
+    }
     await sim(2);                     /* chain window opens at 0.55·0.28 ≈ f9; next press lands ~f14 */
   }
   await sim(60);
