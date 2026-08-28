@@ -60746,3 +60746,24 @@ append is not automatically inert, which is why this run exists.
   a textured metal at uniform L 186 would be §7.3's "plastic gold" failure; the target was
   the texture's own value structure, delivered once, in windows that include its bright half.
 
+
+---
+
+## §725 — Confirmed by play: the swing pivot lands
+
+**Owner, after playing the deployed build: "The swing looks better."**
+
+§723 arm A closes at the boundary: the drawn pivot about the crook-on-ring contact — pin measured
+at 0 px on camera at both arc extremes, capsule sha-identical, release paid off in equal steps —
+now also reads right in the hands. `?swing=loose` stays live and unused.
+
+The confirmation names the swing only. §723 arm B (the slope-freeze fix, `?surf=apex`) and §724
+(the gold hoard, `?pile=faded`) shipped in the same build and are not covered by this sentence;
+they stay verified-by-instrument, awaiting play.
+
+One operational note, recorded because it is a new variant: the local checkout reverted for the
+ELEVENTH time this session while receiving this confirmation — but to `ccdea89` (five days of
+work intact, §720–§724 missing) rather than to the usual August-21 tree. A rollback that lands on
+a RECENT commit is harder to notice than one that lands on a stale month: the §-tail read §719 and
+looked merely short, not ancient. The HEAD check before every write is what caught it; origin was
+intact as in all ten prior instances, and recovery was the standard reset.
