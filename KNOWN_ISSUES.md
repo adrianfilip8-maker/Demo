@@ -60038,6 +60038,329 @@ composition change; the capsule, the pendulum physics, §605's rings and the `Ca
 not move. Arm B: diagnosis first of the pose freeze when walking up a steep slope — §515's
 stutter fix is settled and its slope constants are not retuned here.)*
 
+### §723.1 The two answers, first, so a redirect is cheap (§705)
+
+**Arm A — the swing pivots about the ring.** The drawn character used to TRANSLATE along the
+pendulum arc, upright, while `hook_swing` played — so the crook rode **0.47–3.02 m off the ring
+(mean 1.66 m)** over a driven 80° swing, measured on the full shipped stack. Now `Controller.
+_swingDraw` re-anchors the DRAWN hierarchy every frame: pose first, then the cane `hookPoint`
+read out of the posed hierarchy, then the whole body rotated by the pendulum's own deviation
+about that point and translated so it lands exactly on the ring — **crook-to-ring 0.0000 m at
+full pin weight, 126 of 126 frames**, feet sweeping the arc. The `CaneSwing` clip, its binding
+and the donor cane track are untouched ("keep the animation"), and the capsule's pendulum is
+untouched — the capsule trace is sha256-identical across arms. `?swing=loose` restores the
+shipped composition.
+
+**Arm B — the pose freeze on steep slopes.** Diagnosed before it was fixed, and the mechanism is
+none of the four the brief listed as candidates: on a steep face the capsule climbs as a
+sustained AIRBORNE skim — the sweep against the slope keeps topping vy up to **≈ +0.95 m/s**,
+the grounding probe's rising guard (`velocity.y <= 0.02`) therefore refuses to re-ground it,
+and `Fall.update`'s clip pick `|vy| < apexWindow 2.2` reads that plateau as a jump apex for as
+long as it lasts — **181 consecutive frames (3.0 s) of `jump_apex` at w 1.00 while climbing the
+far-west dune at 6.9 m/s**. `jump_apex` is a hover HOLD (1.25°/frame of worst-bone motion
+against walk's 8.3 and run's 24.6), so the body freezes while travelling. The fix is one branch
+at the one play site: `Fall` counts residence inside the apex window, and past `TUNE.surfBeat`
+0.30 s — a ceiling free fall cannot reach — hands the body to the locomotion tree at its
+measured speed. Presentation only; `?surf=apex` restores the shipped hover.
+
+### §723.2 Arm A — the composition, and why the order of operations is the whole mechanism
+
+The pendulum angle already lives in the state: `HookSwing.update` keeps the capsule on the
+sphere `c.anchor + û·hookL 2.2`, so `û = (position − anchor)/|·|` IS the swing. What did not
+exist was a drawn composition that used it. `_pushCharacter` placed the root at the capsule
+(yaw only), which is right for every state whose feet own the ground and wrong for the one
+state whose HAND owns the world.
+
+`_swingDraw` (Controller.js, called from `_pushCharacter`) does, per attached frame:
+
+```
+  root at baseline (capsule − §610 lag, yaw only) ->  updateMatrixWorld(true)
+  p  = cane hookPoint, world, out of the POSED hierarchy
+  Q  = setFromUnitVectors(DOWN, û)                    the pendulum's deviation from vertical
+  root' = Q·(root − p) + anchor                       rotate about p, then pin p to the ring
+```
+
+**Pose first, correction second, and the manifest already guarantees it**: ANIMATION updates
+before MOVEMENT (`main.js`, registration order == update order), so by the time
+`_pushCharacter` runs, the bone locals carry THIS frame's pose — the same "current *now* rather
+than last frame" contract `Guard.js`'s cone path leans on. The one stale thing is the world
+matrices under the root that was just moved, so they are refreshed before `p` is read. A
+correction computed before pose evaluation would chase last frame's hand — §442's shape, an
+instrument reading the bind pose — and the clip animates the arms every frame, so this is not
+theoretical: the crook seat moves per frame and the pin follows it.
+
+The pin is held as a (Δp, ΔQ) delta against the baseline and BLENDED: in over `swingPinIn`
+0.12 s at the catch (the crook closes 1.74 → 0.00 m across 7 frames — the drawn mirror of the
+state's own taut-rope ease), out over `swingPinOut` 0.20 s at the release with the delta
+FROZEN — recomputing after release would pin a flying body's cane to a ring it let go of.
+Linear ramps, §610's argument verbatim: equal steps mean the largest drawn step is the offset
+over the count. `swingPinMax` 3.0 is a bound, not a knob. Shot mode (`freeCam`) and `teleport`
+zero the pin exactly as they zero `_drawLag`, and for the same reasons.
+
+### §723.3 Arm A measured — pin, release, and the instrument that could not know
+
+`tests/swingpin.test.mjs` drives the full stack — the shipped `SlyModelDLRig` loaded the way
+`dlrig.test.mjs` loads it, the real `Animation` bound to it, the real `Controller` on the real
+level — flown onto `hook-main-3` (§720's own leg) and pumped to a real arc (§435.4: the sample
+flies, the stick is held):
+
+```
+                                     default (pinned)          ?swing=loose (shipped)
+  crook -> ring, swing frames        max 0.0000 m @ w>=1       min 0.467 / mean 1.662 / max 3.017 m
+  arc driven                         80° of deviation           same drive, same arc
+  release, max drawn-root step       0.125 m (ramp window)      —
+  honest flight step, same drive     0.521 m (f168)             0.521 m (f168, identical)
+  capsule position trace             sha256 EQUAL across default / loose / loose+apex arms
+```
+
+The release table is the ring-teleport fix's own measurement re-run at this seam: the largest
+step the PIN adds (0.125 m, one of twelve equal payments) is a quarter of the step the flight
+itself takes on the same frames, and the biggest step in the whole drive belongs to the honest
+ballistics in BOTH arms — the release composes rather than cuts. `hook_release`, the crouch
+bail, `hurt` and a teleport all leave through the same door, because the ramp keys off
+`stateName` alone.
+
+**GRIPS — measured, NOT fixed (report-only), and the hook rows moved exactly as this section
+predicts.** `tools/gripgap.mjs`, full run, raw L / R / worst, palm to prop in cm:
+
+```
+                                        §720.9 BASELINE          AFTER §723 (8f5f1a8)
+  pole_climb · SE drainpipe (§495.C)    -6.6 / -3.5 / -7.9    ->  -6.6 / -3.5 / -7.9
+  pole_climb · obelisk rope (§495.A)    -6.6 / -3.5 / -7.9    ->  -6.6 / -3.5 / -7.9
+  ledge_hang · terrace lip, south       9.9 / 42.8 / 16.5     ->   9.9 / 42.8 / 16.5
+  ledge_hang · terrace lip, east        9.9 / 43   / 16.2     ->   9.9 / 43   / 16.2
+  ledge_hang · plinth lip, south        9.9 / 43   / 16.4     ->   9.9 / 43   / 16.4
+  hook_swing · main-0 (courtyard)     131.1 / 134.8 / 231.2   -> 133.8 / 28   / 54
+  hook_swing · low-2 (return)         100.5 / 32   / 77.7     -> 128.1 / 6.4  / 17.8
+  rail_walk  · colossi-rope (§495.B)   12.4 / 26.6 / 19.1     ->  12.4 / 26.6 / 19.1
+  rail_walk  · roof-e                  26.5 / 26.5 / 33.7     ->  26.5 / 26.5 / 33.7
+```
+
+The CANE hand (R) closes 134.8 -> 28 cm on the courtyard chain and 32 -> 6.4 on the return —
+the pin read on an instrument that shares no mechanism with the pin (glove centroid off the
+artist's skin weights against the level's colliders). The LEFT column is the FREE hand, off the
+rope by the pose's own design, and the pivot moves it where the pose puts it: +2.7 cm on main-0
+and +27.6 on low-2, further out because the rotated body carries it further out. Reported, not
+judged — a free hand has no grip contract to violate. Every non-hook row is the §720.9 baseline to the
+digit. **Nothing was fixed to achieve any of this and no grip gap was edited**; §708's ledge
+OFF-hand 43 cm stays open exactly as §708 says to leave it.
+
+### §723.4 Arm B — the diagnosis, with the per-frame trace the claim needed
+
+"The pose is freezing" is a DERIVATIVE claim — nothing advancing — so the instrument is a
+per-frame trace of the real mixer coupled to the real controller on the real level
+(`_advance`/`_sampleTree`/`_sampleTracks` driven in the manifest's own order), walked onto
+§515.3's far-west dune at (-76, ·, 50), stick held uphill:
+
+```
+  f 60  st=fall gr=0 sp=4.71 vy= 3.02  [jump_fall w0.36 t0.05]
+  f 90  st=fall gr=0 sp=6.67 vy= 1.03  [jump_apex w0.95 t0.13]   <- the hold begins
+  f150  st=fall gr=0 sp=6.81 vy= 0.91  [jump_apex w1.00 t1.13]
+  f260  st=fall gr=0 sp=7.20 vy=-0.84  [jump_apex w1.00 t2.97]   <- 3 s later, same clip
+```
+
+Each candidate mechanism, discriminated on that trace rather than argued:
+
+- **Phase stall (the handed-over hypothesis): NO.** The gait phase is floored at `strideMin`
+  0.35 cyc/s whenever it is nonzero, and the tree was not even on the body — a base track held
+  w 1.00. §435.4: the probe tested the model, and the model was wrong in an instructive way —
+  the freeze happens at 6.9 m/s, not at near-zero speed.
+- **State thrash: NO.** One continuous 206-frame `fall` stretch; ground flips 2 in 300 frames.
+- **Weight collapse / a clip that stopped receiving time: NO.** `jump_apex` at w 1.00 with the
+  playhead advancing t 0.13 -> 3.13. The clip PLAYS; the clip is a HOLD — its content measures
+  1.25°/frame worst-bone (peak 1.87) against walk 8.29 and run 24.57. Playing a hover was
+  always its job; a jump apex lasts ~0.1 s.
+- **§717-specific: NO.** The same instrument at cb4e41d — the commit before any §717 change —
+  returns the identical trace: 181-frame hold at the same site, byte for byte.
+
+**The actual mechanism**, each link measured: pushing up the 51–57° dune, the capsule launches
+off the face, air-control presses it back in, and the sweep's projection restores a positive
+vy on every contact; equilibrium at **vy ≈ +0.95 m/s** (the apex-hang's 0.72×/frame decay
+against gravity's −0.4/frame against the sweep's top-up). The grounding probe's rising guard —
+`velocity.y <= 0.02`, correct for jumps — refuses to re-ground a capsule that is perpetually
+"rising", so the state stays `fall` for seconds while the body tracks the face at ground
+speeds. And `Fall.update`'s pick, `|vy| < apexWindow 2.2 ? 'jump_apex' : 'jump_fall'`, reads
+that plateau as the top of a jump indefinitely. The pose-level number: worst-bone delta during
+the climb **1.79°/frame median against 14.75 on a shallow slope's grounded run** — the freeze,
+quantified. On the >58° ridge (x −79, z 65) the same mechanism runs at sp 0.23 m/s for 5.6 s:
+the futile push against an unwalkable face is the same defect at zero progress.
+
+### §723.5 Arm B — the fix, its bound derived rather than picked, and both arms of it
+
+`Fall` now counts residence inside the apex window and, past `TUNE.surfBeat` 0.30 s, hands the
+body to the locomotion tree at its measured speed (`Move`'s own clip mapping and fade):
+
+- **The bound is a physical ceiling, not taste.** Free fall crosses the ±2.2 m/s window in
+  2·2.2/24 = **0.18 s at most**, and the apex-hang only makes the rising half FASTER (×0.72 per
+  frame toward zero). Measured on the shipped level: a run-off jump spends ≤ 5 frames
+  (**0.083 s**) inside it. 0.30 s is the ceiling with a 1.7× margin — no ballistic arc can
+  reach the branch, every measured surf does (3.0 s / 5.6 s).
+- **At near-zero speed the fallback is the §717 idle family, not a new pose.** The gait request
+  goes through the tree, and the tree resolves sub-`moveFloor` speed to the idle node — the
+  animated repo idle §717 shipped. Asserted at the request level in `slopefreeze.test`.
+- **After, the same instrument:** the 54° climb reads **13.44°/frame median** (the shallow
+  grounded run reads 14.75 — the body RUNS), the ridge push reads 2.12 (idle family breathing
+  and weight shifts), and the ballistic pass arm is untouched: same state path to the frame,
+  apex residence 0.083 s, fall clips `jump_apex`/`jump_fall` only.
+- **Presentation only, asserted:** the capsule position trace is sha256-identical between
+  `?surf` arms over the whole steep drive.
+
+`tests/slopefreeze.test.mjs` carries both arms — the steep drive must still out-stay the beat
+(if terrain or physics ever remove the skim, the arm goes red rather than latent), the gait
+must be what is requested past it, the ballistic jump must never reach the branch, and the
+`?surf=apex` child must reproduce the defect (`jump_apex` past the beat, residence 3.02 s).
+
+### §723.6 What was verified unchanged
+
+- **`spawn2eye` — 19/19 legs, 5883 frames (98.0 s), cam out 0 of 5883, clamp 2831f (max
+  62.6°)**: §720.7's baseline to the frame and the digit, including every hookSwing leg. The
+  harness builds no character, so the drawn pin cannot reach it BY CONSTRUCTION — and it was
+  run anyway, because "unreachable by construction" is a sentence and the run is a measurement.
+- **`telegraph` — 11/11 · T8 7/7 bail, 2/7 crouch · T11 chain 4/4, bails [156,12,24] · driven
+  auto-grab telegraph@26 -> hookGrab@49 = 23 frames (0.38 s)**: §720.7/.8's post-§720 baseline
+  exactly.
+- **§605's rings, §697's ground tuning, `src/ai/*`**: not in the diff. No collider, hook
+  record, anchor or affordance point moved; the §723A pin reads `c.anchor` and writes only the
+  drawn root.
+- **§716 `?combo=mono`, §717 `?idle=pose`, §719 `?hook=cream`, §720 `?pole=climb` / `?mag=wide`**:
+  none of their code is in the diff; the full suite (below) exercises their arms green.
+- **`Controller`'s slope constants (§515) and the rising guard**: read, named as links in the
+  §723B mechanism, and NOT retuned — the fix is animation-side entirely. If a future owner asks
+  whether the SIMULATION should ground a face-surfing capsule, §723.4 is the measurement that
+  question starts from.
+- **The budget.** No mesh, bone, triangle or asset changed; `git diff --stat` over `public/` is
+  empty across the whole section, so no `prodboot` was due (§666) and no budget regeneration.
+  Delta 0. (`Engine.stats.drawCalls` stays unusable here.)
+
+### §723.7 The revert tokens — two, independent, both exercised
+
+- **`?swing=loose`** (or `globalThis.__SWING_AB='loose'`) — Arm A. Restores the shipped drawn
+  composition: the body translating along the arc, the crook off the ring. One constant
+  (`SWING_PINNED`, Controller.js) gates the ramp AND the transform, so the loose arm computes
+  nothing at all.
+- **`?surf=apex`** (or `globalThis.__SURF_AB='apex'`) — Arm B. Restores the apex hover for as
+  long as the window holds. One constant (`SURF_GAIT`, Moveset.js) gates the one branch.
+- **Independence, asserted rather than promised**: `swingpin.test` runs a child with BOTH
+  tokens set — the swing numbers land identical to the loose-only child to the last bit, with
+  `SURF_GAIT === false` read back in the same process — and each test's own children prove
+  each token alone. The capsule sha is equal across all arms in both files, so neither token
+  can move the simulation in any combination.
+
+Deleting `tests/swingpin.test.mjs`, `tests/slopefreeze.test.mjs`, `tools/swingshot.mjs`,
+`_swingRamp`/`_swingDraw` and the swing TUNE rows in `Controller.js`, the `Fall` branch and
+`SURF_GAIT` in `Moveset.js`, and `TUNE.surfBeat` removes the section entirely.
+
+### §723.8 The frames — driven, camDot-checked twice, clip asserted at the shutter
+
+`tools/swingshot.mjs`, at the pushed `8f5f1a8` under the capture lock — poleshot's three guards
+kept (camDot pre-flight BEFORE the browser; cam·facing asserted at the shutter; THE LIVE CLIP
+read off the mixer and compared before the PNG is written) plus a fourth this section needed:
+at every swing shutter the crook seat and the ring anchor are projected through the very camera
+that took the PNG, so the pixel claim has a number in the frame's own coordinates, not only in
+world space. Every camera the shutter ACTUALLY used was re-run through camDot afterwards
+(§720.10's rule — a driven subject does not land where a prediction puts him).
+
+**An instrument fault this tool found in its own first run, recorded because the next swing
+capture will hit it**: `Debug.capture()` fills the buffer with a full `renderFrame(0)`, and a
+shot staged under `debug.freeCam` therefore runs Controller's freeCam branch once before the
+canvas is read — which zeroes the §723A pin (and §610's lag, by design: a staged pose is not
+motion) and renders the UNPINNED body while the pre-capture telemetry honestly reads the pinned
+one. Caught by the fourth guard: crook->ring 0 m at one shutter, 3.91 m at the next with no
+drive in between — two numbers about one drive frame that could not both be true. The staged
+shots now mute the camera module for the shutter instead of raising freeCam; `poleshot`'s
+frames were never affected because its subjects stand where their capsules stand.
+
+```
+node tools/camdot.mjs — pre-flight at the SHUTTER's own radii (r 5.2/up 2.0 swing, 3.0/3.6 dune):
+  swing front34  enclosed 0/26  nearest 1.508 m  forward 31.149 m (arch:hall:hieroglyph_wall)  subject at 5.235 m  ok
+  swing profile  enclosed 0/26  nearest 0.99 m   forward — (sky)                               subject at 5.235 m  ok
+  dune front34   enclosed 0/26  nearest —        forward — (sky)                               subject at 4.173 m  ok
+  dune profile   enclosed 0/26  nearest —        forward — (sky)                               subject at 3.081 m  ok
+RE-RUN, afterwards, on all 11 cameras the shutters actually used: 11/11 ok — nearest 0.907 m
+(extremeA front34, the gilded wall), everything else 1.19–13.3 m or open sky, subject never
+occluded.
+```
+
+`node tools/swingshot.mjs` at `33ca328` under the capture lock: **11 frames, errs 0**, in
+`shots/swing723/`. Every row's clip is the mixer's own heaviest live track at the shutter, and
+the crook->ring column is measured through that frame's camera:
+
+```
+  frame                        clip        w     state      dev      crook->ring (world · in-frame)
+  swing-extremeA-front34       hook_swing  1.00  hookSwing  103.0°   0 m · 0 px      (138.9 px/m)
+  swing-extremeA-profile       hook_swing  1.00  hookSwing  103.0°   0 m · 0 px      (201.6 px/m)
+  swing-extremeB-front34       hook_swing  1.00  hookSwing   67.6°   0 m · 0 px      (118.0 px/m)
+  swing-extremeB-profile       hook_swing  1.00  hookSwing   67.6°   0 m · 0 px      (149.7 px/m)
+  swing-livecam (game camera)  hook_swing  1.00  hookSwing   48.0°   0 m · 0 px      (153.1 px/m)
+  swing-loose-extreme-front34  hook_swing  1.00  hookSwing  103.0°   3.914 m · 566.2 px   <- ?swing=loose
+  swing-loose-extreme-profile  hook_swing  1.00  hookSwing  103.0°   3.914 m · 658.9 px   <- ?swing=loose
+  slope-gait-a-front34         (tree)      —     fall       —        base run_fast        (§723B default)
+  slope-gait-b-front34         (tree)      —     fall       —        base run_fast        (+18 frames)
+  slope-apex-a-front34         jump_apex   1.00  fall       —        base jump_apex       <- ?surf=apex
+  slope-apex-b-front34         jump_apex   1.00  fall       —        base jump_apex       (+18 frames)
+```
+
+Both `?swing=loose` and `?surf=apex` were exercised **through the URL** in fresh page boots, the
+constants read back live (`SWING_PINNED false` / `SURF_GAIT false`) before their frames were
+taken, and both slope arms drove to the SAME skim (`drive frame 124, pos (-63.2, 11.2, 52.2)` in
+both) — the pairs differ by the token alone. **§475 containment, under the game's own camera**:
+a fresh catch pumped for **300 swing frames — out of frame 0, max run 0** — with the drawn root
+and head projected through the live camera on every frame; `swing-livecam` is a frame from that
+regime. **The release on camera**: `hookSwing -> fall` off a real press through `Input._press`,
+max drawn-root step **0.1902 m** over the 32 frames from the press — under half the honest
+0.52 m/frame the same flight reaches later, and no cut.
+
+**What the frames show, read rather than assumed:**
+
+- **`swing-extremeA-front34`** (dev 103.0°, past horizontal) — the crook is seated THROUGH ring 3
+  with the whole body swung up beside it, feet trailing the arc, tail out: the pivot at its most
+  extreme, crook still in the ring. The profile confirms it side-on at the same drive frame.
+- **`swing-extremeB-front34`** (dev 67.6°, the other side) — the crook at the ring under its
+  cable mount, body swung the opposite way, feet sweeping down-left. Both extremes, both angles,
+  0 px of separation.
+- **`swing-livecam`** (dev 48°, the game's own framing) — crook in the ring, body mid-sweep,
+  ring, cane, body and feet all in frame.
+- **`swing-loose-extreme-front34`** — the same drive frame as extremeA under `?swing=loose`: the
+  crook hangs in EMPTY AIR 3.9 m from the ring, which sits far down-frame with nothing attached
+  to it. This pair is the owner's sentence in two pictures.
+- **`slope-gait-a` / `-b`** — two phases 0.3 s apart mid-skim on the 54° dune: two visibly
+  DIFFERENT stride positions (legs scissored opposite ways, the cane arm swept through), a
+  sprint bounding up the face at 7 m/s.
+- **`slope-apex-a` / `-b`** — the same two drive frames under `?surf=apex`: the SAME upright
+  hover pose twice, 2 m apart on the dune — the freeze the owner reported, photographed
+  against its own fix.
+
+The curated record is `shots/swing723-extremeA-front34.png` beside
+`shots/swing723-loose-extreme-front34.png` (arm A, same drive, same camera law, differing by
+the token alone) and `shots/swing723-slope-gait-a.png` beside `shots/swing723-slope-apex-a.png`
+(arm B, likewise); the full set is `shots/swing723/`, which `.gitignore` holds as working
+output (§713's arrangement).
+
+### §723.9 The suite — every run quoted (§703.2)
+
+| run | commit | result | duration | pwd inside the command | cwd at end |
+|---|---|---|---|---|---|
+| 1 | `8f5f1a8` | **1103 / 1103, 0 fail** | 292.9 s | `/home/user/wt-723` | exists |
+| 2 | `8f5f1a8` | **1103 / 1103, 0 fail** | 286.0 s | `/home/user/wt-723` | exists |
+| 3 | `8f5f1a8` | **1103 / 1103, 0 fail** | 287.0 s | `/home/user/wt-723` | exists |
+
+`node --test "tests/*.test.mjs"` from a clean detached worktree at the **pushed** commit
+(`git worktree add --detach`, `node_modules` symlinked), the FIFO capture lock held across the
+runs, cwd checked from INSIDE the spawned command (§694). Each complete TAP stream went to a
+file and `not ok` was counted over the FILE — never over a window. `--test-name-pattern` was
+never used: on `framebudget` it changes allocation history and makes F3 fail 100%.
+
+**Neither documented flake fired in any of the three**, and that is reported as luck rather
+than as a result: `framebudget` F3 GC is ~1-in-3 and `padrest` R1b ~1-in-5, so three clean runs
+is an ordinary outcome and says nothing about either. 1099 -> **1103** is §723's own four arms
+(`slopefreeze` 2, `swingpin` 2); every §723 console line (`[§723A] ...`, `[§723A token] ...`,
+`[§723B] ...`, `[§723B token] ...`) is in all three TAP files rather than only in this section.
+
+**Runs 4 and 5, at the commit that carries this section**, are recorded in the commit after it
+(the §712/§713/§720 precedent — a suite table committed at one sha and quoted at another is a
+claim about a tree nobody ran).
+
+
 ---
 
 ## §724 — "For the gold pile asset, apply a gold coloring to it. It looks faded right now": what "faded" measures as on the pile's own pixels, and the lever the numbers pick
