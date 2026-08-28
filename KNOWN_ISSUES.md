@@ -60767,3 +60767,11 @@ work intact, §720–§724 missing) rather than to the usual August-21 tree. A r
 a RECENT commit is harder to notice than one that lands on a stale month: the §-tail read §719 and
 looked merely short, not ancient. The HEAD check before every write is what caught it; origin was
 intact as in all ten prior instances, and recovery was the standard reset.
+
+
+---
+
+## §726 — "Switch between the day and night setting": there was no switch, so L1 becomes one
+
+*(Heading committed ahead of its body to hold the number — §700.9's rule, claimed by the
+day-night lane against tip `51e5278`; the content lands in this lane's next push.)*
