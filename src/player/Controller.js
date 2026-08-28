@@ -73,6 +73,18 @@ export const TUNE = {
   jumpCut:      0.45,   // releasing Space cuts vy by 55% (§6)
   apexHang:     0.72,   // vy ×0.72 per 60 Hz frame while |vy| < apexWindow — the float
   apexWindow:   2.2,
+  /* ---- §723B: the apex beat's residence ceiling, presentation only. -------------------------
+     `Fall` shows `jump_apex` while |vy| < apexWindow. In FREE fall that window is a MOMENT:
+     gravity crosses it in 2·2.2/24 = 0.18 s at most, and the apex-hang above makes the rising
+     half faster, not slower (×0.72/frame toward zero) — measured on the shipped level, a run-off
+     jump spends ≤ 5 frames (0.08 s) inside it. A body that stays in the window LONGER is not at
+     an apex; it is being carried along a surface that keeps topping vy up (a steep slope climbed
+     against the grounding probe's rising guard holds vy ≈ +0.95 for seconds, §723B's trace), and
+     holding the apex pose there is the "pose freezes on a steep slope" the owner reported —
+     `jump_apex` moves 1.25°/frame against walk's 8.3. 0.30 s is the free-fall ceiling with a
+     ~1.7× margin: no ballistic arc can reach it, every measured surf does (3.0 s / 5.6 s).
+     Read by `Fall.update` alone; nothing in the simulation consumes it. */
+  surfBeat:     0.30,
   /* ---- coyote + jump buffer. Both measured against the reference, both kept. ---------------
      `coyote` 0.110 s is a *time*, and that is the one place this file is unambiguously better
      than `slyrepos/godot`'s `Scripts/player__sly.gd`: theirs counts **frames**

@@ -28,6 +28,30 @@ const DOWN = new THREE.Vector3(0, -1, 0);
 /** Signed 2D dot of two XZ directions. */
 function dot2(ax, az, bx, bz) { return ax * bx + az * bz; }
 
+/**
+ * §723B — "when going up a steep slope, the character pose is freezing".
+ *
+ * 'gait' (default): when `Fall` has held |vy| inside the apex window for longer than free fall
+ * can (`TUNE.surfBeat`, derivation at that constant), the body is being carried along a surface
+ * — a steep slope climbed against the grounding probe's rising guard — and the state hands the
+ * body to the locomotion tree at its measured speed instead of holding the near-static
+ * `jump_apex` hover for seconds.
+ * 'apex' (`?surf=apex` / `globalThis.__SURF_AB='apex'`): exactly what shipped before — the apex
+ * hover for as long as the window holds. One token, one play site, presentation only: the
+ * capsule, the states and every transition are identical in both arms by construction.
+ */
+const SURF_DEFAULT = 'gait';
+function surfRegime() {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('surf') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__SURF_AB != null) raw = String(globalThis.__SURF_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  const t = String(raw).trim().toLowerCase();
+  return t === 'apex' || t === 'gait' ? t : SURF_DEFAULT;
+}
+export const SURF_GAIT = surfRegime() === 'gait';
+
 /** Horizontal unit direction of travel, falling back to intent then facing. */
 function travelDir(c, out) {
   const v = c.velocity;
@@ -351,11 +375,29 @@ class AirState extends State {
 
 class Fall extends AirState {
   canEnter(c) { return !c.grounded && c.sm.group === 'ground'; }
+  enter(c) { this._inWin = 0; }
   update(c, dt) {
     this.air(c, dt);
     const l = this.landed(c); if (l) return l;
     const vy = c.velocity.y;
-    c.baseClip(Math.abs(vy) < TUNE.apexWindow ? 'jump_apex' : 'jump_fall', 0.14);
+    const apex = Math.abs(vy) < TUNE.apexWindow;
+    /* §723B — the apex is a MOMENT, and this counts how long we have pretended it is one.
+       Free fall crosses the window in ≤ 0.18 s (gravity 24, window 2.2, and the apex-hang only
+       shortens the rising half); measured on the shipped level a real jump spends ≤ 0.08 s here.
+       Past `surfBeat` the only thing that can be holding |vy| small is a surface topping it up —
+       the steep-slope climb where the rising guard (`velocity.y <= 0.02`) keeps refusing to
+       ground a capsule the slope keeps pushing upward. That is ground locomotion in every sense
+       but the flag, so show it as the gait at the tree's own measured speed (Move's own clip
+       mapping and fade) rather than holding a 1.25°/frame hover pose for seconds. At near-zero
+       speed the tree resolves to the idle family (§717), not to a new pose. Presentation only:
+       nothing here writes position or velocity. `?surf=apex` restores the shipped pick. */
+    this._inWin = apex ? (this._inWin || 0) + dt : 0;
+    if (SURF_GAIT && apex && this._inWin > TUNE.surfBeat) {
+      const sp = c.speedXZ();
+      c.baseClip(sp < 3.4 ? 'walk' : sp < 6.3 ? 'run' : 'run_fast', 0.16);
+    } else {
+      c.baseClip(apex ? 'jump_apex' : 'jump_fall', 0.14);
+    }
     return null;
   }
 }
