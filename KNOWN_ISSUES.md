@@ -59921,3 +59921,57 @@ arms and look like a token that does nothing); the SPIRE volume (3.3 in both, so
 through the real boot and not only in a unit); and the ring COUNT (11 in both, so the token cannot
 be "working" by dropping targets). `?pole=climb`'s own URL exercise is §720.10's `revert-idle`
 frame, taken in the same browser.
+
+---
+
+## §721 — Confirmed by play: the batch lands, and §720's own "weak pass" closes at the boundary
+
+**Owner, after playing the deployed build at `0e77511`: "The changes all look good."**
+
+That covers §712 (coins restruck and 50% larger), §715/§717 (the repo's own idles across the
+family, crouch pair), §716 (the cane combo with `Cane Hit 2` on slot 3), §719 (the gold hook) and
+§720 (the pole idle/mount, and the rings' acquisition volume halved). All five revert tokens stay
+live and unused: `?mag=wide`, `?pole=climb`, `?combo=mono`, `?idle=pose`, `?hook=cream`.
+
+### §721.1 The part that was actually unmeasurable from here
+
+§720 arm B is the one worth recording, because that lane **graded its own pass as weak and said so**:
+
+> both drive the chain through `hookAuto` 2.9, which never consults the magnet
+
+`spawn2eye` and `telegraph` came back byte-identical across the change — and that identity proved
+less than it looked, because the code path they exercise does not read the quantity that moved. The
+lane then built `magreach` to interrogate the magnet directly (reach unchanged at 3.20 m of aim
+error, unchanged down to a 90% cut) and pinned the floor: 1.65 still exceeds the physics-derived
+`catchSwing` 1.4387.
+
+What none of that could reach is **feel**. The measured residue was 0.10 s of lead time at 16 m/s
+and the auto-grab window narrowing 37 → 23 frames — precisely the kind of delta that reads as
+"twitchier" in the hands and is invisible to a probe. That is §691's shape again: *the last link of
+a chain is routinely the one no instrument in the repo can reach, and disproportionately where the
+answer lives.* The owner's hands were the only instrument for it, and they say it lands.
+
+### §721.2 Two flagged caveats, accepted rather than overturned
+
+Both were reported before play, and the confirmation resolves both by acceptance, not by refutation:
+
+- **§719's gold reads as a warm tint at play range, not as gold.** The lane measured it: at
+  character-sheet range unmistakable (+27.2% saturation), at combat range the crook is a thin stroke
+  between two ink lines with few interior pixels. The levers named were hook size and line weight,
+  and neither was taken. The owner has now seen it in motion and did not ask for either.
+- **§717's `idle_bored` is their fight guard, not a fidget** — torso 30.0° off vertical against the
+  procedural 6.8°, bound because the ruling was "use the ported idle always" and the corpus holds no
+  bored idle. It does not read as bored. It stands.
+
+### §721.3 What this does NOT close
+
+Still open and unruled, listed so they are not mistaken for settled by association:
+§718's four CONSIDER findings (negative surface tag, decaying air control, frame-phase counter, rope
+deflection); §708's ledge-grab off hand at 41 cm below the lip (measured, owner said do not work on
+grips); §712's 13-of-82 coins interpenetrating architecture (pre-existing, scatter unchanged);
+§707.9's head-on guard crossing (WONTFIX by §710); and 27 of 49 verbs still procedural (§715.6 —
+each with its reason, most for want of any source).
+
+**Domain (§418.3).** Confirms: the batch as shipped, played. Does not confirm: that a *different*
+magnetism value would not feel better — one session of play is a sample, and `?mag=wide` exists
+precisely so the comparison stays one token away.
