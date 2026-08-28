@@ -60026,3 +60026,14 @@ implementation), the jump curve's control points, and their cable script — whi
 **Domain (§418.3).** Closes: the four adaptable-mechanism proposals. Does not close: the survey's
 findings of fact, the excluded set, or the standing rule that governs all of it — design references and
 adapted mechanics only, nothing pasted or transliterated.
+
+## §723 — "Pivot the swing about the ring so the cane stays attached; and the pose freeze going up steep slopes"
+
+*(Section claimed at this heading before its content was written — §700.9. Claim marker:
+swing-and-slope lane, hookPoint-pivot + slope-freeze, two arms. Body follows in later commits.
+TWO independent arms with separate revert tokens, the §720 pattern, because both are read by the
+same traversal instruments and an unattributable failure costs a round. Arm A: the drawn
+character pivots about the cane's hookPoint on the ring during `hookSwing` — a DRAWN-root
+composition change; the capsule, the pendulum physics, §605's rings and the `CaneSwing` clip do
+not move. Arm B: diagnosis first of the pose freeze when walking up a steep slope — §515's
+stutter fix is settled and its slope constants are not retuned here.)*
