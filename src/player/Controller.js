@@ -489,6 +489,25 @@ export const TUNE = {
      pathological frame — a chain of captures, a state that places twice — cannot park the drawn
      body an unbounded distance from the capsule. Nothing measured has ever reached it. */
   drawLagMax:     9.0,
+
+  /* ---- §723A: the swing's drawn composition — the whole character pivots about the crook-on-
+     ring contact, so the cane stays ATTACHED to the ring while the feet sweep the arc.
+     Presentation only, exactly like the §610 easing above: `_swingDraw` reads the pose and
+     writes the drawn root; nothing in the simulation consumes any of it. The capsule still
+     rides the pendulum sphere at `hookL` below the anchor — what changes is where the DRAWN
+     hierarchy is placed each frame: rotated by the pendulum's own deviation from vertical about
+     the posed crook seat, then translated so that seat lands exactly on the ring's point.
+
+     `swingPinIn` mirrors the taut-rope ease at the catch (the capsule's own entry is placed,
+     not eased — the DRAWN pin fades in so the crook closes onto the ring instead of cutting);
+     `swingPinOut` mirrors it on the release, §610's argument verbatim: the offset held at the
+     release frame is paid off in equal steps while the body flies, so the largest drawn step is
+     the offset over the frame count and there is no release-frame snap. `swingPinMax` is a
+     bound, not a knob — the pin offset is body-reach plus rope-length shaped (~1 m measured)
+     and nothing honest approaches 3. */
+  swingPinIn:     0.12,
+  swingPinOut:    0.20,
+  swingPinMax:    3.0,
 };
 
 /**
@@ -523,6 +542,37 @@ const _p3 = new THREE.Vector3();
 const _qpos = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
 const DOWN = new THREE.Vector3(0, -1, 0);
+
+/* §723A scratch — `_swingDraw` only. Its own vectors rather than _v1.._v4 because it runs at the
+   very end of the frame and a later borrower of the shared scratch would silently corrupt it. */
+const _swA = new THREE.Vector3();
+const _swB = new THREE.Vector3();
+const _swQ = new THREE.Quaternion();
+const _swQ2 = new THREE.Quaternion();
+
+/**
+ * §723A — "have the whole character pivot about the top point so that the cane stays attached
+ * to the ring during the swinging while the feet swing."
+ *
+ * 'pinned' (default): during `hookSwing` the drawn hierarchy is re-anchored per frame — rotated
+ * by the pendulum angle about the cane's posed `hookPoint`, then translated so that point sits
+ * exactly on the ring — with an eased fade in at the catch and out at the release. The clip,
+ * its binding and the donor cane track are untouched ("keep the animation"), and the capsule's
+ * pendulum is untouched: this is a drawn-root composition, §605/§610's lane.
+ * 'loose' (`?swing=loose` / `globalThis.__SWING_AB='loose'`): exactly what shipped before —
+ * the body translates along the arc and the crook visibly leaves the ring.
+ */
+const SWING_DEFAULT = 'pinned';
+function swingRegime() {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('swing') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__SWING_AB != null) raw = String(globalThis.__SWING_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  const t = String(raw).trim().toLowerCase();
+  return t === 'loose' || t === 'pinned' ? t : SWING_DEFAULT;
+}
+export const SWING_PINNED = swingRegime() === 'pinned';
 
 const _sweepOpt = { skipOneWay: false };
 const _nearOpt = { facing: _fwd, maxAngle: TUNE.hookCone, ignoreRec: null };
@@ -625,6 +675,12 @@ export class Controller {
     this._drawEaseN = 0;                   // frames of payoff still owed
     this._drawP0 = SPAWN.clone();          // the capsule at the top of this frame
     this._drawV0 = 0;                      // its speed there, which is what "explained" means
+
+    /* ---- §723A: the swing pin (see SWING_PINNED above). Presentation only; `_swingRamp` and
+           `_swingDraw` are the only writers, `_swingDraw` the only consumer. ---- */
+    this._swingW = 0;                      // 0..1 — how much of the pin is applied
+    this._swingDp = new THREE.Vector3();   // world offset baseline -> pinned, held across release
+    this._swingDq = new THREE.Quaternion();// world rotation of the pin, held across release
 
     /* ---- extras peers may find useful; all optional to consume ---- */
     this.speed = 0;
@@ -846,6 +902,9 @@ export class Controller {
          freeze would put the drawn body somewhere the recipe did not ask for and the report would
          record that as the staged position. A pose is not motion; there is nothing to ease. */
       this._drawLag.set(0, 0, 0); this._drawEaseN = 0;
+      /* §723A — same reasoning: a staged pose is not a swing, and composing it would put the
+         drawn body somewhere the recipe did not ask for. */
+      this._swingW = 0;
       this._pushCharacter();
       this._pushLocomotion(dt);
       return;
@@ -881,7 +940,7 @@ export class Controller {
 
     this.stateName = this.sm.name;
     this.speed = Math.hypot(this.velocity.x, this.velocity.z);
-    if (dt > 0) this._easeDraw(dt);
+    if (dt > 0) { this._swingRamp(dt); this._easeDraw(dt); }
     this._pushCharacter();
     this._pushLocomotion(dt);
     // After the machine has run, so both read the state Sly is actually in this frame.
@@ -2259,11 +2318,79 @@ export class Controller {
     }
   }
 
+  /**
+   * §723A — advance the swing pin's weight. One ramp, two rates: `swingPinIn` toward 1 while
+   * the swing holds, `swingPinOut` toward 0 the moment it does not — a release, a crouch bail,
+   * a hurt, all through the same door, because `stateName` is the whole condition. Linear on
+   * purpose (§610's argument): equal steps mean the largest drawn step at the release is the
+   * held offset over the frame count, the same size on every one of them.
+   */
+  _swingRamp(dt) {
+    if (!SWING_PINNED) { this._swingW = 0; return; }
+    const want = this.stateName === 'hookSwing' ? 1 : 0;
+    if (want > this._swingW) this._swingW = Math.min(1, this._swingW + dt / Math.max(1e-4, TUNE.swingPinIn));
+    else if (want < this._swingW) this._swingW = Math.max(0, this._swingW - dt / Math.max(1e-4, TUNE.swingPinOut));
+  }
+
+  /**
+   * §723A — pivot the DRAWN character about the crook-on-ring contact.
+   *
+   * ORDER IS THE WHOLE GAME. The clip animates the arms, so the crook seat moves every frame;
+   * a correction computed before pose evaluation chases last frame's hand (§442's shape — an
+   * instrument reading the bind pose measures nothing). The MANIFEST runs ANIMATION before
+   * MOVEMENT, so by the time `_pushCharacter` calls this, the bone locals already carry THIS
+   * frame's pose — the same guarantee `Guard.js`'s cone path leans on when it forces matrices
+   * "current *now* rather than last frame". The one thing still stale is the world matrices
+   * under the root we just moved, so they are refreshed here before the seat is read.
+   *
+   * The transform, in full: with the root at its baseline placement (capsule minus §610 lag,
+   * yaw only), read the cane `hookPoint`'s world position `p` out of the posed hierarchy; build
+   * `Q` = the rotation carrying world-down onto the pendulum's radial direction (anchor to
+   * capsule — the swing angle the state already integrates); rotate the whole drawn body by `Q`
+   * about `p` (the crook holds still, the feet sweep); then translate by `anchor − p` so the
+   * crook seat lands exactly on the ring's point. Held as a (Δp, ΔQ) delta against the baseline
+   * so the release can FREEZE it and pay it off while the capsule flies — recomputing after the
+   * release would pin a flying body's cane to a ring it has let go of.
+   *
+   * The capsule, the pendulum, `spent()`, the camera's target — none of it is read back from
+   * here. §605's rings and every hook record are untouched by construction.
+   */
+  _swingDraw(root) {
+    const w = this._swingW;
+    if (w <= 0) return;
+    if (this.stateName === 'hookSwing') {
+      const cane = this.character?.cane;
+      const co = cane?.object, hp = cane?.hookPoint;
+      if (!co || !hp) { this._swingW = 0; return; }        // a character with no cane has no crook to pin
+      _swA.subVectors(this.position, this.anchor);
+      if (_swA.lengthSq() < 1e-6) _swA.set(0, -1, 0); else _swA.normalize();
+      _swQ.setFromUnitVectors(DOWN, _swA);                 // pendulum deviation from vertical
+      root.updateMatrixWorld(true);                        // fresh matrices under the moved root
+      _swB.copy(hp); co.localToWorld(_swB);                // p — the crook seat, posed, this frame
+      /* rotate about p, then pin p to the ring: root' = Q·(root − p) + p + (anchor − p) */
+      _swA.copy(root.position).sub(_swB).applyQuaternion(_swQ).add(this.anchor);
+      this._swingDp.subVectors(_swA, root.position);
+      if (this._swingDp.lengthSq() > TUNE.swingPinMax * TUNE.swingPinMax) {
+        this._swingDp.setLength(TUNE.swingPinMax);
+      }
+      this._swingDq.copy(_swQ);
+    }
+    if (w >= 1) {
+      root.position.add(this._swingDp);
+      root.quaternion.premultiply(this._swingDq);
+    } else {
+      root.position.addScaledVector(this._swingDp, w);
+      _swQ2.identity().slerp(this._swingDq, w);
+      root.quaternion.premultiply(_swQ2);
+    }
+  }
+
   _pushCharacter() {
     const root = this.character?.root;
     if (root) {
       root.position.copy(this.position).sub(this._drawLag);
       root.rotation.set(0, this.yaw, 0);
+      this._swingDraw(root);
       if (this._placeholder) { this._placeholder.visible = false; }
     } else if (this._placeholder) {
       // The placeholder stands in for the drawn body, so it eases with it or the two disagree.
@@ -2300,6 +2427,9 @@ export class Controller {
     this._drawEaseN = 0;
     this._drawP0.copy(this.position);
     this._drawV0 = 0;
+    /* §723A — a teleport is somebody saying where Sly IS; a swing pin held across it would
+       rotate the drawn body about a ring that is no longer the story. */
+    this._swingW = 0;
     /**
      * Spend the spawn snap. **A teleport is somebody saying exactly where Sly is**, and the
      * pending snap is an answer to a question about a position that no longer exists.
