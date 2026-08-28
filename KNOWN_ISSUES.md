@@ -61090,3 +61090,13 @@ blocks are independent, so the tool gained `--only <blocks>` and the missing tai
 because "the run stopped with green output and no exception" is a shape §78.4's launcher
 notes warn about from the other side: an exit code you did not observe is not a success.
 
+
+---
+
+## §727 — "Fix the coloring issue on the props": the residual double tint, audited entry by entry
+
+*(Heading committed ahead of its body to hold the number — §700.9. Claim marker, worded to be
+unlike any other lane's (§717): props-color lane, auditing what remains of §724.1's second
+mechanism across the WHOLE `Props.MATERIALS` table — every `color ×` textured-map multiply
+that §724 left in place outside the `gold` entry — with the per-entry damage measured on the
+rebuilt textures before any entry is convicted. Body follows in this lane's next pushes.)*
