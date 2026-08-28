@@ -60388,6 +60388,13 @@ A fourth run, at the commit that carries this section body, is recorded in the c
 it — the §712/§713/§719 precedent: a suite table committed at one sha and quoted at another
 is a claim about a tree nobody ran.
 
+**Run 4, at `c1c62f6` (the commit carrying this section), a fresh worktree at that sha
+(`/home/user/wt-724b`), same lock, same runner: 1108 / 1108, 0 fail**, 285.1 s, zero
+`not ok` lines over the whole stream, pwd checked from inside the command
+(`/home/user/wt-724b`), cwd present at the end. Four runs, four quoted; no flake fired in any
+of them and no test went red in any of them — several test files read this ledger, so a body
+append is not automatically inert, which is why this run exists.
+
 ### §724.11 Bounds — what this section does not do
 
 - **Zero `pos:` changes.** No placement, collider, route or reachability moves; `cluevault`
