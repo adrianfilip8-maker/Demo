@@ -95,7 +95,10 @@ const CONTROLS = [
     rows: [
       { k: ['W', 'A', 'S', 'D'], p: [P('stick')], d: 'Move', s: 'Camera-relative · stick pressure walks → runs' },
       { k: [M('wheel')], p: [P('stickR')], d: 'Look', s: 'Scroll to zoom' },
-      { k: ['Shift'], p: [P('L1')], note: 'hold', d: 'Sneak', s: 'On a narrow ledge — tiptoe' },
+      /* §726: no pad column — L1 went to the day/night toggle on the owner's instruction, so
+         sneak is keyboard-only (the row falls back to its keycap on a pad, the same documented
+         gap as Binocucom). Crouch (L2) is the pad's stealth modifier now. */
+      { k: ['Shift'], note: 'hold', d: 'Sneak', s: 'On a narrow ledge — tiptoe' },
       /* §665: this used to read "in a vent — crawl", on the Crouch row, which reads as *press this
          to crawl in a vent* and is false. `Moveset.Crawl.canEnter` is `c.inVent()` and nothing
          else — measured by driving the shipped route with L2 pinned at +1 so `crouch` could never
@@ -107,6 +110,8 @@ const CONTROLS = [
       { k: ['Space'], p: [P('cross')], d: 'Jump', s: 'Again in the air — double jump (cane twirl)' },
       { k: ['Q'], p: [P('R1')], note: 'hold', d: 'Paraglide', s: 'Sly 2\u2019s own X + R1' },
       { k: ['R'], p: [P('L3')], d: 'Recentre camera' },
+      /* §726: the toggle the owner asked for. L1 keeps its glyph consumed on the card. */
+      { k: ['N'], p: [P('L1')], d: 'Day / night', s: 'Eases the world between golden hour and the moonlit night' },
     ],
   },
   {
@@ -281,13 +286,14 @@ const KEY_ALIAS = {
  * because that is what every `prompt()` caller passes ('E', 'Space', `{mouse:'left'}`); the
  * mapping mirrors `Input.js` `PAD_BINDINGS` row for row and the §516 arm asserts both this and
  * the cel's `p:` columns resolve to shipped glyph files. Deliberately absent: `Tab` (Binocucom —
- * unbound on the pad, see PAD_BINDINGS) and `{mouse:'wheel'}` (zoom — Sly 2 has no free-camera
- * zoom control to inherit), so both fall back to their keyboard caps, which is the documented
- * gap rather than an invented button.
+ * unbound on the pad, see PAD_BINDINGS), `{mouse:'wheel'}` (zoom — Sly 2 has no free-camera
+ * zoom control to inherit), and since §726 `Shift` (sneak lost its pad route to the day/night
+ * toggle), so all three fall back to their keyboard caps, which is the documented gap rather
+ * than an invented button. `N` carries L1 for the same §726 row in the other direction.
  */
 const PAD_KEY = {
   E: 'circle', Space: 'cross', F: 'square', Q: 'R1', R: 'R3',
-  Shift: 'L1', Ctrl: 'L2', 'mouse:left': 'square', 'mouse:right': 'R3',   // §682: focus moved off R2
+  N: 'L1', Ctrl: 'L2', 'mouse:left': 'square', 'mouse:right': 'R3',   // §682 R2 empty · §726 L1=daynight
 };
 
 export class HUD {

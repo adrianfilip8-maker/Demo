@@ -171,7 +171,10 @@ const VERBS = [
   ['interact', 'pickpocket', { col: { guards: null }, place: ground() }, [K('KeyE')], [P(1)], P(2)],
   ['crouch (hold)', 'crouch', { place: ground() }, [K('ControlLeft')], [P(6)], P(4)],
   ['crouch (tap at speed)', 'roll', { place: running() }, [K('ControlLeft')], [P(6)], P(4)],
-  ['sneak', 'sneak', { place: ground() }, [K('ShiftLeft')], [P(4)], P(6)],
+  /* §726: sneak's pad route is GONE on the owner's instruction — L1 (4) is the day/night
+     toggle now. The keyboard leg stays, and the counterexample is the old binding itself:
+     button 4 must no longer reach the sneak state. */
+  ['sneak', 'sneak', { place: ground() }, [K('ShiftLeft')], [], P(4)],
   ['glide', 'paraglide', { place: air(30), warm: 20, hold: 20 }, [K('KeyQ')], [P(5)], P(0)],
   /* §682: focus moved off R2 (7) to R3 (11) — a verb that quiets the music must not sit under
      the finger every controller game rests on the right trigger. */
@@ -185,7 +188,8 @@ test('P1 verbs: every moveset verb produces the same transition on keyboard and 
    *               Controller + buildMoveset(), entering the same named state.
    *   fails  on : RUN in-arm — the counterexample column, a live bound neighbour (Circle against
    *               jump, Cross against combo, R1 against dive, Square against pickpocket, L1
-   *               against crouch/roll, L2 against sneak, Cross against paraglide, L1 against
+   *               against crouch/roll, L1 against sneak — §726's OLD binding, the exact
+   *               regression a re-merge would make — Cross against paraglide, L1 against
    *               combatStrafe). Each is asserted to NOT reach the verb, from the same pose, so
    *               a mapping that pressed everything at once would redden here rather than sail
    *               through on the positive column alone.
@@ -278,21 +282,30 @@ test('P2 directions: key, d-pad and stick resolve to the same wish vector', asyn
 /* ====================================================================== */
 
 /**
- * Verbs the keyboard reaches and the pad cannot. Every one is either a debug tool or cut by the
- * user's scope ruling, and each names its consumer so the claim is checkable rather than a
- * promise. If a GAMEPLAY verb ever lands here the pad has silently lost a control.
+ * Verbs the keyboard reaches and the pad cannot. Four are debug tools or cut by the user's
+ * scope ruling; `sneak` is the deliberate §726 exception, and each names its consumer so the
+ * claim is checkable rather than a promise. If a gameplay verb lands here WITHOUT an owner
+ * ruling behind it, the pad has silently lost a control.
  */
 const KEYBOARD_ONLY = {
   binocu:    'src/ui/HUD.js — the Binocucom overlay, out of scope by the user\'s ruling',
   freecam:   'src/core/Debug.js + src/player/CameraRig.js — debug fly-cam',
   quality:   'src/core/Debug.js — cycles the quality preset',
   colliders: 'src/core/Debug.js — collider overlay',
+  /* §726 — the one GAMEPLAY verb in this set, here by the owner's own trade, not by accident:
+     "switch out whatever is currently mapped to L1" took sneak's only pad button for the
+     day/night toggle. Consumer: src/player/Moveset.js `Sneak` (down('sneak'), Shift). The pad
+     keeps crouch (L2) as its stealth modifier — the weaker DETECT multiplier (1.8× vs sneak's
+     2.6×, Patrol.js's measured table) — and R2 remains deliberately unbound (§682) as the slot
+     sneak would return to. `?l1=sneak` reverts the row, and input.test.mjs runs that arm. */
+  sneak:     'src/player/Moveset.js — the sneak gait; pad route traded to daynight (§726)',
 };
 
 test('P3 census: no verb is pad-only, and every keyboard-only verb is debug or out of scope', async () => {
   /* ── DOMAIN (§418.3) ──────────────────────────────────────────────────────────────────────
    *   passes on : the shipped default tables, where the pad-only set is empty and the
-   *               keyboard-only set is exactly the four debug/out-of-scope verbs above.
+   *               keyboard-only set is exactly the five verbs above — four debug/out-of-scope,
+   *               plus `sneak`, keyboard-only since §726 by the owner's instruction.
    *   fails  on : RUN in-arm — the same census recomputed after `bindPad('jump', [])`, which
    *               must move `jump` into the keyboard-only set and out of the allowed list. That
    *               ablation is what proves the census is reading the live map rather than
@@ -338,7 +351,7 @@ test('P3 census: no verb is pad-only, and every keyboard-only verb is debug or o
     assert.ok(!/Pad \d/.test(d), `describe('${a}') = "${d}" — an unnamed pad index reached the label table`);
   }
   console.log(`\n[P3] pad-only: none · keyboard-only: ${now.keyOnly.join(', ')} `
-    + `(all debug or out of scope) · describe('jump') = "${input.describe('jump')}" `
+    + `(debug, out of scope, or §726's sneak trade) · describe('jump') = "${input.describe('jump')}" `
     + `· describe('focus') = "${input.describe('focus')}"`);
 });
 

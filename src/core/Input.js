@@ -84,6 +84,10 @@ export const KEY_BINDINGS = {
   attack:   ['KeyF'],
   glide:    ['KeyQ'],
   binocu:   ['Tab'],
+  /* §726: the day/night toggle's keyboard route, so the verb is testable and reachable with no
+     pad. N was unclaimed by every binding, by HUD.js's raw Escape listener, and by main.js's
+     begin-on-any-key (checked, not assumed). */
+  daynight: ['KeyN'],
   recentre: ['KeyR'],
   freecam:  ['F1'],
   quality:  ['F2'],
@@ -158,12 +162,12 @@ export const MOUSE_BINDINGS = {
  *                  that does nothing at all; the repair belongs to whoever owns `HUD.js`.
  *   recentre [11] R3        OURS. Sly 2 puts the Binocucom here; it is cut, so the slot carries
  *                  our camera recentre rather than nothing.
- *   sneak    [4] L1 · crouch [6] L2 · focus [11] R3 (§682, was R2) — OURS, in Sly 2's GADGET
- *                  slots. This demo
- *                  has no gadget system (out of scope), so the three slots carry our three
- *                  modifiers; `focus` (Thief-o-Vision) sits on an analog trigger because it is
+ *   crouch   [6] L2 · focus [11] R3 (§682, was R2) — OURS, in Sly 2's GADGET slots. This demo
+ *                  has no gadget system (out of scope), so the slots carry our modifiers;
+ *                  `focus` (Thief-o-Vision) sits on an analog trigger because it is
  *                  hold-to-use, through the existing hysteresis. Documented as the gap: a Sly 2
- *                  player expects gadgets on these, and there are none to bind.
+ *                  player expects gadgets on these, and there are none to bind. (`sneak` held
+ *                  the third gadget slot, L1, until §726 — see the `daynight` row below.)
  *   binocu   —    UNBOUND on the pad, and it stays that way — but **not for the reason this row
  *                  used to give.** It said "a button that opens nothing teaches distrust", and
  *                  that premise is false: driven in-arm through the real `src/ui/HUD.js` (§540),
@@ -172,6 +176,16 @@ export const MOUSE_BINDINGS = {
  *                  route — a real keyboard/pad asymmetry, recorded as one. It is left open
  *                  because the Binocucom is out of scope by the user's ruling, which is a reason
  *                  not to grow the feature onto a second device, not evidence that it is inert.
+ *   daynight [4] L1 — §726, ON THE OWNER'S INSTRUCTION, replacing `sneak`. The instruction:
+ *                  "IF there is not currently a way to switch [day/night], switch out whatever is
+ *                  currently mapped to L1 to switch between the day and night". There was no
+ *                  switch (`Debug.setTimeOfDay` is a console facility, `Shots.js` stages tod
+ *                  per shot offline; no input reached either), so the condition fired and L1
+ *                  carries the toggle. What this costs, stated rather than hidden: `sneak`
+ *                  becomes KEYBOARD-ONLY (Shift stays; see the §540 census note below). The
+ *                  slot was ours to begin with — Sly 2 puts a gadget on L1 and gadgets are cut —
+ *                  and R2 remains deliberately unbound (§682), which is where sneak would go if
+ *                  the owner wants it back on the pad. `?l1=sneak` reverts this one row.
  *   d-pad    [12-15] move, verbatim ("digital buttons = move character").
  *
  * ── §540: the parity census, driven rather than read ────────────────────────────────────────
@@ -181,16 +195,27 @@ export const MOUSE_BINDINGS = {
  * `Controller` + `Moveset` and recording the state-machine transition it produced — the §357.1
  * question (bound at one end only) asked of every row at once. The result:
  *
- *   · **Every verb the moveset consults is reachable on both devices, and all 13 produce the
- *     same transition.** jump→jump · attack→combo (ground) and →dive (air), on F, LMB, Square
- *     AND Triangle · interact→pickpocket · crouch→crouch, and tapped at speed →roll · sneak→
- *     sneak · glide→paraglide · focus→combatStrafe · each of the four directions→move on key,
- *     d-pad and stick alike. Nothing is bound-but-dead; nothing is read-but-unbindable.
- *   · **Keyboard-only, five verbs, all of them debug or out-of-scope:** `binocu` (Tab → the HUD
- *     overlay), `freecam` (F1), `quality` (F2), `colliders` (F3) — the last three are
- *     `src/core/Debug.js`'s and are keyboard-only by the same decision `HUD.js:549` records —
- *     and the player-facing pause cel, which is Escape's, not an action at all (see `pause`).
- *   · **Pad-only, nothing.** Every pad button has a keyboard or mouse route to the same verb.
+ *   · **Every verb the moveset consults is reachable on both devices — except `sneak`, which
+ *     §726 traded to the keyboard (below) — and every dual-bound verb produces the same
+ *     transition.** jump→jump · attack→combo (ground) and →dive (air), on F, LMB, Square
+ *     AND Triangle · interact→pickpocket · crouch→crouch, and tapped at speed →roll ·
+ *     sneak→sneak (Shift; pad route removed by §726) · glide→paraglide · focus→combatStrafe ·
+ *     each of the four directions→move on key, d-pad and stick alike. Nothing is
+ *     bound-but-dead; nothing is read-but-unbindable.
+ *   · **Keyboard-only, five verbs, all of them debug or out-of-scope** — plus, since §726, ONE
+ *     gameplay verb by the owner's own trade: `binocu` (Tab → the HUD overlay), `freecam` (F1),
+ *     `quality` (F2), `colliders` (F3) — the last three are `src/core/Debug.js`'s and are
+ *     keyboard-only by the same decision `HUD.js:549` records — the player-facing pause cel,
+ *     which is Escape's, not an action at all (see `pause`), and **`sneak`** (Shift), whose L1
+ *     went to `daynight` on instruction. What a pad player actually loses, measured rather
+ *     than guessed: the button-gated sneak GAIT (`Moveset.Sneak`, `down('sneak')`) and its
+ *     DETECT multiplier — sneaking buys 2.6× against crouching's 1.8× (`Patrol.js`'s own
+ *     measured table), so `crouch` (L2) covers the use-case at the weaker rate, not fully.
+ *     Narrow-ledge tiptoe is unaffected — `Tiptoe.canEnter` is `narrowGround()`, no button —
+ *     and `Moveset.js:1817`'s "stealth modifiers win the button" accepts crouch too. R2 sits
+ *     unbound (§682): the obvious slot if the owner wants sneak back on the pad.
+ *   · **Pad-only, nothing.** Every pad button has a keyboard or mouse route to the same verb
+ *     (`daynight` rides L1 AND KeyN, §726, keeping this row true).
  *     The one thing the pad can do that the keyboard cannot is a *magnitude*: a sustained speed
  *     between 1.93 and 7.20 m/s, where a key is pinned at 7.20. That is the analog axis being
  *     analog rather than a missing verb — `Move.update`'s own comment says so — and Sly 2's
@@ -203,6 +228,25 @@ export const MOUSE_BINDINGS = {
  *     binding is invented here — but it is a one-route verb, and `padparity.test.mjs` pins the
  *     RMB leg so a widened swallow cannot take Thief-o-Vision out with it.
  */
+/**
+ * §726 revert token — `?l1=sneak` (or `globalThis.__L1_AB = 'sneak'` before import) restores the
+ * pre-§726 row: sneak back on L1, `daynight` keyboard-only (KeyN keeps the toggle reachable).
+ * Read at module scope for the same reason `main.js` reads `?char=` there: the tables are
+ * exported constants, so a URL param is the only seam reliably set before they are built.
+ * Node test hosts have no `location`; they get the shipped default unless they set the global.
+ */
+const L1_AB = (() => {
+  try {
+    if (typeof location !== 'undefined' && location.search) {
+      const q = new URLSearchParams(location.search).get('l1');
+      if (q) return String(q);
+    }
+    if (typeof globalThis !== 'undefined' && globalThis.__L1_AB != null) return String(globalThis.__L1_AB);
+  } catch { /* plain-module hosts */ }
+  return '';
+})();
+export const L1_SNEAK = L1_AB === 'sneak';
+
 export const PAD_BINDINGS = {
   forward:  [12],
   back:     [13],
@@ -212,7 +256,11 @@ export const PAD_BINDINGS = {
   attack:   [2, 3],     // Square + Triangle (juggle / dive-spin family)
   interact: [1],        // Circle
   glide:    [5],        // R1 — X+R1 paraglide
-  sneak:    [4],        // L1 — ours (gadget slot, no gadgets in scope)
+  /* §726: L1 carries the day/night toggle, per the owner's "switch out whatever is currently
+     mapped to L1". It carried `sneak` (a gadget slot of ours, no gadget to bind); sneak keeps
+     its keyboard Shift and loses the pad — the cost is quantified in the §540 census note
+     above. `?l1=sneak` restores the old row. */
+  ...(L1_SNEAK ? { sneak: [4] } : { daynight: [4] }),   // L1
   crouch:   [6],        // L2 — ours (gadget slot)
   /**
    * §682 — MOVED OFF R2, and R2 is now bound to nothing at all.

@@ -634,6 +634,171 @@ test('attack has a lock-independent keyboard route', () => {
 });
 
 /* ====================================================================== */
+/* §726 — L1 is the day/night toggle; sneak keeps the keyboard only        */
+/* ====================================================================== */
+
+/**
+ * ── DOMAIN (§418.3) ────────────────────────────────────────────────────────────────────────
+ *   passes on : standard button 4 (L1) driven through the real poll path — `daynight` edges on
+ *               the polled frame, holds without re-edging, and a release + second press edges
+ *               again; and KeyN through the real DOM path, edging on the frame after dispatch
+ *               (§468). The consumer leg below drives the real `Debug.update` off these edges.
+ *   fails  on : RUN in-arm — the OLD binding, both ways round: button 4 must NOT press `sneak`
+ *               (the pre-§726 verb), and sneak's own key (ShiftLeft) must NOT press `daynight`.
+ *               A rebind that pressed both at once, or that never moved, reddens here.
+ *   does NOT  : discriminate a physical DualShock 4 (none exists in this container), nor the
+ *   discrim.    rendered look of either grade — tools/daynightshot.mjs owns the frames.
+ */
+test('§726 binding: L1 presses daynight once per press, and the old binding fails both ways', () => {
+  const { input } = makeInput();
+  const B = (n) => { const b = Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })); if (n >= 0) b[n] = { pressed: true, value: 1 }; return b; };
+
+  assert.deepEqual(PAD_BINDINGS.daynight, [4], 'daynight is not on L1 — §726 regressed');
+  assert.equal(PAD_BINDINGS.sneak, undefined,
+    'sneak still has a pad binding — §726 moved L1 to daynight and bound sneak nowhere on the pad');
+  assert.deepEqual(input.keysFor('sneak'), ['ShiftLeft', 'ShiftRight'],
+    'sneak lost its keyboard route — §726 was to take only the pad button');
+
+  /* one resting poll so button 4 is trusted (§542) */
+  pads = [pad({ buttons: B(-1) })];
+  input.beginFrame(1 / 60);
+
+  pads = [pad({ buttons: B(4) })];
+  input.beginFrame(1 / 60);
+  assert.equal(input.pressed('daynight'), true, 'L1 did not press daynight on its polled frame');
+  assert.equal(input.pressed('sneak'), false,
+    'button 4 still presses sneak — the OLD binding is live alongside the new one');
+  assert.equal(input.down('sneak'), false, 'button 4 holds sneak');
+
+  /* hold: 30 more polls of the same held button must not re-edge */
+  for (let i = 0; i < 30; i++) {
+    input.beginFrame(1 / 60);
+    assert.equal(input.pressed('daynight'), false, `held L1 re-edged on poll ${i + 1} — a hold would repeat-toggle`);
+  }
+  assert.equal(input.down('daynight'), true, 'the hold itself was dropped');
+
+  /* release + second press edges again — the return half of the toggle */
+  pads = [pad({ buttons: B(-1) })];
+  input.beginFrame(1 / 60);
+  pads = [pad({ buttons: B(4) })];
+  input.beginFrame(1 / 60);
+  assert.equal(input.pressed('daynight'), true, 'the second press did not edge — the toggle cannot return');
+  pads = [pad({ buttons: B(-1) })];
+  input.beginFrame(1 / 60);
+
+  /* the keyboard route (§468 timing), and the old binding's key as the cross fail-input */
+  keyDown('KeyN');
+  input.beginFrame(1 / 60);
+  assert.equal(input.pressed('daynight'), true, 'KeyN did not press daynight on the frame after dispatch');
+  keyUp('KeyN');
+  input.beginFrame(1 / 60);
+  keyDown('ShiftLeft');
+  input.beginFrame(1 / 60);
+  assert.equal(input.pressed('daynight'), false, 'ShiftLeft pressed daynight — sneak\'s key reaches the new verb');
+  assert.equal(input.down('sneak'), true, 'ShiftLeft no longer sneaks — the keyboard half was to stay intact');
+  keyUp('ShiftLeft');
+});
+
+/**
+ * The consumer: the real `Debug.update` off the real poll path — press eases the world to the
+ * catalogue night grade and emits ONCE on landing, a hold never re-toggles, the second press
+ * returns to the boot grade, and the old binding (ShiftLeft, run in-arm) moves nothing.
+ * `input.dtReal` is pinned per frame the same way the tests pin the game clock via
+ * `beginFrame(dt)` — the fade runs on the real clock by design (see Debug.js §726 block).
+ */
+test('§726 toggle: press eases to the night grade and back, hold does not repeat, one emit per landing', async () => {
+  /* Debug builds an overlay div and publishes window.__GAME; give the shim just enough DOM. */
+  document.createElement = () => ({ style: {}, textContent: '' });
+  document.body = { appendChild() {} };
+  document.documentElement = { setAttribute() {} };
+
+  const { Debug } = await import('../src/core/Debug.js');
+  const { SHOTS } = await import('../src/core/Shots.js');
+  const { input, engine, events } = makeInput();
+  Object.assign(engine, {
+    debug: { timeOfDay: 0.78, paused: false, showColliders: false, hideHud: false },
+    warnings: [], stats: { fps: 0, ms: 0, drawCalls: 0, triangles: 0, programs: 0 },
+    quality: 'high', get: () => null, on: () => () => {}, setQuality() {},
+  });
+  const dbg = new Debug(engine, input);
+  const B = (n) => { const b = Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })); if (n >= 0) b[n] = { pressed: true, value: 1 }; return b; };
+  const frame = () => { input.beginFrame(1 / 60); input.dtReal = 1 / 60; dbg.update(); };
+
+  pads = [pad({ buttons: B(-1) })];
+  frame();
+  assert.equal(engine.debug.timeOfDay, 0.78, 'the boot grade moved before any press');
+
+  const emitsOf = () => events.filter((e) => e.evt === 'timeOfDay').map((e) => e.p);
+
+  /* press -> the fade runs -> lands EXACTLY on the catalogue's night tod, one emit */
+  pads = [pad({ buttons: B(4) })];
+  frame();
+  let n = 0;
+  while (dbg._dnActive && n < 600) { frame(); n++; }
+  assert.equal(engine.debug.timeOfDay, SHOTS.night.tod,
+    `the toggle landed on ${engine.debug.timeOfDay}, not the catalogue night grade ${SHOTS.night.tod}`);
+  assert.ok(n >= 30, `the fade completed in ${n} frames — that is a snap, not the shipped ease`);
+  assert.deepEqual(emitsOf(), [SHOTS.night.tod],
+    'the fade must emit timeOfDay exactly once, on landing — Guard.js documents the event as '
+    + 'discontinuous-sets-only, and a per-frame emit snaps the guards\' own eased _light');
+
+  /* hold: the button is still physically down; 40 more frames must not re-toggle */
+  for (let i = 0; i < 40; i++) frame();
+  assert.equal(engine.debug.timeOfDay, SHOTS.night.tod, 'a held L1 repeat-toggled after landing');
+
+  /* the old binding, RUN in-arm: sneak's key must move nothing */
+  pads = [pad({ buttons: B(-1) })];
+  frame();
+  keyDown('ShiftLeft');
+  for (let i = 0; i < 30; i++) frame();
+  keyUp('ShiftLeft');
+  assert.equal(engine.debug.timeOfDay, SHOTS.night.tod,
+    'ShiftLeft (the pre-§726 L1 verb) moved the time of day');
+
+  /* second press returns to the boot grade, exactly, with exactly one more emit */
+  pads = [pad({ buttons: B(4) })];
+  frame();
+  n = 0;
+  while (dbg._dnActive && n < 600) { frame(); n++; }
+  assert.equal(engine.debug.timeOfDay, 0.78, 'the second press did not return to the boot grade');
+  assert.deepEqual(emitsOf(), [SHOTS.night.tod, 0.78], 'the return leg emitted more (or less) than once');
+  pads = [];
+});
+
+/**
+ * §726's revert token, exercised the way swingpin exercises its arms: a CHILD process sets
+ * `globalThis.__L1_AB = 'sneak'` before import and must get the pre-§726 table back — sneak on
+ * L1, daynight keyboard-only. The URL leg (`?l1=sneak`) reads the same resolver and is
+ * exercised in a real page boot by tools/daynightshot.mjs.
+ */
+test('§726 token: __L1_AB="sneak" restores sneak to L1 and takes daynight off the pad', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const src = `
+    globalThis.__L1_AB = 'sneak';
+    globalThis.window = { addEventListener() {}, removeEventListener() {} };
+    globalThis.document = { addEventListener() {}, removeEventListener() {} };
+    const m = await import(${JSON.stringify(new URL('../src/core/Input.js', import.meta.url).href)});
+    process.stdout.write('__L1_RESULT__' + JSON.stringify({
+      sneak: m.PAD_BINDINGS.sneak ?? null,
+      daynight: m.PAD_BINDINGS.daynight ?? null,
+      keyDaynight: m.KEY_BINDINGS.daynight ?? null,
+      L1_SNEAK: m.L1_SNEAK,
+    }) + '\\n');
+  `;
+  const raw = execFileSync(process.execPath, ['--input-type=module', '-e', src], { encoding: 'utf8' });
+  const m = /__L1_RESULT__(\{.*\})/.exec(raw);
+  assert.ok(m, 'the token child produced no result line');
+  const r = JSON.parse(m[1]);
+  assert.equal(r.L1_SNEAK, true, 'the token did not reach the resolver');
+  assert.deepEqual(r.sneak, [4], 'the token did not restore sneak to L1');
+  assert.equal(r.daynight, null, 'daynight kept a pad binding under the revert token');
+  assert.deepEqual(r.keyDaynight, ['KeyN'], 'the token took the keyboard toggle away too — it must only move the pad row');
+  /* …and THIS process, imported without the token, is the shipped arm (asserted above). */
+  assert.equal(PAD_BINDINGS.sneak, undefined);
+  assert.deepEqual(PAD_BINDINGS.daynight, [4]);
+});
+
+/* ====================================================================== */
 /* 6 — §516: the PS4 pad — Sly mapping, analog gait, edges, device flag    */
 /* ====================================================================== */
 

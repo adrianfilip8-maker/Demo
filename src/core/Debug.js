@@ -16,6 +16,41 @@ const _p = new THREE.Vector3();
 const SETTLE_FRAMES = 14;
 const SETTLE_FRAMES_2 = 3;
 
+/* ── §726: the L1 / N day-night toggle ─────────────────────────────────────────────────────────
+ *
+ * The night endpoint is the shot catalogue's own `night` grade — `SHOTS.night.tod`, 0.02 —
+ * because that value has been through the critic rounds (midnight 0.0 measured ~85% black there
+ * and was rejected; the `night` entry is one of the ten environment shots the standing baseline
+ * is scored over). The day endpoint is whatever the engine booted with (0.78 golden hour).
+ *
+ * The transition EASES the tod scalar along the corridor that runs FORWARD through midnight:
+ * 0.78 → 1.02 ≡ 0.02 (sunset → twilight → deep night), and back the same way. The day-side
+ * path (0.78 → 0.5 → 0.02) would brighten to full noon mid-fade, so it is not used.
+ * `evalAtmosphere` wraps tod (`((tod % 1) + 1) % 1`) and its deep-night anchor covers the whole
+ * sub-horizon span, so every intermediate frame is a grade the atmosphere model was built for —
+ * including the hard sun→moon key switch, which the model's own comment places "where both keys
+ * are dim" (twilight), exactly the region the ease crosses over ~0.2 s instead of in one frame.
+ *
+ * Propagation honours Guard.js's documented contract — "[the 'timeOfDay' event] fires only on
+ * discontinuous sets, never per-frame": during the fade only `engine.debug.timeOfDay` is
+ * written, which every consumer already polls per frame (Sky, Lighting, Shading, the guards'
+ * own eased `_light`); the event is emitted ONCE, when the fade lands on its endpoint, so
+ * event-only work (the dust-mote rebuild) runs once per completed toggle. A snap was driven
+ * through the same pipeline and measured before choosing this — see KNOWN_ISSUES §726.
+ *
+ * The fade runs on the INPUT layer's real clock (`input.dtReal`), not the scaled game clock:
+ * it is a presentation transition, so Thief-o-Vision's 0.35× and the debug pause neither slow
+ * nor freeze it — the same reasoning `_padLook` records for camera input.
+ *
+ * Interruptible by design: L1 mid-fade flips the target and the scalar turns around from where
+ * it is — nothing queues. Any OTHER writer of `engine.debug.timeOfDay` (shot staging, the
+ * `setTimeOfDay` console facility) cancels the fade and wins; the toggle re-derives its state
+ * from the world on the next press. Session-only on purpose: no storage is written, and a
+ * reload boots at the day grade.
+ */
+const DN_FADE_S = 1.2;      // seconds, real time — §726.5's snap-vs-ease measurement
+const DN_EPS = 1e-6;
+
 /**
  * What the frame actually contains of the character, as opposed to what the shot asked for.
  *
@@ -62,8 +97,88 @@ export class Debug {
     this.freeCam = null;
     this._shotMode = null;
 
+    /* §726 day/night state. `_dnDay` reads the boot value rather than restating 0.78 so the
+       toggle follows the engine default if it ever moves; `_dnNight` reads the catalogue. */
+    this._dnDay = engine.debug.timeOfDay;
+    this._dnNight = SHOTS.night?.tod ?? 0.02;
+    this._dnSpan = (((this._dnNight - this._dnDay) % 1) + 1) % 1;   // 0.24, forward through midnight
+    this._dnU = 0;              // 0 = day endpoint · 1 = night endpoint
+    this._dnTarget = 0;
+    this._dnActive = false;
+    this._dnWrote = null;       // the exact value the fade last wrote; any other writer cancels
+
     this._installGlobals();
     this._installOverlay();
+  }
+
+  /* ── §726 helpers ──────────────────────────────────────────────────────── */
+
+  /** Corridor position of a tod value, or null when it is off the day↔night corridor. */
+  _dnUFor(tod) {
+    if (!(this._dnSpan > 0)) return null;
+    const rel = (((tod - this._dnDay) % 1) + 1) % 1;
+    if (rel <= this._dnSpan + 1e-4) return Math.min(1, rel / this._dnSpan);
+    return null;
+  }
+
+  /** tod at corridor position u, wrapped to [0, 1) and quantised so endpoints land exactly. */
+  _dnTodAt(u) {
+    const t = this._dnDay + this._dnSpan * u;
+    return +((((t % 1) + 1) % 1).toFixed(4));
+  }
+
+  _dayNightToggle() {
+    const engine = this.engine;
+    if (this._dnActive) {
+      // Second press mid-fade REVERSES from wherever the scalar is; nothing queues.
+      this._dnTarget = this._dnTarget === 1 ? 0 : 1;
+      return;
+    }
+    const u = this._dnUFor(engine.debug.timeOfDay);
+    if (u == null) {
+      /* A console-set tod off the corridor (noon, morning): no eased path is defined through
+         the shipped corridor, so this press is the discontinuous set the debug facility
+         already performs — classified by wrapped distance, to the far endpoint. */
+      const wd = (a, b) => { const d = (((a - b) % 1) + 1) % 1; return Math.min(d, 1 - d); };
+      const tod = engine.debug.timeOfDay;
+      const toNight = wd(tod, this._dnDay) <= wd(tod, this._dnNight);
+      this._dnU = this._dnTarget = toNight ? 1 : 0;
+      const v = toNight ? this._dnNight : this._dnDay;
+      engine.debug.timeOfDay = v;
+      engine.emit('timeOfDay', v);
+      return;
+    }
+    this._dnU = u;
+    this._dnTarget = u >= 0.5 ? 0 : 1;
+    this._dnActive = true;
+  }
+
+  _dayNightTick() {
+    if (!this._dnActive) return;
+    const engine = this.engine;
+    if (this._dnWrote != null && engine.debug.timeOfDay !== this._dnWrote) {
+      // Someone else wrote tod (shot staging, setTimeOfDay): the fade yields immediately.
+      this._dnActive = false;
+      this._dnWrote = null;
+      this._dnU = this._dnTarget = (this._dnUFor(engine.debug.timeOfDay) ?? 0) >= 0.5 ? 1 : 0;
+      return;
+    }
+    const dt = Math.min(Math.max(this.input?.dtReal ?? 1 / 60, 0), 1 / 20);
+    const dir = this._dnTarget > this._dnU ? 1 : -1;
+    this._dnU += (dir * dt) / DN_FADE_S;
+    if ((dir > 0 && this._dnU >= this._dnTarget - DN_EPS) || (dir < 0 && this._dnU <= this._dnTarget + DN_EPS)) {
+      this._dnU = this._dnTarget;
+      this._dnActive = false;
+    }
+    const v = this._dnTodAt(this._dnU);
+    engine.debug.timeOfDay = v;
+    if (this._dnActive) {
+      this._dnWrote = v;
+    } else {
+      // The landing is the discontinuous SET the event contract describes — emit once.
+      this._dnWrote = null;
+      engine.emit('timeOfDay', v);
+    }
   }
 
   _installGlobals() {
@@ -326,6 +441,12 @@ export class Debug {
       engine.setQuality(next);
     }
     if (input.pressed('pause')) engine.debug.paused = !engine.debug.paused;
+    /* §726: the day/night toggle — L1 on the pad, N on the keyboard. Consumed here beside
+       `pause`/`quality` because this file already owns every action that flips a field of
+       `engine.debug`, and because main.js pumps this update OUTSIDE the dt-zero gate, so the
+       toggle (and its fade, which runs on the real clock) works while the sim is paused. */
+    if (input.pressed('daynight')) this._dayNightToggle();
+    this._dayNightTick();
 
     if (!this.visible) return;
     const s = engine.stats;
