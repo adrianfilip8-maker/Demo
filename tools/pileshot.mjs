@@ -162,7 +162,39 @@ async function measureFrame(page, { close }) {
       lime: { mesh: lime, pred: (x, y, z) => x > -3.0 && x < 0.1 && y > -11.6 && y < -11.0 && z > -70.4 && z < -68.8 },
     };
 
+    /* The geometry's own state — the §719.12-style readback that lets a token run prove which
+       arm it is in off the live attributes rather than off a flag. */
+    {
+      const pos = gold.geometry.attributes.position, guv = gold.geometry.attributes.uv;
+      const col = gold.geometry.attributes.color || null;
+      let uMin = 1e9, uMax = -1e9, vMin = 1e9, vMax = -1e9, nonWhite = 0, pileSample = null;
+      for (let i = 0; i < pos.count; i++) {
+        if (col && (col.getComponent(i, 0) !== 1 || col.getComponent(i, 1) !== 1 || col.getComponent(i, 2) !== 1)) nonWhite++;
+        if (!POPS.pile.pred(pos.getX(i), pos.getY(i), pos.getZ(i))) continue;
+        if (!pileSample && col) pileSample = [col.getComponent(i, 0), col.getComponent(i, 1), col.getComponent(i, 2)].map((v) => +v.toFixed(4));
+        const u = guv.getX(i), v = guv.getY(i);
+        if (u < uMin) uMin = u; if (u > uMax) uMax = u;
+        if (v < vMin) vMin = v; if (v > vMax) vMax = v;
+      }
+      out.goldGeo = {
+        hasColor: !!col, vertexColors: gold.material.vertexColors === true,
+        nonWhite, pileSample, pileUVSpan: [+(uMax - uMin).toFixed(3), +(vMax - vMin).toFixed(3)],
+      };
+    }
+
+    /* The tag must RESTORE the shipped state, not assume it was empty. §724 ships a real
+       `COLOR_0` on `props_gold`, and the first version of this helper deleted it on tagOff —
+       so every arm after the first measured a build with the un-tint stripped (the after run's
+       own `goldGeo` line said `hasColor:false` and its I4 went 3,920 px, which is how the
+       defect announced itself). The saved attribute and flag come off the live objects. */
+    const _saved = new Map();
     const tagOn = (mesh, pred) => {
+      if (!_saved.has(mesh)) {
+        _saved.set(mesh, {
+          color: mesh.geometry.attributes.color || null,
+          vertexColors: mesh.material.vertexColors === true,
+        });
+      }
       const pos = mesh.geometry.attributes.position;
       const col = new Float32Array(pos.count * 3).fill(1);
       let tagged = 0;
@@ -175,8 +207,10 @@ async function measureFrame(page, { close }) {
       return tagged;
     };
     const tagOff = (mesh) => {
-      mesh.geometry.deleteAttribute('color');
-      mesh.material.vertexColors = false;
+      const s = _saved.get(mesh);
+      if (s?.color) mesh.geometry.setAttribute('color', s.color);
+      else mesh.geometry.deleteAttribute('color');
+      mesh.material.vertexColors = s ? s.vertexColors : false;
       mesh.material.needsUpdate = true;
     };
 
@@ -262,7 +296,10 @@ async function measureFrame(page, { close }) {
       }));
     }
 
-    out.stats = { draws: E.stats?.drawCalls ?? null };
+    /* `Engine.stats.drawCalls` is NOT quoted — five distinct frozen plausible values on record
+       (§700.3/§701.11/§705); draw accounting is `tools/budgetattrib.mjs`'s job. The compiled
+       program count IS real and is the §719.7-style cost of a vertexColors variant. */
+    out.programs = E.renderer?.info?.programs?.length ?? null;
     return out;
   }, { close, EYE, TARGET });
 }
@@ -308,6 +345,7 @@ try {
       }
     }
     if (r.preflight) process.stdout.write(`      preflight: subject ${r.preflight.subjectDist} m, first hits ${r.preflight.firstHits.join(', ') || 'none'}; stance floor ${JSON.stringify(r.stanceFloor)}\n`);
+    if (r.goldGeo) process.stdout.write(`      goldGeo: ${JSON.stringify(r.goldGeo)}\n`);
     if (r.lights?.length) process.stdout.write(`      lights: ${r.lights.map((l) => `${l.type}@${l.intensity}${l.distToPile != null ? ` d${l.distToPile}` : ''}`).join('  ')}\n`);
     if (r.treasureMats) process.stdout.write(`      treasures: ${r.treasureMats.map((t) => `${t.id}{shares:${t.sharesCoinMat},map:${t.hasMap},badge:${t.mapIsBadge},color:${t.color}}`).join(' ')}\n`);
   }

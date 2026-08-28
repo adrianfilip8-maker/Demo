@@ -60049,3 +60049,365 @@ order: mean L, saturation, hue against the house gold `0xe8b942`, in the vault's
 then whichever of texture-scale / lighting / both the numbers indict. The pickup coins and
 their §712 badge are settled and untouched; `pickups` C4's "badge never reaches the treasure"
 stays pinned; zero `pos:` changes; budget delta 0 against `tools/budgetattrib.mjs`.)*
+
+### §724.1 The answer, first, so a redirect is cheap (§705)
+
+"Faded" was measured before any lever was chosen — §719's order of work — and it is **not the
+vault's light**. On the pile's own pixels in the derived close-up (`close`, T=8 footprint,
+28,142 px): **mean L 34.1/255, saturation 0.382, with BLUE above GREEN** — mean hue 336°,
+violet-magenta, outside the gold hue family entirely — while the polished-limestone table in
+the same canonical `interior` frame, in the same torchlight, read **L 113.8**. A bright albedo
+lights fine in this vault; the pile's albedo was painted dark twice over:
+
+1. **all 149 hoard items sampled the SAME ~1.6% corner window of `gold_leaf`** — every builder
+   projects UVs from LOCAL positions before `place()` bakes the transform, so a 0.11–0.17 m
+   item's whole footprint straddles the UV origin: a below-median, SEAM-crossed window
+   (albedo L 104.0 against the tile's mean 134.3, its baked AO at 0.53), the §712 pickup-coin
+   mechanism at pile scale, exactly as predicted;
+2. **the double tint** — `MATERIALS.gold.color 0xe8b942` re-tinting a map that is already
+   gold (§712.2's "muddy olive" multiply), crushing blue to ~0 and costing a further ~23 L.
+
+Effective pre-light albedo ≈ L 81 × AO 0.53 — the L 34 the frame shows, dark enough that the
+cel shadow wash goes violet (the failure `gold_leaf`'s own `rampFloor` note predicts). So two
+levers, both in the albedo path, one revert token **`?pile=faded`**: each item's UV window now
+translates to its own spot on the tile (R2 sequence on the item index — scatter, never
+stretch), and the pile's `COLOR_0` carries the exact linear inverse of the entry's own colour,
+so `color × map × vColor = map`. Measured after, same frames, same footprints: close-up pile
+**L 34.1 → 57.3 (+68%), mean hue 336° → 41°** against the house gold's 43°, and a bright tail
+of **6,657 px at L 92** where before there were two pixels; at the canonical `interior`
+distance L 30.6 → 45.4 (+48%) with a 138-px glint tail where before the sweep died. The pile
+reads as metal in the gold band, in its own frame, in its own light.
+
+One correction landed alongside, measured before it was touched (§724.5): in the browser,
+`Pickups._coinMat`'s badge mutation was reaching **all four treasures** through
+`shading.make`'s option-key cache — `{shares:true, badge:true, color:#ffffff}` on the scarab,
+the collar, the ingot AND the vault's locked Eye — and `pickups` C4 structurally cannot see
+it, because C4 runs in the one environment where the factory does not exist.
+
+### §724.2 What "faded" IS, measured in the vault's own light
+
+`tools/pileshot.mjs` — one boot per commit, `setShot('interior', { dt: 0 })` plus one derived
+close-up from a player-reachable stance (§724.9), every statistic computed on the UNTAGGED
+base frame over a vertex-tag footprint: the pile's own vertices in the merged `props_gold`
+take a magenta `COLOR_0` for one capture and the footprint is the difference — `canehook`'s I3
+trick one level down. Instruments on the before run: I2 (base twice) **0 px**, I4 (restore vs
+base) **0 px**, both frames. Three populations, because "is it the light or the paint" needs
+controls in the same frame under the same light. BEFORE, at `8f5f1a8`:
+
+`close` (subject at 3.55 m):
+
+| pop | T | n px | mean L | sat | mean rgb |
+|---|---|---|---|---|---|
+| pile | 1 | 36,619 | 33.0 | 0.402 | (42.6, 29.7, 37.1) |
+| pile | 8 | 28,142 | **34.1** | 0.382 | (44.9, 30.7, **36.3**) — B above G |
+| pile | 16 | 17,261 | 39.0 | 0.359 | (51.8, 35.2, 38.3) |
+| pile | 32 | 3,472 | 53.7 | 0.358 | (69.6, 49.8, 45.4) |
+| pile | 64 | **2** | — | — | the pile has no bright tail at all |
+
+`interior` (the canonical vault frame, pile at ~11 m):
+
+| pop | T | n px | mean L | sat | mean rgb |
+|---|---|---|---|---|---|
+| pile | 8 | 2,022 | 30.6 | 0.401 | (41.4, 27.0, 34.9) |
+| Ra statue — same material, same merge | 8 | 4,136 | 41.9 | 0.258 | (44.2, 41.0, 44.7) |
+| Ra statue, bright tail | 64 | 11 | 87.8 | 0.264 | (92.4, 88.3, 69.5) |
+| limestone table — bright-albedo control | 16 | 1,419 | **113.8** | 0.140 | (106.3, 116.4, 110.3) |
+
+Reading the three together is the discrimination this section owed:
+
+- **The light reaches the pile.** Six tomb-torch PointLights at intensity 3.0–4.2 stand
+  4.2–11.8 m from it (range 12, colour 0xffb060), and limestone in the same frame reaches
+  L 114. A gold pile in a dark tomb may be correctly dark (the §266-adjacent worry); a pile
+  EIGHTY L below the table beside it is not dark, it is painted dark. No lighting lever was
+  taken, and none was needed.
+- **The pile is not even the dark end of its own material.** The Ra statue wears the
+  identical merged material in the identical vault and reads 11 L brighter with a real bright
+  tail; the pile's sweep dies before T=64. Same paint, different UV WINDOWS.
+- **The hue is §3's family.** Blue above green on "gold", at every threshold, is the cel
+  shadow wash owning texels whose own albedo stopped dominating — mean hue 315–355° across
+  the sweep. "Faded" = dark enough to go violet.
+
+### §724.3 The mechanism, on the texture's own texels
+
+`tools/pilepatch.mjs` — stage A reads the REAL merged geometry out of a level boot (§435.4:
+a probe written from the author's mental model of the level is a test of the model; this one
+found what no model predicted, that ALL windows coincide), stage B rebuilds `gold_leaf`
+exactly as the runtime does (same recipe, seed, size 512, same `derive()`) and samples it at
+those authored UVs, area-weighted, at the shipped `repeat = 1/1.2`, wrapped.
+
+Pile UV bbox before: **[−0.081, −0.046] .. [0.082, 0.047]** — 6,936 triangles, 6.74 m² of
+hoard, one wrapped corner patch, crossed by the beaten-leaf seam lines the recipe draws at
+sheet boundaries (u = 0 and v = 0 ARE seams: value −0.20, occlusion ×0.55, plus weathering).
+
+| population | albedo mean (sRGB) | L | sat | × `0xe8b942` in linear | window AO | rough |
+|---|---|---|---|---|---|---|
+| whole tile | (163, 137, 21) | 134.3 | 0.893 | L 106.3 | — | — |
+| **pile windows, before** | (137, 104, 4) | **104.0** | 0.978 | **L 81.2**, B ≈ 0.2/255 | 0.526 | 0.660 |
+| Ra statue's windows | (148, 119, 12) | 117.3 | 0.938 | L 93.9 | 0.494 | 0.648 |
+| **pile windows, after** | — | **133.3** | 0.898 | (un-tinted instead — §724.4) | 0.617 | 0.624 |
+
+A 200-draw sweep of random window offsets put the shipped corner at ~p07 of the offset
+distribution (tinted-L p05 79.4 / p50 102.6 / p95 134.7): the hoard was sampling one of the
+darkest windows the texture owns, 149 times over.
+
+### §724.4 The levers the numbers pick, and the ones they refuse
+
+Two moves, one token, both entirely in the albedo path the numbers indicted:
+
+1. **Scatter the windows** — `PropKit.offsetUVs`, applied by `Props._gild` and
+   `Pickups._treasureGeo`: each item's window translates to its own spot on the tile, the R2
+   low-discrepancy sequence on the item INDEX. Deterministic, and consuming **zero draws from
+   `this.rng`** — an extra roll there would re-scatter every placement built after the pile
+   in both arms, the class of silent whole-level diff a revert token exists to rule out.
+   Translate, never stretch: `pilegold` G2 pins that no pile triangle exceeds 0.25 UV across,
+   so the sampling SCALE — the leaf grain's world frequency — is untouched and §712.3's
+   refused one-tile-per-face regression cannot return through this door. Result: window mean
+   L 104.0 → **133.3**, which IS the tile mean; per-item variety returns (planished rims,
+   dished shade — a hoard, not 149 casts of one dark disc); window AO 0.526 → 0.617.
+2. **Cancel the double tint** — the pile's `COLOR_0` carries the exact per-channel LINEAR
+   inverse of `MATERIALS.gold.color` (`PILE_UNTINT = (1.2392, 2.0612, 18.3553)`), so
+   `color × map × vColor = map`: the hoard wears the texture's own authored gold, once. The
+   inverse is DERIVED from the entry at module load and G1 asserts the identity, so a moved
+   house gold moves the un-tint or goes red (§719's guard-on-both-constants). **Deliberately
+   not clamped at 1, where §719's tint was** — §719's clamp forbids exceeding the asset's own
+   albedo, and this inverse holds the same bound BY CONSTRUCTION: the product is exactly the
+   map, never more. Every other vertex in `props_gold` — the Ra statue, the colossus trims,
+   the sphinx collars, both finials, the hidden coins twin — is filled EXACT white, a
+   multiply by one; G2 asserts every vertex, not a sample.
+
+Levers refused, with the reason each time:
+
+- **A pile-own material entry** ("a flatter/brighter gold variant"): a new bucket is a new
+  merged mesh — **+1 draw** against a budget-delta-0 constraint, on a `props_gold` whose
+  whole design is to be one draw. Refused on arithmetic.
+- **The §712 badge**: CLOSED for the pile by `pickups` C4, §712's own decision — box UVs wrap
+  a face image into garbage — and untouched here.
+- **A lighting lift** (emissive, rim): the limestone control exonerated the vault's light;
+  lifting the light to fix a paint defect would be §442's wrong-subject fix.
+- **§266 is not imported and not touched.** That refusal is about the CHARACTER cel path's
+  metal response; this is a world prop whose material keeps a real specular path
+  (`spec 0.9, gloss 96, metal 0.85` — none of which moves), and what §724 changes is albedo
+  only, the same split §719 drew.
+
+Where it lands, on purpose: the un-tinted scattered albedo (mean L ≈ 133, sat 0.90, hue 47°)
+is still darker than the flat house gold 0xe8b942 (L 186) — `gold_leaf`'s whole §7.3 design
+is *dark ground + hard glint*, and the glint half now exists because the scattered windows
+include planished crests for the `spec 0.9 / gloss 96` response to land on.
+
+### §724.5 The treasures were wearing the badge, and C4 could not see it
+
+§712 wrote *"`_mat` already returns a fresh material per call, so the separation is real
+rather than assumed."* True exactly where it was checked, false exactly where it mattered:
+
+- **In plain Node** — C4's arm — SHADING is unregistered, `_mat` falls back to a fresh
+  `MeshStandardMaterial` per call, and C4 passes. Vacuously: the §418 family, the arm running
+  in the one environment where the sharing mechanism does not exist.
+- **In the browser**, `shading.make` is `toon()`, which CACHES by option key. `_coinMat` took
+  the cached gold and MUTATED it — badge onto `map`, colour to white, detail slots nulled —
+  and the treasure loop's `_mat('gold')`, same opts, same key, received the mutated instance.
+  Measured live at `defcf63` before the fix was written:
+  `scarab{shares:true,map:true,badge:true,color:#ffffff}`, and identically for collar, ingot
+  and eye. Three of the four are VISIBLE in the open world today — the Ingot of Amun sits in
+  the vault three metres from the pile, inside the owner's own "faded" frame — and the Eye
+  joins them the moment the twelve bottles open the vault.
+
+The fix asks the FACTORY for the difference instead of mutating its answer: the badge, the
+white colour and the dropped detail slots ride the option bag (`_mat('gold', extra)` spreads
+it inside the opts), so the factory returns a DIFFERENT cached material and the shared one is
+never written to. Confirmed in the browser at `ad37783`, both frames, both runs:
+`{shares:false, badge:false, color:#e8b942}` on all four. `?pile=faded` does NOT revert this —
+it is a defect fix, not a coloring. `pilegold` G4 re-asks C4's question under a factory that
+caches like the browser's, and its in-arm FAIL input replays the old mutation shape against
+that same factory and asserts the mutation propagates — the proof the arm can still see the
+disease it was built for.
+
+The treasures also share the hoard's coloring (windows via `_treasureGeo`, the same un-tint,
+the same token): the Eye is two `coin()` discs whose windows sat on the same corner patch —
+§724.3's numbers apply to it verbatim, so it "suffers identically" and is fixed identically.
+
+### §724.6 The after, on the same pixels
+
+`tools/pileshot.mjs` again at `ad37783`, same stances, same footprints, every threshold
+quoted (§719.5's sweep discipline — a conclusion that only holds at one threshold is not a
+conclusion):
+
+`close`, pile, before → after:
+
+| T | n px | mean L | mean hue | Δ(G−B) sign | sat |
+|---|---|---|---|---|---|
+| 1 | 36,619 → 38,668 | 33.0 → **54.8** (+21.8) | 326° → 33° | −7.4 → +5.3 | 0.402 → 0.304 |
+| 8 | 28,142 → 33,918 | 34.1 → **57.3** (+23.2) | 336° → **41°** | −5.6 → +7.5 | 0.382 → 0.291 |
+| 16 | 17,261 → 29,880 | 39.0 → **60.0** (+21.0) | 349° → 46° | −3.1 → +9.7 | 0.359 → 0.285 |
+| 32 | 3,472 → 21,007 | 53.7 → **68.9** (+15.2) | 11° → 52° | +4.4 → +15.2 | 0.358 → 0.297 |
+| 64 | **2 → 6,657** | — → 92.1 | — → 63° | — | — → 0.342 |
+
+`interior` (the second sample, §466.5), pile: T=8 **L 30.6 → 45.4**, rgb (41.4, 27.0, 34.9) →
+(51.2, 43.9, 43.5); the T=64 tail 0 → 138 px at rgb (92.5, 88.9, 61.6) — the same warm-olive
+glint family as the Ra statue's own tail (92.4, 88.3, 69.5), which is the point: the hoard now
+reads as THIS game's gold, not as a new, forked gold.
+
+**The metric that survives its own sweep** (§719's registered-bar lesson, applied in choosing
+what to claim): mean L rises at EVERY threshold in BOTH frames (+15.2 to +23.2 on `close`),
+and the mean hue crosses from the violet side of red (326–11°) into the gold band (33–52°) at
+every threshold, landing at 41° on the main population against the house gold's 43°.
+**Saturation FALLS at every threshold (−0.06 to −0.10), and quoting it alone would read as a
+regression — it is not.** The before-saturation was the chroma of the VIOLET wash, saturation
+of the wrong hue; §724 removes that hue entirely, and the after-saturation is gold chroma
+that rises with brightness (0.291 → 0.342 toward the tail). A single unsigned statistic can
+move against a change that is plainly right — §719's C1 (R−B changing sign with population)
+was the same lesson from the other side.
+
+**The unplanned ablation, from the voided first run (§724.9):** its second pass rendered
+scattered windows WITH the double tint still applied — `close` pile T=8 **L 44.8**. So of the
++23.2 total, the window scatter contributes ≈ +10.7 and the un-tint the remaining ≈ +12.5:
+both levers carry real weight, and neither alone reaches the gold band (the ablation's mean
+rgb (54.9, 42.0, 42.9) still holds G ≈ B — warm-neutral, not gold).
+
+**Nothing else moved.** The limestone-control rows are IDENTICAL before → after to the pixel
+(T=16: 1,419 px, L 113.8, rgb (106.3, 116.4, 110.3) in both runs, across two commits and two
+boots), and the Ra statue's uncontaminated rows match to within 3 px counts and 0.3 L (its
+T=64 row is identical: 11 px, L 87.8, same bbox). The low-threshold "ra"/"lime" rows of the
+AFTER run are cross-contaminated by the pile and are not quoted — the tag helper holds one
+population's tag at a time, so during the Ra arm the pile renders un-tinted and enters Ra's
+difference; the mechanism is stated so the numbers in `report.json` cannot be misread.
+
+### §724.7 Budget: zero draws, zero triangles; the cost is programs
+
+`node tools/budgetattrib.mjs` at `8f5f1a8` (before) and `ad37783` (after): **byte-identical**
+(saved streams diffed, not skimmed). Zero `pos:` changes: `git diff 8f5f1a8..ad37783 -- src/`
+contains no `pos:` line among its 251 changed lines. `Engine.stats.drawCalls` was consulted
+nowhere — five distinct frozen plausible values on record (§700.3/§701.11/§705). The mesh
+census is unchanged: same `props_gold`, same 19,863 vertices, same triangles, same hull. The
+ink shell cannot move with the albedo: its material is a `ShaderMaterial` declaring no
+`vertexColors` (`Outline.js:486`) — §719.7's check, re-made here rather than inherited.
+
+The real cost is **programs 103 → 105, +2**, measured with the same tool at both commits
+(`shots/pile724-prog` boots `8f5f1a8` from a worktree through `--tree`): one `USE_COLOR`
+variant compiled twice, beauty pass + normal prepass — §719.7's exact figure for the same
+mechanism, and the treasures' vertex-coloured material lands on the SAME program as the
+hoard's, so it adds none. Both token arms compile the identical 105 — the §719.7 class of cost: load-time compilation, not per-frame
+work. That before-commit boot also reproduced the before frames BYTE-IDENTICALLY and every
+pile sweep row to the digit, from a different serving tree — a third boot agreeing exactly,
+which is what makes the byte-identity claims in §724.8 a property of the pipeline rather than
+a coincidence of one boot.
+
+### §724.8 The token, exercised through the URL
+
+`node tools/pileshot.mjs --query "?pile=faded"` at `ad37783` — the browser, the real query
+string, and the arm identified off the LIVE geometry rather than off a flag (§719.12):
+
+| arm | pile UV span | non-white `COLOR_0` | first pile vertex | vertexColors |
+|---|---|---|---|---|
+| default | 1.268 × 1.251 | 11,072 (= the pile, exactly) | (1.2392, 2.0612, 18.3553) — `PILE_UNTINT` | true |
+| `?pile=faded` | **0.163 × 0.094** — the corner window, verbatim | **0** | (1, 1, 1) | **true** |
+
+The attribute stays BOUND and the material flag stays ON in the reverted arm — the revert is
+a multiply by one (§719.5 measured that identity bit-for-bit for this mechanism), so it can
+never become the black mesh an unbound attribute produces, and the two arms compile the same
+programs. And the frames say it absolutely: the reverted arm's
+`close-base.png` and `interior-base.png` at `ad37783` are **byte-identical** to the before
+captures at `8f5f1a8` — two commits, two boots, `cmp` equal on the PNG bytes and on the
+decompressed pixel stream. Not "within noise": equal. (Which also shows, in passing, that the
+§723 player commits between the two do not reach these frames.) The pile-footprint sweep rows
+agree to every digit as a consequence. Programs: 105 in the reverted arm, 105 in the default —
+the token flips data, never a shader variant.
+
+### §724.9 The frames, and the instrument defect the second run exists because of
+
+Frames (§466.5 — two samples per visual claim; §435.4 — the shipped `setShot` staging):
+
+| frame | commit | file |
+|---|---|---|
+| `interior` canonical, before | `8f5f1a8` | `shots/pile724-before/interior-base.png` |
+| close-up, before | `8f5f1a8` | `shots/pile724-before/close-base.png` |
+| `interior` canonical, after | `ad37783` | `shots/pile724-after/interior-base.png` |
+| close-up, after | `ad37783` | `shots/pile724-after/close-base.png` |
+| close-up, `?pile=faded` | `ad37783` | `shots/pile724-revert/close-base.png` |
+
+The close-up is from a PLAYER-REACHABLE stance, not a crane: eye (0.9, −10.45, −68.2) — a
+standing eye height directly above vault floor the in-page down-ray confirms at **y −12.012
+on `paving:tomb`** — looking at the pile centre (2.9, −11.8, −70.8), 2.3 m of flat vault
+floor from the `interior` shot's own staged player at (1.4, −12, −66). Pre-flighted TWICE, by
+independent instruments: `tools/camdot.mjs` offline (**enclosed 0/26, nearest 1.534 m,
+forward 3.966 m = `props_gold` itself, subject 3.547 m, VERDICT ok**) and re-derived in-page
+every boot (first hits `props_gold@3.966m`, then `paving:tomb@4.068m` — the pile then the
+floor under it; nothing between lens and subject).
+
+**The first after-capture was voided by its own instrument, and the defect was mine.** The
+footprint tag's `tagOff` DELETED `props_gold`'s `COLOR_0` and cleared `vertexColors` — the
+correct restore before §724, when there was nothing to restore, and wrong the moment §724
+shipped a real attribute. The run's own `goldGeo` readback said `hasColor:false` on its
+second pass and its I4 went 3,920 px, which is how it announced itself; every arm after the
+first in that run measured a build with the un-tint stripped. `tagOff` now restores the SAVED
+attribute and flag, and the re-run's I4 is back to 0. Kept rather than hidden, for two
+reasons: it is §719.10's shape (an instrument whose null was only null on the tree it was
+written against), and the voided run's second pass is, by construction, a clean **ablation**
+— scattered windows WITH the double tint still on — quoted as such in §724.6.
+
+**What the frames show, honestly.** At the close-up the change is unmistakable: before, the
+hoard is a scatter of near-black chocolate discs with a faint violet cast and no glints; after,
+it is a spill of varied metal coins — bright faces, dark dished faces, glint pixels — in the
+same warm-olive gold family as the game's other gilding (the Ra statue's own tail hue). At the
+canonical `interior` distance the read is more limited and the owner should see it as such:
+the pile sits partly in the sarcophagus's shade at ~11 m and improves from "coal" to
+"dark treasure with glints" (+48% L, a 138-px tail) rather than to a bright mound — that is
+the vault's real light on a §7.3 dark-ground metal at distance, and if a brighter-still hoard
+is wanted at that range the honest lever is a local light or a placement out of the shade,
+which is a different instruction (§719.8's shape, stated rather than taken on unasked).
+
+### §724.10 The suite — every run quoted (§703.2)
+
+`node --test "tests/"*.test.mjs` from a clean detached worktree at the **pushed** commit
+(`git worktree add --detach /home/user/wt-724 ad37783`, `node_modules` symlinked), the FIFO
+capture lock **held across all three runs** (§703: F3 is contention-driven and holding the
+lock is what the lock is for), cwd checked from INSIDE the spawned command (§694), each
+complete TAP stream written to its own file and `not ok` counted over the FILE, never a
+window (§711.1). `--test-name-pattern` was never used — on `framebudget` it changes
+allocation history and makes F3 fail 100%.
+
+The suite is **1108 tests** now, and the count has an owner for every step: §720 left it at
+1099, §723 added four (two `swingpin`, two `slopefreeze` — the swing lane's), and §724 adds
+five — `pilegold` G1 (the un-tint identity, derived not typed), G2 (windows scattered +
+un-tint on the pile, exact white on every other gold vertex — the whole domain, per vertex),
+G3 (`?pile=faded` in a child process: corner window restored, all-white BOUND attribute,
+vertexColors still on), G4 (badge/treasure separation under a factory that caches like the
+browser's, with the old mutation replayed as the in-arm fail input), G5 (the treasures'
+windows translate without stretching).
+
+| run | commit | result | duration | pwd inside command | cwd at end |
+|---|---|---|---|---|---|
+| 1 | `ad37783` | **1108 / 1108**, 0 fail | 288.3 s | `/home/user/wt-724` | exists |
+| 2 | `ad37783` | **1108 / 1108**, 0 fail | 286.8 s | `/home/user/wt-724` | exists |
+| 3 | `ad37783` | **1108 / 1108**, 0 fail | 289.4 s | `/home/user/wt-724` | exists |
+
+`not ok` counted over the FILE: **0 / 0 / 0**. Neither documented flake fired (`framebudget`
+F3 ~1-in-3, `padrest` R1b ~1-in-5) — three clean runs under the held lock is the condition
+under which F3 is expected not to fire, not evidence it is gone.
+
+A fourth run, at the commit that carries this section body, is recorded in the commit after
+it — the §712/§713/§719 precedent: a suite table committed at one sha and quoted at another
+is a claim about a tree nobody ran.
+
+### §724.11 Bounds — what this section does not do
+
+- **Zero `pos:` changes.** No placement, collider, route or reachability moves; `cluevault`
+  R1–R3/V1–V12 and the R-family are untouched and green in every run above.
+- **The pickup coins are settled (§712) and stay settled**: the badge, the 0.24 m size, the
+  `COIN_BADGE_PALETTE` HUD coupling — untouched. The decorative twin gains only an all-white
+  bound `COLOR_0` so the shared material's declaration cannot strike it black on the
+  fallback path.
+- **`MATERIALS.gold` keeps its colour, spec, gloss, metal and rough.** The entry gains
+  `vertexColors` only; every non-pile vertex multiplies by exact white. The blast radius of
+  the shared-entry edit is therefore: the pile tinted, everything else `× 1` — asserted per
+  vertex by G2, and visible in §724.6's Ra/lime rows moving only within cross-arm noise.
+- **`src/player/*` untouched** — the swing/slope lane owns it; nothing here reads or writes
+  it. §266 untouched, §716/§717 untouched.
+- **§364.3** — nothing under the reference repo's excluded directories is read, referenced
+  or named by this section, its tools or its tests.
+- **No baked asset regenerates** — the texture catalogue, `CoinBadge.js`, `staging/` and
+  `public/assets/*` are byte-identical, so §666's `prodboot` gate does not arm; stated
+  rather than skipped silently.
+- **Not done, deliberately:** no attempt to make the pile match the FLAT house gold's L 186 —
+  a textured metal at uniform L 186 would be §7.3's "plastic gold" failure; the target was
+  the texture's own value structure, delivered once, in windows that include its bright half.
+
