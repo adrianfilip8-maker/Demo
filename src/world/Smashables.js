@@ -2,6 +2,12 @@ import * as THREE from 'three';
 import { rng, WORLD_SEED } from '../core/Rand.js';
 import { canopicJar, basket, chunk, place, mergeAll } from './PropKit.js';
 import { COIN_VALUE } from './Pickups.js';
+/* §727: the colours below now READ Props.MATERIALS instead of restating its hexes, so the
+ * mirror this file promises ("so this does not become a fourth clay") is structural — when
+ * §727 dropped the wood double tint, a crate restating 0x6b4a2c would have kept the old
+ * grade and stood beside the un-tinted scaffold as exactly the divergence the mirror exists
+ * to prevent. Pickups already imports from Props (same direction), so this cannot cycle. */
+import { MATERIALS as PROP_MATERIALS } from './Props.js';
 
 /**
  * Smashables — things you break, and the publisher `propSmashed` never had.
@@ -277,9 +283,9 @@ export class Smashables {
    */
   _mat(kind) {
     const spec = {
-      jar:    { name: 'smash:clay',   color: 0xd4c19a, rough: 0.62, tex: 'limestone_polished' },
-      basket: { name: 'smash:wicker', color: 0xa8875c, rough: 0.95, tex: 'rope' },
-      crate:  { name: 'smash:wood',   color: 0x6b4a2c, rough: 0.90, tex: 'wood_old' },
+      jar:    { name: 'smash:clay',   color: PROP_MATERIALS.lime.color, rough: 0.62, tex: 'limestone_polished' },
+      basket: { name: 'smash:wicker', color: PROP_MATERIALS.rope.color, rough: 0.95, tex: 'rope' },
+      crate:  { name: 'smash:wood',   color: PROP_MATERIALS.wood.color, rough: 0.90, tex: 'wood_old' },
     }[kind];
     const tex = this.engine.get?.('textures')?.get?.(spec.tex) || null;
     const opts = {

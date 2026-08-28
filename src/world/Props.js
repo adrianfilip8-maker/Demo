@@ -44,8 +44,56 @@ export const PILE_FADED = (() => {
   return String(raw).trim().toLowerCase() === 'faded';
 })();
 
-/* Material keys the builders tag their geometry with, mapped to how each should shade. */
-const MATERIALS = {
+/**
+ * §727 revert token: `?props=tinted` (or `globalThis.__PROPS_AB = 'tinted'` from a test)
+ * restores the shipped double grade on the three entries §727 un-tinted — `wood`, `lapis`
+ * and `carnelian` wearing `color × map` again. Same seam as `?pile=` above, read at module
+ * load, independent of every other lane's token. The revert is a data flip on a material
+ * uniform: same programs, no vertex attribute, and the reverted frames are byte-identical
+ * to the pre-§727 build (measured, §727.5).
+ */
+export const PROPS_TINTED = (() => {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('props') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__PROPS_AB != null) raw = String(globalThis.__PROPS_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  return String(raw).trim().toLowerCase() === 'tinted';
+})();
+
+/**
+ * §727: three entries drop the residual double tint §724.1 named — a `color ×` multiply
+ * over a texture that is already final art (every tint in this table is a verbatim PAL
+ * stop; these three multiply the very hex their texture is BUILT from, §712.2's
+ * gold-times-gold shape). White through `diffuseColor = color × map` is a multiply by one:
+ * the prop wears the texture the recipe authored, once.
+ *
+ *   wood       `wood_old` × 0x6b4a2c drove the whole tile to luma 0.103 — HALF the
+ *              `rampFloor(TIMBER_CREV, lift 0.24)` hard minimum (0.2096) the recipe carries
+ *              because "below the line it stops rendering as dark wood and starts rendering
+ *              as the shader's flat violet". Measured in-frame (§727.4): the scaffold at
+ *              6 m read hue 206 BLUE in courtyard daylight, the sunlit mast salmon — the
+ *              timber's own colour never reached the screen at either grade.
+ *   lapis      `lapis_inlay` × PAL.lapis: the gold cloisonné wire (58% of texels, authored
+ *              L 157 hue 42°) went hue 163° teal-green, the stone cells to L 19 — under the
+ *              inlay's own rampFloor invariant. In-frame: flat navy, §724.2's no-bright-tail
+ *              signature, three framings, both grades.
+ *   carnelian  `carnelian_inlay` × PAL.carnelian: wire erased to dark red, cells L 30. In-
+ *              frame the sun disc's inner face — "the brightest single shape in the tomb" —
+ *              read VIOLET (hue 284–300°) at day and night, §724's exact conviction shape.
+ *
+ * The OTHER textured entries keep their tints, deliberately (§727.2): stone/lime read
+ * within a few L of the arch walls wearing the same textures through the same mechanism
+ * (owner-passed), gold is §724's settled split, bronze is the same dark-ground-metal policy
+ * as gold, rope/cloth measured in-family at both grades. Changing any of them needs its own
+ * section, not a drive-by here — `tests/proptint.test.mjs` T1 pins the whole decision.
+ */
+const TINT727 = (shippedHex) => (PROPS_TINTED ? shippedHex : 0xffffff);
+
+/* Material keys the builders tag their geometry with, mapped to how each should shade.
+ * Exported since §727 so the tint decisions are pinned by value (tests/proptint.test.mjs);
+ * read-only by convention — nothing outside this file may write to it. */
+export const MATERIALS = {
   stone:     { tex: 'granite_pink',       color: 0x9c8278, rough: 0.88, outline: 1.0 },
   lime:      { tex: 'limestone_polished', color: 0xd4c19a, rough: 0.62, outline: 1.0 },
   /* `vertexColors` (§724): the ONLY consumer of a non-white `COLOR_0` in this bucket is the
@@ -58,7 +106,7 @@ const MATERIALS = {
      that identity for the same mechanism). Cost: a `USE_COLOR` program variant, zero draws. */
   gold:      { tex: 'gold_leaf',          color: 0xe8b942, rough: 0.28, metal: true, outline: 1.0, spec: 0.9, gloss: 96, vertexColors: true },
   bronze:    { tex: 'bronze_aged',        color: 0x8a6a3a, rough: 0.52, metal: true, outline: 1.0, spec: 0.6, gloss: 48 },
-  wood:      { tex: 'wood_old',           color: 0x6b4a2c, rough: 0.9,  outline: 0.85 },
+  wood:      { tex: 'wood_old',           color: TINT727(0x6b4a2c), rough: 0.9,  outline: 0.85 },
   rope:      { tex: 'rope',               color: 0xa8875c, rough: 0.95, outline: 0.6, noShadow: true },
   /* `outline: 0` is a TOPOLOGY refusal, not a taste one, and it is the same class as the
      emissive refusals below rather than a thinner line. An inverted hull needs a closed
@@ -74,8 +122,8 @@ const MATERIALS = {
      cannot surface the defect. */
   cloth:     { tex: 'linen_cloth',        color: 0xe8ddc4, rough: 0.85, outline: 0, side: THREE.DoubleSide },
   dark:      { tex: null,                 color: 0x241a16, rough: 0.9,  outline: 0.9 },
-  lapis:     { tex: 'lapis_inlay',        color: 0x1f4f96, rough: 0.35, outline: 0.9, noShadow: true },
-  carnelian: { tex: 'carnelian_inlay',    color: 0xb8452c, rough: 0.4,  outline: 0.9, noShadow: true },
+  lapis:     { tex: 'lapis_inlay',        color: TINT727(0x1f4f96), rough: 0.35, outline: 0.9, noShadow: true },
+  carnelian: { tex: 'carnelian_inlay',    color: TINT727(0xb8452c), rough: 0.4,  outline: 0.9, noShadow: true },
   /* The clue bottle, and the ONLY key it draws in. `PropKit.clueBottle()` folds the imported
      mesh's three source materials into one geometry with a vertex-colour stream, so this recipe
      is white-with-`vertexColors` rather than a colour: `color` multiplies the attribute, and any

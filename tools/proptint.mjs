@@ -53,11 +53,14 @@ const ENTRIES = [
   { key: 'cork',      tex: 'wood_old',           tint: 0x8a6a42, note: 'DEAD entry — clueBottle folds all parts into glass; zero users' },
 ];
 
-/* Drift guard: every (tex, tint) pair above must appear verbatim in Props.js. */
+/* Drift guard: every (tex, tint) pair above must appear verbatim in Props.js. Since §727 a
+ * convicted entry's hex survives wrapped as `TINT727(0x…)` — the shipped grade the token
+ * restores — so the guard accepts the wrapped form; either way this table describes the
+ * SHIPPED double grade (the `?props=tinted` arm), which is what the damage rows measure. */
 const propsSrc = fs.readFileSync(path.join(ROOT, 'src/world/Props.js'), 'utf8');
 for (const e of ENTRIES) {
   const hex = e.tint.toString(16);
-  const re = new RegExp(`${e.key}:\\s*\\{[^}]*tex:\\s*'${e.tex}'[^}]*color:\\s*0x${hex}`);
+  const re = new RegExp(`${e.key}:\\s*\\{[^}]*tex:\\s*'${e.tex}'[^}]*color:\\s*(?:TINT727\\()?0x${hex}`);
   if (!re.test(propsSrc)) {
     process.stderr.write(`proptint: DRIFT — Props.MATERIALS.${e.key} no longer reads tex '${e.tex}' × 0x${hex}. Re-transcribe before trusting this table.\n`);
     process.exit(2);
