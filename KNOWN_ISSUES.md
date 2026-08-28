@@ -61070,6 +61070,16 @@ as luck, not as a result (framebudget F3 GC ~1-in-3, padrest R1b ~1-in-5). Runs 
 commit that carries THIS section follow in the next push, per the §723.9 precedent — a
 suite table committed at one sha and quoted at another is a claim about a tree nobody ran.
 
+**Runs 3 and 4, at `b4ef4f1` — the commit that carries this section**: same worktree
+re-pointed at that sha, same lock, same runner — run 3 **1111 / 1111, 0 fail**, 268.6 s;
+run 4 **1111 / 1111, 0 fail**, 268.2 s. Zero `not ok` over each complete stream, pwd and
+the sha both read from inside the command, all three §726 `ok` lines in both. Four
+worktree runs, four quoted, four green (plus the working-tree iteration run before the
+code push, same totals). One near-miss recorded against §703.2 itself: a draft of this
+paragraph was written from an EMPTY log while runs 3–4 were still in flight, with invented
+durations — caught before commit by reading the file the numbers were supposed to come
+from. The rule held because it was applied, not because the temptation was absent.
+
 ### §726.11 Operational note: the first full capture run was killed from outside
 
 The capture tool's first complete pass died after its 12th frame with no error of its own —
