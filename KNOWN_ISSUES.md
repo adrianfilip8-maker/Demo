@@ -60037,3 +60037,15 @@ character pivots about the cane's hookPoint on the ring during `hookSwing` — a
 composition change; the capsule, the pendulum physics, §605's rings and the `CaneSwing` clip do
 not move. Arm B: diagnosis first of the pose freeze when walking up a steep slope — §515's
 stutter fix is settled and its slope constants are not retuned here.)*
+
+---
+
+## §724 — "For the gold pile asset, apply a gold coloring to it. It looks faded right now": what "faded" measures as on the pile's own pixels, and the lever the numbers pick
+
+*(Section claimed at this heading before its content was written — §700.9. Claim marker:
+treasure-pile lane, vault hoard albedo, gold-coloring-vs-faded. Body follows in later commits.
+Scope: how the 140-coin/9-ingot `_treasurePile` at the vault reads — measurement first (§719's
+order: mean L, saturation, hue against the house gold `0xe8b942`, in the vault's own light),
+then whichever of texture-scale / lighting / both the numbers indict. The pickup coins and
+their §712 badge are settled and untouched; `pickups` C4's "badge never reaches the treasure"
+stays pinned; zero `pos:` changes; budget delta 0 against `tools/budgetattrib.mjs`.)*
