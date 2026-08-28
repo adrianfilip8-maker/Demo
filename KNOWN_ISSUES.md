@@ -60356,9 +60356,14 @@ is an ordinary outcome and says nothing about either. 1099 -> **1103** is §723'
 (`slopefreeze` 2, `swingpin` 2); every §723 console line (`[§723A] ...`, `[§723A token] ...`,
 `[§723B] ...`, `[§723B token] ...`) is in all three TAP files rather than only in this section.
 
-**Runs 4 and 5, at the commit that carries this section**, are recorded in the commit after it
-(the §712/§713/§720 precedent — a suite table committed at one sha and quoted at another is a
-claim about a tree nobody ran).
+**Runs 4 and 5, at `a4fb010` — the commit that carries this section** (the §712/§713/§720
+precedent: a suite table committed at one sha and quoted at another is a claim about a tree
+nobody ran), same worktree re-pointed at that sha, same lock, same runner: run 4 **1108 / 1108,
+0 fail**, 284.1 s; run 5 **1108 / 1108, 0 fail**, 282.7 s — zero `not ok` over each complete
+stream, pwd `/home/user/wt-723` and the sha both read from inside the command, cwd present, all
+four §723 console lines in both streams. 1103 -> 1108 is §724's five arms landing between runs
+3 and 4 (`pilegold`), co-resident and orthogonal — their §724.10 quotes the same total. **Five
+runs, five quoted, five green.**
 
 
 ---
