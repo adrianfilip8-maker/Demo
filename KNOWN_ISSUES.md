@@ -60775,3 +60775,308 @@ intact as in all ten prior instances, and recovery was the standard reset.
 
 *(Heading committed ahead of its body to hold the number — §700.9's rule, claimed by the
 day-night lane against tip `51e5278`; the content lands in this lane's next push.)*
+
+**The owner's request, verbatim: "How do I switch between the day and night setting? IF there
+is not currently a way to switch, switch out whatever is currently mapped to L1 to switch
+between the day and night".**
+
+Shipped at `b654d38`: **L1 on the pad, N on the keyboard, toggles the world between golden
+hour and the catalogue's own night grade**, easing 1.2 s through a measured transition, with
+a revert token and the input-suite pins moved to the new truth. This section is the record.
+
+### §726.1 The existence answer, then the switch
+
+There IS a time-of-day system and there was NO player-facing way to reach it. The scalar is
+`engine.debug.timeOfDay` (`Engine.js:184`, boot value 0.78 = golden hour); every consumer
+either polls it per frame (`Sky.update`, `Lighting.update`, `ToonMaterial.update`, the
+guards' eased `_light` at `Guard.js:2408`) or listens for the `timeOfDay` emit (the
+dust-mote rebuild in `Particles`, the guards' discontinuity snap at `Guard.js:2290`); and
+the only writers were `Debug.setTimeOfDay` — a `window.__GAME` console facility — and
+`Shots.js` staging `shot.tod` per canonical frame offline. No binding, no key, no button
+reached any of it. The owner's conditional therefore fires, and the direct answer to "how do
+I switch" is: **press L1 (pad) or N (keyboard)**.
+
+- `Input.js`: `daynight` rides pad button 4 (L1) and `KeyN`. N was verified unclaimed — by
+  every binding table, by `HUD.js`'s raw listener (Escape only), and by `main.js`'s
+  begin-on-any-key veil (any bound key already double-acts through that veil: Space buffers
+  a jump, P freezes the sim; N joining the class is noted, not new).
+- `Debug.js` consumes the press beside `pause`/`quality`/`colliders` — the file that already
+  owns every action that flips a field of `engine.debug` — and routes the change through the
+  SAME mechanism `setTimeOfDay` uses: write `engine.debug.timeOfDay`, emit `timeOfDay`. No
+  consumer needed touching, and `main.js` pumps `debug.update` outside the dt-zero gate, so
+  the toggle (and its fade, on the real clock) works while the sim is paused.
+- **Session-only, deliberately**: nothing is persisted — no localStorage, no URL state. A
+  reload boots at day. Stated because the alternative would be a silent storage write.
+
+### §726.2 The night value: 0.02, read from the catalogue, not restated
+
+`Debug` takes its night endpoint from **`SHOTS.night.tod` = 0.02** at construction — the
+`night` entry is the build's proven night grade: one of the ten environment shots the
+standing critic baseline is scored over ("Palette flip. Moonlit stealth: cool key, warm
+brazier accents, blue sparkles"), graded through every critic round since §214. Midnight 0.0
+is NOT used: the guard-sheet entry's own history measured empty ground at midnight at ~85%
+black and lifted off full dark to keep a readable frame. The day endpoint reads the engine's
+boot value (0.78) rather than restating it. Both were read back in-page at capture time:
+`day 0.78 · night 0.02 (SHOTS.night.tod) · span 0.24`.
+
+The catalogue also carries tod 0.10 (`guard`, `alert`) — a SUBJECT-readability lift for
+those two staged sheets, not the environment night grade. The toggle uses the `night`
+entry's value, and §726.5's frames measure it readable in free play: the two environment
+night frames land at mean L 47.5 / 31.3 with 36.2% / 65.4% of pixels under L 24 — moonlit
+scenes that are dark where they should be, nowhere near the ~85%-black midnight failure, and
+legible to the eye (silhouettes, sky, sparkles, ink lines all read; the PNGs are in
+`shots/daynight726/`).
+
+### §726.3 What sneak's loss actually costs — measured, then reported, not absorbed
+
+L1 carried `sneak`. "Switch out whatever is currently mapped to L1" takes that button, so
+sneak's pad route is GONE, and the cost is quantified rather than hidden or quietly
+compensated:
+
+- **Keyboard sneak stays**: `Shift` (both sides), asserted by the §726 input arm.
+- **What a pad player keeps**: `crouch` (L2) is also a DETECT stealth modifier — the WEAKER
+  one. `Patrol.js`'s own measured table: sneaking buys **2.6×** detection time, crouching
+  **1.8×**. `Moveset.js:1817`'s "stealth modifiers win the button" accepts crouch, and
+  narrow-ledge tiptoe is untouched entirely — `Tiptoe.canEnter` is `narrowGround()`, no
+  button.
+- **What they lose**: the sneak GAIT itself (`Moveset.Sneak` gates on `down('sneak')`,
+  1.4 m/s) and its 2.6× multiplier.
+- **R2 is currently unbound** — §682 emptied it on purpose. It is the obvious candidate if
+  the owner wants sneak back on the pad. **Not bound here**: the instruction moved one
+  button, so exactly one button moved. This line is the report, not a change.
+
+The §540 parity census comment in `Input.js` and `padparity`'s `KEYBOARD_ONLY` table both
+now carry sneak with the ruling named, so the asymmetry is a documented decision rather than
+a silent regression. (While editing that block, one adjacent falsehood was corrected:
+`report()`'s docblock still said `focus` is "L3 on a pad" — stale since §682 put focus on
+R3/11 — and it is now history-marked rather than wrong.)
+
+### §726.4 Snap or ease — both driven through the shipped pipeline, then the pick
+
+A LIVE toggle is a different animal from `Shots.js`'s offline per-shot snap: the whole delta
+— sky dome, sun→moon key switch, shadow direction (azimuth 186°→293°), fog, the §3 shadow
+wash, the guard-cone grade — lands at once. Both candidates were driven through the shipped
+pipeline on `courtyard` with the world clock frozen (`renderFrame(0)`, §251's rule, so the
+deltas are the transition's alone), the toggle by real synthetic-pad presses and the snap by
+the `setTimeOfDay` facility it replaces:
+
+| arm | worst single presented frame | over |
+|---|---|---|
+| SNAP `setTimeOfDay(0.02)` | **93.5% of pixels change, mean |ΔL| 50.7** | 1 frame |
+| EASE (shipped, 1.2 s) | **41.4% of pixels, mean |ΔL| 16.95** (at u 0.587, the twilight key-switch region) | 11 pumped frames |
+
+**The ease ships.** Its worst instant moves a third of the snap's per-frame energy — and
+that number is an UPPER bound: the capture pumps at the input clock's 1/20 s clamp (u steps
+of ~0.083 per presented frame with the measuring grab interleaved), while a 60 fps player
+gets steps 6× finer, so the real per-frame delta is single-digit ΔL. The 1.2 s ease runs the
+tod scalar along the corridor that goes FORWARD through midnight — 0.78 → 1.02 ≡ 0.02
+(sunset → twilight → deep night) and back the same corridor — because the day-side path
+(0.78 → 0.5 → 0.02) would brighten to full noon mid-fade. `evalAtmosphere` wraps tod
+(`((tod%1)+1)%1`) and its deep-night anchor covers the whole sub-horizon span, so every
+intermediate frame is a grade the atmosphere model was built for; the hard sun→moon key
+switch sits where the model's own comment places it — "where both keys are dim" (twilight) —
+and the ease crosses it over several frames instead of one.
+
+Mechanics, and the contract they honour:
+
+- **Per-frame writes, ONE emit.** `Guard.js:2284` documents the `timeOfDay` event as firing
+  "only on discontinuous sets, never per-frame" — its handler snaps the guards' `_light`
+  while their per-frame path eases it. So the fade writes `engine.debug.timeOfDay` each
+  frame (every consumer already polls it) and emits exactly once, on landing. The dust-mote
+  rebuild (event-only) runs once per completed toggle; during the fade the motes follow the
+  shaft signature as they already do.
+- **Real clock.** The fade advances on `input.dtReal`, not the scaled game clock — a
+  presentation transition, so Thief-o-Vision's 0.35× and the debug pause neither slow nor
+  freeze it (the same reasoning `_padLook` records for camera input).
+- **Interruptible.** L1 mid-fade flips the target and the scalar turns around from where it
+  is; nothing queues. Driven in `tests/input.test.mjs` and in-page: a reversal from u 0.43
+  lands back on 0.78 exactly, one emit.
+- **Any other writer wins.** Shot staging or `setTimeOfDay` writing tod mid-fade cancels the
+  fade immediately (the tick compares the live value against the last value the fade itself
+  wrote). Off the 0.78↔0.02 corridor entirely (a staged 0.72/0.76/0.5/0.10, a console-set
+  noon), a press falls back to the discontinuous set the debug facility already performs,
+  classified by wrapped distance — verified in-page four times (0.76 and 0.72 → night in one
+  frame; 0.10 → day in one frame, twice).
+- Endpoints land EXACTLY (the corridor write is quantised to 4 decimals, so the last write
+  is 0.02 or 0.78, not a float neighbour) — consumers comparing `!==` never flap.
+
+### §726.5 The frames — camDot first, two samples per claim
+
+`tools/daynightshot.mjs`, at the pushed `b654d38` under the capture lock, PNGs in
+`shots/daynight726/`. Pre-flight in Node BEFORE the browser (§604), all 8 cameras:
+
+```
+  temple       enclosed 0/26  nearest 1.542 m  forward 31.953 m (arch:pylon:hieroglyph_wall)  subject at 22.379 m  ok
+  courtyard    enclosed 0/26  nearest 6.226 m  forward 33.809 m (arch:court:limestone_polished)  subject at 25.923 m  ok
+  guard        enclosed 0/26  nearest 1.128 m  forward 9.800 m (arch:court:sandstone_worn)  subject at 6.225 m  ok
+  alert        enclosed 0/26  nearest 1.000 m  forward 18.350 m (props_bronze)  subject at 15.783 m  ok
+  sly-closeup  enclosed 0/26  nearest 1.449 m  forward 9.054 m (props_rope)  subject at 3.612 m  ok
+  sly-key      enclosed 0/26  nearest 1.475 m  forward 7.181 m (arch:court:sandstone_block)  subject at 3.612 m  ok
+  pileclose    enclosed 0/26  nearest 1.534 m  forward 3.966 m (props_gold)  subject at 3.547 m  ok
+  pile2        enclosed 0/26  nearest 1.295 m  forward 4.382 m (props_gold)  subject at 4.148 m  ok
+```
+
+`hero` and `interior` are NOT in that list, and the reason is recorded because the next
+capture lane will hit it: both canonical cameras fail camDot's SUBJECT leg — their look
+targets are aim points 8.0 m and 11.7 m BEHIND the walls that fill their frames. Fine for
+what those shots are (environment framings whose subject IS the architecture), but this tool
+committed to the four-leg instrument, so it photographs `temple`/`courtyard` instead of
+weakening the bar to admit them (§435.4). `interior` is still STAGED for its vault light;
+its pile is photographed through `pileclose`/`pile2`, which pass all four legs.
+
+The toggle was driven through the REAL input path — a synthetic `navigator.getGamepads` pad
+installed before boot, button 4 pressed by mutating its state, frames pumped through the
+wrapped `engine.renderFrame`, so the press travels poll → `_padButtons` →
+`_press('daynight','pad')` → `Debug.update` (§723.8's seam rule; `input.enabled true` and
+`held ["daynight"]` read back at the press). Every frame's tod/u and stats, from the run's
+own log:
+
+```
+  courtyard-night            tod 0.02   u 1      meanL 47.5  black<24 36.2%
+  courtyard-day              tod 0.78   u 0      meanL 94.2  black<24 1.9%
+  courtyard-mid-ease         tod 0.9027 u 0.511  meanL 51.9  black<24 41.7%
+  courtyard-night2           tod 0.02   u 1      meanL 47.5  black<24 36.2%   <- the measured ease's landing
+  temple-night               tod 0.02   u 1      meanL 31.3  black<24 65.4%
+  temple-mid-ease            tod 0.8873 u 0.447  meanL 43.3  black<24 23.7%   <- the RETURN direction's midpoint
+  temple-day                 tod 0.78   u 0      meanL 89.7  black<24 0.6%
+  guard-staged 0.10 50.0/31.9% -> guard-livenight 0.02 35.1/57.1% · alert-staged 0.10 61.1/22.4% -> alert-livenight 0.02 48.8/35.0%
+  pileclose-staged 0.5 79.7/0.6% -> livenight 0.02 40.8/31.1% · pile2-staged 0.5 79.5/0.8% -> livenight 0.02 43.7/20.9%
+  sly-closeup-staged 0.80 77.0/1.9% -> livenight 0.02 21.1/79.2% · sly-key-staged 0.80 91.5/1.5% -> livenight 0.02 36.4/46.2%
+```
+
+Six representative frames are committed flat as `shots/daynight726-*.png` (the swing723
+precedent); the full set plus `report.json` is in the uncommitted `shots/daynight726/`.
+
+Read, not just measured: `courtyard-night` is the proven palette flip — cool blue masonry,
+moonlit cloud bands, star sparkles, warm brazier pools, string lights, readable floor;
+`temple-night` is the moonlit hypostyle — columns rim-lit in the cool key, stars through the
+roof gap, the bright doorway anchoring the axis, props still ink-outlined. Both midpoints
+are coherent DUSK — twilight sky with lit clouds over foreground fallen to silhouette
+(courtyard), warm last-light shafts raking a cool hall (temple) — an authored-looking grade,
+no noon flash, no double-key artefact. `courtyard-night2`, the measured ease's landing, is
+**byte-identical** (`cmp`) to `courtyard-night`, the off-corridor snap's landing — two
+different routes into the same endpoint produce the same PNG, which is the endpoint
+exactness claim of §726.4 measured rather than asserted.
+
+### §726.6 The cone, the pile and the hook at night — looked at once, changed nowhere
+
+A live toggle makes night REACHABLE in normal play for the first time — every night surface
+was previously shot-only. Task #14's staging re-seal still owns the guard-cone night-grade
+decision, so this section reports and touches nothing in `src/ai/*`:
+
+- **The patrol cone** (`guard-staged` 0.10 vs `guard-livenight` 0.02; arithmetic:
+  `_lightTarget(0.02)` = 0.100 < `nightLo` 0.14 → fully night-graded, vs 0.263 → 13.7% at
+  the staged sheet): at live night the beam pool goes pale-cool and dims to `beamNight`
+  0.55, reading as a deliberate stealth telegraph; the staged sheet's warmer 14%-cool beam
+  and rustier masonry sit beside it for comparison. The old "cream wedge of daylight"
+  defect does NOT recur.
+- **Alert-state beams** (`alert-livenight`): patrol pools grade cool, but alert beams keep
+  full hue and brightness at any hour — `Guard.js` TUNE's own documented rule ("a telegraph
+  that dims exactly when it matters is not a telegraph") — and the shot's two OVERLAPPED
+  alert beams at 0.02 wash the courtyard floor toward paper-white. Not a defect by the
+  shipped rule, but it is the first time that rule is visible in free play, and it is
+  exactly the cone-vs-night surface the Task #14 re-seal should weigh. Reported; nothing
+  changed.
+- **The §724 hoard** (`pileclose-*`, `pile2-*`, two camDot-passed stances): the vault drops
+  from meanL ~79.6 to ~42 at live night; the coins read as dark burnished gold with
+  specular glints under the vault's own torch warmth — legible, moodier, and with NO violet
+  regression. The §724 texture's bright half sits below the night exposure; if the owner
+  ever wants the hoard to sparkle at night, that is a lighting-fill question, not an albedo
+  one.
+- **The §719 crook** (`sly-closeup-staged/-livenight`, `sly-key-staged/-livenight` — two
+  framings, both directions of the claim): Sly himself stays fully legible at 0.02 in both
+  (cap, mask, shirt, tail, boots — the §7.3 silhouette features), but the crook's §719 gild
+  goes QUIET: under the pure moon key it reads as a pale near-neutral hook — shape and
+  silhouette intact, warm hue almost gone — while warm-lit props in the same frames (the
+  coil's rim glints) keep their orange. Expected physics of a warm tint under a cool key,
+  reported because §719 was tuned and argued entirely at the day grade. The frame means are
+  the cost of a character sheet framed for daylight: `sly-closeup` 77.0→21.1 L (79.2% under
+  L 24 at night — the darkest frame in the set, most of it floor), `sly-key` 91.5→36.4 L.
+  Nothing changed; if night play ever needs the crook to read gold, that is a rim/fill
+  question for the lighting lane, not an albedo one.
+
+### §726.7 The revert token — `?l1=sneak`, exercised through the URL
+
+`?l1=sneak` (or `globalThis.__L1_AB = 'sneak'` before import) restores the pre-§726 row:
+sneak back on L1, `daynight` keyboard-only — N keeps the toggle reachable, so the revert
+moves exactly the one thing §726 moved. Resolved at module scope for `main.js`'s `?char=`
+reason: the tables are exported constants, so the URL is the only seam reliably set before
+they build. Exercised BOTH ways:
+
+- **URL leg, real page boot** (`?l1=sneak&shot=1`, quoted from the run):
+  `pad.sneak [4] · pad.daynight null · key.daynight ["KeyN"] · button-4 held ["sneak"] ·
+  fade started false` — the button driven through the live poll HOLDS sneak and starts no
+  fade.
+- **Global leg, child process** (`tests/input.test.mjs`, the swingpin child pattern): the
+  child reads back sneak `[4]`, daynight pad `null`, keyboard `['KeyN']`; the parent
+  process re-asserts the shipped default in the same test.
+
+The seven standing tokens (`?swing=loose`, `?surf=apex`, `?pile=faded`, `?mag=wide`,
+`?pole=climb`, `?combo=mono`, `?idle=pose`, `?hook=cream`) are untouched — none of their
+code is in this diff, and the full suite exercises their arms green in §726.10's runs.
+
+### §726.8 The input-test pins, moved to the new truth
+
+- `tests/input.test.mjs` — three new arms, each with its §418.3 DOMAIN block:
+  **binding** (button 4 presses `daynight` once on its polled frame; 30 held polls never
+  re-edge; release + second press re-edges; KeyN presses on the frame after dispatch, §468;
+  fail inputs RUN in-arm: button 4 must NOT press `sneak`, ShiftLeft must NOT press
+  `daynight`); **toggle** (the real `Debug.update` off the real poll path — the fade lands
+  exactly on `SHOTS.night.tod` and emits once, a held button never repeat-toggles, the
+  second press returns to 0.78 with exactly one more emit, and ShiftLeft, run in-arm, moves
+  nothing); **token** (above).
+- `tests/padparity.test.mjs` — the sneak row's pad routes are `[]` and its counterexample
+  is **P(4), the old binding itself** (the exact regression a re-merge would make, run
+  in-arm); `KEYBOARD_ONLY` gains `sneak` with the ruling and consumer named, so P3's census
+  pins the asymmetry as a decision.
+- `tests/hudtruth.test.mjs` / `tests/hud.test.mjs` — unchanged and green: the pause cel
+  keeps its 11 glyphs (the Sneak row drops its pad column to the keycap fallback —
+  Binocucom's documented gap — and a new Day/Night row carries N + L1), `PAD_KEY` swaps
+  `Shift:'L1'` for `N:'L1'` so the L1 glyph stays truthful, and U4's card-vs-bindings check
+  passes because button 4 is still bound — to the verb the card now names.
+
+### §726.9 Music, budget, boot hint — checked, unchanged
+
+- **Music**: `Audio.js` has NO `timeOfDay` listener (grepped, not assumed) — the score keys
+  off the guard-alert ladder and `playerState`. The owner's standing ruling on the three
+  bc-* cues stands untouched; the only path from this toggle to the score is the real one
+  (night lowers the guards' `_light`, DETECT fills slower, the alert rungs arrive later).
+- **Budget**: delta 0. The diff touches `src/core`, `src/ui`, `tests`, `tools` only — no
+  `public/`, no baked asset, no texture, zero `pos:` lines — so §666's `prodboot` gate does
+  not arm and `tools/budgetattrib.mjs` had nothing to regenerate against; stated rather
+  than skipped silently. No material or shader changed, so no §719.7-class program delta.
+  `Engine.stats.drawCalls` was consulted nowhere (five frozen plausible values on record).
+- **Boot hint**: `index.html`'s `#bootClick` enumerates locomotion only ("WASD / stick move
+  · Mouse / right stick look · Space / Cross jump"). A world-state toggle is not of that
+  kind, so the hint is NOT grown; the pause cel — the game's actual controls tutorial —
+  carries the new row.
+- `AGENTS.md §6.1` is not appended: that keyboard list already lags the code by precedent
+  (F attack, P pause, F2/F3 are absent too), and its `Shift (hold) sneak` row remains true.
+
+### §726.10 The suite — every run quoted (§703.2)
+
+| run | commit | result | duration | pwd inside the command | notes |
+|---|---|---|---|---|---|
+| 1 | `b654d38` | **1111 / 1111, 0 fail** | 259.7 s | the detached worktree | all three §726 arms green in the stream |
+| 2 | `b654d38` | **1111 / 1111, 0 fail** | 262.8 s | the detached worktree | ditto |
+
+`node --test "tests/*.test.mjs"` from a clean detached worktree at the pushed commit
+(`git worktree add --detach`, `node_modules` symlinked), the FIFO capture lock held across
+the runs, pwd and sha read from INSIDE the spawned command (§694), each complete TAP stream
+to a file with `not ok` counted over the FILE — zero in both. `--test-name-pattern` never
+used (framebudget F3). 1108 → **1111** is §726's three arms, and all three `ok - §726 …`
+lines are present in both streams. Neither documented flake fired in either run — reported
+as luck, not as a result (framebudget F3 GC ~1-in-3, padrest R1b ~1-in-5). Runs at the
+commit that carries THIS section follow in the next push, per the §723.9 precedent — a
+suite table committed at one sha and quoted at another is a claim about a tree nobody ran.
+
+### §726.11 Operational note: the first full capture run was killed from outside
+
+The capture tool's first complete pass died after its 12th frame with no error of its own —
+its background wrapper was externally stopped (the session's task runner reaped it), taking
+vite and the browser with it. The lock's liveness rule reclaimed cleanly and the scene
+blocks are independent, so the tool gained `--only <blocks>` and the missing tail
+(`sly-closeup`, `sly-key`, the URL token leg) was re-run rather than everything. Recorded
+because "the run stopped with green output and no exception" is a shape §78.4's launcher
+notes warn about from the other side: an exit code you did not observe is not a success.
+

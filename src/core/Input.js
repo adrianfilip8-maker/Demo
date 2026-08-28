@@ -1310,9 +1310,12 @@ export class Input {
    *
    * `held` is the field that usually answers the question on its own: it is what the game currently
    * believes you are holding. A `focus` in that list means Thief-o-Vision is engaged (music ducked
-   * to `TUNE.thiefMusic` and low-passed to `TUNE.thiefFilter`), and `focus` is **L3 on a pad but the
-   * RIGHT MOUSE BUTTON on keyboard** — so a player resting a finger on R2, as most controller games
-   * train you to, silences most of the music in a way a keyboard player can never reproduce.
+   * to `TUNE.thiefMusic` and low-passed to `TUNE.thiefFilter`), and `focus` is **R3 on a pad but the
+   * RIGHT MOUSE BUTTON on keyboard** (this line said L3 until §726 — stale since §682's swap put
+   * `focus` on 11/R3 and `recentre` on 10/L3; the §682 rest-finger hazard it goes on to describe
+   * was REMOVED by that same swap, and the sentence is kept only as history of why R2 is empty) —
+   * a player resting a finger on R2, as most controller games
+   * train you to, used to silence most of the music in a way a keyboard player could never reproduce.
    *
    * Read-only and allocation-light; nothing calls it automatically.
    */

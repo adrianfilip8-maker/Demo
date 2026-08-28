@@ -40,6 +40,11 @@ const TREE = path.resolve(opt('tree', ROOT));
 const OUTDIR = path.resolve(ROOT, opt('out', 'shots/daynight726'));
 const W = +opt('w', 1280), H = +opt('h', 720);
 const TIMEOUT = +opt('timeout', 900) * 1000;
+/* --only courtyard,temple,guards,piles,sly,token — rerun a subset after an interrupted run
+   (the wrapper of the first full run was killed from outside after the pile stances; the
+   scene blocks are independent, so the missing tail is re-run rather than everything). */
+const ONLY = (opt('only', '') || '').split(',').filter(Boolean);
+const want = (k) => !ONLY.length || ONLY.includes(k);
 
 function sha() {
   try { return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: TREE }).toString().trim(); }
@@ -91,16 +96,24 @@ async function startServer(port) {
 /* ---------------------------------------------------------------- camDot */
 
 /** The cameras this tool shoots through — canonical entries, named so the pre-flight rows
- *  can be read against Shots.js. `pileclose` is pileshot.mjs's own §724 stance, reused. */
+ *  can be read against Shots.js. `pileclose` is pileshot.mjs's own §724 stance, reused.
+ *  NOT here, and why: `hero` and `interior` both fail camDot's SUBJECT leg — their look
+ *  targets are aim points 8.0 m and 11.7 m BEHIND the walls that fill their frames, which is
+ *  fine for the shots they are (environment framings whose subject is the architecture
+ *  itself) but means this tool cannot certify them with the instrument it committed to, so it
+ *  photographs `temple`/`courtyard` instead of weakening the bar to admit them (§435.4).
+ *  `interior` is still STAGED (for the vault's light rig) — captured through `pileclose`. */
 const CAMERAS = {
-  hero:          null,   // filled from SHOTS at runtime
+  temple:        null,   // filled from SHOTS at runtime
   courtyard:     null,
   guard:         null,
   alert:         null,
-  interior:      null,
   'sly-closeup': null,
   'sly-key':     null,
   pileclose:     { pos: [0.9, -10.45, -68.2], target: [2.9, -11.8, -70.8] },
+  /* the pile's SECOND §466.5 stance: north of the hoard between it and the Ra statue,
+     looking south — swept from three candidates, the only one of the three camDot passes */
+  pile2:         { pos: [2.0, -10.4, -74.6], target: [2.9, -11.8, -70.8] },
 };
 
 async function preflight() {
@@ -245,20 +258,24 @@ async function run() {
       console.log(`  ${name.padEnd(26)} tod ${res.meta.tod}  u ${res.meta.u}  meanL ${res.meta.meanL}  black<24 ${res.meta.pctBlack}%`);
     };
 
-    /** Stage a canonical shot, then run the toggle through the pad path. */
-    const stage = (name, close) => page.evaluate(async ({ name, close }) => {
+    /** Stage a canonical shot (optionally re-aiming the camera to a camDot-passed stance),
+     *  then run the toggle through the pad path. */
+    const stage = (name, cam) => page.evaluate(async ({ name, cam }) => {
       const { G, E } = window.__dn;
       await G.setShot(name, { dt: 0 });
-      if (close) {
-        E.camera.position.set(0.9, -10.45, -68.2);
-        E.camera.lookAt(2.9, -11.8, -70.8);
+      if (cam) {
+        E.camera.position.set(...cam.pos);
+        E.camera.lookAt(...cam.target);
         E.camera.updateMatrixWorld(true);
       }
       window.__dn.pump(2);
       return window.__dn.state();
-    }, { name, close });
+    }, { name, cam });
 
-    const fadeTo = (wantTarget, midAt) => page.evaluate(async ({ wantTarget, midAt }) => {
+    /* measure=true grabs EVERY fade frame for the per-frame delta (the snap-vs-ease
+       instrument, one scene only — a grab is a full SwiftShader render, so measuring every
+       fade would triple the run for numbers the first scene already gives). */
+    const fadeTo = (wantTarget, midAt, measure = false) => page.evaluate(async ({ wantTarget, midAt, measure }) => {
       const { dbg, pump, tap, state, grab, stats, diff } = window.__dn;
       const t0 = state();
       const seen = tap();
@@ -267,15 +284,19 @@ async function run() {
       let mid = null;
       let frames = 0;
       let maxStep = null;
-      let prev = await grab();
+      let prev = measure ? await grab() : null;
       while (dbg._dnActive && frames < 400) {
         pump(1); frames++;
-        const cur = await grab();
-        const d = diff(prev, cur);
-        if (!maxStep || d.meanDL > maxStep.meanDL) maxStep = { ...d, atU: +dbg._dnU.toFixed(3) };
-        prev = cur;
+        let cur = null;
+        if (measure) {
+          cur = await grab();
+          const d = diff(prev, cur);
+          if (!maxStep || d.meanDL > maxStep.meanDL) maxStep = { ...d, atU: +dbg._dnU.toFixed(3) };
+          prev = cur;
+        }
         if (midAt != null && mid == null
             && ((wantTarget === 1 && dbg._dnU >= midAt) || (wantTarget === 0 && dbg._dnU <= midAt))) {
+          if (!cur) cur = await grab();
           const s = stats(cur);
           mid = { png: cur.png, meta: { tod: dbg.engine.debug.timeOfDay, u: +dbg._dnU.toFixed(3), ...s } };
         }
@@ -286,21 +307,33 @@ async function run() {
         t0, pressed, frames, maxStep, mid,
         end: { png: end.png, meta: { tod: dbg.engine.debug.timeOfDay, u: +dbg._dnU.toFixed(3), ...s } },
       };
-    }, { wantTarget, midAt });
+    }, { wantTarget, midAt, measure });
 
-    /* ── hero: the measurement scene — ease (with midpoint) then back, then the snap arm ── */
+    if (want('courtyard'))
+    /* ── courtyard: the measurement scene. Its staged tod is 0.76 — 0.02 BELOW the corridor —
+       so EVERY canonical daylight staging except hero/dunes/the sly sheets meets the
+       off-corridor rule first (a player never does: gameplay tod is only ever the two
+       endpoints and the corridor between them). Flow: press SNAPS to night (the off-corridor
+       rule, verified one-frame) → press eases back to day → the setTimeOfDay snap arm from
+       day → press runs the MEASURED day→night ease with the midpoint. The measured ease's
+       landing doubles as a second night sample of the same scene. ── */
     {
-      const st = await stage('hero');
-      console.log(`[hero] staged tod ${st.tod.toFixed(2)} · input.enabled ${st.enabled}`);
-      const toNight = await fadeTo(1, 0.5);
-      if (toNight.error) throw new Error(`hero toNight: ${toNight.error}`);
-      if (!toNight.pressed.activeAfterPress) throw new Error('hero: the L1 press never started the fade — the real path did not fire');
-      await save('hero-mid-ease', toNight.mid);
-      await save('hero-night', toNight.end);
-      report.measures.heroEase = { frames: toNight.frames, maxPerFrame: toNight.maxStep };
+      const st = await stage('courtyard');
+      console.log(`[courtyard] staged tod ${st.tod.toFixed(2)} · input.enabled ${st.enabled}`);
+      const r1 = await page.evaluate(async () => {
+        const { dbg, tap, pump, grab, stats } = window.__dn;
+        const seen = tap(); pump(1);
+        const f = await grab(); const s = stats(f);
+        return { active: dbg._dnActive, heldAtPress: seen.held, png: f.png, meta: { tod: dbg.engine.debug.timeOfDay, u: dbg._dnU, ...s } };
+      });
+      if (r1.active || r1.meta.tod !== 0.02) {
+        throw new Error(`courtyard: the off-corridor press should set the night grade in one frame, got tod ${r1.meta.tod} active ${r1.active}`);
+      }
+      console.log(`[courtyard] off-corridor press: held ${JSON.stringify(r1.heldAtPress)} -> tod 0.02 in one frame`);
+      await save('courtyard-night', r1);
       const toDay = await fadeTo(0, null);
-      if (toDay.error) throw new Error(`hero toDay: ${toDay.error}`);
-      await save('hero-day', toDay.end);
+      if (toDay.error) throw new Error(`courtyard toDay: ${toDay.error}`);
+      await save('courtyard-day', toDay.end);
 
       /* the snap, driven through the same pipeline via the console facility the toggle
          replaces — one write+emit, one frame */
@@ -315,26 +348,49 @@ async function run() {
         const back = dbg._dnDay; G.setTimeOfDay(back); pump(1);
         return { onePframe: d, night: s };
       });
-      report.measures.heroSnap = snap;
-      console.log(`[hero] EASE  worst single frame: ${JSON.stringify(report.measures.heroEase.maxPerFrame)} over ${report.measures.heroEase.frames} frames`);
-      console.log(`[hero] SNAP  the whole delta in one frame: ${JSON.stringify(snap.onePframe)}`);
+      report.measures.courtyardSnap = snap;
+      console.log(`[courtyard] SNAP  the whole delta in one frame: ${JSON.stringify(snap.onePframe)}`);
+
+      /* the measured EASE, day -> night, from the toggle's own day endpoint */
+      const toNight = await fadeTo(1, 0.5, true);
+      if (toNight.error) throw new Error(`courtyard toNight: ${toNight.error}`);
+      if (!toNight.pressed.activeAfterPress) throw new Error('courtyard: the day-endpoint press never started the fade — the real path did not fire');
+      await save('courtyard-mid-ease', toNight.mid);
+      await save('courtyard-night2', toNight.end);
+      report.measures.courtyardEase = { frames: toNight.frames, maxPerFrame: toNight.maxStep };
+      console.log(`[courtyard] EASE  worst single frame: ${JSON.stringify(toNight.maxStep)} over ${toNight.frames} pumped frames`);
+      /* return to day so the scene block ends where it began */
+      const home = await fadeTo(0, null);
+      if (home.error) throw new Error(`courtyard home: ${home.error}`);
     }
 
-    /* ── courtyard: the second sample (§466.5) ── */
+    if (want('temple'))
+    /* ── temple: the second sample (§466.5). Its staged tod is 0.72 — 0.06 BELOW the corridor
+       start, so the first press exercises the OFF-CORRIDOR rule (classified day-side, one
+       discontinuous set to the night grade), and the eased leg with its midpoint runs on the
+       RETURN — which also samples the fade in the direction courtyard's midpoint does not. ── */
     {
-      await stage('courtyard');
-      const toNight = await fadeTo(1, 0.5);
-      if (toNight.error) throw new Error(`courtyard toNight: ${toNight.error}`);
-      await save('courtyard-mid-ease', toNight.mid);
-      await save('courtyard-night', toNight.end);
-      const toDay = await fadeTo(0, null);
-      if (toDay.error) throw new Error(`courtyard toDay: ${toDay.error}`);
-      await save('courtyard-day', toDay.end);
-      report.measures.courtyardEase = { frames: toNight.frames, maxPerFrame: toNight.maxStep };
+      const st = await stage('temple');
+      console.log(`[temple] staged tod ${st.tod.toFixed(2)} · input.enabled ${st.enabled}`);
+      const r1 = await page.evaluate(async () => {
+        const { dbg, tap, pump, grab, stats } = window.__dn;
+        tap(); pump(1);
+        const f = await grab(); const s = stats(f);
+        return { active: dbg._dnActive, png: f.png, meta: { tod: dbg.engine.debug.timeOfDay, u: dbg._dnU, ...s } };
+      });
+      if (r1.active || r1.meta.tod !== 0.02) {
+        throw new Error(`temple: the off-corridor press should set the night grade in one frame, got tod ${r1.meta.tod} active ${r1.active}`);
+      }
+      await save('temple-night', r1);
+      const toDay = await fadeTo(0, 0.5);
+      if (toDay.error) throw new Error(`temple toDay: ${toDay.error}`);
+      await save('temple-mid-ease', toDay.mid);
+      await save('temple-day', toDay.end);
+      report.measures.templeEase = { frames: toDay.frames, maxPerFrame: toDay.maxStep };
     }
 
     /* ── guard + alert: the cone at live night (report-only; src/ai untouched) ── */
-    for (const name of ['guard', 'alert']) {
+    for (const name of want('guards') ? ['guard', 'alert'] : []) {
       const st = await stage(name);
       const staged = await page.evaluate(async () => {
         const { grab, stats, dbg } = window.__dn;
@@ -357,36 +413,29 @@ async function run() {
       await save(`${name}-livenight`, r);
     }
 
-    /* ── interior + pileclose: the §724 pile at live night (report-only) ── */
-    {
-      const st = await stage('interior');
-      const r = await page.evaluate(async () => {
-        const { dbg, tap, pump, grab, stats } = window.__dn;
-        tap();                                   // 0.5 is off-corridor day-side -> snaps to night
-        pump(1);
-        const f = await grab(); const s = stats(f);
-        return { png: f.png, meta: { tod: dbg.engine.debug.timeOfDay, u: dbg._dnU, ...s } };
-      });
-      await save('interior-livenight', r);
-      await stage('interior', true);             // pileshot's §724 close stance
+    /* ── pileclose: the §724 pile at the vault's staged light and at live night (report-only).
+       `interior` is STAGED for its light rig; the camera is pileshot's §724 stance, which
+       passes all four camDot legs (the interior camera itself does not — see CAMERAS). ── */
+    for (const stance of want('piles') ? ['pileclose', 'pile2'] : []) {
+      await stage('interior', CAMERAS[stance]);
       const r2 = await page.evaluate(async () => {
         const { dbg, grab, stats } = window.__dn;
         const f = await grab(); const s = stats(f);
         return { png: f.png, meta: { tod: dbg.engine.debug.timeOfDay, u: dbg._dnU, ...s } };
       });
-      /* staging re-set tod 0.5; drive to night again for the close-up */
+      /* the staged vault sits at tod 0.5 (off-corridor) — one press snaps to the night grade */
       const r3 = await page.evaluate(async () => {
         const { dbg, tap, pump, grab, stats } = window.__dn;
         tap(); pump(1);
         const f = await grab(); const s = stats(f);
         return { png: f.png, meta: { tod: dbg.engine.debug.timeOfDay, u: dbg._dnU, ...s } };
       });
-      await save('pileclose-day', r2);
-      await save('pileclose-livenight', r3);
+      await save(`${stance}-staged`, r2);
+      await save(`${stance}-livenight`, r3);
     }
 
     /* ── the cane hook (§719) at both grades, two close framings ── */
-    for (const name of ['sly-closeup', 'sly-key']) {
+    for (const name of want('sly') ? ['sly-closeup', 'sly-key'] : []) {
       await stage(name);
       const day = await page.evaluate(async () => {
         const { dbg, grab, stats } = window.__dn;
@@ -405,7 +454,7 @@ async function run() {
     }
 
     /* ── the revert token, through the URL in a fresh boot ── */
-    {
+    if (want('token')) {
       const page2 = await browser.newPage({ viewport: { width: W, height: H } });
       await page2.addInitScript(PAD_INIT);
       await boot(page2, port, '&l1=sneak');
