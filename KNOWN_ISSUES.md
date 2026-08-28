@@ -59975,3 +59975,54 @@ each with its reason, most for want of any source).
 **Domain (§418.3).** Confirms: the batch as shipped, played. Does not confirm: that a *different*
 magnetism value would not feel better — one session of play is a sample, and `?mag=wide` exists
 precisely so the comparison stays one token away.
+
+---
+
+## §722 — Owner ruling: §718's four CONSIDER findings are closed WONTFIX
+
+**Owner, verbatim: "Leave the 4 survey findings alone."**
+
+§718 surveyed the reference project in full — 52 GDScript files / 5,388 lines read, `project.godot`
+entire, 170 import sidecars by census, the 59 scenes sampled — and returned **nothing at RECOMMEND**,
+four at CONSIDER, three REJECT, and eleven places we already do as well or better. The four are now
+**CLOSED — WONTFIX by owner decision**:
+
+| finding | what it was |
+|---|---|
+| negative surface tag | their level can mark a surface that *looks* climbable and is not; our eleven collision tags all GRANT an affordance and none removes one, so "this ledge is a lie" is expressible here only by omission |
+| decaying air control | ours is a flat constant read at one site; theirs eases toward one-eighth over a long fall so a plummet commits you |
+| global frame-phase counter | 5 call sites / 4 systems / 3 phases in theirs; we have none — and §718 marked it **structural, explicitly not RECOMMEND, because it went looking for a hot spot it would fix and found none** |
+| rope deflection as a two-pose blend | no solver; our seven rail records do not deflect at all |
+
+### §722.1 Why this is a clean close rather than a deferral
+
+None was blocked on doubt about its merit — §718 had already done the discriminating work, including
+declining to recommend the one that was tidiest precisely because it solved no measured problem. Three
+of the four are **feel or authoring-affordance changes**, and the owner has the build in his hands;
+that is the right instrument for them and it has now spoken. The fourth is an optimisation with no
+demonstrated cost to recover.
+
+**The survey is not retracted and stays worth having.** Its most valuable outputs were never the
+CONSIDERs: the null result on their import conventions (the one avenue that had twice handed us real
+answers — §698's atlas split and §702's material chain — returned Godot defaults on all but three
+files, and their one genuine manual decision we already beat by merging to a single atlas material);
+five outright defects in their code proving they are not uniformly better; the shared gap where
+guard-to-guard alert propagation exists in *neither* project; and one correction to this very ledger
+(§364.3's neighbourhood claimed they have no music state machine — they do, it just allocates ~180
+tweens/second, so the conclusion held for a better reason than the one written down).
+
+`tools/godotsurvey.mjs` stays: it re-derives every count from a fresh clone and emits counts and
+identifiers only, never a line of their source, and it selects sidecars by importer rather than by
+path so no §364.3 path is named, matched or opened.
+
+### §722.2 What this ruling does NOT cover
+
+It closes the four CONSIDERs. It does not touch §718's **licence-grounds exclusions**, which were
+listed rather than dropped and remain excluded on their own terms: their pendulum integrator and stair
+solver (in both, the justification *is* the arithmetic, so an honest description would reproduce the
+implementation), the jump curve's control points, and their cable script — which carries a
+**third-party attribution header**, a second licence hop this project does not take.
+
+**Domain (§418.3).** Closes: the four adaptable-mechanism proposals. Does not close: the survey's
+findings of fact, the excluded set, or the standing rule that governs all of it — design references and
+adapted mechanics only, nothing pasted or transliterated.
