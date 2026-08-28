@@ -1143,6 +1143,27 @@ export function faceProjectCoinUVs(geo, r, rimUV = [0.5, 0.5]) {
   return geo;
 }
 
+/**
+ * Translate a geometry's authored UVs by a constant (§724).
+ *
+ * Every builder in this file projects UVs from LOCAL positions before `place()` bakes the
+ * transform, so a small prop's whole UV footprint is a patch straddling the UV origin, scaled
+ * by its own size. For architecture that is the texel-density contract working; for the
+ * treasure pile it means all 140 coins and 9 ingots sample the SAME ~1.6% corner patch of
+ * `gold_leaf` — measured by `tools/pilepatch.mjs`: a below-median, seam-crossed window
+ * (tile-mean albedo L 134.3 against the window's 104.0). Translating each item's window by a
+ * per-item constant scatters the pile across the tile's real value range without touching the
+ * sampling SCALE — the window's size, i.e. the leaf grain's world frequency, is exactly what
+ * it was, so this cannot reintroduce the one-tile-per-face stretch §712.3 refused.
+ */
+export function offsetUVs(geo, du, dv) {
+  const uv = geo.attributes.uv;
+  if (!uv) return geo;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) + du, uv.getY(i) + dv);
+  uv.needsUpdate = true;
+  return geo;
+}
+
 /** Ingot: a squat truncated pyramid, stamped. Reads as heavy. */
 export function ingot(opts = {}) {
   const { w = 0.32, h = 0.11, d = 0.18, rng } = opts;

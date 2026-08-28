@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { rng } from '../core/Rand.js';
 import {
-  Bag, mergeAll, place, matrixOf,
+  Bag, mergeAll, place, matrixOf, normaliseAttrs, offsetUVs,
   brazier, wallTorch, vessel, canopicJar, basket, ropeCoil, ropeSpan,
   offeringTable, incenseStand, scaffold, banner, bannerMast,
   coin, COIN_RADIUS, COIN_THICKNESS, clueBottle, CLUE_ATTRS, CLUE_HEIGHT, ingot, scarab,
@@ -26,11 +26,37 @@ import { ContactDecals, groundFootprint } from './Decals.js';
  * dark foreground element §2.3 asks for.
  */
 
+/**
+ * §724 revert token: `?pile=faded` (or `globalThis.__PILE_AB = 'faded'` from a test) restores
+ * the treasure hoard's pre-§724 coloring — every coin sampling `gold_leaf`'s origin-corner
+ * window through the double `0xe8b942` grade. The name is the owner's own word for that state.
+ * Read at module load, the same seam as `?mag=` / `?carm=` / `?hook=`; independent of every
+ * other lane's token. The reverted arm keeps `vertexColors` on and authors an all-white
+ * `COLOR_0`, so the revert is a multiply by one — bit-identical output, and never the black
+ * mesh an unbound attribute produces (§719's trap, stated there and re-stated here).
+ */
+export const PILE_FADED = (() => {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('pile') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__PILE_AB != null) raw = String(globalThis.__PILE_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  return String(raw).trim().toLowerCase() === 'faded';
+})();
+
 /* Material keys the builders tag their geometry with, mapped to how each should shade. */
 const MATERIALS = {
   stone:     { tex: 'granite_pink',       color: 0x9c8278, rough: 0.88, outline: 1.0 },
   lime:      { tex: 'limestone_polished', color: 0xd4c19a, rough: 0.62, outline: 1.0 },
-  gold:      { tex: 'gold_leaf',          color: 0xe8b942, rough: 0.28, metal: true, outline: 1.0, spec: 0.9, gloss: 96 },
+  /* `vertexColors` (§724): the ONLY consumer of a non-white `COLOR_0` in this bucket is the
+     treasure pile — `_treasurePile` authors the inverse of this entry's own `color` on its
+     coins and ingots, so the hoard wears `gold_leaf`'s authored gold once instead of
+     gold-times-gold (§712.2 records the same multiply going "muddy olive" on the pickup
+     coin). Every OTHER gold geometry is filled with exact white by `_flushBuckets`, and
+     white through `diffuseColor *= vColor` is a multiply by one — the Ra statue, the colossus
+     trims, the sphinx collars and both masts' finials render bit-identically (§719.5 measured
+     that identity for the same mechanism). Cost: a `USE_COLOR` program variant, zero draws. */
+  gold:      { tex: 'gold_leaf',          color: 0xe8b942, rough: 0.28, metal: true, outline: 1.0, spec: 0.9, gloss: 96, vertexColors: true },
   bronze:    { tex: 'bronze_aged',        color: 0x8a6a3a, rough: 0.52, metal: true, outline: 1.0, spec: 0.6, gloss: 48 },
   wood:      { tex: 'wood_old',           color: 0x6b4a2c, rough: 0.9,  outline: 0.85 },
   rope:      { tex: 'rope',               color: 0xa8875c, rough: 0.95, outline: 0.6, noShadow: true },
@@ -69,6 +95,20 @@ const MATERIALS = {
   ember:     { tex: null,                 color: 0xff7a2a, rough: 1.0,  outline: 0, emissive: 0xff6a20, emissiveIntensity: 2.4 },
   flame:     { tex: 'torch_flame',        color: 0xffc06a, rough: 1.0,  outline: 0, emissive: 0xffa040, emissiveIntensity: 3.0, transparent: true, side: THREE.DoubleSide },
 };
+
+/**
+ * §724: the per-channel LINEAR inverse of `MATERIALS.gold.color`, written into the treasure
+ * pile's `COLOR_0` so `diffuseColor = color x map x vColor` collapses to `map` on the hoard.
+ * DERIVED from the entry, never a literal — `tests/pilegold.test.mjs` asserts the identity
+ * `color x PILE_UNTINT = white` exactly, so a moved house gold turns the pin red instead of
+ * silently re-tinting the pile. Linear because that is the space `<color_fragment>`
+ * multiplies in — §719's rule, and §3's class of error when it is done in sRGB.
+ */
+export const PILE_UNTINT = (() => {
+  const c = new THREE.Color(MATERIALS.gold.color);
+  const inv = (v) => (v > 1e-4 ? 1 / v : 1);
+  return [inv(c.r), inv(c.g), inv(c.b)];
+})();
 
 /** §8.1 landmark coordinates this module builds to. */
 const L = {
@@ -425,14 +465,45 @@ export class Props {
     }
   }
 
-  /** Loose gold. It has to actually glitter — it is Sly's whole motivation. */
+  /**
+   * Loose gold. It has to actually glitter — it is Sly's whole motivation.
+   *
+   * ── §724: the gold coloring, and what "faded" measured as ────────────────────────────────
+   * Owner: "For the gold pile asset, apply a gold coloring to it. It looks faded right now."
+   * Measured before anything moved (`tools/pileshot.mjs`, the vault's own light): the pile's
+   * pixels averaged **L 34/255, saturation 0.38, with BLUE above GREEN** — a dark violet-grey,
+   * outside the gold hue family entirely — while the polished-limestone table in the same
+   * frame read L 114, so the vault's light was never the problem. Two albedo factors were:
+   *
+   *   1. every coin and ingot sampled the SAME ~1.6% origin-corner window of `gold_leaf`
+   *      (UVs are projected from local positions before `place()` bakes the transform), a
+   *      below-median seam-crossed patch — albedo L 104 against the tile's mean of 134, with
+   *      the window's baked AO at 0.53 multiplying the result down again;
+   *   2. `MATERIALS.gold.color` re-tints a map that is ALREADY gold — §712.2's "muddy olive"
+   *      multiply — crushing blue to ~0 and costing a further ~23 L.
+   *
+   *   Dark enough, the cel shader's violet shadow wash stops being dominated by the albedo —
+   *   the exact failure `gold_leaf`'s own `rampFloor` note predicts — and that violet IS the
+   *   "faded".
+   *
+   * So `_gild` does two things to the hoard and nothing else: translates each item's UV window
+   * to its own spot on the tile (R2 low-discrepancy sequence — deterministic from the item
+   * index, consuming NO draws from `this.rng`, so every placement downstream of this method is
+   * bit-identical in both arms and under `?pile=faded`), and authors `COLOR_0` with the exact
+   * linear inverse of `MATERIALS.gold.color`, so `color x map x vColor = map`: the hoard wears
+   * the texture's own authored gold, once. The inverse is DERIVED from the entry above at
+   * module load — move the house gold and the un-tint moves with it. It is deliberately not
+   * clamped at 1 (§719 clamps; this differs and says why): it cancels a known multiply
+   * exactly, so the result can never exceed the map's own albedo — the same bound §719's
+   * clamp enforces, held here by construction.
+   */
   _treasurePile(cx, cy, cz) {
     const R = this.rng;
     for (let i = 0; i < 140; i++) {
       const a = R.range(0, Math.PI * 2);
       const r = Math.sqrt(R()) * 1.5;
       const h = (1 - r / 1.6) * 0.5;
-      const g = coin(R.range(0.055, 0.085), 0.014);
+      const g = this._gild(coin(R.range(0.055, 0.085), 0.014), i);
       place(g, {
         x: cx + Math.cos(a) * r, y: cy + R.range(0.01, Math.max(0.02, h)), z: cz + Math.sin(a) * r,
         rx: R.range(-1.4, 1.4), ry: R.range(0, Math.PI), rz: R.range(-1.4, 1.4),
@@ -440,7 +511,7 @@ export class Props {
       this._push('gold', g);
     }
     for (let i = 0; i < 9; i++) {
-      const g = ingot({ rng: R });
+      const g = this._gild(ingot({ rng: R }), 140 + i);
       place(g, { x: cx + R.jitter(1.0), y: cy + 0.06, z: cz + R.jitter(1.0), ry: R.range(0, Math.PI) });
       this._push('gold', g);
     }
@@ -449,6 +520,34 @@ export class Props {
       place(g, { x: cx + R.jitter(1.2), y: cy + R.range(0.1, 0.35), z: cz + R.jitter(1.2), ry: R.range(0, Math.PI) });
       this._push(R.chance(0.5) ? 'lapis' : 'carnelian', g);
     }
+  }
+
+  /**
+   * §724 — dress one hoard geometry: its own UV window, and the un-tint (see `_treasurePile`'s
+   * header for the measurement this answers). The offsets are the R2 low-discrepancy sequence
+   * on the item index — deterministic, evenly spread over the tile, and reading NOTHING from
+   * `this.rng`: an extra rng draw here would re-roll every placement built after the pile, in
+   * both arms, which is exactly the class of silent whole-level diff the revert token exists
+   * to rule out. The 1.2 span is one full `gold_leaf` repeat in authored-UV units
+   * (`tile: 1.2`, `Textures._build` sets `repeat = 1/tile`); the UVs wrap, so if that tile
+   * ever moves the offsets stay correct and merely cover a different fraction of it.
+   *
+   * `COLOR_0` is authored in BOTH arms — the inverse tint by default, exact white under
+   * `?pile=faded` — because the material declares `vertexColors` unconditionally and an
+   * unbound attribute multiplies to black (§719). White is the bit-identical revert.
+   */
+  _gild(g, i) {
+    if (!PILE_FADED) {
+      const du = (0.7548776662466927 * (i + 1)) % 1;   // R2 sequence: the 2D generalisation
+      const dv = (0.5698402909980532 * (i + 1)) % 1;   // of the golden ratio (plastic number)
+      offsetUVs(g, du * 1.2, dv * 1.2);
+    }
+    const n = g.attributes.position.count;
+    const t = PILE_FADED ? [1, 1, 1] : PILE_UNTINT;
+    const col = new Float32Array(n * 3);
+    for (let k = 0; k < n; k++) { col[k * 3] = t[0]; col[k * 3 + 1] = t[1]; col[k * 3 + 2] = t[2]; }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    return g;
   }
 
   /* ===================== set dress ================================= */
@@ -645,6 +744,11 @@ export class Props {
        0..1 cap remap would stretch one whole tile across each face. The badge lives on the
        pickup's own material in `Pickups._coinMat()`, which is the only coin anyone sees. */
     const geo = coin(COIN_RADIUS, COIN_THICKNESS);
+    /* §724: the gold material now declares `vertexColors`, and this hidden twin shares that
+       material — so it must carry a bound `COLOR_0` or, on the fallback path where `Pickups`
+       fails to adopt it, it would draw black (§719's unbound-attribute trap). White: the twin
+       keeps exactly the look it has always had. */
+    normaliseAttrs(geo, ['color']);
     this._geoms.push(geo);
     const mat = this._mat('gold');
     const mesh = new THREE.InstancedMesh(geo, mat, spots.length);
@@ -872,12 +976,17 @@ export class Props {
   _flushBuckets() {
     const shading = this.engine.get('shading');
     for (const [key, geos] of this.buckets) {
-      const merged = mergeAll(geos);
+      const spec = MATERIALS[key];
+      /* A vertex-coloured bucket (§724: `gold`) must keep `COLOR_0` through the merge —
+         `normaliseAttrs` strips anything outside KEEP — and every geometry that did not
+         author one gets EXACT white, so the attribute is bound on all vertices and the
+         multiply is one everywhere the pile is not. Passing null everywhere else keeps every
+         other bucket's merge byte-identical to before. */
+      const merged = mergeAll(geos, spec.vertexColors ? ['color'] : null);
       if (!merged) continue;
       this._geoms.push(merged);
       const mesh = new THREE.Mesh(merged, this._mat(key));
       mesh.name = `props_${key}`;
-      const spec = MATERIALS[key];
       /* Three shadow cascades at `high` means a caster is drawn four times. Inlay, rope and
          loose coinage are either lying flat on a surface that already casts or are thin
          enough that their shadow is a thread — three extra passes each for nothing. The

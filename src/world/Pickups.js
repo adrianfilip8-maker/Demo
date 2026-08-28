@@ -2,9 +2,14 @@ import * as THREE from 'three';
 import { rng, WORLD_SEED } from '../core/Rand.js';
 import {
   coin as coinGeo, COIN_RADIUS, COIN_THICKNESS, clueBottle, CLUE_ATTRS, CLUE_HEIGHT,
-  ingot, scarab, collar, place, mergeAll,
+  ingot, scarab, collar, place, mergeAll, offsetUVs,
 } from './PropKit.js';
 import { decodeCoinBadge, COIN_BADGE_SIZE, COIN_BADGE_RIM_UV } from './CoinBadge.js';
+/* §724: the treasure shares the hoard's coloring — same token, same derived un-tint — because
+   the Eye of Ra is built from the same `coin()` discs at the same UV-origin window and wears
+   the same double-tinted `gold_leaf` (the mechanism `_treasurePile`'s header measures). Props
+   does not import Pickups, so this direction cannot cycle. */
+import { PILE_FADED, PILE_UNTINT } from './Props.js';
 
 /**
  * Pickups — the collect loop. Coins, clue bottles, treasure, and the fence they are carried to.
@@ -608,11 +613,21 @@ export class Pickups {
       this.root.add(mesh);
     }
 
+    let seq = 0;
     for (const t of this.treasures) {
-      const geo = this._treasureGeo(t.shape);
+      const geo = this._treasureGeo(t.shape, seq++);
       if (!geo) continue;
       this._geoms.push(geo);
-      const m = new THREE.Mesh(geo, this._mat('gold'));
+      /* §724: the treasure wears the hoard's coloring — `COLOR_0` carrying the exact linear
+         inverse of the recipe's own tint (white under `?pile=faded`), so the gold you carry
+         matches the gold you found it on. The attribute is authored on every vertex in both
+         arms because the material declares `vertexColors` (§719's unbound-attribute trap). */
+      const tint = PILE_FADED ? [1, 1, 1] : PILE_UNTINT;
+      const n = geo.attributes.position.count;
+      const col = new Float32Array(n * 3);
+      for (let k = 0; k < n; k++) { col[k * 3] = tint[0]; col[k * 3 + 1] = tint[1]; col[k * 3 + 2] = tint[2]; }
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const m = new THREE.Mesh(geo, this._mat('gold', { vertexColors: true }));
       m.name = `treasure_${t.id}`;
       m.position.copy(t.pos);
       /* Treasure is a hero prop, not set dress — §2.1.2 gives the inverted hull to hero props,
@@ -630,10 +645,22 @@ export class Pickups {
    * gold material, and that is the right trade here: a treasure is 0.7 m of silhouette seen from
    * across a courtyard, and one draw call beats four rows of correct lapis nobody can resolve.
    */
-  _treasureGeo(shape) {
+  _treasureGeo(shape, seq = 0) {
     const R = this.rng;
-    if (shape === 'scarab') return place(scarab({ len: 0.42, rng: R }), { y: -0.05 });
-    if (shape === 'ingot') return place(ingot({ w: 0.46, h: 0.16, d: 0.26, rng: R }), {});
+    /* §724: every part built here projects its UVs from local positions, so — exactly as the
+       treasure pile's coins did — each one samples `gold_leaf`'s origin-corner window, the
+       below-median seam patch `Props._treasurePile`'s header measures. The same fix: translate
+       each part's window by the R2 sequence on a deterministic counter (no `this.rng` draws,
+       so placements and every downstream roll are identical in both arms). 16 indices of
+       headroom per treasure keeps parts of one treasure on different patches. */
+    let part = 0;
+    const win = (g) => {
+      if (PILE_FADED) return g;
+      const i = seq * 16 + (part++) + 1;
+      return offsetUVs(g, ((0.7548776662466927 * i) % 1) * 1.2, ((0.5698402909980532 * i) % 1) * 1.2);
+    };
+    if (shape === 'scarab') return place(win(scarab({ len: 0.42, rng: R })), { y: -0.05 });
+    if (shape === 'ingot') return place(win(ingot({ w: 0.46, h: 0.16, d: 0.26, rng: R })), {});
     /* The Eye of Ra: an upright sun disc with a stepped rim, not a big coin. `coin()` is
        already a disc lathe and the only primitive in PropKit that is one, so the shape is two
        of them — a 0.30 m face standing proud of a 0.34 m backing plate, which gives the 4 cm
@@ -643,13 +670,13 @@ export class Pickups {
        about Y, so it presents face, edge, face — the sun disc turning. */
     if (shape === 'eye') {
       return mergeAll([
-        place(coinGeo(0.30, 0.08), { rx: Math.PI / 2 }),
-        place(coinGeo(0.34, 0.04), { rx: Math.PI / 2, z: -0.05 }),
+        place(win(coinGeo(0.30, 0.08)), { rx: Math.PI / 2 }),
+        place(win(coinGeo(0.34, 0.04)), { rx: Math.PI / 2, z: -0.05 }),
       ]);
     }
     if (shape === 'collar') {
       const parts = [];
-      collar({ r: 0.34, rows: 4, rng: R }).drain((_key, geo) => parts.push(geo));
+      collar({ r: 0.34, rows: 4, rng: R }).drain((_key, geo) => parts.push(win(geo)));
       const merged = mergeAll(parts);
       return merged ? place(merged, { rx: -Math.PI / 2 }) : null;
     }
@@ -672,20 +699,31 @@ export class Pickups {
    * MeshStandardMaterial coin in a cel-shaded frame reads as a foreign object, and would not
    * receive the shade-side response the cel ramp is tuned around.
    */
-  _mat(key) {
+  _mat(key, extra = null) {
     const shading = this.engine.get?.('shading');
     const tex = this.engine.get?.('textures')?.get?.('gold_leaf') || null;
-    /* Mirrors Props.js MATERIALS.gold exactly — pickups must not become a sixth gold. */
+    /* Mirrors Props.js MATERIALS.gold exactly — pickups must not become a sixth gold.
+       `extra` (§724) spreads LAST so a caller can vary a slot INSIDE the option bag —
+       `shading.make` caches by option key, so two calls that differ in their opts come back as
+       two materials, while two calls with the same opts come back as ONE. That cache is why
+       `_coinMat` must never again mutate what this returns: the mutation was reaching every
+       later same-key call. See `_coinMat` for the measurement. */
     const opts = {
       name: 'pickups:gold',
       color: 0xe8b942, map: tex?.map ?? null, normalMap: tex?.normalMap ?? null,
       roughnessMap: tex?.roughnessMap ?? null, aoMap: tex?.aoMap ?? null,
       metalnessMap: tex?.metalnessMap ?? null,
       bands: 3, rim: 0.55, rimColor: 0x7fd4ff, spec: 0.9, gloss: 96, metal: 0.85,
+      ...(extra || {}),
     };
     let m = null;
     try { m = shading?.make ? shading.make(opts) : null; } catch { m = null; }
-    if (!m) m = new THREE.MeshStandardMaterial({ color: opts.color, roughness: 0.28, metalness: 0.85, map: opts.map });
+    if (!m) {
+      m = new THREE.MeshStandardMaterial({
+        color: opts.color, roughness: 0.28, metalness: 0.85, map: opts.map,
+        vertexColors: !!opts.vertexColors,
+      });
+    }
     this._materials.push(m);
     return m;
   }
@@ -739,26 +777,39 @@ export class Pickups {
    * already one `InstancedMesh`, so this swaps WHICH texture that one draw samples rather than
    * adding a draw. What it must not do is reach the treasure — `_treasureGeo` builds the Eye of
    * Ra out of `coin()` discs and the hoard is 140 more, and a badge struck across a sun disc is
-   * exactly the silent regression a shared material would produce. `_mat` already returns a fresh
-   * material per call, so the separation is real rather than assumed.
+   * exactly the silent regression a shared material would produce.
+   *
+   * ── §724 CORRECTION: for one release, in the browser, it DID reach the treasure ────────────
+   * §712 wrote "`_mat` already returns a fresh material per call, so the separation is real
+   * rather than assumed" — and that sentence was true only where it was checked. In plain Node
+   * SHADING is unregistered, `_mat` falls to `new MeshStandardMaterial(...)`, and every call is
+   * fresh — which is the arm `pickups` C4 runs in, so C4 passed. In the BROWSER, `shading.make`
+   * CACHES by option key; this method used to take that cached instance and mutate it, and the
+   * treasure loop's own `_mat('gold')` — same opts, same key — then received the mutated one.
+   * Measured live (`tools/pileshot.mjs` at `defcf63`): all four treasures reported
+   * `{shares: true, badge: true, color: #ffffff}` — the Eye of Ra was wearing the badge's four
+   * wrapped corners at white, in the vault, next to the pile the owner called faded. The fix is
+   * to ask the FACTORY for the difference instead of mutating its answer: the badge, the white
+   * `color`, and the dropped tiling detail slots ride in the option bag, so the factory hands
+   * back a DIFFERENT cached material rather than a corrupted shared one. (Dropped because they
+   * sample `gold_leaf`'s UVs, which the badge coin no longer has — its caps are a 0..1 badge
+   * lookup; leaving them on would drape a stone-scale normal and roughness pattern across a
+   * 0.48 m face at one tile per coin.)
    *
    * `color` drops to white where the badge is present. The gold recipe tints `map` by `0xe8b942`,
    * which on a map that is *already* gold multiplies to a muddy olive; the badge carries its own
    * colour, exactly as `BOTTLE.glb`'s vertex stream does for the clue bottle (§700). With no
    * badge the recipe is untouched, so a host that cannot inflate gets today's plain gold coin
-   * rather than a white one.
+   * rather than a white one. This is a defect fix, not part of the §724 coloring, so
+   * `?pile=faded` does NOT revert it.
    */
   _coinMat() {
-    const m = this._mat('gold');
-    if (!this._badgeTex) return m;
-    m.map = this._badgeTex;
-    if (m.color?.setHex) m.color.setHex(0xffffff);
-    /* The tiling detail layer has to go with it. These sample `gold_leaf`'s UVs, which the coin
-       no longer has — its caps are a 0..1 badge lookup now — so leaving them on would drape a
-       stone-scale normal and roughness pattern across a 0.48 m face at one tile per coin. */
-    m.normalMap = null; m.roughnessMap = null; m.aoMap = null; m.metalnessMap = null;
-    m.needsUpdate = true;
-    return m;
+    if (!this._badgeTex) return this._mat('gold');
+    return this._mat('gold', {
+      name: 'pickups:coin-badge',
+      map: this._badgeTex, color: 0xffffff,
+      normalMap: null, roughnessMap: null, aoMap: null, metalnessMap: null,
+    });
   }
 
   /* --------------------------------------------------------------------- */
