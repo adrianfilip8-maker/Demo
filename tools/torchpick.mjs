@@ -182,7 +182,11 @@ async function main() {
     page.on('pageerror', (e) => errs.push(String(e)));
     page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
 
-    await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'domcontentloaded' });
+    /* `?torch=gen` on purpose, and it is the whole reason this frame is a three-way comparison
+       rather than a two-way one. The swap ships in this tree, so without the token the level's
+       own sixteen sconces ARE candidate A and the procedural body — the thing both candidates
+       are being judged against — would not be in the picture at all. */
+    await page.goto(`http://127.0.0.1:${port}/?torch=gen`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null, { timeout: 900000, polling: 500 });
     /* §731.2 — `ready` is not the player's screen. A real click, or every frame below is a
        photograph of the loading panel. */

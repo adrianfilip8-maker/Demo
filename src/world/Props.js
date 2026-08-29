@@ -1141,7 +1141,6 @@ export class Props {
     /* Local cup/light anchors, in the sconce's own frame, from whichever body is standing
        here — then through the mount matrix, once, for both. */
     const flameLocal = sw ? sw.flameAt : new THREE.Vector3().fromArray(bag.flameAt);
-    const lightLocal = sw ? sw.lightAt : new THREE.Vector3().fromArray(bag.lightAt);
     if (sw) {
       sw.geo.applyMatrix4(mount);
       this._kk.push(sw.geo);
@@ -1155,7 +1154,21 @@ export class Props {
     const soot = sootStain({ rng: this.rng });
     place(soot, { x, y: y + 1.5, z, ry });
     this._push('dark', soot);
-    this._lights.push({ position: lightLocal.applyMatrix4(mount), color: 0xffb060, intensity: 3.4, radius: 9, flicker: 0.55 });
+    /* THE LIGHT DOES NOT MOVE, and that is deliberate — it was the one thing in this change
+       that measured itself into a wall.
+       Re-deriving the light from the body the way the flame is re-derived is the obvious
+       symmetry, and `PropKit` even publishes `bag.lightAt` for it. Doing so lifts the six
+       crypt sconce lights from y −9.05 to y −8.62, and `Lighting.js`'s shipped docblock
+       derives §303's SEALED daylight protection from that exact number twice: "mount 2.95 m
+       over the floor" is −9.05 against the vault floor at −12, and "a y −9.05 light with
+       cutoff 9 cannot reach y ≥ −0.05" is −9.05 + 9. At −8.62 the same light reaches +0.38,
+       which is above ground — so the geometric half of a result replicated 42-for-42
+       (RESULT-torchlight3.md, seal a148e33) would become false, in service of a change the
+       owner asked about the BODY. The shader's own gate is on the light's y, not the
+       fragment's, so nothing else catches it.
+       The mount did not move, so this offset is exactly as right as it was. §734 moves the
+       fire onto the cup and leaves the pool where the experiment sealed it. */
+    this._lights.push({ position: new THREE.Vector3(x, y + 0.35, z), color: 0xffb060, intensity: 3.4, radius: 9, flicker: 0.55 });
     this._fx.push({ name: 'torch_smoke', position: flameLocal.applyMatrix4(mount), placed: true });
   }
 
@@ -1179,9 +1192,8 @@ export class Props {
    * 3. **The cup is measured.** The bowl mouth is the ring of vertices at the model's maximum
    *    girth across the mount axis — for a sconce whose arm reaches along +z, the vertices at
    *    max |x|. On `torch_mounted` that ring is 4 vertices, x = ±0.2751, and their centroid is
-   *    the mouth centre. `flameAt` is that centroid; `lightAt` is the same point lifted by the
-   *    generated sconce's own flame-to-light gap, so the pool sits above the fire exactly as
-   *    far as it did before and the `torchlight` shader work is untouched.
+   *    the mouth centre. Only `flameAt` is returned: the LIGHT is deliberately not re-derived,
+   *    for the reason spelled out at its registration in `_torch`.
    *
    * Returns null when the model is unavailable — same contract as `_swapBody`, same reason.
    */
@@ -1203,13 +1215,7 @@ export class Props {
     geo.computeBoundingBox();
     const flameAt = cupCentre(geo);
     if (!flameAt) { geo.dispose(); return null; }
-    /* The flame-to-light gap the generated sconce publishes, kept rather than retyped: the
-       shipped `lightAt` is `flameAt` lifted 0.18 m and pushed 0.10 m further out, and both are
-       read off the bag instead of restated here so a PropKit edit reaches this. */
-    const lightAt = flameAt.clone().add(
-      new THREE.Vector3(bag.lightAt[0] - bag.flameAt[0], bag.lightAt[1] - bag.flameAt[1], bag.lightAt[2] - bag.flameAt[2]),
-    );
-    return { geo, flameAt, lightAt, scale: s };
+    return { geo, flameAt, scale: s };
   }
 
   /* ===================== plumbing ================================== */

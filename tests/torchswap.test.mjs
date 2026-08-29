@@ -25,6 +25,11 @@
  *       §729 destructible statics keep their imported bodies.
  *   T6  THE STANDOFF OPT-OUT — `Particles._standoff` returns early on a `placed` handle, and
  *       still compensates one that is not marked. Executed against the shipped source.
+ *   T7  TOKEN INDEPENDENCE — `?smash=gen` and `?torch=gen` cannot turn each other's family
+ *       off. Pins a coupling this lane really shipped for one round.
+ *   T8  THE LIGHTS DID NOT MOVE — and the rejected cup-derived light is run against the same
+ *       bar to show the bar can fail. §303's sealed daylight protection is arithmetic on the
+ *       torch light's y, and this change deliberately stops at the flame.
  *
  * Children carry the arms because the token and the cache prime are module-load state; the
  * parent only diffs their prints — smashswap.test.mjs's shape, for its reasons.
@@ -70,7 +75,7 @@ const BODIES = [];
 const origS = Props.prototype._swapTorch;
 Props.prototype._swapTorch = function (bag) {
   const r = origS.call(this, bag);
-  if (r) BODIES.push({ scale: r.scale, flame: r.flameAt.toArray(), light: r.lightAt.toArray() });
+  if (r) BODIES.push({ scale: r.scale, flame: r.flameAt.toArray() });
   return r;
 };
 
@@ -293,6 +298,34 @@ test('T5 §734: the escapes — ?torch=gen, a dead transport, and a missing torc
   assert.equal(dead.kaykit, null, 'nothing imported, so no kaykit mesh and no kaykit stats');
   assert.ok(!dead.reg.some((r) => r.startsWith('props_kaykit:')), 'and no props_kaykit collider');
   assert.equal(dead.mounts.length, 16, 'and the level is whole');
+});
+
+test('T8 §734: the torch LIGHTS did not move — §303\'s sealed daylight protection is arithmetic on their y', () => {
+  /**
+   * The one thing this lane measured itself out of doing. Re-deriving the light from the body
+   * the way the flame is re-derived lifts the six crypt sconce lights from y −9.05 to −8.62,
+   * and `Lighting.js` derives §303's SEALED daylight protection from −9.05 twice over: "mount
+   * 2.95 m over the floor" (against the vault floor at −12) and "a y −9.05 light with cutoff 9
+   * cannot reach y ≥ −0.05". At −8.62 that same light reaches +0.38, i.e. above ground, and the
+   * shader gate is on the LIGHT's y rather than the fragment's, so nothing downstream catches
+   * it. §734 moves the fire and leaves the pool.
+   *
+   * DOMAIN (§418.3)
+   * PASSES ON: both arms — the swapped and the generated sconces register identical lights.
+   * FAILS ON:  run, below — the same assertion against the light positions this lane briefly
+   *            shipped (flame + PropKit's own flame-to-light gap) is shown to violate the
+   *            cutoff, so the bar is known to be able to fail.
+   */
+  assert.deepEqual(swap.lights, gen.lights,
+    'the swap changed a torch light position — §303 sealed the daylight protection on that y');
+  for (const p of swap.lights.filter((l) => l[1] < 0)) {
+    assert.ok(p[1] + 9 < -0.05,
+      `a crypt sconce light at y ${p[1]} reaches ${(p[1] + 9).toFixed(3)} — §303 requires it cannot reach y ≥ −0.05`);
+  }
+  // the failing input, run: the light this lane briefly derived from the cup
+  const wouldBe = swap.bodies.map((b, i) => swap.mounts[i][1] + b.flame[1] + 0.18);
+  assert.ok(wouldBe.some((y) => y < 0 && y + 9 >= -0.05),
+    'the rejected cup-derived light would have reached above ground — the bar can fail');
 });
 
 test('T7 §734: the two swap tokens are independent — neither family can turn the other off', () => {
