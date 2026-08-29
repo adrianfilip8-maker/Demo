@@ -125,25 +125,34 @@ export function coin(cls = '') {
 /* ---------------------------------------------------------------- health */
 
 /**
- * Health pip. Carnelian reads as "life" instantly and stays clear of the gold (loot) and cyan
- * (traversal) channels of the palette.
+ * The lucky charm — a horseshoe, the series' own.
  *
- * TWO SHAPES, because the row is not a bar. `PlayerHealth` defines `hp = 1 + charms` and says so
- * in as many words: *"Sly himself is the last pip."* A charm is a horseshoe you spent 100 coins
- * on and can lose; the last pip is the run. Drawing both as the same gem told the player he had
- * three of something, when what he had was two consumables and his life — and "the next hit ends
- * the run" is the single most consequential fact in a game whose health system exists to make
- * *not being seen* the only real defence.
- *
- *   `kind: 'life'`  — the Cooper calling card. A card among horseshoes is a silhouette
- *                     difference, so it survives the ~19 px this renders at on a 1280×720 frame
- *                     without relying on colour.
- *   `kind: 'charm'` — the horseshoe, the series' own lucky charm.
+ * §731.6 note: this used to be `charmPip`, the empty/filled pip in the live health row, and it
+ * was very nearly deleted with that row. It is NOT dead: `Health.js` emits
+ * `toast(..., { icon: 'health' })` when a charm is bought, and `glyph('health')` routes here, so
+ * a caller outside `src/ui/` still needs this art. Only the row is retired, so only the row's
+ * half of it went — the part-paid `.sly-charm-fill` variant, which nothing draws now that
+ * `setCharmProgress` is gone.
  */
-export function pip(filled = true, kind = 'charm', cls = '') {
-  if (kind === 'life') return lifePip(filled, cls);
-  return charmPip(filled, cls);
+function charmIcon(cls) {
+  const shoe = 'M13.2 35.6C9.4 19.4 16 8.8 23 8.8s13.6 10.6 9.8 26.8';
+  return wrap('0 0 46 46', `
+    <path d="${shoe}" transform="translate(0 2.4)" stroke="${C.ink}" stroke-width="11"
+          stroke-linecap="round" fill="none" opacity=".55"/>
+    <path d="${shoe}" stroke="${C.ink}" stroke-width="11.6" stroke-linecap="round" fill="none"/>
+    <path d="${shoe}" stroke="${C.carn}" stroke-width="6.4" stroke-linecap="round" fill="none"/>
+    <g fill="${C.goldL}" opacity=".92">
+      <circle cx="15.4" cy="24.6" r="1.7"/><circle cx="23" cy="14.4" r="1.7"/>
+      <circle cx="30.6" cy="24.6" r="1.7"/>
+    </g>
+    <path d="M15.6 15.2a10 10 0 0 1 5-4.6" stroke="${C.goldL}" stroke-width="2.6"
+          stroke-linecap="round" opacity=".8" fill="none"/>
+  `, cls);
 }
+
+/* --------------------------------------------------------------- keycaps */
+
+const KEY_W = { 'W A S D': 132, 'Space': 116, 'Shift': 88, 'Ctrl': 74, 'Mouse': 92, 'Esc': 68, 'Tab': 68, 'Enter': 84 };
 
 /**
  * §731.5 — the Sly 4 health meter, composed from the reference project's own two layers.
@@ -187,84 +196,6 @@ export function healthMeter(cls = '') {
   `, cls);
 }
 
-/** The Cooper calling card: paint stock, ink mask, two spark eyes. */
-function lifePip(filled, cls) {
-  if (filled) {
-    return wrap('0 0 46 46', `
-      <g transform="rotate(-5 23 23)">
-        <rect x="9" y="8.5" width="28" height="34" rx="3.6" fill="${C.ink}"/>
-        <rect x="9" y="5" width="28" height="34" rx="3.6" fill="${C.paint}"
-              stroke="${C.ink}" stroke-width="3.4"/>
-        <path d="M12.4 18.4c4.4-4.2 17.8-4.2 22.2 0-1 5.8-5.1 8.4-8.7 6.3-1.4-.9-2.3-2.3-2.5-3.2
-                 -.3.9-1.1 2.3-2.5 3.2-3.6 2.1-7.6-.5-8.5-6.3z" fill="${C.ink}"/>
-        <ellipse cx="17.6" cy="19.6" rx="2.5" ry="2" fill="${C.spark}"/>
-        <ellipse cx="28.4" cy="19.6" rx="2.5" ry="2" fill="${C.spark}"/>
-        <path d="M23 27.4q-3.4 0-3.4 2.8T23 33.6t3.4-3T23 27.4z" fill="${C.carn}"
-              stroke="${C.ink}" stroke-width="2.2"/>
-      </g>
-    `, cls);
-  }
-  // Down. The card is spent, not merely dimmed — it keeps its outline so the row still counts.
-  return wrap('0 0 46 46', `
-    <g transform="rotate(-5 23 23)">
-      <rect x="9" y="5" width="28" height="34" rx="3.6" fill="${C.inkSoft}" fill-opacity=".62"
-            stroke="${C.ink}" stroke-width="3.4"/>
-      <path d="M14 12.5 32 31.5M32 12.5 14 31.5" stroke="${C.carn}" stroke-width="2.6"
-            stroke-linecap="round" opacity=".55"/>
-    </g>
-  `, cls);
-}
-
-/** A lucky charm. Stroked rather than filled so the opening reads at pip size. */
-function charmPip(filled, cls) {
-  const shoe = 'M13.2 35.6C9.4 19.4 16 8.8 23 8.8s13.6 10.6 9.8 26.8';
-  if (filled) {
-    return wrap('0 0 46 46', `
-      <path d="${shoe}" transform="translate(0 2.4)" stroke="${C.ink}" stroke-width="11"
-            stroke-linecap="round" fill="none" opacity=".55"/>
-      <path d="${shoe}" stroke="${C.ink}" stroke-width="11.6" stroke-linecap="round" fill="none"/>
-      <path d="${shoe}" stroke="${C.carn}" stroke-width="6.4" stroke-linecap="round" fill="none"/>
-      <g fill="${C.goldL}" opacity=".92">
-        <circle cx="15.4" cy="24.6" r="1.7"/><circle cx="23" cy="14.4" r="1.7"/>
-        <circle cx="30.6" cy="24.6" r="1.7"/>
-      </g>
-      <path d="M15.6 15.2a10 10 0 0 1 5-4.6" stroke="${C.goldL}" stroke-width="2.6"
-            stroke-linecap="round" opacity=".8" fill="none"/>
-    `, cls);
-  }
-  /**
-   * The empty shoe carries the charm you are part-way through PAYING for.
-   *
-   * `.sly-charm-fill` is the same carnelian stroke, at the same 6.4 weight the filled pip uses,
-   * traced from heel to heel by `HUD.setCharmProgress()`. So the pip does not sprout a second
-   * widget when the player starts saving — it fills in and becomes its own finished form, which
-   * is the one shape in the row that already means "a charm". `PlayerHealth` banks coins toward
-   * this at `CHARM.charmCoins`, and before this existed 99 coins and 1 coin looked identical.
-   *
-   * `pathLength="100"` normalises the dash arithmetic exactly as `threatEye`'s lash does, so the
-   * driver writes a percentage and never has to know the curve's real length. It rests at 100
-   * (nothing drawn) so a pip nobody is saving toward is indistinguishable from the old art.
-   */
-  return wrap('0 0 46 46', `
-    <path d="${shoe}" stroke="${C.ink}" stroke-width="11.6" stroke-linecap="round" fill="none"
-          opacity=".62"/>
-    <path d="${shoe}" stroke="${C.carn}" stroke-width="2.2" stroke-linecap="round" fill="none"
-          opacity=".45"/>
-    <path class="sly-charm-fill" d="${shoe}" stroke="${C.carn}" stroke-width="6.4"
-          stroke-linecap="round" fill="none"
-          pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
-  `, cls);
-}
-
-/* --------------------------------------------------------------- keycaps */
-
-const KEY_W = { 'W A S D': 132, 'Space': 116, 'Shift': 88, 'Ctrl': 74, 'Mouse': 92, 'Esc': 68, 'Tab': 68, 'Enter': 84 };
-
-/**
- * A physically drawn keycap — ink outline, paint-white face, top gloss, and a hard ink
- * body underneath so it looks pressable. The whole point of the control reference is that
- * the player reads a *key*, not a word in brackets.
- */
 export function keycap(label, cls = '') {
   const txt = String(label);
   const w = KEY_W[txt] ?? Math.max(46, 24 + txt.length * 15);
@@ -674,7 +605,7 @@ export function glyph(name, cls = '') {
         <rect x="17.6" y="13" width="4.8" height="11" rx="2.4" fill="${C.goldL}"/>
         <circle cx="20" cy="28.5" r="2.7" fill="${C.goldL}"/>
       `, cls);
-    case 'health': return pip(true, 'charm', cls);
+    case 'health': return charmIcon(cls);
     case 'goal': return goalPin(cls);
     default: return sparkle(cls);
   }

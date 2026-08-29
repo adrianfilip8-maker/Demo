@@ -6,14 +6,14 @@
 | plate | `Assets/Textures/Icons/Health_Meter_V1_-_A_Thief_in_Paris.png` — 1920 x 1195, 141377 bytes |
 | fill | `Assets/Textures/Icons/Health_Meter_V1_PROGRESS_BAR_HP.png` — 1920 x 1195, 46320 bytes |
 | licence | **NONE STATED** in that repository |
-| shipped as | `src/ui/HealthMeter.js`, 320 x 181, plate 25631 B + fill mask 19198 B, inlined base64 |
+| shipped as | `src/ui/HealthMeter.js`, 320 x 175, plate 25467 B + fill mask 9197 B, inlined base64 |
 | baked by | `tools/godot2meter.mjs` |
 
 Plate palette (share of opaque texels):
 
-- `#7f7f7f` — 63.3%
-- `#262671` — 11.8%
-- `#c5c5c5` — 7.3%
+- `#7f7f7f` — 57.8%
+- `#262671` — 13.7%
+- `#c5c5c5` — 8.4%
 
 **V1 chosen over V2.** Both are plate+fill pairs. V2's fill is pale cyan `#97fdfd` and composites
 at full to a partial crescent with no track outline; V1's is mid blue `#4aa0d0` and composites to a

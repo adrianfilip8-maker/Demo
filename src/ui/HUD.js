@@ -449,7 +449,6 @@ export class HUD {
 
       <div class="sly-shake">
         <div class="sly-tl">
-          <div class="sly-pips"></div>
           <div class="sly-coins">
             <span class="sly-coin-icon sly-drop">${Ico.coin()}</span>
             <span class="sly-coin-num sly-ink"></span>
@@ -513,7 +512,6 @@ export class HUD {
       tov: q('.sly-tov'),
       marks: q('.sly-marks'),
       shake: q('.sly-shake'),
-      pips: q('.sly-pips'),
       coinNum: q('.sly-coin-num'),
       coinPlus: q('.sly-coin-plus'),
       threat: q('.sly-threat'),
@@ -794,13 +792,12 @@ export class HUD {
       if (typeof p === 'number') { this.setHealth(p, this.healthMax); return; }
       if (!p) return;
       this.setHealth(num(p.hp ?? p.current ?? p.value, this.health), num(p.max, this.healthMax));
-      /* AFTER `setHealth`, never before: `setHealth` repaints the pips it needs to, and a repaint
-         replaces a pip's inner SVG — including the stroke the progress is drawn on. Writing the
-         arc first would put it on art that is about to be thrown away. */
-      this.setCharmProgress(num(p.charmProgress, -1));
-      /* `down` is the fatal hit, not a hit. `PlayerHealth` publishes it on the same payload the
-         pips already read, so telling "caught" apart from "hurt" costs no new interface — only
-         the decision to stop discarding a field that was always there. */
+      /* §731.6: `p.charmProgress` is no longer read. It fed the charm arc drawn INSIDE the pips,
+         and the pips are retired — `Health.js` still publishes the field, and this lane did not
+         touch it because the publisher is outside `src/ui/`. See §731.6 for the report. */
+      /* `down` is the fatal hit, not a hit. `PlayerHealth` publishes it on the same payload,
+         so telling "caught" apart from "hurt" costs no new interface — only the decision to
+         stop discarding a field that was always there. */
       this._setBusted(!!p.down);
     });
 
@@ -1008,37 +1005,26 @@ export class HUD {
     this._punch(this.el.coinPlus, 1.5, 320);
   }
 
+  /**
+   * §731.6 — the health STATE, and the effects that hang off it. There is no longer a row.
+   *
+   * The owner: *"Do not make it real. Retire the pip row for now"*. So the live pip row is gone
+   * and the §731 meter stays decorative — which leaves this method owning what the row never did:
+   * the damage vignette and the hit flash/shake. Those are not pip machinery and they are not
+   * lost with it, so this keeps tracking `health`/`healthMax` and firing `_hitFx` on a real loss.
+   *
+   * `health` is still the ONLY thing that moves this, for the reason recorded at its subscription:
+   * `damage` is a *request* to hurt the player and `PlayerHealth` alone decides whether it lands,
+   * so a view that deducted on the request would drift on the first i-framed hit.
+   */
   setHealth(n, max) {
     const m = Math.max(1, Math.round(num(max, this.healthMax)));
     const v = Math.max(0, Math.min(m, Math.round(num(n, this.health))));
     const lost = v < this.health;
-    const rebuild = m !== this.healthMax || this.el?.pips?.childElementCount !== m;
     this.healthMax = m;
     const prev = this.health;
     this.health = v;
     if (!this._built) return;
-
-    if (rebuild) {
-      this.el.pips.innerHTML = '';
-      for (let i = 0; i < m; i++) {
-        const s = document.createElement('span');
-        s.innerHTML = Ico.pip(i < v, pipKind(i));
-        if (i === 0) s.classList.add('sly-pip-life');
-        this.el.pips.appendChild(s);
-      }
-    } else {
-      const kids = this.el.pips.children;
-      for (let i = 0; i < m; i++) {
-        const filled = i < v;
-        const wasFilled = !kids[i].classList.contains('sly-pip-lost');
-        if (filled === wasFilled) continue;
-        kids[i].innerHTML = Ico.pip(filled, pipKind(i));
-        kids[i].classList.toggle('sly-pip-lost', !filled);
-        if (!filled) this._punch(kids[i], 1.75, 340);
-        else this._punch(kids[i], 1.35, 280);
-      }
-    }
-    for (let i = 0; i < m; i++) this.el.pips.children[i].classList.toggle('sly-pip-lost', i >= v);
 
     this._vig = 1 - v / m;
     if (lost) this._hitFx(prev - v);
@@ -1053,70 +1039,6 @@ export class HUD {
      every use of it would have desynced the row from the truth until the next publish, having
      already fired the flash and the shake for a hit that may never have landed. Keeping a dead
      method whose only possible use is a bug is keeping a trap. */
-
-  /**
-   * Progress toward the next lucky charm, drawn INTO the pip it is going to become.
-   *
-   * `PlayerHealth` banks coins toward a charm at `CHARM.charmCoins` (100), and until this existed
-   * the only thing the player ever saw of that economy was the finished charm appearing. 99 coins
-   * and 1 coin looked exactly the same, which makes the level's one economic decision — is it
-   * worth going back past that guard for the coins on the ledge — unanswerable.
-   *
-   * Drawn as the empty horseshoe filling in with its own stroke rather than as a meter somewhere
-   * else, for two reasons:
-   *   · the pip row already means "what you are carrying", and the thing being bought is the next
-   *     item in that row. A separate bar would have to be read and then related back to it.
-   *   · a second NUMBER beside the coin counter would be worse than no readout at all. That
-   *     counter is the player's coin purse; this is `Health.purse`, coins banked toward a charm,
-   *     and `Health.js:95` says in as many words that the two are not the same quantity. Two
-   *     numbers that disagree and are never explained is a bug report, not a HUD.
-   *
-   * `frac < 0` — the charm cap, or a payload with no `charmProgress` at all from an older
-   * `Health.js` — draws NOTHING. At the cap there is no next charm, and see `Health.charmProgress`
-   * for why 0.99 and 1.0 are both lies there; the absence is unambiguous beside a full row, which
-   * already says every charm there is. An older publisher gets no arc rather than a wrong one.
-   */
-  setCharmProgress(frac) {
-    if (!this._built) return;
-    const p = Number.isFinite(frac) && frac >= 0 ? Math.min(1, frac) : -1;
-    const next = p < 0 ? -1 : this._nextCharmIndex();
-    const kids = this.el.pips.children;
-    /**
-     * Written across the whole row rather than onto a remembered element, and that is a
-     * correctness choice rather than laziness.
-     *
-     * Spending a charm moves the mark DOWN the row, and the pip it moved off is NOT repainted by
-     * `setHealth` — it was already unlit and it still is, so the `filled === wasFilled` fast path
-     * skips it — which leaves the arc it was carrying sitting there. A cached target renders two
-     * charms in progress at once. That is §357.1's shape yet again, and the loop that cannot have
-     * it runs over at most `maxCharms` elements on an event that fires per coin picked up, never
-     * per frame.
-     */
-    for (let i = 1; i < kids.length; i++) {
-      const path = kids[i].querySelector('.sly-charm-fill');
-      if (!path) continue;                       // a lit pip is finished art and carries no stroke
-      path.style.strokeDashoffset = i === next ? String(Math.round((1 - p) * 1000) / 10) : '100';
-    }
-    /* No `this._charmP = p` here. It was written last round "for tests and debug", nothing ever
-       read it, and an audit of this file for one-ended machinery found it on the first pass — a
-       field assigned and never read is the same defect as an event published and never heard,
-       just inside one object instead of across the bus. The row IS the state; the tests read the
-       row. */
-  }
-
-  /**
-   * Which pip the next charm will fill, or −1 if none will.
-   *
-   * The FIRST unlit charm pip, read off the row itself rather than off a charm count, so the mark
-   * and the pips can never disagree about which one is being bought. Index 0 is skipped because
-   * it is Sly himself and not a charm (see `pipKind`) — while he is down that pip is unlit too,
-   * and the charm he is still saving for is the one at index 1.
-   */
-  _nextCharmIndex() {
-    const kids = this.el.pips.children;
-    for (let i = 1; i < kids.length; i++) if (kids[i].classList.contains('sly-pip-lost')) return i;
-    return -1;
-  }
 
   binocucom(on) {
     const v = !!on;
@@ -1879,15 +1801,6 @@ export class HUD {
     this._vigPunch = Math.min(1, 0.45 + pips * 0.18);
     this._shake = Math.min(1, this._shake + 0.4 + pips * 0.12);
     this._flash(0.7, 190);
-    if (this.el.pips && !this.reduced) {
-      this.el.pips.animate(
-        [{ transform: 'translateX(-5%) rotate(-1.4deg)' },
-         { transform: 'translateX(4%) rotate(1.2deg)' },
-         { transform: 'translateX(-2%) rotate(-1.4deg)' },
-         { transform: 'translateX(0) rotate(-1.4deg)' }],
-        { duration: 260, easing: 'ease-out' }
-      );
-    }
   }
 
   _flash(strength, ms) {
@@ -1977,8 +1890,6 @@ function num(v, dflt) { return typeof v === 'number' && Number.isFinite(v) ? v :
  * Derived from the index rather than from a new field on the payload, so nothing in `src/player`
  * has to grow an interface for the HUD to stop drawing three identical gems.
  */
-function pipKind(i) { return i === 0 ? 'life' : 'charm'; }
-
 /** Presentation class for a verb, whoever announced it. See PROMPT_KIND. */
 function kindFor(text) { return PROMPT_KIND[String(text).trim().toLowerCase()] ?? ''; }
 function fx(v) { return (v >= 0 ? '+' : '') + v.toFixed(1); }

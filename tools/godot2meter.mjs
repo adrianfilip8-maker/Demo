@@ -56,6 +56,7 @@ const SRC_ROOT = arg('--src', '/home/user/noahchase/sly-cooper--a-thief-in-godot
 const DIR = 'Assets/Textures/Icons/';
 const PLATE_REL = DIR + 'Health_Meter_V1_-_A_Thief_in_Paris.png';
 const FILL_REL = DIR + 'Health_Meter_V1_PROGRESS_BAR_HP.png';
+const POW_REL = DIR + 'Health_Meter_V1_PROGRESS_BAR_POW.png';
 const SRC_HEAD = 'a312a99';
 const OUT_W = +arg('--width', 320);
 
@@ -64,6 +65,9 @@ const OUT_MODULE = path.join(ROOT, 'src/ui/HealthMeter.js');
 
 /** The plate's EMPTY-TRACK grey. Distinct from the mask's own #c5c5c5, so this is unambiguous. */
 const TRACK = [0x7f, 0x7f, 0x7f];
+/** The artwork's own outline: #242424, measured 5 px thick at the oval's top edge at 1920 wide. */
+const OUTLINE = [0x24, 0x24, 0x24];
+const OUTLINE_PX = 5;
 const near = (d, i, t, tol) => Math.abs(d[i] - t[0]) <= tol && Math.abs(d[i + 1] - t[1]) <= tol
   && Math.abs(d[i + 2] - t[2]) <= tol;
 
@@ -153,8 +157,11 @@ function bake() {
   for (const p of [platePath, fillPath]) {
     if (!fs.existsSync(p)) { console.error(`[godot2meter] source not found: ${p}`); process.exit(1); }
   }
+  const powPath = path.join(SRC_ROOT, POW_REL);
   const plateRaw = fs.readFileSync(platePath), fillRaw = fs.readFileSync(fillPath);
+  const powRaw = fs.readFileSync(powPath);
   const plate = PNG.sync.read(plateRaw), fill = PNG.sync.read(fillRaw);
+  const pow = PNG.sync.read(powRaw);
   console.log(`plate         ${PLATE_REL}  ${plate.width}x${plate.height}, ${plateRaw.length} bytes`);
   console.log(`fill          ${FILL_REL}  ${fill.width}x${fill.height}, ${fillRaw.length} bytes`);
   if (plate.width !== fill.width || plate.height !== fill.height) {
@@ -174,19 +181,82 @@ function bake() {
   console.log(`alignment     ${(100 * onTrack / fillPx).toFixed(1)}% of fill lands on empty track, `
     + `${(100 * offPlate / fillPx).toFixed(2)}% falls outside the plate entirely`);
 
-  /* The SILHOUETTE the HUD paints PAL.blue through: the HP fill, plus the plate's remaining empty
-     track so the meter reads FULL. The mask is neither, so its hole is preserved automatically. */
-  const sil = new PNG({ width: plate.width, height: plate.height });
-  let silPx = 0, fromTrack = 0;
-  for (let i = 0; i < plate.data.length; i += 4) {
-    const isFill = fill.data[i + 3] >= 128;
-    const isTrack = plate.data[i + 3] > 8 && near(plate.data, i, TRACK, 14);
-    if (isFill || isTrack) {
-      sil.data[i] = 255; sil.data[i + 1] = 255; sil.data[i + 2] = 255; sil.data[i + 3] = 255;
-      silPx++; if (!isFill) fromTrack++;
+  /* ── §731.7: CUT THE POW SECTION OUT ──────────────────────────────────────────────────────
+     The owner: "Remove the bottom section of the oval that is sectioned off by the thin lines."
+     That section is the POW track, and it is not a horizontal band — it is a CRESCENT across the
+     bottom of the oval, bounded above by the two thin dividing lines that run from the insignia's
+     chin out to the oval's left and right edges, and below by the oval's own bottom arc. So the
+     boundary is not guessed at a fraction: the region is exactly `PROGRESS_BAR_POW`'s own alpha,
+     which is the layer the artwork uses to paint it.
+
+     This is a MASK, not a rectangular crop: a horizontal cut would take the oval's bottom-left
+     and bottom-right shoulders with it. The removed region's own edge then becomes the shape's
+     new bottom edge, so it is RE-STROKED in the artwork's own outline (#242424 at 5 px, measured
+     off the oval's top edge) — otherwise the meter reads as a broken oval with an open bottom. */
+  const removed = new Uint8Array(plate.width * plate.height);
+  let removedPx = 0;
+  /* COLUMN-WISE, from the dividing line downward — not simply "wherever the POW layer is opaque".
+     The POW fill stops just inside the oval's bottom outline, so removing only its own texels
+     leaves that black arc floating below the cut as an orphan (measured: the bbox did not move).
+     For every column the POW layer touches, everything from its topmost texel down goes; columns
+     the dividing lines never reach are untouched, so the oval's left and right shoulders stay. */
+  for (let x = 0; x < plate.width; x++) {
+    let top = -1;
+    for (let y = 0; y < plate.height; y++) {
+      if (pow.data[(((y * plate.width) + x) << 2) + 3] >= 128) { top = y; break; }
+    }
+    if (top < 0) continue;
+    for (let y = top; y < plate.height; y++) {
+      const px = y * plate.width + x;
+      if (plate.data[(px << 2) + 3] > 8) { removed[px] = 1; removedPx++; }
     }
   }
-  console.log(`silhouette    ${silPx} texels (${fromTrack} of them the POW track, drawn as full)`);
+  console.log(`pow cut       ${removedPx} plate texels removed (the POW crescent and the arc below it)`);
+
+  /* Re-close the outline: every kept texel within OUTLINE_PX of a removed one becomes outline. */
+  const W = plate.width, H = plate.height;
+  let restroked = 0;
+  const kept = (px) => !removed[px] && plate.data[(px << 2) + 3] > 8;
+  const toStroke = [];
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const px = y * W + x;
+      if (!kept(px)) continue;
+      let near_ = false;
+      for (let dy = -OUTLINE_PX; dy <= OUTLINE_PX && !near_; dy++) {
+        for (let dx = -OUTLINE_PX; dx <= OUTLINE_PX; dx++) {
+          if (dx * dx + dy * dy > OUTLINE_PX * OUTLINE_PX) continue;
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          if (removed[ny * W + nx]) { near_ = true; break; }
+        }
+      }
+      if (near_) toStroke.push(px);
+    }
+  }
+  for (const px of toStroke) {
+    const i = px << 2;
+    plate.data[i] = OUTLINE[0]; plate.data[i + 1] = OUTLINE[1]; plate.data[i + 2] = OUTLINE[2];
+    plate.data[i + 3] = 255;
+    restroked++;
+  }
+  console.log(`outline       ${restroked} texels re-stroked along the cut, closing the shape`);
+
+  /* Now clear the removed region. */
+  for (let px = 0; px < removed.length; px++) if (removed[px]) plate.data[(px << 2) + 3] = 0;
+
+  /* The SILHOUETTE the HUD paints PAL.blue through is now the HP fill ALONE — §731.5's union with
+     the empty track existed only to stop the POW region reading as a hole, and that region is
+     gone. Anything of the HP fill that strayed into the cut is dropped with it. */
+  const sil = new PNG({ width: plate.width, height: plate.height });
+  let silPx = 0;
+  for (let i = 0, px = 0; i < plate.data.length; i += 4, px++) {
+    if (fill.data[i + 3] >= 128 && !removed[px] && plate.data[i + 3] > 8) {
+      sil.data[i] = 255; sil.data[i + 1] = 255; sil.data[i + 2] = 255; sil.data[i + 3] = 255;
+      silPx++;
+    }
+  }
+  console.log(`silhouette    ${silPx} texels (HP fill only — the union with the empty track is gone)`);
 
   // Crop both to the plate's opaque bounding box so no transparent margin ships.
   let x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1;

@@ -94,13 +94,16 @@ test('CALIBRATION (must fire): a hit can reach the player at all', async () => {
 
 test('CALIBRATION (must fire): the HUD pip row is reachable from the bus', async () => {
   const { engine, hud } = await boot({ withHud: true });
-  const pips = () => hud.el.pips.childElementCount;
-  const lit = () => [...hud.el.pips.children].filter((c) => !c.classList.contains('sly-pip-lost')).length;
-  assert.ok(pips() > 0, 'the HUD built no pips at all — the shim is not rendering the row');
+  /* §731.6 retired the pip ROW. The quantities it displayed are still tracked by `setHealth` —
+     `hud.health` is what "lit" counted, `hud.healthMax` is what the pip count was — so these arms
+     observe the same numbers off state rather than off DOM, and Health.js coverage is unchanged. */
+  const pips = () => hud.healthMax;
+  const lit = () => hud.health;
+  assert.ok(pips() > 0, 'the HUD tracked no health at all — the bus is not reaching it');
   const before = lit();
   engine.emit('damage', {});
   assert.notEqual(lit(), before,
-    'CALIBRATION FAILED — a landed hit did not change the lit pip count, so the HUD assertions below are vacuous');
+    'CALIBRATION FAILED — a landed hit did not change the HUD health, so the HUD assertions below are vacuous');
 });
 
 /* ──────────────────────────────── the Sly rule, not an HP bar ──────────────────────────────── */
@@ -285,13 +288,13 @@ test('with no movement module the whole thing degrades instead of throwing', asy
 
 test('the HUD pip row is the charm row: one pip per charm, plus Sly', async () => {
   const { engine, hud, health } = await boot({ withHud: true });
-  const pips = () => hud.el.pips.childElementCount;
-  const lit = () => [...hud.el.pips.children].filter((c) => !c.classList.contains('sly-pip-lost')).length;
+  const pips = () => hud.healthMax;
+  const lit = () => hud.health;
 
   assert.equal(pips(), 1 + CHARM.maxCharms,
-    `the HUD is showing ${pips()} pips for a maximum of ${CHARM.maxCharms} charms — it is still `
-    + 'rendering its own placeholder five-pip bar, so the row does not mean what it draws');
-  assert.equal(lit(), 1, 'carrying nothing, exactly one pip is lit');
+    `the HUD is tracking ${pips()} for a maximum of ${CHARM.maxCharms} charms — it is still `
+    + 'holding its own placeholder five, so its state does not mean what Health.js publishes');
+  assert.equal(lit(), 1, 'carrying nothing, health is exactly 1');
 
   engine.emit('coin', { amount: CHARM.charmCoins * 2 });
   assert.equal(lit(), 1 + CHARM.maxCharms, 'two charms light the whole row');
@@ -307,7 +310,7 @@ test('the HUD does not deduct on a hit invulnerability refused', async () => {
      — worse — a pip lost on a hit the health module already refused, because a view cannot know
      about i-frames. The pips must follow the state event and nothing else. */
   const { engine, hud } = await boot({ withHud: true });
-  const lit = () => [...hud.el.pips.children].filter((c) => !c.classList.contains('sly-pip-lost')).length;
+  const lit = () => hud.health;
   engine.emit('coin', { amount: CHARM.charmCoins * 2 });
   const before = lit();
 
@@ -338,32 +341,12 @@ test('the HUD survives module init running before it', async () => {
   await hud.init();                          // and now paints its own placeholder
 
   health.update(1 / 60);
-  assert.equal(hud.el.pips.childElementCount, 1 + CHARM.maxCharms,
-    'the HUD kept its placeholder row — the first-frame re-announcement is not happening, so '
+  assert.equal(hud.healthMax, 1 + CHARM.maxCharms,
+    'the HUD kept its placeholder maximum — the first-frame re-announcement is not happening, so '
     + 'MANIFEST order silently decides whether the HUD tells the truth');
 });
 
 /* ─────────────────────────────── charm progress: BOTH ends of it ───────────────────────────── */
-
-/**
- * §353. The purse existed and was correct; nothing outside this module could see it. §357.1's
- * standing failure mode here is *"machinery wired at one end only — a guard that exists is not a
- * guard that runs"*, and a publish with no consumer is exactly that, so the assertions below come
- * in pairs: what the module says, and what the row actually draws.
- *
- * Read one pip's progress stroke. `null` means the pip carries no stroke at all — a lit pip is
- * finished art, and index 0 is Sly's calling card and never a charm. The rest resolve to the
- * dash offset, which is 100 for "nothing drawn" and `100 - progress%` otherwise (`pathLength=100`
- * normalises it, the same idiom `threatEye`'s lash uses).
- *
- * The initial 100 arrives as an SVG ATTRIBUTE and the driver writes a STYLE, so both are read —
- * checking only one would make an untouched pip and a blanked pip indistinguishable.
- */
-const charmArcs = (hud) => [...hud.el.pips.children].map((sp) => {
-  const path = sp.querySelector('.sly-charm-fill');
-  if (!path) return null;
-  return Number(path.style.strokeDashoffset ?? path.getAttribute('stroke-dashoffset'));
-});
 
 test('the purse is published on every banked coin, not only on the one that completes a charm', async () => {
   /* The `_publish()` this asserts used to live inside `if (gained)`. The purse moved on every
@@ -405,72 +388,6 @@ test('at the charm cap the published progress is −1, not a bar stuck one coin 
   assert.equal(health.charms, CHARM.maxCharms - 1);
   assert.equal(of('health').at(-1).p.charmProgress, (CHARM.charmCoins - 1) / CHARM.charmCoins);
 });
-
-test('CALIBRATION (must fire): the HUD redraws the charm arc when the purse moves', async () => {
-  /* Two-sided on purpose. Every assertion below is "the row shows N"; if the row could not be
-     moved from the bus at all they would be measuring a constant. */
-  const { engine, hud } = await boot({ withHud: true });
-  const before = charmArcs(hud);
-  engine.emit('coin', { amount: 43 });
-  assert.notDeepEqual(charmArcs(hud), before,
-    'CALIBRATION FAILED — 43 coins through the bus changed nothing in the pip row, so the '
-    + 'progress assertions below are vacuous. Interrogate the wiring, not the tests.');
-});
-
-test('the HUD draws the banked purse into the pip the next charm will fill', async () => {
-  const { engine, hud } = await boot({ withHud: true });
-  assert.deepEqual(charmArcs(hud), [null, 100, 100],
-    'carrying nothing and saving nothing, both charm pips must be blank');
-
-  engine.emit('coin', { amount: 43 });
-  assert.deepEqual(charmArcs(hud), [null, 57, 100],
-    '43 of 100 coins is 43% of the FIRST unlit charm pip — offset 57 — and the second must stay '
-    + 'blank, because you are not saving toward two charms at once');
-
-  engine.emit('coin', { amount: 20 });
-  assert.deepEqual(charmArcs(hud), [null, 37, 100], 'and it tracks upward with the purse');
-
-  /* Completing it moves the mark along: pip 1 becomes finished art with no stroke at all, and
-     the 3 coins of change start pip 2. */
-  engine.emit('coin', { amount: 40 });
-  assert.deepEqual(charmArcs(hud), [null, null, 97],
-    'the completed charm must stop being a progress bar and become a charm');
-});
-
-test('the HUD draws no charm arc at the cap — a full row is not 99% of anything', async () => {
-  const { engine, hud } = await boot({ withHud: true });
-  engine.emit('coin', { amount: CHARM.charmCoins * CHARM.maxCharms });
-  assert.deepEqual(charmArcs(hud), new Array(1 + CHARM.maxCharms).fill(null),
-    'every pip is lit, so there is no pip left to draw progress on and nothing that could');
-});
-
-test('spending a charm moves the arc down the row and does not leave a second one behind', async () => {
-  /* The specific defect a remembered target element would have: `setHealth` repaints only pips
-     whose lit state CHANGED, so the pip the mark moves off is never repainted and keeps whatever
-     was drawn on it. Two charms in progress at once, from one hit. */
-  const { engine, hud, health } = await boot({ withHud: true });
-  engine.emit('coin', { amount: CHARM.charmCoins + 60 });
-  assert.equal(health.charms, 1);
-  assert.deepEqual(charmArcs(hud), [null, null, 40], '60 coins toward the second charm');
-
-  engine.emit('damage', {});
-  assert.equal(health.charms, 0, 'the hit cost the charm, not the purse');
-  assert.deepEqual(charmArcs(hud), [null, 40, 100],
-    'the 60 banked coins now buy back the FIRST charm, and pip 2 must have been blanked — a '
-    + 'stale arc there would show two charms being saved for with one purse');
-});
-
-test('a payload from an older Health.js draws no arc rather than a wrong one', async () => {
-  /* `charmProgress` absent must not be read as 0 (an empty bar the player is not owed) nor as
-     NaN. The HUD floors anything non-finite to "no next charm" and draws nothing. */
-  const { engine, hud } = await boot({ withHud: true });
-  engine.emit('coin', { amount: 43 });
-  assert.deepEqual(charmArcs(hud), [null, 57, 100]);
-  engine.emit('health', { hp: 1, max: 3, charms: 0, down: false });
-  assert.deepEqual(charmArcs(hud), [null, 100, 100]);
-});
-
-/* ──────────────────────────────────── the wiring, in source ────────────────────────────────── */
 
 test('nothing else in src/ decides how much a hit costs', async () => {
   /* The census guarantees `damage` has a publisher and a subscriber. It cannot guarantee there is

@@ -322,7 +322,7 @@ async function run() {
     if (errs.length) console.log(`[hudvisible] ${errs.length} console/page error(s); first: ${errs[0]}`);
 
     const SELS = ['.sly-hp', '.sly-hp-meter', '.sly-shake',
-      '.sly-tl', '.sly-coins', '.sly-pips', '.sly-threat', '.sly-carry'];
+      '.sly-tl', '.sly-coins', '.sly-threat', '.sly-carry'];
     const probes = await page.evaluate(PROBE, SELS);
     report.probes = probes;
     /* If the probe itself came back empty the run proves nothing — say so rather than reading
@@ -460,7 +460,6 @@ async function run() {
       h.objective('Steal the Eye of Ra from the sealed vault', 'Temple of Ra - Great Courtyard');
       h.setCoins(888888, true);
       h.setHealth(5, 5);
-      h.setCharmProgress(0.6);
       window.__ENGINE.emit('guardAlert', { id: 'g1', state: 'chase' });
       window.__ENGINE.emit('playerState', 'sneak');
       window.__ENGINE.emit('treasurePickup', { id: 't1', name: 'Scarab of Khepri', value: 1200 });
@@ -471,7 +470,7 @@ async function run() {
     report.widest = wide;
     const hpW = wide['.sly-hp'];
     console.log('\n[hudvisible] TOP-LEFT collision census, every neighbour at its widest:');
-    const NEIGH = ['.sly-tl', '.sly-pips', '.sly-coins', '.sly-threat', '.sly-carry'];
+    const NEIGH = ['.sly-tl', '.sly-coins', '.sly-threat', '.sly-carry'];
     let nearest = Infinity, nearestSel = '';
     for (const s of [...NEIGH, '.sly-hp']) {
       const r = wide[s];
@@ -520,15 +519,16 @@ async function run() {
     const tok = await p3.evaluate(() => ({
       hp: !!document.querySelector('.sly-hp'),
       meter: document.querySelectorAll('.sly-hp-meter').length,
-      live: document.querySelector('.sly-pips')?.childNodes.length ?? -1,
+      /* §731.6 retired the live pip row; the corner's survivor is the coin counter. */
+      coins: !!document.querySelector('.sly-coins'),
       tl: !!document.querySelector('.sly-tl'), coins: !!document.querySelector('.sly-coins'),
       obj: !!document.querySelector('.sly-obj'), prompt: !!document.querySelector('.sly-prompt'),
     }));
     report.token = tok;
     console.log(`\n[hudvisible] ?hud=nohealth on the production build: ornament ${tok.hp ? 'STILL PRESENT' : 'gone'} (${tok.meter} meters); `
-      + `live row ${tok.live}, tl ${tok.tl}, coins ${tok.coins}, obj ${tok.obj}, prompt ${tok.prompt}`);
+      + `coins ${tok.coins}, tl ${tok.tl}, coins ${tok.coins}, obj ${tok.obj}, prompt ${tok.prompt}`);
     if (tok.hp || tok.meter) fail('?hud=nohealth did not remove the ornament from the production build');
-    if (!tok.tl || !tok.coins || !tok.obj || !tok.prompt || tok.live < 1) fail('?hud=nohealth removed more than the ornament');
+    if (!tok.tl || !tok.coins || !tok.obj || !tok.prompt) fail('?hud=nohealth removed more than the ornament');
     await p3.close();
 
     await writeFile(path.join(OUTDIR, 'report.json'), JSON.stringify(report, null, 2));

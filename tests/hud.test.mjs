@@ -645,30 +645,34 @@ test('§731.5: the readout is ONE meter, composed from the plate and the fill si
   assert.equal((svg.match(/<image /g) ?? []).length, 2, 'the meter should draw exactly two images');
   assert.equal((svg.match(/<rect /g) ?? []).length, 1, 'the meter should paint exactly one fill rect');
 });
-test('§731.5: the live pip row and the §731 meter share no drawing code at all', () => {
+test('§731.6: the live pip row is retired, and nothing is left pointing at it', () => {
+  /* The owner: "Do not make it real. Retire the pip row for now". Removed, not hidden — the
+     markup, the element handle, the render path, the charm arc it carried and its CSS. */
   const hud = read('ui/HUD.js');
-  const m = /function pipKind\(i\)\s*\{\s*return ([^;]+);\s*\}/.exec(hud);
-  assert.ok(m, 'pipKind() no longer has the shape this arm reads');
-  const kinds = new Set();
-  const pipKind = new Function('i', `return ${m[1]};`);
-  for (let i = 0; i < 32; i++) kinds.add(pipKind(i));
-  assert.deepEqual([...kinds].sort(), ['charm', 'life'],
-    'pipKind() gained a third kind — the live row may be able to reach the ornament art');
-  assert.equal(kinds.size, 2);                                                 // §211.1
-  // Two-sided: the same walk over a mapping with a third kind is caught.
-  const bad = new Function('i', "return i === 0 ? 'life' : i === 1 ? 'meter' : 'charm';");
-  const seen = new Set();
-  for (let i = 0; i < 32; i++) seen.add(bad(i));
-  assert.equal(seen.size, 3,
-    'CALIBRATION FAILED — the walk cannot see a third kind even when the mapping returns one');
-
-  /* §731.5 deleted the pip route into the ornament entirely: there is no `mask` kind any more,
-     so the live row cannot reach the meter even by mistake. */
+  const css = read('ui/hud.css.js');
   const ico = read('ui/Icons.js');
-  assert.ok(!/kind === 'mask'/.test(ico), "a 'mask' pip kind came back");
-  assert.ok(!/maskPip/.test(ico), 'maskPip came back');
-});
-test('§731: the ornament is inert — a full health run does not move one pixel of it', async () => {
+  let checked = 0;
+  for (const [where, src, dead] of [
+    ['HUD.js', hud, ['sly-pips', 'this.el.pips', 'pipKind(', 'setCharmProgress(', '_nextCharmIndex(']],
+    ['hud.css.js', css, ['sly-pips', 'sly-pip-life', 'sly-pip-lost', 'sly-charm-fill']],
+    ['Icons.js', ico, ['function pip(', 'function lifePip(', 'function charmPip(']],
+  ]) {
+    for (const d of dead) {
+      assert.ok(!src.includes(d), `${d} survived §731.6 in ${where}`);
+      checked++;
+    }
+  }
+  assert.equal(checked, 12);                                                   // §211.1
+
+  /* What must NOT have gone with it: `setHealth` still tracks state and fires the damage
+     vignette and the hit flash, which were never pip machinery. */
+  assert.match(hud, /setHealth\(n, max\)/, 'setHealth was removed with the row');
+  assert.match(hud, /this\._vig = 1 - v \/ m;/, 'the damage vignette went with the row');
+  assert.match(hud, /if \(lost\) this\._hitFx\(prev - v\);/, 'the hit FX went with the row');
+  /* ...and the charm TOAST icon, which a publisher outside src/ui still asks for by name. */
+  assert.match(ico, /case 'health': return charmIcon\(cls\);/,
+    "glyph('health') no longer resolves — Health.js emits a charm toast that needs it");
+});test('§731: the ornament is inert — a full health run does not move one pixel of it', async () => {
   const { hud, engine } = await bootHud();
   const snap = () => hud.root.querySelector('.sly-hp').innerHTML;
 
@@ -682,7 +686,6 @@ test('§731: the ornament is inert — a full health run does not move one pixel
   hud.setHealth(5, 5);
   hud.setHealth(2, 5);
   hud.setHealth(0, 5);
-  hud.setCharmProgress(0.4);
   engine.emit('playerHealth', { hp: 1, max: 5 });
   engine.emit('playerDamage', { amount: 3 });
   engine.emit('playerState', 'hurt');
@@ -691,17 +694,18 @@ test('§731: the ornament is inert — a full health run does not move one pixel
   assert.equal(after, before,
     'the health ornament changed under a damage run — §731 is "visual only" and this is wiring');
 
-  /* Two-sided (§418.3): the SAME snapshot probe, pointed at the element that is supposed to
-     react, must see it react — otherwise the equality above proves only that the probe is
-     blind. The live row is what setHealth actually drives. */
-  const liveAfter = hud.el.pips.innerHTML;
-  hud.setHealth(5, 5);
-  run(hud, engine, 0.2);
-  assert.notEqual(hud.el.pips.innerHTML, liveAfter,
-    'CALIBRATION FAILED — the probe cannot see the LIVE pip row change, so its verdict on the ornament is worthless');
+  /* Two-sided (§418.3): the SAME snapshot probe, pointed at an element that IS supposed to
+     react, must see it react — otherwise the equality above proves only that the probe is blind.
+     §731.6 retired the live pip row, so the witness is now the coin counter, which `addCoins`
+     drives through the same DOM the probe reads. */
+  const coinBefore = hud.el.coinNum.innerHTML;
+  hud.addCoins(1234);
+  run(hud, engine, 0.6);
+  assert.notEqual(hud.el.coinNum.innerHTML, coinBefore,
+    'CALIBRATION FAILED — the probe cannot see the coin counter change, so its verdict on the ornament is worthless');
 
-  // ...and the ornament still has not moved, after the live row demonstrably did.
-  assert.equal(snap(), before, 'the ornament moved once the live row was driven');
+  // ...and the ornament still has not moved, after a neighbour demonstrably did.
+  assert.equal(snap(), before, 'the ornament moved once a live element was driven');
   hud.dispose();
 });
 
@@ -733,17 +737,22 @@ test('§731: ?hud=nohealth removes the ornament and nothing else', async () => {
        pip row in particular keeps its own count — the ornament and the readout are not the
        same thing and a token that took both would be a regression, not a revert. */
     let kept = 0;
-    for (const sel of ['.sly-tl', '.sly-pips', '.sly-coins', '.sly-obj', '.sly-toasts',
+    for (const sel of ['.sly-tl', '.sly-coins', '.sly-obj', '.sly-toasts',
       '.sly-prompt', '.sly-pocket', '.sly-marks']) {
       assert.ok(off.root.querySelector(sel), `?hud=nohealth also removed ${sel}`);
       kept++;
     }
-    assert.equal(kept, 8);                                                     // §211.1
-    /* `_hudshim` supports `.class` and nothing else by design, so the live row is counted off
-       its own handle rather than through a descendant selector. */
-    assert.equal(off.el.pips.childNodes.length, on.el.pips.childNodes.length,
-      'the token changed the LIVE pip row');
-    assert.ok(on.el.pips.childNodes.length > 0, 'the live pip row rendered empty in both arms');
+    assert.equal(kept, 7);                                                     // §211.1
+    /* §731.6 SEMANTICS, stated: the live pip row is retired, so `?hud=nohealth` now leaves the
+       top-left with NO health readout of any kind. It does not leave the corner empty — the coin
+       counter and the exposure/stealth/carry chips are all still there, which the loop above
+       asserts — but "the token removes the ornament and the live row survives" is no longer the
+       truth and this arm no longer claims it. */
+    assert.equal(off.root.querySelector('.sly-pips'), null,
+      'a live pip row came back — §731.6 retired it');
+    assert.equal(on.root.querySelector('.sly-pips'), null,
+      'a live pip row came back on the default boot');
+    assert.ok(off.root.querySelector('.sly-coins'), 'the token emptied the corner entirely');
   } finally {
     on.dispose();
     off.dispose();
@@ -765,10 +774,13 @@ test('§731.5: the meter is the imported V1 pair, inlined, with its palette samp
   const M = await import('../src/ui/HealthMeter.js');
 
   assert.equal(M.METER_W, 320);
-  assert.equal(M.METER_H, 181);
+  assert.equal(M.METER_H, 175);
+  /* §731.7 cut the POW crescent off the bottom, so the shape is taller-cropped than the full
+     plate was: 1857 x 1015 rather than 1857 x 1051. Pinned to the cropped source, because the
+     element's CSS height is derived from it. */
   const aspect = M.METER_W / M.METER_H;
-  assert.ok(Math.abs(aspect - 1857 / 1051) < 0.01,
-    `the bake is ${aspect.toFixed(3)}:1 but the source crop is ${(1857 / 1051).toFixed(3)}:1 — the meter has been squashed`);
+  assert.ok(Math.abs(aspect - 1857 / 1015) < 0.02,
+    `the bake is ${aspect.toFixed(3)}:1 but the cropped source is ${(1857 / 1015).toFixed(3)}:1 — the meter has been squashed`);
 
   /* Inlined, not fetched — the §666 property the whole import hangs on. */
   let layers = 0;
@@ -950,9 +962,15 @@ test('§731.5: one meter at top-left, no chip, no pip row', () => {
   assert.match(rule, /top:\s*calc\(var\(--u\)\s*\*\s*[\d.]+\)/, '.sly-hp is not anchored to the top');
   assert.ok(!/right:/.test(rule) && !/bottom:/.test(rule), '.sly-hp still carries corner offsets');
   const top = parseFloat(/top:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/.exec(rule)[1]);
-  /* The fully-armed .sly-tl stack reaches 125 px at u=11, i.e. 11.36u. */
-  assert.ok(top >= 11.9, `.sly-hp sits at ${top}u, inside the fully-armed .sly-tl stack (11.36u)`);
+  /* §731.7 moved it UP. The armed .sly-tl stack is shorter now that §731.6 retired the pip row
+     that was its first child, so the floor moved with it — the real clearance is measured by
+     tools/hudvisible.mjs against the armed stack, and this arm only holds the direction. */
+  assert.ok(top < 13.5, `.sly-hp is at ${top}u — §731.7 asked for it to move toward the top`);
+  assert.ok(top >= 8, `.sly-hp at ${top}u will collide with the .sly-tl stack`);
   /* Sized to the owner's "roughly 200 px wide in a 1280-wide frame". */
   const w = parseFloat(/width:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/.exec(rule)[1]);
-  assert.ok(w >= 15 && w <= 22, `.sly-hp is ${w}u wide (${(w * 11).toFixed(0)} px at 720p) — the reference is ~200 px`);
+  /* §731.7: "reduce the size by one third" — 18.2u became 12.13u. Pinned as a RATIO of the
+     previous width so the instruction, not a magic number, is what the arm checks. */
+  assert.ok(Math.abs(w - 18.2 * 2 / 3) < 0.05,
+    `.sly-hp is ${w}u wide; one third off 18.2u is ${(18.2 * 2 / 3).toFixed(2)}u`);
 });

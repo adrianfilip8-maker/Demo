@@ -139,7 +139,6 @@ window.__hh = (() => {
     h.setCoins(888888, true);
     h.addCoins(1200);
     h.setHealth(5, 5);
-    h.setCharmProgress(0.6);
     E.emit('guardAlert', { id: 'g1', state: 'chase' });
     E.emit('guardAlert', { id: 'g2', state: 'search' });
     E.emit('playerState', 'sneak');
@@ -245,7 +244,6 @@ window.__hh = (() => {
       toasts: one('.sly-toasts'),
       toastN: document.querySelectorAll('.sly-toast').length,
       coin: one('.sly-coin-num'),
-      pips: one('.sly-pips'),
       threat: one('.sly-threat'),
       /* the subject of the negative claim, sampled by the SAME function in the SAME frames */
       hp: one('.sly-hp'),
@@ -327,7 +325,7 @@ function score(hist) {
 /* Every persistent gameplay element, plus the ornament. `.sly-marks` is deliberately NOT here: it
    is an `inset: 0` container for world markers and overlaps everything by construction, so its
    CHILDREN are what a collision check may ask about. */
-const PERSISTENT = ['.sly-tl', '.sly-pips', '.sly-coins', '.sly-threat', '.sly-carry',
+const PERSISTENT = ['.sly-tl', '.sly-coins', '.sly-threat', '.sly-carry',
   '.sly-obj', '.sly-toasts', '.sly-prompt', '.sly-pocket', '.sly-goal', '.sly-lock'];
 
 /* The twelve standing tokens this lane must not disturb, and the one it adds. */
@@ -443,7 +441,7 @@ async function run() {
     /* ============ ARM A — collision. Loop stopped, transitions frozen. ==================== */
     console.log('\n[hudhealth] ARM A — corner occupancy, every element driven to its widest state:');
     const shape = await page.evaluate(() => {
-      const pristineLive = document.querySelectorAll('.sly-pips').length ? document.querySelector('.sly-pips').childNodes.length : 0;
+      const pristineLive = document.querySelectorAll('.sly-coins').length;
       window.__hh.E.stopLoop();
       window.__hh.freeze();
       window.__hh.widen();
@@ -453,7 +451,7 @@ async function run() {
         present: !!document.querySelector('.sly-hp'),
         pips: q('.sly-hp-pip'),
         inShake: !!document.querySelector('.sly-shake .sly-hp'),
-        livePips: document.querySelector('.sly-pips').childNodes.length,
+        livePips: document.querySelectorAll('.sly-coins').length,
       };
     });
     console.log(`    ornament: present=${shape.present} pips=${shape.pips} inside .sly-shake=${shape.inShake}`);
@@ -564,7 +562,7 @@ async function run() {
     const off = await p2.evaluate(() => ({
       hp: !!document.querySelector('.sly-hp'),
       pips: document.querySelectorAll('.sly-hp-pip').length,
-      live: document.querySelector('.sly-pips').childNodes.length,
+      live: document.querySelectorAll('.sly-coins').length,
       obj: !!document.querySelector('.sly-obj'),
       prompt: !!document.querySelector('.sly-prompt'),
       toasts: !!document.querySelector('.sly-toasts'),

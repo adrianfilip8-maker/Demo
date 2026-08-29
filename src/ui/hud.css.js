@@ -90,39 +90,6 @@ export const HUD_CSS = /* css */ `
   align-items: flex-start;
 }
 
-/* ------- health pips ------- */
-
-.sly-pips {
-  display: flex;
-  gap: calc(var(--u) * .28);
-  align-items: center;
-  transform: rotate(-1.4deg);
-  transform-origin: left center;
-}
-.sly-pips > span {
-  width: calc(var(--u) * 1.72);
-  height: calc(var(--u) * 1.72);
-  display: block;
-  transition: opacity .25s ease, transform .3s var(--pop);
-}
-.sly-pips > span svg { width: 100%; height: 100%; }
-/* Hand-placed: each pip sits a hair off the line. */
-.sly-pips > span:nth-child(2n)   { transform: translateY(calc(var(--u) * .1)) rotate(4deg); }
-.sly-pips > span:nth-child(3n)   { transform: translateY(calc(var(--u) * -.09)) rotate(-5deg); }
-.sly-pips > span:nth-child(5n)   { transform: translateY(calc(var(--u) * .06)) rotate(2.5deg); }
-.sly-pips > span.sly-pip-lost    { opacity: .92; }
-/* The calling card is the pip whose loss ends the run — see pipKind() in HUD.js. It is drawn as
-   a card among horseshoes so the silhouette carries that, and sized a shade larger so the row
-   reads as "Sly, plus two charms" rather than as a three-segment bar. */
-.sly-pips > span.sly-pip-life    { width: calc(var(--u) * 1.94); height: calc(var(--u) * 1.94); }
-/* The charm being paid for — setCharmProgress() in HUD.js traces this stroke from heel to heel as
-   Health.purse fills. Eased, because the driver is a coin PICKUP and coins arrive in ones, threes
-   and fives (COIN_VALUE in Pickups.js): unsmoothed, a pile would step the arc 5% in a single frame
-   and read as a glitch rather than as money going in. Slower than --pop on purpose — this is an
-   accrual, not an impact, and it is the one thing in this corner that should not snap.
-   (No backticks anywhere in this file: the whole stylesheet is one template literal.) */
-.sly-charm-fill { transition: stroke-dashoffset .3s var(--settle); }
-
 /* ------- coin counter ------- */
 
 .sly-coins {
@@ -528,11 +495,16 @@ export const HUD_CSS = /* css */ `
 .sly-hp {
   position: absolute;
   left: calc(var(--u) * 1.9);
-  /* 13.5u, not 12.9u. At 12.9 the MEASURED clearance to a fully-armed .sly-tl was 11.7 px, not
-     the ~17 the offsets imply — the -1.2deg tilt expands the element's bounding box upward, which
-     arithmetic on the offsets does not show and only the browser reports. */
-  top: calc(var(--u) * 13.5);
-  width: calc(var(--u) * 18.2);
+  /* §731.7 "move the meter toward the top": 10u, up from 13.5u. Two things made the room — the
+     POW crescent is cut off the bottom of the artwork, and §731.6 retired the live pip row that
+     used to be .sly-tl's first child, which shortened the stack above by its own height. The
+     offset is still measured rather than derived: the -1.2deg tilt expands the bounding box
+     upward, which cost 11.7 px of real clearance last time against ~17 implied, so the number
+     below is the one tools/hudvisible.mjs reports against a FULLY ARMED stack. */
+  top: calc(var(--u) * 10);
+  /* §731.7 "reduce the size by one third": 18.2u * 2/3 = 12.13u. Height follows the artwork's
+     own cropped aspect (1.830:1 now that the POW crescent is gone, was 1.767:1). */
+  width: calc(var(--u) * 12.13);
   /* A degree of tilt, the way every struck prop in this sheet is hand-placed. Kept small: the
      insignia is a MARK and a visibly askew mark stops reading as itself. */
   transform: rotate(-1.2deg);
