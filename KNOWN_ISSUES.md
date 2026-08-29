@@ -62629,3 +62629,65 @@ committing, not after. §704.9b's lesson was that the tell was in its own output
 The damage here is misattribution in `git log`, not loss, and it is left as it is rather than
 rewritten — history surgery on a branch three other lanes are pushing to would cost more than the
 wrong author line on 210 lines of prose that reads correctly and is signed in its own text.
+
+### §733.8 The suite — every run quoted (§703.2), including the one I killed myself
+
+`node --test "tests/"*.test.mjs` from a clean detached worktree at the **pushed** `b5db5d1`
+(`git worktree add --detach /home/user/wt-733`, `node_modules` symlinked), cwd checked from
+INSIDE the spawned command (§694), the complete TAP stream written to a file and `not ok`
+counted over the FILE, never a window (§711.1). `--test-name-pattern` was never used.
+
+| run | commit | result | duration | pwd inside command | cwd at end |
+|---|---|---|---|---|---|
+| 1 | `b5db5d1` | **INCOMPLETE — killed by my own 10-minute tool timeout** at 1033 ok / **0 not ok**. Not a suite failure and not a pass either; quoted because §703.2 asks for every run, and a run that was cut off is the easiest kind to quietly not mention | ≥600 s (killed) | `/home/user/wt-733` | exists |
+| 2 | `b5db5d1` | **1134 / 1134, 0 fail**, exit 0, zero `not ok` lines over the whole stream | 767 s | `/home/user/wt-733` | exists |
+
+**The suite is 1134 tests now, not §717.12's 1086** — other lanes' arms, none of them this one's:
+this lane added no test, which §733.7 records as a gap rather than an achievement.
+
+**767 s against §717.12's 261–268 s baseline, and the cause is contention rather than anything
+in the tree**: the FIFO capture lock was held throughout by another lane's `vaulturn` walked-break
+run, and two other lanes were running their own suites concurrently (`tests/hudtruth`,
+`tests/alertshot` observed live in `ps` beside this run's own `tests/traversal`). The lock was
+neither taken nor bypassed and the holder was not killed.
+
+**Neither documented flake fired** — `framebudget` F3 GC (~1-in-3) and `padrest` R1b (~1-in-5)
+both passed in run 2, which is worth stating precisely because the contention §703 blames for F3
+was unusually high here.
+
+**One targeted run beside the suite**, because it is the arm this lane's only file could plausibly
+break: `tests/clockfreeze.test.mjs` is the single test in the suite that READS the `tools/`
+directory (found by grep over `tests/`, not by memory). With `tools/verbdonor.mjs` present it
+reports **4 / 4, 0 fail**.
+
+### §733.9 My ledger body was committed by ANOTHER LANE, and I nearly reported otherwise
+
+Recorded because it is §732.9's finding observed from the opposite side, within the hour, and
+because the commit message it produced is wrong in a way that reads as correct.
+
+This lane appended its §733 body, then ran `git add KNOWN_ISSUES.md tools/verbdonor.mjs` and
+committed `b5db5d1`. **That commit contains one file: `tools/verbdonor.mjs`.** The ledger body is
+not in it. Between the append and the `git add`, the §732 coin lane committed the shared ledger
+(`7f119e9`) and swept up this lane's in-flight append — `git log -S` on this section's own claim
+sentence resolves to `7f119e9`, not to `b5db5d1`.
+
+Nothing was lost: `git show HEAD:KNOWN_ISSUES.md` carries all eight §733 subsections and the
+heading exactly once, and `git diff HEAD -- KNOWN_ISSUES.md` is empty. But **`b5db5d1`'s message
+describes a census, a ruling table and an instrument, and its diff is a tool** — a reader running
+`git show` on it would find most of the message unsupported by its own contents.
+
+Two things follow, and the second is the general one:
+
+- §732.9 warns that `git add` on the shared ledger stages another lane's in-flight append. The
+  mirror image is equally live and less obvious: **your own append can be carried off by
+  somebody else's `git add` before you reach your commit**, and your commit then silently
+  narrows to whatever is left. The tell is in `git show --stat`, which this lane ran only
+  because it was checking something else — the §704.9b pattern exactly, where the number that
+  would have caught it was printed and not read.
+- The append itself was safe, and that part was not luck: every write went through a helper that
+  re-reads the file immediately before writing, asserts the marker appears **zero** times before
+  and **exactly once** after, and asserts the line delta equals the body's own length. It caught
+  the file growing under this lane twice (62191 → 62201 before the claim, 62212 → 62397 before
+  the body) and preserved both other lanes' appends. **Guard the append; you cannot guard the
+  commit boundary the same way on a shared tree.**
+
