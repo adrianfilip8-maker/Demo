@@ -222,15 +222,20 @@ async function run() {
   const specs = authorSmashables(route);
   const spawnJar = specs.find((s) => s.at === 'spawn' && s.kind === 'jar');
   const gateCrate = specs.find((s) => s.at === 'inner-gate' && s.kind === 'crate');
-  if (!spawnJar || !gateCrate) throw new Error('the shipped author no longer places a spawn jar / gate crate');
+  /* the SECOND walked break (§466.5): the terrace-1 cluster, one leg up the authored route
+     from spawn — reachable by construction, because it is the designer's own walking line */
+  const terraceProp = specs.find((s) => s.at === 'terrace-1');
+  if (!spawnJar || !gateCrate || !terraceProp) throw new Error('the shipped author no longer places a spawn jar / gate crate / terrace prop');
 
   console.log(`[smashshot] camDot pre-flight (in-Node, swept — §604)`);
   const { camDot } = await import('./camdot.mjs');
   const A = await sweepStance(camDot, [spawnJar.x, spawnJar.y, spawnJar.z]);
   const B = await sweepStance(camDot, [gateCrate.x, gateCrate.y, gateCrate.z]);
+  const C = await sweepStance(camDot, [terraceProp.x, terraceProp.y, terraceProp.z]);
   console.log(`  stanceA (spawn jar @ ${spawnJar.x.toFixed(2)},${spawnJar.z.toFixed(2)}):\n${A.rows.join('\n')}`);
   console.log(`  stanceB (gate crate @ ${gateCrate.x.toFixed(2)},${gateCrate.z.toFixed(2)}):\n${B.rows.join('\n')}`);
-  if ((!A.pos || !B.pos) && process.env.CAMDOT !== '0') {
+  console.log(`  stanceC (terrace ${terraceProp.kind} @ ${terraceProp.x.toFixed(2)},${terraceProp.z.toFixed(2)}):\n${C.rows.join('\n')}`);
+  if ((!A.pos || !B.pos || !C.pos) && process.env.CAMDOT !== '0') {
     throw new Error('[smashshot] no swept azimuth passed camDot — refusing to photograph blind');
   }
 
@@ -355,6 +360,31 @@ async function run() {
     });
     await save('spawn-postbreak-night', persist, { tod: persist.tod, broken: persist.broken });
     report.measures.persistAcrossGrade = { broken: persist.broken, tod: persist.tod };
+
+    /* ── the SECOND walked break (§466.5): up the route to terrace-1, a different kind ───── */
+    const break2 = await page.evaluate(async ({ prop, cam }) => {
+      const S2 = window.__ss;
+      S2.toggleGrade();                            // back to day for a like-for-like pair
+      const leg = S2.walkTo([prop.x, prop.y, prop.z], 1.15, 2400);
+      S2.cam(cam.pos, cam.target); S2.pump(1);
+      const before = S2.E.get('smashables').debugInfo().broken;
+      const hit = S2.swing(5);
+      const mid = await S2.grab();
+      S2.drive(110, 1 / 60, { my: 0 });
+      const post = await S2.grab();
+      const after = S2.E.get('smashables').debugInfo().broken;
+      const mv = S2.E.get('movement');
+      return { leg, hit, before, after, playerY: +mv.position.y.toFixed(2), mid, post };
+    }, { prop: { x: terraceProp.x, y: terraceProp.y, z: terraceProp.z }, cam: { pos: C.pos, target: C.target } });
+    report.measures.break2 = {
+      kind: terraceProp.kind, walkedFrames: break2.leg.frames, dist: break2.leg.dist,
+      events: break2.hit.events, broken: { before: break2.before, after: break2.after }, playerY: break2.playerY,
+    };
+    console.log(`[smashshot] second break (${terraceProp.kind} @ terrace-1): walked ${break2.leg.frames} frames to ${break2.leg.dist} m `
+      + `(player y ${break2.playerY}), ${break2.hit.events} events, broken ${break2.before}->${break2.after}`);
+    if (break2.hit.events < 1) throw new Error('the second walked break broke nothing — one sample was carrying the claim (§466.5)');
+    await save('terrace-midbreak-day', break2.mid, { kind: terraceProp.kind, events: break2.hit.events });
+    await save('terrace-postbreak-day', break2.post, { broken: break2.after });
 
     /* ── the revert, through the URL in a fresh boot ────────────────────────────────────── */
     await boot('&smash=gen');
