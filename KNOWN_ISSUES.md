@@ -61915,3 +61915,143 @@ artifact, and the twelve standing tokens were verified together in one URL at `4
 
 **Boundary unchanged:** this verifies the artifact, not the live host, which the container proxy
 blocks (§695).
+
+---
+
+### §731.5 — "The blue part behind the insignia is the health bar": one meter, from the repo's own layers, filled with the character's blue
+
+**Owner, on §731.4's row of five badges: *"No, that is wrong. The blue part behind the insignia is
+the health bar. Reference the one in the top left of this image."*** Then, settling the colour:
+***"Use the same color blue as the blue on the character's outfit."***
+
+The insignia was never the unit the readout is made of — it is the ornament **on** a meter, and the
+meter is the blue lozenge behind it. One meter, one mask, drawn at full.
+
+#### Which version, and why V1
+
+Both sets are plate-and-fill pairs, 1920 × 1195, HEAD `a312a99`, licence **NONE STATED**:
+
+| | plate bbox | fill bbox | fill colour | composited at full |
+|---|---|---|---|---|
+| **V1** | x28–1884, y72–1122 | x33–1879, y77–989 | **`#4aa0d0` mid blue** (99.5 %) | a complete outlined oval with the mask on it |
+| V2 | x107–1889, y149–1023 | identical to its plate | `#97fdfd` pale cyan (99.9 %) | a partial crescent with a bite out of the lower left and no track outline |
+
+V2's layers are pixel-aligned to each other, which is tidier, but composited it reads as a
+half-empty meter with no outline. V1 composites to exactly what the owner pointed at. **V1.**
+
+**Alignment, measured rather than trusted: 100.0 % of V1's fill lands on the plate's empty track,
+and 0.00 % falls outside the plate.** That is the check that the two layers really are a pair.
+
+V1's plate is taller than its HP fill because it also carries the **POW track** — its own bronze
+`PROGRESS_BAR_POW` layer (`#c18e52`, bbox y848–1117), a second stat this project does not have.
+Left alone it shows as a bare grey wedge under the mask. Since §731 is visual-only and pinned at
+full, the fill silhouette is the **union** of the HP fill and that track (206,874 of 971,145
+texels), so the whole meter reads full. That is a decision about which *state* to draw, not a
+repaint of the artwork.
+
+#### The blue: coupled, not copied
+
+The owner asked for the character's outfit blue. That is `PAL.blue = 0x2f5fc4` in
+`src/player/SlyModel3.js`, whose own docblock states the rule the model was built to — **one blue
+BY NAME across cap, shirt, gloves and boots (G1)**. So the fill colour is **not baked**: the fill
+layer ships as an alpha **silhouette** (white where full, insignia hole included) and
+`Icons.healthMeter` paints it through an SVG luminance mask with the imported constant read at
+module load. Burning `#2f5fc4` into the raster — or retyping it in the HUD — is precisely the drift
+§712 closed between the coin glyph and the coin, and a test asserts the **coupling**, not the
+literal: it renders the meter, reads `PAL.blue` at runtime and requires them to agree, with
+`PAL.blueDark` as the in-arm input that must *not* satisfy it.
+
+**Boundary crossed, disclosed rather than buried:** `PAL` was not exported, so `SlyModel3.js:97`
+gains the word `export`. Purely additive, no behaviour change — but `src/player/` is outside this
+lane's stated ownership and this is the one edit it made there.
+
+#### What the owner's blue costs, measured
+
+`PAL.blue` (luma 0.128) is much darker than the artwork's own fill (`#4aa0d0`, luma 0.312):
+
+| pair | before (`#4aa0d0`) | now (`PAL.blue`) |
+|---|---|---|
+| insignia navy `#262671` vs fill | 4.52:1 | **2.22:1** |
+| insignia pale `#c5c5c5` vs fill | — | **3.42:1** |
+| artwork's black outline vs fill | — | **2.95:1** |
+| **the meter against the SCENE**, all 256 grounds | **3.18:1** | **3.18:1** — unchanged |
+
+**The band does get closer to the fill, and the mark still reads** — not on the band, but on its
+pale patches at 3.42:1 with the artwork's own black outline running between the two. And the
+scene-facing bound does not move at all, because it is set by outline-against-pale, not by the
+fill; a two-sided arm proves that by re-running the sweep with the artwork's blue and getting the
+same number. If the owner wants the band separated further the levers are outline weight or
+`PAL.blueDark`, not a different blue.
+
+#### Placement, re-surveyed (not carried over)
+
+Different shape, so the census was re-run from scratch on the production artifact with every
+neighbour driven to its widest:
+
+| element | x, y | w × h | bottom | overlap |
+|---|---|---|---|---|
+| `.sly-tl` | 21.8, 15.6 | 176 × 109.5 | 125.0 | **0 px²**, clearance **18.5 px** |
+| `.sly-pips` | 21.6, 13.0 | 109.7 × 23.9 | 36.9 | 0 px², 106.6 px |
+| `.sly-coins` | 21.5, 38.9 | 113.6 × 28.2 | 67.1 | 0 px², 76.4 px |
+| `.sly-threat` | 21.5, 66.3 | 215.2 × 30.1 | 96.3 | 0 px², 47.2 px |
+| `.sly-carry` | 21.4, 95.6 | 167.4 × 29.3 | 124.9 | 0 px², 18.6 px |
+| **`.sly-hp`** | **21.8, 143.5** | **202.4 × 117.3** | 260.8 | — |
+
+**A finding the stylesheet cannot show:** at the first offset (12.9u) the measured clearance was
+**11.7 px**, not the ~17 the offsets imply — the −1.2° tilt expands the bounding box upward, and
+only the browser reports that. Moved to 13.5u for 18.5 px.
+
+#### Does it read? — production artifact, veil dismissed, both grades
+
+`.sly-hp` at **202.4 × 117.1** (2.57 % of a 720p frame; the owner asked for "roughly 200 px wide in
+a 1280-wide frame"), `opacity: 1`, effective opacity 1, in the viewport, `data-hidden=0`.
+**75.8 %** of its rect changes when the node is hidden in the same frame (mean Δ 39.64, max Δ 131),
+against a control corner that changed **0 %** while carrying real content (stdev 30.27, 310
+colours).
+
+| grade | fill (`PAL.blue`) | navy | pale | outline | separate pale-grey regions |
+|---|---|---|---|---|---|
+| L1 day | 11,039 px | 6,302 px | 2,923 px | 1,431 px | **5** (1110, 637, 625 — two eye patches + muzzle) |
+| L1 night | 11,053 px | 2,883 px | 2,981 px | 6,318 px | **5** |
+
+All four inks survive at both grades and the insignia's features resolve as separate regions.
+
+#### Dead code removed, not left dormant
+
+`MaskBadge.js`, `tools/godot2mask.mjs`, `staging/assets/sly-mask/`, the `'mask'` pip kind,
+`maskPip`, `HP_PIPS`, `HP_FULL`, the pip-row markup, `.sly-hp-pip`, `.sly-hp-row` and the per-pip
+jitter rules. Tests assert each is gone from both the stylesheet and the source rather than
+trusting the deletion.
+
+#### PROPOSAL, not an action: the top-left now holds two health readouts
+
+Measured, both on the same production frame:
+
+| | rect | area | driven by |
+|---|---|---|---|
+| `.sly-pips` — the **live** readout | 22.2, 13.4, 65.8 × 22.8 | 1,500 px² | `setHealth`; `hp = 1 + charms`, calling card + horseshoes |
+| `.sly-hp` — §731's **decorative** meter | 22.3, 143.0, 202.4 × 117.1 | 23,701 px² | nothing, pinned at full |
+
+**The decorative readout is ~16× the area of the functional one and sits 106.6 px below it, in the
+same corner.** A player will read the large blue meter as their health, and it will never move.
+That is a real usability problem and it is not one this lane should decide unilaterally, so:
+
+- **Option A (recommended):** make the §731 meter the *real* readout — clip the fill silhouette by
+  health fraction and retire `.sly-pips`. This is what a Sly 4 HUD actually is, and the mask hole
+  in the silhouette already gives the correct "insignia stays, bar drains" behaviour. **It
+  contradicts the standing "visual only" instruction, so it needs the owner's word.**
+- **Option B:** keep the meter decorative and move `.sly-pips` out of the top-left.
+- **Option C:** accept both.
+
+Nothing was changed on this; `?hud=nohealth` still removes only the ornament and the live row is
+untouched (verified on the production build: ornament gone, live row still 3).
+
+#### Still visual only
+
+No event, no `setHealth`, no handle in `this.el`, no depletion path and no partial state. The
+inertness arm drives a full damage run and requires byte-identical markup; wiring the meter to
+`setHealth` by hand makes it fail, re-checked after this rewrite.
+
+**Suite:** `1139/1139, 0 failures` at `5f6529c`, clean detached worktree, cwd verified. Production
+measurements above at the same commit. **Boundary unchanged:** the artifact is verified, not the
+live host, which the container proxy blocks (§695).
