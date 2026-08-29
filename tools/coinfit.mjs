@@ -119,12 +119,162 @@ function coinGeom(r) {
     ? Uint32Array.from({ length: idx.count }, (_, i) => idx.getX(i))
     : Uint32Array.from({ length: pos.count }, (_, i) => i);
   geo.computeBoundingBox();
-  const out = { verts, index, t, triCount: index.length / 3, bbox: geo.boundingBox.clone() };
+  const out = { r, verts, index, t, triCount: index.length / 3, bbox: geo.boundingBox.clone() };
   geo.dispose();
   return out;
 }
 
 const BOBS = [-1, 0, 1];
+
+/**
+ * ONE placement, tested over the whole pose envelope. Extracted from `run()` (§732) so that the
+ * census, the controls below and `tools/coinmove.mjs`'s relocation search all ask the **same**
+ * question of the same code. A relocation searched with a second copy of this predicate would
+ * prove the copy agrees with itself, which is §439's stub in a new costume.
+ *
+ * → { cross: {who,pose}|null, clear: number, who: string, pose: string }
+ */
+export function poseTest(W, C, s, opts = {}) {
+  const swept = Math.hypot(C.r, C.t / 2);
+  const pad = opts.pad ?? PAD;
+  const yaws = opts.yaws ?? YAWS;
+  const env = new THREE.Box3(
+    new THREE.Vector3(s.x - swept, s.y - swept - TUNE.bobAmp, s.z - swept),
+    new THREE.Vector3(s.x + swept, s.y + swept + TUNE.bobAmp, s.z + swept));
+  const cand = candidates(W, env, pad);
+  const posed = new Float64Array(C.verts.length);
+  const triA = new Float64Array(9);
+  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+  const one = new THREE.Vector3(1, 1, 1), p = new THREE.Vector3();
+  let cross = null, minClear = Infinity, minWho = -1, minPose = '';
+
+  for (let yi = 0; yi < yaws && !cross; yi++) {
+    const th = (yi / yaws) * Math.PI * 2;
+    for (const bob of BOBS) {
+      if (cross) break;
+      const poseName = `yaw ${(th * 180 / Math.PI).toFixed(0)}° bob ${bob >= 0 ? '+' : ''}${bob}`;
+      /* The shipped pose, verbatim from `Pickups._writeCoinMatrices`. */
+      p.set(s.x, s.y + bob * TUNE.bobAmp, s.z);
+      M.compose(p, q.setFromEuler(e.set(Math.PI / 2, 0, th)), one);
+      const el = M.elements;
+      for (let i = 0; i < C.verts.length; i += 3) {
+        const x = C.verts[i], y = C.verts[i + 1], z = C.verts[i + 2];
+        posed[i] = el[0] * x + el[4] * y + el[8] * z + el[12];
+        posed[i + 1] = el[1] * x + el[5] * y + el[9] * z + el[13];
+        posed[i + 2] = el[2] * x + el[6] * y + el[10] * z + el[14];
+      }
+      for (let ci = 0; ci < cand.length; ci += 7) {
+        const t = cand[ci];
+        if (SELF.has(W.names[W.owner[t]])) continue;      // a coin is not its own obstacle
+        const o = t * 9;
+        for (let i = 0; i < posed.length; i += 3) {
+          const d2 = pointTri2(posed[i], posed[i + 1], posed[i + 2], W.tris, o);
+          if (d2 < minClear * minClear) { minClear = Math.sqrt(d2); minWho = W.owner[t]; minPose = poseName; }
+        }
+        /* The gate is safe rather than merely fast: any world point inside the coin is within the
+           swept radius 0.2414 of its centre, so a crossing triangle ALWAYS drives `minClear`
+           under 0.25 in this same iteration before the gate is read. */
+        if (minClear < 0.25) {
+          for (let f = 0; f < C.index.length && !cross; f += 3) {
+            for (let k = 0; k < 3; k++) {
+              const v = C.index[f + k] * 3;
+              triA[k * 3] = posed[v]; triA[k * 3 + 1] = posed[v + 1]; triA[k * 3 + 2] = posed[v + 2];
+            }
+            if (sat(triA, 0, W.tris, o)) cross = { who: W.names[W.owner[t]], pose: poseName };
+          }
+        }
+        if (cross) break;
+      }
+    }
+  }
+  return { cross, clear: minClear, who: minWho >= 0 ? W.names[minWho] : '', pose: minPose };
+}
+
+/**
+ * ── §732: the instrument's own controls, run on every census ──────────────────────────────
+ *
+ * §439/§440: an instrument built from the same assumption as the thing it measures cannot
+ * falsify it. `poseTest` had, until this section, never been shown to say either word on an
+ * input whose answer was known independently of the answer. Four planted placements, all
+ * against the REAL soup, all through `poseTest` itself:
+ *
+ *   POS-centre  the coin centred exactly on a real wall triangle's centroid   MUST cross
+ *   POS-nudge   the same, pushed 0.05 m along that face's normal              MUST STILL cross
+ *   NEG-air     the coin at (0, 400, 0)                                        MUST NOT cross
+ *   BOUNDARY    step off the same face until it stops crossing                 MUST clear, at
+ *               (ladder 0.05 m out to 1.20 m, both ways along ±n)              d* >= swept 0.2414
+ *
+ * POS-nudge is the one that earns its place: 0.05 m is exactly the "nudge it out until it stops
+ * z-fighting" repair, and an instrument that went quiet there would certify that non-fix.
+ *
+ * BOUNDARY is the discriminating negative, and the FIRST draft of it was wrong in a way worth
+ * keeping. It read "0.60 m along the face normal must be clear" — and it FAILED, because the
+ * largest triangle on this mesh is a horizontal face whose winding puts `n` at (0,−1,0), so
+ * 0.60 m "out" is 0.60 m further INTO the slab. The instrument was right and my control was
+ * measuring my assumption about which way a normal points (§435.4, in one line of arithmetic).
+ * Replaced by a **two-sided ladder**, which needs no such assumption: it asserts that SOME
+ * offset within 1.20 m clears — a claim a predicate that shouted CROSS at everything could not
+ * satisfy — and that the first clear offset is **at least the swept radius**, which is a fact
+ * about geometry (a centre closer than 0.2414 m to a large planar face cannot be clear of it)
+ * and therefore an assertion the instrument cannot pass by being sloppy in either direction.
+ *
+ * The seed triangle is chosen by **largest area on a named wall mesh**, which is a property of
+ * the level and not of the result: nothing here searches for a triangle that makes the controls
+ * pass. If a control fails, the census aborts rather than printing numbers.
+ */
+const LADDER = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.80, 1.00, 1.20];
+
+export function controls(W, C, seedMesh = 'arch:court:sandstone_block') {
+  let best = -1, bestArea = 0;
+  for (let t = 0; t < W.owner.length; t++) {
+    if (W.names[W.owner[t]] !== seedMesh) continue;
+    const o = t * 9;
+    const ux = W.tris[o + 3] - W.tris[o], uy = W.tris[o + 4] - W.tris[o + 1], uz = W.tris[o + 5] - W.tris[o + 2];
+    const vx = W.tris[o + 6] - W.tris[o], vy = W.tris[o + 7] - W.tris[o + 1], vz = W.tris[o + 8] - W.tris[o + 2];
+    const a = Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx) / 2;
+    if (a > bestArea) { bestArea = a; best = t; }
+  }
+  if (best < 0) throw new Error(`coinfit controls: no triangle owned by \`${seedMesh}\` — the mesh names changed`);
+  const o = best * 9;
+  const cx = (W.tris[o] + W.tris[o + 3] + W.tris[o + 6]) / 3;
+  const cy = (W.tris[o + 1] + W.tris[o + 4] + W.tris[o + 7]) / 3;
+  const cz = (W.tris[o + 2] + W.tris[o + 5] + W.tris[o + 8]) / 3;
+  const ux = W.tris[o + 3] - W.tris[o], uy = W.tris[o + 4] - W.tris[o + 1], uz = W.tris[o + 5] - W.tris[o + 2];
+  const vx = W.tris[o + 6] - W.tris[o], vy = W.tris[o + 7] - W.tris[o + 1], vz = W.tris[o + 8] - W.tris[o + 2];
+  let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+  const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
+
+  const at = (d) => ({ x: cx + nx * d, y: cy + ny * d, z: cz + nz * d });
+  const out = [
+    ['POS-centre', at(0), true],
+    ['POS-nudge', at(0.05), true],
+    ['NEG-air', { x: 0, y: 400, z: 0 }, false],
+  ].map(([name, s, want]) => {
+    const r = poseTest(W, C, s);
+    return { name, want, got: !!r.cross, s, who: r.cross ? r.cross.who : r.who, clear: r.clear };
+  });
+
+  /* BOUNDARY — the two-sided ladder. `d*` is the smallest offset, either way along n, at which
+     the coin stops crossing. Both facts asserted: that one exists inside 1.20 m, and that it is
+     not closer than the swept radius. */
+  const swept = Math.hypot(C.r, C.t / 2);
+  let dStar = Infinity, dSide = 0;
+  for (const d of LADDER) {
+    for (const sgn of [1, -1]) {
+      if (d >= dStar) continue;
+      if (!poseTest(W, C, at(sgn * d)).cross) { dStar = d; dSide = sgn; }
+    }
+  }
+  out.push({
+    name: 'BOUNDARY', want: false, got: !(Number.isFinite(dStar) && dStar >= swept - 1e-9),
+    s: Number.isFinite(dStar) ? at(dSide * dStar) : null, who: seedMesh,
+    clear: Number.isFinite(dStar) ? dStar : Infinity,
+    note: Number.isFinite(dStar)
+      ? `first clear at d* ${dStar.toFixed(2)} m on the ${dSide > 0 ? '+n' : '−n'} side (swept ${swept.toFixed(4)})`
+      : `NO offset within ${LADDER[LADDER.length - 1]} m clears — the predicate never says no`,
+  });
+  return { seed: { mesh: seedMesh, tri: best, area: bestArea, c: [cx, cy, cz], n: [nx, ny, nz] }, out };
+}
 
 async function run(radii) {
   process.stdout.write('· booting the drawn level (props included)\n');
@@ -153,59 +303,26 @@ async function run(radii) {
       `   ${C.triCount} tris\n  pose envelope: spin a full turn about Y (swept ball radius ${swept.toFixed(5)} m)` +
       `  bob ±${TUNE.bobAmp} m   ${YAWS} yaws x ${BOBS.length} bobs = ${YAWS * BOBS.length} poses each\n${'='.repeat(104)}\n`);
 
-    const rows = [];
-    const posed = new Float64Array(C.verts.length);
-    const triA = new Float64Array(9);
-    const M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
-    const one = new THREE.Vector3(1, 1, 1), p = new THREE.Vector3();
+    /* §732 — the controls run FIRST, at this radius, and the census does not print if they fail.
+       A number produced by an instrument that has not just demonstrated it can say both words is
+       the thing §439 is about. */
+    const ctl = controls(W, C);
+    process.stdout.write(`  CONTROLS on \`${ctl.seed.mesh}\` tri ${ctl.seed.tri} (area ${ctl.seed.area.toFixed(4)} m², ` +
+      `centroid ${ctl.seed.c.map((n) => n.toFixed(2)).join(',')}, n ${ctl.seed.n.map((n) => n.toFixed(2)).join(',')}):\n`);
+    for (const k of ctl.out) {
+      process.stdout.write(`    ${k.name.padEnd(11)} want ${k.want ? 'CROSS   ' : 'no cross'} ` +
+        `got ${k.got ? 'CROSS   ' : 'no cross'} ${k.got === k.want ? 'OK ' : 'BAD'}   ` +
+        `(${k.note || `${k.who || '—'}${Number.isFinite(k.clear) ? `, clear ${k.clear.toFixed(3)} m` : ', nothing within PAD'}`})\n`);
+    }
+    const failed = ctl.out.filter((k) => k.got !== k.want);
+    if (failed.length) throw new Error(`coinfit: ${failed.length} control(s) failed — ${failed.map((k) => k.name).join(', ')}. ` +
+      `The census is not printed: an instrument that cannot demonstrate both answers is not measuring.`);
 
+    const rows = [];
     for (let si = 0; si < spots.length; si++) {
       const s = spots[si];
-      const env = new THREE.Box3(
-        new THREE.Vector3(s.x - swept, s.y - swept - TUNE.bobAmp, s.z - swept),
-        new THREE.Vector3(s.x + swept, s.y + swept + TUNE.bobAmp, s.z + swept));
-      const cand = candidates(W, env, PAD);
-      let cross = null, minClear = Infinity, minWho = -1, minPose = '';
-
-      for (let yi = 0; yi < YAWS && !cross; yi++) {
-        const th = (yi / YAWS) * Math.PI * 2;
-        for (const bob of BOBS) {
-          if (cross) break;
-          const poseName = `yaw ${(th * 180 / Math.PI).toFixed(0)}° bob ${bob >= 0 ? '+' : ''}${bob}`;
-          /* The shipped pose, verbatim from `Pickups._writeCoinMatrices`. */
-          p.set(s.x, s.y + bob * TUNE.bobAmp, s.z);
-          M.compose(p, q.setFromEuler(e.set(Math.PI / 2, 0, th)), one);
-          const el = M.elements;
-          for (let i = 0; i < C.verts.length; i += 3) {
-            const x = C.verts[i], y = C.verts[i + 1], z = C.verts[i + 2];
-            posed[i] = el[0] * x + el[4] * y + el[8] * z + el[12];
-            posed[i + 1] = el[1] * x + el[5] * y + el[9] * z + el[13];
-            posed[i + 2] = el[2] * x + el[6] * y + el[10] * z + el[14];
-          }
-          for (let ci = 0; ci < cand.length; ci += 7) {
-            const t = cand[ci];
-            if (SELF.has(W.names[W.owner[t]])) continue;      // a coin is not its own obstacle
-            const o = t * 9;
-            for (let i = 0; i < posed.length; i += 3) {
-              const d2 = pointTri2(posed[i], posed[i + 1], posed[i + 2], W.tris, o);
-              if (d2 < minClear * minClear) { minClear = Math.sqrt(d2); minWho = W.owner[t]; minPose = poseName; }
-            }
-            if (minClear < 0.25) {
-              for (let f = 0; f < C.index.length && !cross; f += 3) {
-                for (let k = 0; k < 3; k++) {
-                  const v = C.index[f + k] * 3;
-                  triA[k * 3] = posed[v]; triA[k * 3 + 1] = posed[v + 1]; triA[k * 3 + 2] = posed[v + 2];
-                }
-                if (sat(triA, 0, W.tris, o)) cross = { who: W.names[W.owner[t]], pose: poseName };
-              }
-            }
-            if (cross) break;
-          }
-        }
-      }
-
-      const who = minWho >= 0 ? W.names[minWho] : '';
-      rows.push({ i: si, label: s.label, spot: [s.x, s.y, s.z], cross, clear: minClear, who, pose: minPose });
+      const r2 = poseTest(W, C, s);
+      rows.push({ i: si, label: s.label, spot: [s.x, s.y, s.z], cross: r2.cross, clear: r2.clear, who: r2.who, pose: r2.pose });
     }
 
     const bad = rows.filter((r) => r.cross);
@@ -267,7 +384,7 @@ async function run(radii) {
   return results;
 }
 
-export { coinSpots, coinGeom, readRoute };
+export { coinSpots, coinGeom, readRoute, worldSoup };
 
 /* ---- CLI. Guarded so the probes above can be imported without running an 82-coin sweep. ---- */
 if (process.argv[1] && process.argv[1].endsWith('coinfit.mjs')) {
