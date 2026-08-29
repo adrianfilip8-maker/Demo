@@ -22,12 +22,24 @@
  *
  *   C. REGRESSION — and this arm is why the tool is not just A and B. §439/§440: an instrument
  *      that FREEZES animation cannot certify animation. Arm A has to freeze (see `freeze()`), so
- *      it is run LAST, and arm C runs FIRST on a live, unfrozen page with the real rAF loop still
- *      turning. It samples the pickpocket mark, the toast and the coin readout ACROSS REAL TIME
- *      and requires each of them to actually move, while requiring the ornament in the same
- *      samples not to. That pair is the whole point: the same sampler that certifies the ornament
- *      inert is shown catching motion in the elements beside it, so "the ornament did not move"
- *      cannot be a blind probe reporting nothing (§418.3).
+ *      it is run LAST, and arm C runs FIRST, on an UNFROZEN page. It samples the pickpocket mark,
+ *      the toast and the coin readout across time and requires each of them to actually move,
+ *      while requiring the ornament in the same samples not to. That pair is the whole point: the
+ *      same sampler that certifies the ornament inert is shown catching motion in the elements
+ *      beside it, so "the ornament did not move" cannot be a blind probe reporting nothing
+ *      (§418.3).
+ *
+ *      TIME IN THIS ARM IS CLOCKED BY THE TOOL, NOT BY rAF, and that is a correction rather than
+ *      a shortcut. The first version of this arm let the page's own rAF loop run and sampled
+ *      across wall time: every element, including the toast — whose life is 2.6 s — came back
+ *      with ONE distinct state over 2.8 s, and `toastN` sat at 1 for all fourteen samples. The
+ *      loop is throttled in a headless page, so `HUD.update` was barely being called and the arm
+ *      was measuring a stalled engine, not a stalled HUD. It declared itself unproven, which is
+ *      what it is for. Frames are now stepped through `Engine.renderFrame(1/60)` — the entry
+ *      point whose own docblock exists so a harness can step deterministically — so `HUD.update`
+ *      runs with a real dt and the JS-driven animation (coin tick, toast life, pocket
+ *      resolution) actually advances. CSS transitions are NOT frozen here and still settle on
+ *      wall time, which is why each step is followed by a real wait.
  *
  *   D. THE TOKENS. `?hud=nohealth` is exercised through the URL in its own boot, and the twelve
  *      standing tokens are booted TOGETHER WITH IT in one more, because the only way this lane
@@ -216,6 +228,10 @@ window.__hh = (() => {
     };
     return {
       t: +performance.now().toFixed(1),
+      /* The engine's OWN clock, so a stalled loop is visible in the trace instead of being
+         mistaken for a stalled HUD — which is exactly what happened the first time. */
+      frame: E.frame,
+      simT: +E.time.toFixed(3),
       pocket: one('.sly-pocket'),
       toasts: one('.sly-toasts'),
       toastN: document.querySelectorAll('.sly-toast').length,
@@ -360,14 +376,21 @@ async function run() {
       window.__hh.E.emit('toast', { text: 'CLUE BOTTLE 7 OF 12', icon: 'goal' });
     });
 
-    /* Sample across REAL time while the loop runs. 14 samples over ~2.8 s covers the toast's
-       2.6 s life, the coin tick and several pocket resolutions. */
+    /* 14 steps of 12 frames at 1/60 = 2.8 s of simulated time, which covers the toast's 2.6 s
+       life, the coin tick and ~4 pocket resolutions (TUNE.pocketTick is 6 frames). The rAF loop
+       is stopped so the tool is the only clock and the trace is deterministic; the real wait
+       after each step is what lets the CSS transitions, which are NOT frozen in this arm, settle
+       between samples. */
+    await page.evaluate(() => window.__hh.E.stopLoop());
     const trace = [];
     for (let i = 0; i < 14; i++) {
+      await page.evaluate(() => window.__hh.pump(12, 1 / 60));
       trace.push(await page.evaluate(() => window.__hh.sampleAll()));
-      await page.waitForTimeout(200);
+      await page.waitForTimeout(120);
     }
     report.trace = trace;
+    console.log(`    stepped ${trace.length} x 12 frames at 1/60 (engine frame ${trace[0].frame} -> ${trace[trace.length - 1].frame}, sim time ${trace[0].simT} -> ${trace[trace.length - 1].simT}s)`);
+    if (trace[trace.length - 1].frame === trace[0].frame) fail('the engine frame counter never advanced — arm C has no clock and proves nothing');
 
     const distinct = (k) => new Set(trace.map((s) => s[k])).size;
     const seen = (k) => trace.filter((s) => s[k] !== 'absent').length;
