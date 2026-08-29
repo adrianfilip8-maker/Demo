@@ -554,10 +554,11 @@ export class Props {
        the same mount. Small barrels on an offering table where canopic jars stood — the
        pack has no jar model, and that is stated in Smashables' KINDS note rather than solved
        by stretching one. */
-    /* §730 — and this is the site the owner was looking at. "The urns in the treasure room can
-       be put back … by urns, I mean canopic jars." These four ARE canopic jars, they stand
-       6.4 m from the treasure pile, and §729 turned them into four small barrels on an Egyptian
-       offering table. The mount is tested against the shared `inCrypt` volume rather than
+    /* §730 — and this is the site the owner was most likely looking at. "The urns in the
+       treasure room can be put back … by urns, I mean canopic jars." These four ARE canopic
+       jars — by name here and by silhouette on the screen — they stand 3.8–5.6 m from §724's
+       treasure pile, and §729 turned them into four small barrels on an Egyptian offering
+       table. The mount is tested against the shared `inCrypt` volume rather than
        flagged, so the policy is one predicate at both call sites and a moved offering table
        re-decides itself; `at` is hoisted above the branch to make that possible.
 
