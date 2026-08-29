@@ -61143,6 +61143,192 @@ consequence for break debris and break SOUND stated — while baskets, crates, a
 outside the vault keep the KayKit body §729 gave them. Selection is spatial and RNG-neutral;
 placements outside the vault must stay bit-identical. Body lands in this lane's next pushes.)*
 
+**Owner: *"The urns in the treasure room can be put back."* Then, seconds later: *"By urns, I
+mean canopic jars."***
+
+§729 had just swapped every generated destructible for a KayKit body, at the owner's own "in all
+locations", and its `KINDS` note records the fact that makes this the right correction: **the pack
+holds no jar, pot or basket model** — its containers are barrels, crates and chests — so a `jar`
+slot took `barrel_small`. That reads fine on a dock or a terrace. In the one room whose entire set
+dress is Egyptian ceramic, standing between the offering table, the coffin lid and §724's treasure
+pile, it does not.
+
+So this is a **per-location body policy, not a revert**. §729 stands everywhere else, because
+everywhere else was accepted by silence and the owner named one room and one kind.
+
+### §730.1 The census, because "the urns" is a guess without one
+
+Measured off the shipped seed, not counted by eye. `EgyptLevel.CRYPT` (below) holds **three**
+destructible spots, all from the `sarcophagus` waypoint:
+
+| kind | position | claimed? |
+|---|---|---|
+| `jar` | (−0.487, −12, −72.225) | **yes — urn** |
+| `jar` | (0.589, −12, −72.416) | **yes — urn** |
+| `crate` | (0.043, −12, −71.528) | no — the owner named urns |
+
+Zero baskets. So the coordinator's "if the room holds only jars the distinction is moot" does not
+apply: there is a crate in there, it stays a `crates_stacked`, and that is the instruction read
+literally rather than generously.
+
+Beside them stand **four more canopic jars that are not destructibles at all** — `Props._tomb`'s
+offering-table set at (−2.60 / −1.98 / −1.36 / −0.74, −11.38, −69.6), which §729 also swapped
+(its own comment: *"Small barrels on an offering table where canopic jars stood"*). Those are
+canopic jars by name in the source and by silhouette on the screen, they stand 3.8–5.6 m from
+§724's treasure pile, and they are the likelier of the two sites for the owner to have been
+looking at. **Six urns are restored: two destructible, four static.**
+
+The one waypoint whose NAME says vault and whose position does not: `vault-floor` (0.4, −12,
+−57.6) is in the STAIRWELL, 1.19–2.13 m south of the gate wall's north face, and its cluster is
+1 crate + 2 baskets. Nothing there is claimed, and nothing there is a jar, so the room boundary is
+not load-bearing at this seed — which is exactly what makes it safe to draw.
+
+### §730.2 One volume, and it was already in the build
+
+The temptation was to write a box. The project already had one: `Architecture.update()`'s `sealed`
+predicate, the reverse portal gate that has decided *"is the camera inside the sealed crypt, so the
+desert may be hidden"* every frame since §409. Its six numbers are derived in its own docblock, and
+the one that matters is `z < −59.3` — **the north face of the tomb gate wall**, `tomb()`'s local
+`GATE_Z −58.75` minus `GATE_D/2`, which is precisely the line between the burial chamber and the
+stairwell.
+
+So it is lifted to `EgyptLevel.CRYPT` / `inCrypt(p)` **verbatim**, and `Architecture` now calls it
+instead of restating it. Two readers, one definition; a camera asks it one question and a prop asks
+it another. A second copy of "is this inside the vault" is the drift `Pickups._clueMat` refuses a
+file over, and `vaulturn.test.mjs` V1 scrapes `Architecture.js` to check the call is still there
+and evaluates both over a grid that straddles every face at ±1 cm — with a 10 cm face move as the
+demonstrated failing input, so the grid is known to have the resolution to catch one.
+
+**The selection is spatial, at both call sites.** `isUrn(kind, pos)` is `kind === 'jar' &&
+inCrypt(pos)`, and `Props._tomb` tests its own mount through the same `inCrypt` rather than
+carrying a flag — so a moved offering table re-decides itself. No index list anywhere: a reseed
+moves which spot lands where, and `props[19]` would keep passing while pointing at a terrace.
+
+### §730.3 RNG-neutral by construction, and that is the fail arm
+
+§724's precedent: a per-item change that draws zero `this.rng` values keeps every placement.
+§730 draws **zero**, and the mechanism is one `if`.
+
+`Smashables._loadBodies` already builds the generated canopic jar — §729 builds it purely to
+measure the height the barrel conforms to, then disposes it. §730 **keeps** that geometry instead
+of throwing it away. A second `_genGeo('jar')` would have advanced the stream; this advances
+nothing. On the static side `_swapBody` draws nothing at all and `canopicJar` is built on every arm
+already (§729 put it in the stream deliberately), so choosing not to call `_swapBody` is invisible
+to the rng.
+
+Evidence, run rather than argued:
+
+* `vaulturn` V3 — all **23** authored placements bit-identical across the default arm,
+  `?vault=barrels` and `?smash=gen`. Only the `slot` column differs, on exactly the 2 claimed
+  spots. The detector is calibrated in the same arm: one extra draw taken off a fresh stream
+  before authoring moves the layout, and the comparison sees it.
+* `smashswap` W2 — the static side, as an **ordered-subsequence** check. The surviving bucket
+  stream must still be a subsequence of the `?smash=gen` arm's, so a policy that perturbed the rng
+  (or moved one prop by a micron) returns null and fails. The removed set is 7 pieces (lime 4 /
+  stone 3, the courtyard baskets alone) against §729's 11, and the 4 that stayed are all in `lime`.
+
+### §730.4 The collider is re-derived, not carried
+
+On the DESTRUCTIBLES there is nothing to re-derive: a smashable has no collider and never had one.
+That is §729's own recorded trade — `Collision.build()` rebuilds the whole triangle soup and the
+whole BVH from every record, there is no per-record removal, so disabling one jar's collider on a
+cane swing is not a thing to do; a smashable is a prop you can run through.
+
+The real collider consequence is on the STATIC four, and it is a bucket move:
+
+| | mesh | registered |
+|---|---|---|
+| §729 barrel | `props_kaykit` | `ground` / **`wood`** |
+| §730 urn | `props_lime` | `ground` / **`stone`** |
+
+`_flushBuckets` registers the MERGED bucket, so the collider is the jar's own geometry again —
+re-derived by construction, never the barrel's bounds kept under a new name. `smashswap` W1
+asserts `props_lime:ground:stone` is present and W2 asserts every other collider is unchanged.
+Footsteps on the offering table go back to stone with it.
+
+### §730.5 It breaks like clay again, in both channels, because it is one tag
+
+`material` goes back to `stone` — the row §729's own note documents for the generated jar
+(*"clay under `stone` — limestone chips into `PAL.crevice`, `SMASH.stone`"*). That single tag is
+read by `Particles.smashFor` AND by `Sfx.stepFor`, so the shards and the SOUND move together:
+
+**Shards.** `SMASH.stone` throws debris from `PAL.limeLight` **#f0e3c8** dying to `PAL.crevice`
+#4a2f22, with dust `PAL.limeMid` #d4c19a → `PAL.sandMid` #c9915a. The barrel threw
+`PAL.woodChip` **#8a6a44** → the same crevice, with dust #c9915a → `PAL.sandDark` #8a5a38. A
+restored urn therefore sheds visibly PALER chips — limestone, not timber. §729 found the wood
+recipe already matched the imported bodies by measurement and needed no retint; the same is true
+here in the other direction, and for the same reason: `SMASH.stone` was authored for this jar.
+
+**Sound.** `Audio._onSmash` plays `stepFor(material)` at rate 0.62 plus a `stone_grind` layer. At
+that rate, off the `STEP` table:
+
+| | band × 0.62 | q | body | ring | tick |
+|---|---|---|---|---|---|
+| `step_wood` (barrel) | 434 Hz | 3.2 — narrow, resonant | 152 Hz at **0.46** | **267 Hz, 220 ms** | none |
+| `step_stone` (urn) | **1333 Hz** | 1.4 — broad | 115 Hz at 0.16 | none | **2232 Hz, 12 ms** |
+
+So: **a barrel thunks low and rings out; an urn cracks bright and stops dead.** The `stone_grind`
+rubble layer is identical in both — it keys off `scale`, and `scale` is 1 either way.
+
+`URN` is written as the `?smash=gen` arm's own jar row and `vaulturn` U1 asserts it equals a
+`?smash=gen` child's `KINDS.jar` field for field, so `h`, `scale` and the value ladder cannot
+drift: same place, same pay, same event mid-height, only the body and the material family move.
+
+### §730.6 The bodies, measured at the shipped seed
+
+One boot, four instanced meshes, read off their own bounding boxes:
+
+| mesh | n | material | verts | height | width |
+|---|---|---|---|---|---|
+| `smashable_jar` (`barrel_small`) | 5 | `smash:kaykit` | 621 | 0.6136 | **0.6038** |
+| `smashable_jar_urn` (`canopicJar`) | **2** | `smash:clay` | 333 | **0.6136** | **0.3347** |
+| `smashable_basket` (`chest`) | 10 | `smash:kaykit` | 2184 | 0.5000 | 0.6539 |
+| `smashable_crate` (`crates_stacked`) | 6 | `smash:kaykit` | 3993 | 0.6595 | 0.6431 |
+
+The two heights that matter are **identical to four decimals**, and that is not luck: §729
+conformed `barrel_small` TO the generated jar's measured height, so putting the jar back is
+height-preserving by construction. What changes is the WIDTH — **0.335 m against 0.604 m, 55 % of
+the footprint** — which is the whole visual point: a slender canopic jar where a squat barrel
+stood. It is also 333 vertices against 621.
+
+That makes the one thing §729 had to price get *easier*, not harder. §729 checked its swapped
+footprints against the cluster ring's worst-case neighbour chord (2·0.47·sin 60° = 0.81 m) and
+found a worst radius-sum of 0.65. An urn beside the vault crate sums to 0.167 + 0.346 = **0.513 m**
+against that same 0.81 — more clearance than either arm of §729 had.
+
+`debugInfo().swap` is unchanged in the default arm: jar → `barrel_small` ×0.603, basket → `chest`
+×0.3846, crate → `crates_stacked` ×0.3078, zero fallbacks — §729's own three conforms, still
+there, with `urns: 2` added beside them.
+
+### §730.7 What stayed imported
+
+Everything §729 shipped except six objects. Specifically: the vault's own **crate**
+(`crates_stacked`); the other **five** `jar` spots in the level (spawn, terrace-1, kiosk-lintel and
+both descent-landing jars) which keep `barrel_small` on the atlas material; all **ten** baskets
+(`chest`); all **six** crates; and the **seven** courtyard wall baskets among Props' statics
+(`barrel_large` / `barrel_small_stack` alternating). `debugInfo().swap` still reports all three
+kinds swapping with their §729 conform scales, and `vaulturn` U4 asserts that table is identical
+between the default and token arms — §730 must not remove a body from the imported set.
+
+The urn slot costs the vault **one extra material and one extra draw call** for its two pots:
+`smash:clay` is not on the KayKit atlas, because a clay pot is not wood. Stated rather than hidden.
+
+### §730.8 The token
+
+`?vault=barrels` (`globalThis.__VAULT_AB` for tests) reverts §730 **alone** — the treasure room
+goes back to §729's imported bodies and nothing else in the level notices. It lives in `KayKit.js`
+beside `SMASH_GEN` for that flag's own reason: `Props.js` reads it too, and `Smashables` already
+imports from `Props`, so the other direction would be a cycle. `VAULT_URNS = !SMASH_GEN &&
+!VAULT_BARRELS` is the one expression both files branch on, so `?smash=gen` (which generates
+everything everywhere) makes the policy moot rather than fighting it.
+
+`smashswap`'s W1/W2 now assert §729's original numbers — `{jars: 4, baskets: 7}`, 11 pieces
+removed, lime 8 / stone 3 — **under that token**, which is a stronger statement than the one they
+made before: the way back is byte-exact, not approximate.
+
+<!-- §730 BODY PART 1 ENDS HERE; the walked break and the suite runs are appended after it. -->
+
+
 ---
 
 ## §731 — "Put the health bar from the Sly 4 HUD in the corner of the screen as well… visual only": a drawn pip cluster in the HUD's own prop idiom, wired to nothing
