@@ -62199,3 +62199,14 @@ coin-interpenetration lane, re-census at r=0.24 + relocation + walked verificati
 in later commits. The brief quotes §712.9's "13 of 82"; that figure is the r=0.16 column and
 §712.9's own table already reports 14 at the shipped 0.24. Both are re-derived here rather than
 carried, because a census quoted from another section is a claim about that section.)*
+
+---
+
+## §733 — The still-procedural verbs, re-censused against the opened libraries: which have a donor by CONTENT, which have none, and which have one that cannot be measured
+
+*(Claim marker: §733 CLAIM b7f3c1 — animation-donor lane, continuation of §715's standing
+instruction "add all the required animations from the godot repo". This heading is committed
+BEFORE the work, per the ledger discipline; the body follows in later commits. The brief's
+figure of "roughly 27 of 49" is NOT carried forward — a census quoted from another section is a
+claim about that section (§712.9's lesson), and this lane re-derives it from `CLIP_ORIGIN`
+through the shipped `buildClipSet` in §733.1. The live figure is 28 of 54.)*
