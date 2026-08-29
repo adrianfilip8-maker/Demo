@@ -503,65 +503,6 @@ export const HUD_CSS = /* css */ `
 .sly-prompt-ic svg { width: 100%; height: 100%; }
 .sly-prompt[data-kind='steal'] .sly-prompt-ic { display: block; }
 
-/* ==================================================== SLY 4 HEALTH BAR (§731) */
-
-/* The owner asked for the Sly 4 health readout in a corner, visual only. It is inert markup —
-   no rule below is ever toggled by script, there is no .on state and no transition, because
-   nothing changes. What it must NOT be is rule 1's forbidden object (a translucent grey panel
-   with a fill), so it is built the way the rest of this sheet is: drawn pips, an ink halo on the
-   kicker, a hard offset shadow, and a degree and a half of rotation so it reads hand-placed.
-
-   BOTTOM-RIGHT. .sly-tl owns top-left, .sly-obj top-right, .sly-toasts top-centre and
-   .sly-prompt bottom-centre; the Binocucom's .bx-caller is the only thing anywhere near a
-   bottom corner and it is the LEFT one. Offsets match the two top clusters (1.9u from the side)
-   so the four corners sit on one margin.
-   (No backticks anywhere in this file: the whole stylesheet is one template literal.) */
-.sly-hp {
-  position: absolute;
-  right: calc(var(--u) * 1.9);
-  bottom: calc(var(--u) * 1.55);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: calc(var(--u) * .16);
-  transform: rotate(1.4deg);
-  transform-origin: right bottom;
-}
-/* The optics bracket, mirrored to face into its own corner exactly as .bx-corner.br does —
-   the same glyph, the same trick, so the ornament belongs to the set it borrows from. */
-.sly-hp-br {
-  width: calc(var(--u) * 1.5); height: calc(var(--u) * 1.5);
-  transform: scale(-1);
-  margin-bottom: calc(var(--u) * -.42);
-  margin-right: calc(var(--u) * -.14);
-  opacity: .95;
-}
-.sly-hp-br svg { width: 100%; height: 100%; }
-/* The kicker names the thing. The objective card's own kicker size and tracking, so the two
-   labels in the two right-hand corners are the same voice. Gold, because that one is. */
-.sly-hp-kick {
-  /* .68u is M6's legibility floor — the smallest pause-menu run — and gameplay text may not go
-     under it. hud.test.mjs M6 lists this selector, so the floor governs it rather than trusting
-     this comment. */
-  font-size: calc(var(--u) * .68);
-  letter-spacing: .2em;
-  color: var(--gold-l);
-  line-height: 1;
-  padding-right: calc(var(--u) * .12);
-}
-.sly-hp-row { display: flex; align-items: flex-end; gap: calc(var(--u) * .2); }
-.sly-hp-pip {
-  width: calc(var(--u) * 1.46);
-  height: calc(var(--u) * 1.46);
-  display: block;
-}
-.sly-hp-pip svg { width: 100%; height: 100%; }
-/* Hand-placed, the same jitter the live pip row carries — a perfectly ruled row of five is the
-   engine overlay this HUD refuses to be. Nothing animates; these are static transforms. */
-.sly-hp-row > span:nth-child(2n) { transform: translateY(calc(var(--u) * .09)) rotate(4deg); }
-.sly-hp-row > span:nth-child(3n) { transform: translateY(calc(var(--u) * -.08)) rotate(-5deg); }
-.sly-hp-row > span:nth-child(5n) { transform: translateY(calc(var(--u) * .05)) rotate(2.5deg); }
-
 /* ================================================================ CAUGHT */
 
 /* PlayerHealth gives the fatal hit a 1.15 s beat before the world resets, and until now that

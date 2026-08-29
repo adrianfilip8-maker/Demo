@@ -130,48 +130,9 @@ export function coin(cls = '') {
  *                     difference, so it survives the ~19 px this renders at on a 1280×720 frame
  *                     without relying on colour.
  *   `kind: 'charm'` — the horseshoe, the series' own lucky charm.
- *   `kind: 'heart'` — §731's Sly 4 readout. NOT part of the live row: `pipKind()` returns only
- *                     `life` and `charm`, so nothing that drives `setHealth` can reach this
- *                     branch, and it exists so the corner ornament is a DRAWN pip in this file's
- *                     vocabulary rather than a second widget with its own art. The heart is
- *                     deliberately a different silhouette from both of the above — the ornament
- *                     must not read as a duplicate of the horseshoe row it shares a screen with.
  */
 export function pip(filled = true, kind = 'charm', cls = '') {
-  if (kind === 'life') return lifePip(filled, cls);
-  if (kind === 'heart') return heartPip(filled, cls);
-  return charmPip(filled, cls);
-}
-
-/**
- * §731 — the Sly 4 health pip.
- *
- * Built to `charmPip`'s recipe exactly, because that is what keeps the ornament inside the
- * house style instead of beside it: an ink drop underneath at 0.55, the ink body, the colour on
- * top, and a `goldL` specular arc catching the light from upper-left like every other pip and
- * the coin. Carnelian, the palette's own "life" channel (`C.carn`) — the same hue the horseshoe
- * and the calling card's mouth already use, so the corner cannot introduce a sixth colour.
- *
- * The empty half is `lifePip`'s spent treatment rather than `charmPip`'s: an outline that still
- * counts, because a health readout whose lost pips vanish stops being a readout.
- */
-function heartPip(filled, cls) {
-  const heart = 'M23 39.2C11.6 31 6.6 24.6 6.6 18.7c0-5.6 4.2-9.6 9.1-9.6 3 0 5.6 1.5 7.3 3.9'
-              + ' 1.7-2.4 4.3-3.9 7.3-3.9 4.9 0 9.1 4 9.1 9.6 0 5.9-5 12.3-16.4 20.5z';
-  if (filled) {
-    return wrap('0 0 46 46', `
-      <path d="${heart}" transform="translate(0 2.4)" fill="${C.ink}" opacity=".55"/>
-      <path d="${heart}" fill="${C.carn}" stroke="${C.ink}" stroke-width="4.4"
-            stroke-linejoin="round"/>
-      <path d="M13.6 17.8a6.6 6.6 0 0 1 4.6-4.4" stroke="${C.goldL}" stroke-width="2.8"
-            stroke-linecap="round" fill="none" opacity=".85"/>
-    `, cls);
-  }
-  return wrap('0 0 46 46', `
-    <path d="${heart}" fill="${C.inkSoft}" fill-opacity=".62" stroke="${C.ink}"
-          stroke-width="4.4" stroke-linejoin="round"/>
-    <path d="${heart}" fill="none" stroke="${C.carn}" stroke-width="2.2" opacity=".5"/>
-  `, cls);
+  return kind === 'life' ? lifePip(filled, cls) : charmPip(filled, cls);
 }
 
 /** The Cooper calling card: paint stock, ink mask, two spark eyes. */

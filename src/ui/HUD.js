@@ -74,37 +74,6 @@ const TUNE = {
 
 const CIRC = 2 * Math.PI * 36;   // matches Icons.alertArc()'s r=36
 
-/**
- * §731 — the Sly 4 health readout, and the token that removes it.
- *
- * The owner: *"Put the health bar from the Sly 4 HUD in the corner of the screen as well. It
- * does not need to be a functional health bar, but for visual only."* Both halves of that
- * sentence are honoured literally, and the second one is the harder discipline: this thing is
- * **wired to nothing**. It subscribes to no event, it is not touched by `setHealth`, `update()`
- * never looks at it, and there is no code path anywhere that can change a pip. It is markup
- * written once in `_build` and then left alone — a drawn prop hanging in the corner, which is
- * exactly what this file's design position says the UI is made of.
- *
- * `HP_PIPS` / `HP_FULL` are the ornament's shape, and `HP_FULL === HP_PIPS` on purpose: a
- * permanently part-empty bar reads as "you are hurt" forever, which is a lie a static ornament
- * should not tell. The empty art still exists (`Ico.pip(false, 'heart')`) and is exercised by
- * `tests/hudhealth.test.mjs` so the pip's two states are both real drawings rather than one
- * drawing and a guess.
- *
- * `?hud=nohealth` removes it. Read at module load, same seam as every other lane's token.
- */
-export const HUD_NOHEALTH = (() => {
-  let raw = '';
-  try {
-    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('hud') || '';
-    if (!raw && typeof globalThis !== 'undefined' && globalThis.__HUD_AB != null) raw = String(globalThis.__HUD_AB);
-  } catch { /* plain-module hosts have no location; that is the test path */ }
-  return String(raw).trim().toLowerCase() === 'nohealth';
-})();
-
-const HP_PIPS = 5;
-const HP_FULL = 5;
-
 /** Ladder order for the exposure chip — only used to decide whether a change is an escalation. */
 const THREAT_RANK = { hidden: 0, noticed: 1, hunted: 2, spotted: 3 };
 
@@ -489,8 +458,6 @@ export class HUD {
           <span class="sly-prompt-verb sly-ink sly-ink-s"></span>
           <span class="sly-prompt-ic sly-drop">${Ico.coin()}</span>
         </div>
-
-        ${this._healthHtml()}
       </div>
 
       ${this._binocuHtml()}
@@ -555,58 +522,6 @@ export class HUD {
     this.el.pause.addEventListener('mousedown', (e) => {
       if (e.target === this.el.pause) this.setPaused(false);
     });
-  }
-
-  /* ------------------------------------------------------ health ornament */
-
-  /**
-   * §731 — the Sly 4 health bar, in the BOTTOM-RIGHT corner, drawn and inert.
-   *
-   * ── Why that corner, measured rather than picked ────────────────────────────────────────
-   * The persistent gameplay layer (`.sly-shake`) anchors four things, and every one of them is
-   * in the stylesheet with a corner on it:
-   *
-   *   top-left      `.sly-tl`      left 1.9u / top 1.5u   — the live pip row, the coin counter,
-   *                                the threat + stealth chip, the carry chip. A column that
-   *                                GROWS DOWNWARD as chips turn on: the busiest corner there is.
-   *   top-centre    `.sly-toasts`  left 50% / top 1.6u
-   *   top-right     `.sly-obj`     right 1.9u / top 1.7u  — the objective card, plus its
-   *                                `.sly-obj-eye` hanging 0.5u past its own bottom-right.
-   *   bottom-centre `.sly-prompt`  left 50% / bottom 4.4u
-   *
-   * That leaves the two BOTTOM corners, and between them the right one is the safe one:
-   * `.bx-caller` sits at left 1.4u / bottom 3.3u — inside `.sly-binoc`, so it only exists while
-   * the optics are up, but the gameplay cluster fades over 0.16 s rather than vanishing
-   * (`#sly-hud[data-binoc='1'] .sly-shake { opacity: 0 }`), so a bottom-LEFT ornament would
-   * cross-dissolve through the caller panel every time Bentley calls. The right corner has no
-   * such neighbour in either state. `tests/hudhealth.test.mjs` H2 measures every persistent
-   * element's rect in a real browser and asserts the ornament intersects none of them.
-   *
-   * ── Why it is not a rectangle with a fill ───────────────────────────────────────────────
-   * This file's design position: *"the Sly games never draw a 'UI layer'. They draw props."*
-   * So the readout is five inked heart pips under an optics bracket — `Ico.pip(_, 'heart')` and
-   * `Ico.bracket()`, the two vocabularies this HUD already owns — hand-rotated a degree and a
-   * half, on the house carnelian. A translucent grey bar with a red fill would be the exact
-   * thing the stylesheet's own rule 1 forbids.
-   *
-   * It lives INSIDE `.sly-shake` deliberately: it inherits the world shake, the Binocucom stand
-   * down and the `data-hidden` screenshot kill, so it behaves like the rest of the HUD without a
-   * line of code saying so. Nothing here is read back — the ornament has no element handle in
-   * `this.el` at all, which is the cheapest possible guarantee that no later edit can wire it up
-   * by accident.
-   */
-  _healthHtml() {
-    if (HUD_NOHEALTH) return '';
-    let pips = '';
-    for (let i = 0; i < HP_PIPS; i++) {
-      pips += `<span class="sly-hp-pip sly-drop">${Ico.pip(i < HP_FULL, 'heart')}</span>`;
-    }
-    return `
-      <div class="sly-hp" aria-hidden="true">
-        <span class="sly-hp-br">${Ico.bracket()}</span>
-        <span class="sly-hp-kick sly-ink sly-ink-s">HEALTH</span>
-        <span class="sly-hp-row">${pips}</span>
-      </div>`;
   }
 
   /* ---------------------------------------------------------- binocucom */

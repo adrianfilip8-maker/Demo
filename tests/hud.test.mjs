@@ -185,10 +185,6 @@ const TEXT_PAIRS = [
   ['binocucom caller line',     PAINT,                  CALLER_BG],
   ['thief-o-vision tag',        '#8fd8ff',              INK],
   ['lock-on label',             '#8fd8ff',              INK],
-  /* §731 — the Sly 4 health ornament's kicker. Gold-light on the ink halo every text run in
-     this HUD carries, so it is the same pair the coin counter clears; listed rather than
-     assumed, because "visual only" is not "exempt from being legible". */
-  ['sly4 health kicker',        '#ffe9a8',              INK],
 ];
 
 function contrastFailures(pairs, min) {
@@ -217,7 +213,7 @@ test('M2 CALIBRATION (must fire): the ratio function reports a known-bad pair an
 
 test('M2: every text pair in the HUD clears 4.5:1', () => {
   assert.ok(TEXT_PAIRS.length >= 20, 'refusing to pass on a token sample');   // §211.1
-  assert.equal(TEXT_PAIRS.length, 26);
+  assert.equal(TEXT_PAIRS.length, 25);
   const failures = contrastFailures(TEXT_PAIRS, TEXT_MIN);
   assert.deepEqual(failures, [], `contrast failures:\n  ${failures.join('\n  ')}`);
 });
@@ -421,9 +417,6 @@ const GAMEPLAY = [
   '.sly-obj-kick', '.sly-obj-title', '.sly-obj-sub', '.sly-toast', '.sly-prompt-verb',
   '.sly-tov-tag', '.sly-mark .lbl', '.sly-alert-glyph', '.sly-alert-lbl',
   '.bx-mono', '.bx-rec', '.bx-caller-name', '.bx-caller-line',
-  /* §731: the health ornament is decoration, but its kicker is a word on the gameplay screen
-     and is held to the same floor as every other one. */
-  '.sly-hp-kick',
 ];
 const REFERENCE = [
   '.sly-grp > h4', '.sly-row .dsc', '.sly-row .dsc small', '.sly-row .ks .plus',
