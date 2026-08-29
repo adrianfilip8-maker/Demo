@@ -16,7 +16,7 @@ import { ContactDecals, groundFootprint } from './Decals.js';
  * covers them. They swap to KayKit bodies through the pack's own reduction path (KayKit.js —
  * no second loader), behind the same `?smash=gen` revert. KayKit.js imports nothing from this
  * file, so this direction cannot cycle. */
-import { SMASH_GEN, VAULT_URNS, loadModelLib, loadAtlasTexture, makeAtlasMaterial } from './KayKit.js';
+import { SMASH_GEN, VAULT_URNS, TORCH_GEN, loadModelLib, loadAtlasTexture, makeAtlasMaterial, cupCentre } from './KayKit.js';
 /* §730: the ONE treasure-room volume, shared with Architecture's portal gate and Smashables'
    urn policy. EgyptLevel imports nothing from here (THREE / Kit / PropKit / Rand only), so
    this edge cannot cycle. */
@@ -1113,15 +1113,103 @@ export class Props {
     this._hazard(x, y + 0.9, z, 0.55);
   }
 
+  /**
+   * §734 — the wall sconces wear KayKit's `torch_mounted`, and the fire moves onto its cup.
+   *
+   * The generated sconce is still BUILT on every arm, for the two reasons §730 established:
+   * its `this.rng` draws stay in the stream so no placement anywhere in this module moves, and
+   * its own measured union bounds are the conform reference the import is scaled to (§702/§705
+   * — never a typed number). Only the BODY is exchanged; `_swapTorch` returns null under
+   * `?torch=gen`, under a failed load and under a headless boot with no primed cache, and this
+   * call site then keeps the body it already built.
+   *
+   * **The fire and the light are re-derived, not carried.** Both used to be registered at
+   * offsets off the MOUNT — `(x, y + 0.35, z)` and `(x, y + 0.6, z)` — i.e. on the wall plane,
+   * which is why `Particles._standoff` exists at all: it is a compensation that probes for a
+   * nearby wall and shoves the fire 0.55 m along whichever cardinal axis is clear, because the
+   * registration carried no orientation. Two module docblocks (`Particles.js:2973`, `:4444`)
+   * say in as many words that the correct fix is here rather than there, and this is it: the
+   * cup is measured on the imported mesh, and the SAME matrix the geometry gets is applied to
+   * it, so the flame follows the arm around whichever way the sconce is turned. The handles go
+   * out marked `placed`, which switches the standoff compensation off for exactly these fires
+   * and leaves it running for everything that still needs it.
+   */
   _torch(x, y, z, ry) {
     const bag = wallTorch({ rng: this.rng });
-    bag.transform(matrixOf({ x, y, z, ry }));
-    this._absorb(bag);
+    const mount = matrixOf({ x, y, z, ry });
+    const sw = TORCH_GEN ? null : this._swapTorch(bag);
+    /* Local cup/light anchors, in the sconce's own frame, from whichever body is standing
+       here — then through the mount matrix, once, for both. */
+    const flameLocal = sw ? sw.flameAt : new THREE.Vector3().fromArray(bag.flameAt);
+    const lightLocal = sw ? sw.lightAt : new THREE.Vector3().fromArray(bag.lightAt);
+    if (sw) {
+      sw.geo.applyMatrix4(mount);
+      this._kk.push(sw.geo);
+      this._kkStats.torches++;
+      for (const p of bag.parts) p.geo.dispose();
+      bag.parts.length = 0;
+    } else {
+      bag.transform(mount);
+      this._absorb(bag);
+    }
     const soot = sootStain({ rng: this.rng });
     place(soot, { x, y: y + 1.5, z, ry });
     this._push('dark', soot);
-    this._lights.push({ position: new THREE.Vector3(x, y + 0.35, z), color: 0xffb060, intensity: 3.4, radius: 9, flicker: 0.55 });
-    this._fx.push({ name: 'torch_smoke', position: new THREE.Vector3(x, y + 0.6, z) });
+    this._lights.push({ position: lightLocal.applyMatrix4(mount), color: 0xffb060, intensity: 3.4, radius: 9, flicker: 0.55 });
+    this._fx.push({ name: 'torch_smoke', position: flameLocal.applyMatrix4(mount), placed: true });
+  }
+
+  /**
+   * Conform ONE imported wall sconce to the generated one it replaces, and measure its cup.
+   *
+   * Three things separate this from `_swapBody`, and all three are consequences of the prop
+   * meeting a VERTICAL surface rather than standing on a floor:
+   *
+   * 1. **The re-centring has to be undone in z.** `KayKit.loadModelLib` re-centres every model
+   *    on its own XZ centre, which is right for a barrel (a placement rotates about the origin,
+   *    and `rubble_half` sits 2 m off in x) and wrong for a back plate: `torch_mounted` is
+   *    authored with its plate at exactly z = 0 and the whole model in front of it, so
+   *    re-centring buries half the sconce in the masonry. Seating is `-bb.min.z`, read off the
+   *    conformed bounds, so the plate meets the wall plane whatever the model does.
+   * 2. **The vertical datum is the generated body's, not the floor's.** `_swapBody` seats
+   *    `bb.min.y` at 0 because its props stand on the ground. A sconce hangs off a mount point
+   *    that is neither its top nor its bottom, so the conformed body is seated to the generated
+   *    sconce's own `min.y` — which keeps the soot stain 1.5 m above the mount pointing at the
+   *    same part of the torch it always did.
+   * 3. **The cup is measured.** The bowl mouth is the ring of vertices at the model's maximum
+   *    girth across the mount axis — for a sconce whose arm reaches along +z, the vertices at
+   *    max |x|. On `torch_mounted` that ring is 4 vertices, x = ±0.2751, and their centroid is
+   *    the mouth centre. `flameAt` is that centroid; `lightAt` is the same point lifted by the
+   *    generated sconce's own flame-to-light gap, so the pool sits above the fire exactly as
+   *    far as it did before and the `torchlight` shader work is untouched.
+   *
+   * Returns null when the model is unavailable — same contract as `_swapBody`, same reason.
+   */
+  _swapTorch(bag) {
+    const e = this._kkLib?.get('torch_mounted');
+    if (!e?.geo || !bag?.parts?.length) return null;
+    /* the generated sconce's own union bounds — the conform reference */
+    const genBox = new THREE.Box3();
+    for (const p of bag.parts) { p.geo.computeBoundingBox(); genBox.union(p.geo.boundingBox); }
+    const genH = genBox.max.y - genBox.min.y;
+    const kkH = e.bb.max.y - e.bb.min.y;
+    if (!(genH > 0) || !(kkH > 0)) return null;
+    const s = genH / kkH;
+    const geo = e.geo.clone();
+    geo.scale(s, s, s);
+    geo.computeBoundingBox();
+    const bb = geo.boundingBox;
+    geo.translate(0, genBox.min.y - bb.min.y, -bb.min.z);
+    geo.computeBoundingBox();
+    const flameAt = cupCentre(geo);
+    if (!flameAt) { geo.dispose(); return null; }
+    /* The flame-to-light gap the generated sconce publishes, kept rather than retyped: the
+       shipped `lightAt` is `flameAt` lifted 0.18 m and pushed 0.10 m further out, and both are
+       read off the bag instead of restated here so a PropKit edit reaches this. */
+    const lightAt = flameAt.clone().add(
+      new THREE.Vector3(bag.lightAt[0] - bag.flameAt[0], bag.lightAt[1] - bag.flameAt[1], bag.lightAt[2] - bag.flameAt[2]),
+    );
+    return { geo, flameAt, lightAt, scale: s };
   }
 
   /* ===================== plumbing ================================== */
@@ -1135,16 +1223,27 @@ export class Props {
    * body it already built — the same fallback contract Smashables holds, because a 404 (or a
    * headless boot with no primed cache — KayKit.js `transportReady`) may cost the swap, never
    * the prop. Under `?smash=gen` nothing loads and nothing changes.
+   *
+   * §734 adds `torch_mounted` for the wall sconces, and the request list is assembled PER
+   * FAMILY rather than gated once at the top. That is not tidiness — the early `if (SMASH_GEN)
+   * return` silently coupled the two flags: it meant `?smash=gen` also unloaded the sconce
+   * model, so a boot asking for generated barrels got generated torches it never asked for,
+   * and a dead-transport arm warned four times for three models it wanted. Each family names
+   * its own files under its own token, and the load is skipped only when NOTHING is wanted.
    */
   async _loadSwapBodies() {
     this._kk = [];                                  // placed KayKit-bodied statics, merged once
     /* §730 `urns` is the count of offering-table jars this boot KEPT generated — the static
        half of the vault policy, self-reported beside the swap's own counts so a boot can be
-       asked what it did rather than inferred from a mesh. 4 by default, 0 under either token. */
-    this._kkStats = { jars: 0, baskets: 0, urns: 0 };
+       asked what it did rather than inferred from a mesh. 4 by default, 0 under either token.
+       §734 `torches` is the count of wall sconces wearing the imported body. */
+    this._kkStats = { jars: 0, baskets: 0, urns: 0, torches: 0 };
     this._kkLib = null;
-    if (SMASH_GEN) return;
-    const lib = await loadModelLib(['barrel_small', 'barrel_large', 'barrel_small_stack'], (file, err) => {
+    const want = [];
+    if (!SMASH_GEN) want.push('barrel_small', 'barrel_large', 'barrel_small_stack');
+    if (!TORCH_GEN) want.push('torch_mounted');
+    if (!want.length) return;
+    const lib = await loadModelLib(want, (file, err) => {
       this.engine.warn(`props: KayKit '${file}' failed (${err?.message || err}) — the generated body stands in`);
     });
     if (lib.size) {
@@ -1339,7 +1438,7 @@ export class Props {
     const fx = this.engine.get('fx');
     if (fx?.burst || fx?.spawn) {
       for (const e of this._fx) {
-        try { fx.spawn?.(e.name, { position: e.position }); } catch { /* emitter unknown */ }
+        try { fx.spawn?.(e.name, { position: e.position, placed: e.placed === true }); } catch { /* emitter unknown */ }
       }
     }
   }

@@ -2969,14 +2969,18 @@ export class Particles {
   /**
    * Push a fire that was registered *on* a wall plane out into the room it lights.
    *
-   * **This is compensation for a registration this module does not own, and it should be
-   * deleted the day that registration is fixed.** `PropKit.wallTorch()` publishes the cup at
-   * `bag.flameAt` — local (0, 0.649, 0.825), i.e. 0.83 m out along the sconce arm — and
-   * `Props.js:_torch` registers the emitter at the *mount plate* instead
-   * (`Props.js:340`, `position: (x, y + 0.6, z)`), through `fx.spawn(name, { position })`,
-   * which carries no orientation. So FX is told "there is fire at this point on the wall" and
-   * has no way to know which way the arm points. The correct fix is two lines in PROPS:
-   * transform `bag.flameAt` by the same matrix the geometry gets and register *that*.
+   * **§734 FIXED THE REGISTRATION THIS COMPENSATES FOR, and the fix was where this block said
+   * it would be.** The paragraph below used to read "this should be deleted the day that
+   * registration is fixed … the correct fix is two lines in PROPS: transform `bag.flameAt` by
+   * the same matrix the geometry gets and register *that*." `Props._torch` now does exactly
+   * that, for the imported sconce (cup measured by `KayKit.cupCentre`) and for the generated
+   * one (`PropKit.wallTorch`'s own `bag.flameAt`) alike, and marks the handle `placed`.
+   *
+   * It is NOT deleted, for a reason worth stating rather than assuming: `placed` is opt-IN, so
+   * every fire registered by any other path — and any future one — still arrives at whatever
+   * point its registrar chose, with no orientation attached. The guard at the top means the
+   * compensation can no longer double-apply to the one family that stopped needing it, which
+   * is the whole of what was wrong with keeping it.
    *
    * Until then: a billboard centred on a wall plane is half inside the wall, and — measured
    * on `interior` — from a grazing view down the vault the sconce's own shaft stands directly
@@ -2991,6 +2995,15 @@ export class Particles {
    */
   _standoff(h) {
     if (h._stood) return;
+    /* §734 — the registration this compensates for is FIXED for wall torches, so it must not
+       run on them twice. `Props._torch` now measures the imported sconce's cup, transforms it
+       by the same matrix the geometry gets, and registers THAT; a handle that arrives already
+       standing in its own bowl is 0.27 m off the masonry, which is inside `S.near`, so the
+       probe below would find the wall and shove it another 0.55 m — out through the front of
+       the torch it was just correctly placed in. `placed` is the registrar saying "this point
+       is the fire, not the mount". Everything that still registers on a plane (braziers, and
+       the generated sconces under `?torch=gen`) sends no flag and is compensated as before. */
+    if (h.opts?.placed) { h._stood = true; return; }
     const col = this.engine.get('collision');
     if (!col?.raycast || col.ready === false) return;   // not built yet; try again next frame
     h._stood = true;
@@ -4440,14 +4453,14 @@ export class Particles {
    * FX registration that says "there is fire here". A brazier that never got a light slot
    * still burns.
    *
-   * **Where the flame sits is currently PROPS's mount plate, not its cup.** `PropKit`'s
-   * `wallTorch` publishes `bag.flameAt` at local (0, 0.649, 0.825) — 0.83 m out along the
-   * sconce arm — and `Props.js:_torch` registers the emitter at the wall instead, so the
-   * flame renders against the pier rather than in the bowl on the end of the arm. Costed:
-   * at the `interior` camera it also loses a fifth flame, the nearest one, which sits at
-   * 2.1 m and projects to (1050, 48) from the cup and off the right edge at (1519, 39) from
-   * the mount. `attach()`'s `opts.offset` is honoured here, so the fix is entirely on the
-   * registration side and needs nothing from FX.
+   * **Where the flame sits is PROPS's cup, since §734.** This block used to read "currently
+   * PROPS's mount plate, not its cup … the flame renders against the pier rather than in the
+   * bowl on the end of the arm", and costed it: at the `interior` camera the mount anchor also
+   * lost the nearest flame, which sits at 2.1 m and projects to (1050, 48) from the cup and off
+   * the right edge at (1519, 39) from the mount. `Props._torch` now transforms the cup — the
+   * imported sconce's, measured; the generated sconce's, published by `PropKit` — through the
+   * same matrix the geometry gets. `attach()`'s `opts.offset` is still honoured here, and the
+   * fix needed nothing from FX, exactly as this block predicted.
    */
   _updateFlames() {
     const f = this.flames;

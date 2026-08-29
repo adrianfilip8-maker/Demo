@@ -33,6 +33,13 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 function runChild(pre) {
   const script = `
+/* §734 put the wall sconces on an imported body too, through an INDEPENDENT flag. Every arm
+   here pins the torch token to gen so this file keeps measuring the destructible swap alone:
+   without it the gen and dead arms would carry a props_kaykit mesh built from sixteen torches,
+   and every draw-count and piece-diff §729/§730 recorded would change meaning without changing
+   subject. The sconces have their own suite (tests/torchswap.test.mjs) and their own token.
+   No backticks in this comment: it lives inside a template literal. */
+globalThis.__TORCH_AB = 'gen';
 ${pre}
 const { primeKayKitAssets } = await import(${JSON.stringify(new URL('./_kaykitboot.mjs', import.meta.url).href)});
 const THREE = await import('three');
@@ -114,9 +121,9 @@ test('W1 §729/§730: 7 courtyard baskets swap, the 4 vault jars stay urns, and 
    * they leave the swap; the courtyard baskets are 40 m away and outside `EgyptLevel.CRYPT`,
    * so they do not. The token arm proves the way back is byte-exact rather than approximate.
    */
-  assert.deepEqual(swap.kaykit, { jars: 0, baskets: 7, urns: 4 },
+  assert.deepEqual(swap.kaykit, { jars: 0, baskets: 7, urns: 4, torches: 0 },
     `the static swap took ${JSON.stringify(swap.kaykit)} — §730 keeps the 4 vault jars generated and swaps the 7 courtyard baskets`);
-  assert.deepEqual(barrels.kaykit, { jars: 4, baskets: 7, urns: 0 },
+  assert.deepEqual(barrels.kaykit, { jars: 4, baskets: 7, urns: 0, torches: 0 },
     `?vault=barrels took ${JSON.stringify(barrels.kaykit)} — the revert must reproduce §729's 4 + 7 exactly`);
   for (const [name, arm] of [['swap', swap], ['barrels', barrels]]) {
     assert.ok(arm.kkTris > 0, `no props_kaykit mesh was built in the ${name} arm`);
@@ -188,7 +195,7 @@ test('W2 §729/§730: zero pos changes — the unswapped world is bit-identical,
   assert.equal(goneHole.length, 4,
     `dropping both basket models removed ${goneHole.length} pieces — expected exactly the 4 jars`);
   assert.ok(goneHole.every((p) => p.startsWith('lime,')), 'the hole arm removed something that is not a vault jar');
-  assert.deepEqual(hole.kaykit, { jars: 4, baskets: 0, urns: 0 });
+  assert.deepEqual(hole.kaykit, { jars: 4, baskets: 0, urns: 0, torches: 0 });
   assert.equal(hole.warns, 2, 'dropping two models should warn twice (once per model)');
 });
 

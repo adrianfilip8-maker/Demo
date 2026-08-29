@@ -94,6 +94,30 @@ export const VAULT_BARRELS = (() => {
 export const VAULT_URNS = !SMASH_GEN && !VAULT_BARRELS;
 
 /**
+ * §734 revert token: `?torch=gen` (or `globalThis.__TORCH_AB = 'gen'` from a test) puts the
+ * WALL SCONCES back on `PropKit.wallTorch()` — the generated bracket-and-cup — at both of
+ * `Props._torch`'s call sites (the six crypt pier torches and the ten hypostyle hall torches).
+ *
+ * It is a THIRD independent flag rather than a widening of `?smash=`, because the two answer
+ * different questions: `?smash=gen` is about which body a SMASHABLE wears, and a wall torch is
+ * not smashable and never was. Composing them is meaningful and untangled — `?smash=gen
+ * &torch=gen` generates both families, either alone generates one — so neither flag has to
+ * know the other exists.
+ *
+ * Lives here beside the other two for the identical reason (`Props.js` reads it, and
+ * `Smashables` imports from `Props`, so the other direction would be a cycle), and is read once
+ * at module load so no per-frame branch can disagree with a per-boot one.
+ */
+export const TORCH_GEN = (() => {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('torch') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__TORCH_AB != null) raw = String(globalThis.__TORCH_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  return String(raw).trim().toLowerCase() === 'gen';
+})();
+
+/**
  * Is there a transport that will actually SETTLE for this url? In the browser, always. In plain
  * Node, only a primed `THREE.Cache` (tests/_kaykitboot.mjs seeds it) — `CarmelitaGuard.js:330`
  * records the third case: a `fetch` of a relative URL in Node does not reject, it never settles,
@@ -184,6 +208,52 @@ export async function loadModelLib(names, onFail = () => {}) {
     }
   }
   return lib;
+}
+
+/**
+ * §734 — where the fire sits on an imported sconce, measured on its own vertices.
+ *
+ * The problem this solves: FX anchors a flame at a POINT, and for the generated wall torch that
+ * point was published by the builder that shaped the cup (`PropKit.wallTorch`'s `bag.flameAt`).
+ * An imported body publishes nothing, so an anchor for it is either measured or invented, and an
+ * invented one hangs the flame in the air beside the torch — the failure `Particles.js:4444`
+ * already documents from the other direction.
+ *
+ * The measurement: a torch bowl is the widest thing on the sconce ACROSS the arm, because the
+ * arm is a shaft and the bowl is a mouth. So take the vertices at maximum |x| (for a sconce
+ * whose arm reaches along +z, x is the across-arm axis) and return their centroid. On a tilted
+ * bowl the two extreme-x vertices land on opposite lips, so the centroid is the mouth centre in
+ * all three axes rather than just in x.
+ *
+ * Returns null on a geometry with no position attribute or a degenerate girth, so a caller can
+ * fall back rather than place a flame at a NaN.
+ *
+ * §418.3 DOMAIN — both inputs RUN, in `tests/torchswap.test.mjs` T3:
+ *   PASSES (lands on the cup): `torch_mounted`'s own geometry — the ring is exactly the 4
+ *     vertices at |x| = 0.2751, centroid (0, 0.6078, 0.3478), which is inside the bowl's own
+ *     bounding box on every axis.
+ *   FAILS (lands off the cup): the same geometry with the bowl deleted (every vertex above the
+ *     arm's waist dropped). The girth ring then falls back onto the BRACKET, the centroid comes
+ *     out at the wall end, and T3 asserts the two answers differ by more than the bowl's own
+ *     radius — i.e. the estimator is shown to move when the cup moves, which is the property a
+ *     centroid taken over a fixed band would NOT have had.
+ */
+export function cupCentre(geo) {
+  const pos = geo?.attributes?.position;
+  if (!pos || !pos.count) return null;
+  let mx = 0;
+  for (let i = 0; i < pos.count; i++) mx = Math.max(mx, Math.abs(pos.getX(i)));
+  if (!(mx > 0)) return null;
+  /* One texel of the atlas at the scales these props ship at is ~1 mm; 1e-4 of a metre is a
+     tenth of that, so this picks the authored ring and nothing adjacent to it. */
+  const eps = 1e-4;
+  let n = 0, sx = 0, sy = 0, sz = 0;
+  for (let i = 0; i < pos.count; i++) {
+    if (Math.abs(Math.abs(pos.getX(i)) - mx) > eps) continue;
+    n++; sx += pos.getX(i); sy += pos.getY(i); sz += pos.getZ(i);
+  }
+  if (!n) return null;
+  return new THREE.Vector3(sx / n, sy / n, sz / n);
 }
 
 /**
