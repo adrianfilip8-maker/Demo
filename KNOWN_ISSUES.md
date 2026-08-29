@@ -61154,3 +61154,41 @@ visual-only per the owner — no health system, no damage wiring, no reactivity.
 palette, in a screen corner chosen by an occupancy survey of all four, and checked for legibility
 against BOTH the L1 day and night grades (§726). Zero 3D draw-call and frame-budget delta is a
 claim to be measured, not asserted. Body lands in this lane's next pushes.)*
+
+**§731.0 — LANE HANDOVER, appended by the lane that claimed this number.** The owner then said
+*"Fan out the tasks across different sub agents"* and the HUD health bar was reassigned. **This
+number is released to the HUD lane**, whose section body goes here; the heading above already
+describes their work and needs no renumbering. Two facts they should have rather than rediscover:
+
+1. **A first implementation was pushed and then reverted, on purpose.** `7be97ac` added
+   `Ico.pip(_, 'heart')`, a `.sly-hp` cluster in the bottom-right, `?hud=nohealth`, and one
+   contrast pair plus one `GAMEPLAY` entry in `hud.test.mjs`. `403c0ed` reverts it in full, so
+   `src/ui/HUD.js`, `src/ui/Icons.js`, `src/ui/hud.css.js` and `tests/hud.test.mjs` are
+   **byte-identical to `dc3a207`** and the HUD lane starts clean. `7be97ac` is intact in history
+   if the coordinator would rather hand it over than have it redone.
+2. **Three measured findings from that run, which cost a capture-lock hold and are true whoever
+   implements it.** They are recorded here because re-deriving them costs the same hold again.
+   · **The corner survey, at 1280×720, every element driven to its widest state.** Occupied:
+     `.sly-tl` (25, 12, 176×110, and it GROWS DOWN as the carry and stealth chips arm),
+     `.sly-obj` (1001.6, 14.2, 263×79), `.sly-toasts` (497.7, 14.7, 293×28), `.sly-prompt`
+     (372.3, 633.8, **540×38** — bottom-centre and by far the widest thing on the screen).
+     Free: both bottom corners. Bottom-LEFT is the one with a neighbour — the Binocucom's
+     `.bx-caller` measures (58.1, 578.8, 266×75). A cluster at right 1.9u / bottom 1.55u
+     (90×41) clears `.sly-prompt` by 260 px and everything else by ≥ 568 px.
+   · **What is BEHIND that corner, on both grades.** Sampled off the framebuffer inside the
+     ornament's own rect (the HUD is DOM, so `__GAME.capture()` gives the background and nothing
+     else): L1 day over courtyard sand `#a36746`, Y mean 0.1997, range 0.0075–0.4657; L1 day in
+     the vault `#58383c`, Y 0.0565; L1 night over the courtyard `#091428`, Y 0.0076; L1 night in
+     the vault `#471f1f`, Y 0.0289. A carnelian-inside-ink-outline pip with a `--gold-l` kicker
+     leaves **0 % of background pixels** with no ink over 3:1 at any of the four, worst
+     best-of-three 3.97:1. Carnelian alone does NOT clear it (1.27:1 against day sand); the
+     outline and the gold are what carry it.
+   · **Two instrument traps, both of which produced confident wrong readings first.** CSS
+     transitions **do not advance** in this headless page, so `getComputedStyle` returns the
+     START of a transition: `.sly-prompt.on` read opacity 0 and `.sly-shake` read 1 under
+     `data-binoc='1'`. Inject `transition: none !important` and read the settled value. And
+     `engine.debug.freeCam` must be **true**, not false, to hold a staged camera — with it false
+     two different stances measured backgrounds identical to four decimals. Contrary to
+     `cardshot.mjs`'s note, `page.screenshot()` DOES complete on this container.
+
+Everything below this line belongs to §730 and later.
