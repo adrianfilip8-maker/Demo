@@ -528,7 +528,10 @@ export const HUD_CSS = /* css */ `
 .sly-hp {
   position: absolute;
   left: calc(var(--u) * 1.9);
-  top: calc(var(--u) * 12.9);
+  /* 13.5u, not 12.9u. At 12.9 the MEASURED clearance to a fully-armed .sly-tl was 11.7 px, not
+     the ~17 the offsets imply — the -1.2deg tilt expands the element's bounding box upward, which
+     arithmetic on the offsets does not show and only the browser reports. */
+  top: calc(var(--u) * 13.5);
   width: calc(var(--u) * 18.2);
   /* A degree of tilt, the way every struck prop in this sheet is hand-placed. Kept small: the
      insignia is a MARK and a visibly askew mark stops reading as itself. */
