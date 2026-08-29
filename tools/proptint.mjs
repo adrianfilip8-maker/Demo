@@ -63,13 +63,19 @@ const ENTRIES = [
 ];
 
 /* Drift guard: every (tex, tint) pair above must appear verbatim in Props.js. Since §727 a
- * convicted entry's hex survives wrapped as `TINT727(0x…)` — the shipped grade the token
- * restores — so the guard accepts the wrapped form; either way this table describes the
- * SHIPPED double grade (the `?props=tinted` arm), which is what the damage rows measure. */
+ * treated entry's hex survives wrapped as `TINT727('<key>', 0x…)` — the shipped grade the
+ * token restores — so the guard accepts that exact wrapped form (key must match the entry);
+ * either way this table describes the SHIPPED double grade (the `?props=tinted` arm), which
+ * is what the damage rows measure. The guard has been stale-at-commit twice — at `8feb051`
+ * it still wanted the bare pre-§727 hex, at `6a46cea` the one-arg `TINT727(0x…)` the second
+ * movement had just outgrown — so each committed tree's own instrument exited 2 against it.
+ * The quoted tables were produced in the working tree while the guard matched; this line now
+ * follows the committed call shape, and the re-run at the fix's own tree is quoted in
+ * §727.2/§727.5. */
 const propsSrc = fs.readFileSync(path.join(ROOT, 'src/world/Props.js'), 'utf8');
 for (const e of ENTRIES) {
   const hex = e.tint.toString(16);
-  const re = new RegExp(`${e.key}:\\s*\\{[^}]*tex:\\s*'${e.tex}'[^}]*color:\\s*(?:TINT727\\()?0x${hex}`);
+  const re = new RegExp(`${e.key}:\\s*\\{[^}]*tex:\\s*'${e.tex}'[^}]*color:\\s*(?:TINT727\\('${e.key}',\\s*)?0x${hex}`);
   if (!re.test(propsSrc)) {
     process.stderr.write(`proptint: DRIFT — Props.MATERIALS.${e.key} no longer reads tex '${e.tex}' × 0x${hex}. Re-transcribe before trusting this table.\n`);
     process.exit(2);
