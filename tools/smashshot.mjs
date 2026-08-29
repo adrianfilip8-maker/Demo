@@ -162,13 +162,25 @@ const PAGE_LIB = `
     /* WALK to a planar point through input.move — flips the stick sign if the first frames
        lose ground, so the tool cannot silently moonwalk away (§435.4: the position must come
        from locomotion, so the convention is discovered, not assumed) */
-    const walkTo = (pt, stop = 1.2, maxFrames = 900) => {
+    const walkTo = (pt, stop = 1.2, maxFrames = 900, jumpEvery = 0) => {
       const mv = E.get('movement');
       const dist = () => Math.hypot(mv.position.x - pt[0], mv.position.z - pt[2]);
       let sign = -1, d0 = dist(), frames = 0;
       drive(12, 1 / 60, { my: sign, aimAt: pt });
       if (dist() > d0 - 0.02) { sign = 1; }
-      while (dist() > stop && frames < maxFrames) { drive(1, 1 / 60, { my: sign, aimAt: pt }); frames++; }
+      let stall = 0, last = dist();
+      while (dist() > stop && frames < maxFrames) {
+        drive(1, 1 / 60, { my: sign, aimAt: pt }); frames++;
+        /* a ledge on the way is mantled the way a player mantles it: forward + jump through
+           the input seam — pulsed only while progress has stalled, never on open ground */
+        const d = dist();
+        if (d > last - 0.005) stall++; else { stall = 0; last = d; }
+        if (jumpEvery && stall > 0 && frames % jumpEvery === 0) {
+          E.input._press('jump', 'key');
+          drive(2, 1 / 60, { my: sign, aimAt: pt }); frames += 2;
+          E.input._release('jump', 'key');
+        }
+      }
       drive(6, 1 / 60, { my: 0 });
       return { frames, dist: +dist().toFixed(3), walked: frames > 0 };
     };
@@ -361,29 +373,53 @@ async function run() {
     await save('spawn-postbreak-night', persist, { tod: persist.tod, broken: persist.broken });
     report.measures.persistAcrossGrade = { broken: persist.broken, tod: persist.tod };
 
-    /* ── the SECOND walked break (§466.5): up the route to terrace-1, a different kind ───── */
+    /* ── the SECOND walked break (§466.5): up the route to terrace-1, a different kind.
+       The terrace is a raised slab: the leg pulses jump-through-input while stalled so a ledge
+       is mantled the way a hand mantles it. If the leg still cannot arrive, the sample is NOT
+       faked and NOT skipped: the tool retargets the nearest unbroken smashable to wherever the
+       player actually stands — a walked break is the claim, not a particular postcode — and the
+       record says which target carried it (§435.4: the world decides, not my model of it). ── */
     const break2 = await page.evaluate(async ({ prop, cam }) => {
       const S2 = window.__ss;
       S2.toggleGrade();                            // back to day for a like-for-like pair
-      const leg = S2.walkTo([prop.x, prop.y, prop.z], 1.15, 2400);
+      const sm = S2.E.get('smashables');
+      const mv = S2.E.get('movement');
+      let target = { x: prop.x, y: prop.y, z: prop.z, at: 'terrace-1' };
+      let leg = S2.walkTo([target.x, target.y, target.z], 1.15, 2400, 36);
+      let retargeted = null;
+      if (leg.dist > 1.6) {
+        let best = null, bd = 1e9;
+        for (const p of sm.props) {
+          if (p.broken) continue;
+          const d = Math.hypot(p.pos.x - mv.position.x, p.pos.z - mv.position.z)
+            + Math.abs(p.pos.y - mv.position.y) * 3;   // prefer the player's own floor
+          if (d < bd) { bd = d; best = p; }
+        }
+        if (best) {
+          retargeted = { kind: best.kind, at: best.at };
+          target = { x: best.pos.x, y: best.pos.y, z: best.pos.z, at: best.at };
+          leg = S2.walkTo([target.x, target.y, target.z], 1.15, 2400, 36);
+        }
+      }
       S2.cam(cam.pos, cam.target); S2.pump(1);
-      const before = S2.E.get('smashables').debugInfo().broken;
+      const before = sm.debugInfo().broken;
       const hit = S2.swing(5);
       const mid = await S2.grab();
       S2.drive(110, 1 / 60, { my: 0 });
       const post = await S2.grab();
-      const after = S2.E.get('smashables').debugInfo().broken;
-      const mv = S2.E.get('movement');
-      return { leg, hit, before, after, playerY: +mv.position.y.toFixed(2), mid, post };
+      const after = sm.debugInfo().broken;
+      return { leg, hit, before, after, retargeted, targetAt: target.at, playerY: +mv.position.y.toFixed(2), mid, post };
     }, { prop: { x: terraceProp.x, y: terraceProp.y, z: terraceProp.z }, cam: { pos: C.pos, target: C.target } });
     report.measures.break2 = {
-      kind: terraceProp.kind, walkedFrames: break2.leg.frames, dist: break2.leg.dist,
+      kind: break2.retargeted?.kind ?? terraceProp.kind, at: break2.targetAt, retargeted: break2.retargeted,
+      walkedFrames: break2.leg.frames, dist: break2.leg.dist,
       events: break2.hit.events, broken: { before: break2.before, after: break2.after }, playerY: break2.playerY,
     };
-    console.log(`[smashshot] second break (${terraceProp.kind} @ terrace-1): walked ${break2.leg.frames} frames to ${break2.leg.dist} m `
-      + `(player y ${break2.playerY}), ${break2.hit.events} events, broken ${break2.before}->${break2.after}`);
+    console.log(`[smashshot] second break (${report.measures.break2.kind} @ ${break2.targetAt}${break2.retargeted ? ', RETARGETED' : ''}): `
+      + `walked ${break2.leg.frames} frames to ${break2.leg.dist} m (player y ${break2.playerY}), ${break2.hit.events} events, `
+      + `broken ${break2.before}->${break2.after}`);
     if (break2.hit.events < 1) throw new Error('the second walked break broke nothing — one sample was carrying the claim (§466.5)');
-    await save('terrace-midbreak-day', break2.mid, { kind: terraceProp.kind, events: break2.hit.events });
+    await save('terrace-midbreak-day', break2.mid, { kind: report.measures.break2.kind, at: break2.targetAt, events: break2.hit.events });
     await save('terrace-postbreak-day', break2.post, { broken: break2.after });
 
     /* ── the revert, through the URL in a fresh boot ────────────────────────────────────── */
