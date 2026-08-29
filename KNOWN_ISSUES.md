@@ -62189,3 +62189,13 @@ callers **outside your own directory** — `charmPip` looked dead from inside `s
 verified. 1139 → 1134 is the five removed charm-arc arms. Production measurements above at
 `12d5829`, veil dismissed. `?hud=nohealth` verified on that artifact. Inertness still fires under
 mutation. **Boundary unchanged:** the artifact is verified, not the live host (§695).
+
+---
+
+## §732 — The buried coins: re-derived at the shipped seed, and moved onto routes a player actually walks
+
+*(Section claimed at this heading before its content was written — §700.9. Claim marker:
+coin-interpenetration lane, re-census at r=0.24 + relocation + walked verification. Body follows
+in later commits. The brief quotes §712.9's "13 of 82"; that figure is the r=0.16 column and
+§712.9's own table already reports 14 at the shipped 0.24. Both are re-derived here rather than
+carried, because a census quoted from another section is a claim about that section.)*
