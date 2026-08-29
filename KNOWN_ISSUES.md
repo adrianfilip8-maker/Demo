@@ -61100,3 +61100,22 @@ unlike any other lane's (§717): props-color lane, auditing what remains of §72
 mechanism across the WHOLE `Props.MATERIALS` table — every `color ×` textured-map multiply
 that §724 left in place outside the `gold` entry — with the per-entry damage measured on the
 rebuilt textures before any entry is convicted. Body follows in this lane's next pushes.)*
+
+---
+
+## §728 — Confirmed by play: the L1 day/night toggle works properly
+
+**Owner, on the deployed build: "The button to transition between night and day works properly."**
+
+§726 closes at the boundary. The parts no instrument here could certify — that the 1.2 s ease
+*feels* right on a controller, that the wrap through twilight reads as nightfall rather than a
+glitch, that a mid-fade second press reversing is what a hand expects — are exactly what the owner's
+sentence covers. The measured parts (0.02 night from the critic-graded catalogue entry, byte-identical
+endpoints by either route, edge-triggered press semantics, the ×93.5%-of-pixels snap rejected for a
+41.4%-worst-frame ease) were §726's; the hands were the last instrument, per §691's standing shape.
+
+Scoped: this confirms the TOGGLE. It does not rule on §726's report-only night observations —
+the alert-beam wash (flagged to the parked Task #14 re-seal), the crook's hue under the moon key —
+and it predates the owner seeing §727's prop-color fix, whose close-out is in flight in this same
+window. `?l1=sneak` stays live and unused; sneak remains keyboard-only with R2 still unbound as the
+recorded candidate if the owner ever wants it back on the pad.
