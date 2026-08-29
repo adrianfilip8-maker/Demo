@@ -507,9 +507,27 @@ export const HUD_CSS = /* css */ `
 
 /* The owner asked for the Sly 4 health readout in a corner, visual only. It is inert markup —
    no rule below is ever toggled by script, there is no .on state and no transition, because
-   nothing changes. What it must NOT be is rule 1's forbidden object (a translucent grey panel
-   with a fill), so it is built the way the rest of this sheet is: drawn pips, an ink halo on the
-   kicker, a hard offset shadow, and a degree and a half of rotation so it reads hand-placed.
+   nothing changes.
+
+   ── §731.2: THIS IS THE SECOND ATTEMPT, and the first one is why the panel exists ──────────
+   The first version was an unbacked cluster: five 1.46u pips and a .68u kicker floating on the
+   scene, 90 x 41 px = 0.40% of a 720p frame. Measured on the PRODUCTION build it was present,
+   opacity 1, in the viewport, and painting 84.7% of its own rect — and the owner still reported
+   "the health bar still does not appear". It was not hidden. It was a whisper: 16.5 px hearts
+   and an 8.6 px label in the corner a player looks at last, with a carnelian fill that measures
+   1.28:1 against day sand and was being carried entirely by an ink outline.
+
+   So it is now a STRUCK CHIP, which is this sheet's own answer to "make a readout read": the
+   exact panel treatment .sly-threat, .sly-carry and .sly-prompt already use — near-black ink
+   ground, a hard ink border, an inset accent rule in the element's own colour, a hard offset
+   shadow underneath, and a degree of rotation so it reads hand-placed. That is emphatically not
+   rule 1's forbidden object; rule 1 forbids the translucent GREY rounded rectangle, and this is
+   the same inked prop the three chips above are struck from.
+
+   The panel also fixes the contrast problem at the root. On the scene the pips' ground was
+   whatever the camera happened to be looking at, which is why it needed a four-pose survey per
+   grade; on the chip their ground is a known ink, so carnelian sits at a fixed 3.45:1 and the
+   gold kicker far above it, at noon and at midnight alike.
 
    BOTTOM-RIGHT. .sly-tl owns top-left, .sly-obj top-right, .sly-toasts top-centre and
    .sly-prompt bottom-centre; the Binocucom's .bx-caller is the only thing anywhere near a
@@ -523,36 +541,35 @@ export const HUD_CSS = /* css */ `
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: calc(var(--u) * .16);
-  transform: rotate(1.4deg);
+  gap: calc(var(--u) * .26);
+  padding: calc(var(--u) * .34) calc(var(--u) * .5) calc(var(--u) * .4);
+  background: rgba(20, 14, 12, .82);
+  border: calc(var(--u) * .13) solid var(--ink);
+  border-radius: calc(var(--u) * .42);
+  box-shadow: inset 0 0 0 calc(var(--u) * .06) rgba(184, 69, 44, .75),
+              0 calc(var(--u) * .22) 0 rgba(26,18,16,.6),
+              0 calc(var(--u) * .45) calc(var(--u) * 1.1) rgba(26,18,16,.5);
+  transform: rotate(-1.4deg);
   transform-origin: right bottom;
 }
-/* The optics bracket, mirrored to face into its own corner exactly as .bx-corner.br does —
-   the same glyph, the same trick, so the ornament belongs to the set it borrows from. */
-.sly-hp-br {
-  width: calc(var(--u) * 1.5); height: calc(var(--u) * 1.5);
-  transform: scale(-1);
-  margin-bottom: calc(var(--u) * -.42);
-  margin-right: calc(var(--u) * -.14);
-  opacity: .95;
-}
-.sly-hp-br svg { width: 100%; height: 100%; }
-/* The kicker names the thing. The objective card's own kicker size and tracking, so the two
-   labels in the two right-hand corners are the same voice. Gold, because that one is. */
+/* The kicker names the thing. Held above M6's .68u floor with room to spare now that it sits on
+   its own ground rather than on the scene — at .68u it rendered 8.6 px tall at 720p, which is a
+   floor for "legible when hunted for", not for "noticed". */
 .sly-hp-kick {
-  /* .68u is M6's legibility floor — the smallest pause-menu run — and gameplay text may not go
-     under it. hud.test.mjs M6 lists this selector, so the floor governs it rather than trusting
-     this comment. */
-  font-size: calc(var(--u) * .68);
-  letter-spacing: .2em;
+  /* M6's floor is .68u and hud.test.mjs lists this selector, so the floor governs it rather than
+     trusting this comment. This is deliberately above the floor, not at it. */
+  font-size: calc(var(--u) * .82);
+  letter-spacing: .22em;
   color: var(--gold-l);
   line-height: 1;
-  padding-right: calc(var(--u) * .12);
+  padding-right: calc(var(--u) * .06);
 }
-.sly-hp-row { display: flex; align-items: flex-end; gap: calc(var(--u) * .2); }
+.sly-hp-row { display: flex; align-items: flex-end; gap: calc(var(--u) * .24); }
 .sly-hp-pip {
-  width: calc(var(--u) * 1.46);
-  height: calc(var(--u) * 1.46);
+  /* 2.05u — between the old 1.46u and .sly-coin-icon's 2.25u, so the row reads at a glance and
+     still sits inside the scale the rest of the HUD's drawn tokens use. */
+  width: calc(var(--u) * 2.05);
+  height: calc(var(--u) * 2.05);
   display: block;
 }
 .sly-hp-pip svg { width: 100%; height: 100%; }

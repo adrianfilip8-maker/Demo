@@ -588,10 +588,19 @@ export class HUD {
    *
    * ── Why it is not a rectangle with a fill ───────────────────────────────────────────────
    * This file's design position: *"the Sly games never draw a 'UI layer'. They draw props."*
-   * So the readout is five inked heart pips under an optics bracket — `Ico.pip(_, 'heart')` and
-   * `Ico.bracket()`, the two vocabularies this HUD already owns — hand-rotated a degree and a
-   * half, on the house carnelian. A translucent grey bar with a red fill would be the exact
-   * thing the stylesheet's own rule 1 forbids.
+   * So the readout is five inked heart pips — `Ico.pip(_, 'heart')`, this file's own vocabulary —
+   * struck on the same inked chip `.sly-threat` and `.sly-carry` are struck on, hand-rotated a
+   * degree and a half. A translucent GREY bar with a red fill is what the stylesheet's rule 1
+   * forbids; a near-black inked prop with a hard offset shadow is what the rest of this HUD is
+   * made of.
+   *
+   * ── §731.2: it did not READ, and that is a different failure from being hidden ──────────
+   * The first version was the same pips with no chip behind them, plus a mirrored `Ico.bracket()`.
+   * On the production artifact it measured present, `opacity: 1`, in the viewport, and painting
+   * 84.7 % of its own rect — and the owner still reported it missing. 16.5 px hearts and an
+   * 8.6 px label, 0.40 % of the frame, in the corner a player checks last. The bracket went with
+   * the backing: on an unbacked cluster it tied the ornament to the Binocucom's corner set, on a
+   * struck chip it is noise. Bigger pips, a bigger kicker and a real ground replaced it.
    *
    * It lives INSIDE `.sly-shake` deliberately: it inherits the world shake, the Binocucom stand
    * down and the `data-hidden` screenshot kill, so it behaves like the rest of the HUD without a
@@ -607,7 +616,6 @@ export class HUD {
     }
     return `
       <div class="sly-hp" aria-hidden="true">
-        <span class="sly-hp-br">${Ico.bracket()}</span>
         <span class="sly-hp-kick sly-ink sly-ink-s">HEALTH</span>
         <span class="sly-hp-row">${pips}</span>
       </div>`;
