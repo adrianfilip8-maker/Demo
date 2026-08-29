@@ -1066,8 +1066,34 @@ test('P2: KayKit against Props art — seven placements, and six of them are flo
    *           the same mid-floor courtyard basket it always stood in, wearing its new body.
    *   row  4  crates_stacked @(-20.8, 6.5)     picks up props_kaykit beside props_stone —
    *           a swapped wall basket in the west store line.
+   *
+   * AND A THIRD TIME, UNDER §730, on exactly the row §729's note above singled out. The owner
+   * asked for the treasure room's canopic jars back ("by urns, I mean canopic jars"), so the
+   * four offering-table jars left `props_kaykit` and went back into the `lime` clay bucket. Row
+   * 22 is the tomb coin stack standing beside them, and it reads the change directly:
+   *
+   *   row 22  coin_stack_large @(-2.4, -68.6)
+   *           §729:  9 base + 124 body to 1.17 m  [props_stone,props_kaykit]
+   *           §730:  9 base +  49 body to 1.22 m  [props_stone,props_lime]
+   *
+   * The bucket name flipping `kaykit` → `lime` is an independent confirmation that the four
+   * jars actually changed mesh, measured by a file that knows nothing about §730. The body
+   * count falls because a canopic jar is 0.335 m wide and 333 vertices against the barrel's
+   * 0.604 m and 621 — 55 % of the footprint at the identical 0.6136 m height. Total 133 → 58
+   * takes row 22 from fifth back to last, which is the one and only rank move; the SEVEN
+   * INDICES ARE UNCHANGED for the third time running, so nothing started or stopped touching.
+   * Every other row is byte-identical to §729's.
    */
-  assert.deepEqual(rows.map((r) => r.i), [18, 21, 33, 4, 22, 7, 16], 'a different set of placements now touches Props art');
+  assert.deepEqual(rows.map((r) => r.i), [18, 21, 33, 4, 7, 16, 22], 'a different set of placements now touches Props art');
+  /* §730: the bucket, not just the ranking. Softening the pin above to a set comparison was
+     refused twice; this is the other half of the same instinct — the thing that MOVED is which
+     mesh row 22 touches, so that is asserted rather than left to the ranking to imply. */
+  const coinStack = rows.find((r) => r.i === 22);
+  assert.ok(coinStack, 'the tomb coin stack no longer touches Props art at all');
+  assert.match(coinStack.who, /props_lime/,
+    `row 22 touches [${coinStack.who}] — §730 put the offering-table urns back in the clay bucket, so props_lime must be among them`);
+  assert.doesNotMatch(coinStack.who, /props_kaykit/,
+    `row 22 still touches props_kaykit — the vault jars did not leave the imported mesh`);
 
   /* the one the whole category was opened over, and the correction to it */
   const chest = rows.find((r) => r.i === 21);
