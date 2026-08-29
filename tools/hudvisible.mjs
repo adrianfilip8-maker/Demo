@@ -27,15 +27,17 @@
  *   1. `vite build`, served under a `/Demo/`-shaped prefix (prodboot.mjs's server shape).
  *   2. Booted the way a player boots it — navigate, wait, look. No staging, no injected CSS, no
  *      events emitted, no `stopLoop` during the visibility read, no debug hooks.
- *   3. The verdict is not a rect. It is **pixels**: the same corner of the same frame is
- *      rendered with the ornament and again with `?hud=nohealth`, and the two are differenced.
- *      A rect proves an element is in the layout; only the diff proves it PAINTS, and its
- *      magnitude is the only honest measure of how much it catches an eye that is not hunting
- *      for it. `page.screenshot()` composites the DOM, unlike `__GAME.capture()`, which reads the
- *      WebGL buffer and by design never contains the HUD.
+ *   3. The verdict is not a rect. It is **pixels**: with the loop stopped, ONE frame is captured
+ *      as the player has it, the ornament node is then hidden, and the identical frame is
+ *      captured again. A rect proves an element is in the layout; only the diff proves it PAINTS.
+ *      (An earlier version differenced two separate boots, one with `?hud=nohealth` — two page
+ *      loads mean two different scenes, the control corner came back 47 % changed and the
+ *      calibration refused the number.) `page.screenshot()` composites the DOM, unlike
+ *      `__GAME.capture()`, which reads the WebGL buffer and by design never contains the HUD.
  *
- * The control is the fail arm (§418.3): the SAME diff is computed over `.sly-tl`'s corner, the
- * cluster the owner demonstrably does see, so "the ornament paints N pixels" has a scale.
+ * The control is the fail arm (§418.3): the SAME diff is computed over `.sly-tl`'s corner, which
+ * hiding `.sly-hp` cannot touch — and its pixel SPREAD is asserted too, because "the control did
+ * not change" reads identically to "both frames are the same blank veil".
  *
  *   node tools/hudvisible.mjs                  build, serve at /Demo/, measure
  *   node tools/hudvisible.mjs --no-build       reuse dist/
@@ -235,12 +237,17 @@ function badgeFeatures(png, box) {
     }
   }
   const near = (p, t, tol) => Math.abs(p[0] - t[0]) <= tol && Math.abs(p[1] - t[1]) <= tol && Math.abs(p[2] - t[2]) <= tol;
-  const TARGET = { oval: [143, 216, 255], mask: [31, 79, 150], slit: [242, 232, 212], ink: [26, 18, 16] };
+  /* The IMPORTED artwork's own three inks, sampled by tools/godot2mask.mjs from the source
+     texels: navy #262671, pale grey #c5c5c5, outline #242424. Not the hand-drawn palette
+     §731.3 used. */
+  const TARGET = { navy: [38, 38, 113], grey: [197, 197, 197], outline: [36, 36, 36] };
   const counts = {};
   for (const k of Object.keys(TARGET)) counts[k] = px.filter((p) => near(p, TARGET[k], 46)).length;
 
-  /* Connected components of the near-white slit colour, 4-connected. */
-  const isSlit = px.map((p) => near(p, TARGET.slit, 52));
+  /* Connected components of the pale-grey regions, 4-connected. The mark has THREE of them at
+     full resolution — two eye patches and the muzzle — and the two eye patches are the pair that
+     decides whether it reads as a face. */
+  const isSlit = px.map((p) => near(p, TARGET.grey, 52));
   const seen = new Uint8Array(w * h);
   let blobs = 0;
   const sizes = [];
@@ -261,7 +268,7 @@ function badgeFeatures(png, box) {
     }
     if (n >= 3) { blobs++; sizes.push(n); }      // ignore single-pixel antialiasing specks
   }
-  return { box: [w, h], counts, slitBlobs: blobs, slitSizes: sizes.sort((a, b) => b - a).slice(0, 4) };
+  return { box: [w, h], counts, greyBlobs: blobs, greySizes: sizes.sort((a, b) => b - a).slice(0, 4) };
 }
 
 /** Single-image stats for a box — the guard against measuring a uniform blank. */
@@ -433,12 +440,12 @@ async function run() {
       console.log('\n[hudvisible] the badge as RENDERED, one pip cropped out of the production frame:');
       console.log(`    ${f.box[0]} x ${f.box[1]} px   oval ${f.counts.oval} px, mask ${f.counts.mask} px, `
         + `slits ${f.counts.slit} px, ink ${f.counts.ink} px`);
-      console.log(`    separate near-white regions: ${f.slitBlobs} (sizes ${JSON.stringify(f.slitSizes)}) — two is the mark`);
-      for (const k of ['oval', 'mask', 'slit', 'ink']) {
+      console.log(`    separate pale-grey regions: ${f.greyBlobs} (sizes ${JSON.stringify(f.greySizes)}) — two eye patches plus the muzzle`);
+      for (const k of ['navy', 'grey', 'outline']) {
         if (f.counts[k] < 4) fail(`the rendered badge shows only ${f.counts[k]} px of its ${k} — that ink is not surviving at this size`);
       }
-      if (f.slitBlobs !== 2) {
-        fail(`the rendered badge shows ${f.slitBlobs} near-white regions, not 2 — the eye slits are not resolving, so it does not read as the mask`);
+      if (f.greyBlobs < 2) {
+        fail(`the rendered badge resolves ${f.greyBlobs} pale-grey regions — the eye patches are merging, so it does not read as a face`);
       }
     }
 
@@ -498,11 +505,11 @@ async function run() {
       const png = await shoot(page, path.join(OUTDIR, `prod-${name.replace(/\W+/g, '')}.png`));
       const bg = boxStats(png, hpW);
       const bf = badgeFeatures(png, wide['.sly-hp-pip']);
-      report.grades.push({ grade: name, tod, bg, slitBlobs: bf.slitBlobs, counts: bf.counts });
+      report.grades.push({ grade: name, tod, bg, greyBlobs: bf.greyBlobs, counts: bf.counts });
       console.log(`    ${name.padEnd(9)} behind+badge luma ${bg.lumaMin}..${bg.lumaMax} (mean ${bg.lumaMean}, stdev ${bg.stdev}), ${bg.colours} colours`);
-      console.log(`              badge still resolves: ${bf.slitBlobs} slit regions, oval ${bf.counts.oval} px, mask ${bf.counts.mask} px, ink ${bf.counts.ink} px`);
-      if (bf.slitBlobs !== 2) fail(`at ${name} the badge shows ${bf.slitBlobs} slit regions, not 2`);
-      for (const k of ['oval', 'mask', 'ink']) {
+      console.log(`              badge still resolves: ${bf.greyBlobs} pale-grey regions, navy ${bf.counts.navy} px, grey ${bf.counts.grey} px, outline ${bf.counts.outline} px`);
+      if (bf.greyBlobs < 2) fail(`at ${name} the badge resolves ${bf.greyBlobs} pale-grey regions — the eye patches are merging`);
+      for (const k of ['navy', 'grey', 'outline']) {
         if (bf.counts[k] < 4) fail(`at ${name} the badge's ${k} ink has collapsed to ${bf.counts[k]} px`);
       }
     }

@@ -24,6 +24,7 @@ import {
   alertFor, threatFor, contrast, luminance, parseHex,
 } from '../src/ui/Alert.js';
 import { installDom, fakeEngine } from './_hudshim.mjs';
+import { MASK_BADGE_PALETTE } from '../src/ui/MaskBadge.js';
 
 const SRC = new URL('../src/', import.meta.url);
 const read = (p) => readFileSync(new URL(p, SRC), 'utf8');
@@ -639,15 +640,17 @@ test('§731 CALIBRATION (must fire): the drawing probe reports a known-same pair
 
 test('§731: the ornament ships BOTH pip states as real, distinct drawings', async () => {
   const Ico = await import('../src/ui/Icons.js');
+  const M = await import('../src/ui/MaskBadge.js');
   const full = Ico.pip(true, 'mask');
   const empty = Ico.pip(false, 'mask');
 
   let inspected = 0;
   for (const [name, svg] of [['filled', full], ['empty', empty]]) {
     assert.match(svg, /^<svg[\s\S]*<\/svg>$/, `the ${name} mask badge is not an svg`);
-    // A drawing, not a stub: the oval ground and the mask silhouette both have to be in there.
-    assert.match(svg, /<ellipse[^>]*rx="17\.6"[^>]*ry="15\.2"/, `the ${name} badge lost its oval`);
-    assert.match(svg, /<path[^>]*\bd="M10\.2 12\.6Q/, `the ${name} badge lost the mask silhouette`);
+    // Both states draw the SAME imported artwork — the spent pip is not a different picture.
+    assert.ok(svg.includes(M.MASK_BADGE_URI), `the ${name} badge does not draw the imported asset`);
+    assert.match(svg, /<image[^>]*width="128"[^>]*height="81"/,
+      `the ${name} badge is not placed at the asset's own size`);
     inspected++;
   }
   assert.equal(inspected, 2);                                                  // §211.1
@@ -656,21 +659,11 @@ test('§731: the ornament ships BOTH pip states as real, distinct drawings', asy
      markup renders it, and dead art rots silently. This arm is what keeps it alive. */
   assert.ok(!sameDrawing(full, empty),
     'the empty badge is byte-identical to the filled one — the spent state is not drawn');
-  // Spent still COUNTS: it keeps the ink outline rather than vanishing.
-  assert.match(empty, /stroke-width="4\.2"/, 'the spent badge lost the outline that makes it count');
-  // ...and it is not the filled badge with the fill removed — the mask survives as a traced line.
-  assert.match(empty, /stroke="#8fd8ff"/, 'the spent badge dropped its mask tracing');
-  /* The filled badge carries all four inks the §731.3 contrast bound is computed over. If any of
-     them is dropped the bound in the sweep arm below stops describing what actually ships. */
-  let inks = 0;
-  for (const [what, re] of [
-    ['the sky-blue oval', /fill="#8fd8ff"/], ['the navy mask', /fill="#1f4f96"/],
-    ['the near-white eye slits', /fill="#f2e8d4"/], ['the ink outline', /stroke="#1a1210"/],
-  ]) { assert.match(full, re, `the filled badge lost ${what}`); inks++; }
-  assert.equal(inks, 4);                                                       // §211.1
-  // TWO eye slits, not one: a single slit is not the mark.
-  assert.equal((full.match(/fill="#f2e8d4"/g) ?? []).length, 2,
-    'the badge must have exactly two eye slits');
+  /* Spent still COUNTS — it holds its slot at reduced opacity rather than vanishing, because a
+     readout whose lost pips disappear stops being a readout. */
+  assert.match(empty, /opacity="\.32"/, 'the spent badge is not the dimmed treatment');
+  assert.ok(!/opacity=/.test(full.replace(/data:image[^"]*/, '')),
+    'the FILLED badge is dimmed — the two states are the wrong way round');
 
   /* A different silhouette from BOTH live-row pips — "a second widget with its own art" is
      exactly what it must not become, and the live row sits directly above it now. */
@@ -678,112 +671,7 @@ test('§731: the ornament ships BOTH pip states as real, distinct drawings', asy
   assert.ok(!sameDrawing(full, Ico.pip(true, 'charm')), 'the badge collides with the charm pip');
 });
 
-/**
- * §731.3 — does the drawing actually describe the MASK the owner sent?
- *
- * "It is an svg and it has a path in it" is not that claim. The owner's reference has four
- * features that make it the Cooper mark rather than a blue blob, and every one of them is a
- * geometric fact about the path data, checkable here without a rasteriser:
- * two ear-peaks, a concave dip between them, a notch at bottom centre, and two eye slits whose
- * OUTER ends ride higher than their inner ones. The rendered-pixel half of this claim — that the
- * features survive at the size it actually ships — is `tools/hudvisible.mjs`, which counts them
- * off the production frame.
- */
-function pathPoints(d) {
-  const pts = [...d.matchAll(/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g)]
-    .map((m) => ({ x: +m[1], y: +m[2] }));
-  /* A closed path names its start point again at the end, which read as a third ear peak the
-     first time this ran. Dedupe by coordinate. */
-  const seen = new Set();
-  return pts.filter((q) => {
-    const k = `${q.x},${q.y}`;
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
-}
-
-/** The dip is the feature that separates the mask from a blob: peaks alone do not. */
-function topDip(pts) {
-  const topY = Math.min(...pts.map((q) => q.y));
-  const peaks = pts.filter((q) => Math.abs(q.y - topY) < 0.01);
-  const centre = pts.filter((q) => Math.abs(q.x - 23) < 0.01 && q.y < 25);
-  const centreY = centre.length ? Math.min(...centre.map((q) => q.y)) : null;
-  return { topY, peaks, centreY, dip: centreY == null ? 0 : centreY - topY };
-}
-
-test('§731.3 CALIBRATION (must fire): the silhouette checks reject a shape that is not the mask', () => {
-  /* A rounded blob whose top edge is FLAT. Its outermost top points look exactly like ear peaks
-     to a naive peak count — the first version of this arm counted two and was satisfied, which is
-     why the discriminator is the DIP between them and not the peaks themselves. */
-  const blob = pathPoints('M10 23Q10 12 23 12Q36 12 36 23Q36 34 23 34Q10 34 10 23Z');
-  const b = topDip(blob);
-  assert.ok(b.peaks.length >= 2,
-    'CALIBRATION FAILED — the blob should still LOOK like it has peaks, or it is not a hard case');
-  assert.ok(b.dip < 3,
-    `CALIBRATION FAILED — a flat-topped blob reports a ${b.dip} dip, so the dip check cannot discriminate`);
-
-  /* And a shape with no bottom notch: the lowest edge is flat, so "one lowest point on the
-     centre line" must NOT hold. */
-  const flatBottom = pathPoints('M10 12L36 12L36 34L10 34Z');
-  const botY = Math.max(...flatBottom.map((q) => q.y));
-  const lowest = flatBottom.filter((q) => Math.abs(q.y - botY) < 0.01);
-  assert.ok(lowest.length !== 1,
-    'CALIBRATION FAILED — a flat bottom edge reads as a single notch point');
-});
-
-test('§731.3: the badge path carries the mark — two ears, a dip, a notch, two angled slits', async () => {
-  const src = readFileSync(new URL('../src/ui/Icons.js', import.meta.url), 'utf8');
-  const grab = (name) => {
-    const m = new RegExp(`const ${name} = ([\\s\\S]*?);\\n`).exec(src);
-    assert.ok(m, `${name} not found in Icons.js`);
-    return m[1].replace(/['\n+ ]/g, ' ');
-  };
-  const mask = pathPoints(grab('MASK_D'));
-  assert.ok(mask.length >= 10, `mask path parsed to only ${mask.length} points`);
-
-  /* 1. TWO EAR PEAKS, left and right of centre, at the same height. */
-  const { topY, peaks, dip } = topDip(mask);
-  assert.equal(peaks.length, 2, `expected two ear peaks at the top edge, found ${peaks.length}`);
-  const [lp, rp] = peaks.sort((a, b) => a.x - b.x);
-  assert.ok(lp.x < 23 && rp.x > 23, 'the two peaks are not on opposite sides of centre');
-  assert.ok(Math.abs((23 - lp.x) - (rp.x - 23)) < 0.05, 'the ear peaks are not symmetric');
-
-  /* 2. A CONCAVE DIP between them — the feature the calibration above shows a blob does NOT have.
-     The top edge at centre must sit well below the peaks. */
-  assert.ok(dip >= 3, `the top edge does not dip between the ears (dip ${dip} from peaks at ${topY})`);
-
-  /* 3. A NOTCH at bottom centre: the lowest point of the whole path is ON the centre line. */
-  const botY = Math.max(...mask.map((q) => q.y));
-  const lowest = mask.filter((q) => Math.abs(q.y - botY) < 0.01);
-  assert.equal(lowest.length, 1, 'the bottom point is not a single notch');
-  assert.ok(Math.abs(lowest[0].x - 23) < 0.01, `the bottom notch is off-centre at x=${lowest[0].x}`);
-
-  /* 4. TWO EYE SLITS, mirrored, in the upper half, OUTER ends higher than inner ends. */
-  const eyeL = pathPoints(grab('EYE_L'));
-  const eyeR = pathPoints(grab('EYE_R'));
-  assert.equal(eyeL.length, 4, 'the left slit is not a four-point wedge');
-  assert.equal(eyeR.length, 4, 'the right slit is not a four-point wedge');
-  const mid = (23 + botY) / 2;
-  for (const [side, e] of [['left', eyeL], ['right', eyeR]]) {
-    assert.ok(Math.max(...e.map((q) => q.y)) < mid + 4, `the ${side} slit is not in the upper half`);
-  }
-  // outer end higher (smaller y) than inner end, on both sides
-  const outerL = eyeL.reduce((a, b) => (b.x < a.x ? b : a));
-  const innerL = eyeL.reduce((a, b) => (b.x > a.x ? b : a));
-  assert.ok(outerL.y < innerL.y, 'the left slit does not ride higher at its outer end');
-  const outerR = eyeR.reduce((a, b) => (b.x > a.x ? b : a));
-  const innerR = eyeR.reduce((a, b) => (b.x < a.x ? b : a));
-  assert.ok(outerR.y < innerR.y, 'the right slit does not ride higher at its outer end');
-  // and they are mirror images about x = 23, so the mark is not lopsided
-  const mirror = (pts) => pts.map((q) => ({ x: +(46 - q.x).toFixed(2), y: q.y }))
-    .sort((a, b) => a.x - b.x || a.y - b.y);
-  const norm = (pts) => pts.map((q) => ({ x: +q.x.toFixed(2), y: q.y }))
-    .sort((a, b) => a.x - b.x || a.y - b.y);
-  assert.deepEqual(mirror(eyeR), norm(eyeL), 'the two eye slits are not mirror images');
-});
-
-test('§731: nothing that drives the live pip row can reach the heart branch', () => {
+test('§731: nothing that drives the live pip row can reach the mask branch', () => {
   const hud = read('ui/HUD.js');
   const m = /function pipKind\(i\)\s*\{\s*return ([^;]+);\s*\}/.exec(hud);
   assert.ok(m, 'pipKind() no longer has the shape this arm reads');
@@ -885,6 +773,85 @@ test('§731: ?hud=nohealth removes the ornament and nothing else', async () => {
 });
 
 /**
+ * §731.4 — the badge is IMPORTED, so the checks are about provenance and decode, not geometry.
+ *
+ * §731.3 hand-drew the mark and this block checked its path data — two ear peaks, a dip, a notch,
+ * two slits. All of that passed, and the drawing was still wrong: the owner's artwork has broad
+ * pale eye PATCHES, a muzzle and a nose, and no oval. Checking a shape you invented against a
+ * description you invented is not a check (§439). The art now comes from the reference project,
+ * so what is checkable here is that it is really that file, really inlined, and really wired in.
+ * Whether it READS is a pixel question and belongs to `tools/hudvisible.mjs`.
+ */
+test('§731.4: the mask badge is the imported asset, inlined, with its palette sampled not retyped', async () => {
+  const M = await import('../src/ui/MaskBadge.js');
+
+  // A real baked raster at the source's own aspect, not squared.
+  assert.equal(M.MASK_BADGE_W, 128);
+  assert.equal(M.MASK_BADGE_H, 81);
+  const aspect = M.MASK_BADGE_W / M.MASK_BADGE_H;
+  assert.ok(Math.abs(aspect - 1898 / 1195) < 0.01,
+    `the bake is ${aspect.toFixed(3)}:1 but the source is ${(1898 / 1195).toFixed(3)}:1 — the mark has been squashed`);
+
+  /* Inlined, not fetched. This is the §666 property the whole import hangs on: a runtime asset
+     URL is a production-only fault class, and a fetch that never settles hangs `node --test`. */
+  assert.match(M.MASK_BADGE_URI, /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/,
+    'the badge is not a self-contained data URI');
+  const bytes = Buffer.from(M.MASK_BADGE_URI.split(',')[1], 'base64');
+  assert.deepEqual([...bytes.subarray(0, 8)], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+    'the inlined bytes are not a PNG');
+  // Big enough to be the artwork, small enough not to be the 110 KB source dropped in whole.
+  assert.ok(bytes.length > 2000 && bytes.length < 40000,
+    `the baked PNG is ${bytes.length} bytes, which is neither the artwork nor a sane bake`);
+
+  /* The palette is SAMPLED from the source texels by the bake tool. Retyping it here would be the
+     drift §712 closed for the coin; asserting the SHAPE of each entry keeps it honest without
+     pinning colours the artwork owns. */
+  const pal = M.MASK_BADGE_PALETTE;
+  let entries = 0;
+  for (const k of ['navy', 'grey', 'outline']) {
+    assert.match(pal[k], /^#[0-9a-f]{6}$/, `MASK_BADGE_PALETTE.${k} is not a sampled hex`);
+    entries++;
+  }
+  assert.equal(entries, 3);                                                    // §211.1
+  // ...and they are three genuinely different inks, not one colour three times.
+  assert.equal(new Set(Object.values(pal)).size, 3, 'the sampled palette collapsed');
+
+  /* The glyph actually uses the import. A `maskPip` that quietly went back to hand-drawn paths
+     would still pass every arm above. */
+  const Ico = await import('../src/ui/Icons.js');
+  const svg = Ico.pip(true, 'mask');
+  assert.ok(svg.includes(M.MASK_BADGE_URI), 'the mask pip does not draw the imported asset');
+  assert.match(svg, new RegExp(`viewBox="0 0 ${M.MASK_BADGE_W} ${M.MASK_BADGE_H}"`),
+    'the mask pip is not drawn at the asset\'s own aspect');
+  // The hand-drawn shapes are gone from the file entirely.
+  const src = readFileSync(new URL('../src/ui/Icons.js', import.meta.url), 'utf8');
+  for (const dead of ['MASK_D', 'EYE_L', 'EYE_R', 'heartPip']) {
+    assert.ok(!src.includes(dead), `${dead} survived the §731.4 import — two mask drawings now exist`);
+  }
+});
+
+test('§731.4: provenance is recorded, with the source path, the repo HEAD and the licence', () => {
+  const prov = readFileSync(new URL('../staging/assets/sly-mask/PROVENANCE.md', import.meta.url), 'utf8');
+  let facts = 0;
+  for (const [what, re] of [
+    ['the source file', /Life_Icon_V2/],
+    ['the repo HEAD', /a312a99/],
+    ['the licence', /NONE STATED/],
+    ['the bake tool', /godot2mask\.mjs/],
+    ['the shipped module', /MaskBadge\.js/],
+  ]) { assert.match(prov, re, `PROVENANCE.md does not record ${what}`); facts++; }
+  assert.equal(facts, 5);                                                      // §211.1
+  /* §364.3: the provenance file must not name that project's audio directories, and neither must
+     any source file that touches this asset. Checked as a property of the text, not trusted. */
+  for (const [name, text] of [['PROVENANCE.md', prov],
+    ['MaskBadge.js', readFileSync(new URL('../src/ui/MaskBadge.js', import.meta.url), 'utf8')],
+    ['godot2mask.mjs', readFileSync(new URL('../tools/godot2mask.mjs', import.meta.url), 'utf8')]]) {
+    assert.ok(!/Assets\/(Audio|Sounds?|Music)/i.test(text),
+      `${name} names an audio directory of the reference project`);
+  }
+});
+
+/**
  * §731.3 — the badge's contrast, swept rather than sampled, and why there is no longer a chip.
  *
  * §731.2 struck the row on an ink chip because a carnelian pip on the open scene measured 1.28:1
@@ -898,7 +865,9 @@ test('§731: ?hud=nohealth removes the ornament and nothing else', async () => {
  * no capture lock. It is also what justifies deleting the chip: if the bound holds without it,
  * the chip was solving a problem the artwork already solves.
  */
-const BADGE_INKS = { ink: '#1a1210', oval: '#8fd8ff', mask: '#1f4f96', slit: '#f2e8d4' };
+/* The imported art's own three inks, plus the ink of the `sly-drop` shadow every pip carries.
+   Sampled by the bake tool; imported here rather than retyped so a re-bake moves both. */
+const BADGE_INKS = { ...MASK_BADGE_PALETTE, drop: '#1a1210' };
 const GREY = (v) => '#' + [v, v, v].map((c) => c.toString(16).padStart(2, '0')).join('');
 
 /** Worst, over every grey ground, of the BEST of the supplied inks. */
@@ -912,7 +881,7 @@ function sweepBestOf(hexes) {
   return { worst: +worst.toFixed(2), atGrey: at };
 }
 
-test('§731.3 CALIBRATION (must fire): the sweep rejects a single ink and accepts a real sandwich', () => {
+test('§731.4 CALIBRATION (must fire): the sweep rejects a single ink and accepts a real sandwich', () => {
   /* One ink can never clear a bar against EVERY background — there is always a ground that
      matches it. If the sweep says otherwise it is not sweeping. */
   for (const [name, hex] of Object.entries(BADGE_INKS)) {
@@ -921,22 +890,29 @@ test('§731.3 CALIBRATION (must fire): the sweep rejects a single ink and accept
       `CALIBRATION FAILED — ${name} alone reports ${one.worst}:1 against every background, which is impossible`);
   }
   /* ...and the ink/near-white pair, which is the widest the palette offers, must clear it. */
-  const pair = sweepBestOf([BADGE_INKS.ink, BADGE_INKS.slit]);
+  const pair = sweepBestOf([BADGE_INKS.drop, BADGE_INKS.grey]);
   assert.ok(pair.worst >= 3.0,
-    `CALIBRATION FAILED — ink against near-white should clear 3:1 everywhere, got ${pair.worst}:1`);
+    `CALIBRATION FAILED — ink against the badge's pale grey should clear 3:1 everywhere, got ${pair.worst}:1`);
 });
 
-test('§731.3: the badge clears the non-text bar against EVERY possible background, with no chip', () => {
+test('§731.4: the imported badge clears the non-text bar against EVERY possible background', () => {
   const all = sweepBestOf(Object.values(BADGE_INKS));
   assert.ok(all.worst >= 3.0,
     `the badge falls to ${all.worst}:1 at grey ${all.atGrey} — below the 3:1 non-text bar`);
   // Pinned, so a palette change that silently weakens the guarantee fails instead of passing.
-  assert.deepEqual(all, { worst: 3.9, atGrey: 115 });
+  /* Pinned to the truth, which is TIGHT and deliberately recorded as such: the artwork's own
+     three inks alone bottom out at exactly 3.00:1, and the `sly-drop` ink shadow every pip in
+     Icons.js carries is what buys the margin above. That is why the shadow is not decorative
+     here, and why a dark chip was rejected instead of added — see maskPip's header. */
+  assert.deepEqual(all, { worst: 3.28, atGrey: 103 });
+  const bare = sweepBestOf([MASK_BADGE_PALETTE.navy, MASK_BADGE_PALETTE.grey, MASK_BADGE_PALETTE.outline]);
+  assert.deepEqual(bare, { worst: 3, atGrey: 109 },
+    'the artwork-only bound moved — the margin argument above is derived from it');
 
   /* THE REASON THE KICKER IS GONE. Gold text plus its ink halo is the best case a label could
      have had without a chip, and it does not reach the 4.5:1 text bar. Keeping "HEALTH" after
      deleting the chip would have meant shipping a text run this project's own M2 bar rejects. */
-  const label = sweepBestOf(['#ffe9a8', BADGE_INKS.ink]);
+  const label = sweepBestOf(['#ffe9a8', BADGE_INKS.drop]);
   assert.ok(label.worst < 4.5,
     `a gold label on the open scene reports ${label.worst}:1 — if this now passes, the kicker could come back`);
   assert.deepEqual(label, { worst: 3.95, atGrey: 115 });
@@ -945,7 +921,7 @@ test('§731.3: the badge clears the non-text bar against EVERY possible backgrou
   assert.ok(!/sly-hp-kick/.test(read('ui/HUD.js')), 'the kicker markup survived §731.3');
 });
 
-test('§731.3: the chip is gone, and the readout is a bare row of badges', () => {
+test('§731.4: no chip, and the readout is a bare row of imported badges', () => {
   const css = read('ui/hud.css.js');
   const block = /\.sly-hp\s*\{([\s\S]*?)\}/.exec(css);
   assert.ok(block, '.sly-hp rule not found');

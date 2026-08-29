@@ -1,8 +1,15 @@
 /**
  * Icons — every glyph the HUD draws, as inline SVG strings.
  *
- * No image files, no icon font: AGENTS.md §1 says everything is generated in code, and a HUD
- * that ships as vectors also stays crisp from 1280×720 to 4K without a second asset set.
+ * No icon font, and everything here is generated in code per AGENTS.md §1 — a HUD that ships as
+ * vectors stays crisp from 1280×720 to 4K without a second asset set.
+ *
+ * ONE EXCEPTION, on the same terms as `BOTTLE_PALETTE` and the coin badge: §731.4's `maskPip` is
+ * the reference project's own Cooper insignia, imported as a baked raster because the owner
+ * supplied that artwork and asked for it specifically. Hand-drawing it from a description was
+ * tried in §731.3 and produced a mark that was wrong in every particular and resolved zero eye
+ * regions at its shipped size. It is inlined as base64, not fetched (§666), so the "no runtime
+ * asset URL" property this file is tested for still holds.
  *
  * House rules for every shape in here (AGENTS.md §2.1):
  *   · a thick ink outline on the silhouette — `#1a1210`, never pure black
@@ -13,6 +20,7 @@
 
 import { BOTTLE_PALETTE } from '../world/BottleMesh.js';
 import { COIN_BADGE_PALETTE } from '../world/CoinBadge.js';
+import { MASK_BADGE_URI, MASK_BADGE_W, MASK_BADGE_H } from './MaskBadge.js';
 
 /**
  * The only colours anything in the UI is allowed to use (AGENTS.md §2.2).
@@ -130,10 +138,10 @@ export function coin(cls = '') {
  *                     difference, so it survives the ~19 px this renders at on a 1280×720 frame
  *                     without relying on colour.
  *   `kind: 'charm'` — the horseshoe, the series' own lucky charm.
- *   `kind: 'mask'`  — §731.3's health readout: the Cooper raccoon-mask insignia on its blue
- *                     oval, the franchise's own mark, supplied by the owner as a reference
- *                     image. NOT part of the live row: `pipKind()` returns only `life` and
- *                     `charm`, so nothing that drives `setHealth` can reach this branch.
+ *   `kind: 'mask'`  — §731.4's health readout: the Cooper mask insignia, IMPORTED from the
+ *                     reference project rather than drawn here (see `maskPip` and
+ *                     `MaskBadge.js`). NOT part of the live row: `pipKind()` returns only `life`
+ *                     and `charm`, so nothing that drives `setHealth` can reach this branch.
  */
 export function pip(filled = true, kind = 'charm', cls = '') {
   if (kind === 'life') return lifePip(filled, cls);
@@ -142,57 +150,47 @@ export function pip(filled = true, kind = 'charm', cls = '') {
 }
 
 /**
- * §731.3 — the Cooper mask insignia, the owner's own reference for the health readout.
+ * §731.4 — the Cooper mask insignia, IMPORTED from the reference project.
  *
- * The owner supplied an image and said *"what is in the oval… is what the health bar should look
- * like"*. It is the franchise's mark: a wide blue oval, a raccoon-mask silhouette on it in a
- * darker blue with an ink outline, two ear-peaks with a shallow concave dip between them, a small
- * downward notch at bottom centre, and two angular near-white eye slits whose outer ends ride
- * higher than their inner ones. **Silhouette fidelity beats embellishment here** — this has to
- * read as *that mask* at the ~26 px it renders at, or it is not the thing that was asked for. So
- * there is no specular arc and no extra ornament on it: every drawing decision below serves the
- * outline.
+ * §731.3 hand-drew this from a verbal description of the owner's photograph and got it wrong in
+ * every particular that matters: narrow slit eyes instead of broad pale patches, an invented blue
+ * oval that was never part of the art, no muzzle and no nose. It also failed on its own terms —
+ * `tools/hudvisible.mjs` cropped it out of the production frame at 26 px and resolved **zero** eye
+ * regions, so it did not read as the mask at the size it shipped at.
  *
- * COLOUR IS THE REASON THIS NEEDS NO BACKING. Every earlier §731 pip was carnelian on whatever
- * the camera happened to be pointing at, which measured 1.28:1 over day sand and forced a chip
- * behind the row to hold it. The badge carries its own ground: the oval is opaque, so the mask's
- * contrast against it (5.13:1) and the eye slits' against the mask (6.60:1) are fixed properties
- * of the glyph and cannot vary with the scene at all. Against the SCENE the badge is a
- * four-ink sandwich — ink outline, `spark` oval, `lapisD` mask, `paint` slits — and swept over
- * every one of the 256 possible grey grounds the best of those four never drops below **3.90:1**.
- * That is the bound the chip existed to provide, so §731.3 deletes the chip.
+ * The artwork exists. `MaskBadge.js` is the reference project's own
+ * `Assets/Textures/Icons/Life_Icon_V2_…` at HEAD `a312a99` — 1898 x 1195, 78.1 % opaque, licence
+ * NONE STATED — baked to 128 x 81 by `tools/godot2mask.mjs` with its alpha dilated first, and
+ * inlined as base64 so no runtime URL exists to break under a `/Demo/` prefix (§666). Provenance
+ * is in `staging/assets/sly-mask/PROVENANCE.md` and repeated at every site that touches it.
  *
- * All four inks are existing `C` entries; the badge introduces no new hue. `spark` for the oval
- * and `lapisD` for the mask are the pair with the widest separation the palette offers in blue,
- * which is what keeps the ears and the eye slits legible when this is 26 px wide.
+ * Drawn at the image's own 128:81 aspect and NOT squared: the mark is markedly wider than tall and
+ * the ears are the first thing a squash destroys.
  *
- * The empty half is a drained badge that still counts — a health readout whose lost pips vanish
- * stops being a readout. `HP_FULL === HP_PIPS` so nothing renders it today; `hud.test.mjs` keeps
- * it alive.
+ * ── On the ground question, which the import re-opened ───────────────────────────────────────
+ * The art is TRANSPARENT, so unlike §731.3's invented oval it brings no ground of its own. Swept
+ * over all 256 grey backgrounds the best of its three sampled inks bottoms out at **3.00:1** —
+ * exactly the non-text bar, with no margin — and the `sly-drop` ink shadow every pip in this file
+ * carries lifts that to **3.27:1**. A dark chip behind it was measured and REJECTED: the navy band
+ * is itself dark (luma 0.030) and drops to 1.21:1 against an ink ground, which would erase the
+ * band the mark is recognised by. The badge therefore ships bare on the house sticker shadow, and
+ * `tools/hudvisible.mjs` checks at both grades that the eye patches and the band actually resolve
+ * in the production frame rather than trusting the arithmetic.
  */
-const MASK_D = 'M10.2 12.6Q16.6 15.4 23 17.4Q29.4 15.4 35.8 12.6C37.8 16 38.4 19 37.5 22'
-             + 'C36.4 25.8 33 28.6 28.4 30.1L23 33.4L17.6 30.1C13 28.6 9.6 25.8 8.5 22'
-             + 'C7.6 19 8.2 16 10.2 12.6Z';
-const EYE_L = 'M13 21.2L20.2 23.8L19.8 26.4L13.6 23.2Z';
-const EYE_R = 'M33 21.2L25.8 23.8L26.2 26.4L32.4 23.2Z';
-
 function maskPip(filled, cls) {
+  const box = `0 0 ${MASK_BADGE_W} ${MASK_BADGE_H}`;
   if (filled) {
-    return wrap('0 0 46 46', `
-      <ellipse cx="23" cy="25.4" rx="17.6" ry="15.2" fill="${C.ink}" opacity=".55"/>
-      <ellipse cx="23" cy="23" rx="17.6" ry="15.2" fill="${C.spark}" stroke="${C.ink}"
-               stroke-width="4.2"/>
-      <path d="${MASK_D}" fill="${C.lapisD}" stroke="${C.ink}" stroke-width="2.6"
-            stroke-linejoin="round"/>
-      <path d="${EYE_L}" fill="${C.paint}"/>
-      <path d="${EYE_R}" fill="${C.paint}"/>
+    return wrap(box, `
+      <image href="${MASK_BADGE_URI}" x="0" y="0"
+             width="${MASK_BADGE_W}" height="${MASK_BADGE_H}"/>
     `, cls);
   }
-  return wrap('0 0 46 46', `
-    <ellipse cx="23" cy="23" rx="17.6" ry="15.2" fill="${C.inkSoft}" fill-opacity=".62"
-             stroke="${C.ink}" stroke-width="4.2"/>
-    <path d="${MASK_D}" fill="none" stroke="${C.spark}" stroke-width="2.2" opacity=".5"
-          stroke-linejoin="round"/>
+  /* Spent: the same mark, dimmed, still occupying its slot — a readout whose lost pips vanish
+     stops being a readout. Nothing renders this today (HP_FULL === HP_PIPS); `hud.test.mjs` is
+     what keeps it from rotting. */
+  return wrap(box, `
+    <image href="${MASK_BADGE_URI}" x="0" y="0"
+           width="${MASK_BADGE_W}" height="${MASK_BADGE_H}" opacity=".32"/>
   `, cls);
 }
 

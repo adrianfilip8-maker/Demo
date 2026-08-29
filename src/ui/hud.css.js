@@ -536,12 +536,16 @@ export const HUD_CSS = /* css */ `
 }
 .sly-hp-row { display: flex; align-items: flex-end; gap: calc(var(--u) * .24); }
 .sly-hp-pip {
-  /* 2.4u. The badge has to survive being read as a SILHOUETTE — two ear peaks, a dip, two eye
-     slits — and that is a resolution question, not a taste one: at §731.2's 2.05u the slits are
-     under 2 px tall. .sly-coin-icon is 2.25u, so this stays inside the scale of the HUD's other
-     drawn tokens. */
-  width: calc(var(--u) * 2.4);
-  height: calc(var(--u) * 2.4);
+  /* 3.2u WIDE and 2.025u tall — the imported art's own 128:81, not a square. The mark is much
+     wider than tall and the ears are the first thing a squash destroys, so the box carries the
+     asset's aspect rather than the pip convention's.
+
+     Sized for RESOLUTION, which is the failure §731.3 actually hit: hand-drawn at 2.4u square it
+     cropped out of the production frame with zero eye regions resolving. At 3.2u the badge is
+     35 px wide at 720p against a 128 px source, so the eye patches land on ~8 px rather than
+     ~2 px. tools/hudvisible.mjs counts them off the real frame at both grades. */
+  width: calc(var(--u) * 3.2);
+  height: calc(var(--u) * 2.025);
   display: block;
 }
 .sly-hp-pip svg { width: 100%; height: 100%; }
