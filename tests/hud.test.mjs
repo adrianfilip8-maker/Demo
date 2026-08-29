@@ -782,3 +782,86 @@ test('§731: ?hud=nohealth removes the ornament and nothing else', async () => {
     delete globalThis.__HUD_AB;
   }
 });
+
+/**
+ * §731.2 — the ornament's chip, and why this replaces a camera survey.
+ *
+ * The first version of §731 floated its pips directly on the scene, so their contrast was a
+ * property of wherever the camera happened to point: 1.28:1 over day sand, 3.41:1 over the night
+ * courtyard. Four poses were measured and all four passed, and the owner still could not see it.
+ *
+ * The chip removes the question rather than re-measuring it. The pips now sit on a KNOWN ground,
+ * so the worst case can be computed over EVERY background that can physically exist instead of
+ * sampled at four of them — a strictly stronger claim, and one that costs no capture lock.
+ */
+const HP_CHIP_INK = [20, 14, 12];
+
+/* `contrast()` and `luminance()` in Alert.js take HEX STRINGS, so the composited ground is
+   rounded back to one — which is also what the compositor actually produces on screen. */
+const toHex = (rgb) => '#' + rgb.map((c) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0')).join('');
+
+function chipWorstCase(alpha) {
+  let carn = Infinity, gold = Infinity;
+  for (let bg = 0; bg <= 255; bg++) {
+    const ground = toHex(HP_CHIP_INK.map((c) => alpha * c + (1 - alpha) * bg));
+    carn = Math.min(carn, contrast('#b8452c', ground));
+    gold = Math.min(gold, contrast('#ffe9a8', ground));
+  }
+  return { carn: +carn.toFixed(2), gold: +gold.toFixed(2) };
+}
+
+test('§731.2 CALIBRATION (must fire): the sweep catches a chip too transparent to hold its inks', () => {
+  // The alpha this shipped with first. It is the value that fails, and the sweep must say so.
+  const weak = chipWorstCase(0.82);
+  assert.ok(weak.carn < 3.0,
+    `CALIBRATION FAILED — a .82 chip should NOT clear 3:1 for carnelian, got ${weak.carn}:1`);
+  // ...and a fully opaque ink chip must pass, or the sweep rejects everything and proves nothing.
+  const solid = chipWorstCase(1.0);
+  assert.ok(solid.carn >= 3.0 && solid.gold >= 4.5,
+    `CALIBRATION FAILED — an opaque ink chip must clear both bars, got carn ${solid.carn}:1 gold ${solid.gold}:1`);
+});
+
+test('§731.2: on the shipped chip, both inks clear their bar against EVERY possible background', () => {
+  const css = read('ui/hud.css.js');
+  const m = /\.sly-hp\s*\{[^}]*background:\s*rgba\(\s*20\s*,\s*14\s*,\s*12\s*,\s*([\d.]+)\s*\)/.exec(css);
+  assert.ok(m, 'could not read .sly-hp background alpha — the chip changed shape');
+  const alpha = parseFloat(m[1]);
+  assert.ok(alpha > 0 && alpha <= 1, `nonsense alpha ${alpha}`);
+
+  const w = chipWorstCase(alpha);
+  /* Non-text bar for the pips, the full text bar for the kicker — the same two bars M2 and the
+     §731 background survey used, now as a floor over the whole background range rather than at
+     four sampled poses. */
+  assert.ok(w.carn >= 3.0,
+    `the carnelian pips fall to ${w.carn}:1 on a chip at alpha ${alpha} — below the 3:1 non-text bar`);
+  assert.ok(w.gold >= 4.5,
+    `the gold kicker falls to ${w.gold}:1 on a chip at alpha ${alpha} — below the 4.5:1 text bar`);
+  // Pinned, so a retune that silently weakens the guarantee fails instead of passing quietly.
+  assert.equal(alpha, 0.94, 'the chip alpha moved — re-derive the worst case before changing this');
+  assert.deepEqual(w, { carn: 3.14, gold: 13.98 });
+});
+
+test('§731.2: the chip is struck the way the HUD\'s other chips are, not as a grey panel', () => {
+  const css = read('ui/hud.css.js');
+  const block = /\.sly-hp\s*\{([\s\S]*?)\}/.exec(css);
+  assert.ok(block, '.sly-hp rule not found');
+  const rule = block[1];
+  let checked = 0;
+  for (const [what, re] of [
+    ['an ink border', /border:\s*calc\(var\(--u\)\s*\*\s*[\d.]+\)\s*solid\s*var\(--ink\)/],
+    ['a hard offset shadow', /box-shadow:[\s\S]*?0\s+calc\(var\(--u\)\s*\*\s*[\d.]+\)\s+0\s+rgba\(26,\s*18,\s*16/],
+    ['an inset accent rule', /box-shadow:\s*inset\s/],
+    ['a hand-placed rotation', /transform:\s*rotate\(-?[\d.]+deg\)/],
+  ]) {
+    assert.match(rule, re, `the §731 chip lost ${what} — it is drifting toward rule 1's flat panel`);
+    checked++;
+  }
+  assert.equal(checked, 4);                                                    // §211.1
+  /* Rule 1's forbidden object is the translucent GREY rounded rectangle. The ground must stay the
+     near-black ink the rest of the sheet uses, not a grey. */
+  assert.match(rule, /background:\s*rgba\(\s*20\s*,\s*14\s*,\s*12/,
+    'the chip ground is no longer the house ink');
+  /* And the bracket is gone: it belonged to the unbacked cluster. */
+  assert.ok(!/sly-hp-br/.test(css), 'the optics bracket rule survived the §731.2 redesign');
+  assert.ok(!/sly-hp-br/.test(read('ui/HUD.js')), 'the optics bracket markup survived the §731.2 redesign');
+});

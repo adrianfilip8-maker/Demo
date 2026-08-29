@@ -543,7 +543,13 @@ export const HUD_CSS = /* css */ `
   align-items: flex-end;
   gap: calc(var(--u) * .26);
   padding: calc(var(--u) * .34) calc(var(--u) * .5) calc(var(--u) * .4);
-  background: rgba(20, 14, 12, .82);
+  /* .94, where the chips above use .82 and the prompt .9. The extra opacity is not a style
+     choice, it is what makes the contrast bound UNCONDITIONAL: composite this ground over the
+     brightest background that can physically exist and carnelian still clears 3.14:1 and the
+     gold kicker 13.98:1. At .82 the worst case is 2.11:1. hud.test.mjs sweeps every background
+     from black to white and pins both numbers, which is a stronger claim than any number of
+     camera poses could support. */
+  background: rgba(20, 14, 12, .94);
   border: calc(var(--u) * .13) solid var(--ink);
   border-radius: calc(var(--u) * .42);
   box-shadow: inset 0 0 0 calc(var(--u) * .06) rgba(184, 69, 44, .75),
