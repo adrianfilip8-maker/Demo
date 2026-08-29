@@ -43,6 +43,11 @@ import * as THREE from 'three';
 import { writeFile } from 'node:fs/promises';
 import { SHOTS } from '../src/core/Shots.js';
 import { createAtmosphereState, evalAtmosphere } from '../src/render/Atmosphere.js';
+/* §729: prime the KayKit bytes so `kaykit` and `smashables` (below) build their SHIPPED
+ * geometry — unprimed, the destructibles fall back to their generated stand-ins and this tool
+ * would attribute a world the player does not get. Guarded: a tree without the assets still
+ * attributes everything else and says what it lost. */
+import { primeKayKitAssets } from '../tests/_kaykitboot.mjs';
 
 const argv = process.argv.slice(2);
 const opt = (n, d) => { const i = argv.indexOf(`--${n}`); if (i === -1) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
@@ -174,8 +179,15 @@ async function build(label, path, cls, pick) {
     else console.log(`  (${label}: no root)`);
   } catch (e) { console.log(`  (${label} failed: ${String(e.message).split('\n')[0]})`); }
 }
+try { primeKayKitAssets(); } catch (e) { warnings.push(`kaykit assets not primed (${e.message}) — kaykit/smashables attribute their fallbacks`); }
 await build('architecture', '../src/world/Architecture.js', 'Architecture', (o) => o.root);
 await build('props',        '../src/world/Props.js',        'Props',        (o) => o.group || o.root);
+/* §729: the two destructible-bearing modules were never in this table — their draws and
+ * triangles were invisible to the attribution exactly when the swap made them worth watching.
+ * `kaykit` is the pack's own set dress; `smashables` reads the route off `architecture`,
+ * already built above. Both build headlessly on the primed cache. */
+await build('kaykit',       '../src/world/KayKit.js',       'KayKit',       (o) => o.group);
+await build('smashables',   '../src/world/Smashables.js',   'Smashables',   (o) => o.root);
 /* terrain INCLUDES vegetation and water — building them again triple-counts (§130). */
 await build('terrain',      '../src/world/Terrain.js',      'Terrain',      (o) => o.group || o.root || o.mesh);
 await build('guards',       '../src/ai/Guard.js',           'Guards',       (o) => o.group);

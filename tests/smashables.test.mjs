@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 
@@ -10,6 +11,13 @@ import {
 } from '../src/world/Smashables.js';
 import { smashFor } from '../src/fx/Emitters.js';
 import { stepFor } from '../src/audio/Sfx.js';
+import { primeKayKitAssets } from './_kaykitboot.mjs';
+import { loadModelLib } from '../src/world/KayKit.js';
+
+/* §729: prime the pack's bytes BEFORE any boot, so every arm below runs the SHIPPED swap path —
+ * imported bodies on the atlas material — not the headless fallback. The fallback and the
+ * `?smash=gen` arm are exercised deliberately, in children, by S16/S17. */
+primeKayKitAssets();
 
 /**
  * Smashables — the mechanic half of `propSmashed`.
@@ -576,4 +584,145 @@ test('S15 MOVEMENT hands out live scratch on `caneHit`, and nothing here retains
     'the swing direction is used without being copied out of MOVEMENT\'s scratch');
   assert.ok(/new THREE\.Vector3\(p\.pos\.x/.test(code),
     'the published `pos` is not freshly allocated — AUDIO schedules a delayed read of it');
+});
+
+/* ============================================================================================
+   5. §729 — the imported bodies (the swap itself, its conforms, and its two escape arms)
+============================================================================================ */
+
+test('S16 §729: every kind wears its imported body, conformed to the mount it took over', async () => {
+  /**
+   * DOMAIN (§418.3)
+   * PASSES ON: the primed boot below — three kinds swapped, zero fallbacks, each mesh's
+   *            triangle count equal to its model's own reduction, each body's measured height
+   *            equal to the conform the module recorded, all three meshes on ONE material.
+   * FAILS ON:  run, twice, in-arm: (a) `loadModelLib` with a model name the pack does not have
+   *            reports the failure and returns no entry — the hole the fallback contract exists
+   *            for; (b) the UN-conformed native heights (1.018 / 1.300 / 2.142 m, re-measured
+   *            here off the same lib) each bust the ±0.11 conform band the shipped bodies pass,
+   *            so the band discriminates a forgotten `geo.scale` from a shipped one. The
+   *            headless-unprimed fallback and the `?smash=gen` arm are S17's, in children.
+   */
+  const { sm } = await boot();
+  const swap = sm.debugInfo().swap;
+  assert.equal(swap.armed, true, 'the swap is not armed in a tokenless boot');
+  assert.deepEqual(swap.fallbacks, [], `kinds fell back with the cache primed: ${swap.fallbacks}`);
+  assert.equal(swap.swapped.length, Object.keys(KINDS).length);
+
+  /* the models, re-reduced through the same exported path the module used */
+  const lib = await loadModelLib([...new Set(Object.values(KINDS).map((K) => K.model))]);
+  let mats = new Set(), inspected = 0;
+  for (const [kind, K] of Object.entries(KINDS)) {
+    const entry = sm._meshes.get(kind);
+    const model = lib.get(K.model);
+    assert.ok(entry && model, `no mesh or no model for '${kind}'`);
+    assert.equal(entry.mesh.geometry.attributes.position.count, model.geo.attributes.position.count,
+      `'${kind}' does not render ${K.model}'s own geometry`);
+    entry.mesh.geometry.computeBoundingBox();
+    const bb = entry.mesh.geometry.boundingBox;
+    const h = bb.max.y - bb.min.y;
+    const rec = swap.swapped.find((s) => s.kind === kind);
+    assert.ok(Math.abs(h - rec.h) < 1e-3, `'${kind}' body height ${h.toFixed(3)} != recorded conform ${rec.h}`);
+    assert.ok(Math.abs(h - K.h) < 0.11,
+      `'${kind}' at ${h.toFixed(3)} m is outside the mount's ±0.11 band around KINDS.h ${K.h}`);
+    /* the counterexample, evaluated: the native model height must FAIL the same band, or the
+       band cannot tell a conformed body from a forgotten scale */
+    const nativeH = model.bb.max.y - model.bb.min.y;
+    assert.ok(!(Math.abs(nativeH - K.h) < 0.11),
+      `${K.model}'s native ${nativeH.toFixed(3)} m PASSES the conform band — the band discriminates nothing`);
+    assert.ok(bb.min.y > -1e-3 && bb.min.y < 1e-3, `'${kind}' base is at ${bb.min.y}, not on its floor`);
+    assert.ok(h < TUNE.hitRise, `'${kind}' at ${h.toFixed(2)} m is taller than the one-player-height resolve bound`);
+    mats.add(entry.mesh.material);
+    inspected++;
+  }
+  assert.equal(inspected, Object.keys(KINDS).length);
+  assert.equal(mats.size, 1, `${mats.size} materials across the swapped set — the single-atlas strength (§718) is gone`);
+  assert.equal([...mats][0].name, 'smash:kaykit');
+
+  /* the silhouette budget's own bar: the two fattest bodies side by side stay inside the
+     cluster ring's worst-case neighbour chord (2·0.47·sin 60° = 0.814 m) */
+  const halfW = [...sm._meshes.values()].map(({ mesh }) => {
+    const b = mesh.geometry.boundingBox;
+    return Math.max(b.max.x - b.min.x, b.max.z - b.min.z) / 2;
+  }).sort((a, b) => b - a);
+  assert.ok(halfW[0] + halfW[1] < 0.814,
+    `the two fattest swapped bodies (${(halfW[0] * 2).toFixed(2)} / ${(halfW[1] * 2).toFixed(2)} m) can interpenetrate in a worst-case ring`);
+
+  /* fail input (a), run: a name the pack does not have */
+  const missing = [];
+  const hole = await loadModelLib(['no_such_model'], (f) => missing.push(f));
+  assert.equal(hole.size, 0);
+  assert.deepEqual(missing, ['no_such_model'],
+    'loadModelLib no longer reports a missing model — the fallback contract has no signal');
+});
+
+test('S17 §729: the `?smash=gen` revert and the unprimed fallback, both RUN in children', () => {
+  /**
+   * DOMAIN (§418.3)
+   * PASSES ON: child A (`__SMASH_AB = 'gen'`, primed): generated bodies, generated tags, swap
+   *            disarmed — the revert restores the pre-§729 module bit-for-bit at this seam.
+   * FAILS ON:  run — child B boots the DEFAULT arm with NO primed cache: the transport guard
+   *            answers before any fetch can hang, all three kinds fall back to their generated
+   *            stand-ins with a warn each, and the level still has 23 breakables. That child is
+   *            the §418.3 failing input for the whole load path (and the §592-family guard: a
+   *            swap that fails must not kill a kind). Child C: a bogus token value lands on the
+   *            swap arm — the parser discriminates.
+   */
+  const run = (script) => {
+    const raw = execFileSync(process.execPath, ['--input-type=module', '-e', script],
+      { encoding: 'utf8', maxBuffer: 32 << 20, cwd: path.join(HERE, '..') });
+    const m = /__R__(\{.*\})/.exec(raw);
+    assert.ok(m, 'child produced no result line');
+    return JSON.parse(m[1]);
+  };
+  const bootScript = (pre) => `
+${pre}
+const { primeKayKitAssets } = await import(${JSON.stringify(new URL('./_kaykitboot.mjs', import.meta.url).href)});
+if (!globalThis.__SKIP_PRIME) primeKayKitAssets();
+const THREE = await import('three');
+const { Smashables, KINDS } = await import(${JSON.stringify(new URL('../src/world/Smashables.js', import.meta.url).href)});
+const warns = [];
+const engine = {
+  scene: new THREE.Scene(), on: () => () => {}, emit: () => {}, has: () => false,
+  get: (k) => (k === 'architecture' ? { api: { route: ${JSON.stringify(ROUTE)} } } : null),
+  warn: (m) => warns.push(String(m)),
+};
+const sm = new Smashables(engine);
+await sm.init();
+const kinds = {};
+for (const [kind, e] of sm._meshes) kinds[kind] = { tris: e.mesh.geometry.attributes.position.count / 3, mat: e.mesh.material.name };
+process.stdout.write('__R__' + JSON.stringify({
+  swap: sm.debugInfo().swap, placed: sm.props.length, kinds,
+  materials: Object.fromEntries(Object.entries(KINDS).map(([k, K]) => [k, K.material])),
+  warns: warns.filter((w) => /smashables:/.test(w)).length,
+}));
+`;
+
+  /* child A — the revert */
+  const gen = run(bootScript(`globalThis.__SMASH_AB = 'gen';`));
+  assert.equal(gen.swap.armed, false, 'the gen arm still arms the swap');
+  assert.deepEqual(gen.materials, { jar: 'stone', basket: 'cloth', crate: 'wood' },
+    'the revert did not restore the generated tags — a canopic jar would throw wood chips');
+  assert.equal(gen.kinds.jar.mat, 'smash:clay');
+  assert.equal(gen.kinds.basket.mat, 'smash:wicker');
+  assert.equal(gen.kinds.crate.mat, 'smash:wood');
+  assert.equal(gen.placed, 23, 'the gen arm moved a placement');
+
+  /* child B — the failing input, run: no transport, all three fall back, nothing dies */
+  const cold = run(bootScript(`globalThis.__SKIP_PRIME = 1;`));
+  assert.equal(cold.swap.armed, true);
+  assert.deepEqual([...cold.swap.fallbacks].sort(), ['basket', 'crate', 'jar'],
+    'an unprimed headless boot did not fall back per kind — either a fetch hung or a kind died');
+  assert.equal(cold.warns, 3, `${cold.warns} fallback warns — silent fallback is the §592 shape`);
+  assert.equal(cold.placed, 23, 'the fallback lost placements');
+  assert.equal(cold.kinds.jar.mat, 'smash:clay', 'a fallback kind is not on its generated material');
+
+  /* child C — a bogus token value lands on the swap arm */
+  const bogus = run(bootScript(`globalThis.__SMASH_AB = 'bogus';`));
+  assert.equal(bogus.swap.armed, true, 'a bogus token value disarmed the swap — the parser does not discriminate');
+  assert.equal(bogus.kinds.jar.mat, 'smash:kaykit');
+
+  /* and the two arms disagree where they must: same placement count, different bodies */
+  assert.notEqual(gen.kinds.jar.tris, bogus.kinds.jar.tris,
+    'the gen and swap arms render the same jar geometry — the token changes nothing visible');
 });

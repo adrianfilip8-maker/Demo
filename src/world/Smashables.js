@@ -410,7 +410,10 @@ export class Smashables {
     };
     let m = null;
     try { m = this.engine.get?.('shading')?.make?.(opts) ?? null; } catch { m = null; }
-    if (!m) m = new THREE.MeshStandardMaterial({ color: opts.color, roughness: spec.rough, map: opts.map });
+    if (!m) {
+      m = new THREE.MeshStandardMaterial({ color: opts.color, roughness: spec.rough, map: opts.map });
+      m.name = spec.name;               // the headless branch answers to the same name
+    }
     this._materials.push(m);
     return m;
   }
