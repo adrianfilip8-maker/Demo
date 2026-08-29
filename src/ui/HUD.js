@@ -581,8 +581,10 @@ export class HUD {
    * the optics are up, but the gameplay cluster fades over 0.16 s rather than vanishing
    * (`#sly-hud[data-binoc='1'] .sly-shake { opacity: 0 }`), so a bottom-LEFT ornament would
    * cross-dissolve through the caller panel every time Bentley calls. The right corner has no
-   * such neighbour in either state. `tests/hudhealth.test.mjs` H2 measures every persistent
-   * element's rect in a real browser and asserts the ornament intersects none of them.
+   * such neighbour in either state. That is a claim about LAYOUT, which no offline test can
+   * settle, so it is `tools/hudhealth.mjs` arm A that measures every persistent element's rect
+   * in a real browser — each driven to its widest state first — and asserts the ornament
+   * intersects none of them.
    *
    * ── Why it is not a rectangle with a fill ───────────────────────────────────────────────
    * This file's design position: *"the Sly games never draw a 'UI layer'. They draw props."*
