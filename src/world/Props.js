@@ -16,7 +16,11 @@ import { ContactDecals, groundFootprint } from './Decals.js';
  * covers them. They swap to KayKit bodies through the pack's own reduction path (KayKit.js —
  * no second loader), behind the same `?smash=gen` revert. KayKit.js imports nothing from this
  * file, so this direction cannot cycle. */
-import { SMASH_GEN, loadModelLib, loadAtlasTexture, makeAtlasMaterial } from './KayKit.js';
+import { SMASH_GEN, VAULT_URNS, loadModelLib, loadAtlasTexture, makeAtlasMaterial } from './KayKit.js';
+/* §730: the ONE treasure-room volume, shared with Architecture's portal gate and Smashables'
+   urn policy. EgyptLevel imports nothing from here (THREE / Kit / PropKit / Rand only), so
+   this edge cannot cycle. */
+import { inCrypt } from './EgyptLevel.js';
 
 /**
  * Props — the hero sculpture and set dress.
@@ -550,11 +554,28 @@ export class Props {
        the same mount. Small barrels on an offering table where canopic jars stood — the
        pack has no jar model, and that is stated in Smashables' KINDS note rather than solved
        by stretching one. */
+    /* §730 — and this is the site the owner was looking at. "The urns in the treasure room can
+       be put back … by urns, I mean canopic jars." These four ARE canopic jars, they stand
+       6.4 m from the treasure pile, and §729 turned them into four small barrels on an Egyptian
+       offering table. The mount is tested against the shared `inCrypt` volume rather than
+       flagged, so the policy is one predicate at both call sites and a moved offering table
+       re-decides itself; `at` is hoisted above the branch to make that possible.
+
+       RNG: `canopicJar` is still built on EVERY arm — §729 put it in the stream deliberately
+       and it stays there — and `_swapBody` draws nothing, so choosing not to call it moves no
+       placement anywhere in this module. The only thing that changes is which BUCKET the
+       geometry lands in, and that is the whole of the collider consequence: a generated jar
+       goes to `lime`, which `_flushBuckets` registers as `ground`/**stone**, while the swapped
+       body went onto `props_kaykit`, registered `ground`/**wood**. The collider is the merged
+       body's own bounds either way, so the jar gets a JAR's collider back rather than the
+       barrel's — re-derived by construction, never carried. Footsteps on the offering table
+       go back to stone with it. */
     const kinds = ['ape', 'jackal', 'falcon', 'human'];
     for (let i = 0; i < 4; i++) {
       const jar = canopicJar(kinds[i], { rng: this.rng });
-      const body = this._swapBody(jar, 'barrel_small');
       const at = { x: L.vault.x - 2.6 + i * 0.62, y: L.vault.y + 0.62, z: L.vault.z + 2.4 };
+      const urn = VAULT_URNS && inCrypt(at);
+      const body = urn ? null : this._swapBody(jar, 'barrel_small');
       if (body) {
         place(body, at);
         this._kk.push(body);
@@ -563,6 +584,7 @@ export class Props {
       } else {
         place(jar, at);
         this._push('lime', jar);
+        if (urn) this._kkStats.urns++;
       }
     }
     const table = offeringTable({ rng: this.rng });
@@ -1115,7 +1137,10 @@ export class Props {
    */
   async _loadSwapBodies() {
     this._kk = [];                                  // placed KayKit-bodied statics, merged once
-    this._kkStats = { jars: 0, baskets: 0 };
+    /* §730 `urns` is the count of offering-table jars this boot KEPT generated — the static
+       half of the vault policy, self-reported beside the swap's own counts so a boot can be
+       asked what it did rather than inferred from a mesh. 4 by default, 0 under either token. */
+    this._kkStats = { jars: 0, baskets: 0, urns: 0 };
     this._kkLib = null;
     if (SMASH_GEN) return;
     const lib = await loadModelLib(['barrel_small', 'barrel_large', 'barrel_small_stack'], (file, err) => {

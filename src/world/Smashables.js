@@ -11,7 +11,10 @@ import { MATERIALS as PROP_MATERIALS } from './Props.js';
 /* §729: the imported bodies come through KayKit.js's own reduction — the ONE adoption path the
  * pack already has (§707 measures clearance off it, §718 records its single-atlas merge as the
  * strength to keep) — never a second loader here. `SMASH_GEN` is the `?smash=gen` revert. */
-import { SMASH_GEN, loadModelLib, loadAtlasTexture, makeAtlasMaterial } from './KayKit.js';
+import { SMASH_GEN, VAULT_URNS, loadModelLib, loadAtlasTexture, makeAtlasMaterial } from './KayKit.js';
+/* §730: the treasure-room volume, shared with Architecture's portal gate and Props' offering
+   table — one definition of "inside the vault", asked here of a prop instead of a camera. */
+import { CRYPT, inCrypt } from './EgyptLevel.js';
 
 /**
  * Smashables — things you break, and the publisher `propSmashed` never had.
@@ -82,6 +85,38 @@ import { SMASH_GEN, loadModelLib, loadAtlasTexture, makeAtlasMaterial } from './
  * waist-high-or-bigger one is furniture and blocks. Recorded rather than hidden, because two
  * behaviours on one silhouette is exactly the kind of lie this header already prices.
  * `?smash=gen` (KayKit.js, shared with Props.js's static twins) is the whole-swap revert.
+ *
+ * ── §730: the treasure room takes its urns back, and NOTHING else moves ────────────────────
+ * "The urns in the treasure room can be put back." / "By urns, I mean canopic jars."
+ * §729's own KINDS note records the fact that makes this the right ask: the pack holds **no
+ * jar, pot or basket model**, so a `jar` slot got `barrel_small` — which reads fine on a dock
+ * or a terrace and reads wrong in the one room whose entire set dress is Egyptian ceramic,
+ * standing beside the offering table, the coffin lid and the treasure pile.
+ *
+ * So this is a PER-LOCATION body policy, not a revert. A spot is an URN when it is a `jar`
+ * AND `inCrypt(pos)` — every other spot in the level, and the vault's own crate, keep the
+ * imported body §729 gave them, because the owner named urns and everything else was accepted
+ * by silence. `?vault=barrels` is the way back; `?smash=gen` still generates the whole level
+ * and makes the policy moot.
+ *
+ * Three consequences, all deliberate, none hidden:
+ *   · RNG-NEUTRAL BY CONSTRUCTION. The policy draws ZERO values from `this.rng`. Placement is
+ *     authored before `_loadBodies` runs (§729's own ordering), and the urn BODY is the very
+ *     geometry `_loadBodies` already builds to measure the jar's conform — kept instead of
+ *     disposed. So the stream, and therefore every placement in the level, is bit-for-bit what
+ *     §729 shipped. §724's precedent: a per-item change that draws nothing keeps the world.
+ *   · THE COLLIDER IS RE-DERIVED, NOT CARRIED — trivially here, because a smashable has no
+ *     collider at all (see the trade above) and never had one. The real collider consequence
+ *     is on the STATIC twins in `Props.js`, where the four offering-table jars move off the
+ *     `props_kaykit` mesh (`ground`/`wood`) back into the `lime` bucket (`ground`/`stone`) and
+ *     get a jar's own merged bounds again. Stated here so the two halves read as one policy.
+ *   · IT BREAKS LIKE CLAY AGAIN, which is the point. `material` goes back to `stone`, and that
+ *     one tag is read by `Particles.smashFor` AND `Sfx.stepFor`, so BOTH halves of the break
+ *     change together: pale limestone chips (`PAL.limeLight` #f0e3c8 → `PAL.crevice`) instead
+ *     of wood chips (`PAL.woodChip` #8a6a44), and `step_stone` instead of `step_wood` under
+ *     `_onSmash`'s 0.62 rate — a bright, short crack with a 2.2 kHz heel tick and no ring-out,
+ *     where the barrel gave a 434 Hz resonant thunk with a 267 Hz wooden ring. The `stone_grind`
+ *     rubble layer is identical: it keys off `scale`, and `scale` is 1 in both arms.
  */
 
 /* ============================ tuning ==================================== */
@@ -167,6 +202,34 @@ export const KINDS = Object.freeze(SMASH_GEN ? {
   basket: { material: 'wood', scale: 1, value: COIN_VALUE.single, h: 0.44, model: 'chest' },
   crate:  { material: 'wood', scale: 2, value: COIN_VALUE.pile,   h: 0.62, model: 'crates_stacked' },
 });
+
+/**
+ * §730 — the treasure room's own jar row: the `?smash=gen` arm's `jar` entry, verbatim.
+ *
+ * Written as the gen row rather than as a patch over the shipped one because that is what it
+ * IS — the urn is the generated body wearing its own material tag again, and `stone` is the
+ * tag §729's table documents for exactly this ("jar gen: clay under `stone` — limestone chips
+ * into `PAL.crevice`, `SMASH.stone`"). `h`, `scale` and `value` are UNCHANGED from the shipped
+ * row on purpose: same place, same pay, same event mid-height, only the body and the material
+ * family move. `tests/vaulturn.test.mjs` U1 asserts this row equals a `?smash=gen` child's
+ * `KINDS.jar` field for field, so a retuned jar cannot leave the urn behind.
+ */
+export const URN = Object.freeze({ material: 'stone', scale: 1, value: COIN_VALUE.stack, h: 0.58 });
+
+/** The instancing slot a prop renders in. One mesh per slot, so the urns can carry a different
+ *  geometry AND a different material from the barrels that share their kind. */
+export const URN_SLOT = 'jar:urn';
+
+/**
+ * Is this spot an urn — a canopic jar standing in the treasure room?
+ *
+ * Pure, and exported for the same reason `inSwing` is: it is the whole of §730's selection and
+ * a selection that drifts is worse than none. `kind` is the pre-§729 kind, straight off the
+ * authored spot, so the census is a fact about the SEED rather than about the swap.
+ */
+export function isUrn(kind, pos) {
+  return VAULT_URNS && kind === 'jar' && inCrypt(pos);
+}
 
 /**
  * Route waypoints a prop may stand on.
@@ -279,11 +342,22 @@ export class Smashables {
     this.engine.scene.add(this.root);
     const route = this.engine.get?.('architecture')?.api?.route;
     for (const s of authorSmashables(route, { rng: this.rng })) {
+      /* §730: the urn decision is taken HERE, on the authored spot, and it draws nothing —
+         `isUrn` is a kind test and a box test. It is deliberately independent of whether the
+         KayKit load then succeeds: the policy is about WHERE a prop stands, and on the
+         fallback path (a 404, an unprimed headless boot) the vault's jars are generated
+         anyway, so an urn slot there is the same body wearing the right material instead of
+         §729's `wood`. `slot` is what `_build`/`_writeMatrices`/`_dirty` key on from now on;
+         `kind` keeps its old meaning everywhere so the value ladder and the census still read
+         off the seed. */
+      const urn = isUrn(s.kind, s);
       this.props.push({
-        kind: s.kind, at: s.at, ry: s.ry, broken: false,
+        kind: s.kind, at: s.at, ry: s.ry, broken: false, urn,
+        slot: urn ? URN_SLOT : s.kind,
         pos: new THREE.Vector3(s.x, s.y, s.z),
       });
     }
+    this.urns = this.props.filter((p) => p.urn).length;
     /* §729: AFTER the placements are authored, deliberately — every body decision below is
        downstream of `this.rng`'s placement draws, so neither the swap, the `?smash=gen` arm
        nor a failed load can move a single `pos` (the determinism arm in smashswap.test.mjs
@@ -310,8 +384,9 @@ export class Smashables {
    * primed cache (see `transportReady` in KayKit.js) may cost the level its breakables.
    */
   async _loadBodies() {
-    this._swapGeo = new Map();          // kind -> conformed, base-at-origin geometry
-    this.swapState = { armed: !SMASH_GEN, swapped: [], fallbacks: [] };
+    this._swapGeo = new Map();          // slot -> conformed, base-at-origin geometry
+    this._urnGeo = null;                // §730: the generated canopic jar the vault keeps
+    this.swapState = { armed: !SMASH_GEN, swapped: [], fallbacks: [], urns: this.urns || 0 };
     if (SMASH_GEN) return;
     const models = [...new Set(Object.values(KINDS).map((K) => K.model).filter(Boolean))];
     const lib = await loadModelLib(models, (file, err) => {
@@ -324,7 +399,16 @@ export class Smashables {
       const gen = this._genGeo(kind);
       gen.computeBoundingBox();
       const genH = gen.boundingBox.max.y - gen.boundingBox.min.y;
-      gen.dispose();
+      /* §730 — THE RNG-NEUTRALITY MECHANISM, and it is one `if`. This jar is already built:
+         §729 builds it here purely to measure the height the barrel conforms to, then throws
+         it away. Keeping it instead of disposing it is how the treasure room gets a generated
+         urn for ZERO extra `this.rng` draws — a second `_genGeo('jar')` would advance the
+         stream, and while nothing downstream of here places anything, "nothing downstream
+         today" is not a property to lean on (§729's own reason for loading bodies AFTER
+         authoring). Kept only when a spot actually wants it, so the default boot with no urns
+         disposes exactly as before. */
+      if (kind === 'jar' && this.urns > 0) this._urnGeo = gen;
+      else gen.dispose();
       const kkH = e.bb.max.y - e.bb.min.y;
       const s = genH / kkH;             // uniform — the silhouette conforms, it does not stretch
       const geo = e.geo.clone();
@@ -337,29 +421,41 @@ export class Smashables {
     for (const e of lib.values()) e.geo.dispose();   // the clones above are the working copies
   }
 
+  /** Every slot that may hold a mesh, in a FIXED order derived from `KINDS` — so the mesh and
+   *  material construction order is the same on every boot and in both arms, and adding the
+   *  urn slot cannot reshuffle §729's. `jar:urn` sits immediately after `jar`. */
+  _slots() {
+    return Object.keys(KINDS).flatMap((k) => (k === 'jar' ? [k, URN_SLOT] : [k]));
+  }
+
   _build() {
-    for (const kind of Object.keys(KINDS)) {
-      const list = this.props.filter((p) => p.kind === kind);
+    for (const slot of this._slots()) {
+      const list = this.props.filter((p) => p.slot === slot);
       if (!list.length) continue;
-      const geo = this._geoFor(kind);
+      const geo = this._geoFor(slot);
       if (!geo) continue;
       this._geoms.push(geo);
-      const mesh = new THREE.InstancedMesh(geo, this._matFor(kind), list.length);
-      mesh.name = `smashable_${kind}`;
+      const mesh = new THREE.InstancedMesh(geo, this._matFor(slot), list.length);
+      mesh.name = `smashable_${slot.replace(':', '_')}`;
       mesh.frustumCulled = false;
       /* Half a metre of pot self-shadowing is acne, the same call `Props._collectibles` and
          `Pickups._build` both make for the same reason. */
       mesh.userData.noShadow = true;
       this.root.add(mesh);
-      this._meshes.set(kind, { mesh, list });
-      this._writeMatrices(kind);
+      this._meshes.set(slot, { mesh, list });
+      this._writeMatrices(slot);
     }
   }
 
-  /** The body a kind renders: the conformed import (§729), or the generated stand-in — which
-   *  is the whole of the `?smash=gen` arm and the whole of the per-model failure path. */
-  _geoFor(kind) {
-    return this._swapGeo?.get(kind) || this._genGeo(kind);
+  /** The body a slot renders: §730's kept canopic jar for the urns, else the conformed import
+   *  (§729), else the generated stand-in — which is the whole of the `?smash=gen` arm and the
+   *  whole of the per-model failure path. The `||` on `_urnGeo` is the fallback path only: if
+   *  `barrel_small` never loaded, `_loadBodies` skipped the measure and there is no kept jar,
+   *  so the urns build their own (which costs rng draws AFTER every placement is authored, and
+   *  therefore moves nothing — the determinism arm runs that boot too). */
+  _geoFor(slot) {
+    if (slot === URN_SLOT) return this._urnGeo || this._genGeo('jar');
+    return this._swapGeo?.get(slot) || this._genGeo(slot);
   }
 
   _genGeo(kind) {
@@ -381,9 +477,17 @@ export class Smashables {
   /** One material for the WHOLE swapped set — the pack's single-atlas strength (§718) carried
    *  over: three instanced meshes, one `smash:kaykit` material, built through the same recipe
    *  `KayKit.init` uses so the two cannot drift into separate grades. A kind on its generated
-   *  fallback keeps its own §727-mirrored material through `_mat`. */
-  _matFor(kind) {
-    if (!this._swapGeo?.has(kind)) return this._mat(kind);
+   *  fallback keeps its own §727-mirrored material through `_mat`.
+   *
+   *  §730: the urn slot is NOT on the atlas — it is a clay pot, so it takes `smash:clay`, the
+   *  same §727-mirrored `Props.MATERIALS.lime` grade the generated jar has always worn. That
+   *  costs the vault one extra material and one extra draw call for its two urns, which is the
+   *  honest price of two bodies on one kind and is measured rather than assumed (`budgetattrib`
+   *  in §730's record). `_swapGeo` is keyed by KIND and the urn slot is never in it, so this
+   *  falls through to `_mat` without a special case. */
+  _matFor(slot) {
+    if (slot === URN_SLOT) return this._mat('jar');
+    if (!this._swapGeo?.has(slot)) return this._mat(slot);
     if (!this._atlasMat) {
       this._atlasMat = makeAtlasMaterial(this.engine, this._atlas ?? null, 'smash:kaykit');
       this._materials.push(this._atlasMat);
@@ -419,8 +523,8 @@ export class Smashables {
     return m;
   }
 
-  _writeMatrices(kind) {
-    const entry = this._meshes.get(kind);
+  _writeMatrices(slot) {
+    const entry = this._meshes.get(slot);
     if (!entry) return;
     for (let i = 0; i < entry.list.length; i++) {
       const p = entry.list[i];
@@ -476,16 +580,24 @@ export class Smashables {
       this._break(p, dir);
       n++;
     }
-    for (const kind of this._dirty) this._writeMatrices(kind);
+    for (const slot of this._dirty) this._writeMatrices(slot);
     this._dirty.clear();
     return n;
   }
 
+  /** What a prop breaks AS. §730's urns answer `URN` — the gen arm's own jar row — so the
+   *  material tag, and with it BOTH halves of the break (`Particles.smashFor` shards,
+   *  `Sfx.stepFor` transient), follow the body that is actually standing there. Everything
+   *  else answers `KINDS`, exactly as §729 left it. */
+  _spec(p) {
+    return p.urn ? URN : KINDS[p.kind];
+  }
+
   _break(p, dir) {
-    const K = KINDS[p.kind];
+    const K = this._spec(p);
     p.broken = true;
     this.broken++;
-    this._dirty.add(p.kind);
+    this._dirty.add(p.slot);
 
     /**
      * The event, in the exact shape `tests/eventbus.test.mjs` specified for it.
@@ -528,11 +640,25 @@ export class Smashables {
   update() { /* nothing per-frame: a smashable is inert until it is hit. */ }
 
   /** For the debug overlay and the analysis harness. `swap` is §729's self-report: which kinds
-   *  wear an imported body (with the conform scale each took) and which fell back. */
+   *  wear an imported body (with the conform scale each took) and which fell back.
+   *
+   *  §730 adds `vault`: the treasure room's own CENSUS, straight off the authored spots — how
+   *  many destructibles the seed put in the room and of which kinds, and how many of them this
+   *  boot is rendering as generated urns. Reported because "the urns in the treasure room" is
+   *  only a precise instruction once that census exists, and because a boot should be able to
+   *  say what it did rather than have it inferred from a mesh count. */
   debugInfo() {
     const by = {};
     for (const p of this.props) if (p.broken) by[p.kind] = (by[p.kind] || 0) + 1;
-    return { placed: this.props.length, broken: this.broken, byKind: by, swap: this.swapState };
+    const inRoom = {};
+    for (const p of this.props) if (inCrypt(p.pos)) inRoom[p.kind] = (inRoom[p.kind] || 0) + 1;
+    const vault = {
+      box: CRYPT,
+      spots: Object.values(inRoom).reduce((a, b) => a + b, 0),
+      byKind: inRoom,
+      urns: this.urns || 0,
+    };
+    return { placed: this.props.length, broken: this.broken, byKind: by, swap: this.swapState, vault };
   }
 
   dispose() {
@@ -540,6 +666,7 @@ export class Smashables {
     this._offs.length = 0;
     for (const g of this._geoms) g.dispose?.();
     if (this._swapGeo) { for (const g of this._swapGeo.values()) g.dispose?.(); this._swapGeo.clear(); }
+    this._urnGeo?.dispose?.(); this._urnGeo = null;   // §730: also in `_geoms` once built; safe twice
     for (const m of this._materials) m.dispose?.();
     this._atlas?.dispose?.();
     this._meshes.clear();

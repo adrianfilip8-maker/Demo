@@ -62,6 +62,38 @@ export const SMASH_GEN = (() => {
 })();
 
 /**
+ * §730 revert token: `?vault=barrels` (or `globalThis.__VAULT_AB = 'barrels'` from a test) puts
+ * the TREASURE ROOM back on §729's imported bodies — i.e. it reverts §730 and nothing else.
+ *
+ * The owner: *"The urns in the treasure room can be put back"*, then *"By urns, I mean canopic
+ * jars"*. So this is a PER-LOCATION policy, not a second global swap flag: inside
+ * `EgyptLevel.CRYPT`, a destructible whose kind is `jar` and the four offering-table statics
+ * build the procedural `canopicJar` again; every other spot in the level, and the vault's own
+ * crate, keep the KayKit body §729 gave them. Everything outside the treasure room was accepted
+ * by silence and is not this token's business.
+ *
+ * Sits beside `SMASH_GEN` rather than in Smashables.js for the identical reason: Props.js reads
+ * it too (the offering table is a Props static) and Smashables already imports from Props, so
+ * the other direction would be a cycle. Independent of every other lane's token, read once at
+ * module load. The two flags COMPOSE, and only one order is meaningful — `?smash=gen` already
+ * generates everything everywhere, so the urn policy is a no-op under it and says so at the
+ * one branch that could disagree (`Smashables.init`).
+ */
+export const VAULT_BARRELS = (() => {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('vault') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__VAULT_AB != null) raw = String(globalThis.__VAULT_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  return String(raw).trim().toLowerCase() === 'barrels';
+})();
+
+/** §730: are the treasure room's canopic jars generated on this boot? False under either
+ *  token — `?smash=gen` because everything is already generated, `?vault=barrels` because the
+ *  owner asked for a way back. The ONE expression both files branch on. */
+export const VAULT_URNS = !SMASH_GEN && !VAULT_BARRELS;
+
+/**
  * Is there a transport that will actually SETTLE for this url? In the browser, always. In plain
  * Node, only a primed `THREE.Cache` (tests/_kaykitboot.mjs seeds it) — `CarmelitaGuard.js:330`
  * records the third case: a `fetch` of a relative URL in Node does not reject, it never settles,

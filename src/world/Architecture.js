@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { rng, WORLD_SEED } from '../core/Rand.js';
 import * as K from './Kit.js';
-import { buildEgyptLevel } from './EgyptLevel.js';
+import { buildEgyptLevel, inCrypt } from './EgyptLevel.js';
 
 /**
  * Architecture — the Temple of Ra complex.
@@ -442,9 +442,11 @@ export class Architecture {
       for (const m of this._zoneMeshes.get('tomb') || []) m.visible = show;
     }
 
-    const sealed = p.x > -13.5 && p.x < 13.5
-      && p.y > -12.6 && p.y < -2.5
-      && p.z > -78.5 && p.z < -59.3;
+    /* §730 lifted this box to `EgyptLevel.CRYPT` / `inCrypt()` verbatim — same six numbers,
+       same strict faces — because the urn policy asks the identical question of a PROP and a
+       second copy of "is this inside the vault" is precisely the drift this file's peers
+       refuse. Behaviour here is unchanged; `vaulturn.test.mjs` V1 pins that over a grid. */
+    const sealed = inCrypt(p);
     if (sealed !== this._cryptSealed) {
       this._cryptSealed = sealed;
       for (const o of this._exteriorSets()) o.visible = !sealed;

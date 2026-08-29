@@ -170,6 +170,45 @@ export const L = {
 };
 
 /**
+ * §730 — THE TREASURE ROOM, as one volume, because the project already had one and having two
+ * would be the drift `Pickups._clueMat` refuses a file over.
+ *
+ * These six numbers are `Architecture.update()`'s `sealed` box VERBATIM — the reverse portal
+ * gate that decides "is the camera inside the sealed crypt, so the desert may be hidden". That
+ * predicate has run every frame since §409 and its docblock derives every bound:
+ *
+ *   x ±13.5   inside the vault shells (their inner faces are ±12.05, `VENT.exitX`)
+ *   y −12.6   under the vault floor `L.tomb.floor` −12, with clearance
+ *   y  −2.5   under the vault ceiling `L.tomb.ceil` −2, "with margin below C"
+ *   z −78.5   behind the north wall (`L.tomb.z0` −78)
+ *   z −59.3   THE NORTH FACE OF THE TOMB GATE WALL — `tomb()`'s local `GATE_Z −58.75` minus
+ *             `GATE_D/2` 0.55. This is the bound that matters: it is what separates the
+ *             burial chamber from the STAIRWELL, and Architecture's own note spells out the
+ *             consequence — "on the stairs z > −59.3 everywhere".
+ *
+ * Lifted here, beside `L`, because three readers now want it and only one of them is a camera:
+ * §730's urn policy asks the same question of a PROP ("is this destructible standing in the
+ * treasure room"), at both the Smashables cluster and the Props.js offering table. Architecture
+ * calls this function now rather than restating the box, so the two answers cannot diverge —
+ * and `tests/vaulturn.test.mjs` V1 evaluates both over a grid that straddles every face.
+ *
+ * The floor-plan reading, for anyone checking by eye: this is the pillared crypt from the gate
+ * doorway north to the sarcophagus — the room that holds the treasure pile (§724), the Eye of
+ * Ra, the falcon Ra, the coffin lid and the offering table. The descent landing and both stair
+ * flights are OUTSIDE it, which is why the `vault-floor` route waypoint (0.4, −12, −57.6) is
+ * not in the treasure room despite its name.
+ */
+export const CRYPT = Object.freeze({ x0: -13.5, x1: 13.5, y0: -12.6, y1: -2.5, z0: -78.5, z1: -59.3 });
+
+/** Is this point inside the treasure room? Strict on every face, exactly as §409's gate was. */
+export function inCrypt(p) {
+  if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) return false;
+  return p.x > CRYPT.x0 && p.x < CRYPT.x1
+      && p.y > CRYPT.y0 && p.y < CRYPT.y1
+      && p.z > CRYPT.z0 && p.z < CRYPT.z1;
+}
+
+/**
  * §600 — the vent passage, in one table because THREE builders cut into it: `hypostyleHall`
  * owns the mouth (a paving slab, the floor collider and the north wall), `tomb` owns the exit
  * portal and the landing chain, and `vent()` builds everything between them. Every number here

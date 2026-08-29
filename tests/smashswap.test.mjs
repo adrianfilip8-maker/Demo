@@ -81,7 +81,13 @@ process.stdout.write('__R__' + JSON.stringify({
 const gen = runChild(`globalThis.__SMASH_AB = 'gen';`);
 const swap = runChild(``);
 const dead = runChild(`globalThis.__PRIME = false;`);
-const hole = runChild(`globalThis.__DROP = ['barrel_large', 'barrel_small_stack'];`);
+/* §730 moved the four vault jars off the swap, so the arms below split in two. `barrels` is
+   the `?vault=barrels` child, which is §729's shipped state EXACTLY — every number this file
+   asserted before §730 is still asserted, under the token that restores it. `hole` therefore
+   also runs under that token: its whole job is to drop the two BASKET models and watch the
+   jars swap anyway, and there is nothing to watch if the jars are urns. */
+const barrels = runChild(`globalThis.__VAULT_AB = 'barrels';`);
+const hole = runChild(`globalThis.__VAULT_AB = 'barrels'; globalThis.__DROP = ['barrel_large', 'barrel_small_stack'];`);
 
 /** genList minus swapList, order-preserved: what the swap took OUT of the buckets. */
 function removed(genList, swapList) {
@@ -94,55 +100,95 @@ function removed(genList, swapList) {
   return j === swapList.length ? out : null;   // null: swapList is NOT an ordered subsequence
 }
 
-test('W1 §729: the statics swap counts 4 jars + 7 baskets onto one props_kaykit mesh', () => {
+test('W1 §729/§730: 7 courtyard baskets swap, the 4 vault jars stay urns, and the token swaps all 11', () => {
   /**
    * DOMAIN (§418.3)
-   * PASSES ON: the swap child — kaykit {jars:4, baskets:7}, a props_kaykit mesh, one more draw.
+   * PASSES ON: the swap child — kaykit {jars:0, baskets:7, urns:4}, a props_kaykit mesh, one
+   *            more draw; AND the `?vault=barrels` child, which is §729's shipped state
+   *            {jars:4, baskets:7, urns:0} on the same mesh and the same +1 draw.
    * FAILS ON:  run — the gen child, where all three are absent; and the dead-transport child,
    *            where the swap is armed and still all three are absent. Both asserted in W3.
+   *
+   * §730's owner instruction is what splits this row: "the urns in the treasure room can be
+   * put back … by urns, I mean canopic jars". The offering table's four ARE canopic jars, so
+   * they leave the swap; the courtyard baskets are 40 m away and outside `EgyptLevel.CRYPT`,
+   * so they do not. The token arm proves the way back is byte-exact rather than approximate.
    */
-  assert.deepEqual(swap.kaykit, { jars: 4, baskets: 7 },
-    `the static swap took ${JSON.stringify(swap.kaykit)} — the shipped seed places 4 vault jars and 7 courtyard baskets`);
-  assert.ok(swap.kkTris > 0, 'no props_kaykit mesh was built');
-  assert.equal(swap.draws, gen.draws + 1,
-    `the swap costs ${swap.draws - gen.draws} draws — the design is ONE merged mesh, +1`);
-  assert.ok(swap.reg.includes('props_kaykit:ground:wood'),
-    'the swapped statics lost their solid-ground registration — a barrel you sink through');
+  assert.deepEqual(swap.kaykit, { jars: 0, baskets: 7, urns: 4 },
+    `the static swap took ${JSON.stringify(swap.kaykit)} — §730 keeps the 4 vault jars generated and swaps the 7 courtyard baskets`);
+  assert.deepEqual(barrels.kaykit, { jars: 4, baskets: 7, urns: 0 },
+    `?vault=barrels took ${JSON.stringify(barrels.kaykit)} — the revert must reproduce §729's 4 + 7 exactly`);
+  for (const [name, arm] of [['swap', swap], ['barrels', barrels]]) {
+    assert.ok(arm.kkTris > 0, `no props_kaykit mesh was built in the ${name} arm`);
+    assert.equal(arm.draws, gen.draws + 1,
+      `the ${name} arm costs ${arm.draws - gen.draws} draws — the design is ONE merged mesh, +1`);
+    assert.ok(arm.reg.includes('props_kaykit:ground:wood'),
+      `the ${name} arm's swapped statics lost their solid-ground registration — a barrel you sink through`);
+  }
+  /* §730's collider consequence, stated as an assertion rather than as prose: a restored urn is
+     a CLAY jar, so it goes back into the `lime` bucket and its collider is that mesh's own
+     merged bounds registered as stone — it does not keep the barrel's wood registration. */
+  assert.ok(swap.reg.includes('props_lime:ground:stone'),
+    'the restored offering-table urns are not on a stone-registered collider');
+  assert.ok(barrels.kkTris > swap.kkTris,
+    'the token arm did not add the four jars back onto the kaykit mesh');
 });
 
-test('W2 §729: zero pos changes — the unswapped world is bit-identical, the 11 removed are the right 11', () => {
+test('W2 §729/§730: zero pos changes — the unswapped world is bit-identical, and the removed set is exactly the swapped sites', () => {
   /**
    * DOMAIN (§418.3)
    * PASSES ON: gen vs swap — swap's bucket stream is an ordered subsequence of gen's, and the
-   *            difference is exactly 11 pieces: 8 lime (4 jars + 4 barrel_large-slot baskets)
-   *            and 3 stone. Colliders and ground-decal counts match to the one designed +1.
-   * FAILS ON:  run — gen vs the HOLE child (two basket models dropped): the difference there is
-   *            exactly 4 (jars only), so the instrument demonstrably tracks WHICH sites
-   *            swapped rather than passing on any two boots. A same-arm re-boot equality is
-   *            S6's determinism claim one file over; this arm is the cross-arm version.
+   *            difference is exactly 7 pieces: 4 lime + 3 stone, the courtyard baskets alone,
+   *            because §730 leaves the 4 vault jars in the `lime` bucket where gen put them.
+   *            AND gen vs barrels — the same relation with §729's original 11 (lime 8 / stone
+   *            3), so the token restores the exact bucket stream this file was written on.
+   * FAILS ON:  run — gen vs the HOLE child (`?vault=barrels` plus both basket models dropped):
+   *            the difference there is exactly 4 (jars only), so the instrument demonstrably
+   *            tracks WHICH sites swapped rather than passing on any two boots. A same-arm
+   *            re-boot equality is S6's determinism claim one file over; this is the cross-arm
+   *            version.
+   *
+   * The §730 line that matters most is the FIRST assertion in each pair: `removed()` returns
+   * null the moment the surviving stream stops being an ordered subsequence of gen's, so a
+   * per-location policy that perturbed the rng — or moved one prop by a micron — cannot pass
+   * here. That is §730's RNG-neutrality claim for the static half, asserted rather than argued.
    */
-  const gone = removed(gen.pieces, swap.pieces);
-  assert.ok(gone, 'the swap arm REORDERED or MOVED unswapped placements — not a body swap, a layout change');
-  assert.equal(gone.length, 11, `${gone.length} pieces left the buckets, expected the 11 swapped statics`);
-  const byKey = {};
-  for (const p of gone) { const k = p.split(',')[0]; byKey[k] = (byKey[k] || 0) + 1; }
-  assert.deepEqual(byKey, { lime: 8, stone: 3 },
-    `the removed pieces are ${JSON.stringify(byKey)} — expected lime 8 (4 jars + 4 baskets) / stone 3 (baskets)`);
+  for (const [name, arm, n, byKeyWant] of [
+    ['swap', swap, 7, { lime: 4, stone: 3 }],
+    ['barrels', barrels, 11, { lime: 8, stone: 3 }],
+  ]) {
+    const gone = removed(gen.pieces, arm.pieces);
+    assert.ok(gone, `the ${name} arm REORDERED or MOVED unswapped placements — not a body swap, a layout change`);
+    assert.equal(gone.length, n, `${gone.length} pieces left the buckets in the ${name} arm, expected ${n}`);
+    const byKey = {};
+    for (const p of gone) { const k = p.split(',')[0]; byKey[k] = (byKey[k] || 0) + 1; }
+    assert.deepEqual(byKey, byKeyWant,
+      `the ${name} arm removed ${JSON.stringify(byKey)}, expected ${JSON.stringify(byKeyWant)}`);
+    /* colliders: identical but for the one designed addition */
+    assert.deepEqual(arm.reg.filter((r) => r !== 'props_kaykit:ground:wood'), gen.reg,
+      `a collider other than props_kaykit moved in the ${name} arm`);
+    /* every swapped static still grounds a contact decal where the generated one did */
+    assert.equal(arm.decals, gen.decals,
+      `ground decals moved ${gen.decals} -> ${arm.decals} in the ${name} arm — a swapped basket lost (or doubled) its contact`);
+  }
 
-  /* colliders: identical but for the one designed addition */
-  assert.deepEqual(swap.reg.filter((r) => r !== 'props_kaykit:ground:wood'), gen.reg,
-    'a collider other than props_kaykit moved under the swap');
-  /* every swapped static still grounds a contact decal where the generated one did */
-  assert.equal(swap.decals, gen.decals,
-    `ground decals moved ${gen.decals} -> ${swap.decals} — a swapped basket lost (or doubled) its contact`);
+  /* §730: the four pieces the default arm KEEPS relative to §729 are the vault jars, and they
+     are still in `lime` — the bucket whose flush registers stone. Derived as a set difference
+     between the two arms' removals rather than by index, so a reseed cannot make it lie. */
+  const goneSwap = removed(gen.pieces, swap.pieces);
+  const goneBarrels = removed(gen.pieces, barrels.pieces);
+  const kept = goneBarrels.filter((p) => !goneSwap.includes(p));
+  assert.equal(kept.length, 4, `${kept.length} pieces stayed generated under §730 — expected the 4 offering-table urns`);
+  assert.ok(kept.every((p) => p.startsWith('lime,')), 'a kept urn is not in the lime (clay) bucket');
 
-  /* the failing input, run: with both basket models dropped, only the jars leave the stream */
+  /* the failing input, run: with both basket models dropped AND the jars swapped by the token,
+     only the jars leave the stream */
   const goneHole = removed(gen.pieces, hole.pieces);
   assert.ok(goneHole, 'the hole arm reordered unswapped placements');
   assert.equal(goneHole.length, 4,
     `dropping both basket models removed ${goneHole.length} pieces — expected exactly the 4 jars`);
   assert.ok(goneHole.every((p) => p.startsWith('lime,')), 'the hole arm removed something that is not a vault jar');
-  assert.deepEqual(hole.kaykit, { jars: 4, baskets: 0 });
+  assert.deepEqual(hole.kaykit, { jars: 4, baskets: 0, urns: 0 });
   assert.equal(hole.warns, 2, 'dropping two models should warn twice (once per model)');
 });
 
