@@ -61129,3 +61129,28 @@ lane's marker per §717: this is the DESTRUCTIBLES-SWAP lane, replacing the proc
 `canopicJar`/`basket`/crate bodies at every placement — Smashables' route clusters AND the
 Props.js static call sites that reuse those same generated models — with KayKit-atlas bodies
 conformed per mount, mechanics preserved and measured. Body lands in this lane's next pushes.)*
+
+---
+
+## §730 — "The urns in the treasure room can be put back": a per-location body policy, so the vault's canopic jars come back generated while every other spot keeps its §729 import
+
+*(Heading committed ahead of its body to hold the number — §700.9. Claim marker worded to
+collide with no other open lane (§717): this is the VAULT-URN-POLICY lane. It does NOT revert
+§729; it adds a spatial predicate over the treasure-room volume so that destructible spots whose
+kind is `jar` inside that volume build the procedural `canopicJar` again — with the collider
+re-derived from the ceramic body rather than carried from the barrel, and the shard/step-tag
+consequence for break debris and break SOUND stated — while baskets, crates, and every spot
+outside the vault keep the KayKit body §729 gave them. Selection is spatial and RNG-neutral;
+placements outside the vault must stay bit-identical. Body lands in this lane's next pushes.)*
+
+---
+
+## §731 — "Put the health bar from the Sly 4 HUD in the corner of the screen as well… visual only": a drawn pip cluster in the HUD's own prop idiom, wired to nothing
+
+*(Heading committed ahead of its body to hold the number — §700.9. Claim marker worded to
+collide with no other open lane (§717): this is the HUD-HEALTH-ORNAMENT lane. Explicitly
+visual-only per the owner — no health system, no damage wiring, no reactivity. Built in
+`HUD.js`'s established drawn-object vocabulary rather than as flat game-UI chrome, at the house
+palette, in a screen corner chosen by an occupancy survey of all four, and checked for legibility
+against BOTH the L1 day and night grades (§726). Zero 3D draw-call and frame-budget delta is a
+claim to be measured, not asserted. Body lands in this lane's next pushes.)*
