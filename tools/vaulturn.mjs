@@ -40,6 +40,14 @@ const W = +opt('w', 1280), H = +opt('h', 720);
 
 const sha = () => { try { return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT }).toString().trim(); } catch { return '(no git)'; } };
 
+/* Every line is stamped with elapsed seconds. The first run of this tool was pipelined into
+   `head -22`, which buffered the whole thing and then truncated it, and there was no way to tell
+   a slow BOOT from a stuck WALK from the outside. A capture-lock hold that cannot be diagnosed
+   while it is running is a hold that gets killed and repeated. */
+const T0 = Date.now();
+const say = (s) => { process.stdout.write(`[${((Date.now() - T0) / 1000).toFixed(1).padStart(7)}s] ${s}\n`); };
+const say2 = (...a) => say(a.join(' '));
+
 async function freePort(start = 5710) {
   for (let p = start; p < start + 300; p++) {
     const ok = await new Promise((res) => {
@@ -196,7 +204,7 @@ const PAD_INIT = `
 
 async function boot(browser, port, query) {
   const page = await browser.newPage({ viewport: { width: W, height: H } });
-  page.on('pageerror', (e) => console.log('  [pageerror]', e.message));
+  page.on('pageerror', (e) => say2('  [pageerror]', e.message));
   await page.addInitScript(PAD_INIT);
   await page.goto(`http://127.0.0.1:${port}/${query}`, { waitUntil: 'domcontentloaded', timeout: 120000 });
   await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null, { timeout: 600000, polling: 500 });
@@ -213,13 +221,13 @@ async function walkToVault(page, route, target) {
     if (!w) continue;
     const r = await page.evaluate(([pt]) => window.__vt.walkTo(pt, 1.6, 1400, 24), [[w[1], w[2], w[3]]]);
     out.push({ leg: name, ...r });
-    console.log(`      ${name.padEnd(16)} ${r.arrived ? 'arrived' : 'STOPPED'}  ${String(r.frames).padStart(4)} frames  ${r.dist} m out  at ${JSON.stringify(r.at)}`);
+    say2(`      ${name.padEnd(16)} ${r.arrived ? 'arrived' : 'STOPPED'}  ${String(r.frames).padStart(4)} frames  ${r.dist} m out  at ${JSON.stringify(r.at)}`);
   }
   const r = await page.evaluate(([pt]) => window.__vt.walkTo(pt, 1.0, 900, 24), [target]);
   out.push({ leg: 'urn', ...r });
-  console.log(`      ${'urn'.padEnd(16)} ${r.arrived ? 'arrived' : 'STOPPED'}  ${String(r.frames).padStart(4)} frames  ${r.dist} m out  at ${JSON.stringify(r.at)}`);
+  say2(`      ${'urn'.padEnd(16)} ${r.arrived ? 'arrived' : 'STOPPED'}  ${String(r.frames).padStart(4)} frames  ${r.dist} m out  at ${JSON.stringify(r.at)}`);
   const s = await page.evaluate(() => window.__vt.settle());
-  console.log(`      settled at ${JSON.stringify(s.at)}  grounded=${s.grounded}  state=${s.state}`);
+  say2(`      settled at ${JSON.stringify(s.at)}  grounded=${s.grounded}  state=${s.state}`);
   return { legs: out, settled: s };
 }
 
@@ -241,14 +249,14 @@ async function run() {
   const vaultCrate = vault.find((s) => s.kind === 'crate');
   const outsideJar = specs.find((s) => s.at === 'descent-landing' && s.kind === 'jar');
   if (!urn || !vaultCrate || !outsideJar) throw new Error('the shipped seed no longer places a vault jar / vault crate / landing jar');
-  console.log(`[vaulturn] treasure room census at the shipped seed: ${vault.length} spots — `
+  say2(`[vaulturn] treasure room census at the shipped seed: ${vault.length} spots — `
     + Object.entries(vault.reduce((a, s) => ((a[s.kind] = (a[s.kind] || 0) + 1), a), {})).map(([k, v]) => `${v} ${k}`).join(', '));
-  for (const s of vault) console.log(`             ${s.kind.padEnd(6)} (${s.x.toFixed(3)}, ${s.y}, ${s.z.toFixed(3)})  at '${s.at}'`);
-  console.log(`[vaulturn] control (outside the room): ${outsideJar.kind} at '${outsideJar.at}' (${outsideJar.x.toFixed(2)}, ${outsideJar.y}, ${outsideJar.z.toFixed(2)})`);
+  for (const s of vault) say2(`             ${s.kind.padEnd(6)} (${s.x.toFixed(3)}, ${s.y}, ${s.z.toFixed(3)})  at '${s.at}'`);
+  say2(`[vaulturn] control (outside the room): ${outsideJar.kind} at '${outsideJar.at}' (${outsideJar.x.toFixed(2)}, ${outsideJar.y}, ${outsideJar.z.toFixed(2)})`);
 
   const target = [urn.x, urn.y, urn.z];
   const report0 = {};
-  console.log('[vaulturn] camDot pre-flight (in-Node, §604) — sweeping radius, eye height and azimuth');
+  say2('[vaulturn] camDot pre-flight (in-Node, §604) — sweeping radius, eye height and azimuth');
   const { camDot } = await import('./camdot.mjs');
   /* Radius is swept as well as azimuth, and it has to be: the burial chamber is a PILLARED
      crypt — `arch:tomb:granite_pink` piers stand at z -62 / -68 / -74, and the urns are at
@@ -294,7 +302,7 @@ async function run() {
           tried.push({ subj, r, eye, deg, ok: d.ok, near: d.near, nearest: d.nearest, forward: d.forward,
                        forwardName: d.forwardName, blocked: d.subjectBlocked, reasons: d.reasons });
           if (d.ok) {
-            console.log(`    PASS on '${subj}'  r ${r.toFixed(1)}  eye ${eye.toFixed(2)}  az ${String(deg).padStart(3)}  `
+            say2(`    PASS on '${subj}'  r ${r.toFixed(1)}  eye ${eye.toFixed(2)}  az ${String(deg).padStart(3)}  `
               + `enclosed ${d.near}/${d.dirs}  nearest ${d.nearest}  forward ${d.forward}`);
             stance = { subj, pos: p, target: t, deg, r, eye };
             break outer;
@@ -303,7 +311,7 @@ async function run() {
       }
     }
     sweptFor[subj] = tried.length - before;
-    console.log(`    '${subj}': ${tried.length - before} stances swept, none passed`);
+    say2(`    '${subj}': ${tried.length - before} stances swept, none passed`);
   }
   report0.sweep = { tried: tried.length, passed: tried.filter((x) => x.ok).length, perSubject: sweptFor };
   if (!stance) {
@@ -313,12 +321,12 @@ async function run() {
        sarcophagus, the coffin lid, the offering table and the falcon Ra. */
     const why = {};
     for (const t of tried) for (const r of t.reasons) why[r.split(':')[0]] = (why[r.split(':')[0]] || 0) + 1;
-    console.log(`    no stance passed out of ${tried.length} swept. Refusal census:`);
-    for (const [k, v] of Object.entries(why).sort((a, b) => b[1] - a[1])) console.log(`      ${String(v).padStart(4)}  ${k}`);
+    say2(`    no stance passed out of ${tried.length} swept. Refusal census:`);
+    for (const [k, v] of Object.entries(why).sort((a, b) => b[1] - a[1])) say2(`      ${String(v).padStart(4)}  ${k}`);
     const best = tried.filter((x) => x.reasons.length === 1 && x.reasons[0].startsWith('SUBJECT'))
       .sort((a, b) => (b.forward ?? 0) - (a.forward ?? 0))[0];
     if (best) {
-      console.log(`    least-occluded single-fault stance: r ${best.r} eye ${best.eye} az ${best.deg} — `
+      say2(`    least-occluded single-fault stance: r ${best.r} eye ${best.eye} az ${best.deg} — `
         + `${best.forwardName} at ${best.forward} m in front of a ${(best.r).toFixed(1)} m subject`);
     }
     if (process.env.CAMDOT !== '0') {
@@ -329,10 +337,10 @@ async function run() {
     stance = { pos: [target[0] + Math.sin(a) * r, target[1] + eye, target[2] + Math.cos(a) * r],
                target: [target[0], target[1] + 0.3, target[2]], deg: best?.deg ?? 0, r, eye,
                camdotOverridden: true, refusal: best?.reasons ?? ['(no single-fault stance)'] };
-    console.log('    CAMDOT=0 — proceeding on the least-occluded stance above, recorded as overridden.');
+    say2('    CAMDOT=0 — proceeding on the least-occluded stance above, recorded as overridden.');
   }
 
-  console.log('\n[vaulturn] waiting for capture lock…');
+  say2('\n[vaulturn] waiting for capture lock…');
   const release = await acquire({ onWait: (ms) => process.stdout.write(`· queued for the capture lock (${(ms / 1000) | 0}s)\n`) });
   let server = null, browser = null, bad = 0;
   const report = { sha: sha(), when: new Date().toISOString(), census: vault, stance, ...report0, arms: {} };
@@ -347,24 +355,24 @@ async function run() {
     });
 
     for (const [arm, query] of [['default', ''], ['barrels', '?vault=barrels']]) {
-      console.log(`\n=== arm: ${arm}${query ? '  ' + query : ''} ===`);
+      say2(`\n=== arm: ${arm}${query ? '  ' + query : ''} ===`);
       const page = await boot(browser, port, query);
       const b = await page.evaluate(() => window.__vt.bodies());
       const A = report.arms[arm] = { bodies: b, walk: null, breaks: {}, frames: [] };
-      console.log(`    meshes: ${b.meshes.map((x) => `${x.name}[${x.count}] ${x.mat} h=${x.h} w=${x.w} v=${x.verts}`).join('  |  ')}`);
-      console.log(`    debugInfo().vault = ${JSON.stringify(b.info.vault.byKind)}  urns=${b.info.vault.urns}  spots=${b.info.vault.spots}`);
+      say2(`    meshes: ${b.meshes.map((x) => `${x.name}[${x.count}] ${x.mat} h=${x.h} w=${x.w} v=${x.verts}`).join('  |  ')}`);
+      say2(`    debugInfo().vault = ${JSON.stringify(b.info.vault.byKind)}  urns=${b.info.vault.urns}  spots=${b.info.vault.spots}`);
 
-      console.log('    walking the authored route from spawn to the treasure room:');
+      say2('    walking the authored route from spawn to the treasure room:');
       A.walk = await walkToVault(page, route, target);
-      if (!A.walk.legs[A.walk.legs.length - 1].arrived) { console.log('    !! the walk did not reach the urn'); bad++; }
+      if (!A.walk.legs[A.walk.legs.length - 1].arrived) { say2('    !! the walk did not reach the urn'); bad++; }
 
       /* the swing, and the day frame */
       await page.evaluate(([p, t]) => window.__vt.cam(p, t), [stance.pos, stance.target]);
       const before = await page.evaluate(() => window.__vt.grab());
       const sw = await page.evaluate(() => window.__vt.swing());
       A.breaks.day = sw.events;
-      console.log(`    swing from ${JSON.stringify(sw.from)} (state ${sw.state}) -> ${sw.events.length} propSmashed:`);
-      for (const e of sw.events) console.log(`        (${e.x}, ${e.y}, ${e.z})  material=${e.material}  scale=${e.scale}`);
+      say2(`    swing from ${JSON.stringify(sw.from)} (state ${sw.state}) -> ${sw.events.length} propSmashed:`);
+      for (const e of sw.events) say2(`        (${e.x}, ${e.y}, ${e.z})  material=${e.material}  scale=${e.scale}`);
       await page.evaluate(([p, t]) => window.__vt.cam(p, t), [stance.pos, stance.target]);
       const after = await page.evaluate(() => window.__vt.grab());
       for (const [n, png] of [[`${arm}-day-before`, before], [`${arm}-day-after`, after]]) {
@@ -374,7 +382,7 @@ async function run() {
 
       /* the night grade, through the L1 pad tap — the break stays broken across it */
       const g = await page.evaluate(() => window.__vt.toggleGrade());
-      console.log(`    L1 tap -> tod ${g.tod} over ${g.frames} frames`);
+      say2(`    L1 tap -> tod ${g.tod} over ${g.frames} frames`);
       await page.evaluate(([p, t]) => window.__vt.cam(p, t), [stance.pos, stance.target]);
       const night = await page.evaluate(() => window.__vt.grab());
       await writeFile(path.join(OUTDIR, `${arm}-night-after.png`), Buffer.from(night.split(',')[1], 'base64'));
@@ -385,33 +393,33 @@ async function run() {
       await page.evaluate(() => window.__vt.camOff());
       const back = await page.evaluate(([pt]) => window.__vt.walkTo(pt, 1.0, 1400, 24),
         [[outsideJar.x, outsideJar.y, outsideJar.z]]);
-      console.log(`    control walk back to the '${outsideJar.at}' jar: ${back.arrived ? 'arrived' : 'STOPPED'} ${back.frames} frames, ${back.dist} m out, at ${JSON.stringify(back.at)}`);
+      say2(`    control walk back to the '${outsideJar.at}' jar: ${back.arrived ? 'arrived' : 'STOPPED'} ${back.frames} frames, ${back.dist} m out, at ${JSON.stringify(back.at)}`);
       await page.evaluate(() => window.__vt.settle());
       const sw2 = await page.evaluate(() => window.__vt.swing());
       A.breaks.outside = sw2.events;
-      console.log(`    control swing -> ${sw2.events.length} propSmashed: ${sw2.events.map((e) => e.material).join(', ') || '(none)'}`);
+      say2(`    control swing -> ${sw2.events.length} propSmashed: ${sw2.events.map((e) => e.material).join(', ') || '(none)'}`);
       await page.close();
     }
 
     /* ---- the verdict, from the two arms' payloads ---- */
-    console.log('\n=== verdict ===');
+    say2('\n=== verdict ===');
     const d = report.arms.default, bl = report.arms.barrels;
     const mats = (evs) => evs.map((e) => e.material).sort();
-    console.log(`  default  vault break materials: ${JSON.stringify(mats(d.breaks.day))}`);
-    console.log(`  barrels  vault break materials: ${JSON.stringify(mats(bl.breaks.day))}`);
-    console.log(`  default  outside-room jar:      ${JSON.stringify(mats(d.breaks.outside))}`);
-    console.log(`  barrels  outside-room jar:      ${JSON.stringify(mats(bl.breaks.outside))}`);
-    if (!mats(d.breaks.day).includes('stone')) { console.log('  !! no urn in the vault broke as stone on the default arm'); bad++; }
-    if (mats(bl.breaks.day).includes('stone')) { console.log('  !! ?vault=barrels still broke something as stone'); bad++; }
-    if (mats(d.breaks.outside).includes('stone')) { console.log('  !! a jar outside the treasure room broke as stone — the policy has gone global'); bad++; }
+    say2(`  default  vault break materials: ${JSON.stringify(mats(d.breaks.day))}`);
+    say2(`  barrels  vault break materials: ${JSON.stringify(mats(bl.breaks.day))}`);
+    say2(`  default  outside-room jar:      ${JSON.stringify(mats(d.breaks.outside))}`);
+    say2(`  barrels  outside-room jar:      ${JSON.stringify(mats(bl.breaks.outside))}`);
+    if (!mats(d.breaks.day).includes('stone')) { say2('  !! no urn in the vault broke as stone on the default arm'); bad++; }
+    if (mats(bl.breaks.day).includes('stone')) { say2('  !! ?vault=barrels still broke something as stone'); bad++; }
+    if (mats(d.breaks.outside).includes('stone')) { say2('  !! a jar outside the treasure room broke as stone — the policy has gone global'); bad++; }
     const dUrn = d.bodies.meshes.find((x) => x.name === 'smashable_jar_urn');
     const bUrn = bl.bodies.meshes.find((x) => x.name === 'smashable_jar_urn');
-    console.log(`  urn mesh: default ${dUrn ? `${dUrn.count} on ${dUrn.mat}` : 'ABSENT'}   barrels ${bUrn ? `${bUrn.count} on ${bUrn.mat}` : 'absent (correct)'}`);
-    if (!dUrn || bUrn) { console.log('  !! the urn mesh is not gated by the token'); bad++; }
+    say2(`  urn mesh: default ${dUrn ? `${dUrn.count} on ${dUrn.mat}` : 'ABSENT'}   barrels ${bUrn ? `${bUrn.count} on ${bUrn.mat}` : 'absent (correct)'}`);
+    if (!dUrn || bUrn) { say2('  !! the urn mesh is not gated by the token'); bad++; }
 
     await writeFile(path.join(OUTDIR, 'report.json'), JSON.stringify(report, null, 2));
-    console.log(`\n[vaulturn] report -> ${path.relative(ROOT, OUTDIR)}/report.json   sha ${report.sha}`);
-    console.log(bad ? `\nVERDICT: ${bad} problem(s)` : '\nVERDICT: the vault urns break as clay, the token puts the barrels back, and nothing outside the room moved');
+    say2(`\n[vaulturn] report -> ${path.relative(ROOT, OUTDIR)}/report.json   sha ${report.sha}`);
+    say2(bad ? `\nVERDICT: ${bad} problem(s)` : '\nVERDICT: the vault urns break as clay, the token puts the barrels back, and nothing outside the room moved');
     if (bad) process.exitCode = 1;
   } finally {
     await browser?.close().catch(() => {});
