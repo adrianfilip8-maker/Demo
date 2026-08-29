@@ -61119,3 +61119,13 @@ the alert-beam wash (flagged to the parked Task #14 re-seal), the crook's hue un
 and it predates the owner seeing §727's prop-color fix, whose close-out is in flight in this same
 window. `?l1=sneak` stays live and unused; sneak remains keyboard-only with R2 still unbound as the
 recorded candidate if the owner ever wants it back on the pad.
+
+---
+
+## §729 — "switch out the generated destructible props in all locations for those imported props": the KayKit bodies take over every smashable and its static twins
+
+*(Heading committed ahead of its body — §700.9's rule, worded to be unlike every other open
+lane's marker per §717: this is the DESTRUCTIBLES-SWAP lane, replacing the procedural
+`canopicJar`/`basket`/crate bodies at every placement — Smashables' route clusters AND the
+Props.js static call sites that reuse those same generated models — with KayKit-atlas bodies
+conformed per mount, mechanics preserved and measured. Body lands in this lane's next pushes.)*
