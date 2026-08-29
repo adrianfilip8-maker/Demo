@@ -45,21 +45,31 @@ export const PILE_FADED = (() => {
 })();
 
 /**
- * §727 revert token: `?props=tinted` (or `globalThis.__PROPS_AB = 'tinted'` from a test)
- * restores the shipped double grade on the three entries §727 un-tinted — `wood`, `lapis`
- * and `carnelian` wearing `color × map` again. Same seam as `?pile=` above, read at module
- * load, independent of every other lane's token. The revert is a data flip on a material
- * uniform: same programs, no vertex attribute, and the reverted frames are byte-identical
- * to the pre-§727 build (measured, §727.5).
+ * §727's three-state token family — same seam as `?pile=` above, read at module load,
+ * independent of every other lane's token. All three states are data flips on a material
+ * uniform: same programs, no vertex attribute, no draw.
+ *
+ *   (default)        the §727 CHROMA-CORRECTED grade: each treated entry wears its shipped
+ *                    tint's chromaticity max-normalized and blended from white at a measured
+ *                    per-entry strength (W727 below) — vivid at the texture's own luminance,
+ *                    after the owner's verdict on the intermediate state ("they always
+ *                    looked faded": the word covers both the old dark crush AND the pure
+ *                    un-tint's distance-neutral wash).
+ *   ?props=plain     the intermediate §727 state exactly as first shipped at `8feb051`:
+ *                    wood/lapis/carnelian at flat white (texture as authored, once), rope
+ *                    still tinted. Kept reachable so the owner can A/B all three.
+ *   ?props=tinted    the original double grade — every entry's shipped `color × map`.
  */
-export const PROPS_TINTED = (() => {
+export const PROPS_MODE = (() => {
   let raw = '';
   try {
     if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('props') || '';
     if (!raw && typeof globalThis !== 'undefined' && globalThis.__PROPS_AB != null) raw = String(globalThis.__PROPS_AB);
   } catch { /* plain-module hosts have no location; that is the test path */ }
-  return String(raw).trim().toLowerCase() === 'tinted';
+  const v = String(raw).trim().toLowerCase();
+  return v === 'tinted' || v === 'plain' ? v : 'chroma';
 })();
+export const PROPS_TINTED = PROPS_MODE === 'tinted';
 
 /**
  * §727: three entries drop the residual double tint §724.1 named — a `color ×` multiply
@@ -82,13 +92,49 @@ export const PROPS_TINTED = (() => {
  *              frame the sun disc's inner face — "the brightest single shape in the tomb" —
  *              read VIOLET (hue 284–300°) at day and night, §724's exact conviction shape.
  *
- * The OTHER textured entries keep their tints, deliberately (§727.2): stone/lime read
- * within a few L of the arch walls wearing the same textures through the same mechanism
- * (owner-passed), gold is §724's settled split, bronze is the same dark-ground-metal policy
- * as gold, rope/cloth measured in-family at both grades. Changing any of them needs its own
- * section, not a drive-by here — `tests/proptint.test.mjs` T1 pins the whole decision.
+ * The pure un-tint above was NECESSARY but not SUFFICIENT — the owner's verdict on it was
+ * "they always looked faded", and the numbers agree on the mechanism: an inlay's gold wire
+ * (~40°) and stone cells (~220°) are near-complementary, so the AUTHORED texture's distance
+ * mean (what a mip average presents on a band at 10–25 m) is structurally undersaturated —
+ * lapis satOfMean 0.387 and falling through NEUTRAL as any blue tint blends in (0.025 at
+ * w 0.7). The convicted tint had been re-injecting that distance chroma by accident, at a
+ * catastrophic luminance cost. So the default grade is now the CHROMA-CORRECTED one: the
+ * shipped tint max-normalized in linear (brightest channel = 1, so no flat L-crush), blended
+ * from white at the per-entry strength `tools/proptint.mjs --sweep` measured:
+ *
+ *   wood  w 0.55 → mean L 94→88, satOfMean 0.524→0.655, hue 25° timber   (target: ≥ its
+ *         authored per-texel sat 0.581, one richness step over — the owner's bar is vivid)
+ *   rope  w 0.55 → mean L 152→140, satOfMean 0.490→0.603, hue 36° hemp   (same rule; rope's
+ *         L-crush conviction was declined in §727.2 — this is the drab-texture chroma
+ *         clause, a different lever than the crush)
+ *   lapis w 1.00 → mean L 138→65, satOfMean 0.656, hue 206° azure — the ONLY vivid option
+ *         its complementary modes allow, and the read the wesekh builder documents ("flat
+ *         colour blocking rather than detail"); the wire goes teal up close, stated and
+ *         priced (still 2.4× the convicted state's wire luminance)
+ *   carnelian w 0.70 → mean L 136→101, satOfMean 0.813, hue 20° carnelian; the wire stays
+ *         warm amber (196,99,39) — both modes in-family
+ *
+ * stone/lime/gold/bronze/cloth keep their shipped tints (§727.2's controls and settled
+ * surfaces); `tests/proptint.test.mjs` pins every decision, including the W727 derivation
+ * itself — the hexes below are DERIVED at load, never typed.
  */
-const TINT727 = (shippedHex) => (PROPS_TINTED ? shippedHex : 0xffffff);
+const W727 = { wood: 0.55, rope: 0.55, lapis: 1.0, carnelian: 0.7 };
+const PLAIN727 = new Set(['wood', 'lapis', 'carnelian']);   // the 8feb051 intermediate's fix set
+
+/** lerp(white, maxNormalized(shippedHex), w) in LINEAR, back to an 8-bit sRGB hex. */
+export const chroma727 = (shippedHex, w) => {
+  const c = new THREE.Color(shippedHex);              // .r/.g/.b are LINEAR in three r152+
+  const mx = Math.max(c.r, c.g, c.b) || 1;
+  const lin = [c.r, c.g, c.b].map((v) => 1 + (v / mx - 1) * w);
+  const srgb8 = lin.map((v) => Math.round(255 * (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055)));
+  return (srgb8[0] << 16) | (srgb8[1] << 8) | srgb8[2];
+};
+
+const TINT727 = (key, shippedHex) => {
+  if (PROPS_MODE === 'tinted') return shippedHex;
+  if (PROPS_MODE === 'plain') return PLAIN727.has(key) ? 0xffffff : shippedHex;
+  return chroma727(shippedHex, W727[key]);
+};
 
 /* Material keys the builders tag their geometry with, mapped to how each should shade.
  * Exported since §727 so the tint decisions are pinned by value (tests/proptint.test.mjs);
@@ -106,8 +152,8 @@ export const MATERIALS = {
      that identity for the same mechanism). Cost: a `USE_COLOR` program variant, zero draws. */
   gold:      { tex: 'gold_leaf',          color: 0xe8b942, rough: 0.28, metal: true, outline: 1.0, spec: 0.9, gloss: 96, vertexColors: true },
   bronze:    { tex: 'bronze_aged',        color: 0x8a6a3a, rough: 0.52, metal: true, outline: 1.0, spec: 0.6, gloss: 48 },
-  wood:      { tex: 'wood_old',           color: TINT727(0x6b4a2c), rough: 0.9,  outline: 0.85 },
-  rope:      { tex: 'rope',               color: 0xa8875c, rough: 0.95, outline: 0.6, noShadow: true },
+  wood:      { tex: 'wood_old',           color: TINT727('wood', 0x6b4a2c), rough: 0.9,  outline: 0.85 },
+  rope:      { tex: 'rope',               color: TINT727('rope', 0xa8875c), rough: 0.95, outline: 0.6, noShadow: true },
   /* `outline: 0` is a TOPOLOGY refusal, not a taste one, and it is the same class as the
      emissive refusals below rather than a thinner line. An inverted hull needs a closed
      manifold: it extrudes along welded normals and draws the result BackSide. `banner()`
@@ -122,8 +168,8 @@ export const MATERIALS = {
      cannot surface the defect. */
   cloth:     { tex: 'linen_cloth',        color: 0xe8ddc4, rough: 0.85, outline: 0, side: THREE.DoubleSide },
   dark:      { tex: null,                 color: 0x241a16, rough: 0.9,  outline: 0.9 },
-  lapis:     { tex: 'lapis_inlay',        color: TINT727(0x1f4f96), rough: 0.35, outline: 0.9, noShadow: true },
-  carnelian: { tex: 'carnelian_inlay',    color: TINT727(0xb8452c), rough: 0.4,  outline: 0.9, noShadow: true },
+  lapis:     { tex: 'lapis_inlay',        color: TINT727('lapis', 0x1f4f96), rough: 0.35, outline: 0.9, noShadow: true },
+  carnelian: { tex: 'carnelian_inlay',    color: TINT727('carnelian', 0xb8452c), rough: 0.4,  outline: 0.9, noShadow: true },
   /* The clue bottle, and the ONLY key it draws in. `PropKit.clueBottle()` folds the imported
      mesh's three source materials into one geometry with a vertex-colour stream, so this recipe
      is white-with-`vertexColors` rather than a colour: `color` multiplies the attribute, and any

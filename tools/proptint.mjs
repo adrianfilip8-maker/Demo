@@ -36,6 +36,15 @@ import path from 'node:path';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const opt = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? (process.argv[i + 1] ?? true) : d; };
 const OUT = opt('json', '');
+/* --sweep: §727's chroma-correction designer. For each listed entry, lerp the entry's shipped
+ * tint from WHITE toward its max-normalized chromaticity (linear space, so w is a physical
+ * blend of transmittances) and quote the tinted MEAN's L / sat-of-mean / hue at each step.
+ * sat-of-mean is the DISTANCE read — what a mip average of the whole tile presents — which is
+ * the statistic the owner's eye sees on a band at 10-25 m, and the one the §727 pure un-tint
+ * left too low on the bimodal inlays (gold wire ≈ 40° and stone cells ≈ 220° average toward
+ * neutral). Max-normalizing first means w=1 keeps the brightest channel at full transmittance:
+ * the sweep trades chroma against luminance WITHOUT the shipped tint's flat L-crush. */
+const SWEEP = process.argv.includes('--sweep');
 
 /* The WORLD table's textured entries, transcribed from src/world/Props.js MATERIALS at the
  * commit this runs against — the tool re-reads the file and REFUSES on drift, so a moved tint
@@ -87,7 +96,7 @@ const page = await browser.newPage();
 page.on('pageerror', (e) => console.error('  [pageerror]', e.message));
 await page.goto(`http://127.0.0.1:${port}/lab.html`);
 
-const rows = await page.evaluate(async (entries) => {
+const rows = await page.evaluate(async ({ entries, sweepList }) => {
   const M = await import('/src/textures/Materials.js');
   const C = await import('/src/textures/Canvas2D.js');
   const N = await import('/src/textures/NormalMap.js');
@@ -196,10 +205,25 @@ const rows = await page.evaluate(async (entries) => {
         row.modes[m] = { frac: +(rec.n / (t.size * t.size)).toFixed(3), authored: rec.authored, tinted: applyTint(rec.linMean, T) };
       }
     }
+    /* sat-of-mean: the colour a mip average presents at distance, per arm. */
+    const satOf = (s) => { const [r, g, b] = s.mean; const mx = Math.max(r, g, b), mn = Math.min(r, g, b); return +(mx > 0 ? (mx - mn) / mx : 0).toFixed(3); };
+    const meanOnly = applyTint(t.linMean, [1, 1, 1]);
+    row.meanStats = { authored: { ...meanOnly, satOfMean: satOf(meanOnly) }, tinted: { ...row.tinted, satOfMean: satOf(row.tinted) } };
+    if (sweepList && sweepList.includes(e.key)) {
+      const T = tintLin(e.tint);
+      const mx = Math.max(...T);
+      const norm = T.map((v) => v / mx);           // max-normalized: brightest channel = 1
+      row.sweep = [];
+      for (const w of [0, 0.15, 0.25, 0.35, 0.45, 0.55, 0.7, 0.85, 1]) {
+        const tw = norm.map((v) => 1 + (v - 1) * w);   // lerp(white, norm, w) in linear
+        const s = applyTint(t.linMean, tw);
+        row.sweep.push({ w, tintHex: '0x' + tw.map((v) => Math.round(255 * (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055)).toString(16).padStart(2, '0')).join(''), L: s.L, lumaMean: +(s.L / 255).toFixed(3), satOfMean: satOf(s), hue: s.hue });
+      }
+    }
     rows.push(row);
   }
   return rows;
-}, ENTRIES);
+}, { entries: ENTRIES, sweepList: SWEEP ? ['wood', 'lapis', 'carnelian', 'rope'] : null });
 
 await browser.close();
 server.close();
@@ -218,6 +242,10 @@ for (const r of rows) {
     for (const [m, v] of Object.entries(r.modes)) {
       process.stdout.write(`           · ${m.padEnd(6)} ${String(Math.round(v.frac * 100)).padStart(2)}%  auth (${v.authored.mean.join(',')}) L ${v.authored.L} sat ${v.authored.sat} hue ${v.authored.hue} -> tinted (${v.tinted.mean.join(',')}) L ${v.tinted.L} sat ${v.tinted.sat} hue ${v.tinted.hue}\n`);
     }
+  }
+  if (r.meanStats) process.stdout.write(`           · satOfMean authored ${r.meanStats.authored.satOfMean} (the distance read) vs shipped-tinted ${r.meanStats.tinted.satOfMean}\n`);
+  if (r.sweep) {
+    for (const s of r.sweep) process.stdout.write(`           · w ${String(s.w).padEnd(4)} tint ${s.tintHex}  mean L ${String(s.L).padEnd(6)} luma ${s.lumaMean}  satOfMean ${s.satOfMean}  hue ${s.hue}\n`);
   }
 }
 if (OUT) fs.writeFileSync(OUT, JSON.stringify(rows, null, 1));
