@@ -501,7 +501,10 @@ export const HUD_CSS = /* css */ `
      offset is still measured rather than derived: the -1.2deg tilt expands the bounding box
      upward, which cost 11.7 px of real clearance last time against ~17 implied, so the number
      below is the one tools/hudvisible.mjs reports against a FULLY ARMED stack. */
-  top: calc(var(--u) * 10);
+  /* 10.7u. At 10u the MEASURED clearance to a fully-armed .sly-tl was 8.2 px — zero overlap, but
+     tighter than this corner has any reason to be, and the same margin §731.5 already declined
+     once at 11.7 px. Still well up from the 13.5u it moved from. */
+  top: calc(var(--u) * 10.7);
   /* §731.7 "reduce the size by one third": 18.2u * 2/3 = 12.13u. Height follows the artwork's
      own cropped aspect (1.830:1 now that the POW crescent is gone, was 1.767:1). */
   width: calc(var(--u) * 12.13);
