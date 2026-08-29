@@ -129,11 +129,12 @@ export const TUNE = Object.freeze({
  * chests (enumerated on disk; stated rather than papered over) — so each slot gets the nearest
  * container silhouette, conformed by UNIFORM scale to the measured height of the exact
  * generated body it replaces (§702/§705: both heights are measured at build, in `_loadBodies`;
- * neither is typed here). Native heights, measured through `loadModelLib`:
+ * neither is typed here — the shipped seed makes them exactly reproducible, and `debugInfo().swap`
+ * echoes what a given boot actually took). At the shipped seed:
  *
- *   jar    → `barrel_small`    1.018 m native → ×0.599 to the jar's measured 0.609 m
+ *   jar    → `barrel_small`    1.018 m native → ×0.603 to the jar's measured 0.614 m
  *   basket → `chest`           1.300 m native → ×0.385 to the basket's measured 0.500 m
- *   crate  → `crates_stacked`  2.142 m native → ×0.310 to the crate's measured 0.664 m
+ *   crate  → `crates_stacked`  2.142 m native → ×0.308 to the crate's measured 0.659 m
  *
  * A stretched barrel was rejected up front: conforms are uniform, so the swapped footprints
  * (0.60 / 0.65 / 0.70 m) grow past the generated ones but stay inside the cluster ring's
