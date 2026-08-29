@@ -503,58 +503,40 @@ export const HUD_CSS = /* css */ `
 .sly-prompt-ic svg { width: 100%; height: 100%; }
 .sly-prompt[data-kind='steal'] .sly-prompt-ic { display: block; }
 
-/* ============================================ COOPER MASK HEALTH READOUT (§731) */
+/* ================================================ SLY 4 HEALTH METER (§731) */
 
-/* The owner asked for the Sly 4 health readout in a corner, visual only, and then supplied the
-   artwork: "what is in the oval in this image is what the health bar should look like. Use this
-   instead, placed somewhere near the top left corner where there is space." So the readout is a
-   row of five Cooper mask badges. It is inert markup — no rule below is ever toggled by script,
-   there is no .on state and no transition, because nothing changes.
+/* The owner's second reference, a Sly 4 frame: "the blue part behind the insignia is the health
+   bar", top-left, a wide outlined lozenge filled blue with the mask sitting on it. So this is ONE
+   meter, drawn at full, inert markup — no rule below is ever toggled by script, there is no .on
+   state and no transition, because nothing changes.
 
-   ── §731.3: WHAT IS NOT HERE ANY MORE, AND WHY ────────────────────────────────────────────
-   §731.2 struck this on an ink chip and gave it a gold HEALTH kicker. Both are gone, and neither
-   because of taste. The chip existed because a carnelian pip on the open scene measured 1.28:1
-   over day sand and needed a ground; the badge IS a ground — an opaque oval whose worst case over
-   all 256 possible grey backgrounds is 3.90:1, computed rather than sampled. Keeping the chip
-   would have put a second ground under a picture that already has one. The kicker went for a
-   measured reason of its own: gold text plus its ink halo bottoms out at 3.95:1 on the open
-   scene, under the 4.5:1 text bar, so once the chip went the label could not be kept honestly.
-   Sly 4's own readout carries no label either, and the badge is the franchise's mark.
+   ── §731.5: WHAT THIS REPLACED ────────────────────────────────────────────────────────────
+   A row of five mask badges (§731.4), which was the wrong reading of the first reference: the
+   insignia is the ornament ON the meter, not the unit the meter is made of. The pip row, its
+   jitter rules and its per-pip sizing are gone rather than left dormant.
 
-   ── TOP-LEFT, BELOW A STACK THAT GROWS DOWNWARD ───────────────────────────────────────────
-   "Where there is space" is the real constraint: .sly-tl holds the live pip row, the coin
-   counter, the exposure chip, the stealth chip and the carry chip, and it GROWS DOWNWARD as
-   those arm — fully armed it reaches 125.8 px at 720p. This sits below that, on the same left
-   margin, so it cannot collide with a stack whose height depends on play. tools/hudvisible.mjs
-   measures the fully-armed stack and asserts zero intersection.
+   SIZE. 18.2u wide is ~200 px at 720p against the owner's "roughly 200 px wide in a 1280-wide
+   frame", and the height follows the artwork's own 1.767:1 rather than being set here — the
+   plate, its outline and the insignia are one raster and squashing it would break all three.
+
+   TOP-LEFT, BELOW A STACK THAT GROWS DOWNWARD. .sly-tl holds the live pip row, the coin counter
+   and the exposure/stealth/carry chips, and it GROWS DOWNWARD as those arm — fully armed it
+   reaches 125 px at 720p. This sits below that on the same left margin, so it cannot collide with
+   a stack whose height depends on play. tools/hudvisible.mjs measures the armed stack and asserts
+   zero intersection.
    (No backticks anywhere in this file: the whole stylesheet is one template literal.) */
 .sly-hp {
   position: absolute;
   left: calc(var(--u) * 1.9);
   top: calc(var(--u) * 12.9);
-  display: flex;
+  width: calc(var(--u) * 18.2);
+  /* A degree of tilt, the way every struck prop in this sheet is hand-placed. Kept small: the
+     insignia is a MARK and a visibly askew mark stops reading as itself. */
+  transform: rotate(-1.2deg);
+  transform-origin: left top;
 }
-.sly-hp-row { display: flex; align-items: flex-end; gap: calc(var(--u) * .24); }
-.sly-hp-pip {
-  /* 3.2u WIDE and 2.025u tall — the imported art's own 128:81, not a square. The mark is much
-     wider than tall and the ears are the first thing a squash destroys, so the box carries the
-     asset's aspect rather than the pip convention's.
-
-     Sized for RESOLUTION, which is the failure §731.3 actually hit: hand-drawn at 2.4u square it
-     cropped out of the production frame with zero eye regions resolving. At 3.2u the badge is
-     35 px wide at 720p against a 128 px source, so the eye patches land on ~8 px rather than
-     ~2 px. tools/hudvisible.mjs counts them off the real frame at both grades. */
-  width: calc(var(--u) * 3.2);
-  height: calc(var(--u) * 2.025);
-  display: block;
-}
-.sly-hp-pip svg { width: 100%; height: 100%; }
-/* Hand-placed, the same jitter the live pip row carries — a perfectly ruled row of five is the
-   engine overlay this HUD refuses to be. Kept small: these badges are a MARK, and a mark that is
-   visibly askew stops reading as itself. Nothing animates; these are static transforms. */
-.sly-hp-row > span:nth-child(2n) { transform: translateY(calc(var(--u) * .07)) rotate(2.5deg); }
-.sly-hp-row > span:nth-child(3n) { transform: translateY(calc(var(--u) * -.06)) rotate(-3deg); }
-.sly-hp-row > span:nth-child(5n) { transform: translateY(calc(var(--u) * .04)) rotate(1.5deg); }
+.sly-hp-meter { display: block; width: 100%; }
+.sly-hp-meter svg { display: block; width: 100%; height: auto; }
 
 /* ================================================================ CAUGHT */
 

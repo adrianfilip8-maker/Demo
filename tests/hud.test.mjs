@@ -24,7 +24,9 @@ import {
   alertFor, threatFor, contrast, luminance, parseHex,
 } from '../src/ui/Alert.js';
 import { installDom, fakeEngine } from './_hudshim.mjs';
-import { MASK_BADGE_PALETTE } from '../src/ui/MaskBadge.js';
+import { PAL } from '../src/player/SlyModel3.js';
+
+const PAL_BLUE_HEX = '#' + PAL.blue.toString(16).padStart(6, '0');
 
 const SRC = new URL('../src/', import.meta.url);
 const read = (p) => readFileSync(new URL(p, SRC), 'utf8');
@@ -619,84 +621,61 @@ test('§516: prompts follow the device, and every pad glyph they can name is a c
 /* so the load-bearing claim in this block is a NEGATIVE one — that nothing can change it —    */
 /* and a negative claim is worth nothing unless the probe is shown catching a positive.        */
 
-/** Normalised drawing text, so whitespace in the template literals is not a difference. */
-const draw = (svg) => String(svg).replace(/\s+/g, ' ').trim();
 
-/**
- * Registered probe: two pip drawings differ iff their normalised SVG text differs. Trivial on
- * purpose — the point of the calibration below is that it is two-sided, not that it is clever.
- */
-const sameDrawing = (a, b) => draw(a) === draw(b);
-
-test('§731 CALIBRATION (must fire): the drawing probe reports a known-same pair and a known-different one', async () => {
+test('§731.5: the readout is ONE meter, composed from the plate and the fill silhouette', async () => {
   const Ico = await import('../src/ui/Icons.js');
-  // Same input, twice: the probe must NOT invent a difference.
-  assert.ok(sameDrawing(Ico.pip(true, 'mask'), Ico.pip(true, 'mask')),
-    'CALIBRATION FAILED — the probe reports a difference between one drawing and itself');
-  // A pair that really differs: the probe must not sleep through it.
-  assert.ok(!sameDrawing(Ico.pip(true, 'mask'), Ico.pip(true, 'charm')),
-    'CALIBRATION FAILED — the probe cannot tell the mask badge from the horseshoe');
+  const M = await import('../src/ui/HealthMeter.js');
+  const svg = Ico.healthMeter();
+
+  assert.match(svg, /^<svg[\s\S]*<\/svg>$/, 'the meter is not an svg');
+  assert.match(svg, new RegExp(`viewBox="0 0 ${M.METER_W} ${M.METER_H}"`),
+    'the meter is not drawn at the baked layers\' own aspect');
+
+  /* BOTH layers, in the right order: the plate underneath, the fill painted over it through the
+     silhouette. A meter that drew only the plate would be a grey empty bar and would still be an
+     svg with an image in it. */
+  assert.ok(svg.includes(M.METER_PLATE_URI), 'the meter does not draw the plate layer');
+  assert.ok(svg.includes(M.METER_FILL_URI), 'the meter does not draw the fill silhouette');
+  assert.ok(svg.indexOf(M.METER_PLATE_URI) > svg.indexOf(M.METER_FILL_URI),
+    'the plate is drawn after the fill — the silhouette belongs in a <mask> defined first');
+  assert.match(svg, /<mask id="slyHpFill">/, 'the fill silhouette is not used as a mask');
+  assert.match(svg, /<rect[^>]*mask="url\(#slyHpFill\)"/, 'nothing is painted through the mask');
+
+  /* Exactly one meter's worth of layers — a stray duplicate would double a 60 KB payload. */
+  assert.equal((svg.match(/<image /g) ?? []).length, 2, 'the meter should draw exactly two images');
+  assert.equal((svg.match(/<rect /g) ?? []).length, 1, 'the meter should paint exactly one fill rect');
 });
-
-test('§731: the ornament ships BOTH pip states as real, distinct drawings', async () => {
-  const Ico = await import('../src/ui/Icons.js');
-  const M = await import('../src/ui/MaskBadge.js');
-  const full = Ico.pip(true, 'mask');
-  const empty = Ico.pip(false, 'mask');
-
-  let inspected = 0;
-  for (const [name, svg] of [['filled', full], ['empty', empty]]) {
-    assert.match(svg, /^<svg[\s\S]*<\/svg>$/, `the ${name} mask badge is not an svg`);
-    // Both states draw the SAME imported artwork — the spent pip is not a different picture.
-    assert.ok(svg.includes(M.MASK_BADGE_URI), `the ${name} badge does not draw the imported asset`);
-    assert.match(svg, /<image[^>]*width="128"[^>]*height="81"/,
-      `the ${name} badge is not placed at the asset's own size`);
-    inspected++;
-  }
-  assert.equal(inspected, 2);                                                  // §211.1
-
-  /* The whole reason the empty art exists: HP_FULL === HP_PIPS today, so nothing in the shipped
-     markup renders it, and dead art rots silently. This arm is what keeps it alive. */
-  assert.ok(!sameDrawing(full, empty),
-    'the empty badge is byte-identical to the filled one — the spent state is not drawn');
-  /* Spent still COUNTS — it holds its slot at reduced opacity rather than vanishing, because a
-     readout whose lost pips disappear stops being a readout. */
-  assert.match(empty, /opacity="\.32"/, 'the spent badge is not the dimmed treatment');
-  assert.ok(!/opacity=/.test(full.replace(/data:image[^"]*/, '')),
-    'the FILLED badge is dimmed — the two states are the wrong way round');
-
-  /* A different silhouette from BOTH live-row pips — "a second widget with its own art" is
-     exactly what it must not become, and the live row sits directly above it now. */
-  assert.ok(!sameDrawing(full, Ico.pip(true, 'life')), 'the badge collides with the life pip');
-  assert.ok(!sameDrawing(full, Ico.pip(true, 'charm')), 'the badge collides with the charm pip');
-});
-
-test('§731: nothing that drives the live pip row can reach the mask branch', () => {
+test('§731.5: the live pip row and the §731 meter share no drawing code at all', () => {
   const hud = read('ui/HUD.js');
   const m = /function pipKind\(i\)\s*\{\s*return ([^;]+);\s*\}/.exec(hud);
   assert.ok(m, 'pipKind() no longer has the shape this arm reads');
   const kinds = new Set();
   const pipKind = new Function('i', `return ${m[1]};`);
-  // The live row is at most the charm count plus the calling card; walk well past it.
   for (let i = 0; i < 32; i++) kinds.add(pipKind(i));
   assert.deepEqual([...kinds].sort(), ['charm', 'life'],
-    'pipKind() can now return a third kind — the live row may be able to draw the ornament art');
+    'pipKind() gained a third kind — the live row may be able to reach the ornament art');
   assert.equal(kinds.size, 2);                                                 // §211.1
-  // Two-sided: the same walk over a mapping that DOES reach it is caught.
-  const bad = new Function('i', "return i === 0 ? 'life' : i === 1 ? 'mask' : 'charm';");
-  const badKinds = new Set();
-  for (let i = 0; i < 32; i++) badKinds.add(bad(i));
-  assert.ok(badKinds.has('mask'),
-    'CALIBRATION FAILED — the walk cannot see the mask kind even when the mapping returns it');
-});
+  // Two-sided: the same walk over a mapping with a third kind is caught.
+  const bad = new Function('i', "return i === 0 ? 'life' : i === 1 ? 'meter' : 'charm';");
+  const seen = new Set();
+  for (let i = 0; i < 32; i++) seen.add(bad(i));
+  assert.equal(seen.size, 3,
+    'CALIBRATION FAILED — the walk cannot see a third kind even when the mapping returns one');
 
+  /* §731.5 deleted the pip route into the ornament entirely: there is no `mask` kind any more,
+     so the live row cannot reach the meter even by mistake. */
+  const ico = read('ui/Icons.js');
+  assert.ok(!/kind === 'mask'/.test(ico), "a 'mask' pip kind came back");
+  assert.ok(!/maskPip/.test(ico), 'maskPip came back');
+});
 test('§731: the ornament is inert — a full health run does not move one pixel of it', async () => {
   const { hud, engine } = await bootHud();
   const snap = () => hud.root.querySelector('.sly-hp').innerHTML;
 
   const before = snap();
   assert.ok(before.length > 200, 'the ornament rendered empty — this arm would pass on nothing');
-  assert.equal((before.match(/sly-hp-pip/g) ?? []).length, 5);                 // §211.1
+  assert.equal((before.match(/sly-hp-meter/g) ?? []).length, 1);               // §211.1
+  assert.ok(before.includes('<svg'), 'the meter did not render its artwork');
 
   /* Everything the game can do to health, through the public API and the bus, plus frames. If
      any of it is wired to the ornament, the markup changes. */
@@ -745,10 +724,10 @@ test('§731: ?hud=nohealth removes the ornament and nothing else', async () => {
   const off = await boot('nohealth', 's731off');
   try {
     assert.ok(on.root.querySelector('.sly-hp'), 'the default boot lost the ornament');
-    assert.equal(on.root.querySelectorAll('.sly-hp-pip').length, 5);        // §211.1
+    assert.equal(on.root.querySelectorAll('.sly-hp-meter').length, 1);      // §211.1
     assert.equal(off.root.querySelector('.sly-hp'), null,
       '?hud=nohealth left the ornament in the DOM');
-    assert.equal(off.root.querySelectorAll('.sly-hp-pip').length, 0);
+    assert.equal(off.root.querySelectorAll('.sly-hp-meter').length, 0);
 
     /* The token must be a scalpel. Every other persistent element is still there, and the LIVE
        pip row in particular keeps its own count — the ornament and the readout are not the
@@ -782,75 +761,97 @@ test('§731: ?hud=nohealth removes the ornament and nothing else', async () => {
  * so what is checkable here is that it is really that file, really inlined, and really wired in.
  * Whether it READS is a pixel question and belongs to `tools/hudvisible.mjs`.
  */
-test('§731.4: the mask badge is the imported asset, inlined, with its palette sampled not retyped', async () => {
-  const M = await import('../src/ui/MaskBadge.js');
+test('§731.5: the meter is the imported V1 pair, inlined, with its palette sampled not retyped', async () => {
+  const M = await import('../src/ui/HealthMeter.js');
 
-  // A real baked raster at the source's own aspect, not squared.
-  assert.equal(M.MASK_BADGE_W, 128);
-  assert.equal(M.MASK_BADGE_H, 81);
-  const aspect = M.MASK_BADGE_W / M.MASK_BADGE_H;
-  assert.ok(Math.abs(aspect - 1898 / 1195) < 0.01,
-    `the bake is ${aspect.toFixed(3)}:1 but the source is ${(1898 / 1195).toFixed(3)}:1 — the mark has been squashed`);
+  assert.equal(M.METER_W, 320);
+  assert.equal(M.METER_H, 181);
+  const aspect = M.METER_W / M.METER_H;
+  assert.ok(Math.abs(aspect - 1857 / 1051) < 0.01,
+    `the bake is ${aspect.toFixed(3)}:1 but the source crop is ${(1857 / 1051).toFixed(3)}:1 — the meter has been squashed`);
 
-  /* Inlined, not fetched. This is the §666 property the whole import hangs on: a runtime asset
-     URL is a production-only fault class, and a fetch that never settles hangs `node --test`. */
-  assert.match(M.MASK_BADGE_URI, /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/,
-    'the badge is not a self-contained data URI');
-  const bytes = Buffer.from(M.MASK_BADGE_URI.split(',')[1], 'base64');
-  assert.deepEqual([...bytes.subarray(0, 8)], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
-    'the inlined bytes are not a PNG');
-  // Big enough to be the artwork, small enough not to be the 110 KB source dropped in whole.
-  assert.ok(bytes.length > 2000 && bytes.length < 40000,
-    `the baked PNG is ${bytes.length} bytes, which is neither the artwork nor a sane bake`);
+  /* Inlined, not fetched — the §666 property the whole import hangs on. */
+  let layers = 0;
+  for (const [name, uri] of [['plate', M.METER_PLATE_URI], ['fill mask', M.METER_FILL_URI]]) {
+    assert.match(uri, /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/, `the ${name} is not a self-contained data URI`);
+    const bytes = Buffer.from(uri.split(',')[1], 'base64');
+    assert.deepEqual([...bytes.subarray(0, 8)], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+      `the ${name} bytes are not a PNG`);
+    assert.ok(bytes.length > 2000 && bytes.length < 80000,
+      `the baked ${name} is ${bytes.length} bytes, which is neither the artwork nor a sane bake`);
+    layers++;
+  }
+  assert.equal(layers, 2);                                                     // §211.1
+  assert.notEqual(M.METER_PLATE_URI, M.METER_FILL_URI, 'both layers baked to the same image');
 
-  /* The palette is SAMPLED from the source texels by the bake tool. Retyping it here would be the
-     drift §712 closed for the coin; asserting the SHAPE of each entry keeps it honest without
-     pinning colours the artwork owns. */
-  const pal = M.MASK_BADGE_PALETTE;
+  const pal = M.METER_PALETTE;
   let entries = 0;
-  for (const k of ['navy', 'grey', 'outline']) {
-    assert.match(pal[k], /^#[0-9a-f]{6}$/, `MASK_BADGE_PALETTE.${k} is not a sampled hex`);
+  for (const k of ['track', 'navy', 'pale']) {
+    assert.match(pal[k], /^#[0-9a-f]{6}$/, `METER_PALETTE.${k} is not a sampled hex`);
     entries++;
   }
   assert.equal(entries, 3);                                                    // §211.1
-  // ...and they are three genuinely different inks, not one colour three times.
   assert.equal(new Set(Object.values(pal)).size, 3, 'the sampled palette collapsed');
 
-  /* The glyph actually uses the import. A `maskPip` that quietly went back to hand-drawn paths
-     would still pass every arm above. */
-  const Ico = await import('../src/ui/Icons.js');
-  const svg = Ico.pip(true, 'mask');
-  assert.ok(svg.includes(M.MASK_BADGE_URI), 'the mask pip does not draw the imported asset');
-  assert.match(svg, new RegExp(`viewBox="0 0 ${M.MASK_BADGE_W} ${M.MASK_BADGE_H}"`),
-    'the mask pip is not drawn at the asset\'s own aspect');
-  // The hand-drawn shapes are gone from the file entirely.
-  const src = readFileSync(new URL('../src/ui/Icons.js', import.meta.url), 'utf8');
-  for (const dead of ['MASK_D', 'EYE_L', 'EYE_R', 'heartPip']) {
-    assert.ok(!src.includes(dead), `${dead} survived the §731.4 import — two mask drawings now exist`);
+  /* The old single-badge import is GONE, not merely unused. */
+  const ico = readFileSync(new URL('../src/ui/Icons.js', import.meta.url), 'utf8');
+  for (const dead of ['MaskBadge', 'MASK_BADGE', 'maskPip']) {
+    assert.ok(!ico.includes(dead), `${dead} survived the §731.5 rewrite`);
   }
 });
-
-test('§731.4: provenance is recorded, with the source path, the repo HEAD and the licence', () => {
-  const prov = readFileSync(new URL('../staging/assets/sly-mask/PROVENANCE.md', import.meta.url), 'utf8');
+test('§731.5: provenance is recorded, with both source paths, the repo HEAD and the licence', () => {
+  const prov = readFileSync(new URL('../staging/assets/sly-meter/PROVENANCE.md', import.meta.url), 'utf8');
   let facts = 0;
   for (const [what, re] of [
-    ['the source file', /Life_Icon_V2/],
+    ['the plate source', /Health_Meter_V1_-/],
+    ['the fill source', /Health_Meter_V1_PROGRESS_BAR_HP/],
     ['the repo HEAD', /a312a99/],
     ['the licence', /NONE STATED/],
-    ['the bake tool', /godot2mask\.mjs/],
-    ['the shipped module', /MaskBadge\.js/],
+    ['the bake tool', /godot2meter\.mjs/],
+    ['the shipped module', /HealthMeter\.js/],
+    ['why V1 over V2', /V1 chosen over V2/],
   ]) { assert.match(prov, re, `PROVENANCE.md does not record ${what}`); facts++; }
-  assert.equal(facts, 5);                                                      // §211.1
-  /* §364.3: the provenance file must not name that project's audio directories, and neither must
-     any source file that touches this asset. Checked as a property of the text, not trusted. */
-  for (const [name, text] of [['PROVENANCE.md', prov],
-    ['MaskBadge.js', readFileSync(new URL('../src/ui/MaskBadge.js', import.meta.url), 'utf8')],
-    ['godot2mask.mjs', readFileSync(new URL('../tools/godot2mask.mjs', import.meta.url), 'utf8')]]) {
+  assert.equal(facts, 7);                                                      // §211.1
+
+  /* §364.3: no file touching this asset may name that project's audio directories. Checked as a
+     property of the text rather than trusted. */
+  for (const [name, rel] of [['PROVENANCE.md', '../staging/assets/sly-meter/PROVENANCE.md'],
+    ['HealthMeter.js', '../src/ui/HealthMeter.js'], ['godot2meter.mjs', '../tools/godot2meter.mjs']]) {
+    const text = readFileSync(new URL(rel, import.meta.url), 'utf8');
     assert.ok(!/Assets\/(Audio|Sounds?|Music)/i.test(text),
       `${name} names an audio directory of the reference project`);
   }
 });
 
+test('§731.5: the meter fill is COUPLED to the character blue, not a copy of it', async () => {
+  const { PAL } = await import('../src/player/SlyModel3.js');
+  const Ico = await import('../src/ui/Icons.js');
+  const svg = Ico.healthMeter();
+
+  /* The owner: "use the same color blue as the blue on the character's outfit". SlyModel3's G1
+     rule makes that one named constant across cap, shirt, gloves and boots, so the meter must
+     render whatever that constant currently is — asserting the literal #2f5fc4 here would be the
+     drift §712 closed, since a retune of the outfit would leave this test certifying a stale hex. */
+  const expected = '#' + PAL.blue.toString(16).padStart(6, '0');
+  assert.ok(svg.includes(`fill="${expected}"`),
+    `the meter does not paint PAL.blue (${expected}) — it has drifted from the outfit`);
+
+  /* Two-sided: the arm must be able to SEE a drift. A different blue must not satisfy it. */
+  const other = '#' + PAL.blueDark.toString(16).padStart(6, '0');
+  assert.notEqual(expected, other, 'PAL.blue and PAL.blueDark collapsed — this arm cannot discriminate');
+  assert.ok(!svg.includes(`fill="${other}"`),
+    'the meter paints blueDark as well, so the coupling assertion above proves nothing');
+
+  /* ...and the colour is not baked into the raster, which is what makes the coupling live. */
+  const src = readFileSync(new URL('../src/ui/Icons.js', import.meta.url), 'utf8');
+  assert.ok(/PAL\.blue/.test(src), 'Icons.js no longer reads PAL.blue');
+  /* Comments are stripped first: healthMeter's header DISCUSSES the hex, and a naive search would
+     read that prose as a hardcode and fail on a correct file. */
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  assert.ok(!/#2f5fc4/i.test(code), 'Icons.js hardcodes the character blue instead of importing it');
+  const meter = readFileSync(new URL('../src/ui/HealthMeter.js', import.meta.url), 'utf8');
+  assert.ok(!/#2f5fc4/i.test(meter), 'the bake burned the character blue into the module');
+});
 /**
  * §731.3 — the badge's contrast, swept rather than sampled, and why there is no longer a chip.
  *
@@ -865,9 +866,10 @@ test('§731.4: provenance is recorded, with the source path, the repo HEAD and t
  * no capture lock. It is also what justifies deleting the chip: if the bound holds without it,
  * the chip was solving a problem the artwork already solves.
  */
-/* The imported art's own three inks, plus the ink of the `sly-drop` shadow every pip carries.
-   Sampled by the bake tool; imported here rather than retyped so a re-bake moves both. */
-const BADGE_INKS = { ...MASK_BADGE_PALETTE, drop: '#1a1210' };
+/* What the composed meter actually shows: the artwork's own outline and insignia colours, plus
+   the PAL.blue fill painted through the silhouette. `track` is deliberately absent — the shipped
+   composite covers it completely, so it is never on screen. */
+const METER_INKS = { outline: '#1a1a1a', fill: PAL_BLUE_HEX, pale: '#c5c5c5', navy: '#262671' };
 const GREY = (v) => '#' + [v, v, v].map((c) => c.toString(16).padStart(2, '0')).join('');
 
 /** Worst, over every grey ground, of the BEST of the supplied inks. */
@@ -881,69 +883,76 @@ function sweepBestOf(hexes) {
   return { worst: +worst.toFixed(2), atGrey: at };
 }
 
-test('§731.4 CALIBRATION (must fire): the sweep rejects a single ink and accepts a real sandwich', () => {
+test('§731.5 CALIBRATION (must fire): the sweep rejects a single ink and accepts a real sandwich', () => {
   /* One ink can never clear a bar against EVERY background — there is always a ground that
      matches it. If the sweep says otherwise it is not sweeping. */
-  for (const [name, hex] of Object.entries(BADGE_INKS)) {
+  for (const [name, hex] of Object.entries(METER_INKS)) {
     const one = sweepBestOf([hex]);
     assert.ok(one.worst < 1.05,
       `CALIBRATION FAILED — ${name} alone reports ${one.worst}:1 against every background, which is impossible`);
   }
-  /* ...and the ink/near-white pair, which is the widest the palette offers, must clear it. */
-  const pair = sweepBestOf([BADGE_INKS.drop, BADGE_INKS.grey]);
+  /* ...and the outline against the insignia's pale patches, the widest pair the meter has, must
+     clear it. That pair is what actually carries the element. */
+  const pair = sweepBestOf([METER_INKS.outline, METER_INKS.pale]);
   assert.ok(pair.worst >= 3.0,
-    `CALIBRATION FAILED — ink against the badge's pale grey should clear 3:1 everywhere, got ${pair.worst}:1`);
+    `CALIBRATION FAILED — outline against pale should clear 3:1 everywhere, got ${pair.worst}:1`);
 });
-
-test('§731.4: the imported badge clears the non-text bar against EVERY possible background', () => {
-  const all = sweepBestOf(Object.values(BADGE_INKS));
+test('§731.5: the meter clears the non-text bar against EVERY possible background', () => {
+  const all = sweepBestOf(Object.values(METER_INKS));
   assert.ok(all.worst >= 3.0,
-    `the badge falls to ${all.worst}:1 at grey ${all.atGrey} — below the 3:1 non-text bar`);
-  // Pinned, so a palette change that silently weakens the guarantee fails instead of passing.
-  /* Pinned to the truth, which is TIGHT and deliberately recorded as such: the artwork's own
-     three inks alone bottom out at exactly 3.00:1, and the `sly-drop` ink shadow every pip in
-     Icons.js carries is what buys the margin above. That is why the shadow is not decorative
-     here, and why a dark chip was rejected instead of added — see maskPip's header. */
-  assert.deepEqual(all, { worst: 3.28, atGrey: 103 });
-  const bare = sweepBestOf([MASK_BADGE_PALETTE.navy, MASK_BADGE_PALETTE.grey, MASK_BADGE_PALETTE.outline]);
-  assert.deepEqual(bare, { worst: 3, atGrey: 109 },
-    'the artwork-only bound moved — the margin argument above is derived from it');
+    `the meter falls to ${all.worst}:1 at grey ${all.atGrey} — below the 3:1 non-text bar`);
+  assert.deepEqual(all, { worst: 3.18, atGrey: 105 });
 
-  /* THE REASON THE KICKER IS GONE. Gold text plus its ink halo is the best case a label could
-     have had without a chip, and it does not reach the 4.5:1 text bar. Keeping "HEALTH" after
-     deleting the chip would have meant shipping a text run this project's own M2 bar rejects. */
-  const label = sweepBestOf(['#ffe9a8', BADGE_INKS.drop]);
-  assert.ok(label.worst < 4.5,
-    `a gold label on the open scene reports ${label.worst}:1 — if this now passes, the kicker could come back`);
-  assert.deepEqual(label, { worst: 3.95, atGrey: 115 });
-  // ...and it is genuinely absent, in both the stylesheet and the markup.
-  assert.ok(!/sly-hp-kick/.test(read('ui/hud.css.js')), 'the kicker rule survived §731.3');
-  assert.ok(!/sly-hp-kick/.test(read('ui/HUD.js')), 'the kicker markup survived §731.3');
+  /* THE COST OF THE OWNER'S BLUE, pinned so it cannot drift unnoticed. PAL.blue is much darker
+     than the artwork's own #4aa0d0, so the insignia's navy band sits far closer to the fill than
+     it did. The mark still reads, and this records exactly what carries it. */
+  const navyOnFill = contrast(METER_INKS.navy, METER_INKS.fill);
+  const paleOnFill = contrast(METER_INKS.pale, METER_INKS.fill);
+  const inkOnFill = contrast(METER_INKS.outline, METER_INKS.fill);
+  assert.ok(navyOnFill < 3.0,
+    `the navy band now clears ${navyOnFill.toFixed(2)}:1 on the fill — if this passes 3:1 the note in healthMeter's header is stale`);
+  assert.ok(paleOnFill >= 3.0,
+    `the insignia's pale patches fall to ${paleOnFill.toFixed(2)}:1 on the fill — the mark has stopped reading`);
+  assert.equal(+navyOnFill.toFixed(2), 2.22);
+  assert.equal(+paleOnFill.toFixed(2), 3.42);
+  assert.equal(+inkOnFill.toFixed(2), 2.95);
+
+  /* The SCENE-facing bound is set by outline-against-pale, not by the fill, so the owner's colour
+     costs nothing there. Two-sided: swapping in the artwork's own blue must give the same number. */
+  const withAssetBlue = sweepBestOf([METER_INKS.outline, '#4aa0d0', METER_INKS.pale, METER_INKS.navy]);
+  assert.deepEqual(withAssetBlue, all,
+    'the scene bound moved with the fill colour — the claim that the fill does not set it is wrong');
 });
-
-test('§731.4: no chip, and the readout is a bare row of imported badges', () => {
+test('§731.5: one meter at top-left, no chip, no pip row', () => {
   const css = read('ui/hud.css.js');
   const block = /\.sly-hp\s*\{([\s\S]*?)\}/.exec(css);
   assert.ok(block, '.sly-hp rule not found');
   const rule = block[1];
-  /* No ground, no border, no panel shadow: the badge brings all three. */
+
+  /* No chip: the artwork brings its own outline and ground. */
   let checked = 0;
   for (const [what, re] of [
     ['a background', /background:/], ['a border', /border:/], ['a box-shadow', /box-shadow:/],
-  ]) { assert.ok(!re.test(rule), `.sly-hp still has ${what} — the chip was supposed to go`); checked++; }
+  ]) { assert.ok(!re.test(rule), `.sly-hp still has ${what} — the meter needs no chip`); checked++; }
   assert.equal(checked, 3);                                                    // §211.1
-  // The optics bracket stayed deleted too.
-  assert.ok(!/sly-hp-br/.test(css), 'the optics bracket rule came back');
-  assert.ok(!/sly-hp-br/.test(read('ui/HUD.js')), 'the optics bracket markup came back');
 
-  /* TOP-LEFT now, below a stack that grows downward. The offsets are asserted as numbers because
-     "near the top left corner where there is space" is the instruction, and a rule that drifts
-     back to the right edge would satisfy no part of it. */
+  /* The pip row is GONE, not dormant — rules, markup and constants. */
+  for (const dead of ['sly-hp-pip', 'sly-hp-row', 'sly-hp-kick', 'sly-hp-br']) {
+    assert.ok(!css.includes(dead), `${dead} survived §731.5 in the stylesheet`);
+  }
+  const hud = read('ui/HUD.js');
+  for (const dead of ['sly-hp-pip', 'sly-hp-row', 'const HP_PIPS', 'const HP_FULL']) {
+    assert.ok(!hud.includes(dead), `${dead} survived §731.5 in HUD.js`);
+  }
+
+  /* TOP-LEFT, below a stack that grows downward. */
   assert.match(rule, /left:\s*calc\(var\(--u\)\s*\*\s*[\d.]+\)/, '.sly-hp is not anchored to the left edge');
   assert.match(rule, /top:\s*calc\(var\(--u\)\s*\*\s*[\d.]+\)/, '.sly-hp is not anchored to the top');
-  assert.ok(!/right:/.test(rule) && !/bottom:/.test(rule), '.sly-hp still carries its old corner offsets');
+  assert.ok(!/right:/.test(rule) && !/bottom:/.test(rule), '.sly-hp still carries corner offsets');
   const top = parseFloat(/top:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/.exec(rule)[1]);
-  /* The fully-armed .sly-tl stack reaches 125.8 px at u=11, i.e. 11.44u. Anything above that
-     collides only when the player happens to be carrying loot, which is the worst kind of bug. */
-  assert.ok(top >= 11.9, `.sly-hp sits at ${top}u, inside the fully-armed .sly-tl stack (11.44u)`);
+  /* The fully-armed .sly-tl stack reaches 125 px at u=11, i.e. 11.36u. */
+  assert.ok(top >= 11.9, `.sly-hp sits at ${top}u, inside the fully-armed .sly-tl stack (11.36u)`);
+  /* Sized to the owner's "roughly 200 px wide in a 1280-wide frame". */
+  const w = parseFloat(/width:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/.exec(rule)[1]);
+  assert.ok(w >= 15 && w <= 22, `.sly-hp is ${w}u wide (${(w * 11).toFixed(0)} px at 720p) — the reference is ~200 px`);
 });

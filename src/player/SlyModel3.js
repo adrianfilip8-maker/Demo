@@ -94,7 +94,7 @@ export const TUNE = {
 
 /* ============================ PAL — palette ===============================
  * SPEC §1 [read] from the flat atlas. G1/G5-by-construction: parts reference these BY NAME. */
-const PAL = {
+export const PAL = {
   blue: 0x2f5fc4,          // shirt · cap · gloves · boots — ONE blue (G1)
   blueDark: 0x16264f,
   gold: 0xd9a521,          // belt · collar · cuffs · cane — ONE gold (G2)

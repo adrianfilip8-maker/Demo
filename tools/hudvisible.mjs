@@ -237,12 +237,13 @@ function badgeFeatures(png, box) {
     }
   }
   const near = (p, t, tol) => Math.abs(p[0] - t[0]) <= tol && Math.abs(p[1] - t[1]) <= tol && Math.abs(p[2] - t[2]) <= tol;
-  /* The IMPORTED artwork's own three inks, sampled by tools/godot2mask.mjs from the source
-     texels: navy #262671, pale grey #c5c5c5, outline #242424. Not the hand-drawn palette
-     §731.3 used. */
-  const TARGET = { navy: [38, 38, 113], grey: [197, 197, 197], outline: [36, 36, 36] };
+  /* §731.5's composed METER: the artwork's insignia inks plus the PAL.blue fill painted through
+     the silhouette. `fill` is the character's outfit blue (0x2f5fc4) — if it is absent the mask
+     never resolved and the meter is showing as an empty grey track. */
+  const TARGET = { navy: [38, 38, 113], grey: [197, 197, 197], outline: [26, 26, 26],
+                   fill: [47, 95, 196] };
   const counts = {};
-  for (const k of Object.keys(TARGET)) counts[k] = px.filter((p) => near(p, TARGET[k], 46)).length;
+  for (const k of Object.keys(TARGET)) counts[k] = px.filter((p) => near(p, TARGET[k], 40)).length;
 
   /* Connected components of the pale-grey regions, 4-connected. The mark has THREE of them at
      full resolution — two eye patches and the muzzle — and the two eye patches are the pair that
@@ -320,7 +321,7 @@ async function run() {
     report.consoleErrors = errs.slice(0, 12);
     if (errs.length) console.log(`[hudvisible] ${errs.length} console/page error(s); first: ${errs[0]}`);
 
-    const SELS = ['.sly-hp', '.sly-hp-row', '.sly-hp-pip', '.sly-shake',
+    const SELS = ['.sly-hp', '.sly-hp-meter', '.sly-shake',
       '.sly-tl', '.sly-coins', '.sly-pips', '.sly-threat', '.sly-carry'];
     const probes = await page.evaluate(PROBE, SELS);
     report.probes = probes;
@@ -434,18 +435,18 @@ async function run() {
     }
 
     /* ---- 2b. does the RENDERED badge still carry the mark? ------------------------------- */
-    if (probes['.sly-hp-pip'].exists) {
-      const f = badgeFeatures(withPng, probes['.sly-hp-pip']);
+    if (probes['.sly-hp-meter'].exists) {
+      const f = badgeFeatures(withPng, probes['.sly-hp-meter']);
       report.badge = f;
       console.log('\n[hudvisible] the badge as RENDERED, one pip cropped out of the production frame:');
-      console.log(`    ${f.box[0]} x ${f.box[1]} px   navy ${f.counts.navy} px, grey ${f.counts.grey} px, `
-        + `outline ${f.counts.outline} px`);
+      console.log(`    ${f.box[0]} x ${f.box[1]} px   fill ${f.counts.fill} px, navy ${f.counts.navy} px, `
+        + `grey ${f.counts.grey} px, outline ${f.counts.outline} px`);
       console.log(`    separate pale-grey regions: ${f.greyBlobs} (sizes ${JSON.stringify(f.greySizes)}) — two eye patches plus the muzzle`);
-      for (const k of ['navy', 'grey', 'outline']) {
-        if (f.counts[k] < 4) fail(`the rendered badge shows only ${f.counts[k]} px of its ${k} — that ink is not surviving at this size`);
+      for (const k of ['fill', 'navy', 'grey', 'outline']) {
+        if (f.counts[k] < 6) fail(`the rendered meter shows only ${f.counts[k]} px of its ${k} — that ink is not surviving at this size`);
       }
       if (f.greyBlobs < 2) {
-        fail(`the rendered badge resolves ${f.greyBlobs} pale-grey regions — the eye patches are merging, so it does not read as a face`);
+        fail(`the rendered meter resolves ${f.greyBlobs} pale-grey regions — the insignia's eye patches are merging`);
       }
     }
 
@@ -504,13 +505,13 @@ async function run() {
       await page.waitForTimeout(200);
       const png = await shoot(page, path.join(OUTDIR, `prod-${name.replace(/\W+/g, '')}.png`));
       const bg = boxStats(png, hpW);
-      const bf = badgeFeatures(png, wide['.sly-hp-pip']);
+      const bf = badgeFeatures(png, wide['.sly-hp-meter']);
       report.grades.push({ grade: name, tod, bg, greyBlobs: bf.greyBlobs, counts: bf.counts });
       console.log(`    ${name.padEnd(9)} behind+badge luma ${bg.lumaMin}..${bg.lumaMax} (mean ${bg.lumaMean}, stdev ${bg.stdev}), ${bg.colours} colours`);
-      console.log(`              badge still resolves: ${bf.greyBlobs} pale-grey regions, navy ${bf.counts.navy} px, grey ${bf.counts.grey} px, outline ${bf.counts.outline} px`);
-      if (bf.greyBlobs < 2) fail(`at ${name} the badge resolves ${bf.greyBlobs} pale-grey regions — the eye patches are merging`);
-      for (const k of ['navy', 'grey', 'outline']) {
-        if (bf.counts[k] < 4) fail(`at ${name} the badge's ${k} ink has collapsed to ${bf.counts[k]} px`);
+      console.log(`              meter still resolves: ${bf.greyBlobs} pale-grey regions, fill ${bf.counts.fill} px, navy ${bf.counts.navy} px, grey ${bf.counts.grey} px, outline ${bf.counts.outline} px`);
+      if (bf.greyBlobs < 2) fail(`at ${name} the meter resolves ${bf.greyBlobs} pale-grey regions — the eye patches are merging`);
+      for (const k of ['fill', 'navy', 'grey', 'outline']) {
+        if (bf.counts[k] < 6) fail(`at ${name} the meter's ${k} ink has collapsed to ${bf.counts[k]} px`);
       }
     }
 
@@ -518,15 +519,15 @@ async function run() {
     const { page: p3 } = await boot(browser, url, '?hud=nohealth');
     const tok = await p3.evaluate(() => ({
       hp: !!document.querySelector('.sly-hp'),
-      pips: document.querySelectorAll('.sly-hp-pip').length,
+      meter: document.querySelectorAll('.sly-hp-meter').length,
       live: document.querySelector('.sly-pips')?.childNodes.length ?? -1,
       tl: !!document.querySelector('.sly-tl'), coins: !!document.querySelector('.sly-coins'),
       obj: !!document.querySelector('.sly-obj'), prompt: !!document.querySelector('.sly-prompt'),
     }));
     report.token = tok;
-    console.log(`\n[hudvisible] ?hud=nohealth on the production build: ornament ${tok.hp ? 'STILL PRESENT' : 'gone'} (${tok.pips} pips); `
+    console.log(`\n[hudvisible] ?hud=nohealth on the production build: ornament ${tok.hp ? 'STILL PRESENT' : 'gone'} (${tok.meter} meters); `
       + `live row ${tok.live}, tl ${tok.tl}, coins ${tok.coins}, obj ${tok.obj}, prompt ${tok.prompt}`);
-    if (tok.hp || tok.pips) fail('?hud=nohealth did not remove the ornament from the production build');
+    if (tok.hp || tok.meter) fail('?hud=nohealth did not remove the ornament from the production build');
     if (!tok.tl || !tok.coins || !tok.obj || !tok.prompt || tok.live < 1) fail('?hud=nohealth removed more than the ornament');
     await p3.close();
 

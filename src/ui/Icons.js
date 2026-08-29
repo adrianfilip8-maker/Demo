@@ -4,12 +4,12 @@
  * No icon font, and everything here is generated in code per AGENTS.md §1 — a HUD that ships as
  * vectors stays crisp from 1280×720 to 4K without a second asset set.
  *
- * ONE EXCEPTION, on the same terms as `BOTTLE_PALETTE` and the coin badge: §731.4's `maskPip` is
- * the reference project's own Cooper insignia, imported as a baked raster because the owner
- * supplied that artwork and asked for it specifically. Hand-drawing it from a description was
- * tried in §731.3 and produced a mark that was wrong in every particular and resolved zero eye
- * regions at its shipped size. It is inlined as base64, not fetched (§666), so the "no runtime
- * asset URL" property this file is tested for still holds.
+ * ONE EXCEPTION, on the same terms as `BOTTLE_PALETTE` and the coin badge: §731.5's
+ * `healthMeter` is the reference project's own health meter, imported as baked rasters because
+ * the owner supplied that artwork and asked for it specifically. Hand-drawing the insignia from a
+ * description was tried in §731.3 and produced a mark that was wrong in every particular and
+ * resolved zero eye regions at its shipped size. The layers are inlined as base64, not fetched
+ * (§666), so the "no runtime asset URL" property this file is tested for still holds.
  *
  * House rules for every shape in here (AGENTS.md §2.1):
  *   · a thick ink outline on the silhouette — `#1a1210`, never pure black
@@ -20,7 +20,8 @@
 
 import { BOTTLE_PALETTE } from '../world/BottleMesh.js';
 import { COIN_BADGE_PALETTE } from '../world/CoinBadge.js';
-import { MASK_BADGE_URI, MASK_BADGE_W, MASK_BADGE_H } from './MaskBadge.js';
+import { METER_PLATE_URI, METER_FILL_URI, METER_W, METER_H } from './HealthMeter.js';
+import { PAL } from '../player/SlyModel3.js';
 
 /**
  * The only colours anything in the UI is allowed to use (AGENTS.md §2.2).
@@ -138,59 +139,51 @@ export function coin(cls = '') {
  *                     difference, so it survives the ~19 px this renders at on a 1280×720 frame
  *                     without relying on colour.
  *   `kind: 'charm'` — the horseshoe, the series' own lucky charm.
- *   `kind: 'mask'`  — §731.4's health readout: the Cooper mask insignia, IMPORTED from the
- *                     reference project rather than drawn here (see `maskPip` and
- *                     `MaskBadge.js`). NOT part of the live row: `pipKind()` returns only `life`
- *                     and `charm`, so nothing that drives `setHealth` can reach this branch.
  */
 export function pip(filled = true, kind = 'charm', cls = '') {
   if (kind === 'life') return lifePip(filled, cls);
-  if (kind === 'mask') return maskPip(filled, cls);
   return charmPip(filled, cls);
 }
 
 /**
- * §731.4 — the Cooper mask insignia, IMPORTED from the reference project.
+ * §731.5 — the Sly 4 health meter, composed from the reference project's own two layers.
  *
- * §731.3 hand-drew this from a verbal description of the owner's photograph and got it wrong in
- * every particular that matters: narrow slit eyes instead of broad pale patches, an invented blue
- * oval that was never part of the art, no muzzle and no nose. It also failed on its own terms —
- * `tools/hudvisible.mjs` cropped it out of the production frame at 26 px and resolved **zero** eye
- * regions, so it did not read as the mask at the size it shipped at.
+ * The owner, correcting §731.4's row of five badges: *"No, that is wrong. The blue part behind
+ * the insignia is the health bar."* It is ONE meter with ONE insignia on it. Their reference is
+ * the top-left readout of a Sly 4 frame: a wide outlined lozenge filled blue, the mask sitting on
+ * it and breaking its outline.
  *
- * The artwork exists. `MaskBadge.js` is the reference project's own
- * `Assets/Textures/Icons/Life_Icon_V2_…` at HEAD `a312a99` — 1898 x 1195, 78.1 % opaque, licence
- * NONE STATED — baked to 128 x 81 by `tools/godot2mask.mjs` with its alpha dilated first, and
- * inlined as base64 so no runtime URL exists to break under a `/Demo/` prefix (§666). Provenance
- * is in `staging/assets/sly-mask/PROVENANCE.md` and repeated at every site that touches it.
+ * COMPOSED, not flattened, and that is the whole design of this function. `HealthMeter.js` ships
+ * the V1 pair from that project — a PLATE (black outline, grey track, insignia) and a FILL
+ * SILHOUETTE (white where the meter is full, with the insignia's hole in it). The plate is drawn
+ * as an image; the fill is painted as a flat rect seen through the silhouette as an SVG luminance
+ * mask. Nothing about the blue is baked.
  *
- * Drawn at the image's own 128:81 aspect and NOT squared: the mark is markedly wider than tall and
- * the ears are the first thing a squash destroys.
+ * WHY: the owner then said *"Use the same color blue as the blue on the character's outfit"*, and
+ * that blue is `PAL.blue` in `SlyModel3.js`, whose docblock states the rule the model was built to
+ * — one blue BY NAME across cap, shirt, gloves and boots (G1). Burning `#2f5fc4` into the raster,
+ * or retyping it here, is precisely the drift §712 closed between the coin glyph and the coin: the
+ * outfit could be retuned and the meter would quietly stop matching it. So the constant is
+ * imported and read at module load, and a test asserts the coupling rather than the literal.
  *
- * ── On the ground question, which the import re-opened ───────────────────────────────────────
- * The art is TRANSPARENT, so unlike §731.3's invented oval it brings no ground of its own. Swept
- * over all 256 grey backgrounds the best of its three sampled inks bottoms out at **3.00:1** —
- * exactly the non-text bar, with no margin — and the `sly-drop` ink shadow every pip in this file
- * carries lifts that to **3.27:1**. A dark chip behind it was measured and REJECTED: the navy band
- * is itself dark (luma 0.030) and drops to 1.21:1 against an ink ground, which would erase the
- * band the mark is recognised by. The badge therefore ships bare on the house sticker shadow, and
- * `tools/hudvisible.mjs` checks at both grades that the eye patches and the band actually resolve
- * in the production frame rather than trusting the arithmetic.
+ * ── What that colour costs, measured and not hidden ─────────────────────────────────────────
+ * `PAL.blue` is much darker than the artwork's own fill (`#4aa0d0`, luma 0.31 → 0.13), and the
+ * insignia's navy band is darker still (`#262671`, 0.030). Against the fill the band therefore
+ * falls from 4.52:1 to **2.22:1**. The mark still reads, because it is not the band doing the
+ * work: its pale patches sit at 3.42:1 against the fill and the artwork's own black outline runs
+ * between the two at 2.95:1. Against the SCENE the meter is unchanged at 3.18:1 either way — that
+ * bound is set by the outline against the pale patches, not by the fill. If the owner wants the
+ * band separated more, the levers are outline weight or `PAL.blueDark`, not a different blue.
  */
-function maskPip(filled, cls) {
-  const box = `0 0 ${MASK_BADGE_W} ${MASK_BADGE_H}`;
-  if (filled) {
-    return wrap(box, `
-      <image href="${MASK_BADGE_URI}" x="0" y="0"
-             width="${MASK_BADGE_W}" height="${MASK_BADGE_H}"/>
-    `, cls);
-  }
-  /* Spent: the same mark, dimmed, still occupying its slot — a readout whose lost pips vanish
-     stops being a readout. Nothing renders this today (HP_FULL === HP_PIPS); `hud.test.mjs` is
-     what keeps it from rotting. */
-  return wrap(box, `
-    <image href="${MASK_BADGE_URI}" x="0" y="0"
-           width="${MASK_BADGE_W}" height="${MASK_BADGE_H}" opacity=".32"/>
+export function healthMeter(cls = '') {
+  const blue = '#' + PAL.blue.toString(16).padStart(6, '0');
+  /* One meter exists, so one id is safe; duplicate ids would resolve to an identical mask. */
+  return wrap(`0 0 ${METER_W} ${METER_H}`, `
+    <defs><mask id="slyHpFill">
+      <image href="${METER_FILL_URI}" x="0" y="0" width="${METER_W}" height="${METER_H}"/>
+    </mask></defs>
+    <image href="${METER_PLATE_URI}" x="0" y="0" width="${METER_W}" height="${METER_H}"/>
+    <rect x="0" y="0" width="${METER_W}" height="${METER_H}" fill="${blue}" mask="url(#slyHpFill)"/>
   `, cls);
 }
 
