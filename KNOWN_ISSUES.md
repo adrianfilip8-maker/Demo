@@ -61472,3 +61472,172 @@ describes their work and needs no renumbering. Two facts they should have rather
      `cardshot.mjs`'s note, `page.screenshot()` DOES complete on this container.
 
 Everything below this line belongs to §730 and later.
+
+---
+
+### §731.1 — the body, written by the HUD lane §731.0 released this number to
+
+**Shipped:** five inked heart pips under a mirrored optics bracket with a `HEALTH` kicker, in the
+**bottom-right** corner at right 1.9u / bottom 1.55u — measured at 89.9 × 41.1 px on a 1280×720
+frame, 0.40 % of it. `?hud=nohealth` removes it. It is wired to nothing.
+
+**Why pips and not a bar.** `HUD.js`'s design position is that this game draws *props*, never a
+"UI layer", and `hud.css.js` rule 1 forbids the translucent panel with a fill outright. Sly 4's
+readout is a small cluster rather than a continuous meter, so the ornament is assembled from the
+two vocabularies this HUD already owns: `Ico.pip(_, 'heart')` built on `charmPip`'s exact recipe
+— ink drop at .55, ink body, flat colour, one hard `goldL` specular arc — under `Ico.bracket()`
+mirrored the way `.bx-corner.br` mirrors, the whole cluster rotated 1.4° so it reads hand-placed.
+Every colour comes out of `Icons.C`, so the corner introduces no sixth hue; the kicker's `--gold-l`
+is now pinned to its M2 row by an assertion rather than by a coincidence (§712's lesson).
+
+**"Visual only", taken literally and then measured.** It subscribes to no event, `setHealth` does
+not touch it, `update()` never looks at it, and it has **no key in `this.el` at all** — the markup
+is written once in `_build` and never read back, which is the cheapest guarantee a later edit
+cannot wire it up by accident. That is a *negative* claim, so it is pinned two ways rather than
+asserted. `hud.test.mjs`'s §731 block drives a full damage run — `setHealth(5)→(2)→(0)`,
+`playerHealth` and `playerDamage` on the bus, three seconds of frames — and requires the
+ornament's markup to be byte-identical afterwards, **with the same probe shown catching the live
+pip row change inside the same test**, so the equality is not a blind probe reporting nothing.
+Wiring the ornament to `setHealth` by hand makes that arm fail; that is how it was checked.
+
+#### The corner, chosen by census and not by preference
+
+`tools/hudhealth.mjs` arm A, at 1280×720, every persistent element first driven to its widest
+state (long objective, six-figure coin haul, two guard badges, carry chip, longest steal verb):
+
+| element | x, y | w × h | corner |
+|---|---|---|---|
+| `.sly-tl` (chip stack) | 21, 16.4 | 176 × 109.4 | top-left — **grows downward** as chips arm |
+| `.sly-pips` (live health) | 20.7, 13.7 | 109.8 × 24 | top-left |
+| `.sly-coins` | 20.6, 38.4 | 155.4 × 29.6 | top-left |
+| `.sly-threat` | 20.7, 70.2 | 176.4 × 24.7 | top-left |
+| `.sly-carry` | 20.5, 96.3 | 167.4 × 29.4 | top-left |
+| `.sly-obj` (objective card) | 997.3, 14.5 | 263 × 79.5 | top-right |
+| `.sly-toasts` | 493.4, 17.5 | 293.4 × 27 | top-**centre** |
+| `.sly-prompt` | 370, 635.2 | 540 × 39.6 | bottom-**centre**, widest thing on screen |
+| `.sly-goal` | 630.2, 383.8 | 36.3 × 36.3 | world marker, centre |
+| `.sly-pocket` | 765, 473.4 | 33.9 × 33.9 | centre-right, only while a pocket is in reach |
+| `.bx-caller` | 58.1, 578.8 | 265.6 × 75 | **bottom-left**, Binocucom only |
+| **`.sly-hp` (§731)** | **1170.1, 661.9** | **89.9 × 41.1** | **bottom-right** |
+
+Three corners are taken. Both bottom corners are free of *persistent* elements, and between them
+the left one has a neighbour: `.bx-caller`. The gameplay cluster **cross-dissolves** rather than
+cutting (`#sly-hud[data-binoc='1'] .sly-shake { opacity: 0 }` over 0.16 s), so a bottom-left
+ornament would dissolve *through* the caller panel every time Bentley calls. Bottom-right has no
+such neighbour in either state. **Measured intersection of `.sly-hp` with every element above: 0 px²,
+without exception.** Nearest neighbour is `.sly-prompt` at **260.1 px** clearance; then `.bx-caller`
+(0 px² overlap even with the optics up), `.sly-goal` 558.6 px, `.sly-obj` 567.9 px, the top-left
+stack ≥ 1091 px. Viewport margins 20.0 px right, 17.0 px bottom. With the optics raised,
+`data-binoc="1"` and `.sly-shake` settles to opacity **0** — the ornament is inside it and stands
+down with the rest of the cluster, which is the whole reason it was parented there.
+
+*(`.sly-pocket`'s rect is from the run whose arm C left a guard staged; arm A's own `widen()` does
+not place one, and reports it unrendered. `.sly-lock` needs a live body and is unrendered in both.)*
+
+#### Legibility, on BOTH grades, two poses each (§466.5)
+
+The HUD is DOM and `__GAME.capture()` reads the WebGL buffer, so a plate of the ornament is not
+obtainable that way *by design*. What is obtainable — and is the actual question — is **what is
+behind it**: the framebuffer sampled inside the ornament's own measured rect, scored against its
+three inks with `hud.test.mjs` M2's own arithmetic. 4900 px per sample.
+
+| grade | pose | behind | Y mean [min..max] | carn | ink | goldL | worst bg luma → best ink | px under 3:1 |
+|---|---|---|---|---|---|---|---|---|
+| L1 day | courtyard sand | `#a46847` | 0.2020 [0.0073..0.4618] | 1.28:1 | 4.43:1 | 3.47:1 | Y=0.1703 → **3.97:1** | **0 %** |
+| L1 day | vault interior | `#62383a` | 0.0616 [0.0077..0.1241] | 1.76:1 | 1.96:1 | 7.83:1 | Y=0.1219 → **5.08:1** | **0 %** |
+| L1 night | courtyard sand | `#091428` | 0.0075 [0.0028..0.0890] | 3.41:1 | 1.01:1 | 15.19:1 | Y=0.0910 → **6.20:1** | **0 %** |
+| L1 night | vault interior | `#5c241f` | 0.0412 [0.0066..0.1042] | 2.15:1 | 1.60:1 | 9.58:1 | Y=0.1008 → **5.79:1** | **0 %** |
+
+**The finding that matters: the carnelian alone never clears the bar on day sand — 1.28:1.** What
+carries the ornament is the *sandwich*: a 4.4-wide ink outline that holds over bright sand
+(4.43:1) and a `--gold-l` kicker that holds over the night grade (15.19:1), swapping roles as the
+grade flips. Scoring the fill on its own would have passed a pip set that vanishes at noon. The
+verdict is a per-luma max-over-inks across the background's histogram, not the mean and not the
+worst single pixel, because against the darkest pixel of a bright frame the ink outline is
+invisible and it does not matter — the gold is not.
+
+#### No regression to the existing HUD — proved by motion, not by presence
+
+§439/§440: arm A has to freeze CSS transitions to read settled values, and an instrument that
+disables animation cannot certify animation. So arm C runs **first**, unfrozen, and samples across
+14 steps of 12 frames at 1/60 (engine frame 16 → 172, sim clock 0.4 s → 3.0 s):
+
+| element | frames present | distinct states |
+|---|---|---|
+| pickpocket mark | 14/14 | **14** — a new position every sample, tracking a walking guard |
+| toast stack | 14/14 | 3, and `toastN` runs `1,1,…,1,0` — it retires exactly at its 2.6 s life |
+| coin readout | 14/14 | 2 — the tick |
+| live pip row | 14/14 | 2 |
+| threat chip | 14/14 | 2 |
+| **§731 ornament** | 14/14 | **markup: 1** (inert). Box: 2, which is the world shake it inherits |
+
+The same sampler, in the same frames, sees four neighbouring elements move and the ornament's
+markup not move. That is the §418.3 pair, and it settles requirement 4 and "visual only" at once.
+
+#### Zero cost in the 3D scene
+
+`tools/budgetattrib.mjs` at `48858ec` (pre-ornament) and at `7be97ac` (with it): **byte-identical
+after normalising absolute paths in a pre-existing build warning — md5
+`77fd3aad61288c031142fe7dad2b0c39` both sides.** Delta 0 draws, 0 triangles, on every one of the
+18 canonical shots. Structurally so, too: `src/ui/HUD.js` and `src/ui/Icons.js` are not in
+`budgetattrib.mjs`'s import graph at all, because the ornament is DOM and never enters the scene
+graph. `Engine.stats.drawCalls` was **not** consulted — it has returned five distinct frozen
+plausible values this session, each with zero spread, and a delta of zero from it would have
+agreed with the right answer for the wrong reason.
+
+#### The token
+
+`?hud=nohealth`, through a real URL in its own boot: ornament gone (0 pips), and the rest of the
+HUD intact — live pip row still 3 on a pristine boot, objective, prompt, toasts and pocket mark
+all still present. The token is a scalpel, not a HUD switch, and the **live** health row is
+explicitly not what it removes.
+
+Independence from the twelve standing tokens is a claim about a URL, so it was made against one:
+all twelve plus `?hud=nohealth` in a single boot — `props=tinted&props=plain&smash=gen&swing=loose&surf=apex&pile=faded&mag=wide&pole=climb&combo=mono&idle=pose&hook=cream&l1=sneak&hud=nohealth`
+— **11/11 distinct keys survive, game `ready=true`, ornament absent.** `hud` is read only in
+`src/ui/HUD.js` and by nothing else in `src/`, so there is no key to collide with. Calibration for
+that check: booted with only `?hud=nohealth`, `props` reads `undefined`, so the probe can tell
+absent from present.
+
+#### Three instrument traps, all of which produced a confident wrong reading first
+
+Two are inherited from §731.0 and were re-confirmed; the third is this lane's and is new.
+
+1. **CSS transitions do not advance in a stopped headless page**, so `getComputedStyle` returns
+   the *start* of a transition. Inject `transition: none !important` and read the settled value.
+2. **`engine.debug.freeCam` must be `true`** to hold a staged camera. With it false, two different
+   stances measured backgrounds identical to four decimals.
+3. **NEW — the rAF loop is throttled in a headless page, and a stalled engine looks exactly like a
+   stalled HUD.** Arm C's first version let the page's own loop run and sampled across wall time.
+   Every element came back with ONE distinct state over 2.8 s, *including the toast*, which should
+   have retired inside the trace. Read naively that is "the entire HUD stopped animating" — a
+   false regression report against a change that could not have caused it. It was not reported,
+   because the arm's own calibration ("fewer than two elements animated at all; treat every
+   verdict in this arm as unproven") fired and refused the verdict. Frames are now stepped through
+   `Engine.renderFrame(1/60)` — the entry point whose docblock exists for exactly this — and each
+   sample carries the engine's own frame counter and sim clock, so a stalled loop is now visible
+   in the trace instead of being mistaken for its subject.
+
+#### Process note — a cross-lane index sweep, worth knowing about
+
+This lane restored §731's four files with `git checkout 7be97ac -- <paths>`, which **stages** them,
+and then spent time editing before committing. In that window the vault lane committed, and its
+commit (`7e90c55`) swept this lane's four staged UI files into itself alongside its own two. No
+content was lost and the tree is correct, but the restore is attributed to a §730 commit. The
+index is shared between lanes in this working copy: **stage and commit in one step, and never
+leave files staged across a gap.** Not fixed by rewriting history — `7e90c55` is pushed, and this
+project does not force-push.
+
+#### Scope, and what is not claimed
+
+Measured: the geometry, the contrast against four real backgrounds, the inertness, the token, the
+budget. **Not** claimed: that five pips is the right *count*, that `HEALTH` is the right word, or
+that the thing looks like Sly 4 to someone who has played Sly 4. Those are the owner's call, and
+no instrument here can stand in for them. The ornament is also deliberately **full** at all times
+(`HP_FULL === HP_PIPS`): a permanently part-empty bar reads as "you are hurt" forever, which is a
+lie a static ornament should not tell. The spent art exists and is kept alive by a test arm rather
+than by a comment, so if the owner ever does want it wired, the drawing is already there.
+
+**Suite:** `1134/1134, 0 failures` at `3a379f2`, clean detached worktree, cwd verified. The
+`kaykit` P2 failure this lane saw at `48858ec` was §730's and was fixed on that lane's side; it
+never touched `src/ui/*`.
