@@ -61774,3 +61774,144 @@ every scene and both grades.
 **Suite:** `1137/1137, 0 failures` at `9d2b1ff`, clean detached worktree, cwd verified — the three
 new arms are §731.2's chip sweep, its calibration, and the struck-chip structural check. The
 production measurement above was taken at the same commit.
+
+---
+
+### §731.3 / §731.4 — the artwork existed all along: what hand-drawing it cost, and what importing it fixed
+
+**Owner: *"What is in the oval in this image is what the health bar should look like. Use this
+instead, placed somewhere near the top left corner where there is space."*** Then, decisively:
+***"There may be a health bar or insignia to use in the godot repo."*** There was.
+
+#### §731.3 — the hand-drawn interlude, kept in the ledger because of how it failed
+
+Working from a verbal description of the owner's photograph, this lane drew the mark as SVG paths
+and shipped it. Every geometric arm passed: two symmetric ear peaks, a ≥3-unit concave dip between
+them, a single bottom notch on the centre line, two mirrored eye slits riding higher outboard. The
+drawing was still wrong in every particular that matters — the real art has **broad pale eye
+patches, not narrow slits**, a **grey muzzle with a dark diamond nose** that the drawing lacked
+entirely, and **no blue oval** (the oval in the owner's photo was their game's backing, not the
+mark). **Checking a shape you invented against a description you invented is not a check (§439).**
+
+It also failed on its own terms, and that is the part worth keeping: `tools/hudvisible.mjs` cropped
+the badge out of the production frame at its shipped 26 px and resolved **zero** eye regions. The
+geometry was right and the thing did not read. **A silhouette proof at authoring resolution says
+nothing about the size it ships at** — which is exactly why that rendered-pixel arm was built, and
+it is the one arm that caught this.
+
+#### §731.4 — the import
+
+Source: the reference project, HEAD `a312a99`,
+`Assets/Textures/Icons/Life_Icon_V2_-_Sly_Cooper_A_Thief_In_Paris.png` — 1898 × 1195, 8-bit RGBA,
+110,266 bytes, 78.1 % opaque. **Licence: NONE STATED** in that repository, recorded rather than
+assumed. Nothing under that project's audio directories is read, referenced or named anywhere here
+(§364.3); a test asserts that property of every file touching this asset rather than trusting it.
+
+`tools/godot2mask.mjs` bakes it to **128 × 81, a 10,328-byte PNG**, inlined as base64 into
+`src/ui/MaskBadge.js` (15.4 KB module) with the palette **sampled from the source texels**, not
+retyped — navy `#262671` (34.1 % of opaque), pale grey `#c5c5c5` (20.8 %), outline `#242424`
+(14.1 %). Two decisions carried over from §712's coin-badge path and one deliberately not:
+
+- **base64, never a URL.** A runtime asset URL is a production-only fault class (§666), and a fetch
+  that never settles in Node hangs `node --test` rather than failing it. Inlined, the glyph is the
+  same object in the browser, in the production artifact and in the suite.
+- **alpha dilated before resampling.** The source is 21.9 % transparent; a box filter over straight
+  RGB pulls that padding into every edge texel, which would put a dark halo on the ears and the
+  muzzle — the silhouette the mark is recognised by. 66,083 texels were given real colour first.
+- **aspect preserved, NOT squared.** The coin bake squares its source because a coin face is a
+  disc. The mark is 1.588:1 and the ears are the first thing a squash destroys.
+
+Provenance in `staging/assets/sly-mask/PROVENANCE.md`, asserted by a test on five facts.
+
+#### The ground question, re-opened by the import and settled by measurement
+
+§731.3's invented oval was opaque, so it brought its own ground. **The real art is transparent and
+brings none**, so the question was live again. Swept over all 256 grey backgrounds:
+
+| what | worst best-of-inks | at grey |
+|---|---|---|
+| the artwork's own three inks, bare | **3.00:1** — the non-text bar with *no margin* | 109 |
+| + the `sly-drop` ink shadow every pip already carries | **3.28:1** | 103 |
+| a gold `HEALTH` label on the open scene (why there is none) | 3.95:1, under the 4.5 text bar | 115 |
+
+**A dark chip was measured and rejected, not merely declined.** The navy band is itself dark
+(luma 0.030) and falls to **1.21:1** against an ink ground — a backing would erase the band the
+mark is recognised by. So the badge ships bare on the house sticker shadow. Both numbers are
+pinned, and the bare-artwork bound is pinned separately, because the margin argument is derived
+from the difference between them.
+
+#### Placement: top-left, below a stack that grows downward
+
+`.sly-tl` holds the live pip row, the coin counter and the exposure/stealth/carry chips, and it
+**grows downward as those arm** — fully armed it reaches 125.0 px at 720p. `.sly-hp` sits at
+`left 1.9u, top 12.9u`. Measured on the production artifact with every neighbour driven to its
+widest:
+
+| element | x, y | w × h | bottom | overlap with `.sly-hp` |
+|---|---|---|---|---|
+| `.sly-tl` | 21.8, 15.6 | 176 × 109.5 | 125.0 | **0 px²**, clearance **16.0 px** |
+| `.sly-pips` | 21.6, 13.0 | 109.7 × 23.9 | 36.9 | 0 px², 104.1 px |
+| `.sly-coins` | 21.5, 38.9 | 113.6 × 28.2 | 67.1 | 0 px², 73.9 px |
+| `.sly-threat` | 21.6, 69.5 | 176.4 × 24.7 | 94.1 | 0 px², 46.9 px |
+| `.sly-carry` | 21.4, 95.6 | 167.4 × 29.3 | 124.9 | 0 px², 16.1 px |
+| **`.sly-hp`** | **21.8, 141.0** | **186.5 × 22.4** | 163.3 | — |
+
+**Nearest neighbour 16.0 px, zero intersection with all five.** The clearance is to the stack at
+its *fully armed* height, so it cannot collide only when the player happens to be carrying loot.
+
+**Worth flagging to the owner:** the live health pip row (`.sly-pips`) is already at top-left, 104 px
+above this. Two health-looking rows now share that corner. That is what "near the top left corner"
+asked for and it is not a defect, but if it reads as duplication the ornament can move.
+
+#### Does it read? — the rendered-pixel arm, at both grades
+
+One pip cropped from the production frame at its shipped **35.2 × 22.3 px**:
+
+| grade | navy | pale grey | outline | separate pale-grey regions |
+|---|---|---|---|---|
+| L1 day | 256 px | 249 px | 252 px | **5** (largest 55, 46, 43) |
+| L1 night | 237 px | 275 px | 255 px | **6** |
+
+All three inks present in quantity at both grades, and the pale-grey regions resolve as separate
+blobs — the two eye patches plus the muzzle. **§731.3's hand-drawn badge scored 0 regions on this
+same arm.** Whole-ornament pixels: **74.96 %** of its rect changes when the node is hidden in the
+same frame, mean Δ 41.5, max Δ 125.3, against a control corner that changed **0 %** while carrying
+real content (stdev 30.26, 306 colours) — so the diff isolates the ornament.
+
+Size: 186.5 × 22.5 px = 0.46 % of a 720p frame, against `.sly-tl`'s 0.72 %.
+
+#### The meter: evaluated, not shipped
+
+The same directory holds `Health_Meter_V1`/`V2` (1920 × 1195) and their `PROGRESS_BAR_HP` / `POW`
+layers. `Health_Meter_V2` is **the mask on a grey oval ring**, and `PROGRESS_BAR_HP` is a cyan arc
+with the mask knocked out — together a radial **fill meter**. That composition is what settles the
+reading: the owner said *"what is **in** the oval"*, and what is in the oval is exactly
+`Life_Icon_V2`. It is also a *functional* readout, and the owner asked for visual only. Recorded
+here so the redirect is cheap if they meant the meter.
+
+**Interpretation stated so it can be corrected cheaply (§705):** the badge replaces the pip GLYPH
+and the row of five stays, because the owner named what the bar should *look like* rather than how
+many there are. **A single-badge readout is one constant away — `HP_PIPS = 1`.**
+
+#### Still visual only
+
+No event, no `setHealth`, no handle in `this.el`. The inertness arm drives a full damage run and
+requires byte-identical markup, with the same probe shown catching the live pip row change; wiring
+the ornament to `setHealth` by hand makes it fail, re-checked after this redesign.
+
+#### A process failure of my own, recorded because it nearly shipped
+
+Replacing the §731.3 geometry arms by locating a text block between two anchors **silently deleted
+the two arms that sat between them** — the inertness arm and the `?hud=nohealth` arm. The suite
+went green at 31/31 and the mutation check then passed *because the arm that was supposed to fail
+no longer existed*. This is §704.9b's failure mode exactly. It was caught only because the mutation
+check was re-run and its silence was treated as suspicious rather than as success. **A mutation
+test that stops failing is evidence the arm is gone, not evidence the code is right.** Both arms
+were recovered verbatim from the previous commit.
+
+**Suite:** `1139/1139, 0 failures` at `4211362`, clean detached worktree, cwd verified. The
+production measurements above were taken at the same commit; `?hud=nohealth` verified on that
+artifact, and the twelve standing tokens were verified together in one URL at `45ffd91`.
+
+**Boundary unchanged:** this verifies the artifact, not the live host, which the container proxy
+blocks (§695).
