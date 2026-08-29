@@ -62605,3 +62605,27 @@ vite or chromium process belongs to this lane.
 - **No suite arm was written.** `tools/verbdonor.mjs` carries its calibration in-tool and exits
   non-zero on failure, but nothing in `tests/` runs it, so it is not protected against drift.
 
+
+### §732.9 `git add KNOWN_ISSUES.md` swept another lane's in-flight append into my commit
+
+Caught by reading my own tool output, which is the half of §704.9b that generalises. My append
+was **173 lines**; `git diff --cached --stat` said **383 insertions**. I committed anyway and then
+went looking, which is the wrong order and is recorded as such.
+
+Nothing was lost or duplicated — 1,867 headings in the file, **0 duplicated**, §733's body present
+exactly once. What happened is that the §733 lane had written its body into the working tree and
+not yet committed, and **`git add <path>` stages the WORKING TREE copy of that path**, so my
+commit `7f119e9` carries 210 lines of their prose under my message. Their own commit `b5db5d1`
+then contained only their tool.
+
+This is §418.10's family with a third member. That entry names three commands that disagree about
+*which copy* they mean — `--only` reads the working tree, `git checkout --` reads the index,
+`update-index` writes the index without touching the working tree. **`git add <path>` is a fourth,
+and on a file four lanes append to, "the working tree copy" is not the same object as "my edit".**
+The cheap defence is the one that was already sitting in the procedure for a different reason:
+compare `--cached --stat`'s insertion count against the size of what you appended, **before**
+committing, not after. §704.9b's lesson was that the tell was in its own output; so was this one.
+
+The damage here is misattribution in `git log`, not loss, and it is left as it is rather than
+rewritten — history surgery on a branch three other lanes are pushing to would cost more than the
+wrong author line on 210 lines of prose that reads correctly and is signed in its own text.
