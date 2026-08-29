@@ -88,8 +88,10 @@ const CIRC = 2 * Math.PI * 36;   // matches Icons.alertArc()'s r=36
  * `HP_PIPS` / `HP_FULL` are the ornament's shape, and `HP_FULL === HP_PIPS` on purpose: a
  * permanently part-empty bar reads as "you are hurt" forever, which is a lie a static ornament
  * should not tell. The empty art still exists (`Ico.pip(false, 'heart')`) and is exercised by
- * `tests/hudhealth.test.mjs` so the pip's two states are both real drawings rather than one
- * drawing and a guess.
+ * `tests/hud.test.mjs`'s §731 block, so the pip's two states are both real drawings rather than
+ * one drawing and a guess. (An earlier draft of this paragraph named a `tests/hudhealth.test.mjs`
+ * that was never written — the claim is now pinned to a file that exists and to arms that fail
+ * when the empty art rots.)
  *
  * `?hud=nohealth` removes it. Read at module load, same seam as every other lane's token.
  */

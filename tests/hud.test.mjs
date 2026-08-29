@@ -237,6 +237,12 @@ test('M2: the colours asserted above are the colours the stylesheet actually shi
   // The objective kicker sits on the DARK lapis; on plain --lapis it measures 3.44:1 and fails.
   assert.match(css, /\.sly-obj-kick\s*\{[^}]*background:\s*var\(--lapis-d\)/,
     'the objective kicker must sit on --lapis-d — --lapis fails the contrast bar');
+  /* §731: the health kicker's row above asserts the literal #ffe9a8. That literal is only
+     honest while the selector actually draws in --gold-l, so the coupling is pinned here rather
+     than trusted — the same drift §712 closed between a glyph and its world object. Recolour
+     `.sly-hp-kick` to any other token and this fails instead of M2 certifying a stale hex. */
+  assert.match(css, /\.sly-hp-kick\s*\{[^}]*color:\s*var\(--gold-l\)/,
+    'the §731 health kicker must draw in --gold-l — M2 asserts that hex for it');
 });
 
 /* ====================================================================== M3 */
@@ -618,4 +624,161 @@ test('§516: prompts follow the device, and every pad glyph they can name is a c
   assert.ok(!hud.el.promptKey.innerHTML.includes('<image'),
     'returning to the keyboard must restore keycaps, and did not');
   hud.dispose();
+});
+
+/* ============================================================= §731 ornament */
+/* The Sly 4 health readout in the bottom-right corner. The owner asked for it "visual only",  */
+/* so the load-bearing claim in this block is a NEGATIVE one — that nothing can change it —    */
+/* and a negative claim is worth nothing unless the probe is shown catching a positive.        */
+
+/** Normalised drawing text, so whitespace in the template literals is not a difference. */
+const draw = (svg) => String(svg).replace(/\s+/g, ' ').trim();
+
+/**
+ * Registered probe: two pip drawings differ iff their normalised SVG text differs. Trivial on
+ * purpose — the point of the calibration below is that it is two-sided, not that it is clever.
+ */
+const sameDrawing = (a, b) => draw(a) === draw(b);
+
+test('§731 CALIBRATION (must fire): the drawing probe reports a known-same pair and a known-different one', async () => {
+  const Ico = await import('../src/ui/Icons.js');
+  // Same input, twice: the probe must NOT invent a difference.
+  assert.ok(sameDrawing(Ico.pip(true, 'heart'), Ico.pip(true, 'heart')),
+    'CALIBRATION FAILED — the probe reports a difference between one drawing and itself');
+  // A pair that really differs: the probe must not sleep through it.
+  assert.ok(!sameDrawing(Ico.pip(true, 'heart'), Ico.pip(true, 'charm')),
+    'CALIBRATION FAILED — the probe cannot tell the heart from the horseshoe, so every');
+});
+
+test('§731: the ornament ships BOTH pip states as real, distinct drawings', async () => {
+  const Ico = await import('../src/ui/Icons.js');
+  const full = Ico.pip(true, 'heart');
+  const empty = Ico.pip(false, 'heart');
+
+  let inspected = 0;
+  for (const [name, svg] of [['filled', full], ['empty', empty]]) {
+    assert.match(svg, /^<svg[\s\S]*<\/svg>$/, `the ${name} heart pip is not an svg`);
+    // A drawing, not a stub: the heart path itself has to be in there.
+    assert.match(svg, /<path[^>]*\bd="M23 39\.2C/, `the ${name} heart pip lost its silhouette`);
+    inspected++;
+  }
+  assert.equal(inspected, 2);                                                  // §211.1
+
+  /* The whole reason the empty art exists: HP_FULL === HP_PIPS today, so nothing in the shipped
+     markup renders it, and dead art rots silently. This arm is what keeps it alive. */
+  assert.ok(!sameDrawing(full, empty),
+    'the empty heart pip is byte-identical to the filled one — the spent state is not drawn');
+  // Spent still COUNTS: it keeps the ink outline rather than vanishing.
+  assert.match(empty, /stroke-width="4\.4"/, 'the spent pip lost the outline that makes it count');
+  // ...and it is not simply the filled pip with the fill removed — carnelian survives as a trace.
+  assert.match(empty, /stroke="#b8452c"/, 'the spent pip dropped the carnelian trace');
+  // The filled pip is the one carrying the solid colour and the specular notch.
+  assert.match(full, /fill="#b8452c"/, 'the filled pip is no longer carnelian');
+  assert.match(full, /stroke="#ffe9a8"/, 'the filled pip lost its gold specular');
+
+  /* The docblock claims the heart is a different silhouette from BOTH live-row pips. Pinned,
+     because "a second widget with its own art" is exactly what it must not become. */
+  assert.ok(!sameDrawing(full, Ico.pip(true, 'life')), 'the heart pip collides with the life pip');
+  assert.ok(!sameDrawing(full, Ico.pip(true, 'charm')), 'the heart pip collides with the charm pip');
+});
+
+test('§731: nothing that drives the live pip row can reach the heart branch', () => {
+  const hud = read('ui/HUD.js');
+  const m = /function pipKind\(i\)\s*\{\s*return ([^;]+);\s*\}/.exec(hud);
+  assert.ok(m, 'pipKind() no longer has the shape this arm reads');
+  const kinds = new Set();
+  const pipKind = new Function('i', `return ${m[1]};`);
+  // The live row is at most the charm count plus the calling card; walk well past it.
+  for (let i = 0; i < 32; i++) kinds.add(pipKind(i));
+  assert.deepEqual([...kinds].sort(), ['charm', 'life'],
+    'pipKind() can now return a third kind — the live row may be able to draw the ornament art');
+  assert.equal(kinds.size, 2);                                                 // §211.1
+  // Two-sided: the same walk over a mapping that DOES reach it is caught.
+  const bad = new Function('i', "return i === 0 ? 'life' : i === 1 ? 'heart' : 'charm';");
+  const badKinds = new Set();
+  for (let i = 0; i < 32; i++) badKinds.add(bad(i));
+  assert.ok(badKinds.has('heart'),
+    'CALIBRATION FAILED — the walk cannot see a heart even when the mapping returns one');
+});
+
+test('§731: the ornament is inert — a full health run does not move one pixel of it', async () => {
+  const { hud, engine } = await bootHud();
+  const snap = () => hud.root.querySelector('.sly-hp').innerHTML;
+
+  const before = snap();
+  assert.ok(before.length > 200, 'the ornament rendered empty — this arm would pass on nothing');
+  assert.equal((before.match(/sly-hp-pip/g) ?? []).length, 5);                 // §211.1
+
+  /* Everything the game can do to health, through the public API and the bus, plus frames. If
+     any of it is wired to the ornament, the markup changes. */
+  hud.setHealth(5, 5);
+  hud.setHealth(2, 5);
+  hud.setHealth(0, 5);
+  hud.setCharmProgress(0.4);
+  engine.emit('playerHealth', { hp: 1, max: 5 });
+  engine.emit('playerDamage', { amount: 3 });
+  engine.emit('playerState', 'hurt');
+  run(hud, engine, 3.0);
+  const after = snap();
+  assert.equal(after, before,
+    'the health ornament changed under a damage run — §731 is "visual only" and this is wiring');
+
+  /* Two-sided (§418.3): the SAME snapshot probe, pointed at the element that is supposed to
+     react, must see it react — otherwise the equality above proves only that the probe is
+     blind. The live row is what setHealth actually drives. */
+  const liveAfter = hud.el.pips.innerHTML;
+  hud.setHealth(5, 5);
+  run(hud, engine, 0.2);
+  assert.notEqual(hud.el.pips.innerHTML, liveAfter,
+    'CALIBRATION FAILED — the probe cannot see the LIVE pip row change, so its verdict on the ornament is worthless');
+
+  // ...and the ornament still has not moved, after the live row demonstrably did.
+  assert.equal(snap(), before, 'the ornament moved once the live row was driven');
+  hud.dispose();
+});
+
+test('§731: ?hud=nohealth removes the ornament and nothing else', async () => {
+  /* Driven through the module seam the URL feeds (§435.4): HUD_NOHEALTH is read once at module
+     load, so each arm needs its own instance of the module, not a flag poked afterwards. */
+  const boot = async (token, tag) => {
+    installDom();
+    if (token == null) delete globalThis.__HUD_AB; else globalThis.__HUD_AB = token;
+    const { HUD } = await import(`../src/ui/HUD.js?${tag}`);
+    const camera = new THREE.PerspectiveCamera(55, 1280 / 720, 0.1, 500);
+    camera.updateMatrixWorld(true);
+    const engine = fakeEngine(camera);
+    const hud = new HUD(engine);
+    await hud.init();
+    return hud;
+  };
+
+  const on = await boot(null, 's731on');
+  const off = await boot('nohealth', 's731off');
+  try {
+    assert.ok(on.root.querySelector('.sly-hp'), 'the default boot lost the ornament');
+    assert.equal(on.root.querySelectorAll('.sly-hp-pip').length, 5);        // §211.1
+    assert.equal(off.root.querySelector('.sly-hp'), null,
+      '?hud=nohealth left the ornament in the DOM');
+    assert.equal(off.root.querySelectorAll('.sly-hp-pip').length, 0);
+
+    /* The token must be a scalpel. Every other persistent element is still there, and the LIVE
+       pip row in particular keeps its own count — the ornament and the readout are not the
+       same thing and a token that took both would be a regression, not a revert. */
+    let kept = 0;
+    for (const sel of ['.sly-tl', '.sly-pips', '.sly-coins', '.sly-obj', '.sly-toasts',
+      '.sly-prompt', '.sly-pocket', '.sly-marks']) {
+      assert.ok(off.root.querySelector(sel), `?hud=nohealth also removed ${sel}`);
+      kept++;
+    }
+    assert.equal(kept, 8);                                                     // §211.1
+    /* `_hudshim` supports `.class` and nothing else by design, so the live row is counted off
+       its own handle rather than through a descendant selector. */
+    assert.equal(off.el.pips.childNodes.length, on.el.pips.childNodes.length,
+      'the token changed the LIVE pip row');
+    assert.ok(on.el.pips.childNodes.length > 0, 'the live pip row rendered empty in both arms');
+  } finally {
+    on.dispose();
+    off.dispose();
+    delete globalThis.__HUD_AB;
+  }
 });
