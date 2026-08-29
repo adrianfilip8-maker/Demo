@@ -87,7 +87,7 @@ const CIRC = 2 * Math.PI * 36;   // matches Icons.alertArc()'s r=36
  *
  * `HP_PIPS` / `HP_FULL` are the ornament's shape, and `HP_FULL === HP_PIPS` on purpose: a
  * permanently part-empty bar reads as "you are hurt" forever, which is a lie a static ornament
- * should not tell. The empty art still exists (`Ico.pip(false, 'heart')`) and is exercised by
+ * should not tell. The empty art still exists (`Ico.pip(false, 'mask')`) and is exercised by
  * `tests/hud.test.mjs`'s §731 block, so the pip's two states are both real drawings rather than
  * one drawing and a guess. (An earlier draft of this paragraph named a `tests/hudhealth.test.mjs`
  * that was never written — the claim is now pinned to a file that exists and to arms that fail
@@ -588,19 +588,33 @@ export class HUD {
    *
    * ── Why it is not a rectangle with a fill ───────────────────────────────────────────────
    * This file's design position: *"the Sly games never draw a 'UI layer'. They draw props."*
-   * So the readout is five inked heart pips — `Ico.pip(_, 'heart')`, this file's own vocabulary —
-   * struck on the same inked chip `.sly-threat` and `.sly-carry` are struck on, hand-rotated a
-   * degree and a half. A translucent GREY bar with a red fill is what the stylesheet's rule 1
-   * forbids; a near-black inked prop with a hard offset shadow is what the rest of this HUD is
-   * made of.
+   * So the readout is five Cooper mask badges — `Ico.pip(_, 'mask')`, drawn in this file's own
+   * vocabulary out of `Icons.C` with no new hue. A translucent GREY bar with a red fill is what
+   * the stylesheet's rule 1 forbids; a struck badge with an ink outline and a hard drop shadow
+   * is what the rest of this HUD is made of.
    *
    * ── §731.2: it did not READ, and that is a different failure from being hidden ──────────
-   * The first version was the same pips with no chip behind them, plus a mirrored `Ico.bracket()`.
-   * On the production artifact it measured present, `opacity: 1`, in the viewport, and painting
-   * 84.7 % of its own rect — and the owner still reported it missing. 16.5 px hearts and an
-   * 8.6 px label, 0.40 % of the frame, in the corner a player checks last. The bracket went with
-   * the backing: on an unbacked cluster it tied the ornament to the Binocucom's corner set, on a
-   * struck chip it is noise. Bigger pips, a bigger kicker and a real ground replaced it.
+   * The first version was carnelian heart pips with no chip behind them, plus a mirrored
+   * `Ico.bracket()`. On the production artifact it measured present, `opacity: 1`, in the
+   * viewport, and painting 84.7 % of its own rect — and the owner still reported it missing.
+   * 16.5 px hearts and an 8.6 px label, 0.40 % of the frame, in the corner a player checks last.
+   * A struck ink chip, bigger pips and a bigger kicker replaced it.
+   *
+   * ── §731.3: the owner supplied the artwork, and it dissolved most of the above ──────────
+   * *"What is in the oval in this image is what the health bar should look like. Use this
+   * instead, placed somewhere near the top left corner where there is space."* The image is the
+   * Cooper mask insignia on its blue oval, so `Ico.pip(_, 'mask')` is now the element and the row
+   * of five stays — the owner named what the bar should LOOK like, not how many of them there
+   * are. A single-badge readout is one constant away (`HP_PIPS = 1`) if that reading was wrong.
+   *
+   * The chip and the kicker are both GONE, and that is the badge's doing rather than a change of
+   * mind. The chip existed because a carnelian pip on the open scene measured 1.28:1; the badge
+   * brings its own opaque ground and holds **3.90:1 against every one of the 256 possible grey
+   * backgrounds**, so the backing was solving a problem the artwork already solves — and two
+   * grounds, an ink chip under a blue oval, is one more than the picture has. The `HEALTH` kicker
+   * went with it for a measured reason: gold text plus its ink halo bottoms out at 3.95:1 on the
+   * open scene, under the 4.5:1 text bar, so without a chip the label could not be kept honestly.
+   * The badge is the franchise's own mark and Sly 4's readout carries no label either.
    *
    * It lives INSIDE `.sly-shake` deliberately: it inherits the world shake, the Binocucom stand
    * down and the `data-hidden` screenshot kill, so it behaves like the rest of the HUD without a
@@ -612,11 +626,10 @@ export class HUD {
     if (HUD_NOHEALTH) return '';
     let pips = '';
     for (let i = 0; i < HP_PIPS; i++) {
-      pips += `<span class="sly-hp-pip sly-drop">${Ico.pip(i < HP_FULL, 'heart')}</span>`;
+      pips += `<span class="sly-hp-pip sly-drop">${Ico.pip(i < HP_FULL, 'mask')}</span>`;
     }
     return `
       <div class="sly-hp" aria-hidden="true">
-        <span class="sly-hp-kick sly-ink sly-ink-s">HEALTH</span>
         <span class="sly-hp-row">${pips}</span>
       </div>`;
   }

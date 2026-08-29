@@ -503,87 +503,54 @@ export const HUD_CSS = /* css */ `
 .sly-prompt-ic svg { width: 100%; height: 100%; }
 .sly-prompt[data-kind='steal'] .sly-prompt-ic { display: block; }
 
-/* ==================================================== SLY 4 HEALTH BAR (§731) */
+/* ============================================ COOPER MASK HEALTH READOUT (§731) */
 
-/* The owner asked for the Sly 4 health readout in a corner, visual only. It is inert markup —
-   no rule below is ever toggled by script, there is no .on state and no transition, because
-   nothing changes.
+/* The owner asked for the Sly 4 health readout in a corner, visual only, and then supplied the
+   artwork: "what is in the oval in this image is what the health bar should look like. Use this
+   instead, placed somewhere near the top left corner where there is space." So the readout is a
+   row of five Cooper mask badges. It is inert markup — no rule below is ever toggled by script,
+   there is no .on state and no transition, because nothing changes.
 
-   ── §731.2: THIS IS THE SECOND ATTEMPT, and the first one is why the panel exists ──────────
-   The first version was an unbacked cluster: five 1.46u pips and a .68u kicker floating on the
-   scene, 90 x 41 px = 0.40% of a 720p frame. Measured on the PRODUCTION build it was present,
-   opacity 1, in the viewport, and painting 84.7% of its own rect — and the owner still reported
-   "the health bar still does not appear". It was not hidden. It was a whisper: 16.5 px hearts
-   and an 8.6 px label in the corner a player looks at last, with a carnelian fill that measures
-   1.28:1 against day sand and was being carried entirely by an ink outline.
+   ── §731.3: WHAT IS NOT HERE ANY MORE, AND WHY ────────────────────────────────────────────
+   §731.2 struck this on an ink chip and gave it a gold HEALTH kicker. Both are gone, and neither
+   because of taste. The chip existed because a carnelian pip on the open scene measured 1.28:1
+   over day sand and needed a ground; the badge IS a ground — an opaque oval whose worst case over
+   all 256 possible grey backgrounds is 3.90:1, computed rather than sampled. Keeping the chip
+   would have put a second ground under a picture that already has one. The kicker went for a
+   measured reason of its own: gold text plus its ink halo bottoms out at 3.95:1 on the open
+   scene, under the 4.5:1 text bar, so once the chip went the label could not be kept honestly.
+   Sly 4's own readout carries no label either, and the badge is the franchise's mark.
 
-   So it is now a STRUCK CHIP, which is this sheet's own answer to "make a readout read": the
-   exact panel treatment .sly-threat, .sly-carry and .sly-prompt already use — near-black ink
-   ground, a hard ink border, an inset accent rule in the element's own colour, a hard offset
-   shadow underneath, and a degree of rotation so it reads hand-placed. That is emphatically not
-   rule 1's forbidden object; rule 1 forbids the translucent GREY rounded rectangle, and this is
-   the same inked prop the three chips above are struck from.
-
-   The panel also fixes the contrast problem at the root. On the scene the pips' ground was
-   whatever the camera happened to be looking at, which is why it needed a four-pose survey per
-   grade; on the chip their ground is a known ink, so carnelian sits at a fixed 3.45:1 and the
-   gold kicker far above it, at noon and at midnight alike.
-
-   BOTTOM-RIGHT. .sly-tl owns top-left, .sly-obj top-right, .sly-toasts top-centre and
-   .sly-prompt bottom-centre; the Binocucom's .bx-caller is the only thing anywhere near a
-   bottom corner and it is the LEFT one. Offsets match the two top clusters (1.9u from the side)
-   so the four corners sit on one margin.
+   ── TOP-LEFT, BELOW A STACK THAT GROWS DOWNWARD ───────────────────────────────────────────
+   "Where there is space" is the real constraint: .sly-tl holds the live pip row, the coin
+   counter, the exposure chip, the stealth chip and the carry chip, and it GROWS DOWNWARD as
+   those arm — fully armed it reaches 125.8 px at 720p. This sits below that, on the same left
+   margin, so it cannot collide with a stack whose height depends on play. tools/hudvisible.mjs
+   measures the fully-armed stack and asserts zero intersection.
    (No backticks anywhere in this file: the whole stylesheet is one template literal.) */
 .sly-hp {
   position: absolute;
-  right: calc(var(--u) * 1.9);
-  bottom: calc(var(--u) * 1.55);
+  left: calc(var(--u) * 1.9);
+  top: calc(var(--u) * 12.9);
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: calc(var(--u) * .26);
-  padding: calc(var(--u) * .34) calc(var(--u) * .5) calc(var(--u) * .4);
-  /* .94, where the chips above use .82 and the prompt .9. The extra opacity is not a style
-     choice, it is what makes the contrast bound UNCONDITIONAL: composite this ground over the
-     brightest background that can physically exist and carnelian still clears 3.14:1 and the
-     gold kicker 13.98:1. At .82 the worst case is 2.11:1. hud.test.mjs sweeps every background
-     from black to white and pins both numbers, which is a stronger claim than any number of
-     camera poses could support. */
-  background: rgba(20, 14, 12, .94);
-  border: calc(var(--u) * .13) solid var(--ink);
-  border-radius: calc(var(--u) * .42);
-  box-shadow: inset 0 0 0 calc(var(--u) * .06) rgba(184, 69, 44, .75),
-              0 calc(var(--u) * .22) 0 rgba(26,18,16,.6),
-              0 calc(var(--u) * .45) calc(var(--u) * 1.1) rgba(26,18,16,.5);
-  transform: rotate(-1.4deg);
-  transform-origin: right bottom;
-}
-/* The kicker names the thing. Held above M6's .68u floor with room to spare now that it sits on
-   its own ground rather than on the scene — at .68u it rendered 8.6 px tall at 720p, which is a
-   floor for "legible when hunted for", not for "noticed". */
-.sly-hp-kick {
-  /* M6's floor is .68u and hud.test.mjs lists this selector, so the floor governs it rather than
-     trusting this comment. This is deliberately above the floor, not at it. */
-  font-size: calc(var(--u) * .82);
-  letter-spacing: .22em;
-  color: var(--gold-l);
-  line-height: 1;
-  padding-right: calc(var(--u) * .06);
 }
 .sly-hp-row { display: flex; align-items: flex-end; gap: calc(var(--u) * .24); }
 .sly-hp-pip {
-  /* 2.05u — between the old 1.46u and .sly-coin-icon's 2.25u, so the row reads at a glance and
-     still sits inside the scale the rest of the HUD's drawn tokens use. */
-  width: calc(var(--u) * 2.05);
-  height: calc(var(--u) * 2.05);
+  /* 2.4u. The badge has to survive being read as a SILHOUETTE — two ear peaks, a dip, two eye
+     slits — and that is a resolution question, not a taste one: at §731.2's 2.05u the slits are
+     under 2 px tall. .sly-coin-icon is 2.25u, so this stays inside the scale of the HUD's other
+     drawn tokens. */
+  width: calc(var(--u) * 2.4);
+  height: calc(var(--u) * 2.4);
   display: block;
 }
 .sly-hp-pip svg { width: 100%; height: 100%; }
 /* Hand-placed, the same jitter the live pip row carries — a perfectly ruled row of five is the
-   engine overlay this HUD refuses to be. Nothing animates; these are static transforms. */
-.sly-hp-row > span:nth-child(2n) { transform: translateY(calc(var(--u) * .09)) rotate(4deg); }
-.sly-hp-row > span:nth-child(3n) { transform: translateY(calc(var(--u) * -.08)) rotate(-5deg); }
-.sly-hp-row > span:nth-child(5n) { transform: translateY(calc(var(--u) * .05)) rotate(2.5deg); }
+   engine overlay this HUD refuses to be. Kept small: these badges are a MARK, and a mark that is
+   visibly askew stops reading as itself. Nothing animates; these are static transforms. */
+.sly-hp-row > span:nth-child(2n) { transform: translateY(calc(var(--u) * .07)) rotate(2.5deg); }
+.sly-hp-row > span:nth-child(3n) { transform: translateY(calc(var(--u) * -.06)) rotate(-3deg); }
+.sly-hp-row > span:nth-child(5n) { transform: translateY(calc(var(--u) * .04)) rotate(1.5deg); }
 
 /* ================================================================ CAUGHT */
 

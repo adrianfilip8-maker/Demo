@@ -130,47 +130,69 @@ export function coin(cls = '') {
  *                     difference, so it survives the ~19 px this renders at on a 1280×720 frame
  *                     without relying on colour.
  *   `kind: 'charm'` — the horseshoe, the series' own lucky charm.
- *   `kind: 'heart'` — §731's Sly 4 readout. NOT part of the live row: `pipKind()` returns only
- *                     `life` and `charm`, so nothing that drives `setHealth` can reach this
- *                     branch, and it exists so the corner ornament is a DRAWN pip in this file's
- *                     vocabulary rather than a second widget with its own art. The heart is
- *                     deliberately a different silhouette from both of the above — the ornament
- *                     must not read as a duplicate of the horseshoe row it shares a screen with.
+ *   `kind: 'mask'`  — §731.3's health readout: the Cooper raccoon-mask insignia on its blue
+ *                     oval, the franchise's own mark, supplied by the owner as a reference
+ *                     image. NOT part of the live row: `pipKind()` returns only `life` and
+ *                     `charm`, so nothing that drives `setHealth` can reach this branch.
  */
 export function pip(filled = true, kind = 'charm', cls = '') {
   if (kind === 'life') return lifePip(filled, cls);
-  if (kind === 'heart') return heartPip(filled, cls);
+  if (kind === 'mask') return maskPip(filled, cls);
   return charmPip(filled, cls);
 }
 
 /**
- * §731 — the Sly 4 health pip.
+ * §731.3 — the Cooper mask insignia, the owner's own reference for the health readout.
  *
- * Built to `charmPip`'s recipe exactly, because that is what keeps the ornament inside the
- * house style instead of beside it: an ink drop underneath at 0.55, the ink body, the colour on
- * top, and a `goldL` specular arc catching the light from upper-left like every other pip and
- * the coin. Carnelian, the palette's own "life" channel (`C.carn`) — the same hue the horseshoe
- * and the calling card's mouth already use, so the corner cannot introduce a sixth colour.
+ * The owner supplied an image and said *"what is in the oval… is what the health bar should look
+ * like"*. It is the franchise's mark: a wide blue oval, a raccoon-mask silhouette on it in a
+ * darker blue with an ink outline, two ear-peaks with a shallow concave dip between them, a small
+ * downward notch at bottom centre, and two angular near-white eye slits whose outer ends ride
+ * higher than their inner ones. **Silhouette fidelity beats embellishment here** — this has to
+ * read as *that mask* at the ~26 px it renders at, or it is not the thing that was asked for. So
+ * there is no specular arc and no extra ornament on it: every drawing decision below serves the
+ * outline.
  *
- * The empty half is `lifePip`'s spent treatment rather than `charmPip`'s: an outline that still
- * counts, because a health readout whose lost pips vanish stops being a readout.
+ * COLOUR IS THE REASON THIS NEEDS NO BACKING. Every earlier §731 pip was carnelian on whatever
+ * the camera happened to be pointing at, which measured 1.28:1 over day sand and forced a chip
+ * behind the row to hold it. The badge carries its own ground: the oval is opaque, so the mask's
+ * contrast against it (5.13:1) and the eye slits' against the mask (6.60:1) are fixed properties
+ * of the glyph and cannot vary with the scene at all. Against the SCENE the badge is a
+ * four-ink sandwich — ink outline, `spark` oval, `lapisD` mask, `paint` slits — and swept over
+ * every one of the 256 possible grey grounds the best of those four never drops below **3.90:1**.
+ * That is the bound the chip existed to provide, so §731.3 deletes the chip.
+ *
+ * All four inks are existing `C` entries; the badge introduces no new hue. `spark` for the oval
+ * and `lapisD` for the mask are the pair with the widest separation the palette offers in blue,
+ * which is what keeps the ears and the eye slits legible when this is 26 px wide.
+ *
+ * The empty half is a drained badge that still counts — a health readout whose lost pips vanish
+ * stops being a readout. `HP_FULL === HP_PIPS` so nothing renders it today; `hud.test.mjs` keeps
+ * it alive.
  */
-function heartPip(filled, cls) {
-  const heart = 'M23 39.2C11.6 31 6.6 24.6 6.6 18.7c0-5.6 4.2-9.6 9.1-9.6 3 0 5.6 1.5 7.3 3.9'
-              + ' 1.7-2.4 4.3-3.9 7.3-3.9 4.9 0 9.1 4 9.1 9.6 0 5.9-5 12.3-16.4 20.5z';
+const MASK_D = 'M10.2 12.6Q16.6 15.4 23 17.4Q29.4 15.4 35.8 12.6C37.8 16 38.4 19 37.5 22'
+             + 'C36.4 25.8 33 28.6 28.4 30.1L23 33.4L17.6 30.1C13 28.6 9.6 25.8 8.5 22'
+             + 'C7.6 19 8.2 16 10.2 12.6Z';
+const EYE_L = 'M13 21.2L20.2 23.8L19.8 26.4L13.6 23.2Z';
+const EYE_R = 'M33 21.2L25.8 23.8L26.2 26.4L32.4 23.2Z';
+
+function maskPip(filled, cls) {
   if (filled) {
     return wrap('0 0 46 46', `
-      <path d="${heart}" transform="translate(0 2.4)" fill="${C.ink}" opacity=".55"/>
-      <path d="${heart}" fill="${C.carn}" stroke="${C.ink}" stroke-width="4.4"
+      <ellipse cx="23" cy="25.4" rx="17.6" ry="15.2" fill="${C.ink}" opacity=".55"/>
+      <ellipse cx="23" cy="23" rx="17.6" ry="15.2" fill="${C.spark}" stroke="${C.ink}"
+               stroke-width="4.2"/>
+      <path d="${MASK_D}" fill="${C.lapisD}" stroke="${C.ink}" stroke-width="2.6"
             stroke-linejoin="round"/>
-      <path d="M13.6 17.8a6.6 6.6 0 0 1 4.6-4.4" stroke="${C.goldL}" stroke-width="2.8"
-            stroke-linecap="round" fill="none" opacity=".85"/>
+      <path d="${EYE_L}" fill="${C.paint}"/>
+      <path d="${EYE_R}" fill="${C.paint}"/>
     `, cls);
   }
   return wrap('0 0 46 46', `
-    <path d="${heart}" fill="${C.inkSoft}" fill-opacity=".62" stroke="${C.ink}"
-          stroke-width="4.4" stroke-linejoin="round"/>
-    <path d="${heart}" fill="none" stroke="${C.carn}" stroke-width="2.2" opacity=".5"/>
+    <ellipse cx="23" cy="23" rx="17.6" ry="15.2" fill="${C.inkSoft}" fill-opacity=".62"
+             stroke="${C.ink}" stroke-width="4.2"/>
+    <path d="${MASK_D}" fill="none" stroke="${C.spark}" stroke-width="2.2" opacity=".5"
+          stroke-linejoin="round"/>
   `, cls);
 }
 

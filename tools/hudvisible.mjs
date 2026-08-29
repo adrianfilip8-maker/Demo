@@ -214,6 +214,56 @@ async function boot(browser, url, q) {
   return { page, errs };
 }
 
+/**
+ * Does the RENDERED badge still carry the mark, at the size it actually ships?
+ *
+ * `hud.test.mjs` proves the path data describes the mask; that is a claim about geometry and it
+ * would still pass if the glyph rendered four pixels wide. This is the other half: crop one badge
+ * out of the production frame and count what is actually on screen — all four inks present, and
+ * exactly TWO separate near-white regions, which are the eye slits. Two blobs of near-white with
+ * navy between them is the cheapest machine-checkable statement of "it reads as the mask".
+ */
+function badgeFeatures(png, box) {
+  const x0 = Math.max(0, Math.floor(box.x)), y0 = Math.max(0, Math.floor(box.y));
+  const x1 = Math.min(png.width, Math.ceil(box.right)), y1 = Math.min(png.height, Math.ceil(box.bottom));
+  const w = x1 - x0, h = y1 - y0;
+  const px = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (png.width * (y0 + y) + (x0 + x)) << 2;
+      px.push([png.data[i], png.data[i + 1], png.data[i + 2]]);
+    }
+  }
+  const near = (p, t, tol) => Math.abs(p[0] - t[0]) <= tol && Math.abs(p[1] - t[1]) <= tol && Math.abs(p[2] - t[2]) <= tol;
+  const TARGET = { oval: [143, 216, 255], mask: [31, 79, 150], slit: [242, 232, 212], ink: [26, 18, 16] };
+  const counts = {};
+  for (const k of Object.keys(TARGET)) counts[k] = px.filter((p) => near(p, TARGET[k], 46)).length;
+
+  /* Connected components of the near-white slit colour, 4-connected. */
+  const isSlit = px.map((p) => near(p, TARGET.slit, 52));
+  const seen = new Uint8Array(w * h);
+  let blobs = 0;
+  const sizes = [];
+  for (let i = 0; i < w * h; i++) {
+    if (!isSlit[i] || seen[i]) continue;
+    let n = 0;
+    const stack = [i];
+    seen[i] = 1;
+    while (stack.length) {
+      const c = stack.pop(); n++;
+      const cx = c % w, cy = (c / w) | 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const j = ny * w + nx;
+        if (isSlit[j] && !seen[j]) { seen[j] = 1; stack.push(j); }
+      }
+    }
+    if (n >= 3) { blobs++; sizes.push(n); }      // ignore single-pixel antialiasing specks
+  }
+  return { box: [w, h], counts, slitBlobs: blobs, slitSizes: sizes.sort((a, b) => b - a).slice(0, 4) };
+}
+
 /** Single-image stats for a box — the guard against measuring a uniform blank. */
 function boxStats(png, box) {
   const px = crop(png, box);
@@ -263,8 +313,8 @@ async function run() {
     report.consoleErrors = errs.slice(0, 12);
     if (errs.length) console.log(`[hudvisible] ${errs.length} console/page error(s); first: ${errs[0]}`);
 
-    const SELS = ['.sly-hp', '.sly-hp-row', '.sly-hp-pip', '.sly-hp-kick', '.sly-shake',
-      '.sly-tl', '.sly-coins', '.sly-pips'];
+    const SELS = ['.sly-hp', '.sly-hp-row', '.sly-hp-pip', '.sly-shake',
+      '.sly-tl', '.sly-coins', '.sly-pips', '.sly-threat', '.sly-carry'];
     const probes = await page.evaluate(PROBE, SELS);
     report.probes = probes;
     /* If the probe itself came back empty the run proves nothing — say so rather than reading
@@ -374,6 +424,87 @@ async function run() {
         console.log(`    .sly-tl  ${tl.w} x ${tl.h} = ${(tl.w * tl.h) | 0} px²  (${((tl.w * tl.h) / (W * H) * 100).toFixed(2)}%)  — ${((tl.w * tl.h) / (hp.w * hp.h)).toFixed(1)}x the ornament`);
       }
       report.size = { hp: [hp.w, hp.h], areaPct: +areaPct.toFixed(3) };
+    }
+
+    /* ---- 2b. does the RENDERED badge still carry the mark? ------------------------------- */
+    if (probes['.sly-hp-pip'].exists) {
+      const f = badgeFeatures(withPng, probes['.sly-hp-pip']);
+      report.badge = f;
+      console.log('\n[hudvisible] the badge as RENDERED, one pip cropped out of the production frame:');
+      console.log(`    ${f.box[0]} x ${f.box[1]} px   oval ${f.counts.oval} px, mask ${f.counts.mask} px, `
+        + `slits ${f.counts.slit} px, ink ${f.counts.ink} px`);
+      console.log(`    separate near-white regions: ${f.slitBlobs} (sizes ${JSON.stringify(f.slitSizes)}) — two is the mark`);
+      for (const k of ['oval', 'mask', 'slit', 'ink']) {
+        if (f.counts[k] < 4) fail(`the rendered badge shows only ${f.counts[k]} px of its ${k} — that ink is not surviving at this size`);
+      }
+      if (f.slitBlobs !== 2) {
+        fail(`the rendered badge shows ${f.slitBlobs} near-white regions, not 2 — the eye slits are not resolving, so it does not read as the mask`);
+      }
+    }
+
+    /* ---- 2c. COLLISION at top-left, every neighbour driven to its widest ------------------ */
+    /* Phase separation matters: the visibility numbers above were taken on an UNTOUCHED page,
+       because that is the claim §731.2 was burned on. A collision census is the opposite kind of
+       question — it must be worst case — so the NEIGHBOURS are armed here, after the fact, and
+       the ornament itself is still never touched. */
+    await page.evaluate(() => {
+      const h = window.__ENGINE.get('hud');
+      h.objective('Steal the Eye of Ra from the sealed vault', 'Temple of Ra - Great Courtyard');
+      h.setCoins(888888, true);
+      h.setHealth(5, 5);
+      h.setCharmProgress(0.6);
+      window.__ENGINE.emit('guardAlert', { id: 'g1', state: 'chase' });
+      window.__ENGINE.emit('playerState', 'sneak');
+      window.__ENGINE.emit('treasurePickup', { id: 't1', name: 'Scarab of Khepri', value: 1200 });
+      for (let i = 0; i < 8; i++) window.__ENGINE.renderFrame(1 / 60);
+    });
+    await page.waitForTimeout(600);
+    const wide = await page.evaluate(PROBE, SELS);
+    report.widest = wide;
+    const hpW = wide['.sly-hp'];
+    console.log('\n[hudvisible] TOP-LEFT collision census, every neighbour at its widest:');
+    const NEIGH = ['.sly-tl', '.sly-pips', '.sly-coins', '.sly-threat', '.sly-carry'];
+    let nearest = Infinity, nearestSel = '';
+    for (const s of [...NEIGH, '.sly-hp']) {
+      const r = wide[s];
+      if (!r || !r.exists) { console.log(`    ${s.padEnd(12)} — absent`); continue; }
+      console.log(`    ${s.padEnd(12)} ${String(r.x).padStart(7)},${String(r.y).padStart(6)}  ${String(r.w).padStart(6)} x ${String(r.h).padStart(5)}   bottom ${r.bottom}`);
+    }
+    for (const s of NEIGH) {
+      const r = wide[s];
+      if (!r || !r.exists) continue;
+      const ow = Math.min(hpW.right, r.right) - Math.max(hpW.x, r.x);
+      const oh = Math.min(hpW.bottom, r.bottom) - Math.max(hpW.y, r.y);
+      const area = (ow > 0 && oh > 0) ? +(ow * oh).toFixed(1) : 0;
+      const gx = Math.max(r.x - hpW.right, hpW.x - r.right, 0);
+      const gy = Math.max(r.y - hpW.bottom, hpW.y - r.bottom, 0);
+      const gap = Math.hypot(gx, gy);
+      if (gap < nearest) { nearest = gap; nearestSel = s; }
+      console.log(`    ${s.padEnd(12)} overlap ${String(area).padStart(8)} px²   clearance ${gap.toFixed(1)} px`);
+      if (area > 0) fail(`.sly-hp INTERSECTS ${s} when the stack is fully armed`);
+    }
+    report.nearest = { sel: nearestSel, px: +nearest.toFixed(1) };
+    console.log(`    nearest neighbour: ${nearestSel} at ${nearest.toFixed(1)} px`);
+
+    /* ---- 2d. what is behind it, at BOTH grades (§726) ------------------------------------- */
+    report.grades = [];
+    console.log('\n[hudvisible] background behind the badge at both L1 grades:');
+    for (const [name, tod] of [['L1 day', 0.78], ['L1 night', 0.02]]) {
+      await page.evaluate((t) => {
+        window.__GAME.setTimeOfDay(t);
+        for (let i = 0; i < 4; i++) window.__ENGINE.renderFrame(1 / 60);
+      }, tod);
+      await page.waitForTimeout(200);
+      const png = await shoot(page, path.join(OUTDIR, `prod-${name.replace(/\W+/g, '')}.png`));
+      const bg = boxStats(png, hpW);
+      const bf = badgeFeatures(png, wide['.sly-hp-pip']);
+      report.grades.push({ grade: name, tod, bg, slitBlobs: bf.slitBlobs, counts: bf.counts });
+      console.log(`    ${name.padEnd(9)} behind+badge luma ${bg.lumaMin}..${bg.lumaMax} (mean ${bg.lumaMean}, stdev ${bg.stdev}), ${bg.colours} colours`);
+      console.log(`              badge still resolves: ${bf.slitBlobs} slit regions, oval ${bf.counts.oval} px, mask ${bf.counts.mask} px, ink ${bf.counts.ink} px`);
+      if (bf.slitBlobs !== 2) fail(`at ${name} the badge shows ${bf.slitBlobs} slit regions, not 2`);
+      for (const k of ['oval', 'mask', 'ink']) {
+        if (bf.counts[k] < 4) fail(`at ${name} the badge's ${k} ink has collapsed to ${bf.counts[k]} px`);
+      }
     }
 
     /* ---- 3. the token, on the production artifact ---------------------------------------- */

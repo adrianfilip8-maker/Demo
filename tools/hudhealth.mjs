@@ -45,6 +45,15 @@
  *      standing tokens are booted TOGETHER WITH IT in one more, because the only way this lane
  *      could break them is a key collision and that is a claim about a real URL, not about source.
  *
+ * ── SUPERSEDED FOR §731 BY tools/hudvisible.mjs ─────────────────────────────────────────────
+ * This tool loads the DEV SERVER AT THE DOMAIN ROOT, stages its subjects and freezes CSS, and
+ * its presence check ignores opacity. §731.2 records all four as the reasons it certified an
+ * ornament the owner could not see. It is kept for arm C, whose motion trace is still the only
+ * check that the rest of the HUD still animates; every claim about whether the §731 readout is
+ * VISIBLE belongs to hudvisible.mjs, which measures the production artifact. §731.3 also moved
+ * the readout to the top-left and deleted its chip and kicker, so arm A's corner arithmetic
+ * below describes where the ornament USED to be.
+ *
  *   node tools/hudhealth.mjs                 full run into shots/hud731/
  *   node tools/hudhealth.mjs --out DIR       elsewhere
  */
@@ -443,12 +452,11 @@ async function run() {
         pristineLive,
         present: !!document.querySelector('.sly-hp'),
         pips: q('.sly-hp-pip'),
-        kick: document.querySelector('.sly-hp-kick')?.textContent ?? null,
         inShake: !!document.querySelector('.sly-shake .sly-hp'),
         livePips: document.querySelector('.sly-pips').childNodes.length,
       };
     });
-    console.log(`    ornament: present=${shape.present} pips=${shape.pips} kicker="${shape.kick}" inside .sly-shake=${shape.inShake}`);
+    console.log(`    ornament: present=${shape.present} pips=${shape.pips} inside .sly-shake=${shape.inShake}`);
     console.log(`    live health row beside it: ${shape.pristineLive} pips pristine, ${shape.livePips} after setHealth(5,5)`);
     report.shape = shape;
     if (!shape.present || shape.pips !== 5 || !shape.inShake) fail('the ornament is not the shape §731 ships');
