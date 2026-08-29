@@ -62055,3 +62055,137 @@ inertness arm drives a full damage run and requires byte-identical markup; wirin
 **Suite:** `1139/1139, 0 failures` at `5f6529c`, clean detached worktree, cwd verified. Production
 measurements above at the same commit. **Boundary unchanged:** the artifact is verified, not the
 live host, which the container proxy blocks (§695).
+
+---
+
+### §731.6 / §731.7 — "Retire the pip row for now", then: a third smaller, the bottom section gone, and higher up
+
+Two owner rulings in sequence. On the duplicate-readout proposal: ***"Do not make it real. Retire
+the pip row for now"*** — option A's second half without its first. Then, on the shape:
+***"Reduce the size by one third. Remove the bottom section of the oval that is sectioned off by
+the thin lines. Move the meter toward the top of the screen."***
+
+#### §731.6 — the live pip row, removed rather than hidden
+
+Gone from `src/ui/`: the `.sly-pips` markup, the `el.pips` handle, the render path inside
+`setHealth`, `setCharmProgress`, `_nextCharmIndex`, `pipKind`, `Icons`' `pip` / `lifePip` /
+`charmPip`, and the `.sly-pips` / `.sly-pip-life` / `.sly-pip-lost` / `.sly-charm-fill` rules. A
+test asserts all twelve are absent **by declaration, not by mention** — an earlier version of that
+arm failed on a docblock that merely discussed `charmPip`.
+
+**What did NOT go with it, and this is the part worth checking:**
+
+- `setHealth` **stays**. It still tracks `health`/`healthMax` and still fires the damage vignette
+  (`_vig`) and the hit flash/shake (`_hitFx`). Those were never pip machinery, and deleting the
+  method wholesale would have taken them.
+- `charmPip` **stays**, as `charmIcon`. It was very nearly deleted as dead — `Health.js:246` emits
+  `toast(…, { icon: 'health' })` when a charm is bought and `glyph('health')` routes to it, so a
+  publisher **outside `src/ui/`** still needs that art. Only the row's half went: the part-paid
+  `.sly-charm-fill` variant, which nothing draws now.
+
+**Following the wire back, with nothing cut outside `src/ui/`:** the HUD is the **only** subscriber
+to the `health` event, so retiring the row orphans no publisher. What it *does* orphan is one
+payload **field** — `Health.js:331` still publishes `charmProgress` and, with `setCharmProgress`
+gone, nothing reads it. `charms`, `purse` and `charmCoins` were already unread by the HUD.
+**Reported, not removed** — that file is another lane's.
+
+**Test coverage, moved rather than lost.** `tests/health.test.mjs` used the row as its observation
+surface for `Health.js`. Four arms are re-pointed at `hud.health` / `hud.healthMax` — the *same
+quantities* the row displayed, `lit()` → `health`, pip count → `healthMax` — so no `Health.js`
+behaviour stopped being checked. Five arms tested only the deleted charm-arc **rendering** and are
+removed; their publisher-side equivalents already exist and are untouched (*"the purse is published
+on every banked coin"*, *"at the charm cap the published progress is −1"*). 31 arms → 26.
+
+**`?hud=nohealth` semantics, restated because they changed:** it removes the ornament, and there is
+no longer a live row behind it, so that corner ends up with **no health readout of any kind**. It
+does not leave the corner empty — the coin counter and the exposure/stealth/carry chips remain, and
+the test asserts that rather than the old "the live row survives" claim.
+
+**"For now" is load-bearing — this is reversible.** The row's full implementation is readable at
+commit **`f8907bf`**, in `src/ui/HUD.js` (`setHealth`'s rebuild branch, `setCharmProgress`,
+`_nextCharmIndex`, `pipKind`), `src/ui/Icons.js` (`pip`/`lifePip`/`charmPip`) and
+`src/ui/hud.css.js` (the `health pips` block). And a **functional meter is not a redesign**: the
+insignia sits in a cut-out hole in the fill silhouette, so the mask stays put while the bar drains
+— making it real is a clip on that silhouette plus a subscription, nothing more.
+
+#### §731.7 — the crop, derived rather than guessed
+
+The "bottom section sectioned off by the thin lines" is the **POW track**, and it is **not a
+horizontal band**: it is a crescent across the bottom of the oval, bounded above by the two thin
+dividing lines running from the insignia's chin out to the oval's left and right edges. So the
+boundary is taken from `PROGRESS_BAR_POW`'s **own alpha** — the layer the artwork uses to paint it
+— not from a fraction of the height.
+
+**This is a mask plus a re-stroke, not a rectangular crop.** A horizontal cut would take the oval's
+bottom-left and bottom-right shoulders with it.
+
+- The cut is **column-wise from the dividing line downward**. Removing only the POW layer's own
+  texels left the oval's bottom outline arc floating below the cut as an orphan — caught because
+  the bounding box did not move. **212,318 texels removed**, which cross-checks against the 206,874
+  the old union hack counted (the difference is that orphaned arc plus outline).
+- The cut edge is **re-stroked in the artwork's own outline** — `#242424`, 5 px, measured off the
+  oval's top edge rather than chosen — **6,395 texels**, so the shape stays closed instead of
+  reading as a broken oval.
+- The **union hack is gone**: the fill silhouette is the HP layer alone, since the region it was
+  compensating for no longer exists.
+- **Aspect re-derived: 1857 × 1015 = 1.830:1** (was 1.767:1). Bake **320 × 175**, plate 25,467 B +
+  fill mask 9,197 B, module **48.0 KB** (was 61.6 KB). 320 is kept rather than reduced: at the new
+  size the element is 12.13u, which is 327 px at the largest `--u` the HUD reaches, so the bake is
+  right-sized rather than oversized.
+
+#### Size and position, measured on the production artifact
+
+| | before (§731.5) | after |
+|---|---|---|
+| CSS width | 18.2u | **12.13u** — exactly two thirds, pinned in the test as a *ratio* of the old width, not a magic number |
+| CSS top | 13.5u | **10.7u** |
+| rendered rect | 202.4 × 117.1 | **134.8 × 75.6** (134.8 / 202.4 = 0.666) |
+| share of frame | 2.57 % | **1.11 %** |
+| rendered top | 143.5 | **114** |
+
+**Placement census, every remaining neighbour at its widest** (the stack is shorter now that the
+pip row is gone):
+
+| element | bottom | overlap | clearance |
+|---|---|---|---|
+| `.sly-tl` | 98.2 | **0 px²** | **15.8 px** |
+| `.sly-carry` | 98.1 | 0 px² | 15.9 px |
+| `.sly-threat` | 67.3 | 0 px² | 46.7 px |
+| `.sly-coins` | 40.3 | 0 px² | 73.7 px |
+
+An intermediate `top: 10u` measured **8.2 px** — zero overlap, but tighter than this corner needs
+and the same margin §731.5 already declined at 11.7 px, so it went to 10.7u.
+
+#### Legibility re-run at the new size, not inherited
+
+This is exactly the check §731.4 exists to enforce, and a third off is exactly the change that
+quietly kills it:
+
+| grade | pale-grey regions | fill | navy | pale | outline |
+|---|---|---|---|---|---|
+| L1 day | **6** (405, 257, 254, 98) | 3,812 px | 2,939 px | 1,232 px | 1,000 px |
+| L1 night | **6** | 3,821 px | 1,309 px | 1,268 px | 3,467 px |
+
+**It did not drop — 6 regions at both grades, up from 5 at the larger size** (the crop removed grey
+track that had been merging with the muzzle). Whole-ornament: **68.97 %** of its rect paints, mean
+Δ 34.83, against a control corner at **0 %** with real content (stdev 31.84, 241 colours).
+
+**Contrast bound: unchanged at 3.18:1** over all 256 grounds. The crop moved the palette *shares*
+(track 63.3 % → 57.8 %) but not the ink *values*, and the bound is set by outline-against-pale; the
+test recomputes it from the live ink set every run rather than inheriting it.
+
+#### A process failure of mine, recorded because it broke the whole HUD
+
+Cutting the dead icon functions, my range guard checked only `function` declarations — and
+swallowed `const KEY_W`, a constant sitting between `charmPip` and `keycap`. Every keycap in the
+HUD then threw, `_build()` failed, `init()` caught it into `engine.warn`, and `_built` stayed
+false: **the entire HUD silently stopped existing**, and the visible symptom was four unrelated
+health arms failing on a state value. It was found by reading `engine.warnings` rather than by
+guessing. Two lessons, both now applied: a deletion guard must enumerate **every** top-level
+declaration in range, not just functions; and *"delete what becomes dead"* requires checking
+callers **outside your own directory** — `charmPip` looked dead from inside `src/ui/` and was not.
+
+**Suite:** `1134/1134, 0 failures` at `12d5829` (and at `9fb4853`), clean detached worktree, cwd
+verified. 1139 → 1134 is the five removed charm-arc arms. Production measurements above at
+`12d5829`, veil dismissed. `?hud=nohealth` verified on that artifact. Inertness still fires under
+mutation. **Boundary unchanged:** the artifact is verified, not the live host (§695).
