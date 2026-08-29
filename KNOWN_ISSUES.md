@@ -61326,7 +61326,101 @@ everything everywhere) makes the policy moot rather than fighting it.
 removed, lime 8 / stone 3 — **under that token**, which is a stronger statement than the one they
 made before: the way back is byte-exact, not approximate.
 
-<!-- §730 BODY PART 1 ENDS HERE; the walked break and the suite runs are appended after it. -->
+### §730.9 The browser confirms the bodies; the walked break does NOT yet exist, and this says so
+
+`tools/vaulturn.mjs` is the instrument. §435.4's rule is taken literally in it: the player is
+walked from spawn along `Architecture.api.route` leg by leg through `input.move` — terrace-1,
+terrace-2, hall-floor, inner-gate, descent-landing, vault-floor — down both tomb flights and
+through the gate doorway, then settled until the capsule stops moving, and the attack is pressed
+through `Input._press`, the seam every device path calls.
+
+**It has not been run to completion, and §418.9 is the reason that sentence is here rather than a
+paragraph implying otherwise.** What the run DID obtain, in a real browser, before the hold was
+given up:
+
+```
+[  673.8s]  meshes: smashable_jar[5]      smash:kaykit  h=0.6136 w=0.6038 v=621
+                    smashable_jar_urn[2]  smash:clay    h=0.6136 w=0.3347 v=333
+                    smashable_basket[10]  smash:kaykit  h=0.5000 w=0.6539 v=2184
+                    smashable_crate[6]    smash:kaykit  h=0.6595 w=0.6431 v=3993
+[  673.8s]  debugInfo().vault = {"jar":2,"crate":1}  urns=2  spots=3
+```
+
+That is the whole body policy, read out of a live page rather than a headless boot: two urns on
+the clay material at 0.335 m wide, five jars still on the KayKit atlas at 0.604 m, the identical
+0.6136 m height on both, and the room census the seed authored. It agrees with §730.6's headless
+table to the last decimal. What it does NOT establish is that a player who WALKS there can break
+one, and that is the claim still outstanding.
+
+**Why the hold was given up rather than kept.** The first walk pulsed a jump every 24 stalled
+frames on EVERY leg — correct for the two terrace risers, pointless on hall-floor and inner-gate,
+and ~58 spurious presses per leg with the FX and audio each one drags behind it — over 1400-frame
+legs, for two arms. The first leg had not returned after 4.6 minutes of wall time on a four-core
+container already running a full suite and another lane's capture, which projects to 45+ minutes
+with **that other lane already queued on the capture lock behind us** (`1788009778615-13459` was
+sitting in the FIFO). Keeping it would have been the §727/§729 serialisation failure again. The
+lock was released, it passed straight to the waiting ticket, and the tool was repaired forward:
+per-leg jump pulsing, `maxFrames` 900 (`smashshot.mjs`'s own budget), wall-seconds and ms/frame
+printed per leg so the next reader can tell a slow container from a stuck drive — which is exactly
+what could not be told the first time — and `--arms default` so one hold is one boot and one walk.
+The `?vault=barrels` half does not need a browser at all: U2/U4 and `smashswap` W1/W2 run it
+headlessly under the token.
+
+**A camDot finding worth recording, because it is about the SEED and not about §730.** The
+destructible cluster is authored in a 0.85 m ring about the `sarcophagus` waypoint — and that
+waypoint is `L.tomb.sarc` itself, (0, −12, −72), the sarcophagus. So those two jars stand hard
+against a waist-high granite box, in a room whose crypt piers are at z −62 / −68 / −74. **432
+camera stances were swept over that subject — six radii × three eye heights × 24 azimuths — and
+every one was refused, all 432 for SUBJECT OCCLUDED.** There is no clean lens on a vault
+destructible at this seed. The offering-table jars, 2.4 m south and in the open, pass on the first
+stance tried (r 1.5, eye 1.10, az 0 — nearest surface 1.717 m, forward 1.545 m). So when the frame
+is taken it will be of the STATIC urns, and the destructible pair will be evidenced by payload.
+
+Until that run lands, the break rests on `vaulturn.test.mjs` **U3**, which is honest about what it
+is: a swing resolved through the REAL `caneHit` subscriber and the real `Smashables._resolve`,
+against props standing exactly where the seed authored them — two urns publishing
+`material: 'stone'`, the crate 0.9 m away publishing `'wood'`, and a terrace jar still publishing
+`'wood'` as the failing input. What U3 does not exercise is the combo state machine and the press.
+
+### §730.10 The suite
+
+Two full runs, both in a clean detached worktree with `node_modules` symlinked, both quoted
+(§703.2):
+
+| run | commit | result |
+|---|---|---|
+| 1 | `48c561e` — §730 complete, the HUD lane's work absent | **1128 tests · 1127 pass · 1 fail** |
+| 2 | `7871288` — §730 plus the HUD lane's §731 | **1134 tests · 1134 pass · 0 fail** |
+
+Run 1's single failure is worth the space, because it is a drift pin doing exactly its job for
+the third time. `kaykit.test.mjs` **P2** ranks every KayKit placement by how much drawn Props art
+it overlaps, and its docblock records the ranking moving under §712 (the coins scaled 50 %) and
+again under §729 (the static twins swapped). §730 moved it a third time, on the very row §729's
+own note singled out:
+
+```
+row 22  coin_stack_large @(-2.4, -68.6)
+        §729:  9 base + 124 body to 1.17 m  [props_stone,props_kaykit]
+        §730:  9 base +  49 body to 1.22 m  [props_stone,props_lime]
+```
+
+That is the tomb coin stack standing beside the offering table, and the bucket name flipping
+`kaykit` → `lime` is **an independent confirmation that the four jars actually changed mesh**,
+measured by a file that knows nothing about §730. The body count falls because a canopic jar is
+0.335 m wide and 333 vertices against the barrel's 0.604 m and 621. Total 133 → 58 takes row 22
+from fifth back to last — the one and only rank move — and the seven indices are unchanged for
+the third time running, so nothing started or stopped touching. The pin was updated to the
+measured truth with the before and after both recorded, per the §712 precedent it already
+carries, and the bucket itself is now asserted rather than left to the ranking to imply.
+
+Run 1's count is the arithmetic check on §730's own additions: 1121 at `dc3a207` + 7 new
+`vaulturn.test.mjs` arms = 1128, exactly. `T1` (the URL-token arm) took it to 8 afterwards.
+Neither of the two recorded flakes — `framebudget` F3's GC timing, `padrest` R1b — fired in
+either run, and neither run was name-filtered.
+
+Both runs shared a four-core container with the §731 lane's captures and its own suite, which is
+also why §730.9's walk was abandoned rather than kept.
+
 
 
 ---
