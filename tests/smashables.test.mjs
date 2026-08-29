@@ -515,10 +515,11 @@ test('S13 TRIPWIRE — every kind has a geometry and an instanced mesh', async (
   /**
    * DOMAIN (§418.3) — **unfalsifiable in this level, kept deliberately (§418.5).**
    * PASSES ON: the shipped tree.
-   * FAILS ON:  nothing reachable. `_geoFor` has a branch for every key in `KINDS` and
-   *            `authorSmashables` only ever emits those keys, so no input this level can produce
-   *            leaves a kind without a mesh. TRIPWIRE against a future kind added to `KINDS`
-   *            without a branch in `_geoFor` — the failure mode is silent (no mesh, no error, an
+   * FAILS ON:  nothing reachable. Every key in `KINDS` resolves a body — §729's swap map when
+   *            its model loaded, else `_genGeo`'s branch — and `authorSmashables` only ever
+   *            emits those keys, so no input this level can produce leaves a kind without a
+   *            mesh. TRIPWIRE against a future kind added to `KINDS` with neither a `model`
+   *            nor a `_genGeo` branch — the failure mode is silent (no mesh, no error, an
    *            invisible prop that still breaks and still pays). NOT evidence the shapes read.
    */
   const { sm } = await boot();

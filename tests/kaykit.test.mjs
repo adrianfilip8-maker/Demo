@@ -986,9 +986,16 @@ test('P1: Props\' `ground` colliders ARE its drawn art — the opposite of Archi
     split[k] = (split[k] || 0) + 1;
   }
   console.log(`  P1: ${PROPS_DRAWN.length} drawn Props meshes · ${PROPS.length} colliders — ${JSON.stringify(split)}`);
-  assert.equal(PROPS.length, 20, 'the Props collider count has moved');
+  /* 20 → 21 and 9 → 10 under §729, and the newcomer keeps the structural fact this arm exists
+     for: `props_kaykit` (the destructible models' swapped STATIC twins — 4 vault jars, 7
+     courtyard baskets, one merged mesh) registers the drawn bucket itself, exactly as the other
+     nine ground colliders do — `ground:is-drawn-art`, not a proxy. The count moved because a
+     §729 design line added one mesh; the SPLIT shape is the pin that would catch a proxy
+     sneaking in. (This arm went red on the swap's own commit and was updated to the measured
+     truth — the before is recorded here, per the §712 precedent in P2 below.) */
+  assert.equal(PROPS.length, 21, 'the Props collider count has moved');
   assert.deepEqual(split, {
-    'ground:is-drawn-art': 9,
+    'ground:is-drawn-art': 10,
     'ground:separate-proxy': 1,
     'ledge:separate-proxy': 2,
     'hazard:separate-proxy': 8,
@@ -1043,8 +1050,24 @@ test('P2: KayKit against Props art — seven placements, and six of them are flo
    * The pin is deliberately kept order-sensitive rather than softened to a set comparison. This
    * arm exists so the census cannot drift silently, and a ranking that reshuffles is exactly the
    * signal that some prop's footprint changed — which is what happened here, on purpose.
+   *
+   * AND IT FIRED AGAIN UNDER §729, which is the pin doing its job a second time. The
+   * destructibles swap put KayKit bodies on the static twins — the vault's offering-table jars
+   * became conformed `barrel_small`s (0.36 m of canopic jar → 0.62–0.75 m of barrel) and the
+   * courtyard wall baskets became knee-high barrels on the merged `props_kaykit` mesh, which
+   * this file's own `PROPS_DRAWN` regex rightly counts as drawn Props art. Same seven indices
+   * before and after — nothing started or stopped touching — but THREE rows changed contents
+   * and one changed rank, measured on both sides:
+   *
+   *   row 22  coin_stack_large @(-2.4, -68.6)  58 body [props_stone]  →  9 base + 124 body
+   *           to 1.17 m [props_stone,props_kaykit] — the fatter vault barrels beside the tomb
+   *           coin stack; last place → fifth, the one rank move.
+   *   row 33  crates_stacked @(-5.5, 30.5)     [props_lime]  →  113 + 429 [props_kaykit] —
+   *           the same mid-floor courtyard basket it always stood in, wearing its new body.
+   *   row  4  crates_stacked @(-20.8, 6.5)     picks up props_kaykit beside props_stone —
+   *           a swapped wall basket in the west store line.
    */
-  assert.deepEqual(rows.map((r) => r.i), [18, 21, 33, 4, 7, 16, 22], 'a different set of placements now touches Props art');
+  assert.deepEqual(rows.map((r) => r.i), [18, 21, 33, 4, 22, 7, 16], 'a different set of placements now touches Props art');
 
   /* the one the whole category was opened over, and the correction to it */
   const chest = rows.find((r) => r.i === 21);
