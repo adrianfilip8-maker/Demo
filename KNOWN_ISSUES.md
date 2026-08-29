@@ -62222,3 +62222,386 @@ touches `PropKit.js` / `Props.js` / the torch fire+light registration ONLY — n
 `Animation.js`, not the coin census, not `Guard.js` TUNE. The two candidates are KayKit
 `torch_mounted` and the staged tombchaser `Torch_Art`; the decision, the rejected one and the
 re-derived flame anchor are recorded below rather than asserted.)*
+
+### §732.1 The census, re-derived: it is 14, not 13, and the resize is why
+
+Run at the shipped seed on the shipped tree, both radii in one process so the delta is a
+measurement rather than two reports laid side by side:
+
+```
+  world 63 drawn meshes -> 441,601 triangles · 82 coins · 12 yaws x 3 bobs = 36 poses each
+
+  r = 0.16 (pre-§712)   13/82 interpenetrate
+  r = 0.24 (SHIPPED)    14/82 interpenetrate      1 new, 0 resolved
+       NEW  48  route pile 4  (1.0, 7.9, 11.2)  CROSSES arch:court:granite_pink
+```
+
+**The brief's "13 of 82" is the r=0.16 column.** §712.9 already reported both numbers and the
+shipped figure has been 14 since the coins were scaled; the 13 has been quoted forward without
+its radius attached. The scale-up did not merely worsen the existing set — it converted the
+single tightest clear placement in the whole level into a crossing: `route pile 4` had **0.045 m**
+of clearance at r 0.16 against **0.08 m** of added radius.
+
+Reproduced §712.9's table exactly, on a world that is no longer the world §712 measured — 62
+drawn meshes / 438,550 triangles then, **63 / 441,601** now (§729/§730 swapped the smashable
+bodies). Same 14 placements, same owners. That the census is stable across a level change it did
+not know about is worth more than the number.
+
+The 14, by source: **7 of the 34 `Props._collectibles()` scatter** (0, 3, 16, 17, 18, 20, 33),
+**1 of the 10 architrave-ledge trail** (43, inside `props_wood`), and **6 of the 38
+`authorRouteCoins` trail** (46, 47, 48, 58, 59, 60).
+
+### §732.2 The route six have one cause, and it is not scatter
+
+`authorRouteCoins` lerps between consecutive `Architecture.api.route` waypoints. **A straight
+line between two waypoints is not the path a player walks**, and on every leg where the route
+gains or loses height through masonry the line goes through the masonry:
+
+```
+  46,47  spawn (0,0,30) -> terrace-1 (0,2,19) -> terrace-2 (0,5.2,14)   the line cuts the terrace stair
+     48  terrace-2 -> kiosk-lintel (2.2,9,8.4)                          the line cuts arch:court:granite_pink
+  58,59,60  hall-front-cornice (-9.5,15.29,-16) -> hall-floor (0,0,-20) the line cuts the hall front wall
+```
+
+So six of fourteen are not a placement accident at all; they are the authoring function meeting a
+level whose route climbs. Recorded because it predicts where the next one appears: any waypoint
+pair separated by architecture.
+
+### §732.3 The instrument, and the two inputs it is now seen to answer on
+
+`tools/coinfit.mjs`'s predicate was extracted to `poseTest()` and the census now runs **four
+controls first, on the real soup, through that same function**, aborting rather than printing if
+any fails. §439's rule is that an instrument built from the same assumption as its subject cannot
+falsify it, and until this section `poseTest` had never been shown to say either word on an input
+whose answer was known independently:
+
+```
+  CONTROLS on `arch:court:sandstone_block` tri 48865 (area 17.6520 m², centroid 10.60,2.00,23.91)
+    POS-centre  want CROSS     got CROSS     OK   (clear 0.031 m)
+    POS-nudge   want CROSS     got CROSS     OK   (clear 0.016 m)
+    NEG-air     want no cross  got no cross  OK   (nothing within PAD)
+    BOUNDARY    want no cross  got no cross  OK   (first clear at d* 0.40 m on the −n side, swept 0.2414)
+```
+
+**POS-nudge is the one that earns its place.** 0.05 m is exactly the "push it out until the
+z-fighting stops" repair; the swept radius is 0.2414, so a coin nudged 5 cm is still 0.19 m inside
+the wall, and an instrument that went quiet there would certify the non-fix. It does not.
+
+**And the first BOUNDARY draft was wrong, in one line of arithmetic.** It read *"0.60 m along the
+face normal must be clear"* and it FAILED — the largest triangle on that mesh is horizontal and
+its winding puts `n` at (0,−1,0), so 0.60 m "out" was 0.60 m further **in**. The instrument was
+right and my control was measuring my assumption about which way a normal points. §435.4 does not
+only happen to level probes. Replaced by a two-sided ladder that needs no such assumption: it
+asserts that *some* offset within 1.20 m clears (which a predicate shouting CROSS at everything
+could not satisfy) and that the first clear offset is **at least the swept radius** (which is a
+fact about geometry, not about this level, so it cannot be passed by being sloppy either way).
+
+### §732.4 The finding that killed the fix I was going to write
+
+I intended a `_unbury()` pass in `Pickups._author()` — it inits after `collision`, it owns all 82
+placements, and a rule beats fourteen magic numbers. **Measured before writing it, and it does
+not work**, because the two instruments disagree about this level:
+
+```
+  of the 14 the DRAWN soup calls buried, `Collision.overlap` at the swept radius sees
+      5 at rest bob · 7 across ±bob · and 7 NOT AT ALL
+        (17 kaykit:props, 20 + 58/59/60 the hieroglyph walls, 46, 48 granite_pink)
+  of the 68 it calls CLEAR, `Collision.overlap` calls 4 buried
+        (2, 21, 22, 32 — all against proxy:ground under the courtyard)
+```
+
+**A collider-driven relocation pass would move four good coins and leave seven bad ones exactly
+where they are.** The drawn architecture is served by coarse `proxy:wall` / `proxy:ground` boxes
+that neither cover the detail meshes nor stop at the paving. So the fix has to be authored
+placements re-verified by the census, and — usefully — that keeps the fixer and the verifier on
+*different* assumptions, which is the only arrangement in which their agreement means anything.
+
+### §732.5 What the driven player says about a buried coin
+
+`tools/coinwalk.mjs` boots `Pickups` the way `main.js` does — `realWorld()` never registered the
+Controller as `movement`, which is the one line `Pickups.update` needs — and drives a real capsule
+with `input.move` until `Pickups.update` latches `taken`. Nothing is teleported to a coin. Its own
+controls run on every invocation: a coin 4 m ahead is collected at frame 27; the same record
+parked 40 m behind spawn is **not** collected on the identical walk (closest 0.90 m — the driver
+arrived, there was simply nothing there).
+
+On three of the fourteen, driven rather than argued:
+
+```
+  props scatter 0   (-8.57, 0.97, 21.77)  COLLECTED at frame 86
+  props scatter 3   (-6.60, 0.75, 23.32)  COLLECTED at frame 20
+  props scatter 16  (21.80, 0.68,  3.69)  COLLECTED at frame 19
+```
+
+This **confirms §712.9's reading on the player rather than from the code**: a buried coin is not a
+lost pickup, the magnet drags it out of the wall and pays it. The defect is a look defect. It also
+means the walked arm cannot be the whole bar — "it collects" is true before the fix too, so the
+bar for a relocation is *collects **and** clears the census*, and only the pair discriminates.
+
+### §732.6 CLOSED EARLY AT THE OWNER'S REQUEST — nothing was moved
+
+**No coin was relocated. `src/` is untouched by this lane.** The instruction to close arrived
+after the census, the controls and the search were built and before any destination had been
+verified by a driven walk, and a coin moved on an unverified guess is worse than a coin left
+clipping — it is the same defect with a commit message saying it is fixed.
+
+What exists and is committed: `coinfit` with controls, `tools/coinmove.mjs` (the destination
+search), `tools/coinwalk.mjs` (the driven collection, with controls). `coinmove` found a
+clear-and-standable destination for **all 14** within 0.45–3.40 m, so the fix is available and
+priced; three of the fourteen are further than the rest and the reasons are recorded in its
+output. It is a search, which is a model, and §435.4 is exactly about that — **the candidates it
+prints are proposals, not placements.**
+
+What the next lane needs, in order: pick a destination per coin from `coinmove`; author it as a
+position-keyed table in `Pickups._author()` (position-keyed so a drift fails to match rather than
+moving the wrong coin, with an arm asserting every key matched exactly once); re-run `coinfit`
+until it is 0/82; and drive every relocated coin with `coinwalk`. The route six additionally want
+their destinations taken off a **recorded walk trace**, not off a lerp — that is §732.2's whole
+point, and it is the part I did not get to.
+
+Not attempted at all, and not blocked by anything but the clock: the day/night check the brief
+asked for (§726 put both grades on L1, and the coin material is one `InstancedMesh` whose badge
+is lighting-independent, but that is an argument and not a measurement); and any screenshot — the
+FIFO capture lock was held by `tools/vaulturn.mjs` for this lane's whole life and was never taken.
+
+### §732.7 Suite — every run this lane made, not only the green one (§703.2)
+
+One run, quoted whole:
+
+```
+  node --test tests/pickups.test.mjs tests/collectroute.test.mjs tests/cluevault.test.mjs
+      59 tests · 59 pass · 0 fail          8.4 s      at cddeb51
+```
+
+No `--test-name-pattern` anywhere (§703.2). `framebudget` and `padrest` were not run — this lane
+touched no source, and re-rolling either would have put a flaky figure next to a change that
+cannot have moved it. **Scope of that run, stated because three files is not the suite:** it
+covers the coin-adjacent arms and says the tree is where I found it. It is not a whole-suite
+figure and must not be quoted as one.
+
+### §732.8 What I got wrong
+
+- **The BOUNDARY control, first draft** — §732.3. My control failed and the instrument was right.
+- **I very nearly wrote the collider-driven `_unbury()` pass before measuring whether the collider
+  set can see the defect.** §732.4 is what the measurement said; the design it killed was already
+  drafted. The habit that saved it is the one §442.3 names — *measure the composition, do not
+  derive it* — applied to an instrument's coverage rather than to a table's.
+- **I carried the number 13 for the first half of the round** despite the brief telling me not to
+  trust it, because §712.9's prose leads with *"13 were already buried"* and puts the 14 in the
+  code block below. The brief was right and the correction cost one run.
+
+**Domain (§418.3).** Passes on: the shipped tree at the shipped seed — 14/82, controls green,
+three driven collections. Fails on: `coinfit`'s own POS-nudge and BOUNDARY, run in-arm on every
+census, and `coinwalk`'s 40 m counterexample, run in-arm on every invocation. Does NOT
+discriminate: whether any relocation is correct — **none was made, so nothing here is evidence
+about the fix**, only about where the defect is and what would count as fixing it.
+
+### §733.0 CLOSED EARLY AT THE OWNER'S REQUEST — what is here and what is not
+
+This lane was **closed early at the owner's request** partway through the donor survey. Nothing
+was bound; `src/` is byte-untouched by it. What it leaves behind is the census, a calibrated
+instrument, and a per-verb ruling for every still-procedural verb — with the ones whose rulings
+rest on a full measurement separated from the ones that rest on a corpus-exhaustion argument.
+§733.7 lists exactly what was not reached. No frames were captured (the FIFO lock was held by
+another lane's walked-break run for this lane's whole life, and the queue was not jumped).
+
+### §733.1 The census, re-derived rather than carried — 54 verbs, 26 ported, 28 procedural
+
+The brief quoted "roughly 27 of 49". That figure is §715.7's and it is now stale in both
+columns; a census quoted from another section is a claim about that section (§712.9), so it was
+re-derived from the shipped path: `REQUIRED` in `Clips.js` crossed with `CLIP_ORIGIN` out of
+`buildClipSet` in `Animation.js`.
+
+**54 verbs. 26 play reference data, 28 are procedural.** The count moved because §720 added
+`pole_idle`/`pole_grab` as verbs and §717 bound two more idles — neither of which §715.7's
+sentence could have known.
+
+The 28 still-procedural verbs, with their play sites read out of `Moveset.js`/`Animation.js`
+rather than recalled:
+
+| verb | play site |
+|---|---|
+| `sneak_idle`, `sneak_walk` | `Moveset.js:200` (`baseClip`, speed-gated at 0.25) |
+| `crawl` | `Moveset.js:351` |
+| `turn_l`, `turn_r` | `Animation.js:1889` — NOT a state: a whole-body wind layered on the idle at `turnW` |
+| `skid_stop` | `Moveset.js:268` (`oneShot`) |
+| `roll` | `Moveset.js:223` |
+| `jump_apex` | `Moveset.js:399` (`baseClip`, apex-gated against `jump_fall`) |
+| `land_hard`, `land_roll` | `Moveset.js:302` — one three-way `oneShot` beside `land_soft` |
+| `wall_run_l/r` | `Moveset.js:562/590` (` wall_run_${this._side}` — a TEMPLATED name, invisible to a literal grep) |
+| `wall_jump` | `Moveset.js:887/898` |
+| `wall_cling` | `Moveset.js:777/827` |
+| `ledge_shimmy_l/r` | `Moveset.js:953` |
+| `ledge_climb` | `Moveset.js:971` |
+| `hook_release` | `Moveset.js:1183` |
+| `rail_slide` | `Moveset.js:1357/1365` |
+| `pole_slide` | `Moveset.js:1494` |
+| `pole_swing` | `Moveset.js:1523/1562` |
+| `dive_attack` | `Moveset.js:480/496` |
+| `dive_impact` | `Moveset.js:489` |
+| `paraglide` | `Moveset.js:460` |
+| `hurt` | `Moveset.js:1982` |
+| `perch_idle` | **no gameplay play site** — `src/core/Shots.js:97` and `:220` only (the `hero` freeze and its line-of-action twin) |
+| `ko`, `victory` | **no play site at all** — nothing in `src/` requests either |
+
+Three of those rows are worth their own line because they change what "port this verb" would
+even mean. `turn_l/r` is not a state and never plays alone — it is sampled ON TOP of whatever
+idle is live, at `turnW · treeW · 0.85`, so a donor for it would have to be an additive wind,
+not a clip. `perch_idle` is reachable only through the staged-shot machinery. `ko` and `victory`
+are authored and unreachable — §715.7 already recorded that and it is confirmed here by grep
+over all of `src/`.
+
+### §733.2 The instrument, and the two ways the first draft of it was wrong
+
+`tools/verbdonor.mjs`. Shipped rig (`SlyModel`), shipped `compile()`/`sampleInto()`, and
+`_posecarry.mjs`'s `carry()` imported rather than retyped. It measures what an idle table cannot:
+accumulated sagittal **pitch** (a body that goes over reads a full turn instead of folding back
+to zero), **travel**, and §479.8's **max forward reach of the acting limb relative to the hips**
+with the time, the limb speed there, and the reach range.
+
+**It failed its own calibration twice before it measured anything, and both failures were mine.**
+
+- **The forward vector.** The first draft measured reach along the POSE's own forward
+  (`lat × up`) — `idlemeasure`'s brace-detector convention, borrowed on the theory that
+  borrowing the house's vocabulary was the safe move. It put `cane_combo_1`'s peak at **0.295**
+  against the house's declared **0.150**, because the body yaws 44° through a cane swing
+  (§716.3) and a forward that rotates with the torso chases the hand. Worse, the conjugation
+  arm read **+0.256 m both ways** — a body-relative quantity is invariant under a root yaw BY
+  CONSTRUCTION, so that arm could never have failed. That is §439.3's stub exactly: a check
+  built so it cannot disagree, inside the file whose header quotes §439.3.
+- **The bar itself.** The FLIP arm originally asserted `|bwd + fwd| < 0.02` — that conjugating
+  NEGATES the reading. False, for a reason worth keeping: the statistic is a MAX over time of a
+  projection, and `max(−x) = −min(x)`, not `−max(x)`. The correct bar is a SIGN CHANGE.
+
+Re-derived on the WORLD forward (+Z, the controller's own facing), the measure reproduces the
+house on the house's own clips — which is the only reason anything below is quotable:
+
+```
+  PASS  SHIPPED cane_combo_1: declared 0.100 · measured 0.104 (0.753 m, 2.4 m/s)  · err 0.004 s
+  PASS  SHIPPED cane_combo_2: declared 0.100 · measured 0.104 (0.753 m, 2.4 m/s)  · err 0.004 s
+  PASS  SHIPPED cane_combo_3: declared 0.375 · measured 0.379 (0.625 m, 11.7 m/s) · err 0.004 s
+  PASS  proc    cane_combo_1: declared 0.150 · measured 0.150 (0.254 m, 8.5 m/s)  · err 0.000 s
+  note  proc    cane_combo_2: declared 0.130 · measured 0.210 · err 0.080 s   [does not gate]
+  note  proc    cane_combo_3: declared 0.210 · measured 0.171 · err 0.039 s   [does not gate]
+  PASS  FLAT clip (combo_1's first key held): reach range 0.000000 m — cannot invent a strike
+  PASS  FACING conjugation: +0.254 m vs -0.070 m — the sign flips
+```
+
+`cane_combo_3` reads **0.625 m at t 0.379** against §716.4's published **0.627 @ 0.375** — the
+shipped figure to the digit, on a table this lane did not write. That is the positive control.
+The run **exits non-zero** if a gating arm fails, so a broken instrument cannot quietly produce
+a table. Which arms gate is stated rather than tuned: §479.8 names ONE calibration case in so
+many words (proc slot 1, exact) and says of the others only that they are *"within 35–70 ms"* —
+so demanding 20 ms of all six would be a bar this project's own shipped set fails. Proc 2/3
+print with their errors and do not gate.
+
+**One axis had to be added mid-run and it changes readings.** `hipsY` and ground contact are
+WORLD-anchored, which is meaningful for a grounded clip and nearly meaningless for an airborne
+one: the authored root height of a fall or a flip is wherever the animator's rig sat, and the
+STATE drives world position. Comparing `jump_apex` against an air pose on `hipsY` compares two
+root offsets — §435.4's error, a probe written from the author's model. `legExt` (hips above the
+lowest foot) and `handHip` are invariant to that offset and are what the air verbs are judged on
+below.
+
+### §733.3 The corpus, opened and deduped — and a false equivalence I nearly published
+
+All thirteen `Assets/Animations` containers were re-opened through §715.2's own reader
+(`readLibrary`/`decodeTracks`, imported — not a second scanner, §714.2's lesson). Reference HEAD
+**a312a99** verified by `git rev-parse` on the checkout itself. **247 clip entries → 65 distinct
+track-data payloads** on the humanoid skeleton. (§717.2 counted 66; the difference is that the
+four metarig-era libraries — `MASTER 006`, `Sly_14`, `Sly_19`, `SlyCooper_Anims6` — do not parse
+through this reader at all, failing on a stride-3 track their humanoid siblings do not carry.
+Those are the glTF 24 under other names and are already baked, so nothing is lost, but the
+count is stated as what it is rather than reconciled by assertion.)
+
+**A content finding that corrects §715.2's table.** §715.2 lists the MASTER libraries' four
+`Walk Disguise 1–4` and the Walk library's four `Disguise Walk Carry/Casual/Funny/Relaxed` as
+separate contents of two libraries. They are **the same four takes re-saved**, bit-identical
+after retarget, checked channel by channel across every emitted key:
+
+```
+  Walk Disguise 1 vs Disguise Walk Casual    25 keys  1575 channels   BIT-IDENTICAL
+  Walk Disguise 2 vs Disguise Walk Funny     29 keys  1827 channels   BIT-IDENTICAL
+  Walk Disguise 3 vs Disguise Walk Relaxed   23 keys  1449 channels   BIT-IDENTICAL
+  Walk Disguise 4 vs Disguise Walk Carry     59 keys  3717 channels   BIT-IDENTICAL
+  (§418.3 fail arms) Walk Disguise 1 vs 2 — DIFFER (25 vs 29 keys)
+                     Walk Posture UP vs DOWN — DIFFER (19 vs 17 keys)
+```
+
+So the disguise shelf is **four** clips, not eight — the `Idle Crouch 1 ≡ Idle Look` phenomenon
+§717.2 found, one shelf over.
+
+**AND THE ONE I GOT WRONG.** I also read `Walk Posture UP ≡ Walk Crouch 1` (MASTER) off the
+measured table and was ready to write it down: 0.90 s, 19 keys, hipsY 0.847, legExt 0.836, sep
+69.7, stride 1.380, footfalls R@0.15 L@0.65 — **identical on every printed column to three
+decimals.** Checked channel by channel they differ by **14.6° at `neck` at t 0.300.** They are
+two takes of one posture, not one take under two names. A summary statistic agreed with itself
+across two different clips, which is precisely what §717.2 said to guard against and what its
+own sentence prescribes — *"checked channel by channel and not by a summary statistic"* — and I
+still had to be saved by running the check rather than by remembering the rule.
+
+### §733.4 The per-verb ruling — measured refusals
+
+Every candidate below was extracted and retargeted through §715.2's own importer on the bench
+flag (`--asset <scratch> --keep <json>`, so the shipped asset is untouchable), then measured on
+the shipped rig. Verb figures are the SHIPPED incumbent as delivered (`ACTIVE`), not the raw
+authored body — that is what a donor would actually have to beat.
+
+| verb | best candidate | the measurement that refused it |
+|---|---|---|
+| `jump_apex` | `Idle Air 1` / `Idle Air 2` / `Fall Air Pose` | the verb holds the legs EXTENDED — `legExt` **0.973** against a bind of 0.995 — and all three candidates are tucks: **0.519 / 0.450 / 0.544**, i.e. 43–52 cm of leg drawn up on the axis that defines the pose |
+| `roll`, `land_roll` | `Run Front Flip`, `Front Flip 1/2`, `Front Flip` (Air) | the verb is a GROUND roll: hips rise and fall **59.6 cm** (`land_roll` 60.2) and travel **0.945 m** while the torso passes 45.9 cm below the bind foot. The corpus's flips are AERIAL or degenerate — `Run Front Flip` hipsY **1.045** (above standing), `Front Flip` (Air) hipsY **1.311**; and the pair the names promise does not deliver: **`Front Flip 1` does not rotate at all (pitch 0° against `FrontFlip`'s 360°)** and **`Front Flip 2` never rises (bob 1.3 cm against the verb's 59.6)** |
+| `sneak_walk` | `Walk Posture DOWN` | the only genuinely NEW candidate the survey turned up, and it loses on two axes at once: hands **100.7 cm** apart against the verb's **25.2** (a 75 cm spread — an arms-out beam walk, not a prowl), and its footfalls CLUSTER at **L@0.67 R@0.67**, the same defect that disqualified `Walk Crouch 2` in §715.3 for a tree that runs one shared stride phase. `Walk Sneak Slow` stays refused on §715.6/§717.6's grounds and on this instrument too: 16 cm taller and 20° more upright than the verb |
+| `crawl` | `Walk Posture DOWN` (deepest gait in the corpus) | the verb's hips sit at **0.144** and its torso at **72.0°** off vertical; the corpus's deepest gait sits at **0.721 / 40.2°** — **58 cm** higher and **32°** less prone. Nothing in the corpus goes near the floor |
+| `dive_attack` | `Jump Pounce` | body **86.5°** off vertical (horizontal) against the verb's **33.0°** — and, new beyond §715.6's trajectory argument: its max forward reach lands at **t 0.600 of a 0.600 s clip**, i.e. the reach is still increasing at the final sample. There is no contact instant INSIDE the clip to hang an event on |
+| `paraglide` | `Fall Glide` | **85.9°** off vertical against the verb's **16.5°** — §715.6's prone-skydive refusal reproduced on a second instrument, 69° apart |
+| `hurt` | `Idle Air Hit` | a **4.4 s loop** against a **0.62 s** one-shot, and gait-class leg cycling: toe excursion **52.7 / 56.8 cm**. (Note for the record: §715.6 called it a clip that "drifts ~2.7 m/s"; its hips XZ travel is **0.000 m** — the drift is in the FOOT fit, not the root. Both true, different measures) |
+| `land_hard` | — | the corpus has exactly two landings and both are bound (`Landing` → `land_soft`, `SpireJumplanding` → `spire_land`). No hard landing exists |
+| `skid_stop` | — | nothing in the corpus decelerates. The verb's own signature is a 17.8 m/s reach transient at t 0.015 with 18.2 cm of bob; no corpus clip has a braking beat |
+
+### §733.5 The per-verb ruling — refused on corpus exhaustion, not on a candidate
+
+For these there is no candidate to measure, because the corpus contains no clip that performs
+the function at all. The corpus is fully enumerated (§733.3) and consists of: a T-pose, air
+poses, three cane attacks, four disguise walks, three falls/glides, four flips, seven idles,
+three jumps, three runs, six crouch/posture walks, one sneak walk, one pounce, and two RESETs.
+
+`turn_l`, `turn_r` (and see §733.1 — an additive wind, not a clip), `wall_run_l`, `wall_run_r`,
+`wall_jump`, `wall_cling`, `ledge_shimmy_l`, `ledge_shimmy_r`, `ledge_climb`, `hook_release`,
+`rail_slide`, `pole_slide`, `pole_swing`, `dive_impact`, `ko`, `victory`.
+
+`perch_idle` and `sneak_idle` are refused on §717.6's brace and step tables, reproduced here
+rather than inherited: `perch_idle`'s lowest hand sits **11.8 cm BELOW its own hips** (`handHip`
+−0.118) — a glove braced on stone — and nothing in the corpus braces; `sneak_idle`'s only
+stealth-class relative in the corpus is a gait.
+
+**So the honest headline is the one the brief said was acceptable: of the 28 still-procedural
+verbs, NONE gained a donor.** Nine were refused against a real measured candidate; nineteen have
+no candidate in the corpus to refuse. That is the complete answer this lane reached.
+
+### §733.6 What was NOT touched
+
+`src/` is **byte-untouched** by this lane — no binding, no alias row, no asset. `git status`
+carries exactly one file from it: the new `tools/verbdonor.mjs`. `src/ui/`, `Guard.js`'s
+`groundProbe`/`groundSlopeMax` and the §731 HUD meter were never opened. The FIFO capture lock
+was held by another lane's walked-break run throughout and was neither taken nor bypassed; no
+vite or chromium process belongs to this lane.
+
+### §733.7 What this lane did NOT get to — stated so the next one starts from the truth
+
+- **No frames.** Every ruling above is offline geometry. Nothing was photographed, so no
+  refusal here carries the kind of visual confirmation §715.5 and §717.9 carry, and a reader
+  should not treat these as equally settled.
+- **`Walk Posture DOWN` deserves one more look.** It is the only genuinely new candidate the
+  survey found and its refusal rests on hand separation and a clustered-footfall reading. The
+  cluster in particular came from the importer's own footfall detector on ONE take; §715.3 spent
+  real effort on that question for `Walk Crouch 2` and this lane spent one number.
+- **The four metarig-era libraries were not opened**, only shown to be unparseable by this
+  reader (§733.3). §715.2 asserts they are the glTF 24 under other names; that assertion was
+  NOT independently re-verified here.
+- **`Run Front Flip` as a `double_jump` alternate** was noticed and not pursued — `double_jump`
+  is already ported, so it fell outside the brief, but it is a real 1.13 s running flip that
+  nobody has ruled on.
+- **No suite arm was written.** `tools/verbdonor.mjs` carries its calibration in-tool and exits
+  non-zero on failure, but nothing in `tests/` runs it, so it is not protected against drift.
+
