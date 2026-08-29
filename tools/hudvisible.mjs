@@ -438,8 +438,8 @@ async function run() {
       const f = badgeFeatures(withPng, probes['.sly-hp-pip']);
       report.badge = f;
       console.log('\n[hudvisible] the badge as RENDERED, one pip cropped out of the production frame:');
-      console.log(`    ${f.box[0]} x ${f.box[1]} px   oval ${f.counts.oval} px, mask ${f.counts.mask} px, `
-        + `slits ${f.counts.slit} px, ink ${f.counts.ink} px`);
+      console.log(`    ${f.box[0]} x ${f.box[1]} px   navy ${f.counts.navy} px, grey ${f.counts.grey} px, `
+        + `outline ${f.counts.outline} px`);
       console.log(`    separate pale-grey regions: ${f.greyBlobs} (sizes ${JSON.stringify(f.greySizes)}) — two eye patches plus the muzzle`);
       for (const k of ['navy', 'grey', 'outline']) {
         if (f.counts[k] < 4) fail(`the rendered badge shows only ${f.counts[k]} px of its ${k} — that ink is not surviving at this size`);
