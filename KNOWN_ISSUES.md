@@ -61641,3 +61641,136 @@ than by a comment, so if the owner ever does want it wired, the drawing is alrea
 **Suite:** `1134/1134, 0 failures` at `3a379f2`, clean detached worktree, cwd verified. The
 `kaykit` P2 failure this lane saw at `48858ec` was §730's and was fixed on that lane's side; it
 never touched `src/ui/*`.
+
+---
+
+### §731.2 — "The health bar still does not appear": it was present the whole time, and that is a different bug from being hidden
+
+**Owner, on the deployed build at `01eb6d1`: *"The health bar still does not appear"*, clarifying
+*"It should always be present in the corner"*.**
+
+§731.1 had certified the ornament present, clear of every element and legible on both grades. The
+owner's eyes and that certification could not both be right, and the certification was the thing
+under suspicion — correctly, as it turns out, though not for the reason that would have made the
+owner's report a bug report.
+
+#### What it was NOT, ruled out in order
+
+**1. Missing from the deployed artifact.** No. `vite build` at `01eb6d1` emits the markup into
+`dist/assets/HUD-C9IToBql.js`, the rules into `dist/assets/hud.css-D4Dxx4Is.js`, and the heart
+path `M23 39.2C` into `dist/assets/Icons-CGrF2ezW.js`. Ruled out with a grep over `dist/`, before
+any browser was started.
+
+**2. A visibility gate closing in ordinary play.** No, and this was checked on the production
+artifact rather than argued from source. `HUD.setVisible` is defined and **never called anywhere
+in `src/`** — the two other `setVisible`s are `SlyModel.js`'s and `Cane.js`'s, different classes —
+so `_visible` is `true` for the life of the session. `engine.debug.hideHud` initialises `false`
+(`Engine.js:186`) and is written only by `Debug.js` (its debug hooks and shot mode). `data-binoc`
+moves only through `binocucom()`, which nothing calls without a Tab press. Measured, on the
+production build, booted as a player: `#sly-hud data-hidden=0`, `debug.hideHud=false`, and
+`.sly-hp` at **effective opacity 1.0 through its entire ancestor chain** — the probe multiplies
+every ancestor's opacity rather than reading the element's own, which is the hole that let the
+previous instrument count an `opacity: 0` element as present.
+
+**3. Present, correct, and too subtle to notice.** **This one.** On the production artifact,
+served under a `/Demo/`-shaped prefix and booted the way a player boots it, `.sly-hp` sat at
+`1170.9, 661.7`, `90 × 41.2` px, `display: flex`, `visibility: visible`, in the viewport, and
+painting its own rect. It was 16.5 px hearts under an 8.6 px label — **0.40 % of a 720p frame** —
+in the corner a player checks last, with a carnelian fill measuring **1.28:1 against day sand**
+and carried entirely by an ink outline. §731.1's contrast work was a bar for *legible once you
+are hunting for it*. The owner was not hunting for it. That is not a measurement error; it is
+having measured the wrong property.
+
+#### The fix: a struck chip, which is this HUD's own answer to "make a readout read"
+
+`.sly-threat`, `.sly-carry` and `.sly-prompt` are all struck on the same inked panel — near-black
+ink ground, hard ink border, an inset accent rule in the element's own colour, a hard offset
+shadow, a degree of rotation. `.sly-hp` is now struck the same way, with a carnelian inset rule.
+Rule 1 forbids the translucent **grey** rounded rectangle; this is the inked prop the rest of the
+sheet is made from, and `hud.test.mjs` now asserts all five of those properties so it cannot drift
+into the flat panel.
+
+| | before | after |
+|---|---|---|
+| size | 90 × 41.2 px, **0.40 %** of frame | **137.2 × 47.7 px, 0.71 %** — 1.0× `.sly-tl`, the cluster the owner does see |
+| pips | 1.46u → 16.5 px | **2.05u → 23.1 px** |
+| kicker | .68u → 8.6 px (M6's floor) | **.82u → 10.2 px**, above the floor rather than on it |
+| ground | the scene, whatever it happened to be | a **known ink chip at .94** |
+| carnelian contrast | **1.28:1** on day sand | **3.14:1 against every background that can exist** |
+| gold kicker | 3.47:1 on day sand | **13.98:1**, same guarantee |
+| painting | — | **97.9 %** of its rect, mean Δ **70.0**, max Δ 112.3 |
+| corner luma | — | scene **95.5** → chip **29.0**: a 66-point step |
+
+The mirrored `Ico.bracket()` went with the change. It tied an *unbacked* cluster to the
+Binocucom's corner set; on a chip it is noise.
+
+**The contrast claim is now unconditional and costs no capture lock.** Because the pips sit on a
+known ground, the worst case can be *computed over all 256 possible backgrounds* instead of
+sampled at four camera poses — a strictly stronger statement than §731.1's survey, and the reason
+that survey is not repeated here. Three arms hold it, with the old `.82` alpha pinned as the input
+the sweep must **reject** (2.11:1) and an opaque ink chip as the one it must accept.
+
+Still visual only: no event, no `setHealth`, no handle in `this.el`, and the inertness arm still
+fails when the ornament is wired to `setHealth` by hand — re-checked after the redesign.
+
+#### Why §731.1's instrument certified a thing it could not see — four defects
+
+`tools/hudhealth.mjs` was not merely unlucky. It could not have caught this:
+
+1. **It staged.** Arm A drove every element to its widest state before measuring. A rect on a page
+   the tool arranged is not evidence about the page a player sees (§442).
+2. **It froze.** Arm A injects `transition: none !important` to read settled values, so anything
+   whose appearance depends on a transition was read at a value nobody sees.
+3. **It never loaded the artifact.** Every arm used the **vite dev server at the domain root**.
+   §666 says in as many words that this differs from `vite build` under `/Demo/` by construction.
+4. **Its presence check ignored opacity.** Arm C's sampler returned `absent` only when
+   `querySelector` missed, so an element at `opacity: 0` counted as present in 14/14 frames.
+
+`tools/hudvisible.mjs` is the replacement: production build, `/Demo/` prefix, player boot, no
+staging, no injected CSS, and a verdict made of **pixels** rather than rects.
+
+#### Five traps inside the new instrument, four of which produced a wrong answer first
+
+1. **`page.evaluate(STRING, arg)` evaluates the string as an expression and ignores the
+   argument.** Every probe came back `undefined` and the run died on `.exists`.
+2. **`__GAME.ready === true` is NOT the screen the player is looking at.** `main.js:304` arms a
+   "Click to play" overlay and removes `#boot` only on a real `pointerdown`/`keydown`
+   (`main.js:313-314`). Until then the veil is `display: grid, opacity: 1` over the whole
+   viewport. The first run screenshot **the veil**, and reported the ornament's corner and the
+   control corner both `0 %` changed. Layout happens underneath, which is exactly why the rect
+   probes looked healthy while the pixels said nothing. **Consequence for the record: every
+   `page.screenshot()` plate this lane has ever written — including §731.1's "plates written" —
+   is a picture of the loading panel.** The tool now clicks, waits for `#boot` to go, and asserts
+   it is gone.
+3. **`page.screenshot()` hangs once the game is actually running.** It logs "fonts loaded" and
+   then waits for a stable frame that software rasterisation never delivers — `cardshot.mjs`
+   recorded this and §731.0 marked it as not reproducing, which was true only because §731.0 had
+   only ever captured the static veil. CDP `Page.captureScreenshot` returns immediately.
+4. **A two-boot diff is contaminated.** Comparing a default boot against a `?hud=nohealth` boot
+   means two page loads with two different scenes: the control corner came back **47 %** changed
+   and the calibration refused the number. The isolation is now one boot — stop the loop, capture
+   the untouched player view, hide the node, capture the identical frame again.
+5. **A null-result calibration needs a liveness check.** "The control corner changed 0 %" reads
+   identically whether the diff is clean or **both frames are the same blank veil**, which is
+   precisely how trap 2 slipped through. The control corner's own pixel spread is now asserted
+   too — real content is high-contrast and many-coloured (measured: stdev 30.26, 308 distinct
+   colours), a loading panel is flat.
+
+#### Boundary
+
+This verifies the **artifact**, not the live host. The container's proxy blocks `*.github.io`
+(§695), so nothing here was fetched from the deployed page; what was measured is `vite build`
+output served locally under the same `/Demo/`-shaped prefix a GitHub project page uses, including
+404ing everything outside it. If the deployed page differs from this artifact, that is a deploy
+question and this lane did not and could not test it.
+
+#### Not claimed
+
+That the chip is the *right* size to the owner's eye, that `HEALTH` is the right word, or that
+five hearts is the right count. Those are the owner's call. What is claimed is that it is now the
+same visual weight as the cluster they demonstrably do see, on a ground that holds its contrast in
+every scene and both grades.
+
+**Suite:** `1137/1137, 0 failures` at `9d2b1ff`, clean detached worktree, cwd verified — the three
+new arms are §731.2's chip sweep, its calibration, and the struck-chip structural check. The
+production measurement above was taken at the same commit.
