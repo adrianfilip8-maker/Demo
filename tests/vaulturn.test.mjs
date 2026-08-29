@@ -434,6 +434,48 @@ test('U3 §730: an urn publishes `stone` and the crate beside it still publishes
 });
 
 /* ============================================================================================
+   T1 — the token is read off a URL, and it is independent of every other lane's
+============================================================================================ */
+
+test('T1 §730: ?vault=barrels parses from location.search, composes with ?smash=gen, and ignores the rest', () => {
+  /**
+   * DOMAIN (§418.3)
+   * PASSES ON: `?vault=barrels` — VAULT_BARRELS true, VAULT_URNS false; and
+   *            `?props=tinted&pile=faded&l1=sneak` — VAULT_BARRELS false, VAULT_URNS true, so
+   *            three other lanes' tokens do not reach this one.
+   * FAILS ON:  run — `?vault=` empty, `?vault=barrel` (singular) and `?vault=BARRELS ` are each
+   *            checked: the first two must NOT arm (a typo must not silently revert the owner's
+   *            fix), the third MUST arm (the parser trims and lower-cases like its peers).
+   *
+   * The children below read the flag through `location.search`, which is the path a PLAYER
+   * takes. Every other arm in this file uses the `globalThis.__VAULT_AB` seam, and a token that
+   * only works from a test is not a revert the owner can use.
+   */
+  const read = (search) => {
+    const script = `
+globalThis.location = ${JSON.stringify({ search })};
+const k = await import(${JSON.stringify(new URL('../src/world/KayKit.js', import.meta.url).href)});
+process.stdout.write('__R__' + JSON.stringify({ b: k.VAULT_BARRELS, u: k.VAULT_URNS, g: k.SMASH_GEN }));
+`;
+    const raw = execFileSync(process.execPath, ['--input-type=module', '-e', script],
+      { encoding: 'utf8', cwd: path.join(HERE, '..') });
+    return JSON.parse(/__R__(\{[\s\S]*\})/.exec(raw)[1]);
+  };
+
+  assert.deepEqual(read('?vault=barrels'), { b: true, u: false, g: false }, 'the URL token does not arm');
+  assert.deepEqual(read('?smash=gen&vault=barrels'), { b: true, u: false, g: true },
+    'the two body tokens do not compose');
+  assert.deepEqual(read('?props=tinted&pile=faded&l1=sneak'), { b: false, u: true, g: false },
+    'another lane\'s token reached §730\'s flag');
+  assert.deepEqual(read(''), { b: false, u: true, g: false }, 'the default boot is not the urn arm');
+
+  /* the failing inputs, RUN */
+  assert.equal(read('?vault=').b, false, 'an empty ?vault= armed the revert');
+  assert.equal(read('?vault=barrel').b, false, 'a singular typo armed the revert — the owner would lose the fix silently');
+  assert.equal(read('?vault=BARRELS ').b, true, 'the parser no longer trims and lower-cases like its peers');
+});
+
+/* ============================================================================================
    U4 — the token, and the self-report
 ============================================================================================ */
 
