@@ -11,6 +11,12 @@ import {
   seatedColossus, sphinx, anubis, falconRa, coffinLid, fallenHead, brokenStatue,
 } from './Statues.js';
 import { ContactDecals, groundFootprint } from './Decals.js';
+/* §729: the destructible models' STATIC twins — the vault's offering-table canopic jars and the
+ * courtyard wall baskets are the same generated bodies Smashables breaks, so "in all locations"
+ * covers them. They swap to KayKit bodies through the pack's own reduction path (KayKit.js —
+ * no second loader), behind the same `?smash=gen` revert. KayKit.js imports nothing from this
+ * file, so this direction cannot cycle. */
+import { SMASH_GEN, loadModelLib, loadAtlasTexture, makeAtlasMaterial } from './KayKit.js';
 
 /**
  * Props — the hero sculpture and set dress.
@@ -324,6 +330,12 @@ export class Props {
   async init() {
     this.engine.scene.add(this.group);
 
+    /* §729: fetch the imported bodies FIRST, so the build methods below can substitute them at
+       the mounts they measure. Placement determinism does not depend on this await: every
+       generated prop is still BUILT (its rng draws stay in the stream) and only its BODY is
+       exchanged — smashswap.test.mjs diffs the two arms' placements to hold that. */
+    await this._loadSwapBodies();
+
     this._colossi();
     this._sphinxAvenue();
     this._tomb();
@@ -333,6 +345,7 @@ export class Props {
     this._collectibles();
 
     this._flushBuckets();
+    this._flushKayKit();
     this._registerLightsAndFx();
     /* One draw for every grounded prop in this module, built last so the batch knows its count
        and so its bounds cover every placement. */
@@ -530,11 +543,27 @@ export class Props {
     this._absorb(lid);
 
     // Canopic jars on a low offering table beside the sarcophagus.
+    /* §729: these four are the destructibles' static twins — same generated model Smashables
+       breaks — so the swap covers them. The jar is BUILT in both arms (its rng draws stay in
+       the stream; everything placed after this loop is bit-identical under the token and under
+       a failed load) and the imported body is conformed to the jar it replaces, per jar, at
+       the same mount. Small barrels on an offering table where canopic jars stood — the
+       pack has no jar model, and that is stated in Smashables' KINDS note rather than solved
+       by stretching one. */
     const kinds = ['ape', 'jackal', 'falcon', 'human'];
     for (let i = 0; i < 4; i++) {
       const jar = canopicJar(kinds[i], { rng: this.rng });
-      place(jar, { x: L.vault.x - 2.6 + i * 0.62, y: L.vault.y + 0.62, z: L.vault.z + 2.4 });
-      this._push('lime', jar);
+      const body = this._swapBody(jar, 'barrel_small');
+      const at = { x: L.vault.x - 2.6 + i * 0.62, y: L.vault.y + 0.62, z: L.vault.z + 2.4 };
+      if (body) {
+        place(body, at);
+        this._kk.push(body);
+        this._kkStats.jars++;
+        jar.dispose();
+      } else {
+        place(jar, at);
+        this._push('lime', jar);
+      }
     }
     const table = offeringTable({ rng: this.rng });
     table.transform(matrixOf({ x: L.vault.x - 1.7, y: L.vault.y, z: L.vault.z + 2.4 }));
@@ -656,16 +685,36 @@ export class Props {
     for (const [x, z] of brazierSpots) this._brazier(x, 0, z);
 
     // Pottery and baskets gather against walls and in corners, never mid-floor.
+    /* §729: the BASKET branch swaps to imported bodies (vessels are not destructible models and
+       stay generated). Every rng draw runs in BOTH arms and in the SAME order — the branch's
+       own internals, then ry, s and the bucket coin, hoisted rather than skipped — so the swap,
+       the `?smash=gen` revert and a failed load all leave every placement in this loop and
+       after it bit-identical. Two silhouettes alternate (basketvary's lesson: one stamp reads
+       as autopilot), each conformed to the woven basket it replaces, so the authored size
+       spread (0.39–0.59 m before `s`) survives the swap as barrel-size variety. */
     for (let i = 0; i < 26; i++) {
       const againstWall = R.chance(0.7);
       const x = againstWall ? R.sign() * R.range(21, 25) : R.range(-18, 18);
       const z = againstWall ? R.range(-14, 32) : R.pick([-13, 31]);
-      const g = R.chance(0.6)
+      const isVessel = R.chance(0.6);
+      const g = isVessel
         ? vessel({ rng: R, h: R.range(0.5, 1.1) })
         : basket({ rng: R, r: R.range(0.27, 0.42), h: R.range(0.32, 0.52), bands: 3 + (i % 3), belly: R.range(0.15, 0.85), oval: R.range(0.82, 1.20), lean: R.jitter(0.14) });
-      place(g, { x, y: 0, z, ry: R.range(0, Math.PI * 2), s: R.range(0.85, 1.25) });
-      this._ground(g);
-      this._push(R.chance(0.75) ? 'lime' : 'stone', g);
+      const ry = R.range(0, Math.PI * 2), s = R.range(0.85, 1.25);
+      const key = R.chance(0.75) ? 'lime' : 'stone';
+      const body = isVessel ? null
+        : this._swapBody(g, (this._kkStats.baskets % 2) ? 'barrel_small_stack' : 'barrel_large');
+      if (body) {
+        place(body, { x, y: 0, z, ry, s });
+        this._ground(body);
+        this._kk.push(body);
+        this._kkStats.baskets++;
+        g.dispose();
+      } else {
+        place(g, { x, y: 0, z, ry, s });
+        this._ground(g);
+        this._push(key, g);
+      }
     }
 
     /**
@@ -1054,6 +1103,76 @@ export class Props {
 
   /* ===================== plumbing ================================== */
 
+  /**
+   * §729 — the static half of the destructibles swap.
+   *
+   * Loads the three imported bodies the static twins wear (vault jars → `barrel_small`,
+   * courtyard baskets → `barrel_large`/`barrel_small_stack` alternating). Per-model failure is
+   * non-fatal and per-site: `_swapBody` returns null and the call site keeps the generated
+   * body it already built — the same fallback contract Smashables holds, because a 404 (or a
+   * headless boot with no primed cache — KayKit.js `transportReady`) may cost the swap, never
+   * the prop. Under `?smash=gen` nothing loads and nothing changes.
+   */
+  async _loadSwapBodies() {
+    this._kk = [];                                  // placed KayKit-bodied statics, merged once
+    this._kkStats = { jars: 0, baskets: 0 };
+    this._kkLib = null;
+    if (SMASH_GEN) return;
+    const lib = await loadModelLib(['barrel_small', 'barrel_large', 'barrel_small_stack'], (file, err) => {
+      this.engine.warn(`props: KayKit '${file}' failed (${err?.message || err}) — the generated body stands in`);
+    });
+    if (lib.size) {
+      this._kkLib = lib;
+      try { this._kkAtlas = await loadAtlasTexture(); } catch { this._kkAtlas = null; }
+    }
+  }
+
+  /**
+   * Conform one imported body to the generated prop it replaces: uniform scale to the
+   * generated body's own measured height (never a typed number — §702/§705), base re-seated
+   * to y = 0 so the same `place()` call mounts it exactly where the generated prop stood.
+   * Returns null when the model is unavailable, and the call site keeps the original.
+   */
+  _swapBody(gen, file) {
+    const e = this._kkLib?.get(file);
+    if (!e || !gen?.attributes?.position) return null;
+    gen.computeBoundingBox();
+    const bb = gen.boundingBox;
+    const genH = bb.max.y - bb.min.y;
+    const kkH = e.bb.max.y - e.bb.min.y;
+    if (!(genH > 0) || !(kkH > 0)) return null;
+    const s = genH / kkH;
+    const geo = e.geo.clone();
+    geo.scale(s, s, s);
+    geo.translate(0, -e.bb.min.y * s, 0);
+    return geo;
+  }
+
+  /**
+   * §729 — every swapped static in ONE mesh on ONE atlas material (§718's recorded strength of
+   * the pack, kept). Registered exactly as the buckets it drained are — solid, standable
+   * `ground` — so the swap moves no collision behaviour, only the footstep material, which now
+   * says wood because the thing underfoot is now wood.
+   */
+  _flushKayKit() {
+    if (this._kkLib) { for (const e of this._kkLib.values()) e.geo.dispose(); this._kkLib = null; }
+    if (!this._kk?.length) return;
+    const merged = mergeAll(this._kk, null);
+    for (const g of this._kk) g.dispose();
+    this._kk = [];
+    if (!merged) return;
+    this._geoms.push(merged);
+    this._kkMat = makeAtlasMaterial(this.engine, this._kkAtlas ?? null, 'props:kaykit');
+    this._materials.push(this._kkMat);
+    const mesh = new THREE.Mesh(merged, this._kkMat);
+    mesh.name = 'props_kaykit';
+    this.group.add(mesh);
+    this.stats.draws++;
+    this.stats.tris += (merged.index?.count ?? merged.attributes.position.count) / 3;
+    this.stats.kaykit = { ...this._kkStats };
+    this.engine.registerCollider(mesh, { tag: 'ground', material: 'wood' });
+  }
+
   _absorb(bag) {
     if (!bag?.parts) return;
     bag.drain((key, geo) => this._push(key, geo));
@@ -1265,6 +1384,7 @@ export class Props {
     this.decals.dispose();
     for (const g of this._geoms) g.dispose();
     for (const m of this._materials) m.dispose?.();
+    this._kkAtlas?.dispose?.();               // §729: the swap's atlas texture is owned here
     this._invis?.dispose();
     this.group.removeFromParent();
     this.group.clear();

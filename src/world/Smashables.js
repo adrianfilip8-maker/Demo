@@ -8,6 +8,10 @@ import { COIN_VALUE } from './Pickups.js';
  * grade and stood beside the un-tinted scaffold as exactly the divergence the mirror exists
  * to prevent. Pickups already imports from Props (same direction), so this cannot cycle. */
 import { MATERIALS as PROP_MATERIALS } from './Props.js';
+/* §729: the imported bodies come through KayKit.js's own reduction — the ONE adoption path the
+ * pack already has (§707 measures clearance off it, §718 records its single-atlas merge as the
+ * strength to keep) — never a second loader here. `SMASH_GEN` is the `?smash=gen` revert. */
+import { SMASH_GEN, loadModelLib, loadAtlasTexture, makeAtlasMaterial } from './KayKit.js';
 
 /**
  * Smashables — things you break, and the publisher `propSmashed` never had.
@@ -65,6 +69,19 @@ import { MATERIALS as PROP_MATERIALS } from './Props.js';
  * physical presence is the break test in this file. That is the honest trade at 0.5 m of jar,
  * and the alternative (register them, then leave phantom colliders behind after the break) is
  * strictly worse: an invisible wall is a bug, a pot you clip is set dressing.
+ *
+ * ── §729: the bodies are the imported set now, and everything above survives it ────────────
+ * "Switch out the generated destructible props in all locations for those imported props."
+ * The KINDS docblock carries the per-slot model decision with its measured conforms; what
+ * matters here is what did NOT move: the resolve (same borrowed reach and cone, same early
+ * wind-up burst), the no-respawn latch, the no-collider trade — all body-independent, and the
+ * swapped bodies are 0.60–0.70 m where the trade was priced at 0.5, same class of clip. One
+ * consequence IS new and deliberate: the pack's own set dress places these same models at
+ * FULL size with solid `kaykit:solid` colliders (§707 shows guards pathing around them), so
+ * size is now the vocabulary — a knee-high container smashes and can be waded through, a
+ * waist-high-or-bigger one is furniture and blocks. Recorded rather than hidden, because two
+ * behaviours on one silhouette is exactly the kind of lie this header already prices.
+ * `?smash=gen` (KayKit.js, shared with Props.js's static twins) is the whole-swap revert.
  */
 
 /* ============================ tuning ==================================== */
@@ -106,17 +123,48 @@ export const TUNE = Object.freeze({
  * both key on — so the tag chosen here decides the debris colour, the decal and the transient
  * in one, and all three tables already have an entry for each of these.
  *
- *   jar     clay, and `stone` is the right tag for it in this palette: limestone chips into
- *           `PAL.crevice`, a `dust_ring` settles, no sparks. `SMASH.stone`.
- *   basket  wicker. `SMASH.cloth` throws NO chips — its own comment says "a basket does not
- *           produce shrapnel" — which is why a basket is worth the least: it is the quiet one.
- *   crate   `SMASH.wood`, and `PAL.woodChip` exists for exactly this and had one reader in the
- *           whole project before the SMASH table.
+ * ── §729: the shipped bodies are the IMPORTED set, and the model row is a measured decision ──
+ * The owner: "switch out the generated destructible props in all locations for those imported
+ * props." The pack holds NO jar, pot or basket model — its containers are barrels, crates and
+ * chests (enumerated on disk; stated rather than papered over) — so each slot gets the nearest
+ * container silhouette, conformed by UNIFORM scale to the measured height of the exact
+ * generated body it replaces (§702/§705: both heights are measured at build, in `_loadBodies`;
+ * neither is typed here). Native heights, measured through `loadModelLib`:
+ *
+ *   jar    → `barrel_small`    1.018 m native → ×0.599 to the jar's measured 0.609 m
+ *   basket → `chest`           1.300 m native → ×0.385 to the basket's measured 0.500 m
+ *   crate  → `crates_stacked`  2.142 m native → ×0.310 to the crate's measured 0.664 m
+ *
+ * A stretched barrel was rejected up front: conforms are uniform, so the swapped footprints
+ * (0.60 / 0.65 / 0.70 m) grow past the generated ones but stay inside the cluster ring's
+ * worst-case neighbour chord (2·0.47·sin 60° = 0.81 m against a worst radius-sum of 0.65).
+ *
+ * `material` is `wood` across the swapped set, and that is a MEASUREMENT, not a default: the
+ * area-weighted mean of the sandstone atlas under each model's own UVs is #ab7e4f / #9e6f46 /
+ * #a06d43, and `SMASH.wood`'s debris start (`PAL.woodChip` #8a6a44) is the nearest recipe in
+ * the table for crates and chest (Δ22, Δ21) and within 3 RGB units of nearest for the barrel
+ * (sand Δ37 vs wood Δ40 — a tie the material family breaks). So the shards a swing throws
+ * already match the new bodies with NO retint and no second palette — the §712 rule, satisfied
+ * by finding the derived answer already in the table. The same tag keys `Sfx.stepFor`, so a
+ * barrel now CRACKS instead of grinding, which is the sound of the thing that actually broke.
+ *
+ * `?smash=gen` restores the generated bodies AND their original tags — a canopic jar must not
+ * throw wood chips — so the table is armed at module load, exactly as `Props.PILE_FADED` is.
+ * `h` (the event's mid-height lift and the S9 bound) and the value ladder are UNTOUCHED in
+ * both arms: same places, same pay, new bodies.
+ *
+ *   jar     gen: clay under `stone` — limestone chips into `PAL.crevice`, `SMASH.stone`.
+ *   basket  gen: wicker under `cloth` — NO shrapnel, the quiet one, worth the least.
+ *   crate   both arms wood: `PAL.woodChip` existed for exactly this.
  */
-export const KINDS = Object.freeze({
+export const KINDS = Object.freeze(SMASH_GEN ? {
   jar:    { material: 'stone', scale: 1, value: COIN_VALUE.stack,  h: 0.58 },
   basket: { material: 'cloth', scale: 1, value: COIN_VALUE.single, h: 0.44 },
   crate:  { material: 'wood',  scale: 2, value: COIN_VALUE.pile,   h: 0.62 },
+} : {
+  jar:    { material: 'wood', scale: 1, value: COIN_VALUE.stack,  h: 0.58, model: 'barrel_small' },
+  basket: { material: 'wood', scale: 1, value: COIN_VALUE.single, h: 0.44, model: 'chest' },
+  crate:  { material: 'wood', scale: 2, value: COIN_VALUE.pile,   h: 0.62, model: 'crates_stacked' },
 });
 
 /**
@@ -235,11 +283,58 @@ export class Smashables {
         pos: new THREE.Vector3(s.x, s.y, s.z),
       });
     }
+    /* §729: AFTER the placements are authored, deliberately — every body decision below is
+       downstream of `this.rng`'s placement draws, so neither the swap, the `?smash=gen` arm
+       nor a failed load can move a single `pos` (the determinism arm in smashswap.test.mjs
+       runs all three and diffs the positions). */
+    await this._loadBodies();
     this._build();
     this._wire();
   }
 
   /* --------------------------------------------------------------------- */
+
+  /**
+   * §729 — fetch the imported bodies and conform each to the mount it takes over.
+   *
+   * The conform is measured on BOTH sides at build time: the generated body is built once
+   * (through the same `_genGeo` the `?smash=gen` arm renders), its height read off its own
+   * bounding box, and the KayKit model is uniform-scaled to that height and re-seated base-at-
+   * origin — so a retuned `KINDS.h`, a re-authored generator or a re-exported model all conform
+   * themselves on the next boot with no number to chase (§702/§705).
+   *
+   * Failure is per model and non-fatal: a body that cannot load keeps its generated stand-in
+   * (`_geoFor`'s fallback) and says so — the §592 shape is an event that dies in a swap, and
+   * the cousin here would be a KIND that dies in one; neither a 404 nor a headless boot with no
+   * primed cache (see `transportReady` in KayKit.js) may cost the level its breakables.
+   */
+  async _loadBodies() {
+    this._swapGeo = new Map();          // kind -> conformed, base-at-origin geometry
+    this.swapState = { armed: !SMASH_GEN, swapped: [], fallbacks: [] };
+    if (SMASH_GEN) return;
+    const models = [...new Set(Object.values(KINDS).map((K) => K.model).filter(Boolean))];
+    const lib = await loadModelLib(models, (file, err) => {
+      this.engine.warn?.(`smashables: KayKit '${file}' failed (${err?.message || err}) — the generated body stands in`);
+    });
+    try { this._atlas = await loadAtlasTexture(); } catch { this._atlas = null; }
+    for (const [kind, K] of Object.entries(KINDS)) {
+      const e = K.model ? lib.get(K.model) : null;
+      if (!e) { this.swapState.fallbacks.push(kind); continue; }
+      const gen = this._genGeo(kind);
+      gen.computeBoundingBox();
+      const genH = gen.boundingBox.max.y - gen.boundingBox.min.y;
+      gen.dispose();
+      const kkH = e.bb.max.y - e.bb.min.y;
+      const s = genH / kkH;             // uniform — the silhouette conforms, it does not stretch
+      const geo = e.geo.clone();
+      geo.scale(s, s, s);
+      geo.translate(0, -e.bb.min.y * s, 0);   // base to y=0; XZ came centred from the loader
+      geo.computeBoundingBox();
+      this._swapGeo.set(kind, geo);
+      this.swapState.swapped.push({ kind, model: K.model, s: +s.toFixed(4), h: +(kkH * s).toFixed(4) });
+    }
+    for (const e of lib.values()) e.geo.dispose();   // the clones above are the working copies
+  }
 
   _build() {
     for (const kind of Object.keys(KINDS)) {
@@ -248,7 +343,7 @@ export class Smashables {
       const geo = this._geoFor(kind);
       if (!geo) continue;
       this._geoms.push(geo);
-      const mesh = new THREE.InstancedMesh(geo, this._mat(kind), list.length);
+      const mesh = new THREE.InstancedMesh(geo, this._matFor(kind), list.length);
       mesh.name = `smashable_${kind}`;
       mesh.frustumCulled = false;
       /* Half a metre of pot self-shadowing is acne, the same call `Props._collectibles` and
@@ -260,7 +355,13 @@ export class Smashables {
     }
   }
 
+  /** The body a kind renders: the conformed import (§729), or the generated stand-in — which
+   *  is the whole of the `?smash=gen` arm and the whole of the per-model failure path. */
   _geoFor(kind) {
+    return this._swapGeo?.get(kind) || this._genGeo(kind);
+  }
+
+  _genGeo(kind) {
     const R = this.rng;
     const K = KINDS[kind];
     if (kind === 'jar') return canopicJar('human', { h: K.h, rng: R });
@@ -274,6 +375,19 @@ export class Smashables {
       ]);
     }
     return null;
+  }
+
+  /** One material for the WHOLE swapped set — the pack's single-atlas strength (§718) carried
+   *  over: three instanced meshes, one `smash:kaykit` material, built through the same recipe
+   *  `KayKit.init` uses so the two cannot drift into separate grades. A kind on its generated
+   *  fallback keeps its own §727-mirrored material through `_mat`. */
+  _matFor(kind) {
+    if (!this._swapGeo?.has(kind)) return this._mat(kind);
+    if (!this._atlasMat) {
+      this._atlasMat = makeAtlasMaterial(this.engine, this._atlas ?? null, 'smash:kaykit');
+      this._materials.push(this._atlasMat);
+    }
+    return this._atlasMat;
   }
 
   /**
@@ -409,18 +523,21 @@ export class Smashables {
 
   update() { /* nothing per-frame: a smashable is inert until it is hit. */ }
 
-  /** For the debug overlay and the analysis harness. */
+  /** For the debug overlay and the analysis harness. `swap` is §729's self-report: which kinds
+   *  wear an imported body (with the conform scale each took) and which fell back. */
   debugInfo() {
     const by = {};
     for (const p of this.props) if (p.broken) by[p.kind] = (by[p.kind] || 0) + 1;
-    return { placed: this.props.length, broken: this.broken, byKind: by };
+    return { placed: this.props.length, broken: this.broken, byKind: by, swap: this.swapState };
   }
 
   dispose() {
     for (const off of this._offs) { try { off(); } catch {} }
     this._offs.length = 0;
     for (const g of this._geoms) g.dispose?.();
+    if (this._swapGeo) { for (const g of this._swapGeo.values()) g.dispose?.(); this._swapGeo.clear(); }
     for (const m of this._materials) m.dispose?.();
+    this._atlas?.dispose?.();
     this._meshes.clear();
     this.root.removeFromParent();
     this.root.clear();

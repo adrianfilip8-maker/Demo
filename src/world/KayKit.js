@@ -41,6 +41,152 @@ import { ContactDecals, baseRadiusOf } from './Decals.js';
 
 const BASE = 'assets/kaykit/';
 
+/**
+ * §729 revert token: `?smash=gen` (or `globalThis.__SMASH_AB = 'gen'` from a test) restores the
+ * PROCEDURAL destructible bodies — PropKit's canopic jar, woven basket and chunk-built crate —
+ * at every placement the KayKit swap covers: Smashables' route clusters AND the static twins in
+ * `Props.js` (the vault's offering-table jars, the courtyard wall baskets). Same seam as
+ * `?pile=` / `?props=`: read at module load, independent of every other lane's token, and
+ * independent of `?kaykit=` — that flag governs the pack's own set-dress scatter, this one
+ * governs whose BODY the destructibles wear. It lives here rather than in Smashables.js because
+ * Props.js also reads it and Smashables already imports from Props — the other direction would
+ * be a cycle.
+ */
+export const SMASH_GEN = (() => {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('smash') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__SMASH_AB != null) raw = String(globalThis.__SMASH_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  return String(raw).trim().toLowerCase() === 'gen';
+})();
+
+/**
+ * Is there a transport that will actually SETTLE for this url? In the browser, always. In plain
+ * Node, only a primed `THREE.Cache` (tests/_kaykitboot.mjs seeds it) — `CarmelitaGuard.js:330`
+ * records the third case: a `fetch` of a relative URL in Node does not reject, it never settles,
+ * and an `await` on it hangs the suite. So a headless host with no cache entry is answered NO
+ * up front rather than discovered by a hang. §418.3: the failing input is RUN —
+ * `tests/smashswap.test.mjs` boots the swap in an unprimed child and asserts the fallback.
+ */
+function transportReady(url) {
+  if (typeof document !== 'undefined') return true;
+  try { return !!(THREE.Cache.enabled && THREE.Cache.get(`file:${url}`)); } catch { return false; }
+}
+
+/**
+ * Load KayKit models and reduce each to ONE bind-space geometry plus its measured bounds — the
+ * §729 export of what `KayKit._load` has always done, so the destructibles swap (Smashables.js,
+ * Props.js) adopts the pack through the ONE path that already ships instead of growing a second
+ * loader (§707 reads clearance off this same reduction; §702/§705: the bounds are measured here,
+ * never assumed at a call site).
+ *
+ * Returns `Map(file -> { geo, bb, rBase })`. A file that cannot load (bad data, or no transport
+ * that settles — see `transportReady`) is reported through `onFail(file, err)` and skipped; the
+ * caller decides whether a hole is fatal. Smashables and Props both fall back to the generated
+ * body per missing model, so a 404 costs the swap, never the level.
+ */
+export async function loadModelLib(names, onFail = () => {}) {
+  const loader = new GLTFLoader();
+  const lib = new Map();
+  for (const file of names) {
+    try {
+      if (!transportReady(`${BASE}${file}.gltf`)) throw new Error('no transport that settles (headless, cache not primed)');
+      const g = await loader.loadAsync(`${BASE}${file}.gltf`);
+      g.scene.updateMatrixWorld(true);
+      const parts = [];
+      g.scene.traverse((o) => {
+        if (!o.isMesh || !o.geometry) return;
+        let geo = o.geometry.clone();
+        geo.applyMatrix4(o.matrixWorld);
+        if (geo.index) geo = geo.toNonIndexed();
+        if (!geo.attributes.uv) {
+          geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(geo.attributes.position.count * 2), 2));
+        }
+        if (!geo.attributes.normal) geo.computeVertexNormals();
+        for (const k of Object.keys(geo.attributes)) {
+          if (!['position', 'normal', 'uv'].includes(k)) geo.deleteAttribute(k);
+        }
+        parts.push(geo);
+      });
+      const geo = parts.length === 1 ? parts[0] : mergeGeometries(parts, false);
+      if (!geo) throw new Error('parts disagree on attributes');
+      geo.computeBoundingBox();
+      let bb = geo.boundingBox;
+      if (!bb || ![bb.min.y, bb.max.y].every(Number.isFinite)) throw new Error('non-finite bounds');
+
+      /* Re-centre on the model's own XZ centre, ONCE, here.
+       *
+       * These models are not authored around their origin, and for one of them the amount is
+       * large: `rubble_half` sits 2.000 m off in x (it is a wall-segment piece, origin at one
+       * end). A placement rotates about the origin, so without this a rotated prop swings that
+       * far off the coordinate the table names — and the collider, which is built at the named
+       * coordinate, would not follow it.
+       *
+       * This used to add "and both chests 0.355 m in z", and that number does not describe
+       * anything this code ever sees. Measured: **both chests are 0.0229 m off in z.** 0.355 m
+       * is what you get by unioning the raw accessor bounds WITHOUT applying the node transform
+       * — `chest_lid` carries `translation: [0, 0.5, −0.5648832]`, the raw union spans
+       * z −0.6000…1.3107, centre 0.3554 — and the `applyMatrix4(o.matrixWorld)` a dozen lines
+       * above has already folded that translation in before any of this runs. So `rubble_half`
+       * is the entire case for this block and the chests are a rounding error. The lesson is
+       * narrower than "the number was stale": it was measured on geometry the loader does not
+       * produce, which is a class of error a comment cannot show and a harness can.
+       *
+       * Y is deliberately NOT touched: `bb.min.y` is what sets each prop down on its floor,
+       * and it is the one axis where the asset's own authoring is the useful reference. */
+      const cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2;
+      if (Math.abs(cx) > 1e-4 || Math.abs(cz) > 1e-4) {
+        geo.translate(-cx, 0, -cz);
+        geo.computeBoundingBox();
+        bb = geo.boundingBox;
+      }
+      /* Base footprint radius, measured on the model's own lowest 25 cm rather than taken
+         from `bb`. The two disagree by enough to matter: `barrel_large` is 0.635 m at the
+         floor and 0.932 m at its belly, and `crates_stacked` reaches 1.427 m only at a
+         corner. A decal sized off the bounding box would be up to 47 % too wide under every
+         barrel in the level, which reads as a puddle rather than a contact. */
+      lib.set(file, { geo, bb: bb.clone(), rBase: baseRadiusOf(geo) });
+    } catch (err) {
+      onFail(file, err);
+    }
+  }
+  return lib;
+}
+
+/**
+ * The pack's atlas, with the three settings every consumer needs and none of them can skip
+ * (`flipY = false` is the glTF convention — see SlyModelDL). Headless with no primed image
+ * cache returns null instead of hanging (same reasoning as `transportReady`); a null atlas
+ * still yields a working material below, just an untextured one.
+ */
+export async function loadAtlasTexture(file = 'dungeon_texture_sandstone.png') {
+  if (typeof document === 'undefined') {
+    try { if (!(THREE.Cache.enabled && THREE.Cache.get(`image:${BASE}${file}`))) return null; } catch { return null; }
+  }
+  const atlas = await new THREE.TextureLoader().loadAsync(BASE + file);
+  atlas.colorSpace = THREE.SRGBColorSpace;
+  atlas.flipY = false;                            // glTF convention, unlike OBJ — see SlyModelDL
+  atlas.anisotropy = 4;
+  return atlas;
+}
+
+/**
+ * The ONE look for everything that wears the atlas — `KayKit.init` and the §729 destructible
+ * swap build their materials through this so the imported set cannot drift into two grades
+ * (Smashables' own header calls that drift out by name for the clays). Each consumer OWNS the
+ * material it makes (and disposes it); what is shared is the recipe, not the instance.
+ */
+export function makeAtlasMaterial(engine, atlas, name = 'kaykit:atlas') {
+  const shading = engine?.get?.('shading');
+  if (shading?.make) {
+    return shading.make({ name, color: 0xffffff, map: atlas, bands: 3, rim: 0.5, outline: 0.0034, outlineColor: 0x1a1210 });
+  }
+  const m = new THREE.MeshStandardMaterial({ map: atlas, roughness: 0.9 });
+  m.name = name;                        // the headless branch answers to the same name
+  return m;
+}
+
 /* Showcase row, kept for re-judging the palette. No x coordinates: it packs itself from measured
    bounding boxes, after a hand-spaced version produced an unreadable pile-up (§205). */
 const SHOWCASE = [
@@ -339,16 +485,12 @@ export class KayKit {
     if (flag === 'off') return;
     this.mode = flag === 'show' ? 'show' : flag === 'showraw' ? 'showraw' : 'props';
 
+    /* §729 folded these lines into `loadAtlasTexture`/`makeAtlasMaterial` above so the
+       destructibles swap wears byte-for-byte this material recipe — same settings, same
+       fallback branch, one place for both to drift from (which is to say: neither). */
     const atlasFile = this.mode === 'showraw' ? 'dungeon_texture.png' : 'dungeon_texture_sandstone.png';
-    const atlas = await new THREE.TextureLoader().loadAsync(BASE + atlasFile);
-    atlas.colorSpace = THREE.SRGBColorSpace;
-    atlas.flipY = false;                            // glTF convention, unlike OBJ — see SlyModelDL
-    atlas.anisotropy = 4;
-
-    const shading = this.engine?.get?.('shading');
-    this.material = shading?.make
-      ? shading.make({ name: 'kaykit:atlas', color: 0xffffff, map: atlas, bands: 3, rim: 0.5, outline: 0.0034, outlineColor: 0x1a1210 })
-      : new THREE.MeshStandardMaterial({ map: atlas, roughness: 0.9 });
+    const atlas = await loadAtlasTexture(atlasFile);
+    this.material = makeAtlasMaterial(this.engine, atlas);
 
     const wanted = this.mode === 'props'
       ? [...new Set(PLACEMENTS.map((p) => p[0]))]
@@ -368,73 +510,18 @@ export class KayKit {
       + `${this.stats.decals} contact decals, ${this.stats.hulls || 0} hulls`);
   }
 
-  /** Load each model once and reduce it to a single bind-space geometry plus its bounds. */
+  /**
+   * Load each model once and reduce it to a single bind-space geometry plus its bounds.
+   * §729 moved the body to the exported `loadModelLib` (top of this file) so the destructibles
+   * swap shares it; this method keeps the class's own bookkeeping — `stats.models`/`failed`
+   * and the warn line — byte-identical, and `tests/_kaykitboot.mjs` still wraps it by name.
+   */
   async _load(names) {
-    const loader = new GLTFLoader();
-    const lib = new Map();
-    for (const file of names) {
-      try {
-        const g = await loader.loadAsync(`${BASE}${file}.gltf`);
-        g.scene.updateMatrixWorld(true);
-        const parts = [];
-        g.scene.traverse((o) => {
-          if (!o.isMesh || !o.geometry) return;
-          let geo = o.geometry.clone();
-          geo.applyMatrix4(o.matrixWorld);
-          if (geo.index) geo = geo.toNonIndexed();
-          if (!geo.attributes.uv) {
-            geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(geo.attributes.position.count * 2), 2));
-          }
-          if (!geo.attributes.normal) geo.computeVertexNormals();
-          for (const k of Object.keys(geo.attributes)) {
-            if (!['position', 'normal', 'uv'].includes(k)) geo.deleteAttribute(k);
-          }
-          parts.push(geo);
-        });
-        const geo = parts.length === 1 ? parts[0] : mergeGeometries(parts, false);
-        if (!geo) throw new Error('parts disagree on attributes');
-        geo.computeBoundingBox();
-        let bb = geo.boundingBox;
-        if (!bb || ![bb.min.y, bb.max.y].every(Number.isFinite)) throw new Error('non-finite bounds');
-
-        /* Re-centre on the model's own XZ centre, ONCE, here.
-         *
-         * These models are not authored around their origin, and for one of them the amount is
-         * large: `rubble_half` sits 2.000 m off in x (it is a wall-segment piece, origin at one
-         * end). A placement rotates about the origin, so without this a rotated prop swings that
-         * far off the coordinate the table names — and the collider, which is built at the named
-         * coordinate, would not follow it.
-         *
-         * This used to add "and both chests 0.355 m in z", and that number does not describe
-         * anything this code ever sees. Measured: **both chests are 0.0229 m off in z.** 0.355 m
-         * is what you get by unioning the raw accessor bounds WITHOUT applying the node transform
-         * — `chest_lid` carries `translation: [0, 0.5, −0.5648832]`, the raw union spans
-         * z −0.6000…1.3107, centre 0.3554 — and the `applyMatrix4(o.matrixWorld)` a dozen lines
-         * above has already folded that translation in before any of this runs. So `rubble_half`
-         * is the entire case for this block and the chests are a rounding error. The lesson is
-         * narrower than "the number was stale": it was measured on geometry the loader does not
-         * produce, which is a class of error a comment cannot show and a harness can.
-         *
-         * Y is deliberately NOT touched: `bb.min.y` is what sets each prop down on its floor,
-         * and it is the one axis where the asset's own authoring is the useful reference. */
-        const cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2;
-        if (Math.abs(cx) > 1e-4 || Math.abs(cz) > 1e-4) {
-          geo.translate(-cx, 0, -cz);
-          geo.computeBoundingBox();
-          bb = geo.boundingBox;
-        }
-        /* Base footprint radius, measured on the model's own lowest 25 cm rather than taken
-           from `bb`. The two disagree by enough to matter: `barrel_large` is 0.635 m at the
-           floor and 0.932 m at its belly, and `crates_stacked` reaches 1.427 m only at a
-           corner. A decal sized off the bounding box would be up to 47 % too wide under every
-           barrel in the level, which reads as a puddle rather than a contact. */
-        lib.set(file, { geo, bb: bb.clone(), rBase: baseRadiusOf(geo) });
-        this.stats.models++;
-      } catch (err) {
-        this.stats.failed++;
-        this.engine?.warn?.(`KayKit: ${file} failed — ${err?.message || err}`);
-      }
-    }
+    const lib = await loadModelLib(names, (file, err) => {
+      this.stats.failed++;
+      this.engine?.warn?.(`KayKit: ${file} failed — ${err?.message || err}`);
+    });
+    this.stats.models += lib.size;
     return lib;
   }
 
