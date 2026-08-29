@@ -62210,3 +62210,15 @@ BEFORE the work, per the ledger discipline; the body follows in later commits. T
 figure of "roughly 27 of 49" is NOT carried forward — a census quoted from another section is a
 claim about that section (§712.9's lesson), and this lane re-derives it from `CLIP_ORIGIN`
 through the shipped `buildClipSet` in §733.1. The live figure is 28 of 54.)*
+
+---
+
+## §734 — "Are there any available downloaded assets for torches that can be used the replaced the generated wall mounted torches?": yes, and the choice was made by rendering both, not by reading their filenames
+
+*(Claim marker: §734 CLAIM torch-sconce-import-lane-9d2e4f — the WALL-TORCH-SWAP lane, the
+§729 precedent applied to `PropKit.wallTorch()` at its `Props._torch` call sites. Heading
+committed BEFORE the body per §700.9; the body lands in this lane's later commits. This lane
+touches `PropKit.js` / `Props.js` / the torch fire+light registration ONLY — not `src/ui/`, not
+`Animation.js`, not the coin census, not `Guard.js` TUNE. The two candidates are KayKit
+`torch_mounted` and the staged tombchaser `Torch_Art`; the decision, the rejected one and the
+re-derived flame anchor are recorded below rather than asserted.)*
