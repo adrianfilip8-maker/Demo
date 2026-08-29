@@ -21,8 +21,15 @@
  *
  * Frames are shot for verification only, at the owner's request; there is no presentation set.
  *
- *   node tools/vaulturn.mjs                  full run into shots/vault730/
+ *   node tools/vaulturn.mjs                  the default arm, one boot, into shots/vault730/
+ *   node tools/vaulturn.mjs --arms both      also walk the ?vault=barrels arm (second boot)
  *   CAMDOT=0 node tools/vaulturn.mjs         pre-flight prints but does not refuse
+ *
+ * ── NOT YET RUN TO COMPLETION, and §418.9 says to write that down ───────────────────────────
+ * The first attempt got as far as the browser confirming the bodies (quoted in §730.9) and then
+ * spent 4.6 minutes inside the FIRST walk leg without returning; the hold was abandoned rather
+ * than kept, because another lane was queued on the lock behind it. The repairs are in
+ * `walkToVault`'s header and in `--arms`. **The walked break is therefore not evidence yet.**
  */
 import { chromium } from 'playwright';
 import { acquire } from './lock.mjs';
@@ -37,6 +44,9 @@ const argv = process.argv.slice(2);
 const opt = (n, d) => { const i = argv.indexOf(`--${n}`); if (i < 0) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const OUTDIR = path.resolve(ROOT, opt('out', 'shots/vault730'));
 const W = +opt('w', 1280), H = +opt('h', 720);
+/* One arm by default — see walkToVault's header for why the token half is not worth a second
+   boot on a contended lock. `--arms both` runs the ?vault=barrels walk as well. */
+const ARMS_OPT = String(opt('arms', 'default')).toLowerCase();
 
 const sha = () => { try { return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT }).toString().trim(); } catch { return '(no git)'; } };
 
@@ -212,20 +222,49 @@ async function boot(browser, port, query) {
   return page;
 }
 
-/** Walk the authored route from spawn to the treasure room, leg by leg, and report each. */
+/**
+ * Walk the authored route from spawn to the treasure room, leg by leg, and report each.
+ *
+ * ── What the first attempt cost, and why these numbers are what they are ────────────────────
+ * The first run of this walked 7 legs at `maxFrames 1400` with `jumpEvery 24` on EVERY leg, and
+ * the first leg had not returned after 4.6 minutes of wall time — a projected 45+ minutes for
+ * both arms, on a capture lock another lane was queued behind. That hold was abandoned rather
+ * than kept, and this is the repair:
+ *
+ *   · `jumpEvery` is now PER LEG. A jump pulse is only correct where a mantle is actually
+ *     needed — the two terrace risers and the tomb descent — and on the long flat legs
+ *     (hall-floor, inner-gate) it fired ~58 times per leg for nothing, each one a fresh press
+ *     through the input seam with the FX and audio that follow it.
+ *   · `maxFrames` drops 1400 → 900, which is `smashshot.mjs`'s own budget for the same drive.
+ *   · every leg prints its WALL time as well as its frame count, so the next reader can tell a
+ *     slow container from a stuck drive without guessing — which is exactly what could not be
+ *     told the first time.
+ *   · `--arms default` (the default) runs ONE arm. The `?vault=barrels` half is already proven
+ *     headlessly by `vaulturn.test.mjs` U2/U4 and by `smashswap` W1/W2 under the token, so
+ *     spending a second browser boot and a second full walk on it is not worth a contended
+ *     lock. `--arms both` opts back in.
+ */
+const LEG_JUMP = { 'terrace-1': 24, 'terrace-2': 24, 'descent-landing': 0, 'vault-floor': 30 };
+
 async function walkToVault(page, route, target) {
   const legs = ['terrace-1', 'terrace-2', 'hall-floor', 'inner-gate', 'descent-landing', 'vault-floor'];
   const out = [];
   for (const name of legs) {
     const w = route.find((r) => r[0] === name);
     if (!w) continue;
-    const r = await page.evaluate(([pt]) => window.__vt.walkTo(pt, 1.6, 1400, 24), [[w[1], w[2], w[3]]]);
-    out.push({ leg: name, ...r });
-    say2(`      ${name.padEnd(16)} ${r.arrived ? 'arrived' : 'STOPPED'}  ${String(r.frames).padStart(4)} frames  ${r.dist} m out  at ${JSON.stringify(r.at)}`);
+    const t0 = Date.now();
+    const jump = LEG_JUMP[name] ?? 0;
+    const r = await page.evaluate(([pt, j]) => window.__vt.walkTo(pt, 1.6, 900, j), [[w[1], w[2], w[3]], jump]);
+    const secs = (Date.now() - t0) / 1000;
+    out.push({ leg: name, jump, secs: +secs.toFixed(1), ...r });
+    say2(`      ${name.padEnd(16)} ${r.arrived ? 'arrived' : 'STOPPED'}  ${String(r.frames).padStart(4)} frames in ${secs.toFixed(1)}s `
+      + `(${(1000 * secs / Math.max(1, r.frames)).toFixed(0)} ms/frame)  ${r.dist} m out  at ${JSON.stringify(r.at)}`);
   }
-  const r = await page.evaluate(([pt]) => window.__vt.walkTo(pt, 1.0, 900, 24), [target]);
-  out.push({ leg: 'urn', ...r });
-  say2(`      ${'urn'.padEnd(16)} ${r.arrived ? 'arrived' : 'STOPPED'}  ${String(r.frames).padStart(4)} frames  ${r.dist} m out  at ${JSON.stringify(r.at)}`);
+  const t1 = Date.now();
+  const r = await page.evaluate(([pt]) => window.__vt.walkTo(pt, 1.0, 600, 0), [target]);
+  const s1 = (Date.now() - t1) / 1000;
+  out.push({ leg: 'urn', secs: +s1.toFixed(1), ...r });
+  say2(`      ${'urn'.padEnd(16)} ${r.arrived ? 'arrived' : 'STOPPED'}  ${String(r.frames).padStart(4)} frames in ${s1.toFixed(1)}s  ${r.dist} m out  at ${JSON.stringify(r.at)}`);
   const s = await page.evaluate(() => window.__vt.settle());
   say2(`      settled at ${JSON.stringify(s.at)}  grounded=${s.grounded}  state=${s.state}`);
   return { legs: out, settled: s };
@@ -354,7 +393,10 @@ async function run() {
         '--js-flags=--max-old-space-size=4096', '--force-device-scale-factor=1', '--hide-scrollbars', '--mute-audio'],
     });
 
-    for (const [arm, query] of [['default', ''], ['barrels', '?vault=barrels']]) {
+    const ARMS = ARMS_OPT === 'both'
+      ? [['default', ''], ['barrels', '?vault=barrels']]
+      : [['default', '']];
+    for (const [arm, query] of ARMS) {
       say2(`\n=== arm: ${arm}${query ? '  ' + query : ''} ===`);
       const page = await boot(browser, port, query);
       const b = await page.evaluate(() => window.__vt.bodies());
@@ -406,16 +448,23 @@ async function run() {
     const d = report.arms.default, bl = report.arms.barrels;
     const mats = (evs) => evs.map((e) => e.material).sort();
     say2(`  default  vault break materials: ${JSON.stringify(mats(d.breaks.day))}`);
-    say2(`  barrels  vault break materials: ${JSON.stringify(mats(bl.breaks.day))}`);
     say2(`  default  outside-room jar:      ${JSON.stringify(mats(d.breaks.outside))}`);
-    say2(`  barrels  outside-room jar:      ${JSON.stringify(mats(bl.breaks.outside))}`);
     if (!mats(d.breaks.day).includes('stone')) { say2('  !! no urn in the vault broke as stone on the default arm'); bad++; }
-    if (mats(bl.breaks.day).includes('stone')) { say2('  !! ?vault=barrels still broke something as stone'); bad++; }
     if (mats(d.breaks.outside).includes('stone')) { say2('  !! a jar outside the treasure room broke as stone — the policy has gone global'); bad++; }
     const dUrn = d.bodies.meshes.find((x) => x.name === 'smashable_jar_urn');
-    const bUrn = bl.bodies.meshes.find((x) => x.name === 'smashable_jar_urn');
-    say2(`  urn mesh: default ${dUrn ? `${dUrn.count} on ${dUrn.mat}` : 'ABSENT'}   barrels ${bUrn ? `${bUrn.count} on ${bUrn.mat}` : 'absent (correct)'}`);
-    if (!dUrn || bUrn) { say2('  !! the urn mesh is not gated by the token'); bad++; }
+    say2(`  urn mesh: default ${dUrn ? `${dUrn.count} on ${dUrn.mat}` : 'ABSENT'}`);
+    if (!dUrn) { say2('  !! the default arm built no urn mesh'); bad++; }
+    if (bl) {
+      say2(`  barrels  vault break materials: ${JSON.stringify(mats(bl.breaks.day))}`);
+      say2(`  barrels  outside-room jar:      ${JSON.stringify(mats(bl.breaks.outside))}`);
+      if (mats(bl.breaks.day).includes('stone')) { say2('  !! ?vault=barrels still broke something as stone'); bad++; }
+      const bUrn = bl.bodies.meshes.find((x) => x.name === 'smashable_jar_urn');
+      say2(`  urn mesh: barrels ${bUrn ? `${bUrn.count} on ${bUrn.mat}` : 'absent (correct)'}`);
+      if (bUrn) { say2('  !! the urn mesh is not gated by the token'); bad++; }
+    } else {
+      say2('  barrels arm not run (--arms default) — the token half is covered headlessly by '
+        + 'vaulturn.test.mjs U2/U4 and smashswap W1/W2');
+    }
 
     await writeFile(path.join(OUTDIR, 'report.json'), JSON.stringify(report, null, 2));
     say2(`\n[vaulturn] report -> ${path.relative(ROOT, OUTDIR)}/report.json   sha ${report.sha}`);
