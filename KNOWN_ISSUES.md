@@ -63310,3 +63310,26 @@ read at module load and cannot be poked in-page (`tools/kkgrade.mjs --probe`):
   a material one. §736.4 shows the triplanar layer is not the answer.
 * `tools/kkwhy.mjs`'s knock-out pass has still never completed. It would give the per-term
   attribution this section reasoned about from the shader source instead.
+
+---
+
+## §737 — "The props look faded", the sixth report: the defect is per-OBJECT and scales with curvature, and every round so far averaged it away
+
+*(Heading committed ahead of its body to hold the number — §700.9. Claim marker, worded to be
+unlike any other lane's (§717): §737 CLAIM kaykit-prop-bleach-lane-c40f19 — the KAYKIT-PROP-
+BLEACH lane. Scope: the ATTRIBUTION this complaint has never had. §727 answered it as chroma on
+the wrong population; §736 answered it as albedo grade on the right population, shipped
+`KK_GRADE = 0xe6b073` with a `?kk=flat` revert, and the owner looked at the result and said the
+props still read faded. Both rounds were judged by a POOLED statistic over the whole prop
+population, and this lane's opening claim is that no pooled statistic can see this defect: hand
+patches in §736's own shipped `interior` frame read chest 0.557 — MORE saturated than the
+architecture beside it — against canopic jar 0.020-0.185 with its hue drifting to cyan, same
+material, same atlas, same grade, same room, same lights. A box renders fine and a small rounded
+body does not, so the differentiator is a term whose coverage scales with grazing angle, and the
+mean of the two lands next to the architecture and reports nothing. This lane builds a PER-OBJECT
+metric, validates it against the frames already on disk, and then turns terms off ONE AT A TIME
+— rim, ambient fill, bloom, spec, subsurface — re-measuring the same masks, before any fix is
+designed. It touches nothing in `Architecture.js` and nothing in the character's TUNE: those are
+the owner's reference for "correct". If the dominant term turns out to be one that cannot be
+scoped away from the architecture, this lane STOPS and reports the tradeoff rather than shipping
+a compromise. Body follows in this lane's next pushes.)*
