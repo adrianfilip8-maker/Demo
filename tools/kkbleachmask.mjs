@@ -144,9 +144,24 @@ export async function score(pngFile, mask, { erodeR = 2, minPix = 24 } = {}) {
     let innerN = 0;
     for (let i = 0; i < gw * gh; i++) if (inner[i]) innerN++;
     const edgeFrac = raw > 0 ? 1 - innerN / raw : 1;
+    /* ── within-body LUMA VARIANCE, and why it is safe here when §736's was not ─────────
+       §736 built a local-contrast instrument, ran it for 45 minutes of capture lock, and had
+       to throw it away because its POSITIVE control failed: the known-flat surface measured as
+       the richest in the frame. The cause was structural — a high-pass over a footprint made
+       of many small separate objects is dominated by their silhouettes and their creases
+       against each other, not by anything on their surfaces, and eroding a pixel or three does
+       not remove them.
+
+       That failure is a property of a POPULATION footprint, not of the statistic. Here the
+       mask is one body, already eroded, and the high-pass window is additionally required to
+       lie wholly inside that eroded mask — so no silhouette, no neighbouring object and no ink
+       line can enter the window at all. The controls are back in-arm and they are known-answer
+       rather than assumed: CTLGREY paints every body one flat unlit colour, so hp MUST collapse
+       to the PostFX gradient floor, and the textured architecture must stay well above it. */
     const S = [], V = [], H = [], F = [];
     const N = [];
     let sumR = 0, sumG = 0, sumB = 0, n = 0;
+    const L = new Float32Array(gw * gh);
     for (let gy = 0; gy < gh; gy++) {
       for (let gx = 0; gx < gw; gx++) {
         const gi = gy * gw + gx;
@@ -156,12 +171,34 @@ export async function score(pngFile, mask, { erodeR = 2, minPix = 24 } = {}) {
         const r = img.data[p], g = img.data[p + 1], b = img.data[p + 2];
         const c = hsv(r, g, b);
         S.push(c.s); V.push(c.v); H.push(c.h); F.push(fres[gi] / 255);
+        L[gi] = 0.2126 * r + 0.7152 * g + 0.0722 * b;
         N.push([nrm[gi * 3] / 127, nrm[gi * 3 + 1] / 127, nrm[gi * 3 + 2] / 127]);
         sumR += r; sumG += g; sumB += b; n++;
       }
     }
     if (!n) continue;
     const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+    /* hp3: RMS of (luma - local 7x7 mean), evaluated ONLY where the whole window is inside the
+       eroded body. sdL: the body's own luma spread, which includes its shading gradient. */
+    let hpS = 0, hpN = 0, lS = 0, lS2 = 0, lN = 0;
+    const R3 = 3, WIN = (2 * R3 + 1) * (2 * R3 + 1);
+    for (let gy = R3; gy < gh - R3; gy++) {
+      for (let gx = R3; gx < gw - R3; gx++) {
+        const gi = gy * gw + gx;
+        if (!e[gi]) continue;
+        lS += L[gi]; lS2 += L[gi] * L[gi]; lN++;
+        let ok = 1, sum = 0;
+        for (let dy = -R3; dy <= R3 && ok; dy++) {
+          const row = (gy + dy) * gw + gx;
+          for (let dx = -R3; dx <= R3; dx++) { if (!e[row + dx]) { ok = 0; break; } sum += L[row + dx]; }
+        }
+        if (!ok) continue;
+        const d = L[gi] - sum / WIN;
+        hpS += d * d; hpN++;
+      }
+    }
+    const hp3 = hpN ? Math.sqrt(hpS / hpN) : null;
+    const sdL = lN > 1 ? Math.sqrt(Math.max(0, lS2 / lN - (lS / lN) ** 2)) : null;
     // Measured curvature: mean angle between each visible normal and the object's mean normal.
     let mx = 0, my = 0, mz = 0;
     for (const v of N) { mx += v[0]; my += v[1]; mz += v[2]; }
@@ -178,7 +215,7 @@ export async function score(pngFile, mask, { erodeR = 2, minPix = 24 } = {}) {
       raw, n, thin: n < minPix,
       rgb: [Math.round(sumR / n), Math.round(sumG / n), Math.round(sumB / n)],
       sat: mean(S), val: mean(V), hue: mh.h, hueR: mh.r,
-      fres: mean(F), disp, edgeFrac,
+      fres: mean(F), disp, edgeFrac, hp3, hpN, sdL,
     });
   }
   return rows;

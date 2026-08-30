@@ -22,6 +22,12 @@ const DIR = argv.find((a) => !a.startsWith('--')) || 'shots/kkbleach';
 const FIXTURE = opt('fixture', '');
 const NOBJ = +opt('objects', '16');
 const MINPIX = +opt('minpix', '24');
+/* `--at 963,400 520,372 …` — WHICH OBJECT is at this pixel, and under which material.
+   §730 put the vault's canopic jars back as PROCEDURAL bodies, so a hand patch on "a jar" in
+   the crypt is not necessarily on the KayKit recipe at all. A comparison whose two halves turn
+   out to wear different materials is §442 again, and the cheap defence is to measure the
+   composition rather than derive it from what the object looks like. */
+const AT = String(opt('at', '')).split(/\s+/).filter(Boolean);
 const f3 = (x) => (x == null ? '  —  ' : x.toFixed(3));
 const f1 = (x) => (x == null ? ' — ' : x.toFixed(1));
 
@@ -31,6 +37,19 @@ console.log(`\nkkbleach report — ${DIR}  (sha ${rep.sha}, ${rep.w}x${rep.h}, s
 for (const [shot, rec] of Object.entries(rep.shots)) {
   if (!rec.mask) continue;
   const mask = await loadMask(path.join(DIR, rec.mask));
+
+  if (AT.length) {
+    console.log(`\n  WHAT IS AT THIS PIXEL — ${shot} mask (stride ${mask.stride})`);
+    for (const spec of AT) {
+      const [px, py] = spec.split(',').map(Number);
+      const gx = Math.round(px / mask.stride), gy = Math.round(py / mask.stride);
+      const gi = gy * mask.gw + gx;
+      const id = (gx >= 0 && gx < mask.gw && gy >= 0 && gy < mask.gh) ? mask.ids[gi] : -1;
+      const o = mask.objects.find((x) => x.id === id);
+      const fr = id >= 0 ? (mask.fres[gi] / 255).toFixed(3) : '—';
+      console.log(`    (${px},${py})  ${o ? `${o.pop.padEnd(5)} ${o.mesh}  material ${o.mat}` : 'no object (sky / hidden fx / out of frame)'}   fres ${fr}`);
+    }
+  }
 
   for (const [grade, g] of Object.entries(rec.grades || {})) {
     const arms = {};
@@ -47,12 +66,12 @@ for (const [shot, rec] of Object.entries(rep.shots)) {
     /* ---- per object, biggest first, split by population -------------------------------- */
     const sortRows = (p) => base.filter((r) => r.pop === p && !r.thin).sort((a, b) => b.n - a.n);
     console.log(`\n  PER OBJECT (A0, eroded masks, n = sampled grid cells)`);
-    console.log(`    ${'object'.padEnd(34)} ${'pop'.padEnd(5)} ${'n'.padStart(6)} ${'sat'.padStart(6)} ${'val'.padStart(6)} ${'hue'.padStart(6)} ${'hueR'.padStart(5)} ${'disp°'.padStart(6)} ${'fres'.padStart(6)} ${'edge'.padStart(5)}  rgb`);
+    console.log(`    ${'object'.padEnd(34)} ${'pop'.padEnd(5)} ${'n'.padStart(6)} ${'sat'.padStart(6)} ${'val'.padStart(6)} ${'hue'.padStart(6)} ${'hueR'.padStart(5)} ${'disp°'.padStart(6)} ${'fres'.padStart(6)} ${'edge'.padStart(5)} ${'hp3'.padStart(6)} ${'sdL'.padStart(6)}  rgb`);
     for (const p of ['PROP', 'ARCH', 'CHAR', 'OTHER']) {
       const rows = sortRows(p).slice(0, NOBJ);
       if (!rows.length) continue;
       for (const r of rows) {
-        console.log(`    ${r.mesh.slice(0, 34).padEnd(34)} ${r.pop.padEnd(5)} ${String(r.n).padStart(6)} ${f3(r.sat).padStart(6)} ${f3(r.val).padStart(6)} ${f1(r.hue).padStart(6)} ${f3(r.hueR).padStart(5)} ${f1(r.disp).padStart(6)} ${f3(r.fres).padStart(6)} ${f3(r.edgeFrac).padStart(5)}  ${r.rgb.join(',')}`);
+        console.log(`    ${r.mesh.slice(0, 34).padEnd(34)} ${r.pop.padEnd(5)} ${String(r.n).padStart(6)} ${f3(r.sat).padStart(6)} ${f3(r.val).padStart(6)} ${f1(r.hue).padStart(6)} ${f3(r.hueR).padStart(5)} ${f1(r.disp).padStart(6)} ${f3(r.fres).padStart(6)} ${f3(r.edgeFrac).padStart(5)} ${(r.hp3 == null ? '   —  ' : r.hp3.toFixed(2).padStart(6))} ${(r.sdL == null ? '   —  ' : r.sdL.toFixed(2).padStart(6))}  ${r.rgb.join(',')}`);
       }
       const pl = pool(base, p);
       if (pl) console.log(`    ${('  POOLED ' + p + ' (the statistic §736 published)').padEnd(41)} ${String(pl.n).padStart(6)} ${f3(pl.sat).padStart(6)} ${f3(pl.val).padStart(6)} ${f1(pl.hue).padStart(6)}`);
@@ -77,6 +96,25 @@ for (const [shot, rec] of Object.entries(rep.shots)) {
       for (const p of ['PROP', 'ARCH', 'CHAR']) {
         line(`POOLED ${p}`, (rows) => pool(rows, p)?.sat);
       }
+      /* The quantity that actually matters. The owner's sentence is comparative — the
+         architecture reads right and the props do not — so a term only counts as a CAUSE of
+         this complaint if removing it closes the gap. A term that lifts both populations
+         equally is a global look decision, not this defect; a term that lifts the ARCHITECTURE
+         more makes the complaint worse while raising every absolute number, which is exactly
+         how a lane could ship a "+0.17 saturation" headline and be told the props still look
+         faded. Negative = the gap narrowed = the term was costing the props specifically. */
+      const gapOf = (rows) => {
+        const a = pool(rows, 'ARCH')?.sat, p = pool(rows, 'PROP')?.sat;
+        return a != null && p != null ? a - p : null;
+      };
+      const g0 = gapOf(base);
+      if (g0 != null) {
+        const cells = armIds.map((a) => {
+          const gg = gapOf(arms[a]);
+          return gg == null ? '     —   ' : ((gg - g0 >= 0 ? '+' : '') + (gg - g0).toFixed(3)).padStart(9);
+        });
+        console.log(`    ${'ARCH-PROP GAP (neg = gap closed)'.padEnd(34)} ${cells.join(' ')}   (A0 ${f3(g0)})`);
+      }
       console.log('');
       const focus = sortRows('PROP').slice(0, NOBJ).concat(sortRows('ARCH').slice(0, 4));
       for (const r of focus) line(`  ${r.mesh}`, (rows) => (rows === base ? r.sat : idx[Object.keys(arms).find((k) => arms[k] === rows)]?.[r.id]?.sat));
@@ -100,6 +138,48 @@ for (const [shot, rec] of Object.entries(rep.shots)) {
       };
       console.log(`  SHAPE — over ${n} prop bodies, correlation of A0 saturation with:`);
       console.log(`    normal dispersion ${rr.toFixed(3)}   fresnel ${corr((r) => r.fres).toFixed(3)}   silhouette fraction ${corr((r) => r.edgeFrac).toFixed(3)}   log screen area ${corr((r) => Math.log(r.n)).toFixed(3)}`);
+      /* VARIANCE, with the control §736 could not get to pass. Printed as a block because the
+         numbers only mean anything next to each other: the flat-paint arm is the floor any
+         within-body high-pass can reach through PostFX alone, and the textured architecture is
+         the ceiling the props are being compared against. */
+      const hpOf = (rows, pred) => {
+        const r = rows.filter(pred).filter((x) => x.hp3 != null && x.hpN > 40);
+        if (!r.length) return null;
+        let s2 = 0, w = 0;
+        for (const x of r) { s2 += x.hp3 * x.hpN; w += x.hpN; }
+        return { hp: s2 / w, n: r.length, cells: w };
+      };
+      const pr = (x) => x.pop === 'PROP', ar = (x) => x.pop === 'ARCH';
+      const rowsF = [
+        ['PROP  A0 (shipped)', hpOf(base, pr)],
+        ['ARCH  A0 (known-textured, NEG control)', hpOf(base, ar)],
+        arms.CTLGREY ? ['PROP  CTLGREY flat paint (POS control: must collapse)', hpOf(arms.CTLGREY, pr)] : null,
+        arms.CTLGREY ? ['ARCH  CTLGREY (untouched: must NOT move)', hpOf(arms.CTLGREY, ar)] : null,
+        arms.KKUNI ? ['PROP  KKUNI one albedo, real shader', hpOf(arms.KKUNI, pr)] : null,
+      ].filter(Boolean);
+      console.log(`  WITHIN-BODY LUMA VARIANCE (hp3 = RMS of luma minus its local 7x7 mean, window wholly inside the eroded body)`);
+      for (const [lab, v] of rowsF) {
+        if (!v) { console.log(`    ${lab.padEnd(50)}  (no body large enough)`); continue; }
+        console.log(`    ${lab.padEnd(50)}  hp3 ${v.hp.toFixed(2).padStart(6)}   over ${v.n} bodies / ${v.cells} cells`);
+      }
+      /* The verdict is PRINTED, not left to the reader. §736's variance instrument was quoted
+         for a while before anyone looked at its control row; a control that has to be noticed
+         to work is not a control. */
+      const a0p = hpOf(base, pr), ctp = arms.CTLGREY ? hpOf(arms.CTLGREY, pr) : null;
+      if (a0p && ctp) {
+        const ok = ctp.hp < a0p.hp * 0.5;
+        console.log(`    VERDICT: positive control ${ok ? 'PASSES' : 'FAILS'} — flat unlit paint reads hp3 ${ctp.hp.toFixed(2)} against ${a0p.hp.toFixed(2)} for the shipped textured body.`);
+        if (!ok) {
+          console.log(`    ==> NO VARIANCE CONCLUSION MAY BE DRAWN FROM THIS RUN. A surface with no texture at all cannot`);
+          console.log(`        carry more local contrast than a textured one, so this statistic is measuring something other`);
+          console.log(`        than the surface. The prime suspect is PostFX's INK pass, which draws depth/normal edges`);
+          console.log(`        INSIDE a body's silhouette (a barrel's rim against its own staves) where no erosion can reach`);
+          console.log(`        them; on flat paint those lines are the only signal there is. The arm that would settle it is`);
+          console.log(`        the edge pass disabled in BOTH arms, which this run does not carry.`);
+        }
+      }
+      console.log('');
+
       /* The same four, on the CONFOUND arm where every body wears one albedo. A correlation
          that survives KKUNI is geometry; one that does not was the atlas all along. */
       if (arms.KKUNI) {

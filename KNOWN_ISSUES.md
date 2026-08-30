@@ -63313,7 +63313,7 @@ read at module load and cannot be poked in-page (`tools/kkgrade.mjs --probe`):
 
 ---
 
-## §737 — "The props look faded", the sixth report: the defect is per-OBJECT and scales with curvature, and every round so far averaged it away
+## §737 — "The props look faded", the sixth report: the rim, the bloom and the curvature are all acquitted, and the evidence that convicted them was measured on the architecture
 
 *(Heading committed ahead of its body to hold the number — §700.9. Claim marker, worded to be
 unlike any other lane's (§717): §737 CLAIM kaykit-prop-bleach-lane-c40f19 — the KAYKIT-PROP-
@@ -63333,3 +63333,233 @@ designed. It touches nothing in `Architecture.js` and nothing in the character's
 the owner's reference for "correct". If the dominant term turns out to be one that cannot be
 scoped away from the architecture, this lane STOPS and reports the tradeoff rather than shipping
 a compromise. Body follows in this lane's next pushes.)*
+
+> **CORRECTION, written after the measurement and left here rather than in the body, because
+> this is the declaration site (§34/§41).** Every factual premise in the claim block above is
+> WRONG, and it is wrong in the way §442 keeps being wrong. The chest-versus-jar pair it quotes
+> is not "same material, same atlas, same grade": the chest is `kaykit:atlas` and the jar is
+> `toon`/`props_lime`, a procedural body §730 deliberately restored. The hand patches it inherited
+> from the round's brief are, five of six, on `arch:paving_courtyard` and `arch:hieroglyph_wall` —
+> 238 to 350 px from the nearest KayKit pixel in that frame. The heading originally read "the
+> defect is per-OBJECT and scales with curvature"; the curvature correlation is real but small
+> (−0.376 day) and belongs to NO term this lane could find, because the fresnel rim and the
+> screen-space rim both measure 0.000. The heading has been rewritten to what the section
+> established. What survives of the claim is only its method: measure per body, and never trust
+> a label on a patch you did not ask the scene about.*
+
+### §737.1 The answer, first, so a redirect is cheap (§705)
+
+**The three terms this round was sent to convict — the fresnel rim, the screen-space rim and
+bloom — account for 0.000, 0.000 and −0.002 of the props' saturation deficit. And the measured
+evidence that sent me after them was taken on the architecture.**
+
+Five of the six hand patches in the brief's `shots/look/kaykit.png` table, including all four
+labelled as props, are on `arch:paving_courtyard` and `arch:hieroglyph_wall`. The sixth is on
+`props_lime`, a *procedural* body. **Not one is on a KayKit prop.** The headline "props render at
+~40 % of the architecture's saturation in final pixels" is the courtyard paving compared with
+itself at two grazing angles — 0.22 where it runs away from the eye, 0.58 in the foreground.
+
+The same is true of the round's other exhibit. The chest-versus-canopic-jar pair offered as
+proof that the defect scales with curvature — "same material, same atlas, same `KK_GRADE`, same
+room, same lights" — is a `kaykit:atlas` body compared with a `toon` one. §730 put the vault's
+urns back as PROCEDURAL `canopicJar`s, on the `lime` recipe, which is `limestone_polished` at
+`0xd4c19a`: the palest surface in the palette, pale on purpose. The jar reading sat 0.020 and the
+chest reading 0.557 are two different populations, two different materials and two different
+lanes' work.
+
+This is §442 for the fourth time in this complaint's history, and it is not a careless slip
+either time it happened. A pot in a rendered frame looks like a pot. The only way to know that
+the pot-shaped thing at (740,252) is 350 px from the nearest KayKit pixel is to ask the scene,
+and no amount of care while reading a PNG can substitute for that.
+
+**What IS true**, measured per body on the population the complaint names:
+
+| frame | prop sat | arch sat | gap |
+|---|---|---|---|
+| `interior` day | 0.366 | 0.382 | **+0.016** |
+| `interior` night | 0.691 | 0.727 | **+0.035** |
+| `kaykit` day | 0.414 | 0.391 | **−0.023** |
+| `kaykit` night | 0.755 | 0.731 | **−0.024** |
+
+The imported set is within ±0.035 of the architecture at both grades in both frames, and is more
+saturated than it in two of the four. **On saturation there is no population-level defect left to
+fix** — which is the one thing §736 got right, for the wrong reason and with a statistic that
+could not have told the difference.
+
+### §737.2 But the pooled row hides something, including mine
+
+Sorting the crypt's prop bodies individually, **16 of 20 sit below the architecture's median
+surface saturation.** The pooled row is dragged up by two large bright bodies — `#189` at 0.495
+over 728 cells and `#182` at 0.455 over 673 — which between them are 38 % of the prop area. I
+quoted my own pooled row before I sorted it, which is the identical error one paragraph after
+naming it.
+
+So the honest subject is the **dull subset**, and on it the gap is real and stable:
+
+| | day | night |
+|---|---|---|
+| dull props (17 of 21 bodies) | 0.279 | 0.621 |
+| architecture, same frame | 0.382 | 0.727 |
+| **gap** | **0.103** | **0.105** |
+
+It is not a brightness artefact. Binning both populations by their own display value inside one
+frame and comparing saturation *within* each decile, the props are short in every decile they
+occupy: by day 0.354 → 0.248 in the 0.2–0.3 band, 0.341 → 0.248 in 0.3–0.4, 0.429 → 0.324 in
+0.5–0.6. At night the deficit is concentrated in the dark half (0.765 → 0.533 in 0.2–0.3) and
+closes to nothing in the bright one. **The props' shade side is where the chroma is missing.**
+
+### §737.3 ATTRIBUTION — what each term is worth, on the right subject
+
+Every arm pins ONE term and is scored on masks derived before any arm ran. Δ on the ARCH−PROP
+gap over the dull subset; **negative closes it.**
+
+| arm | term | scope | day | night |
+|---|---|---|---|---|
+| `KKRIM0` | surface fresnel rim, `uRim` → 0 | **props only** | **−0.000** | **−0.000** |
+| `PFXRIM0` | PostFX screen-space silhouette rim → 0 | global | **−0.000** | **−0.000** |
+| `BLOOM0` | bloom pass off | global | **+0.002** | **+0.003** |
+| `FILLN` | fill chroma → luma-matched grey | global | +0.013 | −0.009 |
+| `HOLD1` | §269 shade-side albedo hold → 1 | global | +0.020 | −0.037 |
+| `AMB0` | hemispheric fill → 0 | global | −0.034 | −0.006 |
+| `SHADN` | shadow light chroma → grey | global | −0.053 | −0.054 |
+| `WASH0` | additive shadow coat → 0 | global | +0.099 | +0.012 |
+| `KKUNI` | every body given ONE albedo | props only | +0.119 | +0.080 |
+
+**Every candidate the brief named is acquitted quantitatively, at both grades.** The rim is not
+nearly-equal-across-populations-but-geometrically-amplified; it is worth *nothing* on these
+bodies — `uRim` to zero on the three KayKit recipes moves the dull subset by less than half a
+thousandth. The screen-space rim reads +0.047 at 480×270 and +0.001 at 1280×720, because its
+band is 1.2–4.4 **pixels** wide (`PostFX.TUNE.rimInner/rimMid/rimOuter`) and a prop at half
+resolution is half as many pixels across. A term measured at the wrong resolution is a term
+measured on the wrong subject.
+
+`KKUNI` is the load-bearing negative: giving every body one flat albedo through the real material
+makes the dull props **less** saturated, not more. Their own atlas is not starving them.
+
+And **no term that closes the gap is prop-scopeable.** `SHADN` is the largest at −0.053 of 0.103,
+and it lifts the architecture by +0.159 while it lifts the props by +0.212 — it does not fix a
+comparison, it moves both ends of it. `AMB0` is the same shape. There is no term that is switched
+on and bleaching the imported props specifically.
+
+### §737.4 The instrument, and its controls — including the one that failed
+
+Per-body masks, taken on the GPU inside the boot that renders the frames: an ID pass with every
+mesh swapped for a flat unlit material, plus a `MeshNormalMaterial` override for the
+interpolated view-space normal. Registration is by identity — same camera object, same scene
+graph — not by agreement. KayKit merges its 36 placements into three meshes, so bodies are split
+by **connected component** of the merged geometry; a per-mesh mask would have been a population
+mask wearing an object's label, which is the defect this lane exists to avoid.
+
+**Controls, in-arm, every frame (§418.3's two inputs, both RUN):**
+
+```
+                          interior day    interior night   kaykit day   kaykit night
+  I2  base captured twice     0.000            0.000          0.000        0.000
+  I4  every pin released      0.000            0.000          0.000        0.000
+  CTLGREY  props → flat grey  PROP −0.258      −0.589         −0.343       −0.694
+           architecture       ARCH ±0.000      ±0.000         ±0.000       ±0.000
+  CTLSAT   props → flat red   PROP +0.311      −0.011         +0.281       −0.059
+           architecture       ARCH ±0.000      ±0.000         ±0.000       ±0.000
+```
+
+The two paint arms test the mask and the statistic at once: a mask that leaked onto the masonry
+could not leave `ARCH` at ±0.000 while moving `PROP` by 0.59. And the metric reproduces the
+brief's own hand patches **byte for byte** — all six `kaykit` values, ten of eleven `interior`
+ones, the eleventh differing by one unit on a torch-lit pillar — so the disagreement between this
+section and the brief is not about pixel values at all. It is entirely about which object each
+pixel belongs to.
+
+**The control that failed, stated as loudly as the ones that passed.** I also built a
+within-body luma-variance statistic to re-open §736.7, believing that per-body eroded masks fixed
+the structural flaw that killed §736's version. They do not. Flat unlit paint (`CTLGREY`) reads
+hp3 **11.85** against **10.52** for the shipped textured body: a surface with no texture at all
+measuring as richer than a textured one. **No variance conclusion is drawn anywhere in this
+section**, including one that would have supported re-opening §736.7. The likely cause is PostFX's
+ink pass, which draws depth/normal edges *inside* a body's silhouette where no erosion can reach
+them, and on flat paint those lines are the only signal present. The arm that would settle it is
+the edge pass disabled in both halves; this run does not carry it. §736 threw its variance
+instrument away for the same class of reason and was right to.
+
+### §737.5 The curvature hypothesis, tested rather than inherited
+
+It survives, weakly, and it does not belong to any term this lane could find. Across the crypt's
+prop bodies, saturation against measured normal dispersion correlates **−0.376** by day and
+**−0.183** at night; under `KKUNI`, where every body wears one albedo, **−0.440** and **−0.313** —
+so the relationship is geometry's, not the atlas's. But `KKRIM0` is 0.000, so whatever produces it
+is **not** the fresnel rim, and `PFXRIM0` is 0.000, so it is not the screen-space rim either. It
+is consistent with the plainest reading available: a rounder body turns more of its visible
+surface into shade, and §737.2 already located the deficit in the shade half.
+
+### §737.6 The one prop-scoped lever that exists, costed, and NOT taken
+
+§269's `shadowHold` is the project's own remedy for exactly the mechanism §737.2 measures — it
+stops the shade light's chroma overwriting the material's, gated on albedo chroma. It ships at
+**0.0** for the world and **1.0** for the character (`subjShadowHold`, `vSlySkin`-scoped), so the
+character already holds its own hue in shade and the props do not. The scoping precedent is
+therefore already in the file, and a per-material `uMatShadowHold` in the `own` uniform block
+would reach the three KayKit recipes and leave `Architecture.js` and the character bit-identical.
+
+Measured, on the dull subset, as `HOLD1`: **+0.267 by day, +0.124 at night.** That is the
+magnitude — and it is an OVERSHOOT: it would take the dull props from 0.279 to 0.546 against an
+architecture at 0.382. The lever is continuous, so a fraction lands wherever it is aimed.
+
+**It is not taken, and the reason is the brief's own instruction rather than a technical
+obstacle.** No term is switched on and bleaching these props; the gap is a difference between two
+materials' albedo chroma under a shared shade light. Closing it means deciding that the imported
+set should hold its hue in shade when the masonry beside it does not — a look decision about how
+the imported set differs from the architecture, which is the owner's to make and not a defect to
+be quietly repaired. **Nothing in `src/` is changed by this lane.** The measurement is the
+deliverable, and §737.7 is the choice it puts in front of the owner.
+
+### §737.7 What the owner is actually being asked
+
+Three options, each with its measured price:
+
+1. **Do nothing.** The imported props are within ±0.035 of the architecture on the pooled
+   statistic, and the remaining 0.103 lives on the shade side of the duller two thirds of them.
+2. **Prop-scoped shade hold** (§737.6). Prop-only, architecture and character bit-identical,
+   continuous, revertible by token. Buys up to +0.267 of shade-side chroma.
+3. **The palest thing in the crypt is not an imported prop at all.** `props_lime` — §730's
+   restored canopic jars, on `limestone_polished` — reads sat **0.155** by day, the lowest of any
+   object in the `interior` frame, at value 0.457, with a hue coherence of 0.62 (i.e. barely a hue
+   at all). It stands on the offering table in the middle of the room the owner photographed. If
+   what the owner is looking at is "the pale pots in the tomb", **that is a §727/§730 surface and
+   no change to `makeAtlasMaterial` can reach it** — `tests/kksurface.test.mjs` K5 pins exactly
+   that independence.
+
+### §737.8 What I got wrong
+
+1. **I quoted my own pooled row before sorting it**, one section after writing that pooling is
+   how the last two rounds failed. The 16-of-20 split was in the data the whole time.
+2. **I built a variance instrument whose positive control failed**, having explicitly reasoned
+   that per-body eroded masks made §736's failure impossible. They removed one cause of it and
+   not the other.
+3. **My first mask design was both unusable and wrong** — a raycast with no BVH, 317 s for a
+   160×90 grid, and per-MESH on a population that ships three merged meshes. It would have
+   reproduced §442 inside the instrument built to prevent §442.
+4. **I measured the screen-space rim at 480×270 and nearly reported +0.047**, on a term whose
+   band is specified in pixels. Only the full-resolution run says +0.001.
+5. **I took the brief's curvature framing into the design.** The confound arm that killed it —
+   one albedo on every body — was added because the smoke run's correlation looked too weak to
+   trust, not because I planned it.
+6. **I read a truncated error and published "pre-existing" off it, inside this lane.**
+   `tests/clockfreeze.test.mjs` went red on the first full run. I grepped 18 lines of context,
+   saw eleven `progress/records/*.mjs` paths and no file of mine, and concluded the failure was
+   somebody else's. The list was **13** lines long and the last two were `tools/cryptgate.mjs`
+   and `tools/kkbleach.mjs` — mine. It was caught only by deleting my three files and re-running,
+   which turned it green. **This is §704.9b exactly: the tell was in my own output, one screen
+   below where I stopped reading.** The underlying finding was real — every arm in this lane is
+   phase-frozen through `G.step(n, 0)`, which is why I2 reads 0.000 in all four grade-frames, but
+   the between-grade restage genuinely did let the clock run and a positional `0` declares nothing
+   a scan can see. Fixed at the call, not on the register: `setShot(shot, { dt: 0 })`, so a shot's
+   day and night arms now sit on one animation phase instead of two.
+
+### §737.9 What is still open
+
+* **The variance question (§736.7) is untouched and now has two failed instruments behind it.**
+  The next attempt needs PostFX's ink pass disabled in both arms before a single number is quoted.
+* **`props_lime` has never been measured against the architecture by anyone**, and it is the
+  lowest-saturation object in the room this complaint keeps being reported about.
+* The `kaykit` canonical shot contains **24 KayKit bodies totalling 257 measurable cells** — it is
+  a courtyard framing, not a prop framing, and it is a weak instrument for this complaint. A
+  stance aimed at the crypt's prop cluster would carry far more of the population.

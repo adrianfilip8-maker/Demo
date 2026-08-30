@@ -45,8 +45,13 @@
  * another. A pinned property survives republication by construction, and the I4 arm proves the
  * restore.
  *
+ * CLOCK. Every arm is captured through `G.step(n, 0)` and the only staging call that advances
+ * the world clock is the once-per-shot `setShot` before the mask, so all arms of a shot share one
+ * animation phase — which is what the I2 control's 0.000 in all four grade-frames is evidence of
+ * (§251: `decalsign`'s null arm differed from itself on 52 % of pixels at 0.28 s of drift).
+ *
  *   node tools/kkbleach.mjs --shots interior --grades day,night
- *   node tools/kkbleach.mjs --census            # boot, census, ray timing, exit (no arms)
+ *   node tools/kkbleach.mjs --census            # boot, census, exit (no mask, no arms)
  */
 import { chromium } from 'playwright';
 import { acquire } from './lock.mjs';
@@ -461,9 +466,14 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
         undoArm(a.id);
       }
       out.grades[gname] = g;
-      /* Put the clock back so the next grade starts from the shipped one rather than from
-         whatever the previous grade left, and so `interior`'s own tod is restored for A0. */
-      if (tod != null) { await G.setShot(shot); }
+      /* Put the shot's own time-of-day back after the night pass.
+         `{ dt: 0 }` — §251 / tests/clockfreeze.test.mjs. Every capture in this file is already
+         phase-aligned: the arms advance through `G.step(n, 0)`, which freezes the world clock
+         positionally, and the I2 control reads 0.000 in all four grade-frames because of it. But
+         a positional `0` DECLARES nothing a reader or a scan can see, and this restage was the
+         one call in the file that really did let the clock run. Frozen here as well, so the day
+         and night arms of a shot now sit on ONE animation phase rather than two. */
+      if (tod != null) { await G.setShot(shot, { dt: 0 }); }
     }
     return out;
   }, { shot, grades, arms, stride, census });
