@@ -279,17 +279,76 @@ export async function loadAtlasTexture(file = 'dungeon_texture_sandstone.png') {
 }
 
 /**
+ * §736 revert token: `?kk=flat` (or `globalThis.__KK_AB = 'flat'` from a test) puts the imported
+ * set back on the UNGRADED albedo it wore before §736 — `color: 0xffffff` through the atlas,
+ * which is the state the owner has called faded four times. The name is the measurement's own
+ * word for it, not a judgement: the props' albedo was the flattest in the level.
+ *
+ * A FOURTH independent flag, beside `?smash=`, `?vault=` and `?torch=`, and independent for the
+ * same reason they are of each other: those three choose whose BODY a prop wears, this one
+ * chooses how the atlas is GRADED, and every combination is meaningful. It reaches all three
+ * consumers at once because they all build through `makeAtlasMaterial` — which is exactly what
+ * §729's header promises ("the imported set cannot drift into two grades") and what this token
+ * must not be allowed to break. Read once at module load, like the others.
+ */
+export const KK_FLAT = (() => {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('kk') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__KK_AB != null) raw = String(globalThis.__KK_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  return String(raw).trim().toLowerCase() === 'flat';
+})();
+
+/**
+ * §736 — the world's grade, which the imported props were the only surfaces in the level not
+ * to have. DERIVED, not chosen; `tests/kksurface.test.mjs` re-derives it from the shipped bytes
+ * and refuses the literal if either input has moved.
+ *
+ * WHAT WAS MEASURED. Every `Architecture` recipe is `texture × color` and the two COMPOUND, so
+ * the architecture's albedo is not its recipe hex — measured in-page over the live materials
+ * (`tools/kkwhy.mjs`), `sandstone_block` is **L 74.0 / sat 0.865** and `paving_courtyard` is
+ * **L 86.8 / 0.822**. This atlas went through `color: 0xffffff`, so the props' albedo was the
+ * texture itself: world-area weighted over every body the level actually places
+ * (`tools/kkalbedo.mjs`), **L 120.3 / sat 0.560**. Half again as bright as the masonry they
+ * stand on and two thirds its chroma, before a photon is cast — and that is a property of the
+ * ALBEDO, so it survives every light in the level, which is why the complaint survived §727.
+ *
+ * THE DERIVATION, in two steps, each from a measured population:
+ *   1. the CHROMATICITY is the architecture's own — the linear mean of the four warm-stone
+ *      recipe tints (`sandstone_block` 0xc9915a, `paving_courtyard` 0xcfa068, `hieroglyph_wall`
+ *      0xd6a874, `column_papyrus` 0xd8a468) = 0xd2a068. Not a new colour: the grade the rest of
+ *      the level already wears.
+ *   2. the LEVEL is set by solving for the scale (×1.2359 in linear) at which the props' placed
+ *      albedo lands on `paving_courtyard`'s graded luminance — the surface they stand on.
+ * Result: **0xe6b073**, taking the props' albedo to **L 86.8 / sat 0.816**, inside the
+ * architecture's band on both axes by construction.
+ *
+ * WHAT WAS TRIED AND DECLINED, each measured alone in-frame on a fixed footprint (§736.4):
+ * a triplanar `detail` layer at the architecture's own preset moved mean L the WRONG way
+ * (127.0 → 131.3 by day) for no chroma; `rough 0.9 / spec 0.14 / gloss 20 / sss 0` — the
+ * architecture's own surface numbers — measured **bit-identical** to the shipped material in
+ * the crypt at both grades, because every term it touches is gated by the key light and the
+ * crypt has none. Neither is shipped. A change that measures zero is not a change.
+ */
+export const KK_GRADE = 0xe6b073;
+
+/**
  * The ONE look for everything that wears the atlas — `KayKit.init` and the §729 destructible
  * swap build their materials through this so the imported set cannot drift into two grades
  * (Smashables' own header calls that drift out by name for the clays). Each consumer OWNS the
  * material it makes (and disposes it); what is shared is the recipe, not the instance.
+ *
+ * §736 put `KK_GRADE` where the `0xffffff` was, in BOTH branches — the headless fallback
+ * included, so a boot without SHADING is not a third grade.
  */
 export function makeAtlasMaterial(engine, atlas, name = 'kaykit:atlas') {
+  const color = KK_FLAT ? 0xffffff : KK_GRADE;
   const shading = engine?.get?.('shading');
   if (shading?.make) {
-    return shading.make({ name, color: 0xffffff, map: atlas, bands: 3, rim: 0.5, outline: 0.0034, outlineColor: 0x1a1210 });
+    return shading.make({ name, color, map: atlas, bands: 3, rim: 0.5, outline: 0.0034, outlineColor: 0x1a1210 });
   }
-  const m = new THREE.MeshStandardMaterial({ map: atlas, roughness: 0.9 });
+  const m = new THREE.MeshStandardMaterial({ color, map: atlas, roughness: 0.9 });
   m.name = name;                        // the headless branch answers to the same name
   return m;
 }
