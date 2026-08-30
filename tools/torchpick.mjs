@@ -193,9 +193,14 @@ const RIG = `
     m.frustumCulled = false;
     group.add(m);
   };
-  put(B, -46); put(A, -38); put(B, -30);
+  /* A and B ADJACENT, at -38 and -40, with the shipped procedural sconce at -42 next to
+     them. The first pass put B at the -46 and -30 midpoints and both were column-occluded or
+     off-frame in every stance that framed A, which is a comparison that cannot be made. Two
+     metres apart is clear of both bodies (widest is A at 0.42 m) and puts all three art styles
+     inside one 55-degree frame at 5-7 m, which is the range a player walks the aisle at. */
+  put(A, -38); put(B, -40); put(B, -30);
   E.scene.add(group);
-  out.mounted = [['B', -46], ['A', -38], ['B', -30]];
+  out.mounted = [['A', -38], ['B', -40], ['B', -30]];
   return out;
 })()
 `;
@@ -255,6 +260,8 @@ async function main() {
       wall: { pos: [12.5, 3.4, -20.0], target: [21.0, 4.3, -44.0], fov: 55 },
       // the range a player actually walks past one at: 4 m out, looking up at it
       near: { pos: [17.6, 1.7, -37.0], target: [22.0, 4.2, -38.0], fov: 55 },
+      // the three-up: procedural (-42), B (-40), A (-38), from the aisle
+      trio: { pos: [16.9, 2.2, -37.4], target: [22.0, 4.3, -40.0], fov: 62 },
     };
 
     for (const grade of ['night', 'day']) {
