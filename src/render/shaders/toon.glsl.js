@@ -129,6 +129,23 @@ uniform float uShadowHoldKnee;
    SUBJECT's costume hue being crushed by the saturated blue shade lights, which is exactly
    what the band prevents. max() with the global knob: 0.0 is bit-identical by arithmetic. */
 uniform float uSubjShadowHold;
+/* uMatShadowHold — §738. The same §269 hold again, scoped PER MATERIAL instead of globally or to
+   the skinned population, so one recipe can hold its own shade hue while the surfaces beside it
+   keep the shipped behaviour. Lives in the per-material uniform block that ToonMaterial._build
+   assembles, not in the shared set.
+
+   Why a third knob rather than a value on the first. uShadowHold is global and uSubjShadowHold is
+   vSlySkin-scoped, and §737.3 measured why neither can carry this: turning the global one on
+   lifts the ARCHITECTURE's saturation by +0.286 against the props' +0.267, so it moves the
+   owner's reference further than it moves the subject of the complaint. The character's scope is
+   the wrong population by construction. The imported props are a third population — a material,
+   not a draw kind — and there was no scope for one.
+
+   DEFAULT 0 IS AN EXACT IDENTITY, not a tolerance: it enters as max( ..., uMatShadowHold ), and
+   max(x, 0.0) == x for every non-negative x on every driver, which the two terms it joins already
+   are. So every material that does not name it renders bit-identically — proved in pixels as well
+   as in arithmetic (§738.4). */
+uniform float uMatShadowHold;
 /* uSubjLitHold — §289's mirror, taken on the ASSEMBLED surface colour rather than inside a
    band, because the measured bleacher is the additive legs (spec/rim), not a multiply.
    PREREG-lithold.md; the derivation is at the branch itself, in TOON_SHADE. 0.0 leaves the
@@ -731,7 +748,10 @@ export const TOON_SHADE = /* glsl */ `
 		 * measured by the A5 arm rather than assumed away. */
 		float albMax    = max( alb.r, max( alb.g, alb.b ) );
 		float albChroma = ( albMax - min( alb.r, min( alb.g, alb.b ) ) ) / max( albMax, 1e-4 );
-		float hold      = clamp( max( uShadowHold, uSubjShadowHold * vSlySkin ), 0.0, 1.0 )
+		/* §738 adds the per-material scope as a third max leg. The knee below is UNCHANGED and
+		   still gates all three: a material with no hue of its own has nothing to hold, so an
+		   achromatic recipe asking for the hold still gets nothing, exactly as §269 intended. */
+		float hold      = clamp( max( uShadowHold, max( uSubjShadowHold * vSlySkin, uMatShadowHold ) ), 0.0, 1.0 )
 		                * smoothstep( 0.0, max( uShadowHoldKnee, 1e-4 ), albChroma );
 
 		/* The held branch multiplies albShadow, NOT the raw alb, and that is deliberate.

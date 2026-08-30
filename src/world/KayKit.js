@@ -291,14 +291,55 @@ export async function loadAtlasTexture(file = 'dungeon_texture_sandstone.png') {
  * §729's header promises ("the imported set cannot drift into two grades") and what this token
  * must not be allowed to break. Read once at module load, like the others.
  */
-export const KK_FLAT = (() => {
+/**
+ * §738 EXTENDS this token rather than adding a parallel switch: `?kk=` now reads a COMMA LIST, so
+ * `?kk=flat` still means exactly what §736 shipped, `?kk=nohold` reverts §738's shade hold alone,
+ * and `?kk=flat,nohold` reverts both — one key for one surface's look, which is what a second
+ * `?kkhold=` would have broken. Whitespace and case are tolerated; an unknown word is ignored
+ * rather than throwing, because a token in a URL is a debugging affordance and a typo in one
+ * should not take the level down.
+ */
+const KK_TOKENS = (() => {
   let raw = '';
   try {
     if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('kk') || '';
     if (!raw && typeof globalThis !== 'undefined' && globalThis.__KK_AB != null) raw = String(globalThis.__KK_AB);
   } catch { /* plain-module hosts have no location; that is the test path */ }
-  return String(raw).trim().toLowerCase() === 'flat';
+  return new Set(String(raw).toLowerCase().split(',').map((t) => t.trim()).filter(Boolean));
 })();
+
+export const KK_FLAT = KK_TOKENS.has('flat');
+
+/** §738's revert: the imported set stops holding its own hue in shade. */
+export const KK_NOHOLD = KK_TOKENS.has('nohold');
+
+/**
+ * §738 — how hard the imported set holds its OWN albedo hue on its shade side.
+ *
+ * WHAT THIS FIXES, and what it does not. §737 measured every term the previous three rounds
+ * blamed and acquitted all of them: the surface fresnel rim is worth 0.000 on these bodies, the
+ * screen-space silhouette rim 0.000, bloom −0.002. What it DID find, judging per body rather than
+ * pooled, is that **16 of 20 placed bodies sit below the architecture's median saturation**, that
+ * the deficit is 0.103 by day and 0.105 at night, and that it lives on the SHADE side — present in
+ * every brightness decile the props occupy, so not a brightness artefact.
+ *
+ * The mechanism is §269's, already written down in `ToonMaterial.js`: the shade light is saturated
+ * enough (linear G/R 3.258) that on an albedo whose own G/R sits near the 0.307 break-even, the
+ * multiply INVERTS the channel order and the surface takes the light's hue instead of its own. The
+ * architecture survives it because its compounded albedo is sat 0.82–0.87; the atlas is 0.560
+ * before §736's grade, which is nearer the break-even, so the same light costs it more.
+ *
+ * `TUNE.shadowHold` is §269's remedy and it ships at 0 for the world and 1 for the character
+ * (`subjShadowHold`). It could not be turned on globally here: measured, that lifts the
+ * ARCHITECTURE by +0.286 against the props' +0.267 — it moves the reference further than the
+ * subject. Hence the per-material scope, and hence a value BELOW 1: at full strength the hold is
+ * worth +0.267 against a 0.103 target, which would overshoot the dull bodies past the masonry and
+ * push the four bodies that were already at parity well beyond it.
+ *
+ * THE VALUE IS SWEPT, NOT CHOSEN — see §738.2 for the per-body table it came from. Revert with
+ * `?kk=nohold`.
+ */
+export const KK_HOLD = 0.35;
 
 /**
  * §736 — the world's grade, which the imported props were the only surfaces in the level not
@@ -344,9 +385,10 @@ export const KK_GRADE = 0xe6b073;
  */
 export function makeAtlasMaterial(engine, atlas, name = 'kaykit:atlas') {
   const color = KK_FLAT ? 0xffffff : KK_GRADE;
+  const shadeHold = KK_NOHOLD ? 0 : KK_HOLD;
   const shading = engine?.get?.('shading');
   if (shading?.make) {
-    return shading.make({ name, color, map: atlas, bands: 3, rim: 0.5, outline: 0.0034, outlineColor: 0x1a1210 });
+    return shading.make({ name, color, map: atlas, bands: 3, rim: 0.5, shadeHold, outline: 0.0034, outlineColor: 0x1a1210 });
   }
   const m = new THREE.MeshStandardMaterial({ color, map: atlas, roughness: 0.9 });
   m.name = name;                        // the headless branch answers to the same name

@@ -1280,6 +1280,12 @@ export class Shading {
       rough: clamp(num(opts.rough ?? opts.roughness, TUNE.rough), 0.02, 1),
       metal: clamp(num(opts.metal ?? opts.metalness, 0), 0, 1),
       sss: clamp(num(opts.sss, TUNE.sss), 0, 1),
+      /* §738 — this material's own §269 shade-side hold, 0..1. Defaults to 0, which reaches the
+         shader as `max( …, 0.0 )` and is an exact identity, so no caller that omits it can move.
+         Named `shadeHold` rather than `shadowHold` on purpose: `TUNE.shadowHold` is the GLOBAL
+         knob and the two are different scopes, so sharing a name would invite a future reader to
+         "unify" them and silently repaint the architecture. */
+      shadeHold: clamp(num(opts.shadeHold, 0), 0, 1),
       wrapColor: hex(opts.wrapColor ?? opts.sssColor, PAL.wrapWarm),
       /* Baked AO is scaled down globally — see TUNE.bakedAO. A caller asking for 1.0 is
          asking for "the normal amount of my aoMap", not for a promise that the whole term
@@ -1316,7 +1322,7 @@ export class Shading {
       tid(o.emissiveMap), tid(o.alphaMap), tid(o.metalnessMap),
       o.bands, r3(o.termSoft), r3(o.rim), o.rimColor, r3(o.rimPower),
       r3(o.spec), o.specColor, r3(o.gloss), r3(o.rough), r3(o.metal),
-      r3(o.sss), o.wrapColor, r3(o.ao), r3(o.haze),
+      r3(o.sss), o.wrapColor, r3(o.ao), r3(o.haze), r3(o.shadeHold),
       o.detail, r3(o.detailScale), r3(o.detailStrength), r3(o.detailGrain), r3(o.detailFade),
       r3(o.outline), o.emissive, r3(o.emissiveIntensity),
       +o.transparent, r3(o.opacity), o.side, +o.vertexColors, +o.depthWrite, +o.depthTest,
@@ -1374,6 +1380,10 @@ export class Shading {
       uGloss:          { value: o.gloss },
       uMetal:          { value: o.metal },
       uSss:            { value: o.sss },
+      /* §738. Per-material, NOT republished per frame — so a one-boot A/B pokes
+         `mat.userData.slyUniforms.uMatShadowHold.value` and the poke sticks, which is how the
+         strength sweep in §738.2 was measured (the uShadowHold contract). */
+      uMatShadowHold:  { value: o.shadeHold },
       uSssColor:       { value: new THREE.Color(o.wrapColor) },
       uAoStrength:     { value: o.ao },
       uHazeAmount:     { value: o.haze },

@@ -99,6 +99,17 @@ const ARMS = [
      spread that survives is owned by geometry and shading alone. Without it, a per-object
      curvature correlation is a measurement of KayKit's texture atlas wearing a geometry label. */
   { id: 'KKUNI', scope: 'PROPS', label: 'CONFOUND: every prop body given ONE albedo (map off, flat 0xc08040) through the real shader' },
+  /* §738's STRENGTH SWEEP. `uMatShadowHold` is per-material and is not republished per frame, so
+     every strength is a direct pin on the three KayKit recipes and the whole sweep fits in one
+     boot on one mask — which is the only way the arms can be compared per body at all. H000 is
+     the pre-§738 state and is the row every other row is read against. */
+  { id: 'H000', scope: 'PROPS', label: 'shade hold 0.00 — pre-§738, what ?kk=nohold restores' },
+  { id: 'H015', scope: 'PROPS', label: 'shade hold 0.15' },
+  { id: 'H025', scope: 'PROPS', label: 'shade hold 0.25' },
+  { id: 'H035', scope: 'PROPS', label: 'shade hold 0.35' },
+  { id: 'H050', scope: 'PROPS', label: 'shade hold 0.50' },
+  { id: 'H070', scope: 'PROPS', label: 'shade hold 0.70' },
+  { id: 'H100', scope: 'PROPS', label: 'shade hold 1.00 — full strength, §737.6 measured this as an overshoot' },
   { id: 'KKRIM0', scope: 'PROPS', label: 'uRim = 0 on the three KayKit recipes only — the surface fresnel rim' },
   { id: 'AMB0', scope: 'GLOBAL', label: 'uAmbIntensity = 0 — the hemispheric sky/bounce fill, everywhere' },
   { id: 'WASH0', scope: 'GLOBAL', label: 'uShadowWash = 0 — the albedo-INDEPENDENT additive shadow coat' },
@@ -391,7 +402,7 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
     const shading = E.get('shading');
     const postfx = E.get('postfx');
     const kkMats = [...new Set(subj.map((m) => m.material))];
-    out.kkMats = kkMats.map((m) => `${m.name}#${(m.userData?.slyUniforms?.uRim?.value ?? -1)}`);
+    out.kkMats = kkMats.map((m) => `${m.name} rim=${m.userData?.slyUniforms?.uRim?.value ?? 'MISSING'} hold=${m.userData?.slyUniforms?.uMatShadowHold?.value ?? 'MISSING'}`);
 
     /* Pin a uniform's `.value` so a per-frame republish cannot overwrite it. Assignment is not
        enough: uAmbIntensity is rewritten by `setKeyLight` on every publish, and a harness that
@@ -432,6 +443,10 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
           uniSaved.push([m, m.map, m.color.clone()]);
           m.map = null; m.color.setHex(0xc08040); m.needsUpdate = true;
         }
+      }
+      else if (/^H\d{3}$/.test(id)) {
+        const v = Number(id.slice(1)) / 100;
+        for (const m of kkMats) pin(m.userData?.slyUniforms?.uMatShadowHold, v);
       }
       else if (id === 'KKRIM0') for (const m of kkMats) pin(m.userData?.slyUniforms?.uRim, 0);
       else if (id === 'AMB0') pin(shading?.uniforms?.uAmbIntensity, 0);

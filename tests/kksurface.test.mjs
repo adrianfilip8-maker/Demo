@@ -97,16 +97,18 @@ test('K1 §736: the default bag carries the derived grade; ?kk=flat carries the 
   assert.equal(a.bags.length, 1);
   assert.deepEqual(a.bags[0], {
     name: 'x:on', color: 0xe6b073, map: FAKE_ATLAS,
-    bands: 3, rim: 0.5, outline: 0.0034, outlineColor: 0x1a1210,
-  }, 'the default bag is the shipped recipe with the grade in place of the white — nothing else moved');
+    bands: 3, rim: 0.5, shadeHold: on.KK_HOLD, outline: 0.0034, outlineColor: 0x1a1210,
+  }, 'the default bag is the shipped recipe with the grade in place of the white, plus §738\'s shade hold — nothing else moved');
 
   /* §418.3's failing input, RUN: the reverted arm must be the pre-§736 bag, key for key. */
   const b = recorder();
   off.makeAtlasMaterial(b.engine, FAKE_ATLAS, 'x:off');
+  /* §738: `?kk=flat` reverts the GRADE and must NOT revert the hold — the two are separate
+     findings about the same surface and the token list exists so each can be reverted alone. */
   assert.deepEqual(b.bags[0], {
     name: 'x:off', color: 0xffffff, map: FAKE_ATLAS,
-    bands: 3, rim: 0.5, outline: 0.0034, outlineColor: 0x1a1210,
-  }, '?kk=flat must reproduce the pre-§736 option bag exactly');
+    bands: 3, rim: 0.5, shadeHold: off.KK_HOLD, outline: 0.0034, outlineColor: 0x1a1210,
+  }, '?kk=flat must reproduce the pre-§736 albedo and leave §738\'s hold alone');
 });
 
 /* ------------------------------------------------------------------------------------- K2 */
