@@ -63882,3 +63882,254 @@ Everything §738 established must survive both: architecture, character and the 
 Instrument is §737's `tools/kkbleach.mjs` with its connected-component masks, extended to split
 `props_lime` into bodies and not otherwise rebuilt. Bodies are identified by MASK IDENTITY and a
 world-position census, never by screen centroid — §738.8's second error. Body follows.)*
+
+### §739.1 The answer, first, so a redirect is cheap (§705)
+
+**Two per-material scopes, in opposite directions, on populations that share nothing but a
+shader term.**
+
+* **The canopic jars take §269's hold at FULL strength** (`MATERIALS.lime.shadeHold = LIME_HOLD =
+  1.0`), which takes the four jars in the `interior` frame from a median saturation of **0.156 to
+  0.367** against an architecture median of **0.371** — 0.004 under the bar, no overshoot.
+* **The six crypt sconces give theirs back** (`TORCH_HOLD = 0` on a second merged mesh), which
+  restores them to **exactly** their pre-§738 values: day **0.239**, night **0.755**, against the
+  0.106 / 0.641 §738.4 recorded as the cost it declined to certify.
+* **Everything else moves by 0.0000** — architecture, character, and §738's own imported-prop
+  gain, per body, at every strength tested, in both frames at both grades.
+
+And a third thing that was not asked for and is the better half of the sconce change:
+**splitting the mesh made the frame cheaper, not dearer.** See §739.5.
+
+### §739.2 The jars: the sweep, and why full strength is the only value that arrives
+
+Four jars, one boot, one mask, per body, both grades, against the architecture's median surface
+saturation (0.371 day / 0.709 night):
+
+```
+  hold        0.00    0.20    0.40    0.60    0.80    1.00      bar
+  day  med   0.156   0.125   0.144   0.203   0.284   0.367    0.371
+  night med  0.402   0.432   0.471   0.514   0.554   0.599    0.709
+
+  per body, day        0.00 -> 1.00        per body, night      0.00 -> 1.00
+    props_lime#388    0.118 -> 0.390         props_lime#388    0.351 -> 0.577
+    props_lime#379    0.139 -> 0.369         props_lime#379    0.380 -> 0.584
+    props_lime#358    0.172 -> 0.363         props_lime#358    0.425 -> 0.614
+    props_lime#352    0.195 -> 0.365         props_lime#352    0.490 -> 0.626
+```
+
+**The day row DIPS before it rises, and that is the finding.** 0.20 leaves the jars FLATTER than
+shipped (0.156 → 0.125). It is the same shape §738.4 recorded on the sconces and the same cause:
+the hold mixes the shade light's tint toward the material's own hue, so where the two are
+near-opposite the intermediate mix passes through neutral. Every strength below 0.80 is inside
+that dip. **A cautious partial value here would have made the complaint worse**, which is worth
+saying plainly because "ship half of it and see" is the natural instinct and it is wrong on this
+lever.
+
+**1.00 is a ceiling, not a push.** The hold's endpoint is the surface's own albedo carried to the
+luminance the shading produced, so it cannot make a body more saturated than the material it is
+painting; the character has shipped its own scope at 1.0 since §287.
+
+**The albedo is NOT touched.** §727 already answered this population with a tint and the owner's
+verdict was *"they always looked faded"*. This lane moves the LIGHT's grip on the material, not
+the material.
+
+### §739.3 What the jars' fix does NOT do
+
+**Night is not fixed.** +0.197 is the largest single move this lane makes and it still leaves the
+jars **0.110 under the bar** at full strength, with nothing left in the lever. §738.3 said the
+same thing about the imported set and the reason is identical: at night the shade light's chroma
+EXCEEDS the pale albedo's, so trading one for the other cannot reach a bar set by surfaces whose
+own albedo is far more chromatic. Two sections have now hit this wall from two populations, and
+the lever that would address it is still the clock gate §738.7 named and nobody has built.
+
+### §739.4 What else wears this recipe — measured, not read off the source
+
+`Props.MATERIALS.lime` is not "the canopic jars". It is **422 bodies**, censused by world position
+through `tools/kkbleach.mjs --census --split props_lime`:
+
+| region | bodies | largest dimension |
+|---|---|---|
+| pylon shrines, z > 34 | **352** | 5.31 m |
+| crypt / vault jars, z < −56 | 42 | 0.45 m |
+| courtyard vessels | 16 | 1.07 m |
+| hypostyle vessels | 12 | 1.21 m |
+
+So **five sixths of the population by count, and every large body in it, is the pylon shrine
+complex rather than a pot.** That is real collateral and it is stated as such rather than
+discovered later.
+
+Two things separate it from the shared-texture scare it looks like:
+
+* **`limestone_polished` is a TEXTURE, and three different recipes use it.** `Architecture`'s own
+  `limestone_polished` (`0xe0d0a8`, spec 0.32, gloss 46, detail `limestone`) is a *different
+  material* and is untouched — §739 adds nothing to `Architecture.js`, and `tests/kkhold.test.mjs`
+  H5 pins that no Architecture recipe carries `shadeHold`. Moving Props' `lime` cannot move the
+  masonry.
+* **`Smashables`' `smash:clay` is the third, and it DID need to follow.** §730 left four static
+  urns on the vault's offering table and two destructible jars three metres away; they are the
+  same object to look at. `Smashables._mat` builds `smash:clay` from `PROP_MATERIALS.lime` and its
+  own header says the mirror exists *"so this does not become a fourth clay"* — but it mirrored
+  the colour and not the hold, so the first draft of this lane would have put a seam through a
+  pair. The mirror now crosses `shadeHold`, `smash:wicker` and `smash:wood` resolve to an explicit
+  0, and J6 pins all three.
+
+### §739.5 The sconce split made the frame CHEAPER, and that was not the plan
+
+Scoping the hold off the sconces needed a second material, and a material needs a draw, so this
+was budgeted as **+1 draw call**. Measured on `tools/budgetattrib.mjs` against the §738 tree
+(`Engine.stats.drawCalls` is still §1's five frozen values):
+
+```
+                 §738                  §739               delta
+  courtyard    93 / 0.706 M         94 / 0.706 M        +1 draw,  0 tris
+  kaykit       77 / 0.672 M         78 / 0.672 M        +1 draw,  0 tris
+  temple       73 / 0.631 M         73 / 0.625 M         0 draws, −6 k tris
+  interior     46 / 0.411 M         46 / 0.405 M         0 draws, −6 k tris
+  WORST        93 (37 % of 250)     94 (38 % of 250)    triangles unchanged
+```
+
+The two interior shots got **cheaper**, and the mechanism was measured rather than guessed at:
+
+```
+  §738  props_kaykit        10139 tris   bbox z −74.2 .. 31.3     <- the whole level
+  §739  props_kaykit         5691 tris   bbox z  −5.8 .. 31.3     <- courtyard only
+        props_kaykit_torch   4448 tris   bbox z −74.2 .. −17.8    <- crypt + hypostyle
+```
+
+The old merge held the courtyard baskets AND every sconce from the tomb to the hall in one
+bounding volume spanning **105 m of level**, so it was frustum-visible from every camera and all
+10 139 of its triangles counted from every one. Split by room, the culler now rejects one of the
+two in any interior framing. Where both are in frame the cost is the +1 draw and nothing else:
+5691 + 4448 = 10139 exactly.
+
+**This was luck, not design.** The split was made for a look reason and the budget was expected to
+get worse; it is recorded because the next lane weighing a merge against a scope should know that
+a merge spanning two rooms can cost more than the draw it saves.
+
+### §739.6 Two stances, both grades — and the night grade splits
+
+**The subject was identified by WORLD POSITION, not by where it appears on screen** (§738.8's
+second recorded error, which this lane was told not to repeat). The four bodies carrying the
+`interior` result stand at **(−2.59, −1.97, −1.35, −0.73, y −11.15, z −69.6)**, each 0.36 × 0.45 ×
+0.36 m: §730's census lists the offering-table urns at (−2.60 / −1.98 / −1.36 / −0.74, −11.38,
+−69.6). Exact match. The `courtyard` body is `props_lime#398` at **(1.94, 0.47, 30.99)**,
+0.74 × 0.94 × 0.74 m — a courtyard vessel, the same recipe and the same class of object in a room
+with a key light the crypt does not have.
+
+```
+                                  before   after     bar     verdict
+  interior  day   4 jars   med    0.156 -> 0.367    0.371    lands on the bar
+  courtyard day   1 vessel        0.341 -> 0.412    0.414    lands on the bar
+  interior  night 4 jars   med    0.402 -> 0.599    0.709    +0.197, still 0.110 short
+  courtyard night 1 vessel        0.454 -> 0.311    0.812    −0.143  WORSE
+```
+
+**The day fix generalises across both stances and lands on the bar in each. The night grade does
+not, and it splits by room rather than being uniformly weak.** The mechanism is the one §738.3
+already recorded, now seen from a second population: the hold trades the shade light's chroma for
+the material's own. In the crypt there is NO key light, everything is shade, and the pale jars sit
+far below their own albedo chroma — so the trade is a large gain. In the courtyard at night the
+moon key exists, the vessel starts higher than its own albedo chroma, and the same trade takes it
+down.
+
+**So this is a day fix, said plainly.** It is not a fix at night in a lit room, and no strength of
+this lever makes it one — the endpoint is the material's own chroma and that is the ceiling. Two
+sections have now hit this wall from two populations. The lever that would resolve it is still the
+clock gate §738.7 named: scale the hold by day-ness so it applies where the deficit is and is
+inert where it is not. `ToonMaterial` tracks `_nightAmount` and publishes nothing for it to the
+shader, so it is a new uniform and a new sweep, and it is named here for the third time rather
+than attempted at the end of a lane.
+
+**Sample coverage, stated rather than implied.** The JARS have two stances at both grades. The
+SCONCES have one stance (`interior`) at both grades: `temple` was rendered as the intended second
+and turned out to contain **15 torch cells and zero lime cells** — a stance chosen by guessing
+where the objects were, which is this lane's own recorded error committed a third time and paid
+for with a capture-lock hold. What stands in for the second sconce sample is a cross-check the
+numbers make available anyway: this run's A0/T025 pair reads **0.239 / 0.106** by day and
+**0.755 / 0.641** at night, reproducing §738.4's independently measured figures **to three
+decimals** from a different boot, a different sha and a different mesh topology.
+
+### §739.7 Proof that nothing else moved
+
+Max absolute per-body Δsat against the pre-arm, over every strength tested, in every frame at both
+grades. A MAX over bodies rather than a mean, because a mean hides one wall moving inside many
+that did not.
+
+```
+  interior  (jar sweep 0.20…1.00)   ARCH 6   CHAR 1   OTHER 5   PROP 18   TORCH 2      all 0.0000
+  interior  (sconce arm T025)       ARCH 6   CHAR 1   OTHER 5   PROP 18   LIME  4      all 0.0000
+  courtyard (shipped vs revert)     ARCH 15  CHAR 3   OTHER 9   PROP 10               all 0.0000
+```
+
+`PROP` is §738's imported set: **its gain is intact at 0.0000 through every arm of this lane**,
+which is the requirement that mattered — the sconce fix must not be a revert. Instrument controls
+I2 (base twice) and I4 (all pins released) read 0.0000 in every grade-frame of all three runs.
+
+The scopes are identities rather than tolerances at the source, too: `shadeHold` defaults to 0 in
+`Props._mat`, in `Smashables._mat` and in `ToonMaterial._resolve`, and reaches the shader as
+`max( …, uMatShadowHold )` where `max(x, 0.0) == x`.
+
+### §739.8 Tokens, suites, production
+
+**Tokens.** Two families, deliberately not merged — `tests/kksurface.test.mjs` K5 pins that the
+imported-prop key cannot reach the props table, and J2 now pins it from the other side. Both
+compose as comma lists:
+
+```
+  ?props=nolime        the jars' hold off (grade and §727 mode untouched)
+  ?props=tinted,nolime composes with a mode — and the mode parse became a LIST for this, or
+                       `tinted,nolime` would have fallen through to 'chroma' silently
+  ?kk=torchhold        the sconces back on KK_HOLD, i.e. the §738 state
+  ?kk=nohold           the whole imported set's hold off, sconces included
+```
+
+**Suite — every run this lane made (§703.2), not only the green ones.**
+
+```
+  node --test kkhold+kksurface+torchswap+smashswap+clockfreeze+subjhold   33/33 pass
+  node --test torchswap+smashswap        FAILED 5/25 — T1, T5, T7, W3, H5
+  node --test torchswap                  FAILED 1/12 — T1  (after the stats.kaykit repair)
+  node --test torchswap                  SyntaxError — backticks inside the child-script template
+  node --test limehold                                                     5/5  pass
+  npm test  (full, 1161)   1160 pass, 1 FAIL — kaykit.test.mjs P1
+  node --test limehold+kaykit+smashswap                                   32/32 pass
+  npm test  (full, 1161)                                          1161/1161 pass
+```
+
+**Three pinned tests fired and all three were right.** T5/T7 caught a REAL regression — the split
+published `stats.kaykit` even when nothing was imported, and §734 asserts that absence on purpose;
+repaired in the source, not relaxed in the test. T1 pinned "the ONE props_kaykit mesh", which the
+split makes false; rewritten to pin the split itself, including that the new mesh registers the
+same `ground`/`wood` collider so a step sound cannot move. P1 pinned Props' collider count at 21;
+now 22, updated with both befores recorded and the `is-drawn-art` split shape — the half that
+would catch a proxy sneaking in — unchanged.
+
+**Production (§666/§695).** `node tools/prodboot.mjs` on the built artifact from a `/Demo/`-shaped
+prefix: **`ready true` at 54.8 s, 149 requests, zero 4xx/5xx**, 28 pre-existing in-flight aborts
+(not gated, unchanged). Checked IN the artifact rather than in the source — `Props-*.js` carries
+both `shadeHold` and the `nolime` reader, `KayKit-*.js` carries `shadeHold` and `torchhold`,
+`Smashables-*.js` carries the mirrored `shadeHold`, and `ToonMaterial-*.js` carries
+`uMatShadowHold`. **The live host was NOT checked and no claim is made about it** — the proxy
+blocks `*.github.io`.
+
+### §739.9 What I got wrong
+
+1. **I chose the second stance by guessing where the objects were.** `temple` was rendered as the
+   second sample for both populations and contains **zero** lime cells and 15 torch cells. This is
+   §738.8's error — naming a body's location without asking the scene — committed a third time,
+   and this time it cost a full capture-lock hold. The frustum test that found the right stance
+   (`courtyard`) is pure arithmetic over a census and takes seconds; it should have been run
+   before the render, not after the wasted one.
+2. **I nearly shipped a seam through §730's vault.** `Smashables._mat` mirrors `Props.MATERIALS`
+   and I gave the hold to `lime` without checking who mirrors it, which would have left the two
+   destructible jars pale beside four static urns three metres away. Caught by working through
+   "what else shares the recipe" — the question the round explicitly asked for and which I had
+   answered only for `Props.MATERIALS`, not for its mirrors.
+3. **I committed `LIME_HOLD` at 0.60 as a provisional literal before the sweep** — the identical
+   mistake §738.8 records about `KK_HOLD` at 0.35, made again one section later. Worse here: 0.60
+   is inside the neutral dip, so the value the repository asserted for one commit was one the
+   measurement would later show makes the jars *flatter* than shipping nothing.
+4. **I spent three rounds of reasoning on a budget delta I could have measured in one.** The
+   interior triangle drop was explained by hypothesis after hypothesis until I built the two trees
+   side by side and printed the bounding boxes, which answered it immediately and is what §442
+   says to do in the first place.
