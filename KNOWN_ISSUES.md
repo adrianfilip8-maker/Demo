@@ -63463,7 +63463,17 @@ mask wearing an object's label, which is the defect this lane exists to avoid.
 ```
 
 The two paint arms test the mask and the statistic at once: a mask that leaked onto the masonry
-could not leave `ARCH` at ±0.000 while moving `PROP` by 0.59. And the metric reproduces the
+could not leave `ARCH` at ±0.000 while moving `PROP` by 0.59.
+
+**`CTLSAT` reads NEGATIVE at night and that is not a failure — it is the arm being the wrong
+control for that grade.** At `tod 0.02` every surface in the frame already sits at sat 0.69–0.76
+under a deep blue key, so a flat `0xd01e10` pushed through the night grade lands *below* the
+shipped material rather than above it: the arm cannot demonstrate "the metric finds chroma where
+chroma is" against a background that is already more chromatic than the paint. The **negative**
+control (`CTLGREY`, −0.589 / −0.694) is the one that carries at night, and it carries harder
+there than by day. Quoted this way rather than dropped, because an arm that fails to discriminate
+at one grade is §439's third domain line — `does NOT discriminate` — and not evidence of
+anything either way. And the metric reproduces the
 brief's own hand patches **byte for byte** — all six `kaykit` values, ten of eleven `interior`
 ones, the eleventh differing by one unit on a torch-lit pillar — so the disagreement between this
 section and the brief is not about pixel values at all. It is entirely about which object each
