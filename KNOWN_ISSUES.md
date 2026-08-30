@@ -63053,3 +63053,21 @@ destination was never reached. Nothing here is evidence about jar breakage.
 Ended deliberately, not abandoned mid-flight: process terminated, capture lock file released, port
 freed. `tools/vaulturn.mjs` is unchanged and still carries its own "NOT YET RUN TO COMPLETION" header,
 which remains accurate.
+
+
+---
+
+## §736 — "The props look faded": the fourth report, and the axis §727 never measured
+
+*(Heading committed ahead of its body to hold the number — §700.9. Claim marker, worded to be
+unlike any other lane's (§717): §736 CLAIM kaykit-prop-surface-lane-7b31ac — the KAYKIT-PROP-
+SURFACE lane. Scope: `KayKit.makeAtlasMaterial` ONLY — the one recipe the imported props, the
+§729 destructible swap and the §734 sconces all wear. §727 answered this complaint as chroma
+and the owner's verdict on that fix was "they always looked faded"; the owner has since said
+the ARCHITECTURE reads fine and only the PROPS read flat, and the two populations measure at
+the same saturation, so chroma cannot be the differentiator. This lane measures LOCAL CONTRAST
+within one frame that holds props, architecture and the character together, with a known-flat
+positive control and a known-detailed negative control in-arm. It touches NOTHING in
+`Architecture.js`, nothing in the character's TUNE, and nothing in `ToonMaterial.TUNE` — those
+are the reference being matched. Revert token in the established style. Body follows in this
+lane's next pushes.)*
