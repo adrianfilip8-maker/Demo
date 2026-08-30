@@ -63001,3 +63001,55 @@ Two things follow, and the second is the general one:
   the body) and preserved both other lanes' appends. **Guard the append; you cannot guard the
   commit boundary the same way on a shared tree.**
 
+
+## §735 — The vault walk never reached the vault: four of five route legs failed to converge, and I called it healthy off the one that did
+
+§730.9 recorded that the canopic jars' breakage was code-read, not observed, and that `tools/vaulturn.mjs`
+existed to close that gap by walking the character to the treasure room and swinging. It was run twice
+this session. It never got there. The gap stands exactly as §730.9 left it.
+
+**What the run did establish**, before the walk: the census is correct. Two `smashable_jar_urn` at
+(-0.487, -12, -72.225) and (0.589, -12, -72.416) carrying `smash:clay`, one `smashable_crate` 0.9 m away
+at (0.043, -12, -71.528) carrying `smash:kaykit`, `debugInfo().vault = {"jar":2,"crate":1}`, spots=3.
+Placement and material assignment are observed. **Breakage is still not.**
+
+**The defect.** Legs, as logged:
+
+    terrace-1        arrived   105 frames in  91.9s    1.018 m out   at [0,    1.71, 20.02]
+    terrace-2        STOPPED   900 frames in 549.6s  116.397 m out   at [0.4,  2.97, 130.4]
+    hall-floor       STOPPED   900 frames in 557.2s   44.634 m out   at [0.12, 0,    24.63]
+    inner-gate       STOPPED   900 frames in 1038.7s 179.225 m out   at [0.4,  2.57, 127.22]
+    descent-landing  STOPPED   900 frames in 868.1s   78.999 m out   at [0.17, 0.4,  22]
+
+Four of five hit the 900-frame cap. The character is not converging slowly — it oscillates between
+z≈22 and z≈130, the length of the level, alternating leg to leg. Undiagnosed. This is NOT specific to
+vaulturn: driving the authored route is how anything at the far end of the level gets verified, and
+§732 leaned on the same technique for its coin walks (which did collect, at frames 86/20/19 — so the
+driver is not uniformly broken, and the difference between those two cases is where a diagnosis starts).
+
+**§418.3 DOMAIN.** Not satisfied, and that is the point of this entry. A passing input exists
+(terrace-1, 1.018 m out). No failing input was ever exercised at the destination, because the
+destination was never reached. Nothing here is evidence about jar breakage.
+
+### §735.1 — What I got wrong, and the shape of it
+
+1. **I called the run healthy off one leg.** terrace-1 arrived; I reported "progressing properly now"
+   and moved on. Legs 2-5 had already failed by the time I said it.
+2. **I measured liveness and reported progress.** Diagnosing an apparent stall, I sampled CPU time
+   across the whole process tree and found the GPU process burning ~3.8 cores. That measurement was
+   correct and the inference was wrong: a process ping-ponging across the level burns exactly as much
+   CPU as one making progress. Process-level liveness cannot distinguish converging from thrashing —
+   only the per-leg residual can, and it was in the log I had not yet made readable. §439's family:
+   the instrument could not fail in the direction that mattered.
+3. **Two self-inflicted instrument faults before that.** An arbitrary `timeout 1500` wrapper that
+   would have killed the run at 25 minutes and handed back a truncated result indistinguishable from
+   a hang; and piping through `tail -60`, which by construction emits nothing until EOF, so the
+   output file was guaranteed to read 0 bytes no matter what the run was doing. I then read that
+   guaranteed-empty file as ambiguous evidence rather than as no evidence.
+4. **Cleanup found a second-order leak**: killing the driver left its vite dev server reparented to
+   init, still holding port 5710 after 53 minutes. A lane that kills a holder without checking for
+   orphans leaves the next lane's `--strictPort` bind to fail for reasons that look unrelated.
+
+Ended deliberately, not abandoned mid-flight: process terminated, capture lock file released, port
+freed. `tools/vaulturn.mjs` is unchanged and still carries its own "NOT YET RUN TO COMPLETION" header,
+which remains accurate.
