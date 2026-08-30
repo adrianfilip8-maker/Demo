@@ -74,6 +74,10 @@ const GRADES = String(opt('grades', 'day,night')).split(',').filter(Boolean);
 const PICK = String(opt('arms', '')).split(',').filter(Boolean);
 const QUERY = opt('query', '');
 const CENSUS = flag('census');
+/* §739 — extra MESH names (not material names) to component-split and score per body. Props'
+   materials are all named `toon`, so the selector has to be the mesh; `props_lime` is one merged
+   mesh holding every ceramic vessel in the level. */
+const SPLIT = String(opt('split', '')).split(',').filter(Boolean);
 const TIMEOUT = +opt('timeout', 7200) * 1000;
 
 /**
@@ -110,6 +114,15 @@ const ARMS = [
   { id: 'H050', scope: 'PROPS', label: 'shade hold 0.50' },
   { id: 'H070', scope: 'PROPS', label: 'shade hold 0.70' },
   { id: 'H100', scope: 'PROPS', label: 'shade hold 1.00 — full strength, §737.6 measured this as an overshoot' },
+  /* §739 — the jars' hold sweep (`L`), and the sconce A/B (`T`). Both are pins on per-material
+     uniforms, so all of it fits in one boot on one mask. */
+  { id: 'L000', scope: 'LIME', label: 'canopic-jar hold 0.00 — what ?props=nolime restores' },
+  { id: 'L020', scope: 'LIME', label: 'canopic-jar hold 0.20' },
+  { id: 'L040', scope: 'LIME', label: 'canopic-jar hold 0.40' },
+  { id: 'L060', scope: 'LIME', label: 'canopic-jar hold 0.60' },
+  { id: 'L080', scope: 'LIME', label: 'canopic-jar hold 0.80' },
+  { id: 'L100', scope: 'LIME', label: 'canopic-jar hold 1.00' },
+  { id: 'T025', scope: 'TORCH', label: 'sconces put BACK on KK_HOLD — the §738 state this lane reverses' },
   { id: 'KKRIM0', scope: 'PROPS', label: 'uRim = 0 on the three KayKit recipes only — the surface fresnel rim' },
   { id: 'AMB0', scope: 'GLOBAL', label: 'uAmbIntensity = 0 — the hemispheric sky/bounce fill, everywhere' },
   { id: 'WASH0', scope: 'GLOBAL', label: 'uShadowWash = 0 — the albedo-INDEPENDENT additive shadow coat' },
@@ -163,8 +176,8 @@ async function startServer(port) {
 
 /* ---------------------------------------------------------------------------------------- */
 
-async function runShot(page, { shot, grades, arms, stride, census }) {
-  return page.evaluate(async ({ shot, grades, arms, stride, census }) => {
+async function runShot(page, { shot, grades, arms, stride, census, split }) {
+  return page.evaluate(async ({ shot, grades, arms, stride, census, split }) => {
     const G = window.__GAME, E = G.engine, T = G.THREE;
     const log = [];
     const out = { shot, log, grades: {} };
@@ -177,7 +190,10 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
     if (!census) await G.setShot(shot);
 
     /* ---------------- census: who is in this frame, and under which recipe ---------------- */
-    const KK = new Set(['kaykit:atlas', 'props:kaykit', 'smash:kaykit']);
+    /* §739 added `props:kaykit:torch` — the sconces, split onto their own material so the §738
+       hold could be scoped off them. Listed explicitly, not matched by prefix: §736.5 records a
+       run voided because `/kaykit/` also matched `world.decals.kaykit`. */
+    const KK = new Set(['kaykit:atlas', 'props:kaykit', 'props:kaykit:torch', 'smash:kaykit']);
     const targets = [], subj = [], refs = [];
     E.scene.traverse((o) => {
       if (!(o.isMesh || o.isSkinnedMesh || o.isInstancedMesh)) return;
@@ -188,7 +204,7 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
       if (o.userData?.isOutlineShell || o.userData?.slyOutline || /outline|:ink/i.test(o.name || '')) return;
       targets.push(o);
       const mn = o.material?.name || '';
-      if (KK.has(mn)) subj.push(o);
+      if (KK.has(mn) || split.includes(o.name)) subj.push(o);
       else if (/^arch:/.test(mn)) refs.push(o);
     });
     out.census = {
@@ -341,10 +357,13 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
       saved.push([o, o.material, o.visible, o.geometry.attributes.color || null]);
       if (shell || fx) { o.visible = false; hidden++; return; }
       const mn = o.material?.name || '';
-      if (KK.has(mn)) {
+      if (KK.has(mn) || split.includes(o.name)) {
         const cc = componentsOf(o.geometry);
         const base = objects.length;
-        for (let c = 0; c < cc.n; c++) objects.push({ id: base + c, mesh: `${o.name || o.type}#${c}`, mat: mn, pop: 'PROP' });
+        /* A split mesh gets its OWN population label so it can never be pooled with the imported
+           set — §738's two subsets and §739's jars are three different subjects. */
+        const pop = KK.has(mn) ? (/torch/.test(mn) ? 'TORCH' : 'PROP') : o.name.replace(/^props_/, '').toUpperCase();
+        for (let c = 0; c < cc.n; c++) objects.push({ id: base + c, mesh: `${o.name || o.type}#${c}`, mat: mn, pop });
         const col = new Float32Array(o.geometry.attributes.position.count * 3);
         for (let i = 0; i < cc.comp.length; i++) {
           const e = enc(base + cc.comp[i]);
@@ -450,7 +469,9 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
     /* --------------------------------- the arms ------------------------------------------ */
     const shading = E.get('shading');
     const postfx = E.get('postfx');
-    const kkMats = [...new Set(subj.map((m) => m.material))];
+    const kkMats = [...new Set(subj.filter((m) => KK.has(m.material?.name || '') && !/torch/.test(m.material?.name || '')).map((m) => m.material))];
+    const torchMats = [...new Set(subj.filter((m) => /torch/.test(m.material?.name || '')).map((m) => m.material))];
+    const splitMats = [...new Set(subj.filter((m) => split.includes(m.name)).map((m) => m.material))];
     out.kkMats = kkMats.map((m) => `${m.name} rim=${m.userData?.slyUniforms?.uRim?.value ?? 'MISSING'} hold=${m.userData?.slyUniforms?.uMatShadowHold?.value ?? 'MISSING'}`);
 
     /* Pin a uniform's `.value` so a per-frame republish cannot overwrite it. Assignment is not
@@ -492,6 +513,14 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
           uniSaved.push([m, m.map, m.color.clone()]);
           m.map = null; m.color.setHex(0xc08040); m.needsUpdate = true;
         }
+      }
+      else if (/^L\d{3}$/.test(id)) {
+        const v = Number(id.slice(1)) / 100;
+        for (const m of splitMats) pin(m.userData?.slyUniforms?.uMatShadowHold, v);
+      }
+      else if (/^T\d{3}$/.test(id)) {
+        const v = Number(id.slice(1)) / 100;
+        for (const m of torchMats) pin(m.userData?.slyUniforms?.uMatShadowHold, v);
       }
       else if (/^H\d{3}$/.test(id)) {
         const v = Number(id.slice(1)) / 100;
@@ -540,7 +569,7 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
       if (tod != null) { await G.setShot(shot, { dt: 0 }); }
     }
     return out;
-  }, { shot, grades, arms, stride, census });
+  }, { shot, grades, arms, stride, census, split });
 }
 
 /* ---------------------------------------------------------------------------------------- */
@@ -578,7 +607,7 @@ async function main() {
     for (const shot of SHOTS) {
       const t0 = Date.now();
       process.stdout.write(`· ${shot}: staging + mask\n`);
-      const res = await runShot(page, { shot, grades: GRADES, arms, stride: STRIDE, census: CENSUS });
+      const res = await runShot(page, { shot, grades: GRADES, arms, stride: STRIDE, census: CENSUS, split: SPLIT });
       for (const l of res.log || []) process.stdout.write(`    ${l}\n`);
       process.stdout.write(`    census: ${res.census.targets} targets, ${res.census.subj} prop meshes ${JSON.stringify(res.census.subjMats)}, ${res.census.refs} arch meshes\n`);
       if (res.subjNames) for (const n of res.subjNames) process.stdout.write(`      · ${n}\n`);

@@ -170,10 +170,17 @@ test('H5 §738: the reference this lane must not move is pinned by value', async
   const arch = fs.readFileSync(path.join(ROOT, 'src/world/Architecture.js'), 'utf8');
   assert.ok(!/shadeHold/.test(arch),
     'no Architecture recipe may ask for the hold — the masonry is the reference, not a subject');
+  /* §739 UPDATED THIS ARM RATHER THAN DELETING IT, and the headline change is worth stating:
+     when §738 shipped, the owner had explicitly ruled the procedural surface out of scope and
+     "Props.js contains no shadeHold" was the right pin. After the §738 build he authorised it,
+     so `Props.MATERIALS.lime` now opts in. What the arm still guards is the part that never
+     changed — the hold reaches ONE recipe, by name, and `Architecture.js` still has none. A
+     second `shadeHold` appearing in the props table turns this red. */
   const props = fs.readFileSync(path.join(ROOT, 'src/world/Props.js'), 'utf8');
-  assert.ok(!/shadeHold/.test(props),
-    '§738 is scoped to the imported set; the owner explicitly left the §727/§730 procedural '
-    + 'surface (props_lime and the rest of Props.MATERIALS) alone');
+  const optIns = [...props.matchAll(/^\s*(\w+):\s*\{[^}]*\bshadeHold\b/gm)].map((m) => m[1]);
+  assert.deepEqual(optIns, ['lime'],
+    '§739 scoped the hold to the canopic-jar recipe alone; any other Props entry taking it is a '
+    + 'widening that needs its own measurement');
 });
 
 /* ------------------------------------------------------------------------------------- H6 */

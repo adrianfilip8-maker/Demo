@@ -92,9 +92,16 @@ const engine = {
 const A = new Architecture(engine); await A.init();
 const P = new Props(engine); await P.init();
 const kk = P.group.children.find((c) => c.name === 'props_kaykit');
+/* S739 split the sconces onto their own mesh so the S738 shade hold could be scoped off them.
+   Both meshes are reported: kkTris stays the SET-DRESS mesh (so T2's RNG-neutrality and the
+   S729 statics keep the number they always had) and torchTris is the new one. */
+const kkT = P.group.children.find((c) => c.name === 'props_kaykit_torch');
 process.stdout.write('__R__' + JSON.stringify({
   pieces: PIECES, reg: REG, draws: P.stats.draws, kaykit: P.stats.kaykit ?? null,
   kkTris: kk ? kk.geometry.attributes.position.count / 3 : 0,
+  torchTris: kkT ? kkT.geometry.attributes.position.count / 3 : 0,
+  torchMat: kkT ? kkT.material.name : null,
+  kkMat: kk ? kk.material.name : null,
   mounts: MOUNTS, bodies: BODIES,
   lights: P._lights.filter((l) => l.color === 0xffb060).map((l) => l.position.toArray()),
   fx: P._fx.filter((e) => e.name === 'torch_smoke').map((e) => ({ p: e.position.toArray(), placed: e.placed === true })),
@@ -125,13 +132,21 @@ function removed(genList, swapList) {
   return j === swapList.length ? out : null;
 }
 
-test('T1 §734: 16 wall sconces swap onto the one props_kaykit mesh, 6 crypt + 10 hypostyle', () => {
+test('T1 §734/§739: 16 wall sconces swap onto their OWN imported mesh, 6 crypt + 10 hypostyle', () => {
   /**
    * DOMAIN (§418.3)
-   * PASSES ON: the swap child — kaykit.torches === 16, a props_kaykit mesh carrying more
-   *            triangles than the §729 statics alone, and the mounts split 6/10 by depth.
-   * FAILS ON:  run — the `?torch=gen` child (`gen`), where torches is 0 and the sconce
-   *            geometry is still in the buckets; asserted in T5 rather than described.
+   * PASSES ON: the swap child — kaykit.torches === 16, a props_kaykit_torch mesh carrying the
+   *            sconce geometry, and the mounts split 6/10 by depth.
+   * FAILS ON:  run — the `?torch=gen` child (`gen`), where torches is 0 and there is no torch
+   *            mesh at all; asserted directly below and in T5.
+   *
+   * §739 CHANGED THE SHAPE OF THIS ASSERTION AND THE HEADLINE SAYS SO. It used to read "onto
+   * the ONE props_kaykit mesh", and that was the whole point of §734's batching. The sconces now
+   * have their own mesh because §738's shade hold had to be scoped OFF them (the owner approved
+   * their §734 look and §738 measured it going pale), and a per-material scope needs a material,
+   * which needs a draw. What is still asserted, and is the part that mattered: the sconces are on
+   * an IMPORTED mesh built from the shared recipe, not back in the procedural buckets, and they
+   * are inside the collider §729 registered.
    */
   assert.equal(swap.kaykit.torches, 16, 'every sconce in the level swaps');
   assert.equal(swap.mounts.length, 16, 'and the level authors exactly 16 of them');
@@ -141,8 +156,18 @@ test('T1 §734: 16 wall sconces swap onto the one props_kaykit mesh, 6 crypt + 1
   // §729's statics are still imported: the swap must ADD to that mesh, never replace it.
   assert.equal(swap.kaykit.baskets, 7, '§729 courtyard baskets untouched');
   assert.equal(swap.kaykit.urns, 4, '§730 vault urns untouched');
-  assert.ok(swap.kkTris > gen.kkTris, 'the sconce bodies land on props_kaykit');
-  assert.ok(swap.reg.includes('props_kaykit:ground:wood'), 'and inside the collider §729 registered');
+  /* The set-dress mesh is UNCHANGED by the split — the sconces were added to it in §734 and
+     removed from it in §739, so it is back to carrying exactly the §729 statics. */
+  assert.equal(swap.kkTris, gen.kkTris,
+    '§739: the sconces are no longer merged into the set-dress mesh, so it carries the same '
+    + 'triangles with the swap on or off');
+  assert.ok(swap.torchTris > 0, 'the sconce bodies land on their own imported mesh');
+  assert.equal(gen.torchTris, 0, 'and under ?torch=gen there is no torch mesh at all — RUN');
+  assert.equal(swap.torchMat, 'props:kaykit:torch', 'built through makeAtlasMaterial, named apart');
+  assert.equal(swap.kkMat, 'props:kaykit', 'and the set-dress recipe keeps its own name');
+  assert.ok(swap.reg.includes('props_kaykit:ground:wood'), 'the §729 collider is unchanged');
+  assert.ok(swap.reg.includes('props_kaykit_torch:ground:wood'),
+    'and the new mesh registers the SAME collider contract — the split must not move a step sound');
 });
 
 test('T2 §734: RNG-neutral — every placement the swap does not own is bit-identical', () => {

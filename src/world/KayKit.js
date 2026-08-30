@@ -313,6 +313,9 @@ export const KK_FLAT = KK_TOKENS.has('flat');
 /** §738's revert: the imported set stops holding its own hue in shade. */
 export const KK_NOHOLD = KK_TOKENS.has('nohold');
 
+/** §739's A/B: put the sconces back on the shared `KK_HOLD` they had between §738 and §739. */
+export const KK_TORCHHOLD = KK_TOKENS.has('torchhold');
+
 /**
  * §738 — how hard the imported set holds its OWN albedo hue on its shade side.
  *
@@ -371,6 +374,23 @@ export const KK_NOHOLD = KK_TOKENS.has('nohold');
 export const KK_HOLD = 0.25;
 
 /**
+ * §739 — the SCONCES' shade hold, which is 0, and the sentence that explains why a constant
+ * exists for a zero.
+ *
+ * §738 shipped `KK_HOLD` across the whole atlas recipe and the owner's verdict was that the chest
+ * and coin stacks came up while the six crypt sconces went pale. §738.4 had already measured that
+ * and declined to certify it: day sat 0.239 → 0.106, night 0.755 → 0.641, because the hold rotates
+ * them off the shade light's hue and onto their own and the path crosses neutral. The owner
+ * approved their look at §734, so the correct answer is a SCOPE, not `?kk=nohold` — which would
+ * revert the hold on the barrels, crates and coin stacks too and hand back the win.
+ *
+ * A named constant rather than a bare 0 at the call site, because the next reader's question is
+ * "why does one bucket differ" and the answer has to be at the value, not in a commit message.
+ * `?kk=torchhold` puts the sconces back on `KK_HOLD` for a one-boot A/B.
+ */
+export const TORCH_HOLD = 0;
+
+/**
  * §736 — the world's grade, which the imported props were the only surfaces in the level not
  * to have. DERIVED, not chosen; `tests/kksurface.test.mjs` re-derives it from the shipped bytes
  * and refuses the literal if either input has moved.
@@ -412,9 +432,15 @@ export const KK_GRADE = 0xe6b073;
  * §736 put `KK_GRADE` where the `0xffffff` was, in BOTH branches — the headless fallback
  * included, so a boot without SHADING is not a third grade.
  */
-export function makeAtlasMaterial(engine, atlas, name = 'kaykit:atlas') {
+export function makeAtlasMaterial(engine, atlas, name = 'kaykit:atlas', over = {}) {
   const color = KK_FLAT ? 0xffffff : KK_GRADE;
-  const shadeHold = KK_NOHOLD ? 0 : KK_HOLD;
+  /* §739: `over.shadeHold` is the ONE key a consumer may override, and only downward from
+     `KK_HOLD`. Everything else — the §736 grade, the atlas, the bands, the rim, the ink shell —
+     is the shared recipe, because §729's header requires that the imported set cannot drift into
+     two looks and a shade-side hold is the only axis §738/§739 measured a reason to split.
+     `?kk=torchhold` cancels the override so the A/B is one boot. */
+  const shadeHold = KK_NOHOLD ? 0
+    : (over.shadeHold != null && !KK_TORCHHOLD ? over.shadeHold : KK_HOLD);
   const shading = engine?.get?.('shading');
   if (shading?.make) {
     return shading.make({ name, color, map: atlas, bands: 3, rim: 0.5, shadeHold, outline: 0.0034, outlineColor: 0x1a1210 });

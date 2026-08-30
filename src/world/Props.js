@@ -16,7 +16,7 @@ import { ContactDecals, groundFootprint } from './Decals.js';
  * covers them. They swap to KayKit bodies through the pack's own reduction path (KayKit.js —
  * no second loader), behind the same `?smash=gen` revert. KayKit.js imports nothing from this
  * file, so this direction cannot cycle. */
-import { SMASH_GEN, VAULT_URNS, TORCH_GEN, loadModelLib, loadAtlasTexture, makeAtlasMaterial, cupCentre } from './KayKit.js';
+import { SMASH_GEN, VAULT_URNS, TORCH_GEN, TORCH_HOLD, loadModelLib, loadAtlasTexture, makeAtlasMaterial, cupCentre } from './KayKit.js';
 /* §730: the ONE treasure-room volume, shared with Architecture's portal gate and Smashables'
    urn policy. EgyptLevel imports nothing from here (THREE / Kit / PropKit / Rand only), so
    this edge cannot cycle. */
@@ -76,10 +76,38 @@ export const PROPS_MODE = (() => {
     if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('props') || '';
     if (!raw && typeof globalThis !== 'undefined' && globalThis.__PROPS_AB != null) raw = String(globalThis.__PROPS_AB);
   } catch { /* plain-module hosts have no location; that is the test path */ }
-  const v = String(raw).trim().toLowerCase();
-  return v === 'tinted' || v === 'plain' ? v : 'chroma';
+  /* §739 made this key a COMMA LIST so `nolime` could compose with a mode. Parsed as a list
+     rather than a whole-string compare, or `?props=tinted,nolime` would silently fall through to
+     'chroma' and quietly A/B something other than what was asked for. A bare `?props=tinted`
+     still parses to exactly one token and is unchanged. */
+  const parts = String(raw).toLowerCase().split(',').map((t) => t.trim());
+  return parts.includes('tinted') ? 'tinted' : (parts.includes('plain') ? 'plain' : 'chroma');
 })();
 export const PROPS_TINTED = PROPS_MODE === 'tinted';
+
+/**
+ * §739 — `?props=nolime` reverts the canopic jars' shade hold and nothing else.
+ *
+ * Read from the SAME `?props=` key as §727's three modes rather than from `?kk=`, and that is
+ * deliberate: `tests/kksurface.test.mjs` K5 pins that the imported-prop token cannot reach this
+ * table and this table's token cannot reach the imported recipe, which is the separation §736
+ * and §737 each paid a round to establish. The key takes a comma list so `nolime` composes with
+ * a mode: `?props=tinted,nolime` is both.
+ */
+export const PROPS_NOLIME = (() => {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('props') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__PROPS_AB != null) raw = String(globalThis.__PROPS_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  return String(raw).toLowerCase().split(',').map((t) => t.trim()).includes('nolime');
+})();
+
+/**
+ * The strength of the jars' hold. Swept per body at both grades (§739.2); 0 under
+ * `?props=nolime`, which is the RUN failing input §418.3 asks for.
+ */
+export const LIME_HOLD = PROPS_NOLIME ? 0 : 0.60;
 
 /**
  * §727: three entries drop the residual double tint §724.1 named — a `color ×` multiply
@@ -151,7 +179,17 @@ const TINT727 = (key, shippedHex) => {
  * read-only by convention — nothing outside this file may write to it. */
 export const MATERIALS = {
   stone:     { tex: 'granite_pink',       color: 0x9c8278, rough: 0.88, outline: 1.0 },
-  lime:      { tex: 'limestone_polished', color: 0xd4c19a, rough: 0.62, outline: 1.0 },
+  /* §739 — LIME_HOLD is §269's shade-side hold, the same lever §738 gave the imported props,
+     scoped to this ONE recipe. §737 measured `props_lime` at display sat 0.155 / value 0.457 /
+     hue coherence 0.62 in the `interior` frame: the palest object in the room the owner
+     photographed, and after §738 lifted the imported set it is the palest thing left. The cause
+     is §269's, and this recipe is its worst case in the level: the hold engages in proportion to
+     a surface's own albedo chroma, and `limestone_polished × 0xd4c19a` is the least chromatic
+     albedo any prop wears — so the shade light's own hue wins the multiply almost outright.
+     The albedo is NOT touched: §727 already answered this population with a tint and the owner's
+     verdict on that was "they always looked faded", so this lane moves the LIGHT's grip on the
+     material rather than the material. Reverts on `?props=nolime`. */
+  lime:      { tex: 'limestone_polished', color: 0xd4c19a, rough: 0.62, outline: 1.0, shadeHold: LIME_HOLD },
   /* `vertexColors` (§724): the ONLY consumer of a non-white `COLOR_0` in this bucket is the
      treasure pile — `_treasurePile` authors the inverse of this entry's own `color` on its
      coins and ingots, so the hoard wears `gold_leaf`'s authored gold once instead of
@@ -1146,7 +1184,9 @@ export class Props {
     const flameLocal = sw ? sw.flameAt : new THREE.Vector3().fromArray(bag.flameAt);
     if (sw) {
       sw.geo.applyMatrix4(mount);
-      this._kk.push(sw.geo);
+      /* §739: torches go to their OWN bucket so the §738 hold can be scoped off them without
+         touching the barrels and crates in the same merge. */
+      this._kkTorch.push(sw.geo);
       this._kkStats.torches++;
       for (const p of bag.parts) p.geo.dispose();
       bag.parts.length = 0;
@@ -1242,6 +1282,7 @@ export class Props {
    */
   async _loadSwapBodies() {
     this._kk = [];                                  // placed KayKit-bodied statics, merged once
+    this._kkTorch = [];                             // §739: the sconces, merged separately
     /* §730 `urns` is the count of offering-table jars this boot KEPT generated — the static
        half of the vault policy, self-reported beside the swap's own counts so a boot can be
        asked what it did rather than inferred from a mesh. 4 by default, 0 under either token.
@@ -1290,20 +1331,60 @@ export class Props {
    */
   _flushKayKit() {
     if (this._kkLib) { for (const e of this._kkLib.values()) e.geo.dispose(); this._kkLib = null; }
-    if (!this._kk?.length) return;
-    const merged = mergeAll(this._kk, null);
-    for (const g of this._kk) g.dispose();
-    this._kk = [];
+    /* §739 — TWO buckets, not one, and the split is a look decision rather than a batching one.
+     *
+     * §738 gave the whole atlas recipe a shade-side hold and the owner's verdict was that the
+     * chest and coin stacks came up while the SCONCES went pale: measured, day 0.239 -> 0.106 and
+     * night 0.755 -> 0.641, a hue rotation off the shade light's colour whose path crosses
+     * neutral (§738.4 declined to certify it and was right to). `?kk=nohold` reverts the hold
+     * everywhere and would hand back the win on the barrels and crates, so the fix is a scope,
+     * not a revert: the sconces take the SAME recipe — same atlas, same §736 grade, same rim,
+     * same ink — with `shadeHold` alone forced to 0.
+     *
+     * That needs its own material, and a material needs its own draw, so this costs ONE draw
+     * call in any frame holding a torch (measured on `tools/budgetattrib.mjs`, not on
+     * `Engine.stats.drawCalls`, which §1 records as five frozen values). The alternative — a
+     * per-vertex hold mask through the merge — was rejected: an unbound float attribute reads 0
+     * on the meshes that do not carry it, so the failure mode of getting it wrong is the hold
+     * silently vanishing everywhere rather than a visible extra draw.
+     */
+    const any = (this._kk?.length ?? 0) + (this._kkTorch?.length ?? 0);
+    this._flushKayKitBucket(this._kk, 'props:kaykit', 'props_kaykit', {});
+    this._flushKayKitBucket(this._kkTorch, 'props:kaykit:torch', 'props_kaykit_torch',
+      { shadeHold: TORCH_HOLD });
+    this._kk = []; this._kkTorch = [];
+    /* `stats.kaykit` stays ABSENT when nothing was imported, rather than being published as
+       zeros. §734's T5/T7 assert the absence on purpose — "so a future arm that publishes zeros
+       is a visible change" — and the first draft of §739's split published it unconditionally
+       because the early return it used to sit behind had moved. The tests caught it; the
+       contract is restored here rather than relaxed there. */
+    if (any) this.stats.kaykit = { ...this._kkStats };
+  }
+
+  /**
+   * Merge one KayKit bucket into one mesh with one material, or do nothing if it is empty.
+   *
+   * `over` is the ONE axis on which the two buckets may differ (§729's header forbids the grade
+   * drifting; it says nothing about a shade-side hold, which did not exist when it was written).
+   * Everything else comes from `makeAtlasMaterial`, so the two buckets cannot diverge on colour,
+   * atlas, rim or ink even by accident.
+   */
+  _flushKayKitBucket(geos, matName, meshName, over) {
+    if (!geos?.length) return;
+    const merged = mergeAll(geos, null);
+    for (const g of geos) g.dispose();
     if (!merged) return;
     this._geoms.push(merged);
-    this._kkMat = makeAtlasMaterial(this.engine, this._kkAtlas ?? null, 'props:kaykit');
-    this._materials.push(this._kkMat);
-    const mesh = new THREE.Mesh(merged, this._kkMat);
-    mesh.name = 'props_kaykit';
+    const mat = makeAtlasMaterial(this.engine, this._kkAtlas ?? null, matName, over);
+    this._materials.push(mat);
+    if (matName === 'props:kaykit') this._kkMat = mat;
+    const mesh = new THREE.Mesh(merged, mat);
+    mesh.name = meshName;
     this.group.add(mesh);
     this.stats.draws++;
     this.stats.tris += (merged.index?.count ?? merged.attributes.position.count) / 3;
-    this.stats.kaykit = { ...this._kkStats };
+    /* Same collider contract as the single-mesh version: the swap moved the footstep material
+       to wood and this split must not move it back or somewhere else. */
     this.engine.registerCollider(mesh, { tag: 'ground', material: 'wood' });
   }
 
@@ -1405,6 +1486,11 @@ export class Props {
          one value, and the next metal added here would inherit the same collapse silently. */
       metal: spec.metal ? (spec.metalAmount ?? 0.85) : 0,
       outline: spec.outline ?? 1.0,
+      /* §739 — §269's shade-side hold, per recipe, ABSENT MEANS 0 so every entry in the table
+         except the one that opts in is bit-identical (`max(x, 0.0) == x` in the shader, an
+         identity rather than a tolerance). Only `lime` sets it today; see the note at that
+         entry for the measurement. */
+      shadeHold: spec.shadeHold ?? 0,
       sss: spec.side ? 0.5 : 0.1,
       emissive: spec.emissive ?? 0x000000,
       emissiveIntensity: spec.emissiveIntensity ?? 0,
