@@ -63071,3 +63071,242 @@ positive control and a known-detailed negative control in-arm. It touches NOTHIN
 `Architecture.js`, nothing in the character's TUNE, and nothing in `ToonMaterial.TUNE` — those
 are the reference being matched. Revert token in the established style. Body follows in this
 lane's next pushes.)*
+
+
+### §736.1 The answer, first, so a redirect is cheap (§705)
+
+**The imported props were the only surfaces in the level with no grade on their albedo, and
+that — not chroma, not detail, not spec, not subsurface — is what "faded" measures as.**
+
+Every `Architecture` recipe is `texture × color` and the two COMPOUND. Measured in-page off the
+live materials, the architecture's albedo is **`sandstone_block` L 74.0 / sat 0.865** and
+**`paving_courtyard` L 86.8 / 0.822**. `KayKit.makeAtlasMaterial` passed `color: 0xffffff`, so
+the props' albedo was the atlas itself: world-area weighted over every body the level actually
+places, **L 120.3 / sat 0.560**. Half again as bright as the masonry they stand on and two
+thirds its chroma — *before a photon is cast*. It is a property of the albedo, so no light in
+the level can undo it, which is exactly why the complaint survived four rounds and one fix.
+
+One tint, derived rather than chosen: **`KK_GRADE = 0xe6b073`**, the linear mean of the
+architecture's four warm-stone recipe tints (`0xc9915a`, `0xcfa068`, `0xd6a874`, `0xd8a468` =
+`0xd2a068`) scaled ×1.2359 so the props' placed albedo lands on `paving_courtyard`'s graded
+luminance — the surface they stand on. Revert token **`?kk=flat`**. It reaches all three atlas
+consumers at once, which is what §729's header requires ("cannot drift into two grades") and
+what the token is written not to break.
+
+Measured after, same boot, same footprint, both grades (`tools/kkgrade.mjs --arms A0,FLAT`):
+
+| frame | | `?kk=flat` (before) | shipped | arch paving, same frame |
+|---|---|---|---|---|
+| `interior` day | mean L | 130.8 | **107.5** | 93.9 |
+| | sat (middle luma half) | 0.238 | **0.363** | 0.397 |
+| `interior` night | mean L | 86.5 | **66.9** | 54.0 |
+| | sat | 0.600 | **0.680** | 0.712 |
+| `courtyard` day | mean L | 105.8 | **78.9** | 99.2 |
+| | sat | 0.302 | **0.299** | 0.278 |
+| `courtyard` night † | mean L | 42.1 | **32.0** | 35.0 |
+| | sat | 0.817 | **0.726** | 0.755 |
+
+In the crypt the props went from **39 % brighter than the paving at 60 % of its chroma** to
+**14 % brighter at 91 %**; at night from 60 %/84 % to 24 %/96 %. In the courtyard, where the
+before-state was already in band, the grade moves luminance and leaves chroma alone (0.302 →
+0.299 against the paving's 0.278). † the `courtyard` night footprint is **127 px** and its
+architecture references are 199/378 px — that row is quoted because it exists, not because it
+carries weight.
+
+Budget, on the instrument that works (`tools/budgetattrib.mjs`; `Engine.stats.drawCalls` is
+still the five-frozen-values fiction §1 records): **zero delta, every shot**, identical to the
+figures §734.7 recorded — `interior` 46 draws / 0.411 M, `temple` 73 / 0.631 M, `courtyard`
+93 / 0.706 M, SCENE TOTAL 93 / 0.706 M. And `renderer.info.programs` is **105 in both arms**,
+so there is no new shader variant either: a `color` is a uniform, and the option hash it moves
+keys a material, not a program.
+
+### §736.2 The comparison this lane was handed was between two different things
+
+The brief this lane started from carried a measured table, and its two headline rows are:
+
+```
+  dungeon_texture_sandstone.png  mean sat 0.560      <- the shipped prop atlas
+  arch sandstone_block  0xc9915a sat      0.552      <- the architecture
+```
+
+Both numbers reproduce exactly (0.560 and 0.552 on this tree). The conclusion drawn from them —
+*"props and architecture measure at essentially the same saturation, therefore chroma is not the
+differentiator"* — does not follow, because **the two rows are not the same quantity**. The
+first is ALL of the props' albedo. The second is only the multiplier half of the architecture's;
+its other half is the texture, and `sandstone_block`'s texture is itself sat 0.591. Multiply
+them in linear and the architecture's actual albedo is **sat 0.865**, not 0.552.
+
+This is §442's shape once more — a correct measurement of the wrong subject, under a label that
+says otherwise — and it is worth naming because it did not come from carelessness. The recipe
+hex is the natural thing to reach for: it is the one number in the file that *looks* like the
+surface's colour. It is not; it is the grade applied to a colour that lives somewhere else.
+
+The graded table, measured in-page off the live materials rather than transcribed
+(`tools/kkwhy.mjs`'s albedo pass — the only half of that file that ran, see its header):
+
+| surface | tint | authored L / sat | **GRADED** L / sat |
+|---|---|---|---|
+| **kaykit atlas** | none (`0xffffff`) | 143.7 / 0.560 | **143.7 / 0.560** |
+| `arch sandstone_block` | `0xc9915a` | 123.9 / 0.591 | **74.0 / 0.865** |
+| `arch paving_courtyard` | `0xcfa068` | 133.1 / 0.570 | **86.8 / 0.822** |
+| `arch limestone_polished` | `0xe0d0a8` | 170.8 / 0.339 | **139.6 / 0.518** |
+| `arch hieroglyph_wall` | `0xd6a874` | 122.2 / 0.516 | **82.7 / 0.745** |
+| `arch column_papyrus` | `0xd8a468` | 139.9 / 0.513 | **93.6 / 0.779** |
+
+And the second half of the same correction: §727 was not a failed fix of this problem, it was a
+fix of a **different population**. Its whole subject is the `Props.MATERIALS` table — the
+procedurally-textured set dress. The imported bodies never touch that table; they build through
+`KayKit.makeAtlasMaterial`, which §727 did not edit and which no `?props=` value can reach
+(`tests/kksurface.test.mjs` K5 asserts that). So "they always looked faded" was not a verdict on
+§727's arithmetic. It was the owner still looking at the untouched half.
+
+### §736.3 The instrument, and the control that failed
+
+The first instrument this lane built (`tools/kkflat.mjs`) measured **local contrast** — a
+high-pass RMS on luma over an eroded per-population footprint, on the theory that flatness is a
+variance deficit. It carried the controls §439/§440 require, and **its positive control failed
+outright**, which is the finding rather than a footnote:
+
+```
+  interior, day        n        L      sat     hp3     hp7
+  POS props_dark      25     49.5     0.44    0.00    0.00     <- known-flat: no map, no detail
+  NEG arch sandstone 6756     61.7    0.243   3.43    5.61     <- known-detailed
+  KK setdress       21553    133.9    0.241   6.67    7.58     <- the subject, ABOVE both
+```
+
+At the close stance the same control read **hp7 14.39, the highest number in the frame** — the
+flattest surface the project can build, measuring as the richest. The reason is structural: a
+high-pass over a footprint made of many small separate objects is dominated by their internal
+creases and silhouettes, not by anything on their surfaces, and eroding 1 and 3 px does not
+remove them. **So no variance conclusion is drawn anywhere in this section**, including the one
+that would have supported this lane's own brief. The statistic that did separate the populations
+is saturation over each population's own middle luma half (`satMid`), with mean L beside it,
+because AgX desaturates with brightness (`PostFX.js:242` records a 76.5 % chroma loss on the
+shoulder) and two populations at different luminance cannot be compared on a raw chroma mean.
+
+Instrument arms, every capture run in this section: **I2 = 0 px** (base captured twice) and
+**I4 = 0 px** (every material and uniform restored, diffed against base) at both grades in all
+four frames of the shipping A/B. One earlier run reported I4 = 675 px and its numbers are void —
+see §736.5.
+
+### §736.4 The three levers the brief named, each built and each declined
+
+Each was constructed as a REAL material through the shipped factory and scored on a FIXED
+footprint (the mask is derived once per grade from the shipped material, before any arm runs, so
+no arm can move its own denominator). `tools/kkgrade.mjs` holds all of them.
+
+```
+  interior day (n 27139)          L      sat   satMid        courtyard day (n 20083)
+  A0  shipped                  127.0   0.244    0.238           94.8   0.313   0.295
+  D1  detail 'sandstone'       131.3   0.240    0.241          107.1   0.317   0.276
+  S1  rough .9 spec .14 gloss 20 sss 0
+                               127.0   0.244    0.238          103.3   0.341   0.303
+  W   the grade (0xe6b073)     105.2   0.346    0.359           83.8   0.373   0.325
+  ref arch paving               93.9   0.394    0.397           99.1   0.387   0.277
+```
+
+* **The triplanar detail layer moves the picture the WRONG way.** At the architecture's own
+  preset it adds +4.3 L in the crypt and **+12.3 L in the courtyard** while chroma stands still
+  or falls (satMid 0.295 → 0.276). It is a multiplicative grain centred on 1.0 plus a normal
+  perturbation; on a surface whose problem is that it is already too bright, adding either is
+  not help. Not shipped.
+* **`spec`/`gloss`/`rough`/`sss` measured BIT-IDENTICAL in the crypt**, at both grades — L, sat,
+  val, sdL and both high-pass figures agree to every decimal printed. That is not an arm that
+  failed to apply; it is correct, and the shader says why: `spec` is gated by
+  `step( 0.02, ndl ) * sh` and `sss` by `keyRad * sh`, and **the crypt has no key light**, so
+  both terms are identically zero there whatever their amplitude. In the courtyard, where the
+  sun exists, the same arm is +8.5 L — *brighter*, because dropping `gloss` 32 → 20 at `rough`
+  .62 → .9 takes `glossP` from 20.1 to 9.2 and a broader lobe covers far more of a rounded prop
+  than the third-amplitude it trades away. Not shipped.
+* This also corrects the brief's sign on `sss`. Props take `TUNE.sss = 0.2`; **`Architecture.mat`
+  passes `sss: 0.0`**. Against the reference the owner says looks right, the props' subsurface
+  wrap was a SURPLUS, not a deficit. `tests/kksurface.test.mjs` K4 pins that so the next reader
+  cannot re-invert it.
+
+A neutral (achromatic) grade was also built, because it is the one lever that is unambiguously
+*not* a chroma push — in linear a grey multiply is exactly chroma-preserving on the texture
+(0.560 → 0.571 is 8-bit rounding). It fixes luminance and only luminance: in the crypt
+`0xcdcdcd` took L 127.0 → 109.4 and left satMid at 0.233. Rejected on its own numbers, and the
+comparison is what earns the chromatic grade its place rather than an argument about §727.
+
+### §736.5 What I got wrong, in the order it happened
+
+1. **I took the brief's premise into the design and nearly shipped against it.** The plan for
+   the first two hours was detail + spec + subsurface, because that is what the handoff named.
+   The albedo table killed all three, and it was the *last* table I thought to compute.
+2. **My first instrument's positive control failed and I had to throw the metric away**, after
+   building it, running it for 45 minutes of capture lock and writing its header. §440's rule
+   held — the control caught it — but only because the control was in-arm. Had I quoted the
+   hp7 column without looking at `props_dark`'s row I would have published "the props have
+   MORE local contrast than the architecture", which is true of the number and false of the
+   world.
+3. **I derived a close stance offline and it missed its own subject.** The `baskets` stance was
+   aimed at real placements read off a headless build, and its in-page pre-flight came back
+   `firstHits: paving:court@6.663m` for a 4.53 m target — nothing on the ray at all. The frame
+   is a KayKit body filling half the view from centimetres away. Every number from that stance
+   is discarded.
+4. **The same rig swapped the CONTACT DECALS' material for a barrel's.** The population selector
+   was `/kaykit/.test(material.name)`, and `ContactDecals` names its batch
+   `world.decals.kaykit`. That is the `I4 = 675 px` run; its whole table is void. The selector
+   is now the three exact recipe names, and the comment in `kkgrade.mjs` says why.
+5. **I labelled the largest prop population "KK showcase" and it is not the showcase.**
+   `KayKit.init`'s default mode is `props`, not `show` — the module ships 36 placements of its
+   own. Two tables went out under a name implying they measured an inert debug row.
+6. **I mis-sized the attribution instrument by an order of magnitude.** `tools/kkwhy.mjs`'s
+   knock-out pass is 18 renders per population; three shots projected to ~2.7 h of capture lock.
+   It was stopped after one population and its header now says so in the shape §735 asked for.
+   Its albedo pass had already produced the finding, which is luck, not planning.
+7. **I judged the first frames from statistics before looking at one.** The picture that made
+   the mechanism obvious — bone-white props in a room whose every other surface carries deep
+   colour — was available forty minutes before I opened it.
+
+### §736.6 Scope, and what this does NOT touch
+
+`Architecture.js`'s recipes, `ToonMaterial.TUNE` and the character's `TUNE` are the reference
+this lane matched *to*, and none of them is modified; K4 pins all three by value so a later move
+turns a test red instead of silently invalidating the derivation. No geometry, no placement, no
+`pos:`, no collider, no RNG draw. The §729 destructibles and the §734 sconces take the grade
+because they share the recipe by design; `tests/smashswap.test.mjs` (11 statics, zero pos
+changes, three escapes) and `tests/torchswap.test.mjs` (16 sconces, cup estimator, anchor,
+lights unmoved) both still pass unchanged and both still mean what they meant — neither asserts
+anything about a material's colour, and the collider `material` tags they do assert are
+step-sound tags, a different field with the same name.
+
+**Suite — every run this lane made (§703.2), not only the green ones.** Nothing flaked:
+
+```
+  node --test tests/kksurface.test.mjs                      x3   7/7 pass each
+  node --test kaykit + smashswap + torchswap                x1  35/35 pass
+  npm test  (full, 1150 tests)                              x2  1150/1150 pass, 310s / 306s
+```
+
+**Production (§666/§695).** `node tools/prodboot.mjs`: built, served from a `/Demo/`-shaped
+prefix, `ready true` at 41.6 s, 149 requests, **zero 4xx/5xx**, 30 pre-existing in-flight aborts
+(not gated, unchanged by this lane). The grade is in the artifact —
+`dist/assets/KayKit-Bv0lYCzF.js` carries the literal `15118451` — and so is the token's reader
+(the `kk` search-param reader and `globalThis.__KK_AB`). **The live host was not checked and no claim is
+made about it**: this container's proxy blocks `*.github.io`.
+
+The token was verified END TO END in the browser rather than from source, because `?kk=flat` is
+read at module load and cannot be poked in-page (`tools/kkgrade.mjs --probe`):
+
+```
+  no token     props:kaykit 0xe6b073   kaykit:atlas 0xe6b073   smash:kaykit 0xe6b073   programs 105
+  ?kk=flat     props:kaykit 0xffffff   kaykit:atlas 0xffffff   smash:kaykit 0xffffff   programs 105
+```
+
+### §736.7 What is still open, stated so the next lane starts from the truth
+
+* **The crypt sconces read teal.** `props_kaykit` (the 16 §734 sconces plus 7 courtyard baskets)
+  measures mean hue **166.4° by day and 212.1° at night** in the `interior` frame, in a room
+  whose paving reads 8.9°/1.3°. That is the `rimColor 0x7fd4ff` fresnel on small rounded bodies
+  in a room with no key light, and the grade does not address it. Not investigated further; it
+  is a separate mechanism from this section's and the owner has not named it.
+* **The atlas's own grain never reaches the screen, and no grade can fix that.** Measured over
+  the placed bodies, the albedo varies by an area-weighted **4.78 luma within a triangle** and
+  **38.2 % of triangles vary by under 1 luma across their whole face** — `barrel_large` is 43.7 %
+  — because KayKit's UV islands sit on solid swatches. If the props ever need surface texture
+  rather than surface tone, that is where it has to come from, and it is a texture problem, not
+  a material one. §736.4 shows the triplanar layer is not the answer.
+* `tools/kkwhy.mjs`'s knock-out pass has still never completed. It would give the per-term
+  attribution this section reasoned about from the shader source instead.
