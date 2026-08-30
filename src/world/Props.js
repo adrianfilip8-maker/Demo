@@ -104,10 +104,35 @@ export const PROPS_NOLIME = (() => {
 })();
 
 /**
- * The strength of the jars' hold. Swept per body at both grades (§739.2); 0 under
+ * The strength of the jars' hold — swept per body at both grades (§739.2), 0 under
  * `?props=nolime`, which is the RUN failing input §418.3 asks for.
+ *
+ * FULL STRENGTH, and unlike §738's `KK_HOLD` that is not an overshoot but the only value that
+ * arrives. Measured on the four jars the `interior` frame holds, against the architecture's
+ * median surface saturation (0.371 day, 0.709 night):
+ *
+ *     hold   0.00   0.20   0.40   0.60   0.80   1.00      bar
+ *     day   0.156  0.125  0.144  0.203  0.284  0.367    0.371
+ *     night 0.402  0.432  0.471  0.514  0.554  0.599    0.709
+ *
+ * The day row DIPS before it rises, and that is the same shape §738.4 recorded on the sconces:
+ * the hold mixes the shade light's tint toward the material's own hue, and when the two are
+ * near-opposite the intermediate mix passes through neutral. So a partial value here is worse
+ * than none — 0.20 leaves the jars FLATTER than shipped — and every strength below 0.80 is
+ * inside that dip. 1.00 lands the day median 0.004 under the bar with no overshoot: three of the
+ * four jars sit just below it and one just above.
+ *
+ * 1.00 is a CEILING, not a push. The hold's endpoint is the surface's own albedo carried to the
+ * luminance the shading produced, so it can never make a body more saturated than the material it
+ * is painting — the shader note at `uSubjLitHold` states that invariant and the same arithmetic
+ * governs this band. The character already ships its own scope at full strength
+ * (`TUNE.subjShadowHold = 1.0`), so a 1.0 on a population is not a new kind of value here.
+ *
+ * NIGHT IS NOT FIXED BY THIS, and §739.3 says so with the numbers: +0.197 is the largest single
+ * move this lane makes, and it still leaves the jars 0.110 under the bar at full strength. There
+ * is nothing further left in this lever.
  */
-export const LIME_HOLD = PROPS_NOLIME ? 0 : 0.60;
+export const LIME_HOLD = PROPS_NOLIME ? 0 : 1.0;
 
 /**
  * §727: three entries drop the residual double tint §724.1 named — a `color ×` multiply

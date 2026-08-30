@@ -986,16 +986,24 @@ test('P1: Props\' `ground` colliders ARE its drawn art — the opposite of Archi
     split[k] = (split[k] || 0) + 1;
   }
   console.log(`  P1: ${PROPS_DRAWN.length} drawn Props meshes · ${PROPS.length} colliders — ${JSON.stringify(split)}`);
-  /* 20 → 21 and 9 → 10 under §729, and the newcomer keeps the structural fact this arm exists
-     for: `props_kaykit` (the destructible models' swapped STATIC twins — 4 vault jars, 7
-     courtyard baskets, one merged mesh) registers the drawn bucket itself, exactly as the other
-     nine ground colliders do — `ground:is-drawn-art`, not a proxy. The count moved because a
-     §729 design line added one mesh; the SPLIT shape is the pin that would catch a proxy
-     sneaking in. (This arm went red on the swap's own commit and was updated to the measured
-     truth — the before is recorded here, per the §712 precedent in P2 below.) */
-  assert.equal(PROPS.length, 21, 'the Props collider count has moved');
+  /* 20 → 21 under §729, then 21 → 22 under §739, and each newcomer keeps the structural fact
+     this arm exists for: the merged KayKit buckets register the drawn geometry ITSELF, exactly
+     as the other ground colliders do — `ground:is-drawn-art`, not a proxy.
+
+     §729 added `props_kaykit` (the destructible models' swapped STATIC twins — 4 vault jars, 7
+     courtyard baskets, one merged mesh). §739 added `props_kaykit_torch`: the six crypt and ten
+     hypostyle sconces, split onto their own mesh so §738's shade-side hold could be scoped OFF
+     them without reverting it on the barrels and crates. The sconces were ALREADY inside the
+     §729 collider before the split — this is the same art registering the same `ground`/`wood`
+     contract through a second mesh, not new collision.
+
+     The count moved because a design line added a mesh; the SPLIT shape is the pin that would
+     catch a proxy sneaking in, and it is the half worth reading. (This arm went red on §729's
+     own commit and again on §739's, and was updated to the measured truth each time — the
+     befores are recorded here, per the §712 precedent in P2 below.) */
+  assert.equal(PROPS.length, 22, 'the Props collider count has moved');
   assert.deepEqual(split, {
-    'ground:is-drawn-art': 10,
+    'ground:is-drawn-art': 11,
     'ground:separate-proxy': 1,
     'ledge:separate-proxy': 2,
     'hazard:separate-proxy': 8,

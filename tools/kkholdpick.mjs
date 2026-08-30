@@ -31,6 +31,11 @@ const DIR = argv.find((a) => !a.startsWith('--')) || 'shots/kkhold';
 const BASE = opt('base', 'H000');
 const MINPIX = +opt('minpix', '12');
 const PICK = String(opt('arms', '')).split(',').filter(Boolean);
+/* §739 — which population is the SUBJECT. `PROP` is §738's imported set, `LIME` the procedural
+   canopic jars, `TORCH` the six sconces §739 scoped the hold off. Never more than one at a time:
+   they are three different subjects with three different bars, and merging them would be the
+   pooling error this whole family of sections exists to record. */
+const POP = opt('pop', 'PROP');
 const f3 = (x) => (x == null ? '  —  ' : x.toFixed(3));
 
 const rep = JSON.parse(await readFile(path.join(DIR, 'report.json'), 'utf8'));
@@ -49,7 +54,7 @@ for (const [shot, rec] of Object.entries(rep.shots)) {
     const base = arms[BASE];
     if (!base) { console.log(`  ${shot} ${grade}: no ${BASE} arm`); continue; }
 
-    const props = Object.values(base).filter((r) => r.pop === 'PROP' && !r.thin);
+    const props = Object.values(base).filter((r) => r.pop === POP && !r.thin);
     const arch = Object.values(base).filter((r) => r.pop === 'ARCH' && !r.thin);
     if (!props.length || !arch.length) continue;
     /* The BAR: the architecture's median SURFACE saturation in this frame. A median over
@@ -60,7 +65,7 @@ for (const [shot, rec] of Object.entries(rep.shots)) {
     const dull = props.filter((r) => r.sat < BAR).map((r) => r.id);
     const fine = props.filter((r) => r.sat >= BAR).map((r) => r.id);
 
-    console.log(`\n${'='.repeat(112)}\n${shot} · ${grade}   architecture median surface saturation = ${f3(BAR)}   (${arch.length} surfaces: ${archSats.map(f3).join(' ')})`);
+    console.log(`\n${'='.repeat(112)}\n${shot} · ${grade}   SUBJECT ${POP}   architecture median surface saturation = ${f3(BAR)}   (${arch.length} surfaces: ${archSats.map(f3).join(' ')})`);
     console.log(`   subsets fixed on ${BASE}:  DULL ${dull.length} bodies (below the bar)   ALREADY-FINE ${fine.length} bodies (at or above it)\n`);
 
     const stat = (arm, set) => {
@@ -95,7 +100,7 @@ for (const [shot, rec] of Object.entries(rep.shots)) {
     /* The populations that must NOT move. Printed as a max absolute delta over bodies, because a
        mean would hide one wall moving a lot inside many that did not. */
     console.log(`\n   MUST NOT MOVE — max |Δsat| over bodies vs ${BASE}:`);
-    for (const popName of ['ARCH', 'CHAR', 'OTHER']) {
+    for (const popName of ['ARCH', 'CHAR', 'OTHER', 'PROP', 'LIME', 'TORCH'].filter((p) => p !== POP)) {
       const set = Object.values(base).filter((r) => r.pop === popName && !r.thin).map((r) => r.id);
       if (!set.length) continue;
       const line = cols.map((c) => {
