@@ -33,6 +33,12 @@
  * Captured at both grades. Torches are a night feature above all, so the night pass is the one
  * that decides; the day pass is the second sample §466.5 requires.
  *
+ * TO RE-RUN AFTER THE DECISION: candidate B is served out of `public/assets/tombchaser/`, and
+ * that directory is staged for this comparison only — the losing candidate does not ship, so it
+ * is removed from `public/` once the verdict is recorded, and B's request here will 404.
+ * `cp staging/assets/tombchaser/{Torch_Art.glb,LICENSE.txt,PROVENANCE.md} public/assets/tombchaser/`
+ * puts it back. The pack itself is never deleted; only its copy under the served root is.
+ *
  *   node tools/torchpick.mjs                 both grades into shots/torch734/
  *   node tools/torchpick.mjs --out DIR
  */
@@ -106,6 +112,17 @@ async () => {
   const { GLTFLoader } = await import('/node_modules/three/examples/jsm/loaders/GLTFLoader.js');
   const PK = await import('/src/world/PropKit.js');
   const { rng } = await import('/src/core/Rand.js');
+  const KK = await import('/src/world/KayKit.js');
+  /* Both candidates are dressed through the SHIPPED recipe, KayKit.makeAtlasMaterial, rather
+     than through the material their own glTF carries. Two reasons, and the first alone would
+     decide it: the shipped KayKit material does not use dungeon_texture.png at all - it uses
+     dungeon_texture_sandstone.png, the S718/S727 retint - so a frame drawn from the raw glTF
+     material is a picture of a colour this project does not ship. The second is the comparison
+     itself: makeAtlasMaterial is the toon recipe with bands, rim and ink outline, and judging a
+     candidate under MeshStandard while the room around it is toon-shaded compares the shading
+     models rather than the models. Each candidate keeps its OWN texture; only the recipe is
+     shared. (No backticks in this comment: it lives inside a template literal.) */
+  const kkAtlas = await KK.loadAtlasTexture();
 
   /* the generated sconce's own union bounds — the conform reference, measured here rather
      than carried from a comment */
@@ -145,6 +162,10 @@ async () => {
 
   const A = await bodyOf('/assets/kaykit/torch_mounted.gltf', 0);
   const B = await bodyOf('/assets/tombchaser/Torch_Art.glb', -Math.PI / 2);
+  /* A wears exactly what it will ship in; B wears the same recipe over its own embedded map. */
+  A.mat = KK.makeAtlasMaterial(E, kkAtlas, 'pick:kaykit');
+  B.mat = KK.makeAtlasMaterial(E, B.mat?.map ?? null, 'pick:tomb');
+  out.mats = { A: A.mat?.name ?? null, B: B.mat?.name ?? null, atlas: kkAtlas ? 'sandstone' : 'null' };
   out.cands.A = { scale: A.s, seated: A.seated, verts: A.geo.attributes.position.count };
   out.cands.B = { scale: B.s, seated: B.seated, verts: B.geo.attributes.position.count };
 

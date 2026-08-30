@@ -30,6 +30,9 @@
  *   T8  THE LIGHTS DID NOT MOVE — and the rejected cup-derived light is run against the same
  *       bar to show the bar can fail. §303's sealed daylight protection is arithmetic on the
  *       torch light's y, and this change deliberately stops at the flame.
+ *   T9  THE `interior` FRAMING — the swap must not put FEWER crypt flames in the canonical
+ *       torch shot than the anchor it replaced. Verified against `Particles.js`'s own recorded
+ *       projections, which this arm reproduces to the pixel before it uses them.
  *
  * Children carry the arms because the token and the cache prime are module-load state; the
  * parent only diffs their prints — smashswap.test.mjs's shape, for its reasons.
@@ -397,4 +400,80 @@ test('T6 §734: _standoff returns early on a placed handle and still compensates
   fn.call({ engine }, bare);
   assert.ok(probes > 0, 'an unmarked fire is still probed');
   assert.notEqual(bare.position.x, 0, 'and is still pushed off the wall — the compensation survives for the generated arm');
+});
+
+test('T9 §734: the swap puts no fewer crypt flames in the `interior` frame than the anchor it replaced', async () => {
+  /**
+   * `Particles.js:4444` costed the old mount anchor in exactly this currency: at the `interior`
+   * camera it "loses a fifth flame, the nearest one, which sits at 2.1 m and projects to
+   * (1050, 48) from the cup and off the right edge at (1519, 39) from the mount". That is a
+   * measurable claim about a shipped camera, so it is the bar — and it is reproduced here
+   * BEFORE it is leaned on, because a bar quoted from a comment is a claim about the comment.
+   *
+   * The honest result, recorded rather than rounded up: `torch_mounted`'s bowl sits 0.267 m off
+   * the wall against the generated cup's 0.825, so the nearest flame moves from x 1519 to
+   * x 1348 and is still outside a 1280-wide frame. The swap is an IMPROVEMENT on what ships
+   * (1519 → 1348) and does not reach the 5/6 the generated cup would have. This asserts the
+   * former, which is the property a future conform change could break.
+   *
+   * DOMAIN (§418.3)
+   * PASSES ON: the shipped conform — 4 of 6 in frame, same as the mount anchor, every one of
+   *            them nearer the frame than it was.
+   * FAILS ON:  run below — a conform HALF the shipped one, which pulls the bowl back toward the
+   *            wall and is asserted to push the nearest flame further out than the mount anchor
+   *            already had it.
+   */
+  const THREE = await import('three');
+  const W = 1280, H = 720;
+  const cam = new THREE.PerspectiveCamera(52, W / H, 0.1, 4000);
+  cam.position.set(3.2, -9.2, -60.0);
+  cam.lookAt(new THREE.Vector3(-1.5, -11.5, -74.0));
+  cam.updateMatrixWorld(true); cam.updateProjectionMatrix();
+  const project = (x, y, z) => {
+    const v = new THREE.Vector3(x, y, z).project(cam);
+    return [(v.x + 1) / 2 * W, (1 - v.y) / 2 * H, v.z];
+  };
+  const inFrame = (q) => q[0] >= 0 && q[0] <= W && q[1] >= 0 && q[1] <= H && q[2] < 1;
+
+  /* First: reproduce the two numbers Particles.js records, so the camera model is known to be
+     the one that produced them. The nearest crypt mount is (4.35, −9.4, −62), ry = −PI/2. */
+  const MX = 4.35, MY = -9.4, MZ = -62, RY = -Math.PI / 2;
+  const world = (l) => [MX + l[2] * Math.sin(RY), MY + l[1], MZ + l[2] * Math.cos(RY)];
+  const atMount = project(...world([0, 0.6, 0]));
+  const atGenCup = project(...world([0, 0.6495, 0.8249]));
+  assert.deepEqual([Math.round(atMount[0]), Math.round(atMount[1])], [1519, 39],
+    'the mount projection Particles.js records is not reproduced — this camera model is not the one it used');
+  assert.deepEqual([Math.round(atGenCup[0]), Math.round(atGenCup[1])], [1050, 48],
+    'the generated-cup projection Particles.js records is not reproduced');
+
+  /* Now the six crypt sconces, old anchor against new. */
+  const mounts = [];
+  for (const sx of [-1, 1]) for (const pz of [-62, -68, -74]) mounts.push([sx * 4.35, -9.4, pz, sx < 0 ? Math.PI / 2 : -Math.PI / 2]);
+  const count = (localOf) => mounts.filter(([x, y, z, ry], i) => {
+    const l = localOf(i);
+    return inFrame(project(x + l[2] * Math.sin(ry), y + l[1], z + l[2] * Math.cos(ry)));
+  }).length;
+
+  const cryptBodies = swap.bodies.filter((_, i) => swap.mounts[i][1] < 0);
+  assert.equal(cryptBodies.length, 6, 'six crypt sconces reported a conform');
+  const oldN = count(() => [0, 0.6, 0]);
+  const newN = count((i) => cryptBodies[i].flame);
+  assert.ok(newN >= oldN, `the swap frames ${newN} crypt flames against the old anchor's ${oldN}`);
+  assert.equal(oldN, 4, 'the pre-§734 anchor framed 4 of 6 — the recorded baseline');
+
+  // every flame is at least no further right than it was
+  for (let i = 0; i < 6; i++) {
+    const [x, y, z, ry] = mounts[i];
+    const l = cryptBodies[i].flame;
+    const a = project(x, y + 0.6, z);
+    const b = project(x + l[2] * Math.sin(ry), y + l[1], z + l[2] * Math.cos(ry));
+    assert.ok(Math.abs(b[0] - W / 2) <= Math.abs(a[0] - W / 2) + 1e-6,
+      `sconce ${i} moved AWAY from frame centre: x ${a[0].toFixed(0)} -> ${b[0].toFixed(0)}`);
+  }
+
+  // FAILING INPUT, run: half the shipped conform pulls the bowl back and loses ground
+  const halfN = count((i) => cryptBodies[i].flame.map((v, k) => (k === 1 ? v : v * 0.5)));
+  const halfNear = project(...world([0, cryptBodies[5].flame[1], cryptBodies[5].flame[2] * 0.5]));
+  assert.ok(halfNear[0] > atMount[0] - (atMount[0] - 1348) * 0.9 && halfN <= oldN,
+    `a half-scale conform must not beat the shipped one (half puts the nearest at x ${halfNear[0].toFixed(0)}, framing ${halfN})`);
 });
