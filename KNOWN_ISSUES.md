@@ -63852,3 +63852,33 @@ checked and no claim is made about it** — this container's proxy blocks `*.git
    the lever does is trade the light's chroma for the material's — which lowers saturation
    whenever the light is the more chromatic of the two. §737's own data said so (`HOLD1` at
    −0.125 on `kaykit` night) and I read past it, twice, before the sweep made it unavoidable.
+
+---
+
+## §739 — The last round on "faded": the procedural canopic jars take a hold of their own, and the sconces get theirs taken away
+
+*(Heading committed ahead of its body to hold the number — §700.9. Claim marker, worded to be
+unlike any other lane's (§717): §739 CLAIM lime-jars-and-sconce-scope-lane-b82d70. Owner on the
+§738 build: **"It looks a little better, but still a little washed out."** The chest and coin
+stacks came up; two populations did not, and both are now authorised.
+
+**A — the procedural canopic jars.** `props_lime` on `MATERIALS.lime`, measured by §737 at sat
+0.155 / value 0.457 / hue coherence 0.62 — the palest object in the `interior` frame by a wide
+margin, four of them on the offering table in the middle of the room the owner photographed. This
+is the §727/§730 PROCEDURAL surface, not `makeAtlasMaterial`; `tests/kksurface.test.mjs` K5 pins
+that independence and this lane keeps it, so the jar fix goes through `Props._mat` and reverts on
+the established `?props=` key, NOT on `?kk=`. Routing it through the imported-prop token would
+break the one separation three sections have now paid to establish.
+
+**B — the sconces, restored.** §738 cost them (day 0.239 → 0.106, night 0.755 → 0.641) and
+declined to certify that as an improvement. The owner had approved their look at §734 and they are
+pale in his latest screenshot. `?kk=nohold` is NOT the answer: it would hand back the win on the
+barrels, crates and coin stacks. So the six sconces get their own material — the same recipe, the
+same grade, the hold alone scoped off — which costs one draw call and is proved by measurement
+against the pre-§738 arm rather than by asserting the scope is right.
+
+Everything §738 established must survive both: architecture, character and the imported set's
+§738 gain are re-proved per body at every strength tested, on the max-absolute-delta table.
+Instrument is §737's `tools/kkbleach.mjs` with its connected-component masks, extended to split
+`props_lime` into bodies and not otherwise rebuilt. Bodies are identified by MASK IDENTITY and a
+world-position census, never by screen centroid — §738.8's second error. Body follows.)*
