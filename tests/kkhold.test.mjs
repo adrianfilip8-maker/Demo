@@ -184,7 +184,10 @@ test('H6 §738: the strength is the swept one, and strictly below full', async (
   assert.ok(on.KK_HOLD > 0 && on.KK_HOLD < 1,
     'full strength is worth +0.267 against a 0.103 target (§737.6) — it overshoots the dull '
     + 'bodies past the masonry and pushes the four already at parity well beyond it');
-  assert.equal(on.KK_HOLD, 0.35, 'PROVISIONAL — replaced by the §738.2 sweep result in this lane\'s next commit');
+  assert.equal(on.KK_HOLD, 0.25,
+    'the §738.2 sweep value: 0.35 lands the DAY dull median exactly on the bar but buys only '
+    + '+0.006 of NIGHT dull median over 0.25 while pushing the already-above subset a further '
+    + '+0.020 and the owner-approved sconces a further −0.036');
 
   const src = fs.readFileSync(path.join(ROOT, 'src/world/KayKit.js'), 'utf8');
   assert.match(src, /THE VALUE IS SWEPT, NOT CHOSEN/,

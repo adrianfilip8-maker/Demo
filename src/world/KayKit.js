@@ -336,10 +336,39 @@ export const KK_NOHOLD = KK_TOKENS.has('nohold');
  * worth +0.267 against a 0.103 target, which would overshoot the dull bodies past the masonry and
  * push the four bodies that were already at parity well beyond it.
  *
- * THE VALUE IS SWEPT, NOT CHOSEN — see §738.2 for the per-body table it came from. Revert with
- * `?kk=nohold`.
+ * THE VALUE IS SWEPT, NOT CHOSEN — seven strengths in one boot on one mask, scored per body at
+ * both grades (§738.2). What the sweep says, on the crypt's 20 placed bodies against the
+ * architecture's median surface saturation (0.371 by day, 0.709 at night):
+ *
+ *     hold      DAY dull median   still below   fine median      NIGHT dull median
+ *     0.00        0.267  (−0.104)     16/16      0.462  (+0.090)   0.632  (−0.078)
+ *     0.15        0.316  (−0.055)     12/16      0.487  (+0.116)   0.647  (−0.063)
+ *     0.25        0.348  (−0.023)     10/16      0.506  (+0.135)   0.653  (−0.057)
+ *     0.35        0.379  (+0.008)      7/16      0.526  (+0.155)   0.659  (−0.051)
+ *     0.50        0.425  (+0.054)      2/16      0.563  (+0.192)   0.669  (−0.040)
+ *     1.00        0.569  (+0.197)      0/16      0.652  (+0.281)   0.731  (+0.022)
+ *
+ * WHY 0.25 AND NOT THE 0.35 THAT LANDS THE DAY MEDIAN EXACTLY ON THE BAR. Because the lever
+ * CANNOT SEPARATE THE TWO SUBSETS — one material serves all 20 bodies, so every strength that
+ * lifts the 16 that were short also pushes the 4 that were already above the masonry further
+ * above it, and those 4 start at +0.090 with the architecture's own brightest surface at 0.400.
+ * Past 0.25 the trade turns: 0.25 → 0.35 buys +0.031 of day dull median and **+0.006 of NIGHT
+ * dull median**, for +0.020 on the already-over subset and +0.036 more on the sconces (below).
+ * The night half of the owner's complaint is barely reachable from this lever at any safe
+ * strength, which §738.3 states rather than hides.
+ *
+ * THE ONE SURFACE THAT MOVES AGAINST THE METRIC, named because §734's look is owner-approved.
+ * The six crypt wall sconces (`props_kaykit#0…#11`, measured at x ±4.16, y −9.1, z −62/−68/−74)
+ * are the body §736.7 recorded reading TEAL — hue 166°/212° in a room whose paving reads 9°/1°.
+ * The hold rotates them off the shade light's hue and onto their own, and the path crosses
+ * neutral: day hue 186° → 170° at 0.25 → 30° at 0.50 → 21° at 0.70, with saturation dipping
+ * 0.239 → 0.106 → 0.111 → 0.246 on the way. So their SATURATION falls at this strength while
+ * their HUE moves toward the room's palette. That is a real change to an approved fixture and it
+ * is reported as one; it is not certified as an improvement by this lane.
+ *
+ * Revert with `?kk=nohold`.
  */
-export const KK_HOLD = 0.35;
+export const KK_HOLD = 0.25;
 
 /**
  * §736 — the world's grade, which the imported props were the only surfaces in the level not

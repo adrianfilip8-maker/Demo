@@ -169,7 +169,12 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
     const log = [];
     const out = { shot, log, grades: {} };
 
-    await G.setShot(shot);
+    /* `--census` skips staging entirely: a body's WORLD position does not depend on which camera
+       is looking at it, and setShot costs 17 software-rendered frames. §738 needed this to answer
+       "what IS props_kaykit#6" without paying four minutes of capture lock to find out — and
+       needed to ANSWER it rather than infer it from a screen centroid, which is the whole lesson
+       of §737. */
+    if (!census) await G.setShot(shot);
 
     /* ---------------- census: who is in this frame, and under which recipe ---------------- */
     const KK = new Set(['kaykit:atlas', 'props:kaykit', 'smash:kaykit']);
@@ -193,6 +198,45 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
     };
     if (census) {
       out.subjNames = subj.map((m) => `${m.name || m.type}/${m.material.name}`).slice(0, 80);
+      /* Per connected component: world centroid, world bbox and triangle count — the same
+         component split the mask uses, so a body id here IS the body id there. */
+      out.bodies = [];
+      for (const mesh of subj) {
+        const geo = mesh.geometry, pos = geo.attributes.position, idx = geo.index;
+        const nv = pos.count;
+        const map = new Map(); const weld = new Int32Array(nv);
+        for (let i = 0; i < nv; i++) {
+          const k = `${Math.round(pos.getX(i) * 1e4)},${Math.round(pos.getY(i) * 1e4)},${Math.round(pos.getZ(i) * 1e4)}`;
+          let v = map.get(k); if (v === undefined) { v = map.size; map.set(k, v); } weld[i] = v;
+        }
+        const par = new Int32Array(map.size); for (let i = 0; i < par.length; i++) par[i] = i;
+        const find = (a) => { while (par[a] !== a) { par[a] = par[par[a]]; a = par[a]; } return a; };
+        const uni = (a, b) => { a = find(a); b = find(b); if (a !== b) par[b] = a; };
+        const nTri = idx ? idx.count / 3 : nv / 3;
+        for (let t = 0; t < nTri; t++) {
+          const a = idx ? idx.getX(t * 3) : t * 3, b = idx ? idx.getX(t * 3 + 1) : t * 3 + 1, c = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
+          uni(weld[a], weld[b]); uni(weld[b], weld[c]);
+        }
+        const comp = new Map();
+        const v3 = new T.Vector3();
+        for (let i = 0; i < nv; i++) {
+          const r = find(weld[i]);
+          let c = comp.get(r);
+          if (!c) { c = { n: 0, x: 0, y: 0, z: 0, lo: [1e9, 1e9, 1e9], hi: [-1e9, -1e9, -1e9] }; comp.set(r, c); }
+          v3.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
+          c.n++; c.x += v3.x; c.y += v3.y; c.z += v3.z;
+          c.lo[0] = Math.min(c.lo[0], v3.x); c.lo[1] = Math.min(c.lo[1], v3.y); c.lo[2] = Math.min(c.lo[2], v3.z);
+          c.hi[0] = Math.max(c.hi[0], v3.x); c.hi[1] = Math.max(c.hi[1], v3.y); c.hi[2] = Math.max(c.hi[2], v3.z);
+        }
+        let ci = 0;
+        for (const c of comp.values()) {
+          out.bodies.push({
+            body: `${mesh.name || mesh.type}#${ci++}`, mat: mesh.material.name, verts: c.n,
+            at: [+(c.x / c.n).toFixed(2), +(c.y / c.n).toFixed(2), +(c.z / c.n).toFixed(2)],
+            size: [+(c.hi[0] - c.lo[0]).toFixed(2), +(c.hi[1] - c.lo[1]).toFixed(2), +(c.hi[2] - c.lo[2]).toFixed(2)],
+          });
+        }
+      }
       return out;
     }
 
@@ -533,7 +577,13 @@ async function main() {
       for (const l of res.log || []) process.stdout.write(`    ${l}\n`);
       process.stdout.write(`    census: ${res.census.targets} targets, ${res.census.subj} prop meshes ${JSON.stringify(res.census.subjMats)}, ${res.census.refs} arch meshes\n`);
       if (res.subjNames) for (const n of res.subjNames) process.stdout.write(`      · ${n}\n`);
-      if (CENSUS) { report.shots[shot] = { census: res.census, names: res.subjNames }; continue; }
+      if (CENSUS) {
+        for (const b of (res.bodies || [])) {
+          process.stdout.write(`      ${b.body.padEnd(20)} ${b.mat.padEnd(14)} v${String(b.verts).padStart(5)}  at (${b.at.join(', ')})  size ${b.size.join(' x ')}\n`);
+        }
+        report.shots[shot] = { census: res.census, names: res.subjNames, bodies: res.bodies };
+        continue;
+      }
       if (res.kkMats) process.stdout.write(`    kk materials: ${res.kkMats.join(' ')}\n`);
 
       await writeFile(path.join(OUTDIR, `${shot}.mask.json`), JSON.stringify(res.mask));
