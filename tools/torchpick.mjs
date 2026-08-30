@@ -268,7 +268,12 @@ async function main() {
         }, { p });
         await page.evaluate(async () => { await window.__GAME.step(24, 0); });
         const file = path.join(OUTDIR, `${grade}-${name}.png`);
-        await page.screenshot({ path: file });
+        /* `__GAME.capture()`, not `page.screenshot()`. Under swiftshader at 1280x720 with the
+           whole PostFX chain, playwright's screenshot path exceeded its 30 s default inside the
+           capture lock — and smashshot already reads the canvas from inside the page for its
+           own reasons. The data URL is the same framebuffer, and it cannot time out. */
+        const dataUrl = await page.evaluate(() => window.__GAME.capture());
+        await writeFile(file, Buffer.from(String(dataUrl).split(',')[1], 'base64'));
         meta.frames.push({ grade, pose: name, cam: p, file: path.relative(ROOT, file) });
         console.log(`[torchpick] wrote ${path.relative(ROOT, file)}`);
       }
