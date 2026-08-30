@@ -63573,3 +63573,28 @@ Three options, each with its measured price:
 * The `kaykit` canonical shot contains **24 KayKit bodies totalling 257 measurable cells** — it is
   a courtyard framing, not a prop framing, and it is a weak instrument for this complaint. A
   stance aimed at the crypt's prop cluster would carry far more of the population.
+
+---
+
+## §738 — The prop-scoped shade hold: §269's lever, aimed by §737's per-body numbers at the two thirds of the imported set that needed it
+
+*(Heading committed ahead of its body to hold the number — §700.9. Claim marker, worded to be
+unlike any other lane's (§717): §738 CLAIM kaykit-shade-hold-lane-5ae201 — the KAYKIT-SHADE-HOLD
+lane. Owner's decision on §737.7: **option 2, ship it; option 3 explicitly OUT of scope** — the
+owner was shown that `props_lime` / §730's canopic jars are the palest object in the crypt and
+chose to leave them alone, so nothing on the §727/§730 procedural surface is touched here,
+including `props_lime`, `limestone_polished` and the whole `Props.MATERIALS` table.
+
+Scope: one per-material uniform, `uMatShadowHold`, added beside the global `uShadowHold` and the
+`vSlySkin`-scoped `uSubjShadowHold` that §269/§287 already ship — reaching the three KayKit atlas
+recipes and nothing else. At 0 on every other material the expression is `max(x, 0)`, which is an
+exact identity rather than a tolerance, so `Architecture.js` and the character are bit-identical
+BY ARITHMETIC and are additionally proved so in pixels.
+
+This is a TUNING job with a measured target, not a switch: §737.3 measured the dull subset short
+by 0.103 by day and 0.105 at night, and §737.6 measured the hold at full strength worth +0.267 —
+an overshoot. The strength is chosen from a sweep and judged PER BODY, SORTED, NEVER POOLED, on
+both subsets — the 16 bodies below the architecture's median AND the 4 already at or above it,
+because a fix that corrects the dull ones by pushing the bright ones past parity is not a fix.
+Instrument is §737's `tools/kkbleach.mjs` with its connected-component per-body masks, reused
+rather than rebuilt. Revert token extends `?kk=`. Body follows in this lane's next pushes.)*
