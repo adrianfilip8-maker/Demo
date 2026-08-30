@@ -502,7 +502,13 @@ export class Smashables {
    */
   _mat(kind) {
     const spec = {
-      jar:    { name: 'smash:clay',   color: PROP_MATERIALS.lime.color, rough: 0.62, tex: 'limestone_polished' },
+      /* §739 mirrors `lime`'s shade-side hold as well as its colour, and the reason is three
+         metres of floor: §730 put FOUR static urns on the vault's offering table and left TWO
+         destructible jars beside them, and they are the same object to look at. Taking the
+         hold on one and not the other would put a visible seam between two things a player
+         reads as a pair — the exact drift this method's own header exists to prevent
+         ("mirroring `Props.MATERIALS` so this does not become a fourth clay"). */
+      jar:    { name: 'smash:clay',   color: PROP_MATERIALS.lime.color, rough: 0.62, tex: 'limestone_polished', shadeHold: PROP_MATERIALS.lime.shadeHold },
       basket: { name: 'smash:wicker', color: PROP_MATERIALS.rope.color, rough: 0.95, tex: 'rope' },
       crate:  { name: 'smash:wood',   color: PROP_MATERIALS.wood.color, rough: 0.90, tex: 'wood_old' },
     }[kind];
@@ -512,6 +518,7 @@ export class Smashables {
       map: tex?.map ?? null, normalMap: tex?.normalMap ?? null,
       roughnessMap: tex?.roughnessMap ?? null, aoMap: tex?.aoMap ?? null,
       bands: 3, rim: 0.4, spec: 0.2, gloss: 24,
+      shadeHold: spec.shadeHold ?? 0,
     };
     let m = null;
     try { m = this.engine.get?.('shading')?.make?.(opts) ?? null; } catch { m = null; }

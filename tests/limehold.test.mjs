@@ -149,6 +149,29 @@ test('J4 §739: the sconces are scoped off the hold, and differ from the set dre
   assert.equal(rn.bags[1].shadeHold, 0, 'and the sconces stay at zero too');
 });
 
+/* ------------------------------------------------------------------------------------- J6 */
+
+test('J6 §739: the vault\'s DESTRUCTIBLE jars take the same hold as the static urns beside them', async () => {
+  /* §730 left four static urns on the offering table and two destructible jars three metres
+     away, and they are the same object to look at. `Smashables._mat` builds `smash:clay` from
+     `PROP_MATERIALS.lime` — its header says the mirror exists "so this does not become a fourth
+     clay" — so the hold has to cross with the colour or §739 puts a seam between a pair.
+     DOMAIN: passes on the shipped source; fails on a `smash:clay` bag that omits the mirror,
+     which is what the first draft of this lane shipped for one commit. */
+  const src = fs.readFileSync(path.join(ROOT, 'src/world/Smashables.js'), 'utf8');
+  assert.match(src, /shadeHold: PROP_MATERIALS\.lime\.shadeHold/,
+    'smash:clay must mirror lime\'s hold, not just its colour');
+  assert.match(src, /shadeHold: spec\.shadeHold \?\? 0/,
+    'and the other two kinds (wicker, wood) must still resolve to an explicit 0');
+
+  const { MATERIALS } = await import('../src/world/Props.js?j6');
+  assert.ok(MATERIALS.lime.shadeHold > 0, 'the source of the mirror carries a hold to mirror');
+  for (const k of ['rope', 'wood']) {
+    assert.equal(MATERIALS[k].shadeHold, undefined,
+      `${k} must not opt in — smash:wicker and smash:wood mirror those and would follow`);
+  }
+});
+
 /* ------------------------------------------------------------------------------------- J5 */
 
 test('J5 §739: the strengths are the swept ones, and the sweep\'s SHAPE is on record', async () => {
