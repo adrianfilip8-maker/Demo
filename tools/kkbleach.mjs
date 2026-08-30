@@ -79,15 +79,32 @@ const TIMEOUT = +opt('timeout', 7200) * 1000;
 const ARMS = [
   { id: 'A0', scope: '—', label: 'shipped (control)' },
   { id: 'I2', scope: '—', label: 'base captured a second time — instrument control, must be 0 px' },
-  { id: 'KKRIM0', scope: 'PROPS', label: 'uRim = 0 on the three KayKit recipes only' },
-  { id: 'KKSPEC0', scope: 'PROPS', label: 'uSpec = 0 on the KayKit recipes only' },
-  { id: 'KKSSS0', scope: 'PROPS', label: 'uSss = 0 on the KayKit recipes only' },
+  /* The two KNOWN-ANSWER controls §418.3 asks for, and they are in-arm rather than bolted on
+     afterwards: an input the metric must FAIL to find chroma in, and one it must find plenty in.
+     Both paint the prop bodies with a flat unlit colour and change nothing else, so they test
+     the MASK and the STATISTIC at once — if a prop mask leaked onto the masonry beside it, the
+     grey arm could not read near zero, and if the saturation formula were measuring the region
+     rather than the object, neither arm could move only the PROP rows. */
+  { id: 'CTLGREY', scope: 'PROPS', label: 'CONTROL(neg): prop bodies painted flat neutral grey — PROP sat must collapse, ARCH must not move' },
+  { id: 'CTLSAT', scope: 'PROPS', label: 'CONTROL(pos): prop bodies painted flat saturated red — PROP sat must jump, ARCH must not move' },
+  /* THE CONFOUND ARM, and the one that decides the curvature story. Hand-sampling a chest
+     against a canopic jar cannot separate "this body is rounder" from "this body's patch of the
+     atlas is a duller colour" — they are the same comparison. KKUNI gives every prop body the
+     IDENTICAL albedo (map off, one flat warm) through the REAL toon material, so any saturation
+     spread that survives is owned by geometry and shading alone. Without it, a per-object
+     curvature correlation is a measurement of KayKit's texture atlas wearing a geometry label. */
+  { id: 'KKUNI', scope: 'PROPS', label: 'CONFOUND: every prop body given ONE albedo (map off, flat 0xc08040) through the real shader' },
+  { id: 'KKRIM0', scope: 'PROPS', label: 'uRim = 0 on the three KayKit recipes only — the surface fresnel rim' },
   { id: 'AMB0', scope: 'GLOBAL', label: 'uAmbIntensity = 0 — the hemispheric sky/bounce fill, everywhere' },
+  { id: 'WASH0', scope: 'GLOBAL', label: 'uShadowWash = 0 — the albedo-INDEPENDENT additive shadow coat' },
+  { id: 'SHADN', scope: 'GLOBAL', label: 'uNeutralShadow = 1 — shadow light chroma to luma-matched grey' },
+  { id: 'FILLN', scope: 'GLOBAL', label: 'uNeutralFill = 1 — hemispheric fill chroma to luma-matched grey' },
   { id: 'BLOOM0', scope: 'GLOBAL', label: 'PostFX bloom pass disabled' },
   { id: 'PFXRIM0', scope: 'GLOBAL', label: 'PostFX screen-space silhouette rim strength = 0' },
-  { id: 'ALLRIM0', scope: 'GLOBAL', label: 'uRim = 0 on EVERY toon material + PostFX rim 0 — the ceiling of the rim story' },
+  { id: 'HOLD1', scope: 'GLOBAL', label: 'uShadowHold = 1 — §269 shade-side albedo-chroma hold, which ships at 0 for everything but the character' },
   { id: 'I4', scope: '—', label: 'every pin released — must return to A0 at 0 px' },
 ];
+
 
 function sha() {
   try { return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT }).toString().trim(); }
@@ -166,158 +183,209 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
     /* ------------------------------- the mask -------------------------------------------- */
     /* Engine.camera IS the camera the frame is rendered with (Engine.js:156) — the same object,
        not a reconstruction from the shot spec, so the mask registers with the pixels by
-       identity rather than by agreement. */
+       identity rather than by agreement.
+
+       HOW THE MASK IS TAKEN, and why not by raycasting. The first version of this instrument
+       cast the shot camera through the live scene with THREE.Raycaster. It is correct and it is
+       unusable: no BVH is installed, so every ray tests every triangle of every candidate mesh,
+       and a 160x90 grid took 317 s — 84 minutes at the resolution this lane actually needs.
+       Worse, it could not have answered the question anyway: KayKit merges its 36 placements
+       into THREE meshes (KayKit.js:716, the same merge strategy Architecture uses against §1's
+       draw budget), so a per-MESH mask is a per-POPULATION mask wearing a per-object label —
+       §442's defect, rebuilt by me, one round after reading §442.
+
+       So the mask is taken on the GPU, in two extra renders, and the bodies are separated by
+       CONNECTED COMPONENT of the merged geometry rather than by mesh:
+
+         · ID pass — every mesh swapped for a flat MeshBasicMaterial carrying its own id, the
+           three merged prop meshes carrying a per-VERTEX id so each welded body reads as its
+           own object. Rendered to a linear byte target with toneMapped false, so the value read
+           back is the value written. Ids are spaced 4/255 apart per channel, which is wider than
+           any rounding this path can introduce.
+         · NORMAL pass — scene.overrideMaterial = MeshNormalMaterial, giving the INTERPOLATED
+           view-space shading normal at every pixel: the same normal the toon shader's fresnel
+           consumes. A flat face normal would report a smooth-shaded barrel as a set of panels
+           and invert the curvature column this lane turns on.
+
+       Both passes bypass PostFX entirely (direct renderer.render to a target), so neither the
+       tonemap nor bloom can move an id or a normal. */
     const CAM = E.camera;
     if (!CAM?.isCamera) { out.error = 'no engine camera'; return out; }
     CAM.updateMatrixWorld(true);
-    CAM.updateProjectionMatrix();
-    const W = E.canvas.width, Hh = E.canvas.height;
-    const gw = Math.floor(W / stride), gh = Math.floor(Hh / stride);
+    const RW = E.canvas.width, RH = E.canvas.height;
+    const gw = Math.floor(RW / stride), gh = Math.floor(RH / stride);
 
-    /* Screen-space AABB per target, so each ray tests only the handful of objects whose box
-       covers its tile. Without this the grid is 230k rays x 200 objects and the boot times out. */
-    const _v = new T.Vector3();
-    const boxOf = (o) => {
-      let bb = null;
-      if (o.isInstancedMesh) { if (!o.boundingBox) o.computeBoundingBox(); bb = o.boundingBox?.clone(); }
-      if (!bb) { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); bb = o.geometry.boundingBox?.clone(); }
-      if (!bb) return null;
-      bb.applyMatrix4(o.matrixWorld);
-      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, anyFront = false;
-      for (let i = 0; i < 8; i++) {
-        _v.set(i & 1 ? bb.max.x : bb.min.x, i & 2 ? bb.max.y : bb.min.y, i & 4 ? bb.max.z : bb.min.z);
-        const vv = _v.clone().applyMatrix4(CAM.matrixWorldInverse);
-        if (vv.z < 0) anyFront = true;
-        _v.project(CAM);
-        /* A corner BEHIND the eye projects to a mirrored, meaningless point. Any box that
-           straddles the near plane gets the whole frame rather than a wrong rectangle — the
-           cheap correct answer, and it only costs rays on the few objects it applies to. */
-        if (vv.z >= 0) { x0 = -1; y0 = -1; x1 = 1; y1 = 1; break; }
-        x0 = Math.min(x0, _v.x); x1 = Math.max(x1, _v.x);
-        y0 = Math.min(y0, _v.y); y1 = Math.max(y1, _v.y);
+    /* Weld by quantised position and union-find the triangles: one component per placed body.
+       Quantised at 1e-4 m — KayKit's own bodies stand metres apart, so nothing but a genuinely
+       shared vertex can collide at 0.1 mm. */
+    const componentsOf = (geo) => {
+      const pos = geo.attributes.position, idx = geo.index;
+      const nv = pos.count;
+      const weld = new Int32Array(nv);
+      const map = new Map();
+      for (let i = 0; i < nv; i++) {
+        const k = `${Math.round(pos.getX(i) * 1e4)},${Math.round(pos.getY(i) * 1e4)},${Math.round(pos.getZ(i) * 1e4)}`;
+        let v = map.get(k);
+        if (v === undefined) { v = map.size; map.set(k, v); }
+        weld[i] = v;
       }
-      if (!anyFront) return null;
-      const gx0 = Math.max(0, Math.floor(((x0 + 1) / 2) * gw) - 1);
-      const gx1 = Math.min(gw - 1, Math.ceil(((x1 + 1) / 2) * gw) + 1);
-      const gy1 = Math.min(gh - 1, Math.ceil(((1 - y0) / 2) * gh) + 1);
-      const gy0 = Math.max(0, Math.floor(((1 - y1) / 2) * gh) - 1);
-      if (gx1 < gx0 || gy1 < gy0) return null;
-      return [gx0, gy0, gx1, gy1];
+      const parent = new Int32Array(map.size);
+      for (let i = 0; i < parent.length; i++) parent[i] = i;
+      const find = (a) => { while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a]; } return a; };
+      const uni = (a, b) => { a = find(a); b = find(b); if (a !== b) parent[b] = a; };
+      const nTri = idx ? idx.count / 3 : nv / 3;
+      for (let t = 0; t < nTri; t++) {
+        const a = idx ? idx.getX(t * 3) : t * 3, b = idx ? idx.getX(t * 3 + 1) : t * 3 + 1, c = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
+        uni(weld[a], weld[b]); uni(weld[b], weld[c]);
+      }
+      const root2comp = new Map();
+      const comp = new Int32Array(nv);
+      for (let i = 0; i < nv; i++) {
+        const r = find(weld[i]);
+        let c = root2comp.get(r);
+        if (c === undefined) { c = root2comp.size; root2comp.set(r, c); }
+        comp[i] = c;
+      }
+      return { comp, n: root2comp.size };
     };
 
-    const TS = 16;                                     // tile size, in grid cells
-    const tx = Math.ceil(gw / TS), ty = Math.ceil(gh / TS);
-    const tiles = Array.from({ length: tx * ty }, () => []);
-    let boxed = 0;
-    for (const o of targets) {
-      const b = boxOf(o);
-      if (!b) continue;
-      boxed++;
-      for (let t = (b[1] / TS) | 0; t <= (b[3] / TS) | 0; t++) {
-        for (let s = (b[0] / TS) | 0; s <= (b[2] / TS) | 0; s++) tiles[t * tx + s].push(o);
-      }
-    }
-    log.push(`mask: ${gw}x${gh} grid (stride ${stride}), ${boxed}/${targets.length} targets boxed, ${tx}x${ty} tiles`);
+    const objects = [];
+    const enc = (id) => {                       // id -> a colour 4/255 apart on every channel
+      const r = (id % 64) * 4, g = (((id / 64) | 0) % 64) * 4, b = (((id / 4096) | 0) % 64) * 4;
+      return [r / 255, g / 255, b / 255];
+    };
+    const decode = (r, g, b) => Math.round(r / 4) + Math.round(g / 4) * 64 + Math.round(b / 4) * 4096;
 
+    const saved = [];                            // [mesh, material, visible, colorAttr]
+    const tmpMats = [];
+    const vcMat = new T.MeshBasicMaterial({ vertexColors: true, toneMapped: false, fog: false });
+    tmpMats.push(vcMat);
+    let hidden = 0;
+
+    E.scene.traverse((o) => {
+      if (!(o.isMesh || o.isSkinnedMesh || o.isInstancedMesh)) return;
+      const shell = o.userData?.isOutlineShell || o.userData?.slyOutline || /outline|:ink/i.test(o.name || '');
+      /* Ink shells are back-face expanded copies drawn OUTSIDE the body. In the beauty frame
+         their front faces are culled; in a flat ID pass they are not, so a shell left visible
+         would paint its own id over every object it wraps. Transparent FX (dust, shafts) are
+         hidden too, so the body BEHIND owns the pixel — the contamination that leaves in the
+         beauty frame is identical in every arm (I2 proves the frame is static at dt 0), so it
+         cannot bias an attribution, only an absolute. */
+      const fx = o.material && o.material.transparent === true;
+      if (!o.visible) return;
+      saved.push([o, o.material, o.visible, o.geometry.attributes.color || null]);
+      if (shell || fx) { o.visible = false; hidden++; return; }
+      const mn = o.material?.name || '';
+      if (KK.has(mn)) {
+        const cc = componentsOf(o.geometry);
+        const base = objects.length;
+        for (let c = 0; c < cc.n; c++) objects.push({ id: base + c, mesh: `${o.name || o.type}#${c}`, mat: mn, pop: 'PROP' });
+        const col = new Float32Array(o.geometry.attributes.position.count * 3);
+        for (let i = 0; i < cc.comp.length; i++) {
+          const e = enc(base + cc.comp[i]);
+          col[i * 3] = e[0]; col[i * 3 + 1] = e[1]; col[i * 3 + 2] = e[2];
+        }
+        o.geometry.setAttribute('color', new T.BufferAttribute(col, 3));
+        o.material = vcMat;
+      } else {
+        const id = objects.length;
+        objects.push({
+          id, mesh: o.name || o.type, mat: mn,
+          pop: /^arch:/.test(mn) ? 'ARCH' : (o.isSkinnedMesh ? 'CHAR' : 'OTHER'),
+        });
+        const e = enc(id);
+        const m = new T.MeshBasicMaterial({ toneMapped: false, fog: false });
+        m.color.setRGB(e[0], e[1], e[2]);
+        tmpMats.push(m);
+        o.material = m;
+      }
+    });
+    log.push(`mask: ${objects.length} objects (${objects.filter((o) => o.pop === 'PROP').length} prop bodies), ${hidden} shells/fx hidden`);
+
+    const rt = new T.WebGLRenderTarget(RW, RH, { type: T.UnsignedByteType, colorSpace: T.LinearSRGBColorSpace, samples: 0 });
+    const buf = new Uint8Array(RW * RH * 4);
+    const R = E.renderer;
+    const prevRT = R.getRenderTarget();
+    /* Every piece of renderer/scene state these two passes touch is saved and put back. A
+       harness that leaves the clear colour or the scene background moved renders every arm
+       AFTER it against a different world than the one on disk, and nothing in the arm table
+       would say so — the I4 control is what catches it, but only if the restore is attempted. */
+    const prevClear = new T.Color(); R.getClearColor(prevClear);
+    const prevClearA = R.getClearAlpha();
+    const prevBg = E.scene.background;
+    E.scene.background = null;
+    R.setRenderTarget(rt);
+    R.setClearColor(0x000000, 1); R.clear();
+    R.render(E.scene, CAM);
+    R.readRenderTargetPixels(rt, 0, 0, RW, RH, buf);
+
+    const nbuf = new Uint8Array(RW * RH * 4);
+    const nMat = new T.MeshNormalMaterial();
+    tmpMats.push(nMat);
+    E.scene.overrideMaterial = nMat;
+    R.clear();
+    R.render(E.scene, CAM);
+    R.readRenderTargetPixels(rt, 0, 0, RW, RH, nbuf);
+    E.scene.overrideMaterial = null;
+    R.setRenderTarget(prevRT);
+    R.setClearColor(prevClear, prevClearA);
+    E.scene.background = prevBg;
+
+    /* Restore before anything else runs. The I4 arm re-proves this against the base frame. */
+    for (const [o, mat, vis, colAttr] of saved) {
+      o.material = mat; o.visible = vis;
+      if (colAttr) o.geometry.setAttribute('color', colAttr); else o.geometry.deleteAttribute('color');
+    }
+    for (const m of tmpMats) m.dispose();
+    rt.dispose();
+
+    /* Decode. readRenderTargetPixels hands back rows BOTTOM-UP (the GL convention), so the row
+       index is flipped here; getting this wrong produces a mask that is a mirror of the frame
+       and lands every sample on the wrong object while still looking like a plausible mask. */
     const ids = new Int32Array(gw * gh).fill(-1);
     const nrm = new Int8Array(gw * gh * 3);
     const fres = new Uint8Array(gw * gh);
-    const objIndex = new Map();                        // mesh -> id
-    const objects = [];
-    const rc = new T.Raycaster();
-    const ndc = new T.Vector2();
-    const tri = new T.Triangle();
-    const bc = new T.Vector3();
-    const na = new T.Vector3(), nb = new T.Vector3(), nc = new T.Vector3();
-    const pa = new T.Vector3(), pb = new T.Vector3(), pc = new T.Vector3();
-    const nOut = new T.Vector3();
-    const m4 = new T.Matrix4();
-    const lp = new T.Vector3();
-
-    /* The shader consumes the INTERPOLATED normal; a flat face normal reports a faceted barrel
-       as a set of flat panels and would make the curvature column report the opposite of the
-       truth on exactly the bodies this lane is about. */
-    const normalAt = (hit) => {
-      const o = hit.object, g = o.geometry;
-      const f = hit.face;
-      if (!f) return null;
-      m4.copy(o.matrixWorld);
-      if (hit.instanceId != null && o.isInstancedMesh) {
-        const im = new T.Matrix4(); o.getMatrixAt(hit.instanceId, im); m4.multiply(im);
-      }
-      const nAttr = g.attributes.normal;
-      if (!nAttr || o.material?.flatShading) {
-        return nOut.copy(f.normal).transformDirection(m4).normalize().clone();
-      }
-      pa.fromBufferAttribute(g.attributes.position, f.a);
-      pb.fromBufferAttribute(g.attributes.position, f.b);
-      pc.fromBufferAttribute(g.attributes.position, f.c);
-      lp.copy(hit.point).applyMatrix4(m4.clone().invert());
-      tri.set(pa, pb, pc);
-      if (!tri.getBarycoord(lp, bc)) return nOut.copy(f.normal).transformDirection(m4).normalize().clone();
-      na.fromBufferAttribute(nAttr, f.a); nb.fromBufferAttribute(nAttr, f.b); nc.fromBufferAttribute(nAttr, f.c);
-      nOut.set(0, 0, 0).addScaledVector(na, bc.x).addScaledVector(nb, bc.y).addScaledVector(nc, bc.z);
-      if (nOut.lengthSq() < 1e-9) nOut.copy(f.normal);
-      return nOut.transformDirection(m4).normalize().clone();
-    };
-
-    /* uRimPower is per-material; fres = pow(1 - N.V, uRimPower) is the shader's own line. */
-    const rimPowerOf = (o) => o.material?.userData?.slyUniforms?.uRimPower?.value ?? 3.1;
-
-    const t0 = performance.now();
-    let cast = 0, hitN = 0;
+    const P = CAM.projectionMatrix.elements;
+    const p00 = P[0], p11 = P[5];
+    const seen = new Set();
     for (let gy = 0; gy < gh; gy++) {
       for (let gx = 0; gx < gw; gx++) {
-        const cand = tiles[((gy / TS) | 0) * tx + ((gx / TS) | 0)];
-        if (!cand.length) continue;
         const px = gx * stride, py = gy * stride;
-        ndc.set((px / W) * 2 - 1, -((py / Hh) * 2 - 1));
-        rc.setFromCamera(ndc, CAM);
-        cast++;
-        const hits = rc.intersectObjects(cand, false);
-        if (!hits.length) continue;
-        const h = hits[0];
-        const n = normalAt(h);
-        if (!n) continue;
-        hitN++;
-        let id = objIndex.get(h.object);
-        if (id == null) {
-          id = objects.length;
-          objIndex.set(h.object, id);
-          const mn = h.object.material?.name || '(none)';
-          objects.push({
-            id, mesh: h.object.name || h.object.type, mat: mn,
-            pop: KK.has(mn) ? 'PROP' : (/^arch:/.test(mn) ? 'ARCH' : (h.object.isSkinnedMesh ? 'CHAR' : 'OTHER')),
-          });
-        }
+        const src = ((RH - 1 - py) * RW + px) * 4;
         const gi = gy * gw + gx;
-        ids[gi] = id;
-        nrm[gi * 3] = Math.max(-127, Math.min(127, Math.round(n.x * 127)));
-        nrm[gi * 3 + 1] = Math.max(-127, Math.min(127, Math.round(n.y * 127)));
-        nrm[gi * 3 + 2] = Math.max(-127, Math.min(127, Math.round(n.z * 127)));
-        const vdir = h.point.clone().sub(CAM.position).normalize();
-        const ndv = Math.abs(n.dot(vdir));
-        fres[gi] = Math.max(0, Math.min(255, Math.round(Math.pow(1 - ndv, rimPowerOf(h.object)) * 255)));
+        const id = decode(buf[src], buf[src + 1], buf[src + 2]);
+        if (id <= 0 && buf[src] + buf[src + 1] + buf[src + 2] === 0) continue;   // cleared = sky
+        if (id >= objects.length) continue;
+        ids[gi] = id; seen.add(id);
+        /* MeshNormalMaterial writes the VIEW-space interpolated normal as n*0.5+0.5. The view
+           ray for this pixel comes back out of the projection matrix, so N.V is exact rather
+           than approximated from the world camera position. */
+        const nx = (nbuf[src] / 255) * 2 - 1, ny = (nbuf[src + 1] / 255) * 2 - 1, nz = (nbuf[src + 2] / 255) * 2 - 1;
+        const nl = Math.hypot(nx, ny, nz) || 1;
+        nrm[gi * 3] = Math.max(-127, Math.min(127, Math.round((nx / nl) * 127)));
+        nrm[gi * 3 + 1] = Math.max(-127, Math.min(127, Math.round((ny / nl) * 127)));
+        nrm[gi * 3 + 2] = Math.max(-127, Math.min(127, Math.round((nz / nl) * 127)));
+        const ndcx = (px / RW) * 2 - 1, ndcy = -((py / RH) * 2 - 1);
+        let vx = ndcx / p00, vy = ndcy / p11, vz = -1;
+        const vl = Math.hypot(vx, vy, vz); vx /= vl; vy /= vl; vz /= vl;
+        const ndv = Math.abs((nx * vx + ny * vy + nz * vz) / nl);
+        fres[gi] = Math.max(0, Math.min(255, Math.round(Math.pow(1 - ndv, 3.1) * 255)));
       }
     }
-    log.push(`mask: ${cast} rays, ${hitN} hits, ${objects.length} objects, ${((performance.now() - t0) / 1000).toFixed(1)}s`);
+    log.push(`mask: ${gw}x${gh} grid (stride ${stride}), ${seen.size} objects visible of ${objects.length}`);
 
-    const b64 = (buf) => {
-      const u8 = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+    const b64 = (buf2) => {
+      const u8 = new Uint8Array(buf2.buffer, buf2.byteOffset, buf2.byteLength);
       let s = '';
       for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
       return btoa(s);
     };
-    out.mask = {
-      shot, w: W, h: Hh, stride, gw, gh, objects,
-      ids: b64(ids), nrm: b64(nrm), fres: b64(fres),
-    };
+    out.mask = { shot, w: RW, h: RH, stride, gw, gh, objects, ids: b64(ids), nrm: b64(nrm), fres: b64(fres) };
 
     /* --------------------------------- the arms ------------------------------------------ */
     const shading = E.get('shading');
     const postfx = E.get('postfx');
     const kkMats = [...new Set(subj.map((m) => m.material))];
-    const allMats = shading?._cache ? [...shading._cache.values()] : kkMats;
     out.kkMats = kkMats.map((m) => `${m.name}#${(m.userData?.slyUniforms?.uRim?.value ?? -1)}`);
 
     /* Pin a uniform's `.value` so a per-frame republish cannot overwrite it. Assignment is not
@@ -332,23 +400,50 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
     };
     const release = () => { while (pins.length) pins.pop()(); };
 
+    const ctlMats = [];
+    const ctlSaved = [];
+    const uniSaved = [];
+    const ununi = () => {
+      while (uniSaved.length) {
+        const [m, map, col] = uniSaved.pop();
+        m.map = map; m.color.copy(col); m.needsUpdate = true;
+      }
+    };
+    const paintProps = (hex) => {
+      const m = new T.MeshBasicMaterial({ color: hex, fog: false });
+      ctlMats.push(m);
+      for (const mesh of subj) { ctlSaved.push([mesh, mesh.material]); mesh.material = m; }
+    };
+    const unpaint = () => {
+      while (ctlSaved.length) { const [mesh, mat] = ctlSaved.pop(); mesh.material = mat; }
+      while (ctlMats.length) ctlMats.pop().dispose();
+    };
+
     const applyArm = (id) => {
-      if (id === 'KKRIM0') for (const m of kkMats) pin(m.userData?.slyUniforms?.uRim, 0);
-      else if (id === 'KKSPEC0') for (const m of kkMats) pin(m.userData?.slyUniforms?.uSpec, 0);
-      else if (id === 'KKSSS0') for (const m of kkMats) pin(m.userData?.slyUniforms?.uSss, 0);
+      if (id === 'CTLGREY') paintProps(0x808080);
+      else if (id === 'CTLSAT') paintProps(0xd01e10);
+      else if (id === 'KKUNI') {
+        for (const m of kkMats) {
+          uniSaved.push([m, m.map, m.color.clone()]);
+          m.map = null; m.color.setHex(0xc08040); m.needsUpdate = true;
+        }
+      }
+      else if (id === 'KKRIM0') for (const m of kkMats) pin(m.userData?.slyUniforms?.uRim, 0);
       else if (id === 'AMB0') pin(shading?.uniforms?.uAmbIntensity, 0);
+      else if (id === 'WASH0') pin(shading?.uniforms?.uShadowWash, 0);
+      else if (id === 'SHADN') pin(shading?.uniforms?.uNeutralShadow, 1);
+      else if (id === 'FILLN') pin(shading?.uniforms?.uNeutralFill, 1);
+      else if (id === 'HOLD1') pin(shading?.uniforms?.uShadowHold, 1);
       else if (id === 'BLOOM0') postfx?.setEnabled?.('bloom', false);
       else if (id === 'PFXRIM0') { if (postfx?.tune) postfx.tune.rimStrength = 0; }
-      else if (id === 'ALLRIM0') {
-        for (const m of allMats) pin(m.userData?.slyUniforms?.uRim, 0);
-        if (postfx?.tune) postfx.tune.rimStrength = 0;
-      }
     };
     const RIM_SHIP = postfx?.tune ? postfx.tune.rimStrength : null;
     const undoArm = (id) => {
       release();
+      unpaint();
+      ununi();
       if (id === 'BLOOM0') postfx?.setEnabled?.('bloom', true);
-      if ((id === 'PFXRIM0' || id === 'ALLRIM0') && postfx?.tune && RIM_SHIP != null) postfx.tune.rimStrength = RIM_SHIP;
+      if (id === 'PFXRIM0' && postfx?.tune && RIM_SHIP != null) postfx.tune.rimStrength = RIM_SHIP;
     };
 
     for (const gname of grades) {
@@ -358,7 +453,10 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
       const g = { grade: gname, tod, pngs: {} };
       for (const a of arms) {
         applyArm(a.id);
-        await G.step(2, 0);
+        /* Three frames for the arms that change a DEFINE rather than a uniform: dropping `map`
+           recompiles the program and SwiftShader compiles lazily on first draw, so a two-frame
+           settle can capture the frame before the new program is live. */
+        await G.step(a.id === 'KKUNI' ? 4 : 2, 0);
         g.pngs[a.id] = G.capture();
         undoArm(a.id);
       }

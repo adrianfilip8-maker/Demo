@@ -22,22 +22,32 @@
  *
  * So the subject here is **one object**, never a population:
  *
- *   · the mask is per-MESH, taken by raycasting the shot camera through the LIVE scene (so
- *     KayKit placement, the character's occlusion and the real camera are all whatever the
- *     boot actually has, not what a headless rebuild guesses — `tools/lvl.mjs`'s header records
- *     what that guess costs);
+ *   · the mask is per-BODY, not per-mesh. KayKit merges its 36 placements into three meshes
+ *     (KayKit.js:716), so a per-mesh mask would be a population mask wearing an object's label —
+ *     §442 rebuilt. `kkbleach.mjs` splits each merged geometry into connected components and
+ *     gives every welded body its own id, rendered on the GPU in the same boot that renders the
+ *     frames, so registration is by identity rather than by agreement;
  *   · every statistic is reported per object, and the population row is a footnote;
- *   · each object carries a MEASURED curvature (`disp`, the angular dispersion of its own
- *     visible surface normals) rather than a hand-assigned shape label, because the hypothesis
- *     under test is that the defect scales with how much the form turns.
+ *   · each object carries TWO measured shape variables rather than a hand-assigned label —
+ *     `disp` (angular dispersion of its own visible normals, the variable a SURFACE fresnel
+ *     keys on) and `edgeFrac` (its silhouette fraction, the variable a SCREEN-SPACE term keys
+ *     on). They are not the same shape and conflating them is how a hypothesis survives a test
+ *     it should not have.
+ *
+ * ── The confound the hand patches could not control ────────────────────────────────────────
+ * A chest and a canopic jar differ in shape AND in which patch of the atlas they wear, so
+ * "rounder bodies read duller" and "these particular bodies are painted duller" are the same
+ * comparison until something separates them. `kkbleach.mjs`'s KKUNI arm gives every body ONE
+ * albedo through the real material; a shape correlation that does not survive KKUNI was the
+ * texture all along.
  *
  * ── The mask format ────────────────────────────────────────────────────────────────────────
  * `{ shot, w, h, stride, gw, gh, objects: [{ id, mesh, mat, pop }], ids: b64(Int32Array),
- *    nx, ny, nz: b64(Int8Array x127), fres: b64(Uint8Array x255), rimPower }`
+ *    nrm: b64(Int8Array x127, view space, 3 per cell), fres: b64(Uint8Array x255) }`
  * one entry per GRID cell (`gw*gh`, cell (gx,gy) = pixel (gx*stride, gy*stride)); `id` -1 = no
- * hit. Normals are the INTERPOLATED shading normals at the hit (barycentric over the face's
- * vertex normals), not the flat face normal, because that is the normal the shader's fresnel
- * actually uses and a low-poly rounded body is smooth-shaded.
+ * hit. Normals are the INTERPOLATED shading normals (MeshNormalMaterial), not flat face
+ * normals, because that is the normal the shader's fresnel consumes and a low-poly rounded body
+ * is smooth-shaded — a face normal would report a barrel as a set of flat panels.
  */
 import { readFile } from 'node:fs/promises';
 import { readPNG } from './png.mjs';
@@ -123,6 +133,17 @@ export async function score(pngFile, mask, { erodeR = 2, minPix = 24 } = {}) {
     for (let i = 0; i < gw * gh; i++) if (ids[i] === obj.id) { m[i] = 1; raw++; }
     if (!raw) continue;
     const e = erode(m, gw, gh, erodeR);
+    /* SILHOUETTE FRACTION — how much of this body is within `edgeR` cells of its own outline.
+       This, not normal dispersion, is the shape variable the screen-space rim and the ink
+       outline actually key on: both fire at a DEPTH DISCONTINUITY, so what matters is an
+       object's perimeter against its area, and a small body is nearly all perimeter while a
+       wall is nearly none. Normal dispersion is the right variable for the SURFACE fresnel and
+       the wrong one for a screen-space term, and the two are not the same shape at all — a flat
+       card seen edge-on has zero dispersion and is all silhouette. Both are reported. */
+    const inner = erode(m, gw, gh, 3);
+    let innerN = 0;
+    for (let i = 0; i < gw * gh; i++) if (inner[i]) innerN++;
+    const edgeFrac = raw > 0 ? 1 - innerN / raw : 1;
     const S = [], V = [], H = [], F = [];
     const N = [];
     let sumR = 0, sumG = 0, sumB = 0, n = 0;
@@ -157,7 +178,7 @@ export async function score(pngFile, mask, { erodeR = 2, minPix = 24 } = {}) {
       raw, n, thin: n < minPix,
       rgb: [Math.round(sumR / n), Math.round(sumG / n), Math.round(sumB / n)],
       sat: mean(S), val: mean(V), hue: mh.h, hueR: mh.r,
-      fres: mean(F), disp,
+      fres: mean(F), disp, edgeFrac,
     });
   }
   return rows;
