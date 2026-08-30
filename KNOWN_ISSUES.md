@@ -62223,6 +62223,316 @@ touches `PropKit.js` / `Props.js` / the torch fire+light registration ONLY — n
 `torch_mounted` and the staged tombchaser `Torch_Art`; the decision, the rejected one and the
 re-derived flame anchor are recorded below rather than asserted.)*
 
+### §734.1 The answer, first, so a redirect is cheap (§705)
+
+**Yes — two of them, both genuinely wall-mounted, and the one that ships is KayKit's
+`torch_mounted`.** It is already in `public/`, already on the atlas §729's destructibles wear,
+and it costs the crypt one draw call LESS than the geometry it replaces. The Egyptian
+`Torch_Art` from the staged tombchaser pack was a real second candidate: it was shipped into
+`public/`, conformed the same way, and photographed on the same wall in the same light before it
+was rejected. §734.4 is that comparison and it is where the decision was actually made.
+
+The dangerous half of this change is not the body. **The flame is not part of either mesh**, and
+`Props._torch` anchored it at a typed offset off the MOUNT, on the wall plane. §734.5 is the
+re-derivation; §734.6 is the one thing this lane measured itself out of doing.
+
+### §734.2 The census of what is actually available, measured rather than read off filenames
+
+Six files were named as torch candidates across the two packs. Three of them are not torches and
+one of them is not a wall mount, and none of that is visible in a filename:
+
+| file | verts | tris | bbox | what it actually is |
+|---|---|---|---|---|
+| `kaykit/torch_mounted.gltf` | 391 | 278 | x ±0.2751, y −0.3808…0.6817, **z 0.0000**…0.6158 | wall sconce: back face at z = 0 EXACTLY, everything in front of it |
+| `kaykit/torch.gltf` | 288 | 216 | x ±0.2751, z ±0.2751 | radially symmetric — a floor/handheld torch, no plate |
+| `kaykit/torch_lit.gltf` | 317 | 270 | x ±0.2751, z ±0.2751 | the same, plus a flame cone (one apex at y 0.7307) |
+| `tombchaser/Torch_Art.glb` | 205 | 116 | **x −0.0331**…1.0478, y −0.5774…0.7876, z ±0.2717 | wall sconce: back plate at x ≈ −0.03, arm reaching 1.05 m along +x |
+| `tombchaser/FireTorch01_Art.glb` | **4** | **2** | x 0, z ±0.1747 | a single QUAD on material `Flame&Spiderweb` — a flame billboard |
+| `tombchaser/FireTorch02_Art.glb` | **4** | **2** | z ±0.1693 | the same, smaller |
+
+The two `FireTorch*` files were carried into this lane's brief as torch models. They are two
+triangles each — the flame CARDS the pack ships to stand inside its torches, which this project
+already has twice over (`PropKit.flameCard`, and FX's own billboard). So candidate B's only
+actual sconce is `Torch_Art.glb`, and the census had to be run before the comparison had two
+sides rather than four.
+
+**`torch_mounted` carries no flame, and that is why it can take ours.** `torch_lit` is `torch`
+plus 29 vertices ending in a single apex at y 0.7307; `torch_mounted` tops out at y 0.6817 with
+no apex above the bowl rim, and its 391 vertices are `torch`'s 288 plus 103 of bracket. A lit
+model would have put a baked cone inside the FX flame — checked, not assumed.
+
+### §734.2a A comment at `PropKit.js:844` names a neighbour that does not exist
+
+The brazier's own flame block explains its cost as: *"it merges into the existing `flame` bucket
+with the wall torches, so it costs no additional draw call."* Only `brazier` ever calls
+`bag.add('flame', …)`. `wallTorch` adds three `bronze` parts and one `ember` part and has never
+put a triangle in the `flame` bucket. The conclusion (the brazier's flame is free) survives —
+the bucket exists either way — but the reason names a neighbour that was never there, and this
+lane went looking for the wall torches in `flame` because of it.
+
+### §734.3 The conform, and the one place `loadModelLib` is wrong for this prop
+
+Measured off the shipped seed, both bodies conformed the §729 way — uniform scale to the
+generated sconce's own union height, never a typed number. The browser rig and the offline
+measurement agree to four decimals, which is how the rig is known to be seating them the way the
+shipped swap does:
+
+| | scale | seated y | seated z (reach) | width x | cup, local |
+|---|---|---|---|---|---|
+| generated `wallTorch` | — | −0.175…0.642 | −0.002…**0.978** | 0.321 | (0, 0.6495, **0.8249**) |
+| **A** `torch_mounted` | ×0.7691 | −0.175…0.642 | 0.000…**0.474** | 0.423 | (0, 0.5857, **0.2674**) |
+| B `Torch_Art` | ×0.5986 | −0.175…0.642 | 0.000…**0.647** | 0.325 | (0, 0.5452, **0.5050**) |
+
+Three things separate a sconce from every prop `_swapBody` already handles, and all three follow
+from it meeting a VERTICAL surface:
+
+1. **`loadModelLib`'s XZ re-centring has to be undone in z.** That re-centring is right for a
+   barrel — a placement rotates about the origin, and `rubble_half` sits 2 m off in x — and
+   wrong for a back plate. `torch_mounted` is authored with its plate at exactly z = 0 and the
+   whole model in front of it; re-centred, half the sconce is inside the masonry. `-bb.min.z`,
+   read off the conformed bounds, puts the plate back on the wall plane.
+2. **The vertical datum is the generated body's, not the floor's.** `_swapBody` seats `bb.min.y`
+   at 0 because its props stand on the ground. A sconce hangs off a mount that is neither its
+   top nor its bottom, so the import is seated to the generated sconce's own `min.y` — which is
+   why the soot stain, still placed 1.5 m above the mount, still points at the same part of the
+   torch.
+3. **The cup has to be measured.** §734.5.
+
+### §734.4 The decision, made by looking — and the numbers the eye turned out to agree with
+
+`tools/torchpick.mjs` mounts both candidates on the hypostyle hall's own +x wall, interleaved
+with the shipped procedural sconces, under `?torch=gen` so the generated body is still in the
+frame to be compared against. Both wear `KayKit.makeAtlasMaterial` — the shipped toon recipe,
+each over its OWN texture — because judging a candidate under `MeshStandard` in a toon-shaded
+room compares shading models, not models. Captured at both grades (§466.5's two samples), and
+the night grade is the one that decides, because a torch is a night feature.
+
+**The generated sconce loses to both, and that is worth saying first.** At 5 m it is a straight
+rod at 45° from a small plate, ending in a flat kidney with no rim and no depth. It reads as a
+frying pan, or an oar, glued to the wall. Whatever else this change does, it replaces that.
+
+**Candidate B was rejected on the pixels, and the pixels are measurable.** Side by side at
+z = −40 and −38, two metres apart on the same masonry, sampled inside each body against the wall
+immediately beside it in the same frame:
+
+| | RGB | R−B | sat | vs its own adjacent wall |
+|---|---|---|---|---|
+| B `Torch_Art` | (37, 60, 74) | **−37.4** | **0.505** | wall (73, 94, 94), R−B −20.7, sat 0.220 |
+| A `torch_mounted` | (61, 81, 84) | −22.4 | 0.269 | wall (68, 87, 90), R−B −22.9, sat 0.253 |
+
+**A sits within 0.016 of its wall's saturation and within 0.5 of its R−B. B is 0.285 of
+saturation and 16.7 R−B points away — eighteen times A's departure on the first and thirty-three
+times on the second.** That is §206's "reads as a different game" measured on the actual pixels
+rather than argued, and the cause is structural rather than a tint: B's embedded `InteriorAssets`
+map has never been through `tools/kaykit-retint.mjs`'s sandstone remap, because it is not on that
+atlas. Retinting it is a whole second pipeline, and it would still be a second material and a
+second texture in the build.
+
+**And the geometry loses too, independently of colour.** Conformed to a 0.82 m sconce, B is
+scaled to 0.60 of a model authored 1.36 m tall, and what survives is a flat blocky hook: a thin
+backplate, a stubby arm, a small rectangular box, no visible bowl from below — which is the angle
+the player has, since the hall mounts are 4.2 m up. A at the same range shows a flared cup with a
+rim, a shaft, a collar and a hanging finial, with the atlas's carved panels legible on the bowl.
+A reads as a thing you put fire in; B reads as a coat hook.
+
+The frames are `shots/torch734/` (`night-trio`, `day-trio`, plus the `near` and `wall` stances at
+both grades) and the two crops that carry the comparison, `CROP-night-B-vs-A.png` and
+`CROP-day-B-vs-A.png`. They are not committed — `shots/*/` is gitignored by policy and this
+section is the record.
+
+**What the first pass got wrong, because it is the reusable part:** it put B at the −46 and −30
+midpoints. Projected into both stances afterwards, B is off-frame in the one that framed A and
+behind an aisle column in the other — so the frame showing A clearly showed no B at all. A
+comparison rig has to be checked for *whether both subjects are in the picture* before the
+picture is taken, and that check is a projection, not a look.
+
+### §734.5 The flame anchor, re-derived — and the registration that was already wrong
+
+`PropKit.wallTorch` publishes `bag.flameAt` at local (0, 0.6495, 0.8249) — the cup, 0.82 m out
+along the arm. **`Props._torch` never read it.** It registered the fire at `(x, y + 0.6, z)` and
+the light at `(x, y + 0.35, z)`: both on the wall plane, both typed. `Particles._standoff` exists
+for no other reason — it probes four cardinal directions for a nearby wall and shoves the fire
+0.55 m the other way, because `fx.spawn(name, { position })` carries no orientation. Two
+docblocks in that file (`Particles.js:2973`, `:4444`) say in as many words that the fix belongs
+in PROPS and costs two lines.
+
+So the hazard in this swap arrives from the OPPOSITE direction to the obvious one. The flame was
+never at the generated cup either. What a body swap does is break the accidental tolerance:
+0.55 m of blind compensation against a bowl that now sits 0.27 m from the wall is a flame
+floating 0.28 m in FRONT of the torch.
+
+**The measurement.** A torch bowl is the widest thing on a sconce ACROSS the arm, because the arm
+is a shaft and the bowl is a mouth. `KayKit.cupCentre` takes the vertices at maximum |x| and
+returns their centroid. On `torch_mounted` that ring is exactly **4 unique vertices**, at
+|x| = 0.2751:
+
+```
+  (±0.2751, 0.6181, 0.3031)     near lip
+  (±0.2751, 0.5975, 0.3924)     far lip        centroid (0, 0.6078, 0.3478)
+```
+
+The bowl is tilted, so the two extreme-x vertices land on opposite lips and the centroid is the
+mouth centre in all three axes rather than only in x. The tolerance is bounded from both sides by
+measurement: float32 spacing at 0.2751 is ~1.6e-8, and the next widest ring in is 0.2211, a gap
+540× the 1e-4 used. Conformed (×0.7691) and seated, the cup is local **(0, 0.5857, 0.2674)**; at
+the crypt mount (4.35, −9.4, −62) with `ry = −π/2` the fire lands at world
+**(4.0785, −8.8005, −62)** — 0.2715 m off the pier face, 0.5995 m above the mount. Both the fire
+and, on the generated arm, `bag.flameAt` now go through the SAME matrix the geometry gets, so the
+flame follows the arm around whichever way a sconce is turned.
+
+> **DOMAIN (§418.3) — both inputs RUN, in `tests/torchswap.test.mjs`.**
+> **T3, on the estimator.** PASSES: `torch_mounted`'s own geometry — the centroid lands inside
+> the bowl's own bounding box on every axis. FAILS: the same geometry with every triangle above
+> the arm's waist deleted; the girth ring drops onto the BRACKET and the answer moves by more
+> than the bowl's radius. A centroid taken over a fixed height band would not have moved, which
+> is the property being tested.
+> **T4, on the anchor as shipped.** PASSES: all 16 registered fires, each inside the bowl of the
+> sconce at its own mount (worst error under 1e-6 m). FAILS: the anchor this code used until
+> today — the mount plate, `(x, y + 0.6, z)` — asserted to be outside that same bowl at its
+> CLOSEST of the 16, against the conformed bowl radius.
+
+`_standoff` is not deleted. The handles go out marked `placed` and it stands down for exactly
+them; every other registrar still arrives with a bare point and no orientation, and still gets
+compensated. T6 executes both halves against the shipped `_standoff` body.
+
+**The generated arm's fire moved too, and further.** Under `?torch=gen` it now stands 0.80–0.86 m
+off the wall — its own cup — instead of 0.55 m along whichever cardinal axis the probe guessed.
+That is the fix `Particles.js` asked for, applied to both bodies, and T5 pins the band.
+
+### §734.6 The LIGHT does not move, and that is the finding this lane nearly got wrong
+
+The obvious symmetry is to re-derive the light the same way — `PropKit` even publishes
+`bag.lightAt` for it, and this lane shipped that for one round. It lifts the six crypt sconce
+lights from y −9.05 to y −8.62. `Lighting.js`'s shipped docblock derives §303's **sealed**
+daylight protection from −9.05 twice:
+
+* *"mount 2.95 m over the floor"* — that is −9.05 against the vault floor at −12;
+* *"a y −9.05 light with cutoff 9 cannot reach y ≥ −0.05"* — that is −9.05 + 9.
+
+At −8.62 the same light reaches **+0.38**, which is above ground, over terrain that above-ground
+cameras do see. And nothing downstream catches it: `toon.glsl.js`'s local term gates on
+`slyWorldPos(pointLights[i].position).y < −0.5`, the LIGHT's height, not the fragment's — so a
+light that has risen 0.43 m still passes the gate it was written to fail.
+
+RESULT-torchlight3.md's 42-for-42 replication is a geometric argument resting on one number, and
+the owner asked about a torch BODY. **§734 moves the fire onto the cup and leaves the pool where
+the experiment sealed it.** The mount did not move, so the offset is exactly as right as it was.
+T8 pins every light position across both arms and runs the rejected cup-derived light against the
+same bar, so the bar is known to be able to fail.
+
+`tests/torchlight.test.mjs` is green (6/6) before and after, and it is worth recording what that
+does and does not say: that suite is about the toon shader's local term — its declaration, its
+`NUM_POINT_LIGHTS` guard, three's `unrollLoops` spelling, and the `TUNE.localToon` publication.
+**It contains no assertion about where a torch light is.** The suite passing was never going to
+catch the move; reading `Lighting.js` was.
+
+### §734.7 Budget, on the instrument that works
+
+`Engine.stats.drawCalls` is unusable here (§1's recorded five frozen plausible values), so this
+is `tools/budgetattrib.mjs`, offline, both arms on the same tree:
+
+| shot | draws before → after | tris before → after |
+|---|---|---|
+| **`interior`** (the crypt sconces' own camera) | 47 → **46** | 0.407 M → 0.411 M |
+| `temple` (the hypostyle) | 72 → **73** | 0.623 M → 0.631 M |
+| `courtyard` (worst main view) | 93 → 93 | 0.703 M → 0.706 M |
+| SCENE TOTAL, culling off | 93 / 0.703 M | 93 / **0.706 M** (59 % of the 1.2 M cap, unchanged) |
+
+The crypt goes DOWN one draw, and the attribution says why: in that frame the sconces were the
+only contributors `props_bronze` (5744 tris) and `props_ember` (924 tris) had, so both buckets
+leave the visible set entirely and `props_kaykit` (10139 tris) enters in their place — −2 draws,
++1 draw, +3471 triangles. In `temple` the same mesh enters a frame that already had bronze and
+ember in it, so that one is +1. There is no new material and no new texture: the bodies merge
+into the mesh §729 already ships. Candidate B would have cost a second material, a second
+texture and 632 KB in the build, on top of losing the picture.
+
+The collider moves with them, and it is a bucket move rather than a new registration:
+`props_bronze` is `ground`/**stone**, `props_kaykit` is `ground`/**wood**. Both are solid; the
+material tag is read by `Sfx.stepFor`, and nothing walks on a sconce 4.2 m up a wall.
+
+### §734.8 What the `interior` camera says about the two reaches, in the currency the project already used
+
+`Particles.js:4444` costed the old mount anchor in projected pixels, and that number is a bar
+rather than a remark. Reproduced here to the pixel first — a bar quoted from a comment is a claim
+about the comment — then applied to all four anchors at the six crypt sconces:
+
+| anchor | nearest flame (2.32 m) | crypt flames in a 1280-wide frame |
+|---|---|---|
+| MOUNT — what shipped until today | (1519, 39) | **4 / 6** |
+| generated `wallTorch` cup | (1050, 48) | 5 / 6 |
+| **A `torch_mounted` cup** | (1348, 58) | **4 / 6** |
+| B `Torch_Art` cup | (1209, 86) | 5 / 6 |
+
+The first two rows are `Particles.js`'s own recorded figures and `tests/torchswap.test.mjs` T9
+asserts both before it uses the camera, so the model is known to be the one that produced them.
+
+Stated without rounding up: **A's bowl sits 0.267 m off the wall against the generated cup's
+0.825, so the nearest flame moves from x 1519 to x 1348 and is still outside the frame.** §734 is
+an improvement on what ships and does not reach the 5/6 the generated cup would have. Recovering
+it by scale alone is not available — swept, the crossing is at ×1.3, which is a 1.38 m sconce on
+a 2.6 m mount — so the cost of A's silhouette is one flame at the extreme right edge of one
+authored camera, at 2.3 m, in a shot that has four others. This is the one measure on which B
+would have won, and it is recorded here rather than left out of the comparison.
+
+### §734.9 Production, verified on the artifact and not on a server (§695)
+
+`tools/prodboot.mjs`, which serves `dist/` under a `/Demo/`-shaped prefix: **zero 4xx/5xx across
+149 requests**, boot completed past module 30. The positive signal that the model actually loaded
+is that `Props._loadSwapBodies`' per-model fallback never fired — a failed `torch_mounted` warns
+*"props: KayKit 'torch_mounted' failed … the generated body stands in"* into `engine.warnings`,
+and the production boot's four warnings contain no such line.
+
+Then the URL shapes, against the built artifact:
+
+```
+  200   3060 B   /Demo/assets/kaykit/torch_mounted.gltf
+  200  14180 B   /Demo/assets/kaykit/torch_mounted.bin
+  200  12717 B   /Demo/assets/kaykit/dungeon_texture_sandstone.png
+  404             /assets/kaykit/torch_mounted.gltf          <- §666's fault mode, demonstrated
+  404             /Demo/assets/tombchaser/Torch_Art.glb      <- the rejected pack, removed
+```
+
+That last pair is the §418.3 domain for the production claim: the shipped shape resolves and the
+leading-slash shape does not, on the same artifact in the same run. `KayKit.js`'s `BASE` is the
+relative `'assets/kaykit/'`, so the loader asks for the first and never the second — the same
+mechanism §729's barrels already ship on.
+
+`public/assets/tombchaser/` is removed. The pack stays in `staging/` with its CC0 `LICENSE.txt`
+and `PROVENANCE.md`; nothing under `src/` referenced it before this lane and nothing does now.
+`tools/torchpick.mjs`'s header carries the one-line `cp` that re-stages it, so the comparison is
+reproducible without the loser costing 632 KB in every build.
+
+### §734.10 What I got wrong, in the order it happened
+
+1. **The brief handed me an inverted hazard and I nearly carried it.** It said `Particles.js:4444`
+   *"anchors the flame to `bag.flameAt`"*. It does the opposite — that docblock exists to record
+   that the flame is anchored at the MOUNT and NOT at `bag.flameAt`, and to say the fix belongs
+   in PROPS. Reading the two docblocks rather than trusting the summary is what turned this from
+   "keep the anchor working" into "the anchor was never working".
+2. **I shipped the light move for one round.** Symmetry looked right; §303's seal is arithmetic
+   on the exact y it would have changed. Caught by reading `Lighting.js`, not by any test —
+   `torchlight` was green through both states — which is why T8 now exists.
+3. **I coupled the two swap tokens for one round.** Adding `torch_mounted` to
+   `_loadSwapBodies`' request list put it behind `if (SMASH_GEN) return`, so `?smash=gen`
+   silently generated the torches too. Caught by `smashswap` W3's warn count — three models
+   wanted, four warnings — a bar written for something else entirely. T7 pins it now.
+4. **Backticks inside a template literal, twice.** A comment added inside `smashswap`'s child
+   script, and again inside `torchpick`'s page rig. Both terminated the literal; both were
+   immediate syntax errors, so the cost was minutes. Prose in this project's house style is full
+   of backticks, and a template literal is the one place it cannot go.
+5. **The decision instrument was wrong five times before it was right, and two of those would
+   have produced a CONVINCING WRONG PICTURE rather than an error.** It first rendered with the
+   shipped swap live, so the "procedural" reference in frame would have BEEN candidate A; then
+   with each candidate's own glTF material, so A would have been judged on `dungeon_texture.png`,
+   a colour this project does not ship, instead of the sandstone retint. The three that merely
+   crashed — a bare `chromium.launch()` against a browser build that is not installed, a page rig
+   that `page.evaluate` returned instead of calling, and `page.screenshot` blowing its 30 s
+   default under swiftshader — cost about twenty minutes of capture-lock time between them, most
+   of it queued behind another lane's long run.
+6. **And the sixth: the rig framed a comparison that could not be made.** Both candidates were
+   mounted, both were reported as mounted, and B was off-frame or column-occluded in every stance
+   that framed A. Nothing failed. §734.4 records the fix: check by PROJECTION that both subjects
+   are in the picture before taking it.
 ### §732.1 The census, re-derived: it is 14, not 13, and the resize is why
 
 Run at the shipped seed on the shipped tree, both radii in one process so the delta is a
