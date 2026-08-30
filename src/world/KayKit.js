@@ -244,8 +244,13 @@ export function cupCentre(geo) {
   let mx = 0;
   for (let i = 0; i < pos.count; i++) mx = Math.max(mx, Math.abs(pos.getX(i)));
   if (!(mx > 0)) return null;
-  /* One texel of the atlas at the scales these props ship at is ~1 mm; 1e-4 of a metre is a
-     tenth of that, so this picks the authored ring and nothing adjacent to it. */
+  /* The tolerance is bounded from BOTH sides by measurement rather than chosen. Below: the
+     ring's own coordinates are ±0.2751, where float32 spacing is ~1.6e-8, so 1e-4 is four
+     orders of magnitude clear of representation error. Above: on `torch_mounted` the next
+     widest ring in is 0.2211, a gap of 0.054 — 540x this tolerance — so nothing but the rim
+     can be swept in. A model whose rings were closer together than this would need it derived
+     rather than fixed, and would show up as a cup centre that failed the containment bar in
+     torchswap T3. */
   const eps = 1e-4;
   let n = 0, sx = 0, sy = 0, sz = 0;
   for (let i = 0; i < pos.count; i++) {
