@@ -50,6 +50,16 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import net from 'node:net';
 
+/* The bare `chromium.launch()` this file first shipped burned a 13-minute wait in the capture
+   queue and then failed: playwright resolves to `chrome-headless_shell-1234`, which is not the
+   build installed here (1194). Every working capture tool in this directory passes an explicit
+   executablePath and the swiftshader argv — there is no GPU in this container — so this one
+   does too, copied from celshot.mjs rather than reinvented. */
+const CHROME = ['/opt/pw-browsers/chromium', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+const ARGS = ['--no-sandbox', '--disable-dev-shm-usage', '--use-gl=angle', '--use-angle=swiftshader',
+  '--enable-unsafe-swiftshader', '--enable-webgl', '--ignore-gpu-blocklist', '--hide-scrollbars',
+  '--force-device-scale-factor=1', '--js-flags=--max-old-space-size=4096'];
+
 const ROOT = path.resolve(import.meta.dirname, '..');
 const argv = process.argv.slice(2);
 const opt = (n, d) => { const i = argv.indexOf(`--${n}`); if (i < 0) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
@@ -197,7 +207,7 @@ async function main() {
   try {
     const port = await freePort();
     server = await startServer(port);
-    browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
+    browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || CHROME.find((q) => existsSync(q)), args: ARGS });
     const page = await browser.newPage({ viewport: { width: W, height: H } });
     const errs = [];
     page.on('pageerror', (e) => errs.push(String(e)));
