@@ -1123,23 +1123,26 @@ export class Props {
    * `?torch=gen`, under a failed load and under a headless boot with no primed cache, and this
    * call site then keeps the body it already built.
    *
-   * **The fire and the light are re-derived, not carried.** Both used to be registered at
-   * offsets off the MOUNT — `(x, y + 0.35, z)` and `(x, y + 0.6, z)` — i.e. on the wall plane,
-   * which is why `Particles._standoff` exists at all: it is a compensation that probes for a
-   * nearby wall and shoves the fire 0.55 m along whichever cardinal axis is clear, because the
-   * registration carried no orientation. Two module docblocks (`Particles.js:2973`, `:4444`)
-   * say in as many words that the correct fix is here rather than there, and this is it: the
-   * cup is measured on the imported mesh, and the SAME matrix the geometry gets is applied to
-   * it, so the flame follows the arm around whichever way the sconce is turned. The handles go
-   * out marked `placed`, which switches the standoff compensation off for exactly these fires
-   * and leaves it running for everything that still needs it.
+   * **The FIRE is re-derived; the LIGHT deliberately is not.** Both used to be registered at
+   * typed offsets off the MOUNT — `(x, y + 0.6, z)` and `(x, y + 0.35, z)` — i.e. on the wall
+   * plane, which is why `Particles._standoff` exists at all: it is a compensation that probes
+   * for a nearby wall and shoves the fire 0.55 m along whichever cardinal axis is clear,
+   * because the registration carried no orientation. Two module docblocks
+   * (`Particles.js:2973`, `:4444`) say in as many words that the correct fix is here rather
+   * than there, and this is it: the cup is measured on the imported mesh, and the SAME matrix
+   * the geometry gets is applied to it, so the flame follows the arm around whichever way the
+   * sconce is turned. The handles go out marked `placed`, which switches the standoff
+   * compensation off for exactly these fires and leaves it running for everything that still
+   * needs it. Why the light stays put is a finding in its own right and is argued at the
+   * registration below.
    */
   _torch(x, y, z, ry) {
     const bag = wallTorch({ rng: this.rng });
     const mount = matrixOf({ x, y, z, ry });
     const sw = TORCH_GEN ? null : this._swapTorch(bag);
-    /* Local cup/light anchors, in the sconce's own frame, from whichever body is standing
-       here — then through the mount matrix, once, for both. */
+    /* The cup, in the sconce's own frame, from whichever body is standing here — measured on
+       the import, published by the builder on the generated one — and then through the mount
+       matrix, so both arms get a fire in their own bowl rather than on the plate. */
     const flameLocal = sw ? sw.flameAt : new THREE.Vector3().fromArray(bag.flameAt);
     if (sw) {
       sw.geo.applyMatrix4(mount);
