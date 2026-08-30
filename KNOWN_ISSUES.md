@@ -64133,3 +64133,34 @@ blocks `*.github.io`.
    interior triangle drop was explained by hypothesis after hypothesis until I built the two trees
    side by side and printed the bounding boxes, which answered it immediately and is what §442
    says to do in the first place.
+
+---
+
+## §740 — Eight rounds on the wrong axis: the imported props are at saturation parity and lighter than every stone in the room
+
+*(Heading committed ahead of its body to hold the number — §700.9. Claim marker, worded to be
+unlike any other lane's (§717): §740 CLAIM kk-lightness-axis-lane-3f91c8. Owner on the §739 build:
+the jars are fixed and read rich amber, and **"All the imported kit kay props still appear to be
+washed out compared to everything else."**
+
+**The lead this lane was handed as a hypothesis is confirmed, and the other one is falsified, both
+from frames already on disk before any capture lock was taken.**
+
+Measured per body in the `interior` frame at the shipped §739 state: **16 of 19 imported prop
+bodies are LIGHTER than every architecture surface in the room.** The props run val 0.505–0.703;
+the brightest masonry in the frame, `paving:tomb`, is 0.489. Saturation is at or above parity
+(PROP median 0.390 against ARCH 0.371) — so eight rounds of scoring chroma have been scoring an
+axis on which there is nothing left to win, while the axis the word "washed out" actually names
+has never been measured. The jars §739 just fixed, which the owner is happy with, sit at
+0.469–0.482 — INSIDE the architecture's band. That is the difference he is pointing at.
+
+**And raising `KK_HOLD` — the other lead, and the one that looked free — moves the wrong way.**
+Re-scored off §738's own sweep, on disk, no new render: PROP val median goes 0.540 → 0.623 from
+hold 0.00 to 1.00 while the architecture stands at 0.398. The hold's cap being obsolete is true and
+irrelevant: lifting it would raise the saturation number and make the visible defect worse.
+
+So the lever is `KK_GRADE`'s VALUE, and the sweep is over darkening. Scoped away from §734's
+sconces, which already sit BELOW the architecture at val 0.302/0.375 and must not be dragged
+further down. §739's jars, the character and the architecture are re-proved per body at every
+strength on the max-absolute-delta table. Two stances, both grades. The courtyard inverts the sign
+of the lightness gap and that is stated in the body rather than averaged away. Body follows.)*
