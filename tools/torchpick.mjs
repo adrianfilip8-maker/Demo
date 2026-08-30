@@ -115,8 +115,11 @@ async function startServer(port) {
 
 /* The rig, run inside the page. Returns the measured seating of each candidate so the picture
    comes with the numbers that produced it rather than a claim about them. */
+/* An IIFE, not a bare arrow: `page.evaluate(string)` evaluates the string as an EXPRESSION and
+   hands back whatever it evaluates to. A bare `async () => {…}` therefore returns the function
+   object rather than running it, and the first run of this file died on `undefined.genH`. */
 const RIG = `
-async () => {
+(async () => {
   const THREE = window.__THREE;
   const E = window.__ENGINE;
   const { GLTFLoader } = await import('/node_modules/three/examples/jsm/loaders/GLTFLoader.js');
@@ -194,7 +197,7 @@ async () => {
   E.scene.add(group);
   out.mounted = [['B', -46], ['A', -38], ['B', -30]];
   return out;
-}
+})()
 `;
 
 async function main() {
@@ -245,7 +248,7 @@ async function main() {
     }
 
     // stage: freeCam + hud off through the shipped path, then pose down the hall wall
-    await page.evaluate(async () => { await window.__ENGINE.debugTools.setShot('temple', { dt: 0 }); });
+    await page.evaluate(async () => { await window.__GAME.setShot('temple', { dt: 0 }); });
 
     const POSES = {
       // eye height, looking along the wall so all seven mounts are in one frame
@@ -255,7 +258,7 @@ async function main() {
     };
 
     for (const grade of ['night', 'day']) {
-      await page.evaluate((tod) => window.__ENGINE.debugTools.setTimeOfDay(tod), grade === 'night' ? 0.02 : 0.5);
+      await page.evaluate((tod) => window.__GAME.setTimeOfDay(tod), grade === 'night' ? 0.02 : 0.5);
       for (const [name, p] of Object.entries(POSES)) {
         await page.evaluate(({ p }) => {
           const c = window.__ENGINE.camera;
@@ -263,7 +266,7 @@ async function main() {
           c.lookAt(new window.__THREE.Vector3(...p.target));
           c.updateProjectionMatrix(); c.updateMatrixWorld(true);
         }, { p });
-        await page.evaluate(async () => { await window.__ENGINE.debugTools.step(24, 0); });
+        await page.evaluate(async () => { await window.__GAME.step(24, 0); });
         const file = path.join(OUTDIR, `${grade}-${name}.png`);
         await page.screenshot({ path: file });
         meta.frames.push({ grade, pose: name, cam: p, file: path.relative(ROOT, file) });
