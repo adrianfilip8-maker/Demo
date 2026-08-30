@@ -63598,3 +63598,257 @@ both subsets — the 16 bodies below the architecture's median AND the 4 already
 because a fix that corrects the dull ones by pushing the bright ones past parity is not a fix.
 Instrument is §737's `tools/kkbleach.mjs` with its connected-component per-body masks, reused
 rather than rebuilt. Revert token extends `?kk=`. Body follows in this lane's next pushes.)*
+
+### §738.1 The answer, first, so a redirect is cheap (§705)
+
+**`uMatShadowHold` — §269's shade-side hold, given a third scope so one material can hold its own
+hue while the masonry beside it keeps the shipped behaviour. Shipped at `KK_HOLD = 0.25` on the
+three KayKit recipes. Revert with `?kk=nohold`.**
+
+In the crypt — the room the owner photographed, and the frame §737 located the defect in —
+**19 of 20 placed bodies rise at BOTH grades**, and six of them cross from below the architecture's
+median surface saturation to above it:
+
+| `interior` | dull-subset median | vs arch median | bodies still below | already-fine median |
+|---|---|---|---|---|
+| day, before (`?kk=nohold`) | 0.267 | −0.104 | 16/16 | 0.462 |
+| **day, shipped** | **0.348** | **−0.023** | **10/16** | **0.506** |
+| night, before | 0.632 | −0.078 | 16/16 | 0.755 |
+| **night, shipped** | **0.653** | **−0.057** | **15/16** | **0.757** |
+
+**Architecture, character and every other population move by exactly 0.0000** — max absolute
+per-body delta, at every swept strength up to and including 1.0, in both frames at both grades.
+That is not a tolerance: the term enters as `max( …, uMatShadowHold )` and `max(x, 0.0) == x`.
+
+Two things this does NOT do, stated here rather than buried:
+
+* **It is much weaker at night than by day**, and the night half of the owner's complaint is
+  barely reachable from this lever — see §738.3.
+* **It moves the six crypt sconces against the metric** — §734's fixtures, whose look the owner
+  approved. See §738.4. They are not averaged into the rows above; they are the one body in
+  `interior` that falls, and they are named.
+
+### §738.2 The strength, and why it is not the one that hits the stated target
+
+Seven strengths, one boot, one mask, scored per body at both grades (`tools/kkbleach.mjs`
+`--arms H000,…,H100`, `tools/kkholdpick.mjs`). The subsets are fixed on the **pre-§738 arm before
+any other arm is scored**, for §736.4's reason: if "dull" were re-derived per arm, a strength
+could score well by moving bodies out of the set it is judged on.
+
+```
+             DAY   dull med   still<bar   fine med   |  NIGHT  dull med   fine med
+  0.00           0.267 −0.104    16/16      0.462    |         0.632 −0.078   0.755
+  0.15           0.316 −0.055    12/16      0.487    |         0.647 −0.063   0.752
+  0.25  SHIP     0.348 −0.023    10/16      0.506    |         0.653 −0.057   0.757
+  0.35           0.379 +0.008     7/16      0.526    |         0.659 −0.051   0.762
+  0.50           0.425 +0.054     2/16      0.563    |         0.669 −0.040   0.769
+  0.70           0.484 +0.113     1/16      0.598    |         0.681 −0.028   0.775
+  1.00           0.569 +0.197     0/16      0.652    |         0.731 +0.022   0.785
+```
+
+**0.35 is the strength that lands the day dull median exactly on the bar, and it is not what
+ships.** The reason is structural rather than a matter of taste: **the lever cannot separate the
+two subsets.** One material serves all twenty bodies, so every strength that lifts the sixteen
+that were short also pushes the four that were already above the masonry further above it — and
+those four start at +0.090 against an architecture whose own brightest surface is 0.400. The
+brief's acceptance criterion has two clauses and the second one cannot be fully satisfied by any
+strength; what can be chosen is how far it is violated.
+
+So the value is chosen where the trade turns. **0.25 → 0.35 buys +0.031 of day dull median and
++0.006 of NIGHT dull median, for +0.020 on the already-over subset and a further −0.036 on the
+sconces.** Six thousandths of night for that is not a trade worth making, and the owner's two
+screenshots are one day and one night.
+
+### §738.3 What this does NOT fix, with the numbers
+
+**At night the hold is nearly inert on the deficit and negative in the courtyard.** The mechanism
+is not mysterious and it is the lever working as designed: the hold trades the SHADE LIGHT's
+chroma for the MATERIAL's, and at night the light is a deep saturated blue whose chroma is higher
+than the warm atlas's. So a body the light had bleached BELOW its own chroma rises, and a body the
+light had inflated ABOVE it falls.
+
+Both happen, and which one dominates depends on the frame:
+
+| frame · grade | bodies measured | rise | fall |
+|---|---|---|---|
+| `interior` day | 20 | **19** | 1 (a sconce) |
+| `interior` night | 20 | **19** | 1 (a sconce) |
+| `kaykit` day | 3 | 2 | 1 |
+| `kaykit` night | 3 | **0** | **3** (−0.035, −0.044, −0.091) |
+
+The `kaykit` night row is the honest failure of this change. It is three small bodies totalling
+257 measurable cells in a courtyard framing that §737.9 already recorded as a weak instrument for
+this complaint — but it is a real second sample at a second grade (§466.5) and it goes the wrong
+way, so it is quoted at the same weight as the rows that went the right way.
+
+**If the owner's night screenshot is the one that matters, this is the wrong lever and these
+numbers say so.** The lever that would address it is a clock gate on the hold — scale it by
+day-ness, so it applies where the deficit is and is inert where it is not. `ToonMaterial` already
+tracks `_nightAmount` in JS and publishes nothing for it to the shader, so that is a new uniform
+and a new sweep, and inventing it at the end of this lane without measuring it at both grades is
+how the last three rounds went wrong. It is named in §738.7, not attempted here.
+
+### §738.4 The one surface that moves against the metric, and it is an approved one
+
+`props_kaykit#6` falls at both grades — day 0.239 → 0.106, night 0.755 → 0.641 — and it is the
+largest prop body in the `interior` frame at 652 sampled cells.
+
+**It is a wall sconce, and that was measured rather than inferred**, which is this whole lane's
+lesson. A `--census` pass (which now skips staging entirely, since a body's world position does
+not depend on which camera looks at it) puts it at **(4.16, −9.10, −62), 0.48 × 0.83 × 0.43 m**,
+one of six components at **x ±4.16, z −62 / −68 / −74** — §734's six crypt sconces exactly, each
+splitting into a body and a cup. Inferring it from its screen centroid would have been a guess.
+
+What happens to it is a HUE rotation whose path crosses neutral. It is the body §736.7 recorded
+reading **teal — hue 166° by day and 212° at night, in a room whose paving reads 9°/1°** — and the
+hold rotates it off the shade light's hue and onto its own:
+
+```
+  hold     0.00    0.15    0.25    0.35    0.50    0.70    1.00
+  day hue   186°    181°    170°    130°     30°     21°     22°
+  day sat  0.239   0.158   0.106   0.070   0.111   0.246   0.456
+```
+
+So at the shipped strength the sconces are **less saturated and less teal**; at 0.70 they would be
+**equally saturated and frankly warm**, which is what §736.7 asked for — but 0.70 is far past
+where every other body overshoots. **This lane does not certify the sconce change as an
+improvement.** It reports it as a measured change to an owner-approved fixture, on the axis the
+owner should judge it on, and `?kk=nohold` restores it exactly.
+
+### §738.5 Proof that the reference did not move
+
+Not asserted — measured, and by two independent routes.
+
+**Arithmetic.** The three scopes combine as `max( uShadowHold, max( uSubjShadowHold * vSlySkin,
+uMatShadowHold ) )`. Every material that does not name `shadeHold` resolves it to exactly 0, and
+`max(x, 0.0) == x` for every non-negative x on every driver — which both other terms are, being
+products of non-negative factors. This is an identity, not a tolerance, and it is not a `mix()`
+whose null depends on how a driver spells it (the trap `uShadowColorLit`'s note records).
+
+**Pixels.** Max absolute per-body Δsat against the pre-§738 arm, over every strength swept:
+
+```
+  interior day / night      ARCH  6 bodies   0.0000    CHAR 1 body    0.0000    OTHER 6 bodies  0.0000
+  kaykit   day / night      ARCH 16 bodies   0.0000    CHAR 3 bodies  0.0000    OTHER 3 bodies  0.0000
+```
+
+at 0.15, 0.25, 0.35, 0.50, 0.70 **and 1.00**. Reported as a MAX over bodies, not a mean, because a
+mean would hide one wall moving inside many that did not. `OTHER` includes `props_lime` — §730's
+canopic jars, which the owner ruled out of scope — so that exclusion is verified rather than
+promised. Instrument controls I2 (base twice) and I4 (all pins released) read 0.0000 in every
+grade-frame of both runs.
+
+**Source.** `tests/kkhold.test.mjs` H5 asserts `TUNE.shadowHold` is still 0 and
+`TUNE.subjShadowHold` still 1, and that neither `Architecture.js` nor `Props.js` contains the
+string `shadeHold` — so a later lane cannot quietly widen the scope by adding one caller.
+
+### §738.6 Scope, budget, tokens, suites, production
+
+**Scope.** `src/render/shaders/toon.glsl.js` (one uniform, one `max` leg), `src/render/ToonMaterial.js`
+(one resolved option, one cache-key term, one per-material uniform) and `src/world/KayKit.js`
+(the constant, the extended token, one bag key). No geometry, no placement, no RNG draw, no
+`Props.MATERIALS` entry, nothing on the §727/§730 procedural surface.
+
+**The cache key is the load-bearing detail.** The material cache hands materials back by option
+hash; a hash that omitted the hold would hand a KayKit material to the next caller whose colour
+and maps matched, which is precisely how this fix would have reached the architecture. `r3(o.shadeHold)`
+is in the key and H2 pins it in both directions — two bags differing only in the hold must NOT
+collide, and two identical bags must.
+
+**Budget — `tools/budgetattrib.mjs`, since `Engine.stats.drawCalls` is §1's five-frozen-values
+fiction.** `interior` 46 draws / 0.411 M, `temple` 73 / 0.631 M, `courtyard` 93 / 0.706 M, WORST
+main-view 93 / 0.706 M — **identical to the figures §736.7 recorded**, zero delta. No new shader
+variant is possible either: `customProgramCacheKey` is `sly:<detail><detail2>` and is untouched, so
+a new uniform keys a material and not a program. That last is a source argument, not a measurement,
+and is labelled as one.
+
+**Tokens, verified END TO END in the browser rather than from source** — `?kk=` is read at module
+load and cannot be poked in-page (`tools/kkbleach.mjs --census`, which reads the live materials):
+
+```
+  no token          color=0xe6b073  hold=0.25      on all three recipes
+  ?kk=nohold        color=0xe6b073  hold=0
+  ?kk=flat          color=0xffffff  hold=0.25
+  ?kk=flat,nohold   color=0xffffff  hold=0
+```
+
+The list form is why `?kk=` was extended rather than a `?kkhold=` invented: §736's finding and
+§738's are two findings about one surface, and each has to be revertible alone.
+
+**§734's sconces and §729's destructibles take the hold with the set dress**, because they share
+the recipe by design and §729's header forbids the drift. H4 pins that all three consumers get
+the same value. `tests/torchswap.test.mjs` and `tests/smashswap.test.mjs` still pass unchanged and
+still mean what they meant — neither asserts a material colour. What the sconces LOOK like is
+§738.4, measured and reported rather than assumed.
+
+**Suite — every run this lane made (§703.2), not only the green ones.**
+
+```
+  node --test kkhold + kksurface + kaykit + smashswap + torchswap + clockfreeze   52/52 pass
+  npm test  (full, 1156)   1155 pass, 1 FAIL — tests/subjhold.test.mjs
+  node --test subjhold + kkhold                                                   10/10 pass
+  npm test  (full, 1156)   1156/1156 pass, 336s
+```
+
+The failure was **§287's `subjhold.test.mjs`**, and it was right to fire: it pins the hold
+expression's SHAPE, because the property it protects — that the knobs combine by `max`, so a scope
+that does not apply contributes exactly 0 — is what makes PROT-ARCH hold by construction rather
+than by tolerance. Adding a third `max` leg changed the shape. **Widened to admit the third leg and
+no further**: it still requires `uSubjShadowHold * vSlySkin` verbatim, so dropping the `vSlySkin`
+factor — the edit that would actually repaint the architecture — still turns it red. Not deleted,
+not loosened to a substring.
+
+`tests/clockfreeze.test.mjs` stays green with this lane's files present: `tools/kkbleach.mjs`
+declares its freeze with `setShot(shot, { dt: 0 })`, which §737.8 recorded fixing after reading a
+truncated failure and calling it somebody else's.
+
+**Production (§666/§695).** `node tools/prodboot.mjs` on the built artifact, served from a
+`/Demo/`-shaped prefix: **`ready true` at 43.2 s, 149 requests, zero 4xx/5xx**, 28 pre-existing
+in-flight aborts (not gated, unchanged by this lane). The change is IN the artifact and was
+checked there rather than in the source — `dist/assets/ToonMaterial-*.js` and
+`dist/assets/Outline-*.js` carry `uMatShadowHold`, and the KayKit chunk carries the `0.25`, the
+`nohold` token reader and §736's grade literal `15118451` together. **The live host was NOT
+checked and no claim is made about it** — this container's proxy blocks `*.github.io`.
+
+### §738.7 What is still open
+
+* **The night half.** §738.3 measures it: the hold is nearly inert on the night deficit in the
+  crypt (+0.021 of dull median) and NEGATIVE on three small courtyard bodies (−0.035 to −0.091),
+  because at night the shade light's chroma exceeds the atlas's and the hold trades one for the
+  other. The lever that would address it is a **clock gate** — scale the hold by day-ness so it
+  applies where the deficit is. `ToonMaterial` already tracks `_nightAmount` and publishes nothing
+  for it to the shader, so it is a new uniform and a new sweep, and it is named here rather than
+  attempted at the end of this lane.
+* **The sconces are a decision, not a defect.** §738.4 has their numbers at both grades. At 0.70
+  they would be equally saturated and frankly warm — which is what §736.7 asked for — but 0.70
+  overshoots every other body. If the owner wants the teal fixed, the sconces need their own
+  scope, and this lane's `uMatShadowHold` is the machinery for it: §729's one-recipe rule is about
+  the GRADE, and a second recipe would have to argue with it explicitly rather than by accident.
+* **The four bodies that were already above the masonry go further above it** (median +0.090 →
+  +0.135 against an architecture whose brightest surface is 0.400). Inherent: one material, twenty
+  bodies, one number. Only a per-body authored value could separate them, and nothing in the
+  imported pipeline carries per-body material data.
+* §737.9's three open items are untouched by this lane: the variance question with two failed
+  instruments behind it, `props_lime` (which the owner has now explicitly ruled out of scope), and
+  the `kaykit` shot's weakness as an instrument for this complaint — 3 measurable bodies against
+  `interior`'s 20, which is why §738.3's worst row is also its thinnest.
+
+### §738.8 What I got wrong
+
+1. **I committed a strength before I had swept it.** `KK_HOLD` went in at 0.35 as a "provisional"
+   literal with a test pinning it, so for one commit the repository asserted a value that no
+   measurement supported. It should have gone in as the sweep's output or not at all; labelling it
+   provisional made it honest, not correct.
+2. **I read `props_kaykit#6` off a screen centroid and nearly reported it as a basket.** It is a
+   sconce, at (4.16, −9.10, −62). Inferring an object's identity from where it appears in a frame
+   is the exact error §737 was written about, attempted by me one section later, and it took a
+   census pass to answer properly.
+3. **I broke a second pinned shader-shape test and had to be told by the suite**, having already
+   broken `clockfreeze` the same way in §737. Both are the same shortcoming: I check the tests that
+   are obviously mine and let the full suite find the ones that pin something I touched from
+   outside my own lane.
+4. **My acceptance criterion could not see the night behaviour as designed rather than broken.**
+   A saturation-versus-architecture bar scores the hold's night effect as a regression, when what
+   the lever does is trade the light's chroma for the material's — which lowers saturation
+   whenever the light is the more chromatic of the two. §737's own data said so (`HOLD1` at
+   −0.125 on `kaykit` night) and I read past it, twice, before the sweep made it unavoidable.

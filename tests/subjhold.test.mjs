@@ -36,10 +36,18 @@ test('subjShadowHold is published per frame, so harness pokes stick and readback
 
 test('the shader scopes the subject hold by vSlySkin and keeps the global knob intact', () => {
   const src = readFileSync(GLSL, 'utf8');
-  assert.match(src, /max\( uShadowHold, uSubjShadowHold \* vSlySkin \)/,
-    'the hold expression no longer combines the global and subject knobs via max() — '
-    + 'architecture scoping (vSlySkin = 0) is what makes PROT-ARCH hold by construction');
+  /* §738 added a THIRD scope (uMatShadowHold, per material) as another max leg. The property
+     this arm exists to protect is unchanged and is still asserted: the knobs COMBINE BY MAX, so
+     a scope that does not apply contributes exactly 0 and PROT-ARCH holds by construction rather
+     than by tolerance. The regex is widened to admit the third leg and no further — it still
+     requires `uSubjShadowHold * vSlySkin` to be the subject's term, so dropping the vSlySkin
+     factor (which would repaint the architecture) still turns this red. */
+  assert.match(src, /max\( uShadowHold, max\( uSubjShadowHold \* vSlySkin, uMatShadowHold \) \)/,
+    'the hold expression no longer combines the global, subject and per-material knobs via '
+    + 'max() — architecture scoping (vSlySkin = 0, uMatShadowHold = 0) is what makes PROT-ARCH '
+    + 'hold by construction');
   assert.match(src, /uniform float uSubjShadowHold;/, 'uSubjShadowHold not declared in the shader');
+  assert.match(src, /uniform float uMatShadowHold;/, 'uMatShadowHold not declared in the shader');
 });
 
 test('guardfix: the Carmelita merge synthesizes the colour attribute its materials expect', () => {

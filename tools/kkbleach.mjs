@@ -198,6 +198,11 @@ async function runShot(page, { shot, grades, arms, stride, census }) {
     };
     if (census) {
       out.subjNames = subj.map((m) => `${m.name || m.type}/${m.material.name}`).slice(0, 80);
+      /* What the shipped recipes ACTUALLY carry, read off the live materials. `?kk=` is read at
+         module load and cannot be poked in-page, so this is the only way to verify the token end
+         to end rather than from the source (§736's --probe, same reason). */
+      out.kkMats = [...new Set(subj.map((m) => m.material))].map(
+        (m) => `${m.name} color=0x${m.color.getHexString()} rim=${m.userData?.slyUniforms?.uRim?.value ?? 'MISSING'} hold=${m.userData?.slyUniforms?.uMatShadowHold?.value ?? 'MISSING'}`);
       /* Per connected component: world centroid, world bbox and triangle count — the same
          component split the mask uses, so a body id here IS the body id there. */
       out.bodies = [];
@@ -578,6 +583,7 @@ async function main() {
       process.stdout.write(`    census: ${res.census.targets} targets, ${res.census.subj} prop meshes ${JSON.stringify(res.census.subjMats)}, ${res.census.refs} arch meshes\n`);
       if (res.subjNames) for (const n of res.subjNames) process.stdout.write(`      · ${n}\n`);
       if (CENSUS) {
+        if (res.kkMats) for (const m of res.kkMats) process.stdout.write(`      RECIPE ${m}\n`);
         for (const b of (res.bodies || [])) {
           process.stdout.write(`      ${b.body.padEnd(20)} ${b.mat.padEnd(14)} v${String(b.verts).padStart(5)}  at (${b.at.join(', ')})  size ${b.size.join(' x ')}\n`);
         }
