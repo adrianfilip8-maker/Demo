@@ -36,6 +36,13 @@ const PICK = String(opt('arms', '')).split(',').filter(Boolean);
    they are three different subjects with three different bars, and merging them would be the
    pooling error this whole family of sections exists to record. */
 const POP = opt('pop', 'PROP');
+/* §740 — WHICH AXIS. Eight rounds scored `sat` against the architecture's median and the owner
+   kept saying "washed out", which in ordinary use means PALE: bright AND unsaturated. `val` is
+   that second axis and it had never been measured. Both are printed; the bar and the subsets are
+   taken on whichever is selected, because a body can be short on one and long on the other and
+   pooling the two would be this family of sections' own recorded error in a new costume. */
+const AXIS = opt('axis', 'sat');
+const A = (r) => (AXIS === 'val' ? r.val : r.sat);
 const f3 = (x) => (x == null ? '  —  ' : x.toFixed(3));
 
 const rep = JSON.parse(await readFile(path.join(DIR, 'report.json'), 'utf8'));
@@ -60,16 +67,16 @@ for (const [shot, rec] of Object.entries(rep.shots)) {
     /* The BAR: the architecture's median SURFACE saturation in this frame. A median over
        surfaces, not an area-weighted mean, because the owner's reference is "the masonry looks
        right" and one enormous wall should not be the whole bar. */
-    const archSats = arch.map((r) => r.sat).sort((a, b) => a - b);
+    const archSats = arch.map((r) => A(r)).sort((a, b) => a - b);
     const BAR = archSats[Math.floor(archSats.length / 2)];
-    const dull = props.filter((r) => r.sat < BAR).map((r) => r.id);
-    const fine = props.filter((r) => r.sat >= BAR).map((r) => r.id);
+    const dull = props.filter((r) => A(r) < BAR).map((r) => r.id);
+    const fine = props.filter((r) => A(r) >= BAR).map((r) => r.id);
 
-    console.log(`\n${'='.repeat(112)}\n${shot} · ${grade}   SUBJECT ${POP}   architecture median surface saturation = ${f3(BAR)}   (${arch.length} surfaces: ${archSats.map(f3).join(' ')})`);
+    console.log(`\n${'='.repeat(112)}\n${shot} · ${grade}   SUBJECT ${POP}  AXIS ${AXIS}   architecture median surface saturation = ${f3(BAR)}   (${arch.length} surfaces: ${archSats.map(f3).join(' ')})`);
     console.log(`   subsets fixed on ${BASE}:  DULL ${dull.length} bodies (below the bar)   ALREADY-FINE ${fine.length} bodies (at or above it)\n`);
 
     const stat = (arm, set) => {
-      const v = set.map((id) => arms[arm]?.[id]?.sat).filter((x) => x != null).sort((a, b) => a - b);
+      const v = set.map((id) => (arms[arm]?.[id] ? A(arms[arm][id]) : null)).filter((x) => x != null).sort((a, b) => a - b);
       if (!v.length) return null;
       return {
         n: v.length, min: v[0], med: v[Math.floor(v.length / 2)], max: v[v.length - 1],
@@ -84,7 +91,7 @@ for (const [shot, rec] of Object.entries(rep.shots)) {
     }
 
     /* Every body, sorted, base against each arm — the table the acceptance is actually read off. */
-    const order = [...dull, ...fine].sort((a, b) => base[a].sat - base[b].sat);
+    const order = [...dull, ...fine].sort((a, b) => A(base[a]) - A(base[b]));
     const cols = Object.keys(arms).filter((a) => a !== BASE);
     console.log(`\n   PER BODY, sorted by ${BASE} saturation. '*' marks a body above the bar ${f3(BAR)}.`);
     console.log(`   ${'body'.padEnd(20)} ${'n'.padStart(5)} ${(BASE).padStart(7)}  ${cols.map((c) => c.padStart(7)).join(' ')}`);
@@ -92,20 +99,24 @@ for (const [shot, rec] of Object.entries(rep.shots)) {
       const b = base[id];
       const cells = cols.map((c) => {
         const r = arms[c]?.[id];
-        return r == null ? '     — ' : (f3(r.sat) + (r.sat > BAR ? '*' : ' ')).padStart(7);
+        return r == null ? '     — ' : (f3(A(r)) + (A(r) > BAR ? '*' : ' ')).padStart(7);
       });
-      console.log(`   ${b.mesh.slice(0, 20).padEnd(20)} ${String(b.n).padStart(5)} ${(f3(b.sat) + (b.sat > BAR ? '*' : ' ')).padStart(7)}  ${cells.join(' ')}`);
+      /* The OTHER axis is carried alongside, base and best arm, so a change that fixes one by
+         wrecking the other cannot be read as a clean win. */
+      const other = (r) => (AXIS === 'val' ? r.sat : r.val);
+      const last = cols.length ? arms[cols[cols.length - 1]]?.[id] : null;
+      console.log(`   ${b.mesh.slice(0, 20).padEnd(20)} ${String(b.n).padStart(5)} ${(f3(A(b)) + (A(b) > BAR ? '*' : ' ')).padStart(7)}  ${cells.join(' ')}   | ${AXIS === 'val' ? 'sat' : 'val'} ${f3(other(b))}${last ? ' -> ' + f3(other(last)) : ''}`);
     }
 
     /* The populations that must NOT move. Printed as a max absolute delta over bodies, because a
        mean would hide one wall moving a lot inside many that did not. */
-    console.log(`\n   MUST NOT MOVE — max |Δsat| over bodies vs ${BASE}:`);
+    console.log(`\n   MUST NOT MOVE — max |Δ| over bodies vs ${BASE}, worst of the TWO axes:`);
     for (const popName of ['ARCH', 'CHAR', 'OTHER', 'PROP', 'LIME', 'TORCH'].filter((p) => p !== POP)) {
       const set = Object.values(base).filter((r) => r.pop === popName && !r.thin).map((r) => r.id);
       if (!set.length) continue;
       const line = cols.map((c) => {
         let mx = 0, who = '';
-        for (const id of set) { const r = arms[c]?.[id]; if (!r) continue; const d = Math.abs(r.sat - base[id].sat); if (d > mx) { mx = d; who = base[id].mesh; } }
+        for (const id of set) { const r = arms[c]?.[id]; if (!r) continue; const d = Math.max(Math.abs(r.sat - base[id].sat), Math.abs(r.val - base[id].val)); if (d > mx) { mx = d; who = base[id].mesh; } }
         return `${c} ${mx.toFixed(4)}${mx > 0.0005 ? ` (${who})` : ''}`;
       });
       console.log(`     ${popName.padEnd(6)} ${set.length} bodies:  ${line.join('   ')}`);

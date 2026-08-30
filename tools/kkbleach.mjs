@@ -123,6 +123,16 @@ const ARMS = [
   { id: 'L080', scope: 'LIME', label: 'canopic-jar hold 0.80' },
   { id: 'L100', scope: 'LIME', label: 'canopic-jar hold 1.00' },
   { id: 'T025', scope: 'TORCH', label: 'sconces put BACK on KK_HOLD — the §738 state this lane reverses' },
+  /* §740 — the GRADE VALUE sweep. `Gxxx` scales the set-dress and destructible recipes' albedo by
+     xxx/100 IN LINEAR (THREE.Color stores linear, so multiplyScalar is exactly that) and leaves
+     the sconces alone, because §734's fixtures already sit BELOW the architecture in lightness.
+     `GTxxx` applies the same scale to the sconces too, so the cost of NOT scoping is priced
+     rather than assumed. */
+  { id: 'G085', scope: 'PROPS', label: 'grade x0.85 linear (sconces untouched)' },
+  { id: 'G070', scope: 'PROPS', label: 'grade x0.70 linear (sconces untouched)' },
+  { id: 'G055', scope: 'PROPS', label: 'grade x0.55 linear (sconces untouched)' },
+  { id: 'G045', scope: 'PROPS', label: 'grade x0.45 linear (sconces untouched)' },
+  { id: 'GT070', scope: 'PROPS+TORCH', label: 'grade x0.70 applied to the sconces as well — prices the unscoped alternative' },
   { id: 'KKRIM0', scope: 'PROPS', label: 'uRim = 0 on the three KayKit recipes only — the surface fresnel rim' },
   { id: 'AMB0', scope: 'GLOBAL', label: 'uAmbIntensity = 0 — the hemispheric sky/bounce fill, everywhere' },
   { id: 'WASH0', scope: 'GLOBAL', label: 'uShadowWash = 0 — the albedo-INDEPENDENT additive shadow coat' },
@@ -489,6 +499,8 @@ async function runShot(page, { shot, grades, arms, stride, census, split }) {
     const ctlMats = [];
     const ctlSaved = [];
     const uniSaved = [];
+    const colSaved = [];
+    const uncolour = () => { while (colSaved.length) { const [m, c] = colSaved.pop(); m.color.copy(c); } };
     const ununi = () => {
       while (uniSaved.length) {
         const [m, map, col] = uniSaved.pop();
@@ -513,6 +525,14 @@ async function runShot(page, { shot, grades, arms, stride, census, split }) {
           uniSaved.push([m, m.map, m.color.clone()]);
           m.map = null; m.color.setHex(0xc08040); m.needsUpdate = true;
         }
+      }
+      else if (/^G\d{3}$/.test(id)) {
+        const k = Number(id.slice(1)) / 100;
+        for (const m of kkMats) { colSaved.push([m, m.color.clone()]); m.color.multiplyScalar(k); }
+      }
+      else if (/^GT\d{3}$/.test(id)) {
+        const k = Number(id.slice(2)) / 100;
+        for (const m of [...kkMats, ...torchMats]) { colSaved.push([m, m.color.clone()]); m.color.multiplyScalar(k); }
       }
       else if (/^L\d{3}$/.test(id)) {
         const v = Number(id.slice(1)) / 100;
@@ -540,6 +560,7 @@ async function runShot(page, { shot, grades, arms, stride, census, split }) {
       release();
       unpaint();
       ununi();
+      uncolour();
       if (id === 'BLOOM0') postfx?.setEnabled?.('bloom', true);
       if (id === 'PFXRIM0' && postfx?.tune && RIM_SHIP != null) postfx.tune.rimStrength = RIM_SHIP;
     };
