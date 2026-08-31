@@ -90,13 +90,19 @@ test('K1 §736: the default bag carries the derived grade; ?kk=flat carries the 
 
   assert.equal(on.KK_FLAT, false, 'no token must give the §736 grade');
   assert.equal(off.KK_FLAT, true, '?kk=flat must be read');
-  assert.equal(on.KK_GRADE, 0xe6b073);
+  /* §740 SPLIT THIS IN TWO and the split is the point. §736's DERIVATION is untouched and still
+     lands on 0xe6b073 — K3 below re-derives it from the shipped bytes. What §740 changed is the
+     derivation's TARGET: §736 solved for `paving_courtyard`, the brightest stone in the room, and
+     the result put the props above every surface around them on lightness. `KK_GRADE_BASE` is
+     §736's answer; `KK_GRADE` is that answer dimmed by §740's measured factor. */
+  assert.equal(on.KK_GRADE_BASE, 0xe6b073, '§736\'s derived grade is unchanged');
+  assert.equal(on.KK_GRADE, on.dimGrade(0xe6b073, on.KK_DIM), 'and KK_GRADE is it, dimmed');
 
   const a = recorder();
   on.makeAtlasMaterial(a.engine, FAKE_ATLAS, 'x:on');
   assert.equal(a.bags.length, 1);
   assert.deepEqual(a.bags[0], {
-    name: 'x:on', color: 0xe6b073, map: FAKE_ATLAS,
+    name: 'x:on', color: on.KK_GRADE, map: FAKE_ATLAS,
     bands: 3, rim: 0.5, shadeHold: on.KK_HOLD, outline: 0.0034, outlineColor: 0x1a1210,
   }, 'the default bag is the shipped recipe with the grade in place of the white, plus §738\'s shade hold — nothing else moved');
 

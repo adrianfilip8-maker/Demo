@@ -316,6 +316,9 @@ export const KK_NOHOLD = KK_TOKENS.has('nohold');
 /** §739's A/B: put the sconces back on the shared `KK_HOLD` they had between §738 and §739. */
 export const KK_TORCHHOLD = KK_TOKENS.has('torchhold');
 
+/** §740's revert: the imported set's albedo goes back to §736's undimmed grade. */
+export const KK_NODIM = KK_TOKENS.has('nodim');
+
 /**
  * §738 — how hard the imported set holds its OWN albedo hue on its shade side.
  *
@@ -373,6 +376,61 @@ export const KK_TORCHHOLD = KK_TOKENS.has('torchhold');
  */
 export const KK_HOLD = 0.25;
 
+/* sRGB transfer, spelled out rather than borrowed from THREE.Color, because `dimGrade` has to
+   run at module load (before any renderer exists) and has to be re-derivable by a test that does
+   not import three. */
+const _s2l = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const _l2s = (c) => (c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055);
+
+/**
+ * §740 — scale a grade hex by `k` IN LINEAR, which is where a light-transport scale belongs.
+ * Doing it on the sRGB bytes instead would darken the dark channel far more than the bright one
+ * and rotate the hue, which is the opposite of what a grade is for.
+ */
+export function dimGrade(hex, k) {
+  let out = 0;
+  for (let c = 0; c < 3; c++) {
+    const v = ((hex >> (16 - 8 * c)) & 255) / 255;
+    out = out * 256 + Math.round(255 * Math.max(0, Math.min(1, _l2s(_s2l(v) * k))));
+  }
+  return out;
+}
+
+/**
+ * §740 — HOW DARK the imported set's albedo is, and the axis eight rounds never measured.
+ *
+ * THE DEFECT, in the owner's own control. After §739 he reported the canopic jars fixed and
+ * *"All the imported kit kay props still appear to be washed out compared to everything else"*,
+ * then narrowed it: *"Only the imported props from that pack seem to be having the issue."* So
+ * the jars standing on the same table, under the same lights, in the same frame, are a reference
+ * he has explicitly accepted. Measured per body against them, in the shipped §739 state:
+ *
+ *     interior day    props sat 0.390 / val 0.568   jars sat 0.369 / val 0.511
+ *     interior night  props sat 0.667 / val 0.429   jars sat 0.614 / val 0.326
+ *
+ * **Saturation is at parity — the props are marginally ABOVE it — and the lightness is not.**
+ * 15 of 19 placed bodies are lighter than the lightest approved jar at BOTH grades, and 16 of 19
+ * are lighter than every architecture surface in the room. "Washed out" means pale, and pale is
+ * bright-and-unsaturated; eight rounds scored only the second half of that.
+ *
+ * WHY THIS AND NOT MORE HOLD. §738's `KK_HOLD` was capped at 0.25 partly to protect the sconces,
+ * and §739 removed that constraint by giving them their own material — so raising it was the
+ * obvious free move. It is the wrong lever: re-scored off §738's own sweep, prop val median goes
+ * **0.540 → 0.623** as the hold runs 0.00 → 1.00 while the architecture stands at 0.398. The hold
+ * raises the saturation number and makes the visible defect worse. Measured, not argued
+ * (`H050` in §740.3 is the arm).
+ *
+ * THE VALUE IS SWEPT, NOT INTERPOLATED — `G085/G070/G055/G045`, one boot, one mask, per body,
+ * two stances, both grades (§740.3). At 0.70 the crypt props land on the approved jars almost
+ * exactly (val 0.509 against 0.511) while saturation barely moves (0.390 → 0.376 against the
+ * jars' 0.369), which is the whole point: this buys lightness parity without spending the chroma
+ * parity §736 and §738 earned. Night improves from +32 % to +11 % lighter than the jars and is
+ * NOT closed — §740.4 says so rather than describing a day win as a fix.
+ *
+ * Revert with `?kk=nodim`.
+ */
+export const KK_DIM = 0.70;
+
 /**
  * §739 — the SCONCES' shade hold, which is 0, and the sentence that explains why a constant
  * exists for a zero.
@@ -421,7 +479,31 @@ export const TORCH_HOLD = 0;
  * the crypt at both grades, because every term it touches is gated by the key light and the
  * crypt has none. Neither is shipped. A change that measures zero is not a change.
  */
-export const KK_GRADE = 0xe6b073;
+export const KK_GRADE_BASE = 0xe6b073;
+
+/**
+ * §740 dims §736's derived grade by `KK_DIM` in linear. `KK_GRADE_BASE` is kept intact and
+ * separate on purpose: §736's derivation is still valid arithmetic about the atlas, the placed
+ * bodies and the architecture palette, and `tests/kksurface.test.mjs` K3 re-derives it from the
+ * shipped bytes. What §740 changes is not that derivation but its TARGET — §736 solved for
+ * `paving_courtyard`'s luminance, which is the brightest stone in the room, and the result landed
+ * the props above every surface around them.
+ */
+export const KK_GRADE = KK_NODIM ? KK_GRADE_BASE : dimGrade(KK_GRADE_BASE, KK_DIM);
+
+/**
+ * §740 — the sconces keep §736's UNDIMMED grade, and this does not breach §729.
+ *
+ * §729's header forbids the imported set drifting into two grades, and it means it: a body placed
+ * as set dress and the same body placed as a destructible must not differ. That holds here —
+ * `torch_mounted` is never placed as either. It is the one model in the pack with its own call
+ * site, and it is the one population that does NOT have §740's defect: measured, the sconces sit
+ * at val 0.375 day / 0.294 night against an architecture at 0.395 / 0.302, i.e. already at or
+ * below the masonry, while every other imported body sits above it. The `GT070` arm prices
+ * dimming them anyway at 0.375 → 0.335 and 0.294 → 0.262, which is a change to a fixture the
+ * owner approved at §734 and re-approved when §739 handed its shade back. Not taken.
+ */
+export const TORCH_GRADE = KK_GRADE_BASE;
 
 /**
  * The ONE look for everything that wears the atlas — `KayKit.init` and the §729 destructible
@@ -433,7 +515,9 @@ export const KK_GRADE = 0xe6b073;
  * included, so a boot without SHADING is not a third grade.
  */
 export function makeAtlasMaterial(engine, atlas, name = 'kaykit:atlas', over = {}) {
-  const color = KK_FLAT ? 0xffffff : KK_GRADE;
+  /* `?kk=flat` still wins over every per-consumer override: it is §736's whole-population revert
+     and must reproduce the pre-§736 bag for EVERY consumer, sconces included. */
+  const color = KK_FLAT ? 0xffffff : (over.color != null ? over.color : KK_GRADE);
   /* §739: `over.shadeHold` is the ONE key a consumer may override, and only downward from
      `KK_HOLD`. Everything else — the §736 grade, the atlas, the bands, the rim, the ink shell —
      is the shared recipe, because §729's header requires that the imported set cannot drift into

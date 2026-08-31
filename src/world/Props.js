@@ -16,7 +16,7 @@ import { ContactDecals, groundFootprint } from './Decals.js';
  * covers them. They swap to KayKit bodies through the pack's own reduction path (KayKit.js —
  * no second loader), behind the same `?smash=gen` revert. KayKit.js imports nothing from this
  * file, so this direction cannot cycle. */
-import { SMASH_GEN, VAULT_URNS, TORCH_GEN, TORCH_HOLD, loadModelLib, loadAtlasTexture, makeAtlasMaterial, cupCentre } from './KayKit.js';
+import { SMASH_GEN, VAULT_URNS, TORCH_GEN, TORCH_HOLD, TORCH_GRADE, loadModelLib, loadAtlasTexture, makeAtlasMaterial, cupCentre } from './KayKit.js';
 /* §730: the ONE treasure-room volume, shared with Architecture's portal gate and Smashables'
    urn policy. EgyptLevel imports nothing from here (THREE / Kit / PropKit / Rand only), so
    this edge cannot cycle. */
@@ -1376,7 +1376,7 @@ export class Props {
     const any = (this._kk?.length ?? 0) + (this._kkTorch?.length ?? 0);
     this._flushKayKitBucket(this._kk, 'props:kaykit', 'props_kaykit', {});
     this._flushKayKitBucket(this._kkTorch, 'props:kaykit:torch', 'props_kaykit_torch',
-      { shadeHold: TORCH_HOLD });
+      { shadeHold: TORCH_HOLD, color: TORCH_GRADE });
     this._kk = []; this._kkTorch = [];
     /* `stats.kaykit` stays ABSENT when nothing was imported, rather than being published as
        zeros. §734's T5/T7 assert the absence on purpose — "so a future arm that publishes zeros
