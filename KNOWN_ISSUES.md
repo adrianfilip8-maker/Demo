@@ -65118,3 +65118,19 @@ Whether the objective belongs in the pause cel at all is his call and it is chea
 proxy blocks `*.github.io`, so nothing here was fetched from the deployed page. If the deployed
 page differs from this artifact, that is a deploy question and this lane did not and could not
 test it.
+
+---
+
+## §744 — "Can the camera transitions be slightly smoothed out?": the harshness measured at the screen, ranked, and answered where it actually is
+
+*(Heading committed ahead of its body to hold the number — §700.9. Claim marker worded to collide
+with no other open lane (§717): §744 CLAIM camera-transition-smoothing-lane-9c4e21 — the
+CAMERA-TRANSITION-SMOOTHING lane. Owner's request, verbatim: "Can the camera transitions be
+slightly smoothed out?" Scope: `src/player/CameraRig.js` blend machinery only. The word is
+SLIGHTLY, so the working hypothesis on entry is that a blanket `tau` multiplier is the wrong
+answer twice over — §442/§440 record that raising `tau` LOWERS delivery on every short-residency
+row (`land` ceiling 47%, `dive` boom 5%, `air` 32% on a glide hinge), so a smoother blend bought
+that way deletes framings the owner currently gets. This lane measures the SCREEN-side derivative
+(§442: the output, not the authored input) across real driven state transitions, ranks them, and
+reports delivered-percentage before and after for every row it touches. Body lands in this
+lane's next pushes.)*
