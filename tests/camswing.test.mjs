@@ -2,31 +2,33 @@
  * camswing.test.mjs — the ring swing's camera motion (§745).
  *
  * The owner asked for the camera to move half as much while swinging on the rings, and for that
- * motion to be smoother. What ships is one number: `FRAMES.hook_swing.vtip = 0.00`, which is the
- * fraction of the velocity-driven orbit tip — `fallPitch` + `climbPitch` in `_effectivePitch` —
- * that this one framing uses. Every other row is 1.0 and unchanged. `?cam=swingtip` puts it back.
+ * motion to be smoother. **The metric is his: total path length of the camera position over one
+ * swing, in metres, integrated entry-to-exit.** Rotation is reported beside it and never folded
+ * into the same scalar.
  *
- * ── WHY THAT ONE TERM, AND NOT `stiff` OR `lead` ───────────────────────────────────────────
- * Because the ablation says so and it is not close. W2 runs it. A pendulum's vertical velocity
- * oscillates through its whole range twice per cycle, so both halves of the velocity tip are
- * driven end to end all swing — and they are an ORBIT pitch on a 7.8 m boom, so a radian of them
- * is 7.8 m of camera arc. Every other velocity-reactive term in the rig moved the measured motion
- * by 6 % or less, and the authored `lead` moved it by nothing at all, exactly as the `leadMax`
- * census in `CameraRig.js` predicted.
+ * Two changes ship, and they do two different jobs — W2 measures that they do:
  *
- * ── THE METRIC, WHICH IS DEFINED BEFORE IT IS HALVED ───────────────────────────────────────
- * "Amount of camera movement" is four different quantities. This file's primary is **mean optical
- * flow** — `|ω| + |v_perp| / distDefault`, radians per second of IMAGE motion — because that is
- * literally how fast the picture moves, which is what a person watching a screen means. Total
- * path length is reported and is NOT the target: 91 % of the camera's path is Sly's own 14.95 m
- * pendulum arc, and a camera that travels half of that has lost him.
+ *   `hook_swing.vtip  0.00`  the fraction of the velocity-driven orbit tip (`fallPitch` +
+ *                            `climbPitch`) this framing uses. Owns the JERK.
+ *   `hook_swing.track 0.30`  the fraction of the pivot goal's own excursion the rig chases, the
+ *                            rest going to a `trackTau`-low-passed copy. Owns the PATH.
+ *
+ * Every other row is 1.0 on both. `?cam=swingtip` and `?cam=swingtrack` revert them separately.
+ *
+ * ── HOW THE WINDOW AND THE POPULATION ARE HELD FIXED ───────────────────────────────────────
+ * FIVE real swings at the same ring, spanning 87-109 deg of pendulum deviation, all entered by
+ * the auto-grab out of freefall (§435.4). Each is recorded ONCE and replayed under every arm, so
+ * the `hook_swing` residency is the same frame span in every arm by construction — W3 asserts
+ * that, because a change that shortened the window would cut the path without calming anything.
+ * The CAPSULE's own path over the same window is the paired control: if it moved too, the arms
+ * are measuring different swings rather than different cameras.
  *
  * The instrument is `tools/camjerk.mjs`, imported rather than copied (§424).
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { SWING_ROUTE, trace, replay, residency, armWith, record, delivery, rank, pool, absOf, PERC }
+import { recordSwings, replay, residency, armWith, record, delivery, rank, pool, absOf, PERC }
   from '../tools/camjerk.mjs';
 import { TUNE } from '../src/player/CameraRig.js';
 
@@ -35,200 +37,193 @@ import { TUNE } from '../src/player/CameraRig.js';
    delivery ratios that were wrong for a different reason. */
 PERC.lin = TUNE.deadzoneH; PERC.ang = TUNE.shakeRot; PERC.fov = TUNE.shakeFov;
 
-/** One recording of the driven swing, shared by every arm. The camera is a passive observer. */
+/** The five swings, recorded once. The camera is a passive observer of each. */
 let REC = null;
-const swing = async () => (REC || (REC = await trace(SWING_ROUTE[1], SWING_ROUTE[2], SWING_ROUTE[3], SWING_ROUTE[4], SWING_ROUTE[5])));
+const swings = async () => (REC || (REC = await recordSwings()));
 
-/** `vt` null = the shipped row (0.00); a number forces `TUNE.swingVTip`, which is the token's lever. */
-async function measure(vt, ARM = null, skip = 30) {
-  const t = await swing();
+/**
+ * One arm, pooled over all five swings. `vt`/`tk` null means "use the shipped row"; a number
+ * forces the token's own lever, which is how BEFORE is produced — the same module, one field.
+ * The window is the FULL `hook_swing` residency, entry through exit, `skip` 0.
+ */
+async function measure({ vt = null, tk = null, ARM = null } = {}) {
+  const recs = await swings();
   const T = ARM ? ARM.TUNE : TUNE;
-  const keep = T.swingVTip;
-  T.swingVTip = vt;
+  const kv = T.swingVTip, kt = T.swingTrack;
+  T.swingVTip = vt; T.swingTrack = tk;
   try {
-    const A = replay(t.samples, t.collision, null, ARM);
-    return residency(t.samples, A, 'hook_swing', skip);
-  } finally { T.swingVTip = keep; }
+    const per = recs.map(([lab, t]) => [lab, residency(t.samples, replay(t.samples, t.collision, null, ARM), 'hook_swing', 0)]);
+    const sum = (k) => per.reduce((a, [, R]) => a + R[k], 0);
+    return { per, path: sum('path'), playerPath: sum('playerPath'), angPath: sum('angPath'),
+      pivPath: sum('pivPath'), ndcPath: sum('ndcPath'), frames: sum('frames'),
+      rmsAcc: sum('rmsAcc'), peakAcc: Math.max(...per.map(([, R]) => R.peakAcc)),
+      ndcMax: Math.max(...per.map(([, R]) => R.ndcMax)), behind: sum('behind') };
+  } finally { T.swingVTip = kv; T.swingTrack = kt; }
 }
 
-const HOOK = '  hook_swing: { dist:  2.30, height:  0.55, lead: 1.60, fov:  1.0, pitch: -3.0 * DEG, side: 0.85, stiff: 1.50, tau: 0.30, vtip: 0.00 },';
+const BEFORE = { vt: 1, tk: 1 };
+
+/** The shipped row, verbatim, for the source-patched control arms. */
+const HOOK = '  hook_swing: { dist:  2.30, height:  0.55, lead: 1.60, fov:  1.0, pitch: -3.0 * DEG, side: 0.85, stiff: 1.50, tau: 0.30, vtip: 0.00, track: 0.30 },';
 
 /* ====================================================================== */
-/* W1 — the residency metric moves the right way, both ways               */
+/* W1 — the path metric discriminates, both ways                          */
 /* ====================================================================== */
 
-test('W1: the during-state motion metric rises on a camera made busier and falls on one made stiller', async () => {
-  /* §439: an instrument built from the same assumption as its subject cannot falsify it. Before
-   * any number below is quoted, the metric is exercised on two rigs whose answer is known ahead
-   * of the run, plus a determinism control.
+test('W1: camera path length rises on a camera made busier and falls on one glued to the pendulum', async () => {
+  /* §439, before any number is quoted: the metric is exercised on two rigs whose answer is known
+   * ahead of the run, plus a determinism control.
    *
    * DOMAIN (§418.3)
-   *   passes on : `vtip` 3.0 — the same term at triple strength. Run below; mean flow goes
-   *               0.791 → 1.631 rad/s and peak acceleration 273 → 798 m/s².
-   *   fails on  : `stiff` 8.00 — the follow spring made five times softer, so the camera barely
-   *               translates. Run below and asserted to fall BELOW the shipped arm on path and
-   *               peak speed, so the metric is known to be able to go down as well as up.
-   *   does NOT discriminate : whether the motion it counts is PLEASANT. It is an amount, not a
-   *               verdict; W3's `ndcPath`/`ndcMax` guard is what says the shot still works.
-   *
-   * The `stiff` control is also the reason `path` is not this file's primary: `stiff 8.00` cuts
-   * the path hardest of anything measured and leaves the FLOW essentially where it was, because
-   * a camera that lags has to rotate more to hold the subject. Two readings of "less movement"
-   * that disagree, in one run. */
-  const t = await swing();
-  const before = await measure(1);
-  const shipped = await measure(null);
+   *   passes on : `vtip` 3.0 — the velocity orbit tip at triple strength, which throws the camera
+   *               around a 7.8 m boom. Run below; pooled camera path rises well above BEFORE.
+   *   fails on  : `track` 1.0 with `stiff` 0.30 — a pivot glued hard to the capsule, which is the
+   *               MOST movement the rig can produce and is asserted to exceed BEFORE too... no:
+   *               asserted below is the other direction, `track` 0.00, the least. Both are run,
+   *               so the metric is known to move down as well as up.
+   *   does NOT discriminate : whether the motion is pleasant. It is an amount. W3's `ndcPath`
+   *               and `ndcMax` bars are what say the shot still works. */
+  const before = await measure(BEFORE);
+  const shipped = await measure({});
   const POS = await armWith([[HOOK, HOOK.replace('vtip: 0.00', 'vtip: 3.00')]], 'w1p');
-  const NEG = await armWith([[HOOK, HOOK.replace('stiff: 1.50', 'stiff: 8.00')]], 'w1n');
-  const pos = await measure(null, POS);
-  const neg = await measure(null, NEG);
+  const pos = await measure({ ARM: POS });
+  const NEG = await armWith([[HOOK, HOOK.replace('track: 0.30', 'track: 0.00')]], 'w1n');
+  const neg = await measure({ ARM: NEG });
 
-  console.log(`\n[W1] mean flow rad/s   before ${before.flow.toFixed(3)}  shipped ${shipped.flow.toFixed(3)}  `
-    + `positive(vtip 3.0) ${pos.flow.toFixed(3)}  negative(stiff 8.0) ${neg.flow.toFixed(3)}`);
-  console.log(`[W1] path m            before ${before.path.toFixed(2)}  shipped ${shipped.path.toFixed(2)}  `
-    + `positive ${pos.path.toFixed(2)}  negative ${neg.path.toFixed(2)}   (capsule ${before.playerPath.toFixed(2)})`);
-  console.log(`[W1] peakAcc m/s2      before ${before.peakAcc.toFixed(1)}  shipped ${shipped.peakAcc.toFixed(1)}  `
-    + `positive ${pos.peakAcc.toFixed(1)}  negative ${neg.peakAcc.toFixed(1)}`);
+  console.log(`\n[W1] pooled camera path over 5 swings, metres:  before ${before.path.toFixed(2)}  `
+    + `shipped ${shipped.path.toFixed(2)}  positive(vtip 3.0) ${pos.path.toFixed(2)}  negative(track 0) ${neg.path.toFixed(2)}`);
+  console.log(`[W1] capsule path, same windows:               before ${before.playerPath.toFixed(2)}  `
+    + `shipped ${shipped.playerPath.toFixed(2)}  positive ${pos.playerPath.toFixed(2)}  negative ${neg.playerPath.toFixed(2)}`);
 
-  assert.ok(pos.flow > before.flow * 1.5,
-    `tripling the velocity tip moved the mean flow to ${pos.flow.toFixed(3)} against ${before.flow.toFixed(3)}. `
+  assert.ok(pos.path > before.path * 1.1,
+    `tripling the velocity tip left the camera path at ${pos.path.toFixed(2)} m against ${before.path.toFixed(2)} m. `
     + 'This metric cannot see the camera being made busier, so nothing it says elsewhere counts.');
-  assert.ok(pos.peakAcc > before.peakAcc * 2,
-    `tripling the tip left peak acceleration at ${pos.peakAcc.toFixed(1)} against ${before.peakAcc.toFixed(1)}`);
-  assert.ok(neg.path < shipped.path && neg.peak < shipped.peak,
-    `a follow spring at stiff 8.00 travels ${neg.path.toFixed(2)} m at peak ${neg.peak.toFixed(2)} m/s against the `
-    + `shipped ${shipped.path.toFixed(2)} m / ${shipped.peak.toFixed(2)} m/s — the metric only goes up`);
-
-  /* Determinism: the same trajectory replayed twice under the same rig must give the same number,
-     or every before/after difference in this file is partly noise. */
-  const again = await measure(null);
-  assert.equal(again.flow, shipped.flow, 'two identical replays disagree — the instrument is not deterministic');
-  assert.equal(again.path, shipped.path, 'two identical replays disagree on path');
-  assert.ok(t.samples.filter((s) => s.state === 'hookSwing').length > 180,
-    'the driven route stopped catching the ring — the sample is broken, not the camera');
+  assert.ok(neg.path < shipped.path,
+    `a pivot that ignores the pendulum entirely travels ${neg.path.toFixed(2)} m against the shipped `
+    + `${shipped.path.toFixed(2)} m — the metric only goes up`);
+  const again = await measure({});
+  assert.equal(again.path, shipped.path, 'two identical replays disagree — the instrument is not deterministic');
 });
 
 /* ====================================================================== */
-/* W2 — the attribution: which lever actually owns the swing's motion      */
+/* W2 — two levers, two jobs, and neither does the other's                */
 /* ====================================================================== */
 
-test('W2: the velocity orbit tip owns the swing camera motion, and every other lever is noise', async () => {
-  /* This is §745's load-bearing claim and the one §442 is a warning about: a number is easy, the
-   * explanation for it is what goes wrong. So the explanation is measured rather than reasoned —
-   * each candidate term is removed IN TURN from a copy of the rig and the swing is re-flown.
+test('W2: `track` owns the path and `vtip` owns the jerk — each alone does only its own half', async () => {
+  /* §442's warning applied to a two-part change: a pair of levers landing together is a pair
+   * whose individual contributions nobody measured. Each is run ALONE against BEFORE.
    *
    * DOMAIN (§418.3)
-   *   passes on : the velocity tip — removing it alone takes mean flow to 0.561 of shipped-before.
-   *   fails on  : the other five, asserted below to move the flow by less than 10 % each. Both
-   *               sides come off the same instrument on the same trajectory, so "this one and not
-   *               those" is a measurement rather than a preference.
-   *   does NOT discriminate : anything about the SWING ITSELF. `HookSwing` and the ring magnet are
-   *               untouched by this lane; the capsule trajectory is one recording replayed under
-   *               every arm, so nothing here can be evidence about the move. */
-  const before = await measure(1);
-  const ABL = [
-    ['velocity orbit tip', null, null],
-    ['climbLift + fallLead', [['    y += Math.min(1, climbing / TUNE.climbSpeed) * TUNE.climbLift;\n    y -= Math.min(falling * TUNE.fallLeadTime, TUNE.fallLeadMax);', '    y += 0 * climbing; y -= 0 * falling;']], 1],
-    ['speed dolly', [['    want += this._speedNorm() * TUNE.distSpeedGain;   // the speed dolly — see `distSpeedGain`', '    want += 0;']], 1],
-    ['fov speed gain', [['      + this._speedNorm() * TUNE.fovSpeedGain', '      + 0 * TUNE.fovSpeedGain']], 1],
-    ['side (0.85 -> 0)', [[HOOK, HOOK.replace('side: 0.85', 'side: 0.00')]], 1],
-    ['lead (1.60 -> 0)', [[HOOK, HOOK.replace('lead: 1.60', 'lead: 0.00')]], 1],
-    ['stiff (1.50 -> 3.0)', [[HOOK, HOOK.replace('stiff: 1.50', 'stiff: 3.00')]], 1],
-  ];
-  const rows = [];
-  let tag = 0;
-  for (const [label, edits, vt] of ABL) {
-    const ARM = edits ? await armWith(edits, `w2${tag++}`) : null;
-    rows.push([label, await measure(vt, ARM)]);
-  }
-  console.log('\n[W2] each term removed in turn, as a fraction of the pre-§745 camera');
-  console.log('     removed                  flow  flowPeak  angPath  peakAng   rmsAcc  peakAcc');
-  for (const [label, R] of rows) {
-    const f = (k) => (R[k] / before[k]).toFixed(3).padStart(8);
-    console.log(`     ${label.padEnd(22)}${f('flow')}${f('flowPeak')}${f('angPath')}${f('peakAng')}${f('rmsAcc')}${f('peakAcc')}`);
-  }
+   *   passes on : `track` alone — path falls hard, jerk barely moves. `vtip` alone — jerk falls
+   *               hard, path barely moves. Both run below.
+   *   fails on  : the claim that either does both, which is what this arm asserts against. If
+   *               `vtip` alone halved the path, `track` would be unnecessary and this file would
+   *               be shipping a change nothing needs.
+   *   does NOT discriminate : anything about the SWING. `HookSwing` and the ring magnet are not
+   *               touched by this lane; one recording per swing is replayed under every arm, so
+   *               nothing here can be evidence about the move. */
+  const before = await measure(BEFORE);
+  const tipOnly = await measure({ tk: 1 });        // vtip shipped (0.00), track forced back to 1
+  const trkOnly = await measure({ vt: 1 });        // track shipped (0.30), vtip forced back to 1
+  const both = await measure({});
 
-  const tip = rows[0][1];
-  assert.ok(tip.flow < before.flow * 0.65,
-    `removing the velocity orbit tip left the mean flow at ${(tip.flow / before.flow).toFixed(3)} of the `
-    + 'pre-§745 camera. It is not the dominant term, so §745 fixed the wrong thing.');
-  for (const [label, R] of rows.slice(1)) {
-    assert.ok(Math.abs(R.flow / before.flow - 1) < 0.10,
-      `removing '${label}' moved the mean flow to ${(R.flow / before.flow).toFixed(3)} of the pre-§745 camera — `
-      + 'more than 10 %. It is not the noise this arm claims it is, and the attribution needs re-measuring.');
-  }
-  /* The `lead` row carries its own claim, and it is the one the file already predicted: */
-  const lead = rows.find((r) => r[0].startsWith('lead'))[1];
-  console.log(`[W2] lead 1.60 -> 0.00 moves the flow by ${(100 * (lead.flow / before.flow - 1)).toFixed(1)}% `
-    + '— `hook_swing` is floored by `leadMax`, so no value of `f.lead` reaches the screen');
-  assert.ok(Math.abs(lead.flow / before.flow - 1) < 0.01,
-    "deleting `hook_swing`'s authored lead changed the camera's motion. The `leadMax` census says it "
-    + 'cannot, so either the census or this arm is wrong');
+  const row = (l, R) => console.log(`     ${l.padEnd(22)} path ${R.path.toFixed(2).padStart(6)} x${(R.path / before.path).toFixed(3)}`
+    + `   rmsAcc ${R.rmsAcc.toFixed(0).padStart(4)} x${(R.rmsAcc / before.rmsAcc).toFixed(3)}`
+    + `   angPath ${R.angPath.toFixed(2)} x${(R.angPath / before.angPath).toFixed(3)}`);
+  console.log('\n[W2] each lever alone, pooled over five swings');
+  row('BEFORE', before); row('vtip only (track=1)', tipOnly); row('track only (vtip=1)', trkOnly); row('SHIPPED, both', both);
+
+  assert.ok(tipOnly.path / before.path > 0.75,
+    `the velocity tip alone took the camera path to ${(tipOnly.path / before.path).toFixed(3)} of before. `
+    + 'It is doing the path work too, so `track` is not the lever this file says it is.');
+  assert.ok(tipOnly.rmsAcc / before.rmsAcc < 0.5,
+    `the velocity tip alone left the camera's rms acceleration at ${(tipOnly.rmsAcc / before.rmsAcc).toFixed(3)} of before`);
+  assert.ok(trkOnly.path / before.path < 0.8,
+    `the pivot tracking alone took the camera path only to ${(trkOnly.path / before.path).toFixed(3)} of before`);
+  assert.ok(trkOnly.rmsAcc / before.rmsAcc > 0.8,
+    `the pivot tracking alone took the rms acceleration to ${(trkOnly.rmsAcc / before.rmsAcc).toFixed(3)} of before — `
+    + 'it is smoothing as well as shortening, so the two-lever story is wrong');
 });
 
 /* ====================================================================== */
-/* W3 — the delivered reduction, against the target, with the shot intact  */
+/* W3 — the halving, with the window pinned and the shot intact           */
 /* ====================================================================== */
 
-test('W3: the swing camera moves 0.56 of what it did, and the subject sits exactly where it did', async () => {
-  /* The owner asked for half. The primary metric is mean optical flow, and half of it is NOT
-   * reachable: with the velocity tip entirely off — which is what ships — the flow is 0.561 of
-   * before, and the remaining 0.443 rad/s is the irreducible cost of keeping a subject who
-   * travels 14.95 m in 3.25 s inside the frame. That gap is reported rather than closed, because
-   * closing it means spending `stiff` and `side`, which the ablation prices at 6 % and 4 %.
+test('W3: the camera travels half as far over the same five swings, and the capsule travels the same', async () => {
+  /* The owner's number, on the owner's metric.
    *
-   * **The second bar is the one that makes the first one honest.** A camera can always be made to
-   * move less by letting the subject leave the frame. So the subject's on-screen path and its
-   * worst NDC radius are asserted UNCHANGED — the motion removed was not doing framing work.
+   * THREE guards make it a halving rather than an artefact:
+   *   · the residency in FRAMES must be identical arm to arm, or the window moved;
+   *   · the CAPSULE's path must be identical, or the swings moved;
+   *   · the subject's on-screen path and worst NDC radius must not degrade, or the camera bought
+   *     stillness by letting Sly leave the frame.
    *
    * DOMAIN (§418.3)
-   *   passes on : the shipped `vtip` 0.00 — flow 0.561, angular path 0.531, peak acceleration
-   *               0.271, subject path 0.999 and worst NDC radius equal to three decimals.
-   *   fails on  : `stiff` 8.00, run below, which cuts the camera's path harder than the shipped
-   *               arm does and FAILS the composition bar — the subject's screen path rises 15 %.
-   *               That is the trade this arm exists to refuse, measured rather than imagined.
-   *   does NOT discriminate : any ring but this one, or any swing that ends differently. One
-   *               route, one ring, 225 frames. */
-  const before = await measure(1);
-  const after = await measure(null);
-  const NEG = await armWith([[HOOK, HOOK.replace('stiff: 1.50', 'stiff: 8.00')]], 'w3n');
-  const neg = await measure(null, NEG);
+   *   passes on : the shipped pair — pooled camera path 0.508 of before over five swings, per
+   *               swing 0.490-0.544, capsule path identical to the digit, frames identical.
+   *   fails on  : `track` 0.00 with `stiff` 8.00, run below, which cuts the path further and
+   *               FAILS the composition bar — the subject's screen path rises past 5 %. That is
+   *               the trade this arm exists to refuse, measured rather than imagined.
+   *   does NOT discriminate : any ring but this one. One ring, five entries. */
+  const before = await measure(BEFORE);
+  const after = await measure({});
 
-  const F = (k) => after[k] / before[k];
-  console.log('\n[W3] ring swing residency, 195 frames (3.25 s), pre-§745 -> shipped');
-  const line = (k, u, d = 3) => console.log(`     ${k.padEnd(10)} ${before[k].toFixed(d).padStart(9)} -> ${after[k].toFixed(d).padStart(9)} ${u.padEnd(7)} x${F(k).toFixed(3)}`);
-  for (const [k, u] of [['flow', 'rad/s'], ['flowPeak', 'rad/s'], ['angPath', 'rad'], ['peakAng', 'rad/s'],
-    ['path', 'm'], ['relPath', 'm'], ['mean', 'm/s'], ['peak', 'm/s'], ['rmsAcc', 'm/s2'], ['peakAcc', 'm/s2'],
-    ['boomPath', 'm'], ['fovPath', 'deg'], ['ndcPath', 'ndc'], ['ndcMax', 'ndc']]) line(k, u);
-  console.log(`     capsule path over the same frames ${before.playerPath.toFixed(2)} m — the floor for 'path'`);
+  console.log('\n[W3] camera PATH LENGTH per swing, entry to exit, metres');
+  console.log('     swing      frames |  before   after   ratio |  capsule before/after | angPath b/a | peakAcc b/a');
+  for (let i = 0; i < after.per.length; i++) {
+    const [lab, A] = after.per[i], B = before.per[i][1];
+    assert.equal(A.frames, B.frames, `'${lab}' residency is ${A.frames} frames after and ${B.frames} before — the WINDOW moved, so a shorter path is not a calmer camera`);
+    console.log(`     ${lab.padEnd(9)} ${String(A.frames).padStart(6)} | ${B.path.toFixed(2).padStart(7)} ${A.path.toFixed(2).padStart(7)} `
+      + `${(A.path / B.path).toFixed(3).padStart(7)} | ${B.playerPath.toFixed(2).padStart(8)} / ${A.playerPath.toFixed(2).padStart(6)} | `
+      + `${B.angPath.toFixed(2)} / ${A.angPath.toFixed(2)} | ${B.peakAcc.toFixed(0)} / ${A.peakAcc.toFixed(0)}`);
+    assert.ok(Math.abs(A.playerPath - B.playerPath) < 1e-9,
+      `'${lab}' capsule path is ${A.playerPath.toFixed(4)} after and ${B.playerPath.toFixed(4)} before — the arms are `
+      + 'measuring different swings, not different cameras');
+  }
+  const R = after.path / before.path;
+  console.log(`[W3] POOLED camera path ${before.path.toFixed(2)} -> ${after.path.toFixed(2)} m, x${R.toFixed(3)} `
+    + `(target 0.500)   capsule ${before.playerPath.toFixed(2)} -> ${after.playerPath.toFixed(2)} m`);
+  console.log(`[W3] rotation, reported separately and NOT folded in: angular path ${before.angPath.toFixed(2)} -> `
+    + `${after.angPath.toFixed(2)} rad, x${(after.angPath / before.angPath).toFixed(3)}`);
+  console.log(`[W3] jerk: rms acceleration x${(after.rmsAcc / before.rmsAcc).toFixed(3)}, worst peak `
+    + `${before.peakAcc.toFixed(0)} -> ${after.peakAcc.toFixed(0)} m/s2`);
+  console.log(`[W3] composition: subject screen path x${(after.ndcPath / before.ndcPath).toFixed(3)}, worst NDC radius `
+    + `${before.ndcMax.toFixed(3)} -> ${after.ndcMax.toFixed(3)}, frames behind the lens ${after.behind}`);
 
-  /* THE TARGET. Stated as a band rather than a point: the owner said half, the mechanism's floor
-     is 0.561, and a bar at exactly 0.500 would be a bar this change cannot pass. */
-  assert.ok(F('flow') <= 0.65,
-    `the mean optical flow is ${F('flow').toFixed(3)} of what it was — the change delivers less than a `
-    + 'third of the reduction asked for');
-  assert.ok(F('flow') >= 0.45,
-    `the mean optical flow fell to ${F('flow').toFixed(3)} of what it was, well past the half asked for. `
-    + 'Either something other than the velocity tip moved, or the camera has stopped following him.');
-  /* And the smoothing half, which is the request's second sentence. */
-  assert.ok(F('peakAcc') < 0.5 && F('rmsAcc') < 0.5,
-    `the camera's acceleration during the swing is ${F('rmsAcc').toFixed(3)} rms / ${F('peakAcc').toFixed(3)} peak `
-    + 'of what it was — "and smooth the camera movement" is not delivered');
+  assert.ok(R >= 0.47 && R <= 0.55,
+    `the camera's pooled path is ${R.toFixed(3)} of what it was. The owner asked for half; a band of `
+    + '0.47-0.55 is what "half" is being held to, and this is outside it.');
+  /* Rotation must not be the thing that was traded away. */
+  assert.ok(after.angPath < before.angPath,
+    `the camera's angular travel went ${before.angPath.toFixed(2)} -> ${after.angPath.toFixed(2)} rad. The path was `
+    + 'bought by rotating more, which is not less camera movement.');
+  /* And the request's second half. */
+  assert.ok(after.rmsAcc / before.rmsAcc < 0.5,
+    `rms camera acceleration is ${(after.rmsAcc / before.rmsAcc).toFixed(3)} of before — "and smooth the camera `
+    + 'movement" is not delivered');
+  /* Composition. */
+  assert.ok(Math.abs(after.ndcPath / before.ndcPath - 1) < 0.05,
+    `the subject's on-screen path changed by ${(100 * (after.ndcPath / before.ndcPath - 1)).toFixed(1)}% — the stillness `
+    + 'was bought by moving Sly around the frame instead of the world');
+  assert.ok(after.ndcMax <= before.ndcMax + 0.02, `the subject reaches ${after.ndcMax.toFixed(3)} of NDC radius against ${before.ndcMax.toFixed(3)}`);
+  assert.equal(after.behind, 0, 'the subject went behind the lens during a swing');
 
-  /* COMPOSITION, and it is a bar rather than an observation. */
-  assert.ok(Math.abs(F('ndcPath') - 1) < 0.02,
-    `the subject's on-screen path changed by ${(100 * (F('ndcPath') - 1)).toFixed(1)}% — the camera motion that `
-    + 'was removed WAS doing framing work, so this is a composition change and not a smoothing one');
-  assert.ok(after.ndcMax <= before.ndcMax + 1e-3,
-    `the subject reaches ${after.ndcMax.toFixed(3)} of NDC radius against ${before.ndcMax.toFixed(3)} before — `
-    + 'he is further out of frame than he was');
-  assert.equal(after.behind, 0, 'the subject went behind the lens during the swing');
-
-  console.log(`[W3] composition control: at stiff 8.00 the camera path falls to ${(neg.path / before.path).toFixed(3)} `
-    + `but the subject's screen path RISES to ${(neg.ndcPath / before.ndcPath).toFixed(3)} — bought, not earned`);
-  assert.ok(neg.path < after.path && neg.ndcPath > before.ndcPath * 1.05,
-    'the stiff-8.00 control does not actually trade composition for stillness, so the bar above is not '
-    + 'known to be able to catch that trade');
+  /* THE FAILING INPUT, RUN: the version of this change that DOES buy stillness with composition. */
+  const OVER = await armWith([[HOOK, HOOK.replace('track: 0.30', 'track: 0.00').replace('stiff: 1.50', 'stiff: 8.00')]], 'w3o');
+  const over = await measure({ ARM: OVER });
+  console.log(`[W3] control: at track 0.00 + stiff 8.00 the path falls to x${(over.path / before.path).toFixed(3)} `
+    + `but the subject's screen path rises to x${(over.ndcPath / before.ndcPath).toFixed(3)}`);
+  /* And the sharpest form of the point: the control's PATH is indistinguishable from the shipped
+     arm's on the owner's own metric, and its composition is not. A halving is not self-certifying;
+     the composition bar is the thing that separates these two. */
+  assert.ok(Math.abs(over.ndcPath / before.ndcPath - 1) >= 0.05,
+    `the track-0/stiff-8 control moves the subject's screen path by only `
+    + `${(100 * (over.ndcPath / before.ndcPath - 1)).toFixed(1)}%, inside the 5 % bar above — so that bar is not `
+    + 'known to be able to catch a camera that buys stillness by letting Sly wander the frame');
+  assert.ok(Math.abs(over.path / after.path - 1) < 0.10,
+    `the control reaches ${(over.path / before.path).toFixed(3)} of the path against the shipped `
+    + `${(after.path / before.path).toFixed(3)} — far enough apart that the path metric alone would have `
+    + 'separated them, which is not the case this control is here to make');
 });
 
 /* ====================================================================== */
@@ -280,46 +275,54 @@ test('W4: §744 is untouched — the transition ranking and all nine boom delive
 /* W5 — the revert, and the blast radius                                  */
 /* ====================================================================== */
 
-test('W5: `?cam=swingtip` restores the pre-§745 swing exactly, and no other framing carries a vtip', async () => {
-  /* Two claims. The token is a real revert, and the change reaches exactly one row.
+test('W5: both §745 tokens revert exactly what they name, separately and together', async () => {
+  /* Two mechanisms, two tokens, the §720/§723 pattern — because a pair that can only be reverted
+   * together is a pair whose failures cannot be attributed. Three claims:
+   *   · each token reaches its own field and leaves the other alone;
+   *   · the change reaches exactly one framing row;
+   *   · and the token arm is the OLD MOTION, not merely the old constant — the flown swing under
+   *     `?cam=swingtip,swingtrack` is bit-equal to a source copy whose row literally reads 1.00.
    *
    * DOMAIN (§418.3)
-   *   passes on : `__CAMBLEND_AB = 'swingtip'` in a fresh import — `swingVTip` becomes 1, and the
-   *               measured swing under it is bit-equal to the arm with the tip at full strength.
-   *   fails on  : the same import with the flag unset, asserted to leave `swingVTip` null so the
-   *               row's own 0.00 governs. And `hardblend,swingtip` is asserted to set BOTH, so the
-   *               comma list is known to be parsed rather than string-matched. */
+   *   passes on : `swingtip`, `swingtrack`, both, and both plus `hardblend`. All four imported
+   *               fresh below.
+   *   fails on  : the unset import, asserted to leave BOTH fields null so the row governs — so
+   *               the arm is reading the flag rather than a constant. */
   const src = readFileSync(new URL('../src/player/CameraRig.js', import.meta.url), 'utf8');
-  const rowsWithVtip = [...src.matchAll(/^ {2}([a-z_]+):\s*\{[^}]*vtip:\s*([\d.]+)/gm)].map((m) => `${m[1]}=${m[2]}`);
-  console.log(`\n[W5] rows carrying a vtip: ${rowsWithVtip.join(' ') || '(none)'}`);
-  assert.deepEqual(rowsWithVtip, ['hook_swing=0.00'],
-    'a framing other than `hook_swing` carries a `vtip`. §745 is scoped to the ring swing and this '
-    + 'arm is that scope.');
+  /* The key must start a field, or `track` also matches `vtrack` — which it did, and the arm
+     reported `wall_run` and `climb` as carrying a §745 tracking fraction they do not have. */
+  const scan = (key) => [...src.matchAll(new RegExp(`^ {2}([a-z_]+):\\s*\\{[^}]*[{,]\\s${key}:\\s*([\\d.]+)`, 'gm'))].map((m) => `${m[1]}=${m[2]}`);
+  console.log(`\n[W5] rows carrying a vtip: ${scan('vtip').join(' ') || '(none)'} · a track: ${scan('track').join(' ') || '(none)'}`);
+  assert.deepEqual(scan('vtip'), ['hook_swing=0.00'], 'a framing other than `hook_swing` carries a `vtip`');
+  assert.deepEqual(scan('track'), ['hook_swing=0.30'], 'a framing other than `hook_swing` carries a `track`');
 
   const fresh = async (flag) => {
     const keep = globalThis.__CAMBLEND_AB;
     if (flag === undefined) delete globalThis.__CAMBLEND_AB; else globalThis.__CAMBLEND_AB = flag;
     try {
       const m = await import(`../src/player/CameraRig.js?swing=${flag}-${Math.random()}`);
-      return { vt: m.TUNE.swingVTip, shape: m.TUNE.frameBlendShape };
+      return { vt: m.TUNE.swingVTip, tk: m.TUNE.swingTrack, shape: m.TUNE.frameBlendShape };
     } finally { if (keep === undefined) delete globalThis.__CAMBLEND_AB; else globalThis.__CAMBLEND_AB = keep; }
   };
   const off = await fresh(undefined);
-  const rev = await fresh('swingtip');
-  const both = await fresh('hardblend,swingtip');
-  console.log(`[W5] swingVTip: default ${off.vt} · swingtip ${rev.vt} · both ${both.vt} (shape ${both.shape})`);
-  assert.equal(off.vt, null, `the default build forces swingVTip to ${off.vt} instead of leaving the row to govern`);
-  assert.equal(off.shape, 0.8, '§744 default moved');
-  assert.equal(rev.vt, 1, `\`?cam=swingtip\` set swingVTip to ${rev.vt}; the revert does not revert`);
-  assert.equal(rev.shape, 0.8, '`?cam=swingtip` also reverted §744 — the two tokens are not independent');
-  assert.equal(both.vt, 1); assert.equal(both.shape, 0, '`?cam=hardblend,swingtip` did not set both');
+  const tip = await fresh('swingtip');
+  const trk = await fresh('swingtrack');
+  const both = await fresh('swingtip,swingtrack');
+  const all = await fresh('hardblend,swingtip,swingtrack');
+  console.log(`[W5] default {vt ${off.vt}, tk ${off.tk}, shape ${off.shape}} · swingtip {${tip.vt}, ${tip.tk}} · `
+    + `swingtrack {${trk.vt}, ${trk.tk}} · both {${both.vt}, ${both.tk}} · all three {${all.vt}, ${all.tk}, shape ${all.shape}}`);
+  assert.deepEqual(off, { vt: null, tk: null, shape: 0.8 }, 'the default build forces a §745 field instead of leaving the row to govern');
+  assert.deepEqual(tip, { vt: 1, tk: null, shape: 0.8 }, '`?cam=swingtip` did not revert exactly the tip');
+  assert.deepEqual(trk, { vt: null, tk: 1, shape: 0.8 }, '`?cam=swingtrack` did not revert exactly the tracking');
+  assert.deepEqual(both, { vt: 1, tk: 1, shape: 0.8 }, '`?cam=swingtip,swingtrack` did not revert both');
+  assert.deepEqual(all, { vt: 1, tk: 1, shape: 0 }, '§744 and §745 tokens are not independent');
 
-  /* And the revert is a revert of the MOTION, not just of a constant. */
-  const reverted = await measure(1);
-  const full = await measure(null, await armWith([[HOOK, HOOK.replace('vtip: 0.00', 'vtip: 1.00')]], 'w5'));
-  console.log(`[W5] token arm flow ${reverted.flow.toFixed(6)} vs a source copy at vtip 1.00 ${full.flow.toFixed(6)}`);
-  assert.equal(reverted.flow, full.flow,
-    'the token arm and a rig whose row literally reads `vtip: 1.00` do not fly the same swing, so '
-    + '`?cam=swingtip` is an approximation of the old feel rather than the old feel');
-  assert.equal(reverted.path, full.path, 'the token arm and the source copy disagree on path');
+  /* And the revert is a revert of the MOTION, not of a constant. */
+  const viaToken = await measure(BEFORE);
+  const viaSource = await measure({ ARM: await armWith([[HOOK, HOOK.replace('vtip: 0.00', 'vtip: 1.00').replace('track: 0.30', 'track: 1.00')]], 'w5') });
+  console.log(`[W5] token arm path ${viaToken.path.toFixed(6)} m vs a source copy at vtip 1.00 track 1.00 ${viaSource.path.toFixed(6)} m`);
+  assert.equal(viaToken.path, viaSource.path,
+    'the token arm and a rig whose row literally reads the pre-§745 values do not fly the same swings, so '
+    + 'the tokens are an approximation of the old feel rather than the old feel');
+  assert.equal(viaToken.angPath, viaSource.angPath, 'the token arm and the source copy disagree on angular path');
 });

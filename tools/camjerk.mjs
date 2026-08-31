@@ -267,13 +267,39 @@ export const ROUTES = [
  * capsule and `replay` drives a fresh rig over it — so this fixes the INPUT basis and leaves the
  * measured camera free.
  */
-export const SWING_ROUTE = ['ring swing', V(4.2, 12.4, 1.2), 0, 300,
-  (inp, i, cc, eng) => {
-    inp.move.y = 1;
-    if (eng?.camera) { eng.camera.rotation.set(0, Math.PI, 0, 'YXZ'); eng.camera.updateMatrixWorld(true); }
-    if (i === 240) inp.hold('jump'); else inp.let_go('jump');
-  },
+const SWING_DRIVE = (inp, i, cc, eng) => {
+  inp.move.y = 1;
+  if (eng?.camera) { eng.camera.rotation.set(0, Math.PI, 0, 'YXZ'); eng.camera.updateMatrixWorld(true); }
+  if (i === 240) inp.hold('jump'); else inp.let_go('jump');
+};
+
+/**
+ * FIVE swings at the same ring, not one (§745). Swing amplitude is a function of entry speed and
+ * height, so a single sample cannot tell a calmer camera from a smaller swing — the five below
+ * span 87-109 deg of pendulum deviation and 9.5-11.6 m/s of capsule speed, and every arm is
+ * measured on all five with the CAPSULE PATH reported beside the camera's as the paired control.
+ * Entry is the auto-grab in every case: freefall past the rings with forward held.
+ */
+export const SWING_STARTS = [
+  ['A slow', [4.2, 13.2, 0.0], [0, 1.0, 6.0]],
+  ['C low', [4.2, 12.6, 0.6], [0, 2.0, 5.0]],
+  ['D drop', [4.2, 15.6, 2.2], [0, -1.0, 3.0]],
+  ['E side', [3.0, 13.2, 0.0], [1.2, 1.0, 6.0]],
+  ['F gentle', [4.2, 13.0, 1.0], [0, 1.5, 4.0]],
+];
+
+export const SWING_ROUTE = ['ring swing', V(4.2, 12.4, 1.2), 0, 300, SWING_DRIVE,
   (c) => { c.position.set(4.2, 13.2, 0); c.velocity.set(0, 1.0, 6.0); c.grounded = false; c.sm.set('fall'); }];
+
+/** Record all five. */
+export async function recordSwings() {
+  const out = [];
+  for (const [label, p, v] of SWING_STARTS) {
+    out.push([label, await trace(V(4.2, 12.4, 1.2), 0, 300, SWING_DRIVE,
+      (c) => { c.position.set(p[0], p[1], p[2]); c.velocity.set(v[0], v[1], v[2]); c.grounded = false; c.sm.set('fall'); })]);
+  }
+  return out;
+}
 
 export async function record() {
   const out = [];
@@ -481,7 +507,7 @@ export function residency(samples, out, key, skipFrames = 0) {
   if (cur) spans.push(cur);
   const R = { frames: 0, spans: spans.length, path: 0, sq: 0, peak: 0, angPath: 0, peakAng: 0,
     accSq: 0, peakAcc: 0, boomPath: 0, fovPath: 0, playerPath: 0, relPath: 0, flowSum: 0,
-    flowPeak: 0, rev: 0, n: 0, nAcc: 0, ndcPath: 0, ndcMax: 0, ndcSum: 0, behind: 0 };
+    flowPeak: 0, rev: 0, n: 0, nAcc: 0, ndcPath: 0, ndcMax: 0, ndcSum: 0, behind: 0, pivPath: 0 };
   const v0 = new THREE.Vector3(), v1 = new THREE.Vector3(), a0 = new THREE.Vector3(), a1 = new THREE.Vector3();
   const fwd = new THREE.Vector3(), q = new THREE.Quaternion();
   for (const sp of spans) {
@@ -499,6 +525,7 @@ export function residency(samples, out, key, skipFrames = 0) {
         samples[i].pz - samples[i - 1].pz);
       /* The camera's path IN THE PLAYER'S FRAME — the part of the translation the camera adds
          rather than inherits. `path` minus this is Sly's own arc being carried along. */
+      R.pivPath += Math.hypot(out[i].pivX - out[i - 1].pivX, out[i].pivY - out[i - 1].pivY, out[i].pivZ - out[i - 1].pivZ);
       R.relPath += Math.hypot((out[i].x - samples[i].px) - (out[i - 1].x - samples[i - 1].px),
         (out[i].y - samples[i].py) - (out[i - 1].y - samples[i - 1].py),
         (out[i].z - samples[i].pz) - (out[i - 1].z - samples[i - 1].pz));
@@ -539,6 +566,8 @@ export function residency(samples, out, key, skipFrames = 0) {
   R.mean = R.secs ? R.path / R.secs : 0;
   R.rmsAcc = R.nAcc ? Math.sqrt(R.accSq / R.nAcc) : 0;
   R.ratio = R.playerPath > 1e-9 ? R.path / R.playerPath : NaN;
+  R.perSec = R.secs > 1e-9 ? R.path / R.secs : 0;
+  R.playerPerSec = R.secs > 1e-9 ? R.playerPath / R.secs : 0;
   R.flow = R.n ? R.flowSum / R.n : 0;
   R.ndcMean = R.n ? R.ndcSum / R.n : 0;
   return R;

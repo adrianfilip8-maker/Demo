@@ -559,6 +559,16 @@ export const TUNE = {
   /* ---- recentre (R) ------------------------------------------------------- */
   recentreTime: 0.45,
 
+  /* ---- the ring swing's pivot tracking (§745) ------------------------------- */
+  /* `null` — use the `hook_swing` row's own `track`. A number — force it, which is what
+     `?cam=swingtrack` does by setting 1. Only this one framing is affected either way. */
+  swingTrack: null,
+  /* Time constant of the low-passed pivot goal `FRAMES.track` blends toward. 0.65 s is one
+     half-period of the shipped ring pendulum (`hookL` 2.2 m, measured at ~1.3 s a cycle on the
+     driven swing), so the calmed goal holds the swing's CENTRE and drops its ends. Shorter and
+     it follows the arc again; longer and it lags the level itself when a swing translates. */
+  trackTau: 0.65,
+
   /* ---- the ring swing's velocity tip (§745) -------------------------------- */
   /* `null` — use the `hook_swing` row's own `vtip`. A number — force it, which is what
      `?cam=swingtip` does by setting 1. Only this one framing is affected either way. */
@@ -607,7 +617,12 @@ export const TUNE = {
  *                     shipped with, bit-exact. No authored `FRAMES.tau` differs between the arms.
  *   `?cam=swingtip`   §745 — the ring swing gets the velocity-driven orbit tip back at full
  *                     strength, i.e. `hook_swing.vtip` 1.0. Nothing else about the row moves.
- *   `?cam=hardblend,swingtip`  both.
+ *   `?cam=swingtrack` §745 — the ring swing's pivot goes back to following the pendulum 1:1,
+ *                     i.e. `hook_swing.track` 1.0. Separate from `swingtip` on purpose: they are
+ *                     two mechanisms answering two halves of one request, one shortens the
+ *                     camera's PATH and one removes its JERK, and an unattributable regression
+ *                     across a pair costs a round (§720/§723's pattern).
+ *   `?cam=swingtip,swingtrack`  all of §745. `?cam=hardblend,swingtip,swingtrack` all of both.
  *
  * `globalThis.__CAMBLEND_AB` is the same string, for tests with no `location`.
  */
@@ -622,6 +637,7 @@ export const TUNE = {
   const set = new Set(String(raw).toLowerCase().split(',').map((x) => x.trim()).filter(Boolean));
   if (set.has('hardblend') || set.has('hard')) TUNE.frameBlendShape = 0;
   if (set.has('swingtip')) TUNE.swingVTip = 1;
+  if (set.has('swingtrack')) TUNE.swingTrack = 1;
 })();
 
 /**
@@ -732,7 +748,7 @@ const FRAMES = {
   sneak:      { dist: -1.70, height: -0.36, lead: 0.50, fov: -4.5, pitch:  1.5 * DEG, side: 0.18, stiff: 1.25, tau: 0.34 },
   crawl:      { dist: -1.90, height: -0.62, lead: 0.50, fov: -3.0, pitch:  4.0 * DEG, side: 0.00, stiff: 1.20, tau: 0.34 },
   /* Swing: wide, high and soft, so the pendulum arc reads as an arc. Lead frames the landing. */
-  hook_swing: { dist:  2.30, height:  0.55, lead: 1.60, fov:  1.0, pitch: -3.0 * DEG, side: 0.85, stiff: 1.50, tau: 0.30, vtip: 0.00 },
+  hook_swing: { dist:  2.30, height:  0.55, lead: 1.60, fov:  1.0, pitch: -3.0 * DEG, side: 0.85, stiff: 1.50, tau: 0.30, vtip: 0.00, track: 0.30 },
   /* Rail: behind and low, lens tightened — speed reads as compression, not FOV. */
   rail_slide: { dist:  1.30, height: -0.55, lead: 1.90, fov: -3.5, pitch: -1.0 * DEG, side: 0.00, stiff: 0.80, tau: 0.24 },
   /* Balance / spire: back and up to show the drop, and go very still. */
@@ -990,6 +1006,12 @@ function vtipOf(f) {
   return f.vtip == null ? 1 : f.vtip;
 }
 
+/** A framing's pivot-tracking fraction (§745). Same shape, same scope, its own token. */
+function trackOf(f) {
+  if (f === FRAMES.hook_swing && TUNE.swingTrack != null) return TUNE.swingTrack;
+  return f.track == null ? 1 : f.track;
+}
+
 /**
  * The containment translates' stand-off (§580.1). Both of them move the camera along a unit
  * axis, which moves the subject in view space by `−d·û`; the squared camera→subject range is
@@ -1067,12 +1089,15 @@ export class CameraRig {
     this._recovering = false;
 
     /* ---- framing blend ---- */
-    this._frame = { dist: 0, height: 0, lead: 1, fov: 0, pitch: 0, side: 0, stiff: 1, vtip: 1 };
+    this._frame = { dist: 0, height: 0, lead: 1, fov: 0, pitch: 0, side: 0, stiff: 1, vtip: 1, track: 1 };
     /* Per-channel blend velocity (§744). Carried ACROSS a framing switch on purpose: it is what
        makes the switch continuous in the derivative — an interrupted blend keeps the speed it
        already had and bends toward the new target instead of restarting from it. Unused, and
        held at zero, when `TUNE.frameBlendShape` is 0. */
-    this._frameVel = { dist: 0, height: 0, lead: 0, fov: 0, pitch: 0, side: 0, stiff: 0, vtip: 0 };
+    this._frameVel = { dist: 0, height: 0, lead: 0, fov: 0, pitch: 0, side: 0, stiff: 0, vtip: 0, track: 0 };
+    /* The calmed pivot goal (§745). `null` until the first frame seeds it. */
+    this._goalCalm = new THREE.Vector3();
+    this._goalCalmOn = false;
     this._frameKey = 'idle';
     this._stateName = '';
     this._attachedPole = false;
@@ -1450,8 +1475,10 @@ export class CameraRig {
       this._frame.dist = f.dist; this._frame.height = f.height; this._frame.lead = f.lead;
       this._frame.fov = f.fov; this._frame.pitch = f.pitch; this._frame.side = f.side;
       this._frame.stiff = f.stiff; this._frame.vtip = vtipOf(f);
+      this._frame.track = trackOf(f);
       const v = this._frameVel;
-      v.dist = 0; v.height = 0; v.lead = 0; v.fov = 0; v.pitch = 0; v.side = 0; v.stiff = 0; v.vtip = 0;
+      v.dist = 0; v.height = 0; v.lead = 0; v.fov = 0; v.pitch = 0; v.side = 0; v.stiff = 0; v.vtip = 0; v.track = 0;
+      this._goalCalmOn = false;
     }
   }
 
@@ -1512,6 +1539,7 @@ export class CameraRig {
       c.side = smoothDamp(c.side, f.side, v.side, ts, dt); v.side = _sdVel;
       c.stiff = smoothDamp(c.stiff, f.stiff, v.stiff, ts, dt); v.stiff = _sdVel;
       c.vtip = smoothDamp(c.vtip, vtipOf(f), v.vtip, ts, dt); v.vtip = _sdVel;
+      c.track = smoothDamp(c.track, trackOf(f), v.track, ts, dt); v.track = _sdVel;
     } else {
       c.dist = ease(c.dist, f.dist, tau, dt);
       c.height = ease(c.height, f.height, tau, dt);
@@ -1521,6 +1549,7 @@ export class CameraRig {
       c.side = ease(c.side, f.side, tau, dt);
       c.stiff = ease(c.stiff, f.stiff, tau, dt);
       c.vtip = ease(c.vtip, vtipOf(f), tau, dt);
+      c.track = ease(c.track, trackOf(f), tau, dt);
     }
 
     /* Which side is the wall on? Two short probes answer it without MOVEMENT having to
@@ -2073,6 +2102,7 @@ export class CameraRig {
 
   _follow(dt) {
     this._pivotGoal(_goal, 1);
+    this._calmGoal(dt);
     const f = this._frame;
     const p = this.pivot;
     const v = this._pivotVel;
@@ -2156,6 +2186,38 @@ export class CameraRig {
   }
 
   /* ------------------------------------------------------------------ boom -- */
+
+  /**
+   * ── THE PIVOT DOES NOT HAVE TO FOLLOW A PENDULUM 1:1 (§745) ────────────────────────────────
+   *
+   * `FRAMES.track` is the fraction of the pivot GOAL's own excursion the rig chases; the rest is
+   * given to a low-passed copy of that goal. 1.0 on every row but `hook_swing`, where it is the
+   * only lever that can reduce the camera's PATH LENGTH — which is the quantity the owner named.
+   *
+   * **`stiff` cannot do it, and the reason is a feedback loop this file already documents from
+   * the other end.** The lead floor raises the goal's look-ahead to `followTimeH × f.stiff × v`
+   * so the spring's own trail is cancelled — so softening the spring pushes the GOAL further
+   * ahead by exactly as much as the pivot then lags. Measured: at `stiff` 40 the goal's z travel
+   * over one swing is **361 m** against the capsule's 14.6, and the pivot still moves 12.2 m. The
+   * two stages are wired to hold the pivot ON the capsule at any stiffness, which is correct
+   * everywhere else in the game and is the thing to defeat here.
+   *
+   * The low-pass is applied to the FINISHED goal rather than to the capsule position, so the
+   * height, the lead, the side offset and the route lift all keep their existing meanings and the
+   * floor keeps compensating a trail it can still see. `trackTau` is one pendulum half-period, so
+   * what survives is the swing's centre rather than its ends.
+   *
+   * The subject leaves the middle of the frame as a result, and that is the trade rather than a
+   * side effect: the arc gets told by Sly crossing the frame instead of by the world sweeping
+   * past. `tests/camswing.test.mjs` W3 measures both halves and rule 6's containment clamp is
+   * still the backstop that keeps him on screen.
+   */
+  _calmGoal(dt) {
+    const k = this._frame.track;
+    if (!this._goalCalmOn) { this._goalCalm.copy(_goal); this._goalCalmOn = true; }
+    this._goalCalm.lerp(_goal, 1 - Math.exp(-dt / Math.max(1e-4, TUNE.trackTau)));
+    if (k < 0.999) _goal.lerp(this._goalCalm, 1 - k);
+  }
 
   _effectivePitch() {
     const falling = Math.max(0, -_pVel.y);
