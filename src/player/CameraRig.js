@@ -563,11 +563,14 @@ export const TUNE = {
   /* `null` — use the `hook_swing` row's own `track`. A number — force it, which is what
      `?cam=swingtrack` does by setting 1. Only this one framing is affected either way. */
   swingTrack: null,
-  /* Time constant of the low-passed pivot goal `FRAMES.track` blends toward. 0.65 s is one
-     half-period of the shipped ring pendulum (`hookL` 2.2 m, measured at ~1.3 s a cycle on the
-     driven swing), so the calmed goal holds the swing's CENTRE and drops its ends. Shorter and
-     it follows the arc again; longer and it lags the level itself when a swing translates. */
-  trackTau: 0.65,
+  /* Time constant of the calmed pivot goal that `FRAMES.track` blends toward, and of the two
+     smoothed speeds that gate it. The shipped ring pendulum runs about 1.4 s a cycle on the
+     driven swings, so at 1.00 s the calmer passes only 22 % of the arc's amplitude
+     (`1/sqrt(1+(Ωτ)²)`, Ω = 4.49 rad/s) and what survives is the swing's CENTRE. Swept against
+     the owner's own metric over five real swings: 0.65 s leaves the camera at 0.62 of its path,
+     1.00 s reaches 0.50, 1.40 s overshoots to 0.39. Shorter follows the arc again; longer takes
+     more of a straight swing's travel to hand authority back (the gate settles in ~3τ). */
+  trackTau: 1.00,
 
   /* ---- the ring swing's velocity tip (§745) -------------------------------- */
   /* `null` — use the `hook_swing` row's own `vtip`. A number — force it, which is what
@@ -748,7 +751,7 @@ const FRAMES = {
   sneak:      { dist: -1.70, height: -0.36, lead: 0.50, fov: -4.5, pitch:  1.5 * DEG, side: 0.18, stiff: 1.25, tau: 0.34 },
   crawl:      { dist: -1.90, height: -0.62, lead: 0.50, fov: -3.0, pitch:  4.0 * DEG, side: 0.00, stiff: 1.20, tau: 0.34 },
   /* Swing: wide, high and soft, so the pendulum arc reads as an arc. Lead frames the landing. */
-  hook_swing: { dist:  2.30, height:  0.55, lead: 1.60, fov:  1.0, pitch: -3.0 * DEG, side: 0.85, stiff: 1.50, tau: 0.30, vtip: 0.00, track: 0.30 },
+  hook_swing: { dist:  2.30, height:  0.55, lead: 1.60, fov:  1.0, pitch: -3.0 * DEG, side: 0.85, stiff: 1.50, tau: 0.30, vtip: 0.00, track: 0.20 },
   /* Rail: behind and low, lens tightened — speed reads as compression, not FOV. */
   rail_slide: { dist:  1.30, height: -0.55, lead: 1.90, fov: -3.5, pitch: -1.0 * DEG, side: 0.00, stiff: 0.80, tau: 0.24 },
   /* Balance / spire: back and up to show the drop, and go very still. */
@@ -1098,6 +1101,8 @@ export class CameraRig {
     /* The calmed pivot goal (§745). `null` until the first frame seeds it. */
     this._goalCalm = new THREE.Vector3();
     this._goalCalmOn = false;
+    this._calmSpeed = 0;
+    this._plSpeed = 0;
     this._frameKey = 'idle';
     this._stateName = '';
     this._attachedPole = false;
@@ -2202,10 +2207,12 @@ export class CameraRig {
    * two stages are wired to hold the pivot ON the capsule at any stiffness, which is correct
    * everywhere else in the game and is the thing to defeat here.
    *
-   * The low-pass is applied to the FINISHED goal rather than to the capsule position, so the
+   * The filter is applied to the FINISHED goal rather than to the capsule position, so the
    * height, the lead, the side offset and the route lift all keep their existing meanings and the
-   * floor keeps compensating a trail it can still see. `trackTau` is one pendulum half-period, so
-   * what survives is the swing's centre rather than its ends.
+   * floor keeps compensating a trail it can still see. `trackTau` is comparable to the pendulum's
+   * whole period, so what survives is the swing's centre rather than its ends — and the filter is
+   * GATED on whether the calmed goal is itself travelling, because a straight-line swing must not
+   * be lagged. Both of those took a wrong turn first; see `_calmGoal`.
    *
    * The subject leaves the middle of the frame as a result, and that is the trade rather than a
    * side effect: the arc gets told by Sly crossing the frame instead of by the world sweeping
@@ -2214,9 +2221,42 @@ export class CameraRig {
    */
   _calmGoal(dt) {
     const k = this._frame.track;
-    if (!this._goalCalmOn) { this._goalCalm.copy(_goal); this._goalCalmOn = true; }
-    this._goalCalm.lerp(_goal, 1 - Math.exp(-dt / Math.max(1e-4, TUNE.trackTau)));
-    if (k < 0.999) _goal.lerp(this._goalCalm, 1 - k);
+    const a = 1 - Math.exp(-dt / Math.max(1e-4, TUNE.trackTau));
+    if (!this._goalCalmOn) {
+      this._goalCalm.copy(_goal); this._goalCalmOn = true;
+      this._calmSpeed = 0; this._plSpeed = Math.hypot(_pVel.x, _pVel.y, _pVel.z);
+      return;
+    }
+    _off.copy(this._goalCalm);
+    this._goalCalm.lerp(_goal, a);
+    /* Two smoothed speeds, both at `trackTau`: how fast the CALMED goal is going somewhere, and
+       how fast the player is moving at all. */
+    const calmStep = dt > 0 ? this._goalCalm.distanceTo(_off) / dt : 0;
+    this._calmSpeed += (calmStep - this._calmSpeed) * a;
+    this._plSpeed += (Math.hypot(_pVel.x, _pVel.y, _pVel.z) - this._plSpeed) * a;
+    if (k >= 0.999) return;
+    /* ── THE GATE, AND IT IS THE THIRD MECHANISM THIS LANE TRIED ──────────────────────────────
+       Pulling the goal toward a low-passed copy of itself is pure lag on anything that travels in
+       one direction: the copy trails by `trackTau × v`, so the look-at settles
+       `(1 − track) × trackTau × v` behind the player — **−3.375 m** on a straight 8 m/s swing,
+       which is exactly the defect the lead floor in `_pivotGoal` exists to prevent and which
+       `camdrive` D9 and `camlead` L1 both reddened on within one suite run.
+       Two fixes were tried and measured before this one, and both are recorded rather than
+       deleted because each fails in an instructive direction:
+         · subtract the deviation's own mean at the same τ — passes the lead arms, and costs the
+           swing most of the effect (path ×0.737 against ×0.508), because a filter at the swing's
+           own period cannot separate a deviation from its mean;
+         · add `smoothedVelocity × trackTau` back as lag compensation — passes the lead arms, and
+           costs MORE (×0.886), because a 0.65 s smoother of a 1.4 s pendulum's velocity is not
+           anything like zero.
+       What actually distinguishes the two cases is whether the CALMED GOAL is going anywhere.
+       On a pendulum it holds the swing's centre and barely moves; in steady travel it moves at
+       the player's own speed. So the filter's authority is the fraction of the player's speed the
+       calmed goal is NOT already carrying — 1 on a pendulum, 0 once a straight line settles, and
+       it is a ratio of two window-averaged speeds rather than an instantaneous test, so it does
+       not flicker off at the ends of the arc where the player's speed passes through zero. */
+    const gate = 1 - clamp(this._calmSpeed / Math.max(0.05, this._plSpeed), 0, 1);
+    if (gate > 1e-3) _goal.lerp(this._goalCalm, (1 - k) * gate);
   }
 
   _effectivePitch() {
