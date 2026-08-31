@@ -64421,15 +64421,378 @@ made about it** — the proxy blocks `*.github.io`.
 
 ---
 
-## §742 — "Have coins physically pop out from behind the guard when they are pickpocketed": real coins on the real magnet, paid for exactly once
+## §742 — "Have coins physically pop out from behind the guard when they are pickpocketed": real coins off the rig, flying to Sly, paid for exactly once
 
 *(Section claimed at this heading BEFORE its body was written — §700.9 / §742-claim discipline.
 Claim marker: **§742 CLAIM pocketpop-9c31**. Pickpocket-pop lane, replacing the §741 beat the
-owner removed. The body follows in later commits. Nothing below this line is carried from
-another section: the economy census, the instanced-mesh capacity figure and the settle census
-are all re-derived here, because a number quoted from another section is a claim about that
-section (§712.9's lesson, re-learned in §732.1).*
+owner removed. Nothing below this line is carried from another section: the economy census, the
+instanced-mesh capacity figures and the rig census are all re-derived here, because a number
+quoted from another section is a claim about that section (§712.9's lesson, re-learned in
+§732.1).*
+
+*(**The heading was corrected when the body landed.** It was claimed as "real coins on the real
+magnet" — the design that existed when the claim was made. Mid-lane the owner amended the
+request to "go directly to the character", which deleted the landing and the magnet handoff
+entirely; see §742.4. Corrected at the declaration site rather than annotated further down,
+which is this file's rule.)*
 
 *Note for the next reader: **§741 has no ledger body.** It shipped as commit `df8d8dc` with its
 reasoning in the commit message only, so the ledger jumps §740 → §742. That is not an
 off-by-one.)*
+
+### §742.1 The economy: the coins are COSMETIC, and the arm that goes red if they ever are not
+
+The brief's first hazard is the one that decides whether this ships, and the ledger's own record
+of it is out of date in a way that reads as current. **The comment at `Pickups.js:828` said the
+HUD was "currently paying a flat 25 for the raw intent event".** It has not been true since
+`tests/pickpocket.test.mjs` landed. Re-derived on the shipped tree rather than carried:
+
+```
+  HUD.js:786        on('guardPickpocket') -> addCoins(p.coins)     the wallet, the +N, the toast
+  Health.js:149     on('guardPickpocket') -> bank(p.coins)          the charm purse
+  Pickups.js:833    on('guardPickpocket') -> _lastPocket only       deliberately does NOT bank
+  HUD.js            on('pickpocket')      -> NOTHING                the flat 25 is gone
+```
+
+So the steal is already paid, **exactly once**, through two independent readers of one event.
+The stale comment's conclusion — *"banking here would double-pay"* — is still right and is now
+right for a different reason, and the comment has been corrected at its declaration site.
+
+**Ruling: the popped coins pay nothing.** Not "pay a token amount", not "pay and remove the
+existing line". Three reasons, in order of weight:
+
+1. **The existing payout is pinned by a test written about a shipped exploit.**
+   `tests/pickpocket.test.mjs` asserts `hud.coins` moves by exactly 73 on a `guardPickpocket` of
+   73. Rerouting the payment into the pickups would have meant deleting that arm, and the arm
+   exists because mashing E in an empty courtyard once minted ~45 coins a second.
+2. **The loot is 45–150 and the pop is 3–8.** Any payment carried by the discs is either wrong
+   or requires a per-disc denomination that has to be reconciled with the roll — a second economy
+   beside the first.
+3. **A pop that pays is a pop that can be lost.** The player did the steal; the loot is his.
+   Making it contingent on catching the coins would take money away from a successful action.
+
+What the player sees is therefore not a second payment: it is the FIRST one, drawn. The wallet
+ticks at the instant of the steal and the coins are the picture of that transfer arriving.
+
+The mechanism, at four levels so a single change cannot re-open it: the pool lives in
+`this.pocketCoins` and never in `this.coins`; it is never stepped by `stepPickup`; it is retired
+only by `_absorbPop`, which publishes nothing at all; and every record carries `pay: false`,
+which `_collectCoin` refuses. **That last guard is not decoration and it is not dead** — this
+lane's own first draft handed the pops to the magnet, which routes every collected coin straight
+through `_collectCoin`, and the guard is what makes that draft safe rather than a second payout.
+
+**Nothing is emitted on absorption, not even `coin` with `amount: 0`.** `HUD.addCoins` and
+`Health.bank` both no-op on zero, so it would have been tempting — but `Audio._onCoins` schedules
+`amount` chimes and FX bursts on the same event, and a chime for a payment that did not happen is
+a lie the player can hear.
+
+**The arm.** `tests/pocketpop.test.mjs` E1 boots the real `HUD`, the real `Health` and the real
+`Pickups` on one bus, emits a scripted steal of 137, flies all seven discs to the player and
+asserts four things at once:
+
+```
+  HUD wallet     +137     exactly, not >=
+  charm purse    +137     (purse + charms x CHARM.charmCoins, so a rollover cannot hide 100)
+  Pickups.wallet +0       a steal has never fed the module's own counter and still does not
+  'coin' events   0
+```
+
+**E1b is that arm's failing input, executed rather than described** (§418.3). It runs the
+identical steal and then makes the pops payable — `pay = true`, `value = COIN_VALUE.single`,
+through the real `_collectCoin` — and asserts the wallet reads `137 + 7`. Without E1b, "the
+wallet moved by exactly the loot" is indistinguishable from "this harness cannot see a second
+payment". E2 then exercises the `pay` guard in both directions on one record.
+
+`tools/pocketpop.mjs` prints the same four numbers beside the flight, on the real level.
+
+### §742.2 Capacity: headroom on the mesh that already exists, and it is free while it is empty
+
+`Pickups._build` sized the coin `InstancedMesh` to exactly `this.coins.length`, so there was
+nowhere to spawn into. Two options, and the brief asked for the cost either way:
+
+* **A second pooled mesh** — a second draw call and a second material for a set that is
+  visually indistinguishable from the first.
+* **Headroom on the existing one** — `coins.length + POCKET.pool`, same geometry, same material,
+  same `_writeCoinMatrices` loop, one draw.
+
+Headroom, and the measurement is exact arithmetic on a known geometry rather than a counter
+(`Engine.stats.drawCalls` is unusable in this harness — §712's five frozen values, zero spread):
+
+```
+  coin geometry            48 triangles, 76 verts
+  authored coins           82           instance capacity 106 (= 82 + pool 24)
+  instanceMatrix bytes     5,248 -> 6,784                         +1,536 bytes, standing
+  IDLE     1 draw, mesh.count  82,  3,936 tris    identical to the pre-§742 frame
+  PEAK     1 draw, mesh.count  90,  4,320 tris    one maximum steal in the air: +384 tris
+  FULL     1 draw, mesh.count 106,  5,088 tris    pool saturated:              +1,152 tris
+```
+
+**The headroom is not drawn while it is empty.** `_writeCoinMatrices` sets
+`mesh.count = coins.length + _popLive` every frame, so an idle frame issues the same draw with
+the same instance count it always did. Against `tools/budgetattrib.mjs`'s worst canonical main
+view — **94 draws (38 % of the 250 cap) and 0.706 M triangles (59 % of the 1.2 M cap)** — this
+feature is **+0 draws** and **+0.054 % triangles** at a normal peak, +0.16 % with the pool
+saturated. (`budgetattrib` does not build `Pickups`, so it is quoted here as the DENOMINATOR
+only; the numerator is measured directly off the mesh.)
+
+`tests/pocketpop.test.mjs` C1 pins all of it, and its failing input is the pre-§742 sizing
+executed in-arm. That control had to be rewritten once: **`setMatrixAt` past the end of the
+buffer does not throw.** `Matrix4.toArray` writes into a `Float32Array` and the language discards
+out-of-range writes silently, so the pre-§742 mesh would have accepted every pop and drawn none
+of them with no error anywhere. The control now asserts the write is LOST (a failed round-trip),
+which is both the true behaviour and the reason the sizing had to be decided rather than
+discovered.
+
+### §742.3 The spawn comes off the hips bone, and `pocketBack` was already on it
+
+`Guard.pocketPosition` is `position` plus two authored offsets and it is a TARGET — the point
+`nearestPickpocketTarget` ranks against and `Controller.pickMark` draws the HUD mark on. The
+brief asked for a spawn derived from the rig, so the rig was measured first
+(`tools/pocketpop.mjs` RIG, all nine roster guards, at rest):
+
+```
+  guard   type    bone   pocketUp vs hips   spawn (world)            behind    up     head
+  guard0  temple  hips   dy +0.000 m        -0.310, 0.620, -11.359   -0.345   0.620   1.95
+  guard2  heavy   hips   dy +0.020 m         4.428, 0.600, -11.625   -0.345   0.600   2.22
+  …  every temple guard dy +0.000, every heavy dy +0.020, every one behind -0.345
+```
+
+**`pocketUp` 0.62 lands on the `hips` bone's world height to 0.000 m on every temple guard and
+0.020 m on every heavy**, and to within 0.005 m laterally. So the authored offset was not wrong —
+it was derived from this rig — and switching to the bone changes almost nothing at rest. What
+the bone buys is that it FOLLOWS: `GuardAnim` drives a `pos` channel on the hips (the walk bob,
+the KO collapse) and a static offset cannot see any of it.
+
+The published spawn sits **0.345 m behind his facing** and **0.60–0.62 m above his feet**,
+against heads at 1.95 m (temple) and 2.22 m (heavy). "Behind him, not his head" is those two
+columns, not an intention.
+
+**The wall clamp, and the number that chose its radius.** "Behind him" is exactly the direction
+that puts a pouch inside masonry when a guard's back is to a wall, so the `pocketBack` offset is
+swept rather than applied. `tools/pocketpop.mjs`'s WALL arm backs every roster guard onto real
+level geometry found by raycast — at 0.55 m (where a whole coin fits behind him: `pocketBack`
+0.34 + swept radius 0.2414 = 0.58) and at a deliberately unwinnable 0.22 m — and reports solid
+colliders overlapping the spawn at the coin's own swept radius:
+
+```
+                         raw pouch      swept spawn
+  gap 0.55 m   colliders     7      ->       0        (7 guards)
+  gap 0.22 m   colliders     7      ->       0
+  --nowall     colliders     7      ->       7        both gaps — the sweep defeated
+```
+
+That is §418.3's pair on the same inputs. **The probe radius is the coin's swept radius and that
+was a correction, not a choice:** at a hand-picked 0.12 m the same arm reported 6 of 7 spawns
+still inside drawn masonry, which is what a probe half the width of the thing it is clearing
+buys you.
+
+A second column in that table is **advisory and is labelled so**: `coinfit.poseTest` against the
+DRAWN triangle soup reads 6/7 and 5/7 even where the collider column is 0. That is §732.4's
+disagreement between the two representations, not a failure of the sweep — the arm places guards
+by COLLIDER raycast, and it reports that 3/7 and 6/7 of those poses have **the guard's own hip
+inside drawn geometry**. Attributing it is the difference between a number and a number that
+means something.
+
+### §742.4 The flight: the owner's amendment, and what it deleted
+
+Mid-lane the owner amended the request: *"The coins don't need to fall to the ground, but can
+instead go directly to the character."* **That deletes the entire landing half of the original
+design, and with it the §732 buried-coin hazard**, which is the thing the first brief was most
+worried about. Recorded because a whole subsystem was built, measured and then removed, and the
+measurements it produced are the reason the replacement is trustworthy.
+
+What was built and deleted: a ballistic settle through `Collision.capsuleSweep` at the coin's
+swept radius, a `groundCheck` rest clamp at a derived `POCKET_REST` = `hypot(r, t/2) + bobAmp +
+margin`, a magnet handoff to `stepPickup`, and a settle census through `coinfit.poseTest`. That
+census read **44 settled coins across all nine guards, 0 CROSS**, and it is quoted here only
+because it is what proved the deleted design worked — nothing in the shipped tree depends on it.
+
+What replaced it is two phases and **no world interaction at all**:
+
+```
+  POP    popTime 0.16 s of pure ballistics out of the pouch, into a fan of +/-41 deg about
+         -forward. gravity 11.0 acts here and nowhere else; it is what gives the burst weight.
+  HOME   the residual pop velocity is STEERED toward Sly's chest at `homeTurn` per second rather
+         than replaced, so the path bows out and back. Speed ramps `TUNE.speedMin` -> `speedMax`
+         over 0.30 s.
+```
+
+Every number that could have been invented is borrowed instead: the flight ceiling is
+`TUNE.speedMax` (2 x `Controller.TUNE.runSpeed`, the magnet's own "must beat a sprint"), the
+floor is `TUNE.speedMin`, the absorption radius is `TUNE.collect`, and the target is
+`position.y + TUNE.grabHeight` — the same chest point `stepPickup` snaps to. A popped coin and a
+magnetised coin therefore arrive at the same place by the same number.
+
+**`homeTurn` was swept, not picked.** Deviation from the straight pouch-to-chest line, and the
+whole beat, at a realistic 1.5 m steal distance:
+
+```
+  homeTurn      3      4      5      6      7      9     12
+  bow (m)    0.441  0.406  0.381  0.363  0.349  0.330  0.311
+  beat (s)    0.65   0.60   0.57   0.55   0.53   0.52   0.48
+```
+
+A clean monotone trade with no knee, so the choice is a judgement and is stated as one: **5.0**,
+buying 0.38 m of arc for 0.57 s. The first draft shipped 9.0 and its own test could barely see
+the curve.
+
+Driven on the real level at every guard (`tools/pocketpop.mjs` FLIGHT):
+
+```
+  loot 57-144 -> 3-8 discs · pop reach 1.23-1.32 m · bow 0.41-0.52 m · beat 0.58-0.60 s
+  RETREAT (player sprinting away at 7.2 m/s): all five absorbed by 1.08 s, none lost
+```
+
+**The count is capped and the cap is the point.** `Guard.TUNE.loot` rolls 45–90 / 80–150 /
+10–25, so a disc per coin is 150 objects out of one pouch. `popCount` is
+`clamp(ceil(v / 20), 3, 8)`: 10 -> 3, 45 -> 3, 90 -> 5, 150 -> 8. Monotone, so a heavy visibly
+out-pops a scarab. `tests/pocketpop.test.mjs` P1 asserts the cap **at 400**, because every value
+in the actual loot table agrees with the unclamped form and only an out-of-table input separates
+them.
+
+### §742.5 The `coin_pop` puff moved off the intent and onto the steal
+
+`Particles.js` bursted `coin_pop` on `pickpocket` — MOVEMENT's INTENT event, at Sly's own
+position. Since `Moveset.Pickpocket.canEnter` gained its mark requirement that is no longer the
+free-money event `tests/pickpocket.test.mjs` was written about, **but it still fires on every
+reach that MISSES**: the mark walked away inside `pickTime`, the guard was already `looted`, a
+heavy clutched his purse. A gold burst there says "you got it" when the answer was no — and
+since §741 removed the guard's reaction, it was the only thing saying anything at all.
+
+It now subscribes to `guardPickpocket` and bursts at `e.pocket`, so the puff is the IGNITION for
+the physical coins: same instant, same origin, one beat. Verified in the built artifact, not only
+in source — `dist/assets/Particles-*.js` carries
+`` t(`guardPickpocket`,e=>this._burstAt(`coin_pop`,e?.pocket||e?.pos,Q,.7)) `` and no
+`pickpocket` burst. **No absorb burst was added**, deliberately: 3–8 coins each bursting at his
+chest is a slot machine, and the `+137` punch is already the arrival mark.
+
+### §742.6 Two defects found by instruments, neither by reading the code
+
+**1. The `_pocketWorld` fallback applied `pocketBack` twice.** The fallback branch — taken when
+a rig has no `hips` bone or its matrix is stale — copied `pocketPosition`, which has ALREADY had
+`-forward * pocketBack` applied, and then applied it again: a pouch **0.68 m** behind him instead
+of 0.34, floating a body-width off his back. The bone path was never wrong, which is exactly why
+a nine-guard census read a clean −0.345 and said nothing. Caught by `tests/traversal.test.mjs`'s
+new §409/§742 arm on its first run, in the open-air cell.
+
+**2. A steal that lands before PICKUPS' first update is silently unpaid.** `Pickups.update`
+publishes `coins` — HUD's ABSOLUTE-set channel — once, on its first frame, to sync the HUD to its
+own purse; `HUD.on('coins')` is `setCoins`, not `addCoins`. So a `guardPickpocket` credit that
+arrives before that frame is applied and then overwritten back to `Pickups.wallet.coins`.
+`tools/pocketpop.mjs` read **`HUD wallet +0`** on its first run for exactly this reason and it
+took twenty minutes to stop suspecting the new code. **It cannot happen in the shipped game** —
+MANIFEST updates PICKUPS from frame 1 and a steal needs a guard inside 2.4 m — so nothing was
+changed. It is recorded because it is a live instance of the divergence `Pickups.award`'s own
+docblock warns about (two counters, one event, no assertion between them), and because the next
+harness to boot these three modules will hit it too.
+
+### §742.7 §409's census went red, and censusing it properly is what found defect 1
+
+`tests/traversal.test.mjs`'s §409 arm counts direct `capsuleSweep` call sites in `src/` and
+refuses a new one until it is censused. It fired at 4 against an enumerated 3. The census answer
+for `Guard._pocketWorld`:
+
+> **It reads `res.position` and nothing else** — not `hit`, not `toi`, not `distance`, the three
+> fields §409 is about. That puts it in `_slide`/`ledgeAssist`'s class: the question it asks is
+> *"where along this 0.34 m offset does a coin still fit?"*, and `position` answers correctly
+> under both disjuncts. `sweepHit` -> the last clear point along the offset. `depenHit` -> where
+> the push-out put it, which is OUT of the wall, and a strictly better answer than the raw offset.
+
+Asserted by construction rather than by reading the source, both quadrants on the real level:
+
+```
+  open air   sweepHit false  depenHit false   pouch goes the full -0.340 m behind him
+  buried     sweepHit false  depenHit TRUE    raw pouch overlaps 1 collider -> swept overlaps 0
+```
+
+**Building the buried cell cost a detour worth recording.** The first fixture buried the guard's
+hip half a metre under the courtyard sand — and `Collision.overlap` reported it touching nothing,
+because `groundCheck` answers there from TERRAIN's analytic height and there are no BVH triangles
+under it. §732.4's disagreement between the two representations, hit again in a new place. The
+fixture now SEARCHES for a real solid and refuses the arm if it cannot bury the hip in one, so a
+fixture that silently tests the wrong cell fails instead of passing. The second draft still tested
+the wrong cell — it validated the POUCH rather than the sweep's START — and reported
+`sweepHit=true depenHit=false`, an ordinary contact.
+
+### §742.8 Suite — every run this lane made, not only the green one (§703.2)
+
+```
+  run 1   npm test  (full)      1187 tests · 1186 pass · 1 FAIL      433.1 s   at f7ddeb0-pre
+          FAIL: tests/traversal.test.mjs "§409 census: capsuleSweep says WHY it hit"
+                4 call sites against an enumerated 3 — the pinned test doing its job on
+                `Guard._pocketWorld`. Resolved by censusing the caller (§742.7), not by
+                raising the count.
+  run 2   npm test  (full)      1188 tests · 1188 pass · 0 fail      437.3 s   at cdb431d
+```
+
+Targeted runs beside those, all quoted:
+
+```
+  node --test tests/pocketpop.test.mjs                       19/19 pass    25.7 s
+  node --test traversal + pocketpop + pickpocket
+              + pickups + guardsuite                       119/119 pass   (one process)
+  node --test --test-name-pattern="fourth caller"
+              tests/traversal.test.mjs                        1/1 pass     (iterating the fixture)
+```
+
+**Baseline arithmetic:** 1168 + 19 (`tests/pocketpop.test.mjs`) + 1 (the §409/§742 census arm)
+= **1188**, which is the number run 2 reports. Neither documented flake fired: `framebudget` F3
+(GC, ~1-in-3) and `padrest` R1b (~1-in-5) both passed in both full runs. **No
+`--test-name-pattern` was used on `framebudget` at any point.**
+
+### §742.9 Production (§666/§695)
+
+`npm run build`, then `node tools/prodboot.mjs --no-build` against the ARTIFACT served from a
+`/Demo/`-shaped prefix: **`ready true` at 56.8 s, 17 modules, 149 requests, zero 4xx/5xx**, 31
+pre-existing in-flight aborts (not gated; §740 recorded 32 on the same set). Checked IN the
+artifact rather than in the source:
+
+```
+  dist/assets/Pickups-*.js     pocketCoins, _popPocket, _absorbPop, homeTurn, __POP_AB,
+                               POCKET_FALLBACK_UP, guardPickpocket
+  dist/assets/Guard-*.js       _pocketWorld, guardPickpocket
+  dist/assets/Particles-*.js   t(`guardPickpocket`,e=>this._burstAt(`coin_pop`,e?.pocket||e?.pos,Q,.7))
+                               and NO `pickpocket` burst
+```
+
+**The live host was NOT checked and no claim is made about it** — the proxy blocks `*.github.io`.
+
+**No frame was captured, and that is a stated gap rather than an oversight.** The beat is 0.58 s
+long and `tools/shot.mjs` has no way to fire a steal on a chosen frame; building one would have
+meant a bespoke capture tool holding the FIFO lock for 4–6 minutes per attempt. Every claim in
+this section is therefore numeric or driven, and **no visual claim is made from any frame** —
+which is the discipline §466.5 asks for, satisfied by not making the claim rather than by taking
+two samples of it.
+
+### §742.10 What I got wrong
+
+1. **I built the entire landing subsystem before the owner's amendment arrived**, and it was the
+   larger half of the work: a ballistic collision step, a derived rest height, a magnet handoff,
+   a settle census and a relocation-grade instrument. All of it deleted. Not avoidable given when
+   the amendment came, but worth stating that most of §742's elapsed time is in code that is not
+   in the tree.
+2. **My first ballistic sweep used a 0.12 m probe on a 0.2414 m coin.** A sweep narrower than the
+   thing it sweeps does not keep it out of anything, and the wall arm reported 16 settled coins
+   crossing real masonry on its very first run. I had reasoned about the number ("a spawn
+   clearance, not a coin radius") instead of measuring it.
+3. **`POCKET_REST`'s margin was chosen before it was measured**, at 0.03 m, and produced a
+   worst-case clearance of **0.0095 m** — nine millimetres, which is the margin §732.1 watched a
+   coin resize eat whole. Raised to 0.06 after measuring. (Deleted with the rest of the landing,
+   but the mistake is the same shape as 2 and I made it twice in one session.)
+4. **`tests/pocketpop.test.mjs` C1's failing input asserted `throws` and went red.** I assumed a
+   write past the end of an `InstancedMesh` buffer would be refused; the language discards it
+   silently. §418.3 catching the person writing the bar, which is the whole point of it, and the
+   third time this project has recorded that exact experience.
+5. **F2's bow control shared its subject's largest term.** The first draft measured the bow over
+   the WHOLE path, and both arms contain the same ballistic pop phase, so it read 0.332 against
+   0.257 and could not discriminate. Fixed by measuring the homing segment alone, where the
+   mutant reads 0.000.
+6. **R1's first draft took `hardReset`'s default yaw** and reported "pressing E next to a guard
+   never produced the intent". True, and a fact about the harness: `nearestPickpocketTarget`
+   rejects a target behind the player, and the default faces him down −Z. §435.4 in the arm
+   written to satisfy §435.4.
+7. **The §409/§742 fixture tested the wrong quadrant twice** before it tested the right one —
+   once because terrain has no triangles to overlap, once because I validated the pouch instead
+   of the sweep's start.
+8. **I nearly reported the tool's `HUD wallet +0` as a defect in my own code.** It is a property
+   of the PICKUPS/HUD sync order that predates this lane by hundreds of sections.
