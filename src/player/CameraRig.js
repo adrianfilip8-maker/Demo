@@ -559,6 +559,11 @@ export const TUNE = {
   /* ---- recentre (R) ------------------------------------------------------- */
   recentreTime: 0.45,
 
+  /* ---- the ring swing's velocity tip (§745) -------------------------------- */
+  /* `null` — use the `hook_swing` row's own `vtip`. A number — force it, which is what
+     `?cam=swingtip` does by setting 1. Only this one framing is affected either way. */
+  swingVTip: null,
+
   /* ---- framing blend SHAPE (§744) ------------------------------------------ */
   /* NOT a duration. Every authored `FRAMES.tau` is untouched by this and stays exactly what its
      author wrote; this changes the ORDER of the filter those durations drive.
@@ -595,11 +600,16 @@ export const TUNE = {
 };
 
 /**
- * §744 revert token: `?cam=hardblend` (or `globalThis.__CAMBLEND_AB = 'hard'` from a test) puts
- * the framing blend back to the first-order `ease` this file shipped with, bit-exact — no
- * authored `FRAMES.tau` differs between the two arms, so the reverted arm IS the old feel and
- * not an approximation of it. Precedent: `?kk=`, `?react=`, `?pop=`, `?vault=`.
- * Read once at module scope: a per-frame path must never touch `location`.
+ * Revert tokens, two, independent, one key. Read once at module scope: a per-frame path must
+ * never touch `location`. Precedent: `?kk=flat,nohold`, `?react=`, `?pop=`, `?vault=`.
+ *
+ *   `?cam=hardblend`  §744 — the framing blend goes back to the first-order `ease` this file
+ *                     shipped with, bit-exact. No authored `FRAMES.tau` differs between the arms.
+ *   `?cam=swingtip`   §745 — the ring swing gets the velocity-driven orbit tip back at full
+ *                     strength, i.e. `hook_swing.vtip` 1.0. Nothing else about the row moves.
+ *   `?cam=hardblend,swingtip`  both.
+ *
+ * `globalThis.__CAMBLEND_AB` is the same string, for tests with no `location`.
  */
 (() => {
   let raw = '';
@@ -607,8 +617,11 @@ export const TUNE = {
     if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('cam') || '';
     if (!raw && typeof globalThis !== 'undefined' && globalThis.__CAMBLEND_AB != null) raw = String(globalThis.__CAMBLEND_AB);
   } catch { /* plain-module hosts have no location; that is the test path */ }
-  const v = String(raw).trim().toLowerCase();
-  if (v === 'hardblend' || v === 'hard') TUNE.frameBlendShape = 0;
+  /* A comma list, so the two reverts are independent and can be taken together —
+     `?cam=hardblend`, `?cam=swingtip`, `?cam=hardblend,swingtip`. Precedent: `?kk=flat,nohold`. */
+  const set = new Set(String(raw).toLowerCase().split(',').map((x) => x.trim()).filter(Boolean));
+  if (set.has('hardblend') || set.has('hard')) TUNE.frameBlendShape = 0;
+  if (set.has('swingtip')) TUNE.swingVTip = 1;
 })();
 
 /**
@@ -719,7 +732,7 @@ const FRAMES = {
   sneak:      { dist: -1.70, height: -0.36, lead: 0.50, fov: -4.5, pitch:  1.5 * DEG, side: 0.18, stiff: 1.25, tau: 0.34 },
   crawl:      { dist: -1.90, height: -0.62, lead: 0.50, fov: -3.0, pitch:  4.0 * DEG, side: 0.00, stiff: 1.20, tau: 0.34 },
   /* Swing: wide, high and soft, so the pendulum arc reads as an arc. Lead frames the landing. */
-  hook_swing: { dist:  2.30, height:  0.55, lead: 1.60, fov:  1.0, pitch: -3.0 * DEG, side: 0.85, stiff: 1.50, tau: 0.30 },
+  hook_swing: { dist:  2.30, height:  0.55, lead: 1.60, fov:  1.0, pitch: -3.0 * DEG, side: 0.85, stiff: 1.50, tau: 0.30, vtip: 0.00 },
   /* Rail: behind and low, lens tightened — speed reads as compression, not FOV. */
   rail_slide: { dist:  1.30, height: -0.55, lead: 1.90, fov: -3.5, pitch: -1.0 * DEG, side: 0.00, stiff: 0.80, tau: 0.24 },
   /* Balance / spire: back and up to show the drop, and go very still. */
@@ -970,6 +983,13 @@ function ease(cur, tgt, tau, dt) {
 
 function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
 
+/** A framing's velocity-tip fraction (§745). 1 unless the row says otherwise; `TUNE.swingVTip`
+    overrides the `hook_swing` row alone, which is what `?cam=swingtip` sets. */
+function vtipOf(f) {
+  if (f === FRAMES.hook_swing && TUNE.swingVTip != null) return TUNE.swingVTip;
+  return f.vtip == null ? 1 : f.vtip;
+}
+
 /**
  * The containment translates' stand-off (§580.1). Both of them move the camera along a unit
  * axis, which moves the subject in view space by `−d·û`; the squared camera→subject range is
@@ -1047,12 +1067,12 @@ export class CameraRig {
     this._recovering = false;
 
     /* ---- framing blend ---- */
-    this._frame = { dist: 0, height: 0, lead: 1, fov: 0, pitch: 0, side: 0, stiff: 1 };
+    this._frame = { dist: 0, height: 0, lead: 1, fov: 0, pitch: 0, side: 0, stiff: 1, vtip: 1 };
     /* Per-channel blend velocity (§744). Carried ACROSS a framing switch on purpose: it is what
        makes the switch continuous in the derivative — an interrupted blend keeps the speed it
        already had and bends toward the new target instead of restarting from it. Unused, and
        held at zero, when `TUNE.frameBlendShape` is 0. */
-    this._frameVel = { dist: 0, height: 0, lead: 0, fov: 0, pitch: 0, side: 0, stiff: 0 };
+    this._frameVel = { dist: 0, height: 0, lead: 0, fov: 0, pitch: 0, side: 0, stiff: 0, vtip: 0 };
     this._frameKey = 'idle';
     this._stateName = '';
     this._attachedPole = false;
@@ -1429,9 +1449,9 @@ export class CameraRig {
       const f = FRAMES[key] || FRAMES.idle;
       this._frame.dist = f.dist; this._frame.height = f.height; this._frame.lead = f.lead;
       this._frame.fov = f.fov; this._frame.pitch = f.pitch; this._frame.side = f.side;
-      this._frame.stiff = f.stiff;
+      this._frame.stiff = f.stiff; this._frame.vtip = vtipOf(f);
       const v = this._frameVel;
-      v.dist = 0; v.height = 0; v.lead = 0; v.fov = 0; v.pitch = 0; v.side = 0; v.stiff = 0;
+      v.dist = 0; v.height = 0; v.lead = 0; v.fov = 0; v.pitch = 0; v.side = 0; v.stiff = 0; v.vtip = 0;
     }
   }
 
@@ -1491,6 +1511,7 @@ export class CameraRig {
       c.pitch = smoothDamp(c.pitch, f.pitch, v.pitch, ts, dt); v.pitch = _sdVel;
       c.side = smoothDamp(c.side, f.side, v.side, ts, dt); v.side = _sdVel;
       c.stiff = smoothDamp(c.stiff, f.stiff, v.stiff, ts, dt); v.stiff = _sdVel;
+      c.vtip = smoothDamp(c.vtip, vtipOf(f), v.vtip, ts, dt); v.vtip = _sdVel;
     } else {
       c.dist = ease(c.dist, f.dist, tau, dt);
       c.height = ease(c.height, f.height, tau, dt);
@@ -1499,6 +1520,7 @@ export class CameraRig {
       c.pitch = ease(c.pitch, f.pitch, tau, dt);
       c.side = ease(c.side, f.side, tau, dt);
       c.stiff = ease(c.stiff, f.stiff, tau, dt);
+      c.vtip = ease(c.vtip, vtipOf(f), tau, dt);
     }
 
     /* Which side is the wall on? Two short probes answer it without MOVEMENT having to
@@ -2139,9 +2161,24 @@ export class CameraRig {
     const falling = Math.max(0, -_pVel.y);
     const climbing = Math.max(0, _pVel.y);
     let p = this.pitch + this._frame.pitch;
-    // Falling fast: tip down so the landing is on screen before you reach it.
-    p += smoothstep(2, TUNE.fallPitchSpeed, falling) * TUNE.fallPitch;
-    p += smoothstep(1, TUNE.climbSpeed, climbing) * TUNE.climbPitch;
+    /* ── THE VELOCITY TIP, AND WHY ONE FRAMING TURNS IT DOWN (§745) ───────────────────────────
+       "Falling fast: tip down so the landing is on screen before you reach it", and its climbing
+       mirror. Both are right for a trajectory that GOES somewhere — a fall has a landing, a climb
+       has a top. **A pendulum has neither, and it drives both terms through their full range
+       twice per cycle.** Ablated on a driven 3.75 s ring swing (`tools/camjerk.mjs --swing`),
+       these two lines alone own the swing's camera motion: removing them takes mean optical flow
+       0.791 → 0.439 rad/s, peak flow 3.57 → 1.00, peak camera acceleration 273 → 74 m/s². Every
+       other velocity-reactive term in the rig — the climb lift, the fall lead, the speed dolly,
+       the FOV gain, `side`, `lead`, `stiff` — moved the flow by 6 % or less, and `lead` by
+       nothing at all, exactly as the `leadMax` census predicted.
+       The reason the leverage is here and nowhere else is the lever arm: this is an ORBIT pitch,
+       so a radian of it is a radian times the boom, and the swing rides a 7.8 m boom. The channel
+       swept 0.780 rad over the residency — 6.1 m of camera arc against the pivot's own 2.61 m.
+       `_frame.vtip` is that fraction, per framing, blended like every other channel so it cannot
+       itself be a step, and 1.0 on every row but `hook_swing`. `?cam=swingtip` restores 1.0. */
+    const tip = smoothstep(2, TUNE.fallPitchSpeed, falling) * TUNE.fallPitch
+      + smoothstep(1, TUNE.climbSpeed, climbing) * TUNE.climbPitch;
+    p += tip * this._frame.vtip;
     // Route reveal: drop the camera and look up the line. Suppressed by the fall tip above by
     // construction — you are not being shown a climb while you are plummeting off one.
     p += this._routeUpW * TUNE.routePitch;

@@ -76,8 +76,18 @@ class LookInput {
   pressed() { return false; } down() { return false; }
 }
 
-async function trace(start, yaw, frames, drive, pre) {
+export async function trace(start, yaw, frames, drive, pre) {
   const { engine, c, collision } = await realWorld();
+  /* ── THE ENGINE IS CACHED AND ITS CAMERA IS SHARED (§745) ─────────────────────────────────
+     `realWorld()` mints a fresh `Controller` per call but hands back the SAME engine, and
+     MOVEMENT is camera-relative — so a drive script that aims the engine camera (the ring swing
+     does, exactly as `tests/swingpin.test.mjs` does) leaves that aim behind for every route
+     recorded afterwards in the same process. Observed: recording the swing before §744's eight
+     routes changed their trajectories, which changed the transition count 53 → 54 and every
+     delivery ratio, and the numbers looked like plausible camera numbers. Snapshotted and
+     restored here so a route cannot reach the next one. */
+  const camQ = engine.camera?.quaternion.clone();
+  const camP = engine.camera?.position.clone();
   hardReset(engine, c, start, yaw);
   if (pre) pre(c);
   c._needSpawnSnap = false;
@@ -85,12 +95,13 @@ async function trace(start, yaw, frames, drive, pre) {
   for (let i = 0; i < frames; i++) {
     engine.input.beginFrame(DT);
     engine.input.move.x = 0; engine.input.move.y = 0;
-    drive(engine.input, i, c);
+    drive(engine.input, i, c, engine);
     engine.time = i * DT;
     c.update(DT, i * DT);
     samples.push({ state: c.stateName, px: c.position.x, py: c.position.y, pz: c.position.z,
       vx: c.velocity.x, vy: c.velocity.y, vz: c.velocity.z, grounded: c.grounded, yaw: c.yaw });
   }
+  if (engine.camera && camQ) { engine.camera.quaternion.copy(camQ); engine.camera.position.copy(camP); engine.camera.updateMatrixWorld(true); }
   return { samples, collision };
 }
 
@@ -132,6 +143,7 @@ export function replay(samples, collision, pin, ARM) {
         fov: cam.fov, boom: rig.boom, fdist: rig._frame.dist,
         pivX: rig.pivot.x, pivY: rig.pivot.y, pivZ: rig.pivot.z,
         rx: rig.right.x, rz: rig.right.z, epitch: rig._effectivePitch(),
+        ...ndcOf(cam, samples[i]),
       });
     }
     return out;
@@ -152,6 +164,24 @@ function angVel(a, b, out) {
 }
 
 const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3(), _v4 = new THREE.Vector3();
+
+/**
+ * Where the SUBJECT sits on screen (§745). A camera that moves less does not make the shot
+ * quieter for free — it makes the subject move MORE within the frame, and that is the trade the
+ * owner is really being offered: the pendulum arc gets conveyed by Sly crossing the frame instead
+ * of by the world sweeping past. Both halves are measured so the trade is visible rather than
+ * asserted, and `behind` counts the frames where the subject is off the back of the lens, which
+ * `Vector3.project` would otherwise report as a plausible number (§419).
+ */
+const _subj = new THREE.Vector3(), _fw = new THREE.Vector3(), _rel = new THREE.Vector3();
+function ndcOf(cam, s) {
+  _subj.set(s.px, s.py + 0.9, s.pz);
+  cam.getWorldDirection(_fw);
+  _rel.copy(_subj).sub(cam.position);
+  if (_rel.dot(_fw) <= cam.near) return { ndcX: null, ndcY: null };
+  _subj.project(cam);
+  return { ndcX: _subj.x, ndcY: _subj.y };
+}
 function linVel(a, b, out) { return out.set((b.x - a.x) / DT, (b.y - a.y) / DT, (b.z - a.z) / DT); }
 
 /**
@@ -216,6 +246,34 @@ export const ROUTES = [
   ['temple approach', V(0, 0.1, 30), Math.PI, 320, (inp, i) => { inp.move.y = 1; if (i % 45 >= 20 && i % 45 < 24) inp.hold('jump'); else inp.let_go('jump'); }, null],
   ['combo', V(0, 0.1, 30), 0, 160, (inp, i) => { if (i % 30 === 5) inp.hold('attack'); else inp.let_go('attack'); }, null],
 ];
+
+/**
+ * THE RING SWING (§745), kept OUT of `ROUTES` on purpose.
+ *
+ * `ROUTES` is the census §744's published before/after numbers were measured on — 1860 frames, 53
+ * transitions, seventeen pooled pairs. Adding an eighth route to it would silently re-base every
+ * one of those, so the swing lives beside it and the §744 comparison stays a comparison.
+ *
+ * A real ring, entered the way a player enters it (§435.4): freefall past the hanging rings at
+ * (4.20, 14.80, 4.50) with forward held, and the auto-grab does the rest — `Controller.afford`
+ * finds the hook, `HookSwing.enter` takes it. Nothing here pokes `hookSwing`; the only poke is
+ * `sm.set('fall')` to start airborne, which a spawn cannot do. Driven: `fall` 0-14,
+ * **`hookSwing` 15-239 (225 frames, 3.75 s)**, released on the jump press at 240 into `fall`.
+ * The pendulum sweeps 0.2-99.9 deg of deviation over roughly three decaying cycles and the
+ * capsule peaks at 11.07 m/s, so this is the move at its liveliest rather than a gentle sample.
+ *
+ * MOVEMENT is camera-relative, so the drive holds the engine camera at yaw pi every frame exactly
+ * as `tests/swingpin.test.mjs` does. That camera is NOT the rig under test — `trace` records the
+ * capsule and `replay` drives a fresh rig over it — so this fixes the INPUT basis and leaves the
+ * measured camera free.
+ */
+export const SWING_ROUTE = ['ring swing', V(4.2, 12.4, 1.2), 0, 300,
+  (inp, i, cc, eng) => {
+    inp.move.y = 1;
+    if (eng?.camera) { eng.camera.rotation.set(0, Math.PI, 0, 'YXZ'); eng.camera.updateMatrixWorld(true); }
+    if (i === 240) inp.hold('jump'); else inp.let_go('jump');
+  },
+  (c) => { c.position.set(4.2, 13.2, 0); c.velocity.set(0, 1.0, 6.0); c.grounded = false; c.sm.set('fall'); }];
 
 export async function record() {
   const out = [];
@@ -379,6 +437,113 @@ export function delivery(recorded, ARM) {
 
 export const absOf = (c) => (c && c.asked > 1e-9 ? c.got / c.asked : NaN);
 
+/* ====================================================================== */
+/* §745 — DURING a state, not at the switch into it                       */
+/* ====================================================================== */
+
+/**
+ * "How much is the camera moving?" — measured over a residency instead of at its first frame.
+ *
+ * §744's `stepAt` scores the SWITCH; the owner's ring-swing complaint is about the 3.75 s after
+ * it. The four candidate readings of "amount of movement" are all computed because **they are not
+ * the same quantity and halving one does not halve another**, and the choice between them has to
+ * be auditable rather than asserted:
+ *
+ *   path       Σ|Δpos| over the residency, metres. How far the camera travelled, full stop.
+ *   rms        √mean(|Δpos|²)/dt, m/s. Path's cousin, weighted toward the fast frames.
+ *   peak       max|Δpos|/dt, m/s. The single worst instant.
+ *   angPath    Σ|Δangle|, radians. The same question asked of orientation, which for a camera
+ *              orbiting a pendulum is a large part of what a player is actually watching.
+ *
+ * And three that answer "is it SMOOTH", which is the request's second half:
+ *
+ *   rmsAcc     √mean(|Δv|²)/dt, m/s². Jerkiness, integrated.
+ *   peakAcc    max|Δv|/dt, m/s². The worst discontinuity INSIDE the state — the residency's
+ *              analogue of §744's step, and the number that says whether the motion is a smooth
+ *              arc or a sequence of corrections.
+ *   reversals  sign changes of the camera's velocity along each world axis. A camera that
+ *              travels far in one direction reads as a pan; one that travels the same distance
+ *              back and forth reads as busy.
+ *
+ * **`playerPath` is the floor and it is why a raw halving would be the wrong target.** The
+ * capsule travels its own arc, and a camera that does not follow it loses Sly — rule 6 then
+ * drags the view back, which is more motion, not less. So the irreducible component is reported
+ * with every run and the interesting number is the camera's path AGAINST it.
+ */
+export function residency(samples, out, key, skipFrames = 0) {
+  const spans = [];
+  let cur = null;
+  for (let i = 0; i < out.length; i++) {
+    if (out[i].key !== key) { if (cur) { spans.push(cur); cur = null; } continue; }
+    if (!cur) cur = { s: i, e: i };
+    cur.e = i;
+  }
+  if (cur) spans.push(cur);
+  const R = { frames: 0, spans: spans.length, path: 0, sq: 0, peak: 0, angPath: 0, peakAng: 0,
+    accSq: 0, peakAcc: 0, boomPath: 0, fovPath: 0, playerPath: 0, relPath: 0, flowSum: 0,
+    flowPeak: 0, rev: 0, n: 0, nAcc: 0, ndcPath: 0, ndcMax: 0, ndcSum: 0, behind: 0 };
+  const v0 = new THREE.Vector3(), v1 = new THREE.Vector3(), a0 = new THREE.Vector3(), a1 = new THREE.Vector3();
+  const fwd = new THREE.Vector3(), q = new THREE.Quaternion();
+  for (const sp of spans) {
+    const s = Math.min(sp.s + skipFrames, sp.e);
+    let prevSign = 0;
+    for (let i = s + 1; i <= sp.e; i++) {
+      const d = Math.hypot(out[i].x - out[i - 1].x, out[i].y - out[i - 1].y, out[i].z - out[i - 1].z);
+      R.path += d; R.sq += d * d; R.peak = Math.max(R.peak, d / DT); R.n++;
+      angVel(out[i - 1], out[i], v0);
+      const ang = v0.length() * DT;
+      R.angPath += ang; R.peakAng = Math.max(R.peakAng, ang / DT);
+      R.boomPath += Math.abs(out[i].boom - out[i - 1].boom);
+      R.fovPath += Math.abs(out[i].fov - out[i - 1].fov);
+      R.playerPath += Math.hypot(samples[i].px - samples[i - 1].px, samples[i].py - samples[i - 1].py,
+        samples[i].pz - samples[i - 1].pz);
+      /* The camera's path IN THE PLAYER'S FRAME — the part of the translation the camera adds
+         rather than inherits. `path` minus this is Sly's own arc being carried along. */
+      R.relPath += Math.hypot((out[i].x - samples[i].px) - (out[i - 1].x - samples[i - 1].px),
+        (out[i].y - samples[i].py) - (out[i - 1].y - samples[i - 1].py),
+        (out[i].z - samples[i].pz) - (out[i - 1].z - samples[i - 1].pz));
+      /* OPTICAL FLOW, rad/s — how fast the IMAGE sweeps, which is the thing a person watching
+         calls "the camera moving". Rotation moves every pixel at `|ω|`; translation moves a
+         feature at depth D by `|v_perp| / D`, where `v_perp` is the part of the camera's velocity
+         across the view axis (the along-axis part is a dolly, not a sweep). D is `distDefault`
+         5.4 m, the rig's own nominal boom — a scene reference read out of the file rather than
+         picked, and the same in every arm so the comparison never depends on it. */
+      v1.set((out[i].x - out[i - 1].x) / DT, (out[i].y - out[i - 1].y) / DT, (out[i].z - out[i - 1].z) / DT);
+      q.set(out[i].qx, out[i].qy, out[i].qz, out[i].qw);
+      fwd.set(0, 0, -1).applyQuaternion(q);
+      v1.addScaledVector(fwd, -v1.dot(fwd));
+      const flow = ang / DT + v1.length() / TUNE_SHIPPED.distDefault;
+      R.flowSum += flow; R.flowPeak = Math.max(R.flowPeak, flow);
+      /* The other side of the trade: how far the SUBJECT travels across the frame. */
+      if (out[i].ndcX == null || out[i - 1].ndcX == null) R.behind++;
+      else {
+        R.ndcPath += Math.hypot(out[i].ndcX - out[i - 1].ndcX, out[i].ndcY - out[i - 1].ndcY);
+        const r = Math.hypot(out[i].ndcX, out[i].ndcY);
+        R.ndcMax = Math.max(R.ndcMax, r); R.ndcSum += r;
+      }
+      const sgn = Math.sign(out[i].z - out[i - 1].z);
+      if (sgn && prevSign && sgn !== prevSign) R.rev++;
+      if (sgn) prevSign = sgn;
+      if (i > s + 1) {
+        a0.set(out[i - 1].x - out[i - 2].x, out[i - 1].y - out[i - 2].y, out[i - 1].z - out[i - 2].z).divideScalar(DT);
+        a1.set(out[i].x - out[i - 1].x, out[i].y - out[i - 1].y, out[i].z - out[i - 1].z).divideScalar(DT);
+        const acc = a1.sub(a0).length() / DT;
+        R.accSq += acc * acc; R.peakAcc = Math.max(R.peakAcc, acc); R.nAcc++;
+      }
+    }
+    R.frames += sp.e - s + 1;
+  }
+  void v1;
+  R.secs = R.n * DT;
+  R.rms = R.n ? Math.sqrt(R.sq / R.n) / DT : 0;
+  R.mean = R.secs ? R.path / R.secs : 0;
+  R.rmsAcc = R.nAcc ? Math.sqrt(R.accSq / R.nAcc) : 0;
+  R.ratio = R.playerPath > 1e-9 ? R.path / R.playerPath : NaN;
+  R.flow = R.n ? R.flowSum / R.n : 0;
+  R.ndcMean = R.n ? R.ndcSum / R.n : 0;
+  return R;
+}
+
 /**
  * A patched copy of the rig, loaded as its own module so a control can change a constant without
  * mutating the shipped one. `CameraRig.js` imports nothing but the bare specifier `three`, so a
@@ -398,6 +563,8 @@ export async function armWith(edits, tag) {
 
 const SWEEP = (() => { const i = argv.indexOf('--sweep'); return i >= 0 ? argv[i + 1].split(',').map(Number) : null; })();
 const VARIANTS = argv.includes('--variants');
+const SWING = (() => { const i = argv.indexOf('--swing'); return i >= 0 ? (argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : '') : null; })();
+const SKIP = (() => { const i = argv.indexOf('--skip'); return i >= 0 ? Number(argv[i + 1]) : 30; })();
 const SHAPE = (() => { const i = argv.indexOf('--shape'); return i >= 0 ? Number(argv[i + 1]) : null; })();
 
 async function main() {
@@ -450,6 +617,59 @@ async function main() {
       }
     }
     TUNE.frameBlendShape = rows[0].k;
+    return;
+  }
+
+  /* ---- §745: the ring swing's RESIDENCY, and the levers that move it -------------------- */
+  if (SWING !== null) {
+    const [, start, yaw, nf, drive, pre] = SWING_ROUTE;
+    const t = await trace(start, yaw, nf, drive, pre);
+    const nSwing = t.samples.filter((s) => s.state === 'hookSwing').length;
+    console.log(`[camjerk] ring swing recorded: ${nSwing} hookSwing frames of ${t.samples.length}`);
+
+    const HOOK = '  hook_swing: { dist:  2.30, height:  0.55, lead: 1.60, fov:  1.0, pitch: -3.0 * DEG, side: 0.85, stiff: 1.50, tau: 0.30, vtip: 0.00 },';
+    /* BEFORE is the shipped module with `?cam=swingtip` on, so the two arms differ in exactly the
+       one number the token names and nothing else — a before/after rather than a reconstruction. */
+    const arms = [['BEFORE (?cam=swingtip)', null, 1], ['SHIPPED §745', null, null]];
+    for (const spec of (SWING || '').split(',').filter(Boolean)) {
+      const [kind, val] = spec.split('=');
+      if (kind === 'vtip') arms.push([`vtip ${val}`, null, Number(val)]);
+      else if (kind === 'stiff') arms.push([`stiff ${val}`, [[HOOK, HOOK.replace('stiff: 1.50', `stiff: ${val}`)]], null]);
+      else if (kind === 'lead') arms.push([`lead ${val}`, [[HOOK, HOOK.replace('lead: 1.60', `lead: ${val}`)]], null]);
+      else if (kind === 'side') arms.push([`side ${val}`, [[HOOK, HOOK.replace('side: 0.85', `side: ${val}`)]], null]);
+    }
+    const rows = [];
+    let tag = 0;
+    for (const [label, edits, vt] of arms) {
+      const ARM = edits ? await armWith(edits, `sw${tag++}`) : null;
+      const T = ARM ? ARM.TUNE : TUNE;
+      const keepVT = T.swingVTip;
+      T.swingVTip = vt;
+      try {
+        const A = replay(t.samples, t.collision, null, ARM);
+        rows.push([label, residency(t.samples, A, 'hook_swing', SKIP), residency(t.samples, A, 'hook_swing', 0)]);
+      } finally { T.swingVTip = keepVT; }
+    }
+    console.log(`\n[camjerk] RING SWING RESIDENCY — hook_swing, skipping the first ${SKIP} frames (the tau 0.30 blend in)`);
+    console.log('  arm                    frames |  FLOW rad/s  peak |  PATH m  rel  vs plyr |  mean m/s  peak m/s | angPath  peakAng |  rmsAcc   peakAcc | boom  fov | rev | ndcPath ndcMax behind');
+    const base = rows[0][1];
+    for (const [label, R] of rows) {
+      console.log(`  ${label.padEnd(22)} ${String(R.frames).padStart(6)} | ${R.flow.toFixed(3).padStart(10)} ${R.flowPeak.toFixed(3).padStart(5)} | `
+        + `${R.path.toFixed(2).padStart(6)} ${R.relPath.toFixed(2).padStart(5)} ${R.ratio.toFixed(2).padStart(7)} | `
+        + `${R.mean.toFixed(3).padStart(8)} ${R.peak.toFixed(2).padStart(9)} | `
+        + `${R.angPath.toFixed(3).padStart(7)} ${R.peakAng.toFixed(3).padStart(8)} | ${R.rmsAcc.toFixed(1).padStart(7)} ${R.peakAcc.toFixed(1).padStart(9)} | `
+        + `${R.boomPath.toFixed(2).padStart(5)} ${R.fovPath.toFixed(1).padStart(4)} | ${String(R.rev).padStart(3)} | `
+        + `${R.ndcPath.toFixed(2).padStart(7)} ${R.ndcMax.toFixed(2).padStart(6)} ${String(R.behind).padStart(6)}`);
+    }
+    console.log(`\n  as a fraction of BEFORE — the owner's target is 0.500 on whichever row is chosen`);
+    console.log('  arm                     FLOW flowPeak    path  relPath    mean    peak angPath peakAng  rmsAcc peakAcc ndcPath');
+    for (const [label, R] of rows) {
+      const f = (k) => (base[k] > 1e-9 ? (R[k] / base[k]).toFixed(3) : '  —  ').padStart(8);
+      console.log(`  ${label.padEnd(22)}${f('flow')}${f('flowPeak')}${f('path')}${f('relPath')}${f('mean')}${f('peak')}${f('angPath')}${f('peakAng')}${f('rmsAcc')}${f('peakAcc')}${f('ndcPath')}`);
+    }
+    console.log(`\n  the floor: the CAPSULE's own path over the same frames is ${base.playerPath.toFixed(2)} m. A camera`);
+    console.log('  below it is losing Sly, and rule 6 drags the view back — which is more motion, not less.');
+    console.log(`  full residency (no skip), SHIPPED: path ${rows[0][2].path.toFixed(2)} m over ${rows[0][2].frames} frames, ratio ${rows[0][2].ratio.toFixed(2)}`);
     return;
   }
 
