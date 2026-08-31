@@ -325,8 +325,10 @@ function score(hist) {
 /* Every persistent gameplay element, plus the ornament. `.sly-marks` is deliberately NOT here: it
    is an `inset: 0` container for world markers and overlaps everything by construction, so its
    CHILDREN are what a collision check may ask about. */
+/* §743 removed `.sly-obj`, the corner objective card. The objective now renders inside the pause
+   cel, which is not a gameplay-layer element and so is not a collision neighbour. */
 const PERSISTENT = ['.sly-tl', '.sly-coins', '.sly-threat', '.sly-carry',
-  '.sly-obj', '.sly-toasts', '.sly-prompt', '.sly-pocket', '.sly-goal', '.sly-lock'];
+  '.sly-toasts', '.sly-prompt', '.sly-pocket', '.sly-goal', '.sly-lock'];
 
 /* The twelve standing tokens this lane must not disturb, and the one it adds. */
 const STANDING = ['props=tinted', 'props=plain', 'smash=gen', 'swing=loose', 'surf=apex',
@@ -563,15 +565,17 @@ async function run() {
       hp: !!document.querySelector('.sly-hp'),
       pips: document.querySelectorAll('.sly-hp-pip').length,
       live: document.querySelectorAll('.sly-coins').length,
-      obj: !!document.querySelector('.sly-obj'),
+      obj: !!document.querySelector('.sly-obj'),         // §743: must now be FALSE always
+      pobj: !!document.querySelector('.sly-pobj-title'),
       prompt: !!document.querySelector('.sly-prompt'),
       toasts: !!document.querySelector('.sly-toasts'),
       pocket: !!document.querySelector('.sly-pocket'),
     }));
     report.token = off;
-    console.log(`    ?hud=nohealth : ornament ${off.hp ? 'STILL PRESENT' : 'gone'} (${off.pips} pips); rest of the HUD intact — live row ${off.live}, obj ${off.obj}, prompt ${off.prompt}, toasts ${off.toasts}, pocket ${off.pocket}`);
+    console.log(`    ?hud=nohealth : ornament ${off.hp ? 'STILL PRESENT' : 'gone'} (${off.pips} pips); rest of the HUD intact — live row ${off.live}, corner card ${off.obj}, pause objective ${off.pobj}, prompt ${off.prompt}, toasts ${off.toasts}, pocket ${off.pocket}`);
     if (off.hp || off.pips) fail('?hud=nohealth did not remove the ornament');
-    if (off.live !== shape.pristineLive || !off.obj || !off.prompt || !off.toasts || !off.pocket) {
+    if (off.obj) fail('the corner objective card is back — §743 removed it');
+    if (off.live !== shape.pristineLive || !off.pobj || !off.prompt || !off.toasts || !off.pocket) {
       fail(`the token removed more than the ornament (live row ${off.live} vs the default boot's ${shape.pristineLive})`);
     }
     await p2.close();

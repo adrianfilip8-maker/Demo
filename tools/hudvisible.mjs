@@ -321,8 +321,14 @@ async function run() {
     report.consoleErrors = errs.slice(0, 12);
     if (errs.length) console.log(`[hudvisible] ${errs.length} console/page error(s); first: ${errs[0]}`);
 
+    /* §743 moved `.sly-hp` into the corner `.sly-obj` vacated, so the census subject changed and
+       so did the neighbour set. Everything persistent is probed, not just the old top-left stack:
+       a clearance is only worth quoting if the thing it was measured against is in the list. The
+       Binocucom's own top-right pair is probed separately below, because it does not exist until
+       the optics are up. */
     const SELS = ['.sly-hp', '.sly-hp-meter', '.sly-shake',
-      '.sly-tl', '.sly-coins', '.sly-threat', '.sly-carry'];
+      '.sly-tl', '.sly-coins', '.sly-threat', '.sly-carry',
+      '.sly-toasts', '.sly-prompt', '.sly-goal', '.sly-pocket', '.sly-obj'];
     const probes = await page.evaluate(PROBE, SELS);
     report.probes = probes;
     /* If the probe itself came back empty the run proves nothing — say so rather than reading
@@ -450,11 +456,16 @@ async function run() {
       }
     }
 
-    /* ---- 2c. COLLISION at top-left, every neighbour driven to its widest ------------------ */
+    /* ---- 2c. COLLISION in the corner, every neighbour driven to its widest ---------------- */
     /* Phase separation matters: the visibility numbers above were taken on an UNTOUCHED page,
        because that is the claim §731.2 was burned on. A collision census is the opposite kind of
        question — it must be worst case — so the NEIGHBOURS are armed here, after the fact, and
-       the ornament itself is still never touched. */
+       the ornament itself is still never touched.
+
+       §743: `h.objective()` is still called, and it no longer widens anything on the gameplay
+       layer — the card it used to inflate is gone and the objective renders inside the pause cel
+       now. It is kept deliberately, as a smoke check that the retained API survives the minifier
+       and runs on the production artifact; `.sly-obj`'s absence is asserted with it. */
     await page.evaluate(() => {
       const h = window.__ENGINE.get('hud');
       h.objective('Steal the Eye of Ra from the sealed vault', 'Temple of Ra - Great Courtyard');
@@ -463,20 +474,28 @@ async function run() {
       window.__ENGINE.emit('guardAlert', { id: 'g1', state: 'chase' });
       window.__ENGINE.emit('playerState', 'sneak');
       window.__ENGINE.emit('treasurePickup', { id: 't1', name: 'Scarab of Khepri', value: 1200 });
+      window.__ENGINE.emit('toast', { text: 'The vault is open - the Eye of Ra' });
       for (let i = 0; i < 8; i++) window.__ENGINE.renderFrame(1 / 60);
     });
     await page.waitForTimeout(600);
     const wide = await page.evaluate(PROBE, SELS);
     report.widest = wide;
     const hpW = wide['.sly-hp'];
-    console.log('\n[hudvisible] TOP-LEFT collision census, every neighbour at its widest:');
-    const NEIGH = ['.sly-tl', '.sly-coins', '.sly-threat', '.sly-carry'];
+    if (wide['.sly-obj'] && wide['.sly-obj'].exists) {
+      fail('the corner objective card is still in the production DOM — §743 removed it');
+    }
+    console.log('\n[hudvisible] COLLISION census in the corner, every neighbour at its widest:');
+    /* Every PERSISTENT element, not just the corner's own — a clearance quoted against a short
+       list is a claim about that list (§442). `.sly-goal` is here because §743 kept it. */
+    const NEIGH = ['.sly-tl', '.sly-coins', '.sly-threat', '.sly-carry',
+      '.sly-toasts', '.sly-prompt', '.sly-goal', '.sly-pocket'];
     let nearest = Infinity, nearestSel = '';
     for (const s of [...NEIGH, '.sly-hp']) {
       const r = wide[s];
-      if (!r || !r.exists) { console.log(`    ${s.padEnd(12)} — absent`); continue; }
-      console.log(`    ${s.padEnd(12)} ${String(r.x).padStart(7)},${String(r.y).padStart(6)}  ${String(r.w).padStart(6)} x ${String(r.h).padStart(5)}   bottom ${r.bottom}`);
+      if (!r || !r.exists) { console.log(`    ${s.padEnd(13)} — absent`); continue; }
+      console.log(`    ${s.padEnd(13)} ${String(r.x).padStart(7)},${String(r.y).padStart(6)}  ${String(r.w).padStart(6)} x ${String(r.h).padStart(5)}   right ${String(r.right).padStart(7)} bottom ${r.bottom}`);
     }
+    report.clearances = {};
     for (const s of NEIGH) {
       const r = wide[s];
       if (!r || !r.exists) continue;
@@ -487,11 +506,61 @@ async function run() {
       const gy = Math.max(r.y - hpW.bottom, hpW.y - r.bottom, 0);
       const gap = Math.hypot(gx, gy);
       if (gap < nearest) { nearest = gap; nearestSel = s; }
-      console.log(`    ${s.padEnd(12)} overlap ${String(area).padStart(8)} px²   clearance ${gap.toFixed(1)} px`);
-      if (area > 0) fail(`.sly-hp INTERSECTS ${s} when the stack is fully armed`);
+      report.clearances[s] = { overlap: area, gap: +gap.toFixed(1) };
+      console.log(`    ${s.padEnd(13)} overlap ${String(area).padStart(8)} px²   clearance ${gap.toFixed(1)} px`);
+      if (area > 0) fail(`.sly-hp INTERSECTS ${s} when everything is fully armed`);
     }
+    /* The viewport margins the offsets promise. With `transform-origin: right top` the tilt can no
+       longer throw the painted box past either anchored edge, which is the claim §743 re-derived
+       the origin on — so it is measured rather than argued. */
+    const margins = { right: +(W - hpW.right).toFixed(1), top: +hpW.y.toFixed(1) };
+    report.margins = margins;
+    console.log(`    viewport margins: right ${margins.right} px, top ${margins.top} px`);
+    if (margins.top < 0 || margins.right < 0) fail('.sly-hp is painting outside the viewport');
     report.nearest = { sel: nearestSel, px: +nearest.toFixed(1) };
-    console.log(`    nearest neighbour: ${nearestSel} at ${nearest.toFixed(1)} px`);
+    console.log(`    nearest persistent neighbour: ${nearestSel} at ${nearest.toFixed(1)} px`);
+
+    /* ---- 2c-bis. the Binocucom's own corner set, which exists only with the optics up ------ */
+    /* §731.1 rejected the bottom-left corner because `.bx-caller` lives there and the gameplay
+       cluster CROSS-DISSOLVES (0.16 s) rather than cutting. The top-right has the same shape of
+       neighbour — `.bx-rec` and `.bx-corner.tr` — and §743 does not get to choose the corner, so
+       this is measured and reported rather than used as a veto. Both states are read: with the
+       optics down (nothing there) and up (the cluster standing down). */
+    const BINOC = ['.bx-rec', '.bx-corner.tr'];
+    const binocDown = await page.evaluate(PROBE, BINOC);
+    await page.evaluate(() => {
+      window.__ENGINE.emit('binocucom', true);
+      for (let i = 0; i < 20; i++) window.__ENGINE.renderFrame(1 / 60);
+    });
+    await page.waitForTimeout(700);
+    const binocUp = await page.evaluate(PROBE, [...BINOC, '.sly-hp', '.sly-shake']);
+    report.binoc = { down: binocDown, up: binocUp };
+    console.log('\n[hudvisible] the Binocucom neighbours in this corner (optics UP):');
+    for (const s of BINOC) {
+      const r = binocUp[s];
+      if (!r || !r.exists) { console.log(`    ${s.padEnd(15)} — absent`); continue; }
+      const ow = Math.min(hpW.right, r.right) - Math.max(hpW.x, r.x);
+      const oh = Math.min(hpW.bottom, r.bottom) - Math.max(hpW.y, r.y);
+      const area = (ow > 0 && oh > 0) ? +(ow * oh).toFixed(1) : 0;
+      console.log(`    ${s.padEnd(15)} ${String(r.x).padStart(7)},${String(r.y).padStart(6)}  ${String(r.w).padStart(6)} x ${String(r.h).padStart(5)}   overlap with .sly-hp ${area} px²`);
+    }
+    const hpUp = binocUp['.sly-hp'];
+    console.log(`    .sly-hp with the optics up: effective opacity ${hpUp?.effectiveOpacity} (.sly-shake ${binocUp['.sly-shake']?.opacity})`);
+    if (hpUp && hpUp.effectiveOpacity > 0.02) {
+      fail(`.sly-hp is still at effective opacity ${hpUp.effectiveOpacity} with the optics up — it is not standing down with the cluster`);
+    }
+    await page.evaluate(() => {
+      window.__ENGINE.emit('binocucom', false);
+      for (let i = 0; i < 20; i++) window.__ENGINE.renderFrame(1 / 60);
+    });
+    await page.waitForTimeout(700);
+    const hpBack = (await page.evaluate(PROBE, ['.sly-hp']))['.sly-hp'];
+    console.log(`    .sly-hp with the optics back down: effective opacity ${hpBack?.effectiveOpacity}`);
+    /* CALIBRATION (§418.3): the probe must read a DIFFERENT number in the two states, or the
+       "it stands down" verdict above is a constant rather than a measurement. */
+    if (!(hpBack && hpBack.effectiveOpacity > 0.9)) {
+      fail(`CALIBRATION FAILED — .sly-hp did not come back (effective opacity ${hpBack?.effectiveOpacity}); the binocular probe reads the same value in both states and proves nothing`);
+    }
 
     /* ---- 2d. what is behind it, at BOTH grades (§726) ------------------------------------- */
     report.grades = [];
@@ -519,16 +588,24 @@ async function run() {
     const tok = await p3.evaluate(() => ({
       hp: !!document.querySelector('.sly-hp'),
       meter: document.querySelectorAll('.sly-hp-meter').length,
-      /* §731.6 retired the live pip row; the corner's survivor is the coin counter. */
-      coins: !!document.querySelector('.sly-coins'),
+      /* §731.6 retired the live pip row; the corner's survivor is the coin counter. §743 retired
+         the objective CARD, so the objective's survival is checked at its new home in the pause
+         cel rather than at `.sly-obj`, which must be absent in this boot as in every other. */
       tl: !!document.querySelector('.sly-tl'), coins: !!document.querySelector('.sly-coins'),
-      obj: !!document.querySelector('.sly-obj'), prompt: !!document.querySelector('.sly-prompt'),
+      obj: !!document.querySelector('.sly-obj'),
+      pobj: (document.querySelector('.sly-pobj-title')?.textContent || '').trim(),
+      prompt: !!document.querySelector('.sly-prompt'),
+      marks: !!document.querySelector('.sly-marks'),
+      goal: !!document.querySelector('.sly-goal'),
     }));
     report.token = tok;
     console.log(`\n[hudvisible] ?hud=nohealth on the production build: ornament ${tok.hp ? 'STILL PRESENT' : 'gone'} (${tok.meter} meters); `
-      + `coins ${tok.coins}, tl ${tok.tl}, coins ${tok.coins}, obj ${tok.obj}, prompt ${tok.prompt}`);
+      + `tl ${tok.tl}, coins ${tok.coins}, prompt ${tok.prompt}, marks ${tok.marks}, goal ${tok.goal}, `
+      + `corner card ${tok.obj ? 'PRESENT' : 'gone'}, pause objective "${tok.pobj}"`);
     if (tok.hp || tok.meter) fail('?hud=nohealth did not remove the ornament from the production build');
-    if (!tok.tl || !tok.coins || !tok.obj || !tok.prompt) fail('?hud=nohealth removed more than the ornament');
+    if (!tok.tl || !tok.coins || !tok.prompt || !tok.marks || !tok.goal) fail('?hud=nohealth removed more than the ornament');
+    if (tok.obj) fail('the corner objective card is present under ?hud=nohealth — §743 removed it');
+    if (!tok.pobj) fail('the pause cel carries no objective text — the retained objective() API is drawing nothing');
     await p3.close();
 
     await writeFile(path.join(OUTDIR, 'report.json'), JSON.stringify(report, null, 2));

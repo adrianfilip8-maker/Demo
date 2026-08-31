@@ -288,98 +288,6 @@ export const HUD_CSS = /* css */ `
                      0 calc(var(--u) * .22) 0 rgba(26,18,16,.6) }
 }
 
-/* ============================================================ OBJECTIVE CARD */
-
-.sly-obj {
-  position: absolute;
-  right: calc(var(--u) * 1.9);
-  top: calc(var(--u) * 1.7);
-  max-width: min(42vw, calc(var(--u) * 26));
-  opacity: 0;
-  transform: translateX(calc(var(--u) * 5)) rotate(4deg);
-  transition: opacity .34s ease, transform .34s ease;
-}
-.sly-obj.on {
-  opacity: 1;
-  transform: translateX(0) rotate(-1.9deg);
-  transition: opacity .16s ease, transform .5s var(--pop);
-}
-/* The panel behind, offset the other way — two stacked comic cels. */
-.sly-obj::before {
-  content: '';
-  position: absolute;
-  inset: calc(var(--u) * .35) calc(var(--u) * -.45) calc(var(--u) * -.5) calc(var(--u) * .5);
-  background: var(--lapis-d);
-  border: calc(var(--u) * .17) solid var(--ink);
-  transform: rotate(2.6deg);
-  border-radius: calc(var(--u) * .18);
-}
-.sly-obj-card {
-  position: relative;
-  background: var(--paint);
-  border: calc(var(--u) * .21) solid var(--ink);
-  border-radius: calc(var(--u) * .2);
-  box-shadow: calc(var(--u) * .38) calc(var(--u) * .4) 0 var(--ink),
-              0 calc(var(--u) * .5) calc(var(--u) * 1.2) rgba(26,18,16,.45);
-  padding: calc(var(--u) * .62) calc(var(--u) * .95) calc(var(--u) * .72);
-  overflow: hidden;
-}
-/* Halftone — the single strongest "this is printed" cue. */
-.sly-obj-card::after {
-  content: '';
-  position: absolute; inset: 0;
-  background-image: radial-gradient(circle at 50% 50%, rgba(26,18,16,.17) 26%, transparent 28%);
-  background-size: calc(var(--u) * .42) calc(var(--u) * .42);
-  opacity: .8;
-  pointer-events: none;
-}
-.sly-obj-kick {
-  display: inline-block;
-  /* --lapis-d, not --lapis: pale gold on #2a7fd4 measures 3.44:1 and fails the 4.5:1 bar this
-     HUD is held to (tests/hud.test.mjs M2). On #1f4f96 the same text clears at 6.68:1. */
-  background: var(--lapis-d);
-  color: var(--gold-l);
-  font-size: calc(var(--u) * .74);
-  letter-spacing: .22em;
-  padding: calc(var(--u) * .16) calc(var(--u) * .5) calc(var(--u) * .2);
-  border: calc(var(--u) * .13) solid var(--ink);
-  border-radius: calc(var(--u) * .12);
-  transform: rotate(-1.2deg);
-  position: relative; z-index: 1;
-}
-.sly-obj-title {
-  position: relative; z-index: 1;
-  margin-top: calc(var(--u) * .38);
-  font-size: calc(var(--u) * 1.32);
-  line-height: 1.02;
-  color: var(--ink);
-  letter-spacing: -.005em;
-  transform: skewX(-5deg);
-  text-shadow: calc(var(--u) * .07) calc(var(--u) * .07) 0 rgba(232,185,66,.9);
-}
-.sly-obj-sub {
-  position: relative; z-index: 1;
-  margin-top: calc(var(--u) * .28);
-  font-size: calc(var(--u) * .78);
-  font-weight: 700;
-  letter-spacing: .1em;
-  color: #6b503c;
-  max-height: calc(var(--u) * 1.4);
-  overflow: hidden;
-  transition: max-height .4s var(--settle), opacity .3s ease, margin-top .4s var(--settle);
-}
-.sly-obj-eye {
-  position: absolute;
-  right: calc(var(--u) * -.35); bottom: calc(var(--u) * -.5);
-  width: calc(var(--u) * 4.4); opacity: .17; z-index: 0;
-  transform: rotate(-8deg);
-}
-.sly-obj-eye svg { width: 100%; height: auto; }
-.sly-obj.mini .sly-obj-sub { max-height: 0; opacity: 0; margin-top: 0; }
-.sly-obj.mini .sly-obj-title { font-size: calc(var(--u) * 1.02); }
-.sly-obj.mini .sly-obj-card { padding: calc(var(--u) * .48) calc(var(--u) * .8) calc(var(--u) * .5); }
-.sly-obj.mini { opacity: .93; }
-
 /* ================================================================== TOASTS */
 
 .sly-toasts {
@@ -470,10 +378,10 @@ export const HUD_CSS = /* css */ `
 .sly-prompt-ic svg { width: 100%; height: 100%; }
 .sly-prompt[data-kind='steal'] .sly-prompt-ic { display: block; }
 
-/* ================================================ SLY 4 HEALTH METER (§731) */
+/* =========================================== SLY 4 HEALTH METER (§731/§743) */
 
 /* The owner's second reference, a Sly 4 frame: "the blue part behind the insignia is the health
-   bar", top-left, a wide outlined lozenge filled blue with the mask sitting on it. So this is ONE
+   bar" — a wide outlined lozenge filled blue with the mask sitting on it. So this is ONE
    meter, drawn at full, inert markup — no rule below is ever toggled by script, there is no .on
    state and no transition, because nothing changes.
 
@@ -486,32 +394,42 @@ export const HUD_CSS = /* css */ `
    frame", and the height follows the artwork's own 1.767:1 rather than being set here — the
    plate, its outline and the insignia are one raster and squashing it would break all three.
 
-   TOP-LEFT, BELOW A STACK THAT GROWS DOWNWARD. .sly-tl holds the live pip row, the coin counter
-   and the exposure/stealth/carry chips, and it GROWS DOWNWARD as those arm — fully armed it
-   reaches 125 px at 720p. This sits below that on the same left margin, so it cannot collide with
-   a stack whose height depends on play. tools/hudvisible.mjs measures the armed stack and asserts
-   zero intersection.
+   TOP-RIGHT (§743), THE CORNER THE OBJECTIVE CARD VACATED. The owner: "Remove the objective from
+   the corner and move the fake health bar to take its place." .sly-obj sat at right 1.9u /
+   top 1.7u and is gone; nothing persistent is anchored in that corner now. What IS there, and is
+   recorded rather than discovered twice: .bx-rec and .bx-corner.tr, both inside .sly-binoc, so
+   both exist only while the optics are up — and the gameplay cluster fades over 0.16 s rather
+   than cutting, so the meter cross-dissolves through them for that 0.16 s. .sly-obj did the same
+   for the whole life of the card. tools/hudvisible.mjs runs the census on the production artifact
+   with every neighbour driven to its widest.
    (No backticks anywhere in this file: the whole stylesheet is one template literal.) */
 .sly-hp {
   position: absolute;
-  left: calc(var(--u) * 1.9);
-  /* §731.7 "move the meter toward the top": 10u, up from 13.5u. Two things made the room — the
-     POW crescent is cut off the bottom of the artwork, and §731.6 retired the live pip row that
-     used to be .sly-tl's first child, which shortened the stack above by its own height. The
-     offset is still measured rather than derived: the -1.2deg tilt expands the bounding box
-     upward, which cost 11.7 px of real clearance last time against ~17 implied, so the number
-     below is the one tools/hudvisible.mjs reports against a FULLY ARMED stack. */
-  /* 10.7u. At 10u the MEASURED clearance to a fully-armed .sly-tl was 8.2 px — zero overlap, but
-     tighter than this corner has any reason to be, and the same margin §731.5 already declined
-     once at 11.7 px. Still well up from the 13.5u it moved from. */
-  top: calc(var(--u) * 10.7);
+  /* Mirrors .sly-tl's left 1.9u, and is the retired card's own right offset. */
+  right: calc(var(--u) * 1.9);
+  /* 1.5u, the same STATED offset as .sly-tl in the opposite corner — and now the same PAINTED
+     one, which is the point of the origin below. At top-left this element could not use .sly-tl's
+     number: the tilt stole margin off the top (§731.5 measured 11.7 px where the offsets implied
+     ~17, and §731.7 declined 10u at 8.2 px) and the offset had to absorb a stack that grows
+     downward. Neither applies here, so the number is derived from the opposite corner rather
+     than carried over from the old one. */
+  top: calc(var(--u) * 1.5);
   /* §731.7 "reduce the size by one third": 18.2u * 2/3 = 12.13u. Height follows the artwork's
-     own cropped aspect (1.830:1 now that the POW crescent is gone, was 1.767:1). */
+     own cropped aspect (1.830:1 now that the POW crescent is gone, was 1.767:1). Unchanged by
+     §743 — that instruction was a move, not a resize. */
   width: calc(var(--u) * 12.13);
   /* A degree of tilt, the way every struck prop in this sheet is hand-placed. Kept small: the
      insignia is a MARK and a visibly askew mark stops reading as itself. */
   transform: rotate(-1.2deg);
-  transform-origin: left top;
+  /* RE-DERIVED, not copied. The origin belongs on the corner the element is ANCHORED by, so the
+     tilt is spent inward instead of eating the margin the offsets above promise. At left/top with
+     origin left top, -1.2deg swings the far (right) end UP and the bounding box escapes above
+     top by width * sin(1.2deg) = 2.8 px at 720p — the exact class of escape §731.5 caught by
+     measuring. Anchored by right and top, right top makes that corner a fixed point: the box
+     cannot cross either margin, and the tilt throws the far end DOWN and LEFT, into open screen
+     whose nearest occupant (.sly-toasts) is ~340 px away. left top here would have thrown the
+     box up over the viewport edge and left the right margin as the only true one. */
+  transform-origin: right top;
 }
 .sly-hp-meter { display: block; width: 100%; }
 .sly-hp-meter svg { display: block; width: 100%; height: auto; }
@@ -542,7 +460,7 @@ export const HUD_CSS = /* css */ `
 .sly-busted .mark { width: calc(var(--u) * 2.8); flex: none; }
 .sly-busted .mark svg { width: 100%; height: auto; }
 /* Paint on ink, with the carnelian carried as an offset spot-colour plate — the same trick
-   .sly-obj-title uses with gold. It reads red at a glance and still measures 12.6:1, where
+   .sly-pobj-title uses with gold. It reads red at a glance and still measures 12.6:1, where
    carnelian type on ink would have measured 3.45:1 and failed the bar the rest of this sheet
    is held to (tests/hud.test.mjs M2). */
 .sly-busted-txt {
@@ -1030,6 +948,54 @@ export const HUD_CSS = /* css */ `
   display: block; font-style: normal; font-size: calc(var(--u) * .78);
   letter-spacing: .3em; color: var(--lapis-d); text-shadow: none; margin-top: calc(var(--u) * .22);
 }
+
+/* ---- the objective, rehoused (§743) ----
+   The owner removed the top-right objective cel and gave the corner to the health meter. The
+   objective SYSTEM survives it — Pickups publishes the event on the vault beat, the loot loop
+   swaps a transient goal in and out of it, and tests/hudtruth.test.mjs U2 will not tolerate a
+   subscription that changes nothing on screen — so it renders here instead, in the cel a player
+   opens when he wants to know what he is doing. That is not the corner, which is the whole of
+   the instruction, and it costs the gameplay layer zero pixels.
+
+   Type sizes are pause-cel REFERENCE text (tests/hud.test.mjs M6), so the gameplay legibility
+   floor does not apply to them; the contrast bar still does, and the three pairs are the ones
+   the corner card was already held to — ink on paint, #6b503c on paint, gold on --lapis-d.
+   --lapis-d and not --lapis: pale gold on #2a7fd4 measures 3.44:1 and fails; on #1f4f96 it
+   clears at 6.68:1. */
+.sly-pobj {
+  position: relative;
+  margin-top: calc(var(--u) * .7);
+  padding-left: calc(var(--u) * .1);
+}
+.sly-pobj-kick {
+  display: inline-block;
+  background: var(--lapis-d);
+  color: var(--gold-l);
+  font-size: calc(var(--u) * .74);
+  letter-spacing: .22em;
+  padding: calc(var(--u) * .16) calc(var(--u) * .5) calc(var(--u) * .2);
+  border: calc(var(--u) * .13) solid var(--ink);
+  border-radius: calc(var(--u) * .12);
+  transform: rotate(-1.2deg);
+}
+.sly-pobj-title {
+  margin-top: calc(var(--u) * .34);
+  font-size: calc(var(--u) * 1.32);
+  line-height: 1.02;
+  color: var(--ink);
+  letter-spacing: -.005em;
+  transform: skewX(-5deg);
+  transform-origin: left center;
+  text-shadow: calc(var(--u) * .07) calc(var(--u) * .07) 0 rgba(232,185,66,.9);
+}
+.sly-pobj-sub {
+  margin-top: calc(var(--u) * .24);
+  font-size: calc(var(--u) * .78);
+  font-weight: 700;
+  letter-spacing: .1em;
+  color: #6b503c;
+}
+
 .sly-pause-rule {
   height: calc(var(--u) * .18); background: var(--ink); border-radius: 2px;
   margin: calc(var(--u) * .7) 0 calc(var(--u) * .8); position: relative;

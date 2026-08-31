@@ -172,9 +172,13 @@ const TEXT_PAIRS = [
   ['threat chip · hunted',      THREAT.hunted.colour,   INK],
   ['threat chip · spotted',     THREAT.spotted.colour,  INK],
   ['coin counter',              '#ffe9a8',              INK],
-  ['objective title',           INK,                    PAINT],
-  ['objective subtitle',        '#6b503c',              PAINT],
-  ['objective kicker',          '#ffe9a8',              LAPIS_D],
+  /* §743 moved these three runs out of the retired corner card and into the pause cel
+     (`.sly-pobj-*`). Same three colour pairs, because the pause panel's ground is `--paint`,
+     the same ground the card had — so the bar they were held to is unchanged and the entries
+     stay rather than being deleted with the card. */
+  ['pause objective title',     INK,                    PAINT],
+  ['pause objective subtitle',  '#6b503c',              PAINT],
+  ['pause objective kicker',    '#ffe9a8',              LAPIS_D],
   ['toast body',                PAINT,                  TOAST_BG],
   ['prompt verb',               PAINT,                  PROMPT_BG],
   ['pause title',               INK,                    PAINT],
@@ -234,8 +238,19 @@ test('M2: the colours asserted above are the colours the stylesheet actually shi
   }
   assert.equal(checked, 5);                                                   // §211.1
   // The objective kicker sits on the DARK lapis; on plain --lapis it measures 3.44:1 and fails.
-  assert.match(css, /\.sly-obj-kick\s*\{[^}]*background:\s*var\(--lapis-d\)/,
+  // §743: the kicker moved to the pause cel with the rest of the objective. Same rule, same bar.
+  assert.match(css, /\.sly-pobj-kick\s*\{[^}]*background:\s*var\(--lapis-d\)/,
     'the objective kicker must sit on --lapis-d — --lapis fails the contrast bar');
+  /* And the card the kicker came off is GONE, not renamed around a surviving rule (§743).
+     Comments are stripped first: this file's own prose still explains where the card went, and a
+     probe that cannot tell a rule from a note about a rule is not measuring the stylesheet.
+     §418.3, both inputs named: it must PASS on the sheet as it ships and FAIL on `.sly-pobj`,
+     the replacement, which is asserted below with the same stripper so the probe is not blind. */
+  const rules = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.ok(!rules.includes('.sly-obj'),
+    'a .sly-obj rule is back in the stylesheet — §743 removed the corner objective card');
+  assert.ok(rules.includes('.sly-pobj-kick'),
+    'CALIBRATION FAILED — the comment stripper ate the rules too, so the absence above proves nothing');
 });
 
 /* ====================================================================== M3 */
@@ -417,13 +432,18 @@ test('M5: two guards at the same rank report a count the player can act on', asy
  */
 const GAMEPLAY = [
   '.sly-coin-num', '.sly-coin-plus', '.sly-threat-lbl', '.sly-threat-num',
-  '.sly-obj-kick', '.sly-obj-title', '.sly-obj-sub', '.sly-toast', '.sly-prompt-verb',
+  '.sly-toast', '.sly-prompt-verb',
   '.sly-tov-tag', '.sly-mark .lbl', '.sly-alert-glyph', '.sly-alert-lbl',
   '.bx-mono', '.bx-rec', '.bx-caller-name', '.bx-caller-line',
 ];
 const REFERENCE = [
   '.sly-grp > h4', '.sly-row .dsc', '.sly-row .dsc small', '.sly-row .ks .plus',
   '.sly-btn', '.sly-pause-tip', '.sly-pause-title em',
+  /* §743: the objective's three runs moved OUT of the gameplay list and into this one, because
+     the corner card was retired and the objective now renders inside the pause cel. They are not
+     merely deleted from GAMEPLAY — a run that stops being inspected by either list is a run
+     nothing holds a floor on, and this file has lost arms that way before (§731.4). */
+  '.sly-pobj-kick', '.sly-pobj-title', '.sly-pobj-sub',
 ];
 
 /** Pull every `<selector> { … font-size: calc(var(--u) * N) … }` out of the stylesheet. */
@@ -735,14 +755,22 @@ test('§731: ?hud=nohealth removes the ornament and nothing else', async () => {
 
     /* The token must be a scalpel. Every other persistent element is still there, and the LIVE
        pip row in particular keeps its own count — the ornament and the readout are not the
-       same thing and a token that took both would be a regression, not a revert. */
+       same thing and a token that took both would be a regression, not a revert.
+       §743: `.sly-obj` left this list because the OWNER removed the corner card, not because the
+       token grew. Its place is taken by `.sly-pobj-title`, the objective's new home in the pause
+       cel — so the list still proves the token leaves the objective alone, which is what it was
+       here to prove, and the count does not shrink. */
     let kept = 0;
-    for (const sel of ['.sly-tl', '.sly-coins', '.sly-obj', '.sly-toasts',
+    for (const sel of ['.sly-tl', '.sly-coins', '.sly-pobj-title', '.sly-toasts',
       '.sly-prompt', '.sly-pocket', '.sly-marks']) {
       assert.ok(off.root.querySelector(sel), `?hud=nohealth also removed ${sel}`);
       kept++;
     }
     assert.equal(kept, 7);                                                     // §211.1
+    /* And the retired card is gone from BOTH boots — a token that resurrected it would be a
+       second way to fail §743, and neither boot may have it. */
+    assert.equal(off.root.querySelector('.sly-obj'), null, 'the corner objective card is back');
+    assert.equal(on.root.querySelector('.sly-obj'), null, 'the corner objective card is back');
     /* §731.6 SEMANTICS, stated: the live pip row is retired, so `?hud=nohealth` now leaves the
        top-left with NO health readout of any kind. It does not leave the corner empty — the coin
        counter and the exposure/stealth/carry chips are all still there, which the loop above
@@ -935,7 +963,7 @@ test('§731.5: the meter clears the non-text bar against EVERY possible backgrou
   assert.deepEqual(withAssetBlue, all,
     'the scene bound moved with the fill colour — the claim that the fill does not set it is wrong');
 });
-test('§731.5: one meter at top-left, no chip, no pip row', () => {
+test('§743: one meter in the corner the objective card vacated, no chip, no pip row', () => {
   const css = read('ui/hud.css.js');
   const block = /\.sly-hp\s*\{([\s\S]*?)\}/.exec(css);
   assert.ok(block, '.sly-hp rule not found');
@@ -957,16 +985,40 @@ test('§731.5: one meter at top-left, no chip, no pip row', () => {
     assert.ok(!hud.includes(dead), `${dead} survived §731.5 in HUD.js`);
   }
 
-  /* TOP-LEFT, below a stack that grows downward. */
-  assert.match(rule, /left:\s*calc\(var\(--u\)\s*\*\s*[\d.]+\)/, '.sly-hp is not anchored to the left edge');
-  assert.match(rule, /top:\s*calc\(var\(--u\)\s*\*\s*[\d.]+\)/, '.sly-hp is not anchored to the top');
-  assert.ok(!/right:/.test(rule) && !/bottom:/.test(rule), '.sly-hp still carries corner offsets');
-  const top = parseFloat(/top:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/.exec(rule)[1]);
-  /* §731.7 moved it UP. The armed .sly-tl stack is shorter now that §731.6 retired the pip row
-     that was its first child, so the floor moved with it — the real clearance is measured by
-     tools/hudvisible.mjs against the armed stack, and this arm only holds the direction. */
-  assert.ok(top < 13.5, `.sly-hp is at ${top}u — §731.7 asked for it to move toward the top`);
-  assert.ok(top >= 8, `.sly-hp at ${top}u will collide with the .sly-tl stack`);
+  /* §743 TOP-RIGHT, the corner `.sly-obj` vacated. Anchored by `right` and `top`, and NOT by
+     `left` or `bottom` — an element with both a left and a right offset is stretched rather than
+     placed, and the whole point of the move is that the right margin is the one that holds. */
+  const decl = rule.replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.match(decl, /right:\s*calc\(var\(--u\)\s*\*\s*[\d.]+\)/, '.sly-hp is not anchored to the right edge');
+  assert.match(decl, /top:\s*calc\(var\(--u\)\s*\*\s*[\d.]+\)/, '.sly-hp is not anchored to the top');
+  assert.ok(!/left:/.test(decl) && !/bottom:/.test(decl),
+    '.sly-hp still carries its old top-left offsets — §743 moved it to the top-right');
+
+  /* THE ORIGIN, which is the part of this move that is not a number swap. `rotate(-1.2deg)`
+     leaves ONE corner fixed — the transform origin — and throws every other corner off it. At
+     `left top` the far (right) end swings UP and the painted box escapes above the stated `top`
+     by width * sin(1.2deg); that is the 11.7-px-against-~17 gap §731.5 measured and the reason
+     §731.7 declined 10u at 8.2 px. Anchored by `right`/`top`, the origin must sit on THAT corner
+     or the two offsets above stop meaning what they say. Carrying `left top` over is the specific
+     mistake this arm exists to catch. */
+  assert.match(decl, /transform-origin:\s*right\s+top/,
+    '.sly-hp is anchored right/top but its transform-origin is not — the tilt will eat a margin the offsets promise');
+  const rot = parseFloat(/transform:\s*rotate\(([-\d.]+)deg\)/.exec(decl)[1]);
+  assert.ok(Math.abs(rot) > 0 && Math.abs(rot) <= 2,
+    `.sly-hp is rotated ${rot}deg — the tilt is a degree of hand-placement, not a slant`);
+
+  const right = parseFloat(/right:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/.exec(decl)[1]);
+  const top = parseFloat(/top:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/.exec(decl)[1]);
+  /* Both offsets are DERIVED from the opposite corner rather than picked: `.sly-tl` is the
+     cluster the owner demonstrably reads, and the two top corners should carry the same margins.
+     Read out of the stylesheet, not retyped, so retuning one corner fails this instead of
+     silently desyncing the two. The real clearances are measured by tools/hudvisible.mjs on the
+     production artifact against a fully armed stack; this arm holds the symmetry. */
+  const tl = /\.sly-tl\s*\{([\s\S]*?)\}/.exec(css)[1];
+  const tlLeft = parseFloat(/left:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/.exec(tl)[1]);
+  const tlTop = parseFloat(/top:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/.exec(tl)[1]);
+  assert.equal(right, tlLeft, `.sly-hp's right margin is ${right}u against .sly-tl's ${tlLeft}u — the two top corners must mirror`);
+  assert.equal(top, tlTop, `.sly-hp's top is ${top}u against .sly-tl's ${tlTop}u — the two top corners must line up`);
   /* Sized to the owner's "roughly 200 px wide in a 1280-wide frame". */
   const w = parseFloat(/width:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/.exec(rule)[1]);
   /* §731.7: "reduce the size by one third" — 18.2u became 12.13u. Pinned as a RATIO of the

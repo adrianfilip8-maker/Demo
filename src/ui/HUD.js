@@ -30,7 +30,6 @@ const TUNE = {
   toastLife: 2.6,         // s
   toastMax: 3,
   promptSwapPunch: 1.12,
-  objectiveHold: 5.0,     // s before the card collapses to its compact tab
   /**
    * `guardAlert` is EDGE-triggered — `Patrol._setState()` emits once per transition and never
    * again (`Guard.js:647`). So there is no such thing as an alert "going stale": the last state
@@ -355,7 +354,8 @@ export class HUD {
     this._promptKey = '';
     this._promptText = '';
     this._promptKind = '';
-    this._objTimer = 0;
+    /* §743: no `_objTimer` — the card that held-then-collapsed is gone. `_objBase` stays: it is
+       the standing goal restored when a carry ends, and the pause cel renders it. */
     this._objBase = null;       // the standing objective, restored when a carry ends
     this._carry = null;         // { name, value } — the treasure in hand
     this._goal = null;          // { point, label } — what the world marker points at
@@ -470,15 +470,6 @@ export class HUD {
           </div>
         </div>
 
-        <div class="sly-obj">
-          <div class="sly-obj-card">
-            <span class="sly-obj-eye">${Ico.eyeOfRa()}</span>
-            <span class="sly-obj-kick">OBJECTIVE</span>
-            <div class="sly-obj-title"></div>
-            <div class="sly-obj-sub"></div>
-          </div>
-        </div>
-
         <div class="sly-toasts"></div>
 
         <div class="sly-prompt">
@@ -531,9 +522,11 @@ export class HUD {
       goalLbl: q('.sly-goal-lbl'),
       goalDist: q('.sly-goal-dist'),
       busted: q('.sly-busted'),
-      obj: q('.sly-obj'),
-      objTitle: q('.sly-obj-title'),
-      objSub: q('.sly-obj-sub'),
+      /* §743: the objective no longer has a corner card. These two handles now point INTO the
+         pause cel — see `objective()` for why the method, its state and its subscription all
+         survived the card. */
+      objTitle: q('.sly-pobj-title'),
+      objSub: q('.sly-pobj-sub'),
       toasts: q('.sly-toasts'),
       prompt: q('.sly-prompt'),
       promptKey: q('.sly-prompt-key'),
@@ -557,29 +550,30 @@ export class HUD {
   /* ------------------------------------------------------ health ornament */
 
   /**
-   * §731 — the Sly 4 health bar, in the BOTTOM-RIGHT corner, drawn and inert.
+   * §731 — the Sly 4 health bar, drawn and inert. §743 moved it to the TOP-RIGHT corner.
    *
-   * ── Why that corner, measured rather than picked ────────────────────────────────────────
-   * The persistent gameplay layer (`.sly-shake`) anchors four things, and every one of them is
-   * in the stylesheet with a corner on it:
+   * ── Which corner, and why it is no longer a free choice ─────────────────────────────────
+   * The persistent gameplay layer (`.sly-shake`) now anchors three things:
    *
-   *   top-left      `.sly-tl`      left 1.9u / top 1.5u   — the live pip row, the coin counter,
-   *                                the threat + stealth chip, the carry chip. A column that
-   *                                GROWS DOWNWARD as chips turn on: the busiest corner there is.
+   *   top-left      `.sly-tl`      left 1.9u / top 1.5u   — the coin counter, the threat +
+   *                                stealth chip, the carry chip. A column that GROWS DOWNWARD
+   *                                as chips turn on: the busiest corner there is.
    *   top-centre    `.sly-toasts`  left 50% / top 1.6u
-   *   top-right     `.sly-obj`     right 1.9u / top 1.7u  — the objective card, plus its
-   *                                `.sly-obj-eye` hanging 0.5u past its own bottom-right.
    *   bottom-centre `.sly-prompt`  left 50% / bottom 4.4u
    *
-   * That leaves the two BOTTOM corners, and between them the right one is the safe one:
-   * `.bx-caller` sits at left 1.4u / bottom 3.3u — inside `.sly-binoc`, so it only exists while
-   * the optics are up, but the gameplay cluster fades over 0.16 s rather than vanishing
-   * (`#sly-hud[data-binoc='1'] .sly-shake { opacity: 0 }`), so a bottom-LEFT ornament would
-   * cross-dissolve through the caller panel every time Bentley calls. The right corner has no
-   * such neighbour in either state. That is a claim about LAYOUT, which no offline test can
-   * settle, so it is `tools/hudhealth.mjs` arm A that measures every persistent element's rect
-   * in a real browser — each driven to its widest state first — and asserts the ornament
-   * intersects none of them.
+   * The fourth was `.sly-obj` at right 1.9u / top 1.7u, and the owner retired it: *"Remove the
+   * objective from the corner and move the fake health bar to take its place."* So the corner is
+   * not chosen here — it is named — and what is measured instead is what the corner CONTAINS.
+   * `tools/hudvisible.mjs` runs that census on the production artifact with every neighbour
+   * driven to its widest and asserts zero intersection.
+   *
+   * The one neighbour that census cannot dismiss, recorded so nobody rediscovers it: `.bx-rec`
+   * and `.bx-corner.tr` are in this corner, inside `.sly-binoc`, so they exist only while the
+   * optics are up. The gameplay cluster FADES over 0.16 s rather than cutting
+   * (`#sly-hud[data-binoc='1'] .sly-shake { opacity: 0 }`), so for that 0.16 s the meter
+   * cross-dissolves through them. §731.1 rejected the bottom-left corner for exactly this reason
+   * — but it had a free choice and this does not, and `.sly-obj` had the identical property for
+   * the whole life of the card. Measured, reported, not treated as a defect.
    *
    * ── Why it is not a rectangle with a fill ───────────────────────────────────────────────
    * This file's design position: *"the Sly games never draw a 'UI layer'. They draw props."*
@@ -599,7 +593,9 @@ export class HUD {
    * §731.5 is the owner correcting the shape of the thing: *"No, that is wrong. The blue part
    * behind the insignia is the health bar."* Five badges was never the readout — the insignia is
    * the ornament ON a meter, and the meter is the blue lozenge behind it. One meter, one mask.
-   * `HP_PIPS`/`HP_FULL` and the whole pip row are gone rather than left dormant.
+   * `HP_PIPS`/`HP_FULL` and the whole pip row are gone rather than left dormant. §731.6/.7 then
+   * retired the live pip row, cut the POW crescent and took a third off the size at top-left;
+   * §743 is only a move, and the artwork, the size and the inertness are untouched by it.
    *
    * The fill is `PAL.blue`, IMPORTED from `SlyModel3.js` rather than copied, on the owner's
    * instruction to use the character's own outfit blue — see `Icons.healthMeter` for why the
@@ -701,6 +697,11 @@ export class HUD {
           <div class="sly-pause-head">
             <span class="mark">${Ico.cooperMark()}</span>
             <div class="sly-pause-title">PAUSED<em>SANDS OF RA</em></div>
+          </div>
+          <div class="sly-pobj">
+            <span class="sly-pobj-kick">OBJECTIVE</span>
+            <div class="sly-pobj-title"></div>
+            <div class="sly-pobj-sub"></div>
           </div>
           <div class="sly-pause-rule"><span class="cane">${Ico.cane()}</span></div>
           <div class="sly-cols">${groups}</div>
@@ -1065,20 +1066,44 @@ export class HUD {
   }
 
   /**
-   * Comic-cel objective card: slides in, holds, then collapses to a compact tab.
+   * The level's standing goal. §743 took away its corner card; it did NOT take away the system.
    *
-   * `transient` marks a card the loot loop puts up for the duration of a carry. The standing
-   * objective is remembered rather than overwritten, so banking a treasure puts the level's own
-   * goal back instead of leaving the player staring at a step he has already finished.
+   * ── What the owner asked for, and what that could not mean ─────────────────────────────────
+   * *"Remove the objective from the corner and move the fake health bar to take its place."* The
+   * top-right `.sly-obj` cel is gone. Retiring the METHOD with it was considered and is wrong in
+   * three separate ways, each of which is a live arm rather than an opinion:
+   *
+   *   · `Pickups._openVault()` PUBLISHES `objective` when the twelfth clue bottle is found —
+   *     the one mission beat this game has. `tests/eventbus.test.mjs`'s census fails in BOTH
+   *     directions, so dropping the subscriber would not quietly orphan that publish, it would
+   *     turn `objective` into a dead PUBLICATION and force §211.1's closed line back open.
+   *   · `tests/cluevault.test.mjs` V6/V7 EXTRACT this method's `on('objective', …)` handler out
+   *     of this file and execute it against the payload `Pickups` builds. No handler, no arm.
+   *   · `tests/hudtruth.test.mjs` U2 requires every subscribed event to change something on
+   *     screen. A method kept "for the API" that draws nothing is exactly the §357.1 shape U2
+   *     exists to catch — so "keep it but render nothing" is not available either.
+   *
+   * ── So it renders somewhere that is not a corner ────────────────────────────────────────────
+   * The pause cel, above the controls rule. That is where a player goes to ask what he is doing,
+   * it is read with the game stopped so it competes with nothing during play, and it costs the
+   * gameplay layer zero pixels — which is the whole point of the instruction. The card's
+   * hold-then-collapse timer (`_objTimer`, `TUNE.objectiveHold`, `_tickObjective`) went with the
+   * card: a line in a panel you opened deliberately has nothing to collapse out of the way of.
+   *
+   * `transient` still marks a goal the loot loop puts up for the duration of a carry. The
+   * standing objective is remembered in `_objBase` rather than overwritten, so banking a treasure
+   * puts the level's own goal back instead of leaving the player staring at a step he has already
+   * finished — unchanged, and still exercised by `_onCarry`.
+   *
+   * NOT to be confused with `setGoal()`, which drives the world-space `.sly-goal` pin and its
+   * distance readout. That is a different element with a different label, it was never fed from
+   * here, and §743 deliberately left it alone.
    */
   objective(title, sub = '', transient = false) {
     if (!this._built || !title) return;
     if (!transient) this._objBase = { title, sub };
     this.el.objTitle.textContent = title;
     this.el.objSub.textContent = sub;
-    this.el.obj.classList.remove('mini');
-    this.el.obj.classList.add('on');
-    this._objTimer = TUNE.objectiveHold;
   }
 
   /* ------------------------------------------------------------- the loot loop */
@@ -1258,7 +1283,6 @@ export class HUD {
 
     this._tickCoins(d);
     this._tickToasts(d);
-    this._tickObjective(d);
     this._tickSuspicion(d);
     this._tickPocket();
     this._tickWorldMarks();
@@ -1452,12 +1476,6 @@ export class HUD {
     if (i >= 0) this._toasts.splice(i, 1);
     t.el.classList.remove('on');
     setTimeout(() => t.el.remove(), 400);
-  }
-
-  _tickObjective(dt) {
-    if (this._objTimer <= 0) return;
-    this._objTimer -= dt;
-    if (this._objTimer <= 0) this.el.obj.classList.add('mini');
   }
 
   /* --------------------------------------------------- projected markers */
