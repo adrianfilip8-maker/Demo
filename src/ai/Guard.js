@@ -71,6 +71,21 @@ const CARMELITA_TYPES = ['temple', 'heavy'];
  * trusting this line — it has been wrong once already, and a comment cannot be tested.
  */
 
+/* §741 revert token: `?react=pickpocket` (or `globalThis.__REACT_AB = 'pickpocket'` from a
+   test) puts the pickpocketed one-shot back. The owner asked for the beat removed; the clips
+   stay authored in `GuardAnim.js` so the restore is this flag and no re-authoring. Only the
+   ANIMATION is gated here — `DETECT.pickpocketSuspicion` is untouched, so the guard still
+   half-notices exactly as before. */
+const REACT = (() => {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('react') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__REACT_AB != null) raw = String(globalThis.__REACT_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  const on = String(raw).trim().toLowerCase().split(',').map(s => s.trim());
+  return { pickpocket: on.includes('pickpocket') };
+})();
+
 /* ============================== TUNE ====================================== */
 
 const TUNE = {
@@ -966,7 +981,12 @@ class Guard {
     this.looted = true;
     // He half-notices — funnier than not noticing, and it teaches the player the tell.
     this.senses.suspicion = Math.max(this.senses.suspicion, DETECT.pickpocketSuspicion);
-    this._playOneShot('pickpocketed_reaction');
+    /* §741 — the owner asked for the reaction animation gone. The SUSPICION bump above stays:
+       that is the gameplay tell (he half-notices and may turn), and it is not what was cut.
+       Only the visible one-shot is removed. Both `pickpocketed_reaction` clips remain authored
+       in `GuardAnim.js`, and `CarmelitaNative.js` keeps its `HitTaken` mapping and its ONCE
+       membership, so restoring the beat is re-adding this single call and nothing else. */
+    if (REACT.pickpocket) this._playOneShot('pickpocketed_reaction');
     try { this.engine.emit('guardPickpocket', { guard: this, id: this.id, pos: this.position, ...this._loot }); }
     catch { /* an event handler must never cost a guard his loot */ }
     return this._loot;
