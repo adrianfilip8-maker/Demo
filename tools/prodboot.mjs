@@ -28,6 +28,7 @@
  *   node tools/prodboot.mjs --no-build      reuse an existing dist/
  *   node tools/prodboot.mjs --prefix /      serve at the root instead (the A/B: both must pass)
  *   node tools/prodboot.mjs --keep          leave the server up and print the URL
+ *   node tools/prodboot.mjs --query cam=hardblend   boot with a revert token on (§744)
  */
 import { chromium } from 'playwright';
 import { acquire } from './lock.mjs';
@@ -113,7 +114,11 @@ if (!existsSync(path.join(DIST, 'index.html'))) {
 const release = await acquire({ onWait: (ms) => process.stdout.write(`· waiting for capture lock (${(ms / 1000) | 0}s)\n`) });
 const port = await freePort();
 const srv = await serve(port);
-const url = `http://127.0.0.1:${port}${PREFIX}`;
+/* `--query cam=hardblend` boots the SAME artifact with a revert token on (§744). Additive, and
+   the default is the empty string, so every existing invocation is byte-for-byte what it was. A
+   revert token that has only ever been exercised in node is a claim about node. */
+const QUERY = (arg('--query', '') || '').replace(/^\?*/, '');
+const url = `http://127.0.0.1:${port}${PREFIX}${QUERY ? `?${QUERY}` : ''}`;
 console.log(`[prodboot] serving dist/ at ${url}`);
 
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || CHROME.find((p) => existsSync(p)), args: ARGS });
