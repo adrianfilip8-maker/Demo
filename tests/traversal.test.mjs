@@ -4033,6 +4033,9 @@ test('slopes: standing still does not travel, and a face too steep to stand on s
  *   _calibrate              reads hit BARE    latched once; see the note on its arm below
  *   CameraRig._sweep        reads distance    depen sets distance = totalLen, so the boom reads
  *                                             "clear to the far end" minus one camPad, not a jam
+ *   Guard._pocketWorld      reads position    §742; the fourth site. See the arm below — it is
+ *                           ONLY               in `_slide`'s class, and the census is what
+ *                                              established that rather than the author saying so.
  */
 test('§409 census: capsuleSweep says WHY it hit, and every caller in src is enumerated', async () => {
   const { c, collision } = await realWorld();
@@ -4121,15 +4124,17 @@ test('§409 census: capsuleSweep says WHY it hit, and every caller in src is enu
     });
   }
   console.log(`[§409] direct capsuleSweep callers in src: ${callers.join(', ')}`);
-  assert.equal(callers.length, 3,
+  assert.equal(callers.length, 4,
     `${callers.length} direct capsuleSweep call sites in src (${callers.join(', ')}), and the ` +
-    '§409 census enumerated 3: Controller._calibrate, Controller._sweep, CameraRig._sweep. A new ' +
-    'one must be censused — does it distinguish a swept contact from a push-out, and what does it ' +
-    'do when it cannot? — and then this count updated, not the other way round.');
+    '§409 census enumerated 4: Controller._calibrate, Controller._sweep, CameraRig._sweep, ' +
+    'Guard._pocketWorld. A new one must be censused — does it distinguish a swept contact from a ' +
+    'push-out, and what does it do when it cannot? — and then this count updated, not the other ' +
+    'way round.');
   const byFile = callers.map((s) => s.split(':')[0]).sort();
-  assert.deepEqual(byFile, ['player/CameraRig.js', 'player/Controller.js', 'player/Controller.js'],
-    'a capsuleSweep caller appeared outside player/ — the census covered the player only because ' +
-    'that is where every caller was; guards use raycast/groundCheck, neither of which depenetrates');
+  assert.deepEqual(byFile, ['ai/Guard.js', 'player/CameraRig.js', 'player/Controller.js', 'player/Controller.js'],
+    'a capsuleSweep caller appeared outside the censused set. It was player-only until §742 added ' +
+    '`Guard._pocketWorld`; guard SENSING still uses raycast/groundCheck, neither of which ' +
+    'depenetrates, and any new guard-side sweep needs its own arm below.');
 
   // And the Controller's own fan-out: `_sweep` is the wrapper five consumers share.
   const ctrl = readFileSync(path.join(SRC, 'player', 'Controller.js'), 'utf8');
@@ -4202,6 +4207,137 @@ test('§409 census: capsuleSweep says WHY it hit, and every caller in src is enu
     'read in the codebase; it is safe only because a 3.5 m drop that starts 3 m above known ground ' +
     'must cross the floor. If that stops being true the probe needs the bound, not a wider window.');
   assert.equal(c._capOff, 0, 'the base/centre calibration flipped — every sweep is now offset 0.9 m');
+});
+
+/**
+ * §409 census, the FOURTH caller (§742): `Guard._pocketWorld`.
+ *
+ * The census above counts it; this arm is the census of it — the question the count's own failure
+ * message asks of any new site. *Does it distinguish a swept contact from a push-out, and what
+ * does it do when it cannot?*
+ *
+ * **It does not distinguish, and it does not need to, because it reads `position` and nothing
+ * else.** That puts it in `_slide`/`ledgeAssist`'s class rather than `_moveVertical`'s: the whole
+ * question it asks is *"where along this 0.34 m offset does a coin still fit?"*, and `position`
+ * answers it correctly under BOTH disjuncts —
+ *
+ *   sweepHit  the offset ran into something; `position` is the last clear point along it.
+ *   depenHit  the pouch STARTED inside something (a guard flush against masonry); `position` is
+ *             where the push-out put it, which is out of the wall. That is the right answer and
+ *             it is a strictly better one than the raw offset.
+ *
+ * It never reads `hit`, `toi` or `distance` — the three fields §409 is about — so the shape that
+ * dropped Sly off the summit lip has no way in. Asserted below by CONSTRUCTION rather than by
+ * reading the source: the depenetration-only quadrant is built (a guard whose hips are buried),
+ * the real method is called, and its answer is required to be out of the thing it started in.
+ */
+test('§409 census, the fourth caller: `Guard._pocketWorld` is in `_slide`\'s class, not `_moveVertical`\'s', async () => {
+  /* DOMAIN (§418.3)
+   * passes on : a guard standing in open courtyard — the sweep finds nothing, `position` is the
+   *             requested end point, and the pouch lands the full `pocketBack` behind him.
+   * fails  on : the same guard with his hips buried in a solid collider, where the raw offset
+   *             stays inside it and only the push-out gets out. Both cells are built in-arm.
+   * does NOT  : test the pop, the flight or the economy — `tests/pocketpop.test.mjs` owns those.
+   *             This is about ONE field of ONE sweep result.
+   */
+  const { engine, collision } = await realWorld();
+  const { Guards } = await import('../src/ai/Guard.js');
+  const guards = new Guards(engine);
+  await guards.init();
+  const g = guards.guards[0];
+  g._updatePocket();
+  g.root.updateMatrixWorld(true);
+
+  /* Route the guard's collision lookup at the real layer, and watch what the sweep answered. */
+  const seen = [];
+  const realSweep = collision.capsuleSweep.bind(collision);
+  collision.capsuleSweep = (...a) => { const r = realSweep(...a); seen.push({ sweepHit: r.sweepHit, depenHit: r.depenHit }); return r; };
+  const inner = engine.get.bind(engine);
+  engine.get = (m) => (m === 'collision' ? collision : inner(m));
+
+  /* ---- cell 1: open air. The sweep finds nothing and the pouch goes the whole way back. ---- */
+  const openAt = V(0, 200, 0);                       // nothing is 200 m up
+  const homePos = g.position.clone();
+  g.position.copy(openAt);
+  g.forward.set(0, 0, 1);
+  g._updatePocket();
+  const open = g._pocketWorld(new THREE.Vector3());
+  const openLast = seen[seen.length - 1];
+  console.log(`[§409/§742] open  sweepHit=${openLast?.sweepHit} depenHit=${openLast?.depenHit} `
+    + `back=${open.clone().sub(openAt).dot(g.forward).toFixed(3)}`);
+  assert.equal(openLast?.sweepHit, false, 'a pouch sweep 200 m in the air contacted something');
+  assert.equal(openLast?.depenHit, false, 'a pouch sweep 200 m in the air was pushed out of something');
+  assert.ok(open.clone().sub(openAt).dot(g.forward) < -0.3,
+    `the unobstructed pouch landed ${open.clone().sub(openAt).dot(g.forward).toFixed(3)} m along his `
+    + 'facing — it must go the full `pocketBack` BEHIND him when nothing is in the way');
+
+  /* ---- cell 2: buried. The depenetration-only quadrant, and the one that matters. ---------- */
+  /**
+   * Put his hips inside a real SOLID, found by raycast rather than typed (§435.4).
+   *
+   * The floor under the courtyard will not do, and finding that out was worth the detour: at
+   * (0,·,30) `groundCheck` answers from TERRAIN's analytic height, which has no BVH triangles
+   * there, so `Collision.overlap` reports a capsule half a metre under the sand as touching
+   * nothing at all. That is §732.4's disagreement between the two representations in miniature —
+   * and it would have made this cell a silent no-op with `raw overlaps=0`.
+   */
+  const SOLID_TAGS = ['ground', 'wall', 'ledge', 'pole', 'misc'];
+  const stillIn = (p) => collision.overlap(p, 0.2414, SOLID_TAGS).length;
+  const EYE = 1.2;
+  let solid = null;
+  const dir = new THREE.Vector3();
+  /* Search rather than assume: the fixture is only valid if the RAW offset really does end up
+     inside something, so the search runs until `overlap` says so and the arm refuses otherwise. */
+  outer:
+  for (let a = 0; a < 48; a++) {
+    const th = (a / 48) * Math.PI * 2;
+    dir.set(Math.sin(th), 0, Math.cos(th));
+    const hit = collision.raycast(V(0, EYE, 24), dir, 40, null);
+    if (!hit?.hit || hit.distance < 1) continue;
+    for (const deep of [0.60, 1.00, 1.60]) {
+      const at = V(0, EYE - 0.62, 24).addScaledVector(dir, hit.distance + deep);
+      g.position.copy(at);
+      g.forward.copy(dir).negate();                   // his back is deeper into the solid
+      g._updatePocket();
+      /**
+       * The validated point is where the SWEEP STARTS — his own hip — and not the raw pouch.
+       *
+       * That distinction is the whole fixture. A start OUTSIDE the solid with the end inside it
+       * produces `sweepHit`, which is the ordinary contact quadrant and one this arm can already
+       * see elsewhere; only a start INSIDE produces the depenetration-only answer §409 is about.
+       * The first draft validated the pouch, buried him 0.30 m, and got `sweepHit=true
+       * depenHit=false` — a fixture that passed its own search and tested the wrong cell.
+       */
+      const hip = V(g.position.x, g.position.y + 0.62, g.position.z);
+      if (stillIn(hip) > 0 && stillIn(g.pocketPosition) > 0) {
+        solid = { dir: dir.clone(), tag: hit.tag, deep }; break outer;
+      }
+    }
+  }
+  assert.ok(solid,
+    'no direction from the courtyard buried the guard\'s HIP inside a solid collider — then the '
+    + 'depenetration cell below is not reachable and this arm is not measuring the quadrant it says');
+  console.log(`[§409/§742] buried fixture: ${solid.tag} at ${solid.deep} m depth`);
+  seen.length = 0;
+  const out = g._pocketWorld(new THREE.Vector3());
+  const buriedLast = seen[seen.length - 1];
+  const raw = g.pocketPosition.clone();
+  console.log(`[§409/§742] buried sweepHit=${buriedLast?.sweepHit} depenHit=${buriedLast?.depenHit} `
+    + `raw overlaps=${stillIn(raw)} -> swept overlaps=${stillIn(out)}  moved=${raw.distanceTo(out).toFixed(3)} m`);
+  assert.ok(buriedLast, 'the buried pouch never reached the real collision layer');
+  assert.equal(buriedLast.depenHit, true,
+    'a pouch whose sweep STARTS inside the floor did not report a push-out — then this cell is not '
+    + 'the depenetration quadrant and the arm is measuring the wrong thing');
+  assert.ok(stillIn(raw) > 0, 'the raw offset is not inside anything, so there is nothing to get out of');
+  assert.equal(stillIn(out), 0,
+    `the pouch is still inside ${stillIn(out)} collider(s) after the sweep. \`_pocketWorld\` reads `
+    + '`position` precisely so a push-out is honoured; if that read changed to `hit`+`toi`, this is '
+    + 'the arm that says so.');
+
+  collision.capsuleSweep = realSweep;
+  engine.get = inner;
+  g.position.copy(homePos);
+  g._updatePocket();
 });
 
 /**

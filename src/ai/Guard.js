@@ -1693,13 +1693,25 @@ class Guard {
   _pocketWorld(out) {
     const bone = this.bones ? (this.bones.hips || this.bones.Hips || this.bones.pelvis
       || this.bones.mixamorigHips || this.bones.spine || null) : null;
+    let onBone = false;
     if (bone?.matrixWorld) {
       out.setFromMatrixPosition(bone.matrixWorld);
       /* A bone whose matrix has never been updated reads as the origin, which is a spawn point
-         100 m from the guard. Fall through rather than publish it. */
-      if (!Number.isFinite(out.x) || out.distanceToSquared(this.position) > 4) out.copy(this.pocketPosition);
-    } else {
-      out.copy(this.pocketPosition);
+         a hundred metres from the guard. Fall through rather than publish it. */
+      onBone = Number.isFinite(out.x) && out.distanceToSquared(this.position) <= 4;
+    }
+    /**
+     * The fallback is his own HIP HEIGHT, not `pocketPosition`.
+     *
+     * `pocketPosition` has already had `-forward * pocketBack` applied to it, so copying it here
+     * and then applying the offset below puts the pouch **0.68 m** behind him — twice the
+     * authored distance, floating a body-width off his back. The first draft did exactly that
+     * and `tests/traversal.test.mjs`'s §409/§742 arm caught it on its first run, on the one input
+     * that reaches this branch (a guard whose bone matrix is stale). The bone path was never
+     * wrong, which is why nine guards' worth of census read a clean −0.345 and said nothing.
+     */
+    if (!onBone) {
+      out.set(this.position.x, this.position.y + TUNE.pocketUp * (this.type === 'scarab' ? 0.4 : 1), this.position.z);
     }
 
     const back = TUNE.pocketBack * (this.type === 'scarab' ? 0.6 : 1);
