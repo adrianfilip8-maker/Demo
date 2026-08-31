@@ -64164,3 +64164,257 @@ sconces, which already sit BELOW the architecture at val 0.302/0.375 and must no
 further down. §739's jars, the character and the architecture are re-proved per body at every
 strength on the max-absolute-delta table. Two stances, both grades. The courtyard inverts the sign
 of the lightness gap and that is stated in the body rather than averaged away. Body follows.)*
+
+### §740.1 The answer, first, so a redirect is cheap (§705)
+
+**The imported props were never short of chroma. They were too LIGHT, and nobody had measured
+lightness in eight rounds.**
+
+The owner narrowed it himself — *"Only the imported props from that pack seem to be having the
+issue, nothing else"* — which hands this lane the control it had been missing: §739's canopic
+jars, standing on the same table, under the same lights, in the same frame, that he had just
+called fixed. Measured per body against them, in the shipped §739 state:
+
+| `interior` | | props | approved jars | architecture |
+|---|---|---|---|---|
+| day | saturation | 0.390 | 0.369 | 0.371 |
+| | **lightness** | **0.568** | **0.511** | **0.398** |
+| night | saturation | 0.667 | 0.614 | 0.709 |
+| | **lightness** | **0.429** | **0.326** | **0.303** |
+
+**Saturation is at parity — the props are marginally ABOVE the control on it — and lightness is
+not.** 15 of 19 placed bodies are lighter than the lightest approved jar at BOTH grades; 16 of 19
+are lighter than every architecture surface in the room by day. "Washed out" means pale, pale is
+bright-and-unsaturated, and only the second half of it had ever been scored.
+
+**Shipped: `KK_DIM = 0.70`** — §736's derived grade scaled by 0.70 in linear, `KK_GRADE_BASE
+0xe6b073` → `KK_GRADE 0xc49661`. Revert `?kk=nodim`. In the crypt that lands the props at val
+**0.509** against the approved jars' **0.511**, while saturation moves only 0.390 → 0.376 against
+their 0.369 — it buys lightness parity without spending the chroma parity §736 and §738 earned.
+
+### §740.2 The other lead was the obvious free move and it is the wrong lever
+
+§738 capped `KK_HOLD` at 0.25 partly to protect the sconces; §739 removed that constraint by
+giving them their own material. So raising the hold looked free, and it is not — **it moves
+lightness the wrong way**. Re-scored off §738's own sweep, already on disk, no new render:
+
+```
+  hold      0.00    0.25    0.35    0.50    0.70    1.00     architecture
+  PROP val 0.540   0.555   0.566   0.581   0.601   0.623        0.398
+  PROP sat 0.317   0.387   0.414   0.453   0.505   0.584        0.371
+```
+
+Every step that improves the number eight rounds were scoring makes the defect the owner can see
+worse. The `H050` arm reproduces it inside §740's own run (val 0.568 → 0.593). **The cap being
+obsolete is true and irrelevant**, and that is worth stating plainly because it was the lead that
+arrived labelled as a fact rather than a hypothesis.
+
+### §740.3 The sweep
+
+Four dims, one boot, one mask, per body, two stances, both grades. The bar is the approved jars.
+
+```
+  interior            day val / sat        night val / sat
+  A0  (shipped §739)   0.568 / 0.390        0.429 / 0.667
+  G085                 0.534 / 0.386        0.397 / 0.671
+  G070  SHIP           0.509 / 0.376        0.361 / 0.671
+  G055                 0.463 / 0.352        0.318 / 0.667
+  G045                 0.424 / 0.325        0.285 / 0.663
+  H050 (more hold)     0.593 / 0.454        0.435 / 0.695
+  --- the bars ---
+  LIME approved jars   0.511 / 0.369        0.326 / 0.614
+  ARCH                 0.395                0.302
+```
+
+**0.70 is a measured arm, not an interpolation between two.** §738.8 and §739.9 both record this
+lane committing a provisional literal ahead of its sweep, and in §739 that literal sat inside a
+dip and would have made the jars flatter than shipping nothing; the rule earned twice is that the
+shipped number is one that was rendered.
+
+Why 0.70 and not 0.55, which lands NIGHT exactly (0.318 against 0.326): 0.55 overshoots day
+downward to 0.463 against 0.511, and the courtyard (§740.4) says every extra step of dim costs
+more there. 0.70 lands day almost exactly and cuts the night excess from +32 % to +11 %.
+
+**Saturation is nearly flat across the whole sweep in the crypt** — 0.390 → 0.376 by day, 0.667 →
+0.671 at night. That is the property that makes this the right lever rather than a trade.
+
+### §740.4 The courtyard inverts the sign, and it is reported rather than averaged
+
+```
+  courtyard            day val / sat        night val / sat
+  A0                   0.348 / 0.283        0.154 / 0.655
+  G070  SHIP           0.312 / 0.349        0.144 / 0.716
+  ARCH                 0.537                0.275
+  LIME                 0.744 / 0.415        0.363 / 0.332
+```
+
+In the courtyard the imported props are **already the darkest thing in the frame** — val 0.348
+against masonry at 0.537 — so the dim makes a lightness gap that runs the other way slightly
+worse (0.348 → 0.312). It simultaneously moves saturation a long way toward the architecture
+(0.283 → 0.349 against 0.414), because AgX desaturates with brightness and these bodies are
+sunlit.
+
+So the change is a clear win where the complaint lives and a mixed one where it does not. It is
+shipped on the crypt's numbers because that is the room the owner has photographed through this
+whole family of sections, it holds the control he named, and the courtyard's own reading is not a
+"washed out" signature at all — dark and under-saturated is muddy, not pale.
+
+### §740.5 Scope, and why the sconces keep §736's grade without breaching §729
+
+§729's header forbids the imported set drifting into two grades. It means that a body placed as
+set dress and the same body placed as a destructible must not differ, and that holds exactly:
+`kaykit:atlas`, `props:kaykit` and `smash:kaykit` take an identical bag, asserted by set
+difference in D4. **`torch_mounted` has a single call site and is never placed as either.**
+
+It is also the one imported population WITHOUT §740's defect — measured at val 0.375 day / 0.294
+night against an architecture at 0.395 / 0.302, i.e. already at or below the masonry while every
+other imported body sits above it. The `GT070` arm prices dimming them anyway at **0.375 → 0.335**
+and **0.294 → 0.262**: a change to a fixture the owner approved at §734 and re-approved when §739
+handed its shade back, in service of a defect it does not have. Not taken.
+
+`KK_GRADE_BASE` keeps §736's derived `0xe6b073` intact and separate, so `tests/kksurface.test.mjs`
+K3 still re-derives it from the shipped atlas bytes, the placed bodies and the architecture
+palette. **§740 did not change §736's arithmetic — it changed its TARGET.** §736 solved for
+`paving_courtyard`'s luminance because that is the surface the props stand on; it is also the
+brightest stone in the room, and aiming at it put the props above everything around them.
+
+### §740.5b The shipped before/after, against the control the owner named
+
+Both stances, both grades, scored on each run's own mask, per body. `A0` of the sweep run is the
+§739 state; `A0` of the verification run is the shipped §740 build.
+
+```
+                        props val   props sat    jars val   jars sat   props lighter than
+                                                                       the LIGHTEST jar
+  interior day  before     0.568       0.390       0.511      0.369        15 of 19
+                AFTER      0.509       0.375       0.511      0.369         8 of 19
+  interior night before     0.429       0.667       0.326      0.614        15 of 19
+                AFTER      0.360       0.671       0.326      0.614        10 of 19
+  courtyard day before      0.348       0.283       0.744      0.415         0 of 13
+                AFTER      0.312       0.350       0.744      0.415         0 of 13
+  courtyard night before    0.154       0.655       0.363      0.332         2 of 13
+                AFTER      0.144       0.715       0.362      0.335         2 of 13
+```
+
+**In the crypt the props' median lightness lands on the approved jars' by day (0.509 against
+0.511) and the count of bodies lighter than the lightest jar falls from 15 of 19 to 8 of 19** —
+i.e. the population now straddles the control instead of sitting entirely above it. At night the
+median goes 0.429 → 0.360 against 0.326 and the count 15 → 10: better, not closed (§740.8).
+
+Saturation across all four rows moves by at most 0.015 downward and 0.060 upward — the chroma
+parity §736 and §738 bought is spent nowhere.
+
+### §740.6 Proof that nothing else moved
+
+Within-boot, per body, max absolute Δ over BOTH axes against the shipped §739 state, at every dim
+tested. Within-boot because that is the only comparison that is phase-frozen (§251): every arm
+runs at `dt = 0` behind one `setShot`, so a duplicate arm differs by exactly zero.
+
+```
+  interior day     ARCH 6   CHAR 1   OTHER 5   LIME 4   TORCH 2
+    G085 / G070 / G055 / G045       0.0000   0.0000   0.0000   0.0000   0.0000
+    GT070 (the alternative)         0.0000   0.0000   0.0000   0.0000   0.1484  props_kaykit_torch#6
+  interior night   same, and GT070 moves TORCH by 0.0395
+  courtyard        ARCH 15  CHAR 3   OTHER 10  LIME 1            all 0.0000
+```
+
+**The only non-zero anywhere is the arm this lane did NOT ship.** `GT070` is the unscoped
+alternative — the dim applied to the sconces as well — and it is in the run precisely so the cost
+of not scoping is a measured number rather than an argument.
+
+**And the shipped build reproduces the swept arm.** The dim is applied as a hex constant computed
+by `dimGrade`, while the sweep applied it as a live linear multiply on the material; those are two
+different code paths through the same arithmetic and they had to be checked against each other
+rather than assumed equal. Matched by mesh name across the two boots:
+
+```
+  PROP  19 bodies   max |Δ| 0.0029 (day) / 0.0024 (night)   <- 8-bit quantisation of the hex
+  LIME   4 bodies   0.0002 / 0.0000
+  TORCH  2 bodies   0.0000 / 0.0002
+  CHAR   1 body     0.0000 / 0.0000
+  ARCH   6 bodies   0.0345 / 0.0407   <- NOT this change: see below
+  OTHER  5 bodies   0.0525 / 0.0244
+```
+
+The ARCH and OTHER rows are the honest wart in this cross-check and they are not evidence of a
+leak: the two worst are `arch:tomb:hieroglyph_gilded` and `props_dark`, both crypt surfaces
+standing under a torch, and the two runs are DIFFERENT BOOTS whose flame phase differs. Within a
+boot those same surfaces read 0.0000 at every arm, which is the table above. It is a clean
+illustration of why §251's rule exists and why the no-regression proof is taken within a boot and
+never across two.
+
+### §740.7 Budget, tokens, suites, production
+
+**Budget — `tools/budgetattrib.mjs`** (`Engine.stats.drawCalls` is still §1's five frozen values):
+`interior` 46 / 0.405 M, `temple` 73 / 0.625 M, `courtyard` 94 / 0.706 M, `kaykit` 78 / 0.672 M,
+WORST main-view **94 draws (38 % of 250), 0.706 M triangles (59 % of 1.2 M)** — **identical to
+§739 in every row.** A colour constant costs nothing, and the sconces already had their own
+material from §739 so the scope adds no draw either. Measured rather than assumed, because the
+`over.color` path could in principle have split a cached material and it does not: the option hash
+already keys on `color`, and the sconce bag was already distinct on `shadeHold`.
+
+**Tokens — four findings on one key, each reverting alone, all composing:**
+
+```
+  ?kk=flat       §736: the ungraded white, and it still wins over every per-consumer override
+  ?kk=nohold     §738: the imported set's shade hold off
+  ?kk=torchhold  §739: the sconces back onto the shared hold
+  ?kk=nodim      §740: §736's undimmed grade back
+```
+
+**Suite — every run this lane made (§703.2), not only the green ones.**
+
+```
+  node --test kksurface+kkhold+limehold+torchswap+smashswap+kaykit   FAILED 53/54 — K1
+  node --test kksurface                                              7/7  pass
+  node --test kkdim                                     FAILED 5/6 — D1, MY OWN control
+  node --test kkdim                                                  6/6  pass
+  npm test  (full, 1168)                                     1168/1168 pass
+```
+
+**The fourth pinned test fired, as predicted, and so did one of my own.** K1 asserted the option
+bag carries the literal `0xe6b073`; it now asserts `KK_GRADE_BASE` is that literal and `KK_GRADE`
+is it dimmed, so §736's derivation stays pinned where K3 re-derives it. D1's failing input — my
+own §418.3 arm — claimed the naive sRGB-space dim rotates the hue by more than 0.03; the true
+figure at the shipped k is **0.0142** on B/R. The arm now asserts the measured magnitude at two
+depths instead of a number I guessed, which is the whole point of §418.3 and I got it wrong in the
+act of applying it.
+
+**Production (§666/§695).** `node tools/prodboot.mjs` on the built artifact, served from a
+`/Demo/`-shaped prefix: **`ready true` at 56.3 s, 149 requests, zero 4xx/5xx**, 32 pre-existing
+in-flight aborts (not gated). Checked IN the artifact rather than in the source —
+`dist/assets/KayKit-*.js` carries `dimGrade`, the `nodim` and `torchhold` token words, the `.7`
+dim constant and §736's base literal `15118451` (`0xe6b073`) together, which is the whole §740
+mechanism plus the §736 value it is derived from. **The live host was NOT checked and no claim is
+made about it** — the proxy blocks `*.github.io`.
+
+### §740.8 What is still open
+
+* **Night is improved and not closed.** The props go from 32 % lighter than the approved jars to
+  11 % lighter. Deeper dims reach it (0.55 lands night at 0.318 against 0.326) at the cost of
+  overshooting day and of the courtyard. If the owner reports night specifically, 0.55 is the
+  measured next stop and the table in §740.3 is the evidence for it.
+* **The courtyard runs the other way** (§740.4) and no single constant serves both rooms, because
+  the imported set is lighter than its surroundings in the crypt and darker than them outside.
+  What would serve both is a grade that is not a constant — the same shape as the clock gate
+  §738.7 and §739.3 have now named three times without anyone building it.
+* **Eight rounds scored one axis.** The instrument recorded `val` per body from §737 onward and
+  nothing read the column until §740. The lesson is not "measure lightness" — it is that a metric
+  chosen to answer round one's question was never re-examined against the owner's actual word,
+  and "washed out" names two axes in ordinary English.
+
+### §740.9 What I got wrong
+
+1. **My own §418.3 domain control was wrong in the direction §418.3 exists to prevent.** D1
+   asserted a threshold I had not measured (0.03 against a true 0.0142) and it went red on first
+   run. The rule says record an input you have SEEN it fail on; I recorded one I assumed it would.
+2. **I passed the sweep an arm name that does not exist** (`NODIM`) and the tool silently dropped
+   it, running `A0,I2,I4`. That is the right set by luck, and it was caught only because the tool
+   prints its arm list at startup. A harness that ignores an unknown arm should say so.
+3. **I read the cross-boot check as a possible leak before splitting it by population.** The
+   0.0525 on `props_dark` looked alarming for thirty seconds; it is torch flicker between two
+   boots, and the population split shows the subject at 0.0029 and the protected sets at 0.0000.
+4. **This was measurable eight rounds ago.** §736 recorded the albedo luminance gap in its own
+   table — props L 120.3 against architecture L 74.0 — chose `paving_courtyard` as the target
+   because it is the surface the props stand on, and never asked whether the brightest stone in
+   the room was the right thing to match. Every round since re-measured chroma.
