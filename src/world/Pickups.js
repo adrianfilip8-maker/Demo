@@ -235,6 +235,135 @@ const CLUE_TUNE = Object.freeze({ ...TUNE, collect: TUNE.clueCollect });
 /** Denominations. `amount` doubles as Audio's chime count, so these stay small and legible. */
 export const COIN_VALUE = { single: 1, stack: 3, pile: 5 };
 
+/* ====================== the pickpocket pop (§742) ======================== */
+
+/**
+ * The coins that burst out of a guard's pouch when Sly takes it, and fly straight to him.
+ *
+ * ── THEY PAY NOTHING, AND THAT IS THE WHOLE DESIGN (§742.1) ─────────────────────────────────
+ * A steal is ALREADY paid, exactly once, on `guardPickpocket`: `HUD.js:786` credits the wallet
+ * with the guard's own rolled `coins` and `Health.js:149` banks the same number into the charm
+ * purse. `tests/pickpocket.test.mjs` pins both directions of that — it exists because a flat 25
+ * on the raw `pickpocket` INTENT event shipped once and could be farmed by mashing E in an
+ * empty courtyard. So a paying pop would be a SECOND credit path off one steal, and the exploit
+ * would come back wearing a different hat.
+ *
+ * These records therefore carry `pay: false`, they never enter `this.coins`, they are never
+ * stepped by `stepPickup`, and `_absorbPop` — the ONLY way one is retired — emits nothing on
+ * the bus. What the player sees is not a second payment; it is the FIRST one, drawn. The wallet
+ * ticks up at the instant of the steal (with the "+83" punch and the toast) and the coins are
+ * the picture of that transfer arriving.
+ *
+ * ── They fly to him. They do not land (owner's amendment, mid-§742) ─────────────────────────
+ * The first draft of this section arced them onto the floor and handed them to the existing
+ * magnet, which made the §732 buried-coin hazard live and cost two sweeps per coin per frame.
+ * The owner's amendment — *"The coins don't need to fall to the ground, but can instead go
+ * directly to the character"* — deletes all of it. There is no ground query, no resting state
+ * and no collision in the flight at all. What is left is two phases and no world interaction:
+ *
+ *   POP    `popTime` of pure ballistics away from the pouch, into a fan about −forward. Short,
+ *          fast and slightly up. This is the beat that says "out of his pocket".
+ *   HOME   the residual pop velocity is STEERED toward Sly's chest rather than replaced, so the
+ *          path bows out and back — thrown, not teleported — and the speed ramps to a snatch.
+ *
+ * A coin may clip a metre of masonry mid-flight. That is accepted deliberately: it is two or
+ * three frames of a 0.3 m sprite behind a wall, and the alternative is a per-coin sweep every
+ * frame for a beat that is over before the player could look at it.
+ *
+ * ── The count is derived from the loot and then CAPPED, because the loot is huge ────────────
+ * `Guard.TUNE.loot` rolls temple 45–90, heavy 80–150, scarab 10–25. Popping one disc per coin
+ * would be 150 physical objects out of one pouch — a firework, not a pickpocket, and 150
+ * instances of headroom for a beat that reads at eight. `perCoin` maps loot to a legible count
+ * and `min`/`max` clamp it: 10 → 3, 45 → 3, 90 → 5, 150 → 8. The mapping is monotone so a
+ * heavy visibly out-pops a scarab, which is the only thing a count can usefully say.
+ */
+export const POCKET = {
+  /* ---- the pool ---- */
+  /**
+   * Instances of headroom on the coin mesh. THREE steals' worth of maximum pops in the air at
+   * once (3 × `max`), which the level cannot produce: `Guard.looted` latches so a guard can be
+   * robbed once, `Controller.TUNE.pickTime` 0.55 floors the gap between two steals, and a whole
+   * flight is over in well under half of that. Overflow recycles the oldest live coin rather
+   * than dropping the pop, and `debugInfo().pop.evicted` reports if it ever happens.
+   */
+  pool:          24,
+
+  /* ---- how many ---- */
+  perCoin:       20,     // loot per popped disc
+  min:           3,      // a scarab's 10-25 still reads as a handful
+  max:           8,      // the cap. See the header: the loot goes to 150 and eight is the beat.
+
+  /* ---- the pop (m/s, s) ---- */
+  popTime:       0.16,   // pure ballistics out of the pouch before the homing takes over
+  gravity:       11.0,   // only ever acts during `popTime`; it is what bends the burst
+  up:            2.30,
+  upJitter:      0.55,
+  out:           2.05,   // away from his back
+  outJitter:     0.55,
+  spread:        0.72,   // rad, half-angle of the fan about −forward (±41°)
+
+  /* ---- the flight ---- */
+  /**
+   * How hard the velocity is steered onto the player, per second.
+   *
+   * This is the number that decides "thrown" against "teleported". The pop velocity is not
+   * discarded when the homing starts — it is BLENDED toward the target direction at this rate —
+   * so a coin still travelling outward at 2 m/s takes a fifth of a second to come round, and the
+   * path it draws in that time is the arc. Raise it and the coins turn on a pin; drop it and
+   * they sail past him.
+   *
+   * **Swept rather than picked.** Deviation from the straight pouch→chest line, and the length
+   * of the whole beat, measured at a realistic 1.5 m steal distance:
+   *
+   *     homeTurn      3      4      5      6      7      9     12
+   *     bow (m)    0.441  0.406  0.381  0.363  0.349  0.330  0.311
+   *     beat (s)    0.65   0.60   0.57   0.55   0.53   0.52   0.48
+   *
+   * A clean monotone trade with no knee in it, so the choice is a judgement and is stated as
+   * one: 5.0 buys 0.38 m of arc — a fifth of the whole flight's length — for 0.57 s, which is
+   * still comfortably inside the "sub-second" the beat was asked for. The first draft shipped
+   * 9.0 and `tests/pocketpop.test.mjs` F2 could barely see its curve.
+   */
+  homeTurn:      5.0,
+  homeRamp:      0.30,   // s over which the flight speed ramps from `speedMin` to `speedMax`
+  life:          2.50,   // s before a coin that cannot reach him gives its slot back
+  fade:          0.35,   // of which the last N are spent scaling to nothing
+};
+
+/**
+ * §742 revert token: `?pop=off` (or `globalThis.__POP_AB = 'off'` from a test) takes the
+ * physical pop back out and leaves the steal exactly as §741 shipped it — the suspicion bump,
+ * the wallet credit, the toast, and no visible coins. Precedent: `?kk=`, `?react=`, `?vault=`.
+ * The gate is read once at module scope so a per-frame path never touches `location`.
+ */
+export const POP_ON = (() => {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('pop') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__POP_AB != null) raw = String(globalThis.__POP_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  return String(raw).trim().toLowerCase() !== 'off';
+})();
+
+/**
+ * Belt height above a guard's feet, used ONLY when `guardPickpocket` arrives without a `pocket`
+ * key (an older GUARDS, or a bare test payload). `Guard.TUNE.pocketUp` is the authored value and
+ * this mirrors it rather than importing it, because PICKUPS importing GUARDS to read one number
+ * would couple the collect loop to the AI module; `tests/pocketpop.test.mjs` asserts the two
+ * agree, so the mirror cannot drift silently. Never used on the shipped path.
+ */
+export const POCKET_FALLBACK_UP = 0.62;
+
+/**
+ * How many discs a roll of `n` coins is worth, on screen.
+ * Pure, exported, and pinned — the cap is a design claim and belongs where it can be asserted.
+ */
+export function popCount(n) {
+  const v = Number.isFinite(n) ? n : 0;
+  if (v <= 0) return 0;
+  return Math.max(POCKET.min, Math.min(POCKET.max, Math.ceil(v / POCKET.perCoin)));
+}
+
 /**
  * The treasures. Rare, hand-placed, each on a different route so no single traversal skill
  * collects them all — the scarab is the vertical route's prize, the collar the rooftop run's,
@@ -469,6 +598,24 @@ export class Pickups {
 
     this.wallet = new Wallet(TUNE);
     this.coins = [];        // { pos, kind, value, taken, phase }
+    /**
+     * §742 — the pickpocket pop. A FIXED pool, allocated once, never grown.
+     *
+     * Deliberately NOT pushed into `this.coins`: that array is the authored 82 and three things
+     * read it as such — `stats.coins`, `tools/coinfit.mjs`'s census (which would report 82 + 24
+     * placements, most of them nowhere) and `tests/pickups.test.mjs`'s placement arms. The pool
+     * shares the coin mesh's instance buffer and nothing else.
+     *
+     * Live records occupy `[0, _popLive)` and dead ones the tail, so the live set is always a
+     * contiguous prefix and `_coinMesh.count` can be a plain sum. Freeing is a swap with the
+     * last live slot — no splice, no allocation, and it is why a record's identity is its slot
+     * and never its index.
+     */
+    this.pocketCoins = [];  // { pos, vel, t, life, born, phase, scale, pay }
+    this._popLive = 0;
+    this._popSeq = 0;       // monotonic, so the overflow eviction can find the oldest
+    this._popRng = rng(WORLD_SEED ^ 0x50cc);
+    this._popStats = { pops: 0, spawned: 0, evicted: 0, expired: 0, collected: 0 };
     this.clues = [];        // { pos, taken, magnet, phase, home } — Sly's clue bottles
     this.clueCount = 0;     // bottles found; the vault opens when it reaches clues.length
     this.vaultOpen = false; // latched by `_openVault`, so the beat cannot fire twice
@@ -484,6 +631,15 @@ export class Pickups {
     this._playerPos = new THREE.Vector3(0, 0, 30);
     this._alert = new Map();   // guard id -> state, so "am I being chased" is one lookup
     this.stats = { coins: 0, treasures: 0 };
+    /* Allocated HERE and not on the first steal: a pop must not be the frame that allocates 24
+       Vector3 pairs. `pay: false` is the field `_collectCoin` reads — see POCKET's header. */
+    for (let i = 0; i < POCKET.pool; i++) {
+      this.pocketCoins.push({
+        pos: new THREE.Vector3(), vel: new THREE.Vector3(),
+        kind: 'pocket', value: 0, pay: false,
+        t: 0, life: 0, born: -1, phase: 0, scale: 1,
+      });
+    }
   }
 
   /* --------------------------------------------------------------------- */
@@ -605,7 +761,24 @@ export class Pickups {
          one texel; see `PropKit.coin`'s header for why that is an option and not the default. */
       const geo = coinGeo(TUNE.coinRadius, COIN_THICKNESS, { faceUV: true, rimUV: COIN_BADGE_RIM_UV });
       this._geoms.push(geo);
-      const mesh = new THREE.InstancedMesh(geo, this._coinMat(), this.coins.length);
+      /**
+       * §742 — CAPACITY, and why it is headroom on this mesh rather than a second mesh.
+       *
+       * This used to be `new InstancedMesh(geo, mat, this.coins.length)` — sized to exactly the
+       * placed count, so there was nowhere to spawn into. The two options were a second pooled
+       * mesh or headroom here, and headroom wins on every axis that costs anything: the popped
+       * coins are the SAME geometry with the SAME material, so they ride the same single draw
+       * call, the same badge texture and the same `_writeCoinMatrices` loop. A second mesh would
+       * have bought a second draw call and a second material for a set that is visually
+       * indistinguishable from the first.
+       *
+       * The headroom is NOT free triangles: `_writeCoinMatrices` sets `mesh.count` to
+       * `coins.length + _popLive` every frame, so with nothing in the air the mesh draws exactly
+       * what it drew before this section and an idle frame is bit-identical. The standing cost is
+       * the instance buffer — 24 × 16 floats = **1,536 bytes** — and nothing else.
+       */
+      const mesh = new THREE.InstancedMesh(geo, this._coinMat(), this.coins.length + POCKET.pool);
+      mesh.count = this.coins.length;   // the pool draws nothing until something is popped
       mesh.name = 'pickup_coins';
       mesh.frustumCulled = false;
       mesh.userData.noShadow = true;   // tiny, and self-shadowing them is pure acne (Props' own note)
@@ -825,15 +998,177 @@ export class Pickups {
       if (p.state === 'chase' && this.wallet.carrying) this._dropTreasure();
     });
 
-    /* A pickpocket is the other way loot enters the game, and `guardPickpocket` — which carries
-       the guard's ACTUAL rolled loot — had no listener at all. See KNOWN_ISSUES: the HUD is
-       currently paying a flat 25 for the raw intent event instead. Banking the real number here
-       would double-pay against that line, so this only records it for the debug overlay until
-       the HUD listener is corrected by its owner. */
+    /**
+     * A pickpocket is the other way loot enters the game, and `guardPickpocket` carries the
+     * guard's ACTUAL rolled loot.
+     *
+     * **CORRECTION (§742), because the comment that stood here was two owners out of date.** It
+     * read *"the HUD is currently paying a flat 25 for the raw intent event instead"*. That has
+     * not been true since `tests/pickpocket.test.mjs` landed: `HUD.js:786` now credits
+     * `p.coins` on THIS event and pins that it does not credit the intent, and `Health.js:149`
+     * banks the same number into the charm purse. The conclusion the stale comment drew is still
+     * the right one and now for the right reason — **this module must not bank, because the
+     * steal is already paid exactly once and banking here would be the second path.** That is
+     * also why the coins `_popPocket` throws pay nothing at all. See `POCKET`'s header.
+     */
     on('guardPickpocket', (p) => {
       if (!p) return;
       this._lastPocket = { coins: p.coins ?? 0, item: p.item ?? null, id: p.id ?? null };
+      if (POP_ON) this._popPocket(p);
     });
+  }
+
+  /* ------------------------------------------------------ §742 the pop --- */
+
+  /**
+   * Throw the guard's pouch open. One call per steal; never on the frame clock.
+   *
+   * ── The spawn point comes off the RIG, and the payload is what carries it ──────────────────
+   * `Guard.pickpocket()` publishes `pocket` — the world position of the pouch, taken from the
+   * guard's `hips` bone matrix and pushed `pocketBack` along −forward (see `Guard._pocketWorld`,
+   * which also sweeps that offset once so a guard with his back to a wall does not open his
+   * pouch inside the masonry). It is a fresh Vector3 per steal, so holding it for a spawn loop
+   * is safe. Measured across all nine roster guards by `tools/pocketpop.mjs`: the spawn sits
+   * **0.345 m behind his facing** and **0.60–0.62 m above his feet**, against a head that is at
+   * ~1.95 m. That is a belt, not a skull, and it is the number rather than the intention.
+   *
+   * The fallback is `pos` (the guard's FEET) lifted to belt height — used only when an older
+   * GUARDS is in the tree or a test emits a bare payload. Deliberately a bad-but-safe place:
+   * behind him at his own waist rather than floating at head height, which is the failure the
+   * brief named ("erupting from his head").
+   *
+   * @param {{coins?:number, pocket?:THREE.Vector3, pos?:THREE.Vector3, forward?:THREE.Vector3, yaw?:number}} p
+   * @returns {number} how many discs were actually thrown
+   */
+  _popPocket(p) {
+    const n = popCount(p?.coins);
+    if (n <= 0) return 0;
+
+    /* Behind him means behind his FACING, so the fan is aimed down −forward. `forward` is read
+       here and never retained. */
+    let fx = 0, fz = 1;
+    if (p?.forward && Number.isFinite(p.forward.x)) { fx = p.forward.x; fz = p.forward.z; }
+    else if (Number.isFinite(p?.yaw)) { fx = Math.sin(p.yaw); fz = Math.cos(p.yaw); }
+    const fl = Math.hypot(fx, fz) || 1;
+    fx /= fl; fz /= fl;
+
+    const src = p?.pocket && Number.isFinite(p.pocket.x) ? p.pocket : null;
+    const sx = src ? src.x : num(p?.pos?.x, 0);
+    const sy = src ? src.y : num(p?.pos?.y, 0) + POCKET_FALLBACK_UP;
+    const sz = src ? src.z : num(p?.pos?.z, 0);
+
+    const R = this._popRng;
+    let thrown = 0;
+    for (let i = 0; i < n; i++) {
+      const c = this._popSlot();
+      if (!c) break;
+      /* A fan about −forward, not a sphere: a sphere throws half the coins THROUGH him. */
+      const a = (n === 1 ? 0 : ((i / (n - 1)) - 0.5) * 2) * POCKET.spread + R.jitter(0.12);
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const dx = (-fx) * ca - (-fz) * sa;
+      const dz = (-fz) * ca + (-fx) * sa;
+      const out = POCKET.out + R.jitter(POCKET.outJitter);
+
+      c.pos.set(sx, sy, sz);
+      c.vel.set(dx * out, POCKET.up + R.jitter(POCKET.upJitter), dz * out);
+      c.t = 0;
+      c.life = POCKET.life;
+      c.scale = 1;
+      c.phase = R.range(0, Math.PI * 2);
+      c.born = this._popSeq++;
+      thrown++;
+    }
+    this._popStats.pops++;
+    this._popStats.spawned += thrown;
+    return thrown;
+  }
+
+  /**
+   * Claim a slot. A full pool recycles the OLDEST live coin rather than refusing the pop — a
+   * steal that produced nothing visible would read as a bug, and the oldest coin is by
+   * construction the one furthest through its own beat.
+   */
+  _popSlot() {
+    const pool = this.pocketCoins;
+    if (!pool.length) return null;
+    if (this._popLive < pool.length) return pool[this._popLive++];
+    let oldest = 0;
+    for (let i = 1; i < this._popLive; i++) if (pool[i].born < pool[oldest].born) oldest = i;
+    this._popStats.evicted++;
+    return pool[oldest];
+  }
+
+  /** Retire slot `i` by swapping it with the last live one. No splice, no allocation. */
+  _popFree(i) {
+    const pool = this.pocketCoins;
+    const last = this._popLive - 1;
+    if (i !== last) { const t = pool[i]; pool[i] = pool[last]; pool[last] = t; }
+    this._popLive = last;
+    pool[last].born = -1;
+  }
+
+  /**
+   * Sly takes it. **The one and only way a popped coin is retired, and it pays nothing.**
+   *
+   * Kept as a named method with three lines in it rather than inlined into `update`, because
+   * what it does NOT do is the load-bearing part and needs somewhere to be written down. It does
+   * not call `award()`, it does not call `_coin()`, and it emits nothing at all — not even
+   * `coin` with `amount: 0`. `HUD.addCoins` and `Health.bank` both no-op on 0, but
+   * `Audio._onCoins` would still schedule a chime and FX would still burst, and a chime for a
+   * payment that did not happen is a lie the player can hear. The steal has its own beat, its own
+   * toast and its own "+N" punch, and all three already fired at the instant `guardPickpocket`
+   * went out. See `POCKET`'s header for the whole argument.
+   */
+  _absorbPop(i) {
+    this._popStats.collected++;
+    this._popFree(i);
+  }
+
+  /**
+   * One popped coin, one frame. Two phases, no world interaction.
+   *
+   * @param {object} c    the pool record
+   * @param {number} dt
+   * @param {THREE.Vector3} target  Sly's chest — see the call site for why it is the chest
+   * @returns {boolean} true on the frame it reaches him
+   */
+  _stepPop(c, dt, target) {
+    c.t += dt;
+    if (c.t < POCKET.popTime) {
+      /* Pure ballistics out of the pouch. `gravity` acts here and nowhere else: it is what turns
+         a radial burst into a scatter with weight in it. */
+      c.vel.y -= POCKET.gravity * dt;
+      c.pos.addScaledVector(c.vel, dt);
+      return false;
+    }
+
+    _pN.subVectors(target, c.pos);
+    const d = _pN.length();
+    /* `TUNE.collect` and nothing else. It is the contact radius every other coin in this game is
+       taken at (`stepPickup`), so "absorbed at his chest" means the same distance here as there
+       — one number, one meaning, and a coin resize moves both together. */
+    if (d <= TUNE.collect) return true;
+    _pN.divideScalar(d);
+
+    /**
+     * Speed ramps from the magnet's own floor to its own ceiling over `homeRamp`.
+     *
+     * Borrowed rather than invented, for the reason `TUNE.speedMax`'s comment gives: it is
+     * `2 × Controller.TUNE.runSpeed` and it must strictly beat a sprinting player, or a coin
+     * thrown at a retreating Sly never lands. A second, differently-felt convergence speed
+     * beside the magnet's is exactly the drift this file's TUNE header exists to prevent.
+     */
+    const k = Math.min(1, (c.t - POCKET.popTime) / POCKET.homeRamp);
+    const speed = TUNE.speedMin + (TUNE.speedMax - TUNE.speedMin) * k * k;
+
+    /* STEER, do not replace. The residual pop velocity is still pointing away from him, so the
+       blend draws the arc for free — see `POCKET.homeTurn`. */
+    const turn = Math.min(1, POCKET.homeTurn * dt);
+    c.vel.x += (_pN.x * speed - c.vel.x) * turn;
+    c.vel.y += (_pN.y * speed - c.vel.y) * turn;
+    c.vel.z += (_pN.z * speed - c.vel.z) * turn;
+    c.pos.addScaledVector(c.vel, dt);
+    return c.pos.distanceTo(target) <= TUNE.collect;
   }
 
   /* --------------------------------------------------------------------- */
@@ -862,6 +1197,28 @@ export class Pickups {
       if (stepPickup(c, player, dt, TUNE)) this._collectCoin(c);
     }
 
+    /**
+     * §742 — the popped coins, flying to him.
+     *
+     * Backwards, because `_absorbPop`/`_popFree` swap the tail into the slot they retire and a
+     * forward loop would then step the swapped-in coin twice on the same frame.
+     *
+     * The target is the capsule's CENTRE, not its base — `TUNE.grabHeight`'s own comment gives
+     * the reason and `stepPickup` uses the same offset: `movement.position` is his feet, and a
+     * coin converging on his feet reads as being dropped rather than pocketed. So a popped coin
+     * and a magnetised one arrive at the same point, by the same number.
+     */
+    if (this._popLive) {
+      _pTarget.set(player.x, player.y + TUNE.grabHeight, player.z);
+      for (let i = this._popLive - 1; i >= 0; i--) {
+        const c = this.pocketCoins[i];
+        c.life -= dt;
+        if (c.life <= 0) { this._popStats.expired++; this._popFree(i); continue; }
+        if (c.life < POCKET.fade) c.scale = Math.max(0, c.life / POCKET.fade);
+        if (this._stepPop(c, dt, _pTarget)) this._absorbPop(i);
+      }
+    }
+
     for (const c of this.clues) {
       if (c.taken) continue;
       if (stepPickup(c, player, dt, CLUE_TUNE)) this._collectClue(c);
@@ -888,7 +1245,8 @@ export class Pickups {
   _writeCoinMatrices(t) {
     const mesh = this._coinMesh;
     if (mesh) {
-      for (let i = 0; i < this.coins.length; i++) {
+      const base = this.coins.length;
+      for (let i = 0; i < base; i++) {
         const c = this.coins[i];
         if (c.taken) { _m.makeScale(0, 0, 0); mesh.setMatrixAt(i, _m); continue; }
         const y = c.magnet ? c.pos.y : c.home + Math.sin(t * TUNE.bobRate + c.phase) * TUNE.bobAmp;
@@ -896,6 +1254,24 @@ export class Pickups {
         _m.compose(_v, _q.setFromEuler(_e.set(Math.PI / 2, 0, t * TUNE.spinRate + c.phase)), _one);
         mesh.setMatrixAt(i, _m);
       }
+      /**
+       * §742 — the popped coins share this buffer, in the headroom past the authored set.
+       *
+       * Same pose function as every other coin — that is the point of sharing the mesh — with
+       * two differences, both properties of a coin that is in flight and never at rest: no bob
+       * (a bob added to a position an integrator is already moving is the coin fighting itself),
+       * and a scale, which is the last `POCKET.fade` seconds of a coin that could not reach him
+       * shrinking away rather than blinking out.
+       */
+      for (let k = 0; k < this._popLive; k++) {
+        const c = this.pocketCoins[k];
+        _pScale.set(c.scale, c.scale, c.scale);
+        _m.compose(c.pos, _q.setFromEuler(_e.set(Math.PI / 2, 0, t * TUNE.spinRate + c.phase)), _pScale);
+        mesh.setMatrixAt(base + k, _m);
+      }
+      /* The headroom costs nothing while it is empty: with `_popLive` 0 this is exactly the
+         count the mesh had before §742, so an idle frame draws the same triangles it always did. */
+      mesh.count = base + this._popLive;
       mesh.instanceMatrix.needsUpdate = true;
     }
     const cm = this._clueMesh;
@@ -934,7 +1310,22 @@ export class Pickups {
 
   /* --------------------------------------------------------------------- */
 
+  /**
+   * A coin was touched. **`pay` decides whether that is a transaction (§742).**
+   *
+   * Every authored coin pays; the pickpocket pop does not, and is retired by `_absorbPop`
+   * instead — it never reaches this method on the shipped path. **This guard is therefore not
+   * decoration and it is not dead: it is a standing refusal at the one door a popped coin could
+   * come back through.** §742's own first draft handed the pops to `stepPickup` and the magnet,
+   * which routes every one of them straight here, and that draft is exactly what the guard
+   * exists to make safe. A later change that reintroduces the handoff finds a wall rather than a
+   * second payout.
+   *
+   * A per-record boolean rather than a `kind` string on purpose: `kind` is presentation
+   * (`single`/`stack`/`pile`) and has already been read as an index once in this file's history.
+   */
   _collectCoin(c) {
+    if (c.pay === false) return;
     this.award(c.value, c.pos);
   }
 
@@ -1176,6 +1567,10 @@ export class Pickups {
       cluesPlaced: this.stats.clues, cluesFound: this.clueCount || 0,
       vaultOpen: !!this.vaultOpen,
       lastPocket: this._lastPocket || null,
+      /* §742. `popLive` is the number of cosmetic coins in the air right now; the counters
+         beside it are cumulative. `evicted` above zero means the pool is undersized for how the
+         level is actually being played, which is the one number that would justify raising it. */
+      popLive: this._popLive, pop: { ...this._popStats },
     };
   }
 
@@ -1207,5 +1602,10 @@ const _e = new THREE.Euler();
  */
 const _eRock = new THREE.Euler(0, 0, 0, 'ZYX');
 const _one = new THREE.Vector3(1, 1, 1);
+/* §742's flight step. Its own scratch, because `_v`/`_d` are live inside `stepPickup` and
+   `_writeCoinMatrices` on the same frame and aliasing them is §237's trap one file over. */
+const _pN = new THREE.Vector3();
+const _pTarget = new THREE.Vector3();
+const _pScale = new THREE.Vector3(1, 1, 1);
 
 export default Pickups;

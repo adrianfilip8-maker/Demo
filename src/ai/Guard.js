@@ -5,6 +5,10 @@ import { removeOutlineShell } from '../render/Outline.js';
 import { loadCarmelitaGuard, CARMELITA_TEX, CARRY as CARMELITA_CARRY } from './CarmelitaGuard.js';
 import { loadCarmelitaNative, instantiateNative, CarmelitaNativeAnim } from './CarmelitaNative.js';
 import { GuardAnim } from './GuardAnim.js';
+/* §742 — the pouch sweep clears the COIN, so it needs the coin's authored size. `PropKit` is a
+   pure geometry library (no engine, no scene, no state) and `Pickups.js` reads the same two
+   constants from it for the same reason: one authored size, never two literals. */
+import { COIN_RADIUS, COIN_THICKNESS } from '../world/PropKit.js';
 import {
   ROSTER, buildRoutes, Senses, VISION, DETECT, STATE, stateForSuspicion, speedFor,
   coneColourStop,
@@ -790,6 +794,22 @@ export function shiftGuardSkin(geometry, on) {
 const _v1 = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _v3 = new THREE.Vector3();
+/* §742 — `_pocketWorld`'s own scratch. It runs inside `pickpocket()`, which is called from the
+   `pickpocket` bus handler while `_v1`/`_v3` are live in `nearestPickpocketTarget`'s loop. */
+const _v4 = new THREE.Vector3();
+/**
+ * §742 — the clearance the pouch sweep asks for, and 'center' so the probe is a SPHERE.
+ *
+ * It is the coin's own swept radius, imported rather than typed. `_writeCoinMatrices` poses
+ * every coin `Euler(π/2, 0, θ)` and turns it a full revolution about the vertical, so a coin's
+ * footprint is a ball of `hypot(r, t/2)` and not a disc — `tools/coinfit.mjs`'s header measures
+ * that and §732's census tests against it. **Measured before choosing:** at a hand-picked 0.12 m
+ * the wall arm of `tools/pocketpop.mjs` still reported 6 of 7 spawns inside drawn masonry, which
+ * is what a probe half the width of the thing it is clearing buys you. `PropKit` is a pure
+ * geometry library with no engine state, so this import adds no coupling GUARDS did not have.
+ */
+const POCKET_PROBE = Math.hypot(COIN_RADIUS, COIN_THICKNESS / 2);
+const POCKET_SWEEP_OPTS = Object.freeze({ anchor: 'center' });
 const _eye = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 const _rgt = new THREE.Vector3();
@@ -987,7 +1007,24 @@ class Guard {
        in `GuardAnim.js`, and `CarmelitaNative.js` keeps its `HitTaken` mapping and its ONCE
        membership, so restoring the beat is re-adding this single call and nothing else. */
     if (REACT.pickpocket) this._playOneShot('pickpocketed_reaction');
-    try { this.engine.emit('guardPickpocket', { guard: this, id: this.id, pos: this.position, ...this._loot }); }
+    /**
+     * §742 — `pocket` and `forward` are NEW keys, and both are freshly allocated.
+     *
+     * `pos` has always been `this.position`, the live vector: every existing subscriber reads it
+     * synchronously (HUD credits, HEALTH banks, PICKUPS records a number) so aliasing has never
+     * cost anything. `pocket` is different — PICKUPS holds it for the length of a spawn loop and
+     * FX bursts on it — and a guard who walks a metre before the next frame would drag the whole
+     * pop with him. One Vector3 pair per steal, and a steal is once per guard for the whole
+     * level; this is the same trade `Pickups._coin` documents for its own `pos`.
+     *
+     * Adding keys to a published payload is safe here in a way it usually is not: every reader
+     * of this event in `src/` destructures by name (`p.coins`, `p.item`, `p.id`, `p.pos`) and
+     * `tests/pickpocket.test.mjs` asserts on the wallet delta rather than on the payload shape.
+     */
+    const payload = { guard: this, id: this.id, pos: this.position, ...this._loot };
+    try { payload.pocket = this._pocketWorld(new THREE.Vector3()); } catch { /* rig-less build */ }
+    payload.forward = this.forward.clone();
+    try { this.engine.emit('guardPickpocket', payload); }
     catch { /* an event handler must never cost a guard his loot */ }
     return this._loot;
   }
@@ -1616,6 +1653,65 @@ class Guard {
     this.pocketPosition.copy(this.position)
       .addScaledVector(this.forward, -TUNE.pocketBack);
     this.pocketPosition.y += TUNE.pocketUp * (this.type === 'scarab' ? 0.4 : 1);
+  }
+
+  /**
+   * The pouch, off the RIG — where §742's coins actually leave him from.
+   *
+   * ── Why this is not just `pocketPosition` ──────────────────────────────────────────────────
+   * `pocketPosition` is `position` plus two authored offsets, and it is a TARGET: the point
+   * `nearestPickpocketTarget` ranks against and `Controller.pickMark` draws the HUD mark on. A
+   * point that is 2 cm off during a walk cycle is a perfect target and a visibly wrong SPAWN —
+   * the brief for §742 is explicit that the coins must read as leaving his pouch, not as
+   * erupting from a guessed offset, and a spawn that does not move with him reads as detached
+   * the moment he is mid-stride.
+   *
+   * **Measured before choosing, across all nine roster guards at rest** (`tools/pocketpop.mjs`
+   * reproduces it): `pocketUp` 0.62 lands on the `hips` bone's world height to **0.000 m** on
+   * every temple guard and **0.020 m** on every heavy, and laterally to within 0.005 m. So the
+   * authored offset is not wrong — it was derived from this rig — and the fallback below is a
+   * near-identical place rather than a different one. What the bone buys is that it FOLLOWS:
+   * `GuardAnim` drives a `pos` channel on the hips (the walk bob, the KO collapse), and the
+   * static offset cannot see any of it.
+   *
+   * ── The wall clamp: ONE sweep, at the steal, and nowhere near a frame ──────────────────────
+   * "Behind him" is exactly the direction that puts a pouch inside masonry when a guard has his
+   * back to a wall — measured, not imagined: `tools/pocketpop.mjs` backs every roster guard to
+   * 0.22 m off real level geometry and the raw offset lands inside it in 7 cases of 7. So the
+   * `pocketBack` offset is SWEPT, not applied: a blocked sweep hands back the last clear point
+   * along it, which is his own back rather than the inside of the wall.
+   *
+   * This is the ONLY collision query the whole pickpocket-pop feature makes. The coins
+   * themselves fly to the player with no world interaction at all (see `Pickups.POCKET`), so the
+   * cost of the clamp is one `capsuleSweep` per steal — and a guard can be robbed exactly once.
+   * `POCKET_PROBE` is a clearance for the pouch, not a coin's radius; a coin clipping a wall for
+   * two frames of a sub-second flight is accepted, a burst that ignites inside masonry is not.
+   *
+   * @param {THREE.Vector3} out
+   * @returns {THREE.Vector3} `out`
+   */
+  _pocketWorld(out) {
+    const bone = this.bones ? (this.bones.hips || this.bones.Hips || this.bones.pelvis
+      || this.bones.mixamorigHips || this.bones.spine || null) : null;
+    if (bone?.matrixWorld) {
+      out.setFromMatrixPosition(bone.matrixWorld);
+      /* A bone whose matrix has never been updated reads as the origin, which is a spawn point
+         100 m from the guard. Fall through rather than publish it. */
+      if (!Number.isFinite(out.x) || out.distanceToSquared(this.position) > 4) out.copy(this.pocketPosition);
+    } else {
+      out.copy(this.pocketPosition);
+    }
+
+    const back = TUNE.pocketBack * (this.type === 'scarab' ? 0.6 : 1);
+    _v4.copy(out).addScaledVector(this.forward, -back);
+    const col = this.owner?.collision || this.engine?.get?.('collision');
+    if (col?.capsuleSweep && col.ready !== false) {
+      const res = col.capsuleSweep(out, _v4, POCKET_PROBE, POCKET_PROBE * 2 + 1e-3, POCKET_SWEEP_OPTS);
+      out.copy(res.position);
+    } else {
+      out.copy(_v4);
+    }
+    return out;
   }
 
   get headY() { return this.position.y + (TUNE.headTop[this.type] ?? 1.95); }

@@ -2620,7 +2620,23 @@ export class Particles {
     on('doubleJump', (e) => this._burstAt('cane_arc', e?.pos, UP, 0.6));
     on('railMount', (e) => this._burstAt('footstep_metal', e?.pos, UP));
     on('poleMount', (e) => this._burstAt('footstep_stone', e?.pos, UP));
-    on('pickpocket', (e) => this._burstAt('coin_pop', e?.pos, UP, 0.7));
+    /**
+     * §742 — the gold puff MOVED from the reach to the steal, and from Sly to the pouch.
+     *
+     * It used to be `on('pickpocket', …)` at `e.pos` — Sly's own position — and `pickpocket` is
+     * MOVEMENT's INTENT event: the hand going out. `Moveset.Pickpocket.canEnter` requires a mark
+     * to exist, so it is no longer the free-money event `tests/pickpocket.test.mjs` was written
+     * about, but it still fires on every reach that MISSES (the mark walked away inside
+     * `pickTime`, the guard was already `looted`, a heavy clutched his purse). A gold burst on a
+     * failed steal is the E-mash exploit's cosmetic twin: the one thing the player has left to
+     * read the outcome by, saying yes when the answer was no.
+     *
+     * `guardPickpocket` fires only when `Guard.pickpocket()` actually paid out, and it carries
+     * `pocket` — the pouch off the rig — so the puff now goes off exactly where §742's physical
+     * coins leave him, instead of a metre in front at his chest. The two beats share an origin
+     * because they are one beat.
+     */
+    on('guardPickpocket', (e) => this._burstAt('coin_pop', e?.pocket || e?.pos, UP, 0.7));
 
     /* Target magnetism (src/player/Targets.js). §2.1.6's blue sparkle is the series' UI
        language for exactly these points and the field already emits the four beats. */
