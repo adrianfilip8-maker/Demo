@@ -65104,6 +65104,16 @@ way a player boots it with the "Click to play" veil dismissed (§731.2's trap 2)
   the pause cel on that artifact reads **"Steal the Eye of Ra"**, which is written by
   `init()` AFTER `_built = true`.
 
+#### One claim deliberately NOT made (§466.5)
+
+**No plate of the pause cel was taken, and no visual claim is made about how the re-homed
+objective LOOKS.** Every statement about it here is geometric or numeric — the three colour pairs
+against the 4.5:1 bar, the three type sizes against the pause cel's own reference floor, and the
+text reading back off the production artifact. §466.5 asks for two samples on both grades for a
+visual claim; the discipline is satisfied by not making the claim rather than by taking two
+samples of it, and the owner's eye is the instrument that matters for a panel he opens himself.
+Whether the objective belongs in the pause cel at all is his call and it is cheap to reverse.
+
 **Boundary unchanged (§666/§695):** this verifies the artifact, NOT the live host. The container's
 proxy blocks `*.github.io`, so nothing here was fetched from the deployed page. If the deployed
 page differs from this artifact, that is a deploy question and this lane did not and could not
