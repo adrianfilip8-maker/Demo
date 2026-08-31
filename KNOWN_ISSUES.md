@@ -65422,3 +65422,21 @@ amount of *slightly*, and `?cam=hardblend` puts the old feel back bit-exact for 
 Deleting `tests/camsmooth.test.mjs`, `tools/camjerk.mjs` and `tools/camprodblend.mjs`, reverting
 the ~50 lines in `_blendFrame` and the `--query` flag in `tools/prodboot.mjs` removes the lane
 entirely.
+
+---
+
+## §745 — "Reduce the amount of camera movement when swinging on the rings by half and smooth the camera movement": the during-state metric, defined before it was halved
+
+*(Heading committed ahead of its body to hold the number — §700.9. Claim marker, worded to be
+unlike any other lane's (§717): §745 CLAIM ring-swing-camera-motion-lane-4d1f88 — the
+RING-SWING-CAMERA-MOTION lane. Owner's request, verbatim: "Reduce the amount of camera movement
+when swinging on the rings by half and smooth the camera movement". Follow-up to §744, which he
+has seen and approved; §744's blend-shape change addresses the ENTRY into a framing and this one
+is about the RESIDENCY inside `hook_swing`. Scope: `src/player/CameraRig.js` only. GAMEPLAY IS
+OUT OF SCOPE AND WILL NOT BE TOUCHED — `MAG` in `EgyptLevel.js` (§720) and `HookSwing` in
+`Moveset.js` (§723) are the owner's own work and this lane edits neither; if the measurement says
+the fix belongs in the move, that is reported rather than done. "Amount of movement" is four
+different quantities that do not scale together, so this lane DEFINES the one it halves before it
+halves anything and reports the other three beside it. §744's numbers — mean STEP 10.4 over 53
+transitions, the nine boom delivery ratios, air->dive 143.1 — are re-run before and after and
+quoted either way. Body lands in this lane's next pushes.)*
