@@ -300,7 +300,7 @@ function printPool(title, rows) {
  * same trajectory converges to with the state PINNED − value on entry)`, absolute-weighted
  * `Σ|got| / Σ|asked|` across every visit, because the mean of per-visit fractions flatters.
  */
-const SCREEN = [
+export const SCREEN = [
   ['boom', 0.05], ['fov', 0.30], ['pivY', 0.05],
   ['lead', 0.08], ['side', 0.05], ['pitch', 0.010],
 ];
@@ -340,11 +340,36 @@ export function delivery(recorded, ARM) {
         const ref = B[r.e][name], e0 = enter[name];
         if (ref == null || e0 == null) continue;
         const span = ref - e0;
+        const c = rec.ch[name] = rec.ch[name] || { asked: 0, got: 0, miss: 0, visits: 0 };
+        /* ── `miss`, AND WHY IT IS THE STATISTIC A BEFORE/AFTER MAY BE JUDGED ON ─────────────
+           The D6 ratio below is a fraction of `asked`, and `asked` is the distance still to travel
+           WHEN THE STATE BEGINS — a fact about where the previous blend left the camera. Two arms
+           of a smoothing change do not agree about that, and the disagreement IS the change
+           working: on the `combo` route, where combat and idle alternate every 30 frames and the
+           camera never fully returns, the soft arm enters each combat already nearer the combat
+           framing (per-visit spans −1.381/−0.770/−0.402/−0.558° become
+           −1.111/−0.544/−0.316/−0.436°). `asked` falls 5.95° → 5.25° and any absolute measured
+           from the ENTRY falls with it, which reads as a 10 % regression and is the opposite of
+           one — the per-visit fractions are the same or better and the lens is closer throughout.
+
+           `miss` is measured from the TARGET instead: the closest the screen ever got to the
+           framing during the visit, in the channel's own unit, summed over visits. It does not
+           care where the visit started, it needs no `minSpan` gate so its population cannot move
+           between arms, and the reference it is measured against is the settled pinned run, which
+           is arm-invariant (checked: the four `combat` fov references agree to 4 decimals across
+           both arms). It is exactly the question "how much of this framing was missing from the
+           screen at its best moment", which is what "did a framing get less reachable" asks. */
+        let miss = Infinity, peak = 0;
+        for (let i = r.s; i <= r.e; i++) {
+          const v = A[i][name];
+          if (v == null) continue;
+          miss = Math.min(miss, Math.abs(v - ref));
+          if (span !== 0) peak = Math.max(peak, (v - e0) / span);
+        }
+        if (!Number.isFinite(miss)) continue;
+        c.miss += miss; c.visits++;
         if (Math.abs(span) < minSpan) continue;
-        let peak = 0;
-        for (let i = r.s; i <= r.e; i++) if (A[i][name] != null) peak = Math.max(peak, (A[i][name] - e0) / span);
         const frac = Math.max(0, Math.min(1.2, peak));
-        const c = rec.ch[name] = rec.ch[name] || { asked: 0, got: 0 };
         c.asked += Math.abs(span); c.got += frac * Math.abs(span);
       }
     }
