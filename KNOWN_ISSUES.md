@@ -64809,3 +64809,302 @@ world-space objective PIN with its distance readout — is explicitly OUT of sco
 placement is measured against a fully armed stack by `tools/hudvisible.mjs`, not carried over from
 §731.7: anchoring by `right` changes which way the -1.2 degree tilt throws the bounding box, so the
 transform origin is re-derived rather than copied. Body lands in this lane's next pushes.)*
+
+---
+
+### §743.1 — the body
+
+**Owner: *"Remove the objective from the corner and move the fake health bar to take its place."***
+
+Two changes to one corner, and the second is the one with measurements in it.
+
+**Gone:** `.sly-obj`, the two-cel comic objective card at right 1.9u / top 1.7u — its markup, its
+`::before` backing cel, `.sly-obj-card` and its halftone, the kicker, the title, the subtitle, the
+`.sly-obj-eye` watermark, the four `.mini` collapse rules, the `el.obj` handle, and the
+hold-then-collapse timer behind it (`_objTimer`, `TUNE.objectiveHold`, `_tickObjective` and its
+call in `update()`). **14 stylesheet rules, 92 lines**, one markup block and four members.
+
+**Moved:** `.sly-hp`, §731's decorative meter, from `left 1.9u / top 10.7u` to
+`right 1.9u / top 1.5u`, with `transform-origin` re-derived from `left top` to `right top`.
+Nothing else about it changed — same artwork, same 12.13u width, same −1.2° tilt, still inert,
+still inside `.sly-shake`, `?hud=nohealth` still removes it and only it.
+
+**Kept, deliberately, and each for a reason that is an arm rather than an opinion:**
+
+- **`.sly-goal`** — the world-space objective PIN with the "FENCE 63 m" readout. A different
+  element in a different place, and the owner did not ask for it. Its label comes from
+  `setGoal(point, label)` (`'FENCE'` / `'DROPPED'`), never from `objective()`, so nothing about
+  retiring the card touches it. Verified rather than assumed: it is in the census below at
+  1207.4 px clearance, and `?hud=nohealth` is now asserted to leave it standing.
+- **`Ico.eyeOfRa`** — the card's watermark was its only *direct* caller, but `glyph('eye')` routes
+  to it and `Pickups.js:1439` toasts the opened vault with `icon: 'eye'`. §731.6's lesson exactly:
+  *delete what becomes dead* requires checking callers outside your own directory.
+- **the whole objective SYSTEM.** See below; this is the decision worth reading.
+
+#### The objective API: kept, and given a renderer that is not a corner
+
+"Remove the card and keep the method" sounds like the cautious option. It is not available, and
+finding out why is the substance of this section. Three live arms constrain it:
+
+1. **`Pickups._openVault()` PUBLISHES `objective`** when the twelfth clue bottle is found — the
+   one mission beat this game has (§211.1 deleted `objective` from `eventbus.test.mjs`'s
+   DEAD_UNBUILT register *as a deliverable*). That census **fails in both directions**, so
+   dropping the HUD's subscriber would not quietly orphan the publish: it would make `objective`
+   a dead PUBLICATION and force a closed line back open.
+2. **`tests/cluevault.test.mjs` V6/V7 EXTRACT the `on('objective', …)` handler** out of `HUD.js`
+   and execute it against the payload `Pickups` builds. No handler, no arms.
+3. **`tests/hudtruth.test.mjs` U2 requires every subscribed event to change something on
+   screen** — a full DOM serialisation, four channels wide, diffed across four frames. A method
+   kept "for the API" that draws nothing is precisely the §357.1 shape U2 exists to catch. So
+   "keep it and render nothing" fails a real arm, and weakening that arm to pass is the move this
+   session has already lost two arms to.
+
+So the objective needed a renderer that is not a corner card. **The toast stack was considered and
+rejected by measurement, not taste:** `Pickups` already toasts every beat that also raises an
+objective — `'{name} — carry it to the fence'` (1507), `'{name} fenced — {value}'` (1522),
+`'Dropped {name}'` (1540) and `'The vault is open — the Eye of Ra'` (1439, which publishes the
+`objective` **in the same method**). Routing objectives to toasts doubles four of them.
+
+**It renders in the pause cel**, above the controls rule: `.sly-pobj` / `-kick` / `-title` /
+`-sub`, with `el.objTitle` and `el.objSub` re-pointed there and nothing else in `objective()`
+changed. That is where a player goes to ask what he is doing, it is read with the game stopped so
+it competes with nothing during play, and it costs the gameplay layer zero pixels — which is the
+whole of the instruction. `_objBase` still remembers the standing goal and `_onCarry` still puts
+it back after a bank, unchanged and still exercised.
+
+**Stated so it is cheap to correct (§705):** the owner asked for a removal, and this is a removal
+plus a re-home. If the objective should be gone from the game rather than out of the corner, the
+change is small — but it is not free, and the three arms above are the bill.
+
+#### The tilt, re-derived rather than carried over
+
+`.sly-hp` carries `rotate(-1.2deg)`. A rotation leaves exactly ONE point fixed — the transform
+origin — and throws every other corner off it, so the origin decides which of the element's
+promised margins survives the tilt and which one the tilt eats. **The origin belongs on the corner
+the element is ANCHORED by**, and that corner changed.
+
+At `left 1.9u / top 10.7u` with `transform-origin: left top`, the top-left corner was pinned and
+the far (right) end swung UP: the painted box escaped **above** the stated `top` by
+`width · sin(1.2°)` = 133.4 · 0.02094 = **2.79 px** — upward, into `.sly-tl`, which is exactly why
+§731.5 measured 11.7 px of real clearance where the offsets implied ~17 and why §731.7 declined
+10u at 8.2 px.
+
+At `right 1.9u / top 1.5u`, `right top` pins the corner nearest both anchors. The box cannot cross
+either margin; the tilt is spent DOWN and LEFT, into open screen. Measured, and this is the payoff:
+**top margin 16.2 px against a stated 16.5 px — the tilt costs 0 px there**, and the 1.5 px it does
+cost lands on the right margin (17.8 px against a stated 20.9 px; 1.5 px of that is
+`height · sin(1.2°)` and the rest is the residual world shake, which also moves `.sly-tl` by
+1.6 px in the same frame). Carrying `left top` over would have put the 2.8 px escape back on the
+TOP margin, over the viewport edge, and left the right margin as the only true one.
+
+A test arm pins this: `.sly-hp` must be anchored `right`/`top`, must NOT carry `left` or `bottom`,
+and its `transform-origin` must be `right top`. Mutation-checked — flipping the origin back to
+`left top` fails it with *".sly-hp is anchored right/top but its transform-origin is not"*.
+
+#### The corner, measured — production artifact, `/Demo/` prefix, veil dismissed, 1280×720
+
+Untouched player boot, nothing staged and nothing frozen: `.sly-hp` at **1127.2, 16.4**,
+**134.8 × 75.6 px** (1.11 % of the frame), `opacity: 1`, effective opacity 1 through its whole
+ancestor chain, `display: block`, in the viewport, `#sly-hud data-hidden=0`. It paints **71.5 %**
+of its own rect (mean Δ 33.4, max Δ 100.7) when the node is hidden in the identical frame, against
+a control corner that changed **0 %** while carrying real content (stdev 31.78, 241 colours).
+
+Collision census with every neighbour driven to its widest — long objective, 888,888 coins, a
+chase alert, `sneak`, a carried treasure, a toast long enough to hit the stylesheet's own
+`max-width: 70vw` cap, and a guard badge for a subject 60 m off the camera's right:
+
+| element | x, y | w × h | overlap | clearance |
+|---|---|---|---|---|
+| **`.sly-hp`** | **1127.4, 16.2** | **134.8 × 75.6** | — | — |
+| `.sly-toasts` (at the 70vw cap) | 193.7, 16.1 | **896 × 28** | **0 px²** | **37.7 px** |
+| `.sly-prompt` | 622.7, 672.0 | 36.5 × 10.2 | 0 px² | 745.5 px |
+| `.sly-tl` (armed) | 22.5, 14.8 | 189.1 × 82.7 | 0 px² | 915.8 px |
+| `.sly-threat` | 22.3, 41.7 | 189.5 × 24.9 | 0 px² | 915.7 px |
+| `.sly-carry` | 22.1, 68.1 | 167.4 × 29.2 | 0 px² | 937.9 px |
+| `.sly-coins` | 22.2, 11.4 | 113.6 × 28.2 | 0 px² | 991.6 px |
+| `.sly-alert` (clamped, subject off-screen) | 624.1, 307.9 | 31.9 × 31.9 | 0 px² | 518.6 px |
+| `.sly-pocket` | unrendered | — | 0 px² | 1112.0 px |
+| `.sly-goal` | 25.1, 658.7 | 36.3 × 36.3 | 0 px² | 1207.4 px |
+
+**Zero intersection with everything, and the nearest neighbour is 37.7 px** — against the 15.8 px
+the top-left placement had to live with, and the 8.2 px and 11.7 px §731 twice declined. 37.7 px
+is also the *synthetic* worst case: it needs a ~170-character toast to reach 70vw, and the longest
+toast the game actually publishes measured 246 px wide in the same census, which leaves **362.6 px**.
+Viewport margins **right 17.8 px, top 16.2 px**.
+
+**The one thing that CAN reach this corner, stated rather than discovered twice.** `HUD._project`
+CLAMPS an off-screen world mark to a margin inset, so a goal pin or a guard badge whose subject is
+behind the camera parks in whichever corner it was heading for and can land on any of the four.
+The badge this census drove landed 518.6 px away, so the corner is clear *in this sample* — but
+that is a sample, not a bound, and the clamp region reaches into the meter's rect. This is a
+property of the mark system and not of the placement: the objective card occupied a strictly
+larger rect in the same corner and had the same exposure for its whole life. Reported, not fixed —
+changing the clamp is a change to elements this lane was not asked to touch.
+
+#### The Binocucom pair in this corner, which is the one argument against it
+
+§731.1 rejected the BOTTOM-LEFT corner on exactly this ground: `.bx-caller` lives there, the
+gameplay cluster CROSS-DISSOLVES rather than cutting
+(`#sly-hud[data-binoc='1'] .sly-shake { opacity: 0 }`, 0.16 s), so an ornament there would dissolve
+*through* the caller panel every time Bentley calls. The top-right has the same shape of
+neighbour, measured with the optics up:
+
+| element | x, y | w × h | inside `.sly-hp`'s rect |
+|---|---|---|---|
+| `.bx-rec` | 1137.1, 70.0 | 84 × 10 | **840 px²** (all of it) |
+| `.bx-corner.tr` | 1201.8, 39.2 | 28.6 × 28.6 | **818 px²** (all of it) |
+
+Both lie **entirely inside** the rect `.sly-obj` occupied — 997.3, 14.5, 263 × 79.5, from §731.1's
+census; the card is deleted and cannot be re-measured on this build, so that is arithmetic on a
+published rect rather than a fresh reading, and it is stated as such. **The meter inherits the
+card's exposure exactly rather than creating one.** §731.1 had a free choice of corner and this
+does not, so this is measured and reported, not used as a veto.
+
+#### Does it still read at the new position? Both grades, re-measured rather than inherited
+
+§731.4 exists to enforce exactly this check: a silhouette proof at the old place says nothing
+about the new one. One meter cropped out of the production frame at its shipped 134.8 × 75.6:
+
+| grade | pale-grey regions | fill | navy | pale grey | outline | behind+badge luma |
+|---|---|---|---|---|---|---|
+| L1 day | **5** | 3801 px | 1080 px | 1299 px | 1355 px | 29.8..218.6 (mean 97.6, stdev 45.57), 371 colours |
+| L1 night | **5** | 3837 px | 1296 px | 1281 px | 3389 px | 9.2..217 (mean 76.4, stdev 55.97), 349 colours |
+
+Against §731.7's top-left readings (day 6 / 3812 / 2939 / 1232 / 1000, night 6 / 3821 / 1309 /
+1268 / 3467): the fill, the pale grey and the outline all track within noise, the navy's share
+moves with the different ground behind, and the insignia resolves **5 separate pale-grey regions
+at both grades** — one fewer than at the top-left, comfortably over the 2 the arm requires, which
+is the two eye patches.
+
+The **contrast** bound is unchanged and does not need re-measuring here: it is computed over all
+256 possible grounds by `tests/hud.test.mjs` from the live ink set, not sampled at a camera pose,
+which is the strictly stronger statement §731.2 moved it to. Moving an element does not move it.
+
+#### The states the corner has to survive, and the top-left it leaves behind
+
+- **`data-hidden='1'`** — `#sly-hud { display: none !important }` takes the whole root; the meter
+  is inside it and nothing about the move changes that.
+- **`data-binoc='1'`** — the meter is inside `.sly-shake`, which is the element the stand-down
+  rule targets. **Measured on the production artifact, both directions: `.sly-shake` settles to
+  opacity 0 with the optics up and 1 with them down.** The live read says 1 in both states —
+  see the instrument note below; that is §731.0's trap, not a regression.
+- **the top-left it vacates** — nothing was positioned around it. `.sly-hp` was absolutely
+  positioned with its own two offsets and no sibling ever referenced it: `.sly-tl` is anchored at
+  left 1.9u / top 1.5u and grows DOWNWARD from there, and nothing in the sheet is anchored below
+  it. The census confirms the corner unchanged — `.sly-tl` armed still 22.5, 14.8, 189.1 × 82.7,
+  bottom 97.6, exactly where it was with the meter beneath it. No hole, because nothing was
+  leaning on the meter.
+
+#### `?hud=nohealth`, on the production artifact
+
+Ornament gone (0 meters); `.sly-tl`, `.sly-coins`, `.sly-prompt`, `.sly-marks` and **`.sly-goal`**
+all still present; the corner card absent in this boot as in every other; and the pause cel still
+reads **"Steal the Eye of Ra"** — which is also the proof that the retained `objective()` API
+survives the minifier and runs on the artifact rather than only in the suite.
+
+**A matching token for the objective is NOT warranted, and that is a decision rather than an
+omission.** `?hud=nohealth` exists because the ornament is decorative and a capture harness might
+want it gone. The objective card is gone outright, so there is nothing left to toggle; what
+replaced it is inside the pause cel, which never appears in a capture — the harness kills the
+whole HUD with `data-hidden` long before it could. A token would remove nothing that is ever on
+screen during play.
+
+#### Which test arms changed, and what each one now asserts
+
+Nothing was deleted to make a suite green. Every arm below asserts the NEW truth, and the two that
+could have quietly stopped testing anything are the reason this list is itemised.
+
+| arm | before | after | why this is not a hole |
+|---|---|---|---|
+| M2 `TEXT_PAIRS` | `objective title / subtitle / kicker` | `pause objective title / subtitle / kicker` | **Same three colour pairs, same 4.5:1 bar, same count (25).** The pause panel's ground is `--paint`, the ground the card had, so the pairs are still true of shipped text rather than retired with the card. |
+| M2 stylesheet check | `.sly-obj-kick` sits on `--lapis-d` | `.sly-pobj-kick` sits on `--lapis-d` | Gold on plain `--lapis` measures 3.44:1 and fails; the rule moved with the kicker, so the arm moved with the rule. |
+| M2 stylesheet check | — | **NEW: no `.sly-obj` rule survives**, comments stripped | Mutation-checked: re-adding `.sly-obj { … }` fails it. Two-sided — the same stripper must still find `.sly-pobj-kick`, or a stripper that ate the rules would pass the absence check on nothing. |
+| M6 `GAMEPLAY` / `REFERENCE` | the three objective runs were GAMEPLAY | they are REFERENCE | **Moved between the lists, not dropped from both.** A run in neither list has no floor held on it. Inspected gameplay runs 16 → 13 (bar: ≥ 12); the reference floor is still 0.68u, asserted exactly. |
+| §731 `?hud=nohealth` | asserts `.sly-obj` survives the token | asserts `.sly-pobj-title` survives it, plus `.sly-obj` absent in BOTH boots | The arm existed to prove the token is a scalpel that leaves the objective alone. It still proves that, at the objective's new address, and the kept count is unchanged at 7. |
+| §731.5 placement arm | `left`/`top`, no `right`/`bottom`, `8 ≤ top < 13.5` | `right`/`top`, no `left`/`bottom`, `transform-origin: right top`, tilt magnitude bounded, and both offsets asserted EQUAL to `.sly-tl`'s | The old bounds were about clearing a stack the meter no longer sits under. The new ones are about the corner it does sit in, and they are read out of `.sly-tl`'s own rule rather than retyped, so retuning one corner fails instead of silently desyncing the two. |
+
+Untouched and still passing on their own terms: the §731 inertness arm (a full damage run —
+`setHealth(5/2/0)`, `playerHealth`, `playerDamage`, three seconds of frames — leaves the meter's
+markup byte-identical, with the coin counter shown changing in the same test so the probe is not
+blind), the §731.5 provenance and palette-coupling arms, the 256-ground contrast sweep, and
+`cluevault` V5–V8, `eventbus`'s census and `hudtruth`'s U2 — the three that made the objective
+decision for us, all green without an edit.
+
+#### Two instrument defects this lane found, both of which produced a confident wrong reading first
+
+Neither is §743's doing; both were found by §743 pointing the tool at a moved subject, and both
+were fixed rather than worked around.
+
+1. **`tools/hudvisible.mjs`'s rendered-ink arm was reading a capture that cannot report a colour.**
+   Its verdict is "how many pixels of the crop are within tol 40 of an exact ink", which silently
+   assumes exact sRGB comes back. On the untouched-boot capture it does not: that frame returned
+   **0 px of the meter's fill and 0 px of its pale grey, and 1 pale-grey region instead of 6** —
+   read at face value, "the insignia has stopped reading at the new position". It has not. In the
+   SAME frame the top-left corner contains **not one pixel of `--gold-l` (#ffe9a8)** inside
+   `.sly-coins` and **not one pixel of `--ink` (#1a1210)** exactly, and the brightest pixel in the
+   whole 1280×720 frame is 240 — the entire composited page comes back tone-shifted, DOM included.
+   The staged grade captures 200 ms later reproduce `#ffe9a8` and `#1a1210` exactly and read the
+   meter's inks in full. **The tell was in the previous lane's own report file:** its untouched
+   boot, at the OLD placement, scored fill 1251 px where its grade capture scored 3812 — the same
+   defect, at a degree that happened to stay above the arm's floor. So the arm now runs behind a
+   **colour-fidelity gate** — a known HUD ink in a different element of the same frame — and
+   prints its counts as UNPROVEN rather than failing when the frame cannot report a colour. This
+   is §731.2's trap 5 ("a null result needs a liveness check") in colour rather than in content.
+   A 400 ms settle was tried first and did not fix it, which is how the compositor-race
+   explanation was ruled out.
+2. **The Binocucom stand-down arm read the START of a transition, twice.** §731.0 recorded this
+   exact trap — *CSS transitions do not advance in this headless page* — and my first version of
+   the arm walked into it anyway, reporting `.sly-shake` at opacity **1** under `data-binoc='1'`
+   on a build whose stand-down rule is untouched. Resuming the rAF loop and waiting 900 ms did not
+   fix it either, which is worth recording because "make the page live" is the obvious repair and
+   it does not work. The arm now takes the SETTLED value with the transition suppressed on that
+   one element, labelled as the only staging this tool does, and two-sided: the same suppressed
+   read with the optics down must differ, or the probe is not discriminating and the verdict is
+   refused.
+
+#### What I got wrong
+
+1. **I set out to "keep the API and simply not render the card", which is what the brief
+   preferred, and it is not a thing that can ship.** `hudtruth`'s U2 refuses a subscription that
+   changes nothing on screen, and it is right to. I found that by running the suite, not by
+   reading it — the brief's own preference would have gone in and come back red.
+2. **My first Binocucom arm reported a regression that did not exist**, on a rule §743 does not
+   touch, because it read a transition mid-flight — a trap this very section's ancestor (§731.0)
+   had already written down. I then "fixed" it by resuming the rAF loop, which does not fix it,
+   and only then read the ledger's own prescription. Two rounds of capture lock for a lesson
+   already in the file.
+3. **I read "0 px of fill" as a defect in the placement for three tool runs.** It is a defect in
+   the capture, and the evidence that settles it was sitting in the previous lane's `report.json`
+   the whole time (its untouched boot scored fill 1251 against its own grade capture's 3812 — the
+   same defect at a survivable degree). I tried a compositor-settle wait before I tried measuring
+   whether the frame could report a colour at all, which is §418.3's whole point: I had a bar and
+   had never asked what input would make it fail for the wrong reason.
+4. **I put backticks inside `hud.css.js`.** The whole stylesheet is one template literal; the
+   module failed to parse with *"Unexpected identifier 'top'"* and the file had been warned about
+   in the brief. Caught immediately by importing the module rather than by a test, which is the
+   only reason it cost seconds.
+5. **The first census I wrote measured the toast at its typical width**, 246 px, and reported
+   362.6 px of clearance. The stylesheet allows 70vw and the honest number is 37.7 px. A clearance
+   measured against a short toast is a claim about that toast (§442).
+
+#### Suite, production verification, boundary
+
+**Suite: `1188/1188, 0 failures`** at `a9d2c6c`, clean tree, cwd verified — the same 1188 as the
+baseline taken at `ca5cf25` before a line was touched. **No arm was added and none was removed**;
+six were re-pointed at the new truth, and the count staying put is part of the evidence for that.
+
+**Production, on the ARTIFACT** — `vite build`, served under a `/Demo/`-shaped prefix, booted the
+way a player boots it with the "Click to play" veil dismissed (§731.2's trap 2), at `a9d2c6c`:
+
+- `tools/hudvisible.mjs` — **VERDICT: present, painting, and in the viewport**, exit 0. Every
+  number in the tables above is from that run.
+- `tools/prodboot.mjs` — `ready=true`, 17 modules, **149 requests and zero 4xx/5xx**, boot
+  completed past module 30. The HUD's own `init()` is proved to have completed rather than
+  swallowed into `engine.warn` (§731.7's failure mode) by a stronger fact than a warning count:
+  the pause cel on that artifact reads **"Steal the Eye of Ra"**, which is written by
+  `init()` AFTER `_built = true`.
+
+**Boundary unchanged (§666/§695):** this verifies the artifact, NOT the live host. The container's
+proxy blocks `*.github.io`, so nothing here was fetched from the deployed page. If the deployed
+page differs from this artifact, that is a deploy question and this lane did not and could not
+test it.
