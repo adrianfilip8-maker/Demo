@@ -559,6 +559,13 @@ export const TUNE = {
   /* ---- recentre (R) ------------------------------------------------------- */
   recentreTime: 0.45,
 
+  /* ---- framing blend SHAPE (§744) ------------------------------------------ */
+  /* NOT a duration. Every authored `FRAMES.tau` is untouched by this and stays exactly what its
+     author wrote; this changes the ORDER of the filter those durations drive.
+     `0` — the shipped first-order `ease`. `> 0` — critically damped, `smoothTime = tau × this`.
+     See `_blendFrame` for the measurement that chose the value. */
+  frameBlendShape: 0.80,
+
   /* ---- speed coupling ------------------------------------------------------ */
   /* One smoothed ground speed, normalised by `speedRef`, feeds BOTH the FOV stretch and the
      boom dolly. It was `fovSpeedRef` while the FOV was the only consumer; the dolly below is
@@ -586,6 +593,23 @@ export const TUNE = {
   freeFlySpeed: 9.0,
   freeFlyFast: 30.0,
 };
+
+/**
+ * §744 revert token: `?cam=hardblend` (or `globalThis.__CAMBLEND_AB = 'hard'` from a test) puts
+ * the framing blend back to the first-order `ease` this file shipped with, bit-exact — no
+ * authored `FRAMES.tau` differs between the two arms, so the reverted arm IS the old feel and
+ * not an approximation of it. Precedent: `?kk=`, `?react=`, `?pop=`, `?vault=`.
+ * Read once at module scope: a per-frame path must never touch `location`.
+ */
+(() => {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('cam') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__CAMBLEND_AB != null) raw = String(globalThis.__CAMBLEND_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  const v = String(raw).trim().toLowerCase();
+  if (v === 'hardblend' || v === 'hard') TUNE.frameBlendShape = 0;
+})();
 
 /**
  * Per-state framing. This table *is* the authored feel — every entry is a deliberate answer to
@@ -1024,6 +1048,11 @@ export class CameraRig {
 
     /* ---- framing blend ---- */
     this._frame = { dist: 0, height: 0, lead: 1, fov: 0, pitch: 0, side: 0, stiff: 1 };
+    /* Per-channel blend velocity (§744). Carried ACROSS a framing switch on purpose: it is what
+       makes the switch continuous in the derivative — an interrupted blend keeps the speed it
+       already had and bends toward the new target instead of restarting from it. Unused, and
+       held at zero, when `TUNE.frameBlendShape` is 0. */
+    this._frameVel = { dist: 0, height: 0, lead: 0, fov: 0, pitch: 0, side: 0, stiff: 0 };
     this._frameKey = 'idle';
     this._stateName = '';
     this._attachedPole = false;
@@ -1401,20 +1430,65 @@ export class CameraRig {
       this._frame.dist = f.dist; this._frame.height = f.height; this._frame.lead = f.lead;
       this._frame.fov = f.fov; this._frame.pitch = f.pitch; this._frame.side = f.side;
       this._frame.stiff = f.stiff;
+      const v = this._frameVel;
+      v.dist = 0; v.height = 0; v.lead = 0; v.fov = 0; v.pitch = 0; v.side = 0; v.stiff = 0;
     }
   }
 
+  /**
+   * ── THE BLEND'S SHAPE, WHICH IS NOT ITS DURATION (§744) ──────────────────────────────────
+   *
+   * The owner asked for the transitions to be *slightly* smoothed. Measured at the screen rather
+   * than read off the table (`tools/camjerk.mjs`): every framing switch is entered with the
+   * camera's velocity **stepping** rather than ramping, because a first-order `ease` is at its
+   * fastest the instant its target changes. The step is `Δchannel × (1 − e^(−dt/τ))` — the
+   * position stays continuous, the velocity does not, and a velocity step is what the eye calls
+   * a jolt. Ranked over 53 real driven transitions, `air → dive` was **28.6 m/s of camera in one
+   * frame, 468 mm of boom**, 3.4× the next worst, because `Δdist` is 2.75 m against `tau` 0.09.
+   * (It was invisible before §442.1 collapsed the boom chain: the `zoomTime` stage used to
+   * absorb it, which is also why that section's p99-of-all-frames could not see it — two dive
+   * entries in 1852 frames sit above the 99th percentile by construction.)
+   *
+   * **RAISING `tau` WAS THE WRONG ANSWER AND THE TABLE ALREADY SAID SO.** `land` cannot reach
+   * 47 % of itself, a jump-apex `dive` holds 8 frames against `tau` 0.09, `air` gets 7 frames on
+   * a glide hinge. Every one of those gets worse if the duration grows. So the duration is not
+   * what moved: **the filter's ORDER is.** Critically damped instead of first-order, at
+   * `smoothTime = tau × frameBlendShape`, with the channel velocity carried across the switch.
+   * It starts from the speed it already had and accelerates into the new framing rather than
+   * leaving at full speed, which is exactly the derivative the eye was reading.
+   *
+   * `frameBlendShape` 0.80 was chosen by sweep, not by taste. It is below 1.0 because a
+   * critically damped step is slower than an exponential early on, and 0.80 is the value at
+   * which **no framing's measured end-to-end delivery falls** while the worst step is cut hardest
+   * — see §744 for the sweep and `tests/camsmooth.test.mjs` for the arms that hold both halves.
+   *
+   * `?cam=hardblend` (or `globalThis.__CAMBLEND_AB = 'hard'`) restores the shipped first-order
+   * ease bit-exact. Precedent: `?kk=`, `?react=`, `?pop=`, `?vault=`.
+   */
   _blendFrame(dt) {
     const f = FRAMES[this._frameKey] || FRAMES.idle;
     const c = this._frame;
     const tau = f.tau;
-    c.dist = ease(c.dist, f.dist, tau, dt);
-    c.height = ease(c.height, f.height, tau, dt);
-    c.lead = ease(c.lead, f.lead, tau, dt);
-    c.fov = ease(c.fov, f.fov, tau, dt);
-    c.pitch = ease(c.pitch, f.pitch, tau, dt);
-    c.side = ease(c.side, f.side, tau, dt);
-    c.stiff = ease(c.stiff, f.stiff, tau, dt);
+    const shape = TUNE.frameBlendShape;
+    if (shape > 0) {
+      const ts = tau * shape;
+      const v = this._frameVel;
+      c.dist = smoothDamp(c.dist, f.dist, v.dist, ts, dt); v.dist = _sdVel;
+      c.height = smoothDamp(c.height, f.height, v.height, ts, dt); v.height = _sdVel;
+      c.lead = smoothDamp(c.lead, f.lead, v.lead, ts, dt); v.lead = _sdVel;
+      c.fov = smoothDamp(c.fov, f.fov, v.fov, ts, dt); v.fov = _sdVel;
+      c.pitch = smoothDamp(c.pitch, f.pitch, v.pitch, ts, dt); v.pitch = _sdVel;
+      c.side = smoothDamp(c.side, f.side, v.side, ts, dt); v.side = _sdVel;
+      c.stiff = smoothDamp(c.stiff, f.stiff, v.stiff, ts, dt); v.stiff = _sdVel;
+    } else {
+      c.dist = ease(c.dist, f.dist, tau, dt);
+      c.height = ease(c.height, f.height, tau, dt);
+      c.lead = ease(c.lead, f.lead, tau, dt);
+      c.fov = ease(c.fov, f.fov, tau, dt);
+      c.pitch = ease(c.pitch, f.pitch, tau, dt);
+      c.side = ease(c.side, f.side, tau, dt);
+      c.stiff = ease(c.stiff, f.stiff, tau, dt);
+    }
 
     /* Which side is the wall on? Two short probes answer it without MOVEMENT having to
        publish anything, and the answer only matters a few times a second. */
