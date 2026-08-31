@@ -65376,7 +65376,9 @@ lane's. The number is here so it is a decision rather than a rediscovery.
 
 ```
   before  node --test "tests/*.test.mjs"   1..1188   pass 1188  fail 0   519.4 s
-  after   node --test "tests/*.test.mjs"   1..1193   pass 1193  fail 0   503.8 s
+  after   node --test "tests/*.test.mjs"   1..1193   pass 1193  fail 0   498.6 s
+          (re-run on the shipped tree after the source comments were corrected; the run at
+           the arms commit read 1..1193 pass 1193 fail 0 in 503.8 s)
 ```
 
 The five new arms are `tests/camsmooth.test.mjs` S1–S5. No existing arm was relaxed, re-based or
