@@ -64796,3 +64796,16 @@ two samples of it.
    of the sweep's start.
 8. **I nearly reported the tool's `HUD wallet +0` as a defect in my own code.** It is a property
    of the PICKUPS/HUD sync order that predates this lane by hundreds of sections.
+
+---
+
+## §743 — "Remove the objective from the corner and move the fake health bar to take its place": the corner card retired, the meter re-anchored to the corner it vacates
+
+*(Heading committed ahead of its body to hold the number — §700.9. Claim marker worded to collide
+with no other open lane (§717): this is the OBJECTIVE-CARD-RETIREMENT lane. Two halves, and the
+second is the one with measurements in it: the top-right `.sly-obj` cel is removed, and §731's
+decorative `.sly-hp` meter moves from top-left into the corner it vacates. `.sly-goal` — the
+world-space objective PIN with its distance readout — is explicitly OUT of scope and stays. The
+placement is measured against a fully armed stack by `tools/hudvisible.mjs`, not carried over from
+§731.7: anchoring by `right` changes which way the -1.2 degree tilt throws the bounding box, so the
+transform origin is re-derived rather than copied. Body lands in this lane's next pushes.)*
