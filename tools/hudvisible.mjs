@@ -272,6 +272,20 @@ function badgeFeatures(png, box) {
   return { box: [w, h], counts, greyBlobs: blobs, greySizes: sizes.sort((a, b) => b - a).slice(0, 4) };
 }
 
+/**
+ * How many pixels inside `box` reproduce `target` exactly enough — the guard against measuring a
+ * capture that cannot report a colour at all (§743). Pointed at an element whose ink is FIXED by
+ * the stylesheet, in the same frame as the subject, it separates "the artwork is wrong" from
+ * "this frame is tone-shifted".
+ */
+function inkFidelity(png, box, target, tol) {
+  let n = 0;
+  for (const [r, g, b] of crop(png, box)) {
+    if (Math.abs(r - target[0]) <= tol && Math.abs(g - target[1]) <= tol && Math.abs(b - target[2]) <= tol) n++;
+  }
+  return n;
+}
+
 /** Single-image stats for a box — the guard against measuring a uniform blank. */
 function boxStats(png, box) {
   const px = crop(png, box);
@@ -328,7 +342,7 @@ async function run() {
        the optics are up. */
     const SELS = ['.sly-hp', '.sly-hp-meter', '.sly-shake',
       '.sly-tl', '.sly-coins', '.sly-threat', '.sly-carry',
-      '.sly-toasts', '.sly-prompt', '.sly-goal', '.sly-pocket', '.sly-obj'];
+      '.sly-toasts', '.sly-prompt', '.sly-goal', '.sly-pocket', '.sly-alert', '.sly-obj'];
     const probes = await page.evaluate(PROBE, SELS);
     report.probes = probes;
     /* If the probe itself came back empty the run proves nothing — say so rather than reading
@@ -375,6 +389,19 @@ async function run() {
      * capture is the untouched player view; the second is only ever used as its background.
      */
     await page.evaluate(() => { window.__ENGINE.stopLoop(); for (let i = 0; i < 3; i++) window.__ENGINE.renderFrame(1 / 60); });
+    /* SETTLE, and this line is a bug fix rather than caution (§743).
+       `Page.captureScreenshot` deliberately does NOT wait for a stable frame — that is why it is
+       used here at all, because `page.screenshot()` hangs waiting for one. The cost is that it
+       will happily return a frame the compositor has not finished blending, and `.sly-hp-meter`
+       carries a `filter: drop-shadow()` which puts it on its own raster layer. Caught by reading
+       the meter's own inks out of this capture: they came back pulled toward the background —
+       [43,72,142] where the artwork paints [47,95,196] — while the SAME frame captured after a
+       wait, and every staged grade capture below (which already had a 200 ms wait), read the ink
+       values exactly. The `without` capture already waited 250 ms; only this one did not, so the
+       two halves of the diff were not taken under the same conditions.
+       §418.3, both inputs: with this wait the untouched-boot badge arm reads the artwork's exact
+       inks; with it removed it reads 0 px of fill and 0 px of pale grey on the same build. */
+    await page.waitForTimeout(400);
     const withPng = await shoot(page, path.join(OUTDIR, 'prod-with.png'));
     const removed = await page.evaluate(() => {
       const el = document.querySelector('.sly-hp');
@@ -441,18 +468,44 @@ async function run() {
     }
 
     /* ---- 2b. does the RENDERED badge still carry the mark? ------------------------------- */
+    /**
+     * WITH A COLOUR-FIDELITY GATE IN FRONT OF IT (§743), because without one this arm reports a
+     * defect in the ARTWORK when the fault is in the CAPTURE.
+     *
+     * The verdict is "how many pixels of this crop are within tol of an exact ink value", which
+     * silently assumes the capture reproduces exact sRGB. The FIRST capture of a boot does not
+     * always: measured on this build, the untouched-boot frame contains not one pixel of
+     * `--gold-l` (#ffe9a8) anywhere inside `.sly-coins` — the whole composited page, DOM
+     * included, comes back tone-shifted, with the frame's brightest pixel at 240 — while the
+     * staged grade captures further down reproduce #ffe9a8 and #1a1210 exactly. Read without
+     * this gate the arm said "0 px of fill, 0 px of grey, the insignia has stopped reading",
+     * which is a claim about the meter made from a frame that could not report a colour.
+     *
+     * So a KNOWN HUD colour in a DIFFERENT element of the SAME frame is the calibration
+     * (§731.2's trap 5, in colour rather than in content): if the frame cannot reproduce the
+     * coin counter's gold, the ink counts are printed as UNPROVEN and no verdict is read off
+     * them. The grade captures below carry the real legibility claim.
+     */
     if (probes['.sly-hp-meter'].exists) {
       const f = badgeFeatures(withPng, probes['.sly-hp-meter']);
       report.badge = f;
-      console.log('\n[hudvisible] the badge as RENDERED, one pip cropped out of the production frame:');
+      const fid = probes['.sly-coins'].exists ? inkFidelity(withPng, probes['.sly-coins'], [255, 233, 168], 8) : -1;
+      report.captureFidelity = fid;
+      console.log('\n[hudvisible] the badge as RENDERED, cropped out of the production frame:');
       console.log(`    ${f.box[0]} x ${f.box[1]} px   fill ${f.counts.fill} px, navy ${f.counts.navy} px, `
         + `grey ${f.counts.grey} px, outline ${f.counts.outline} px`);
       console.log(`    separate pale-grey regions: ${f.greyBlobs} (sizes ${JSON.stringify(f.greySizes)}) — two eye patches plus the muzzle`);
-      for (const k of ['fill', 'navy', 'grey', 'outline']) {
-        if (f.counts[k] < 6) fail(`the rendered meter shows only ${f.counts[k]} px of its ${k} — that ink is not surviving at this size`);
-      }
-      if (f.greyBlobs < 2) {
-        fail(`the rendered meter resolves ${f.greyBlobs} pale-grey regions — the insignia's eye patches are merging`);
+      console.log(`    colour fidelity of THIS capture: ${fid} px of --gold-l (#ffe9a8) inside .sly-coins`);
+      if (fid < 20) {
+        console.log('    UNPROVEN — this frame does not reproduce a known HUD colour, so the ink counts above'
+          + ' are a property of the capture and not of the meter. The grade captures below carry the claim.');
+      } else {
+        for (const k of ['fill', 'navy', 'grey', 'outline']) {
+          if (f.counts[k] < 6) fail(`the rendered meter shows only ${f.counts[k]} px of its ${k} — that ink is not surviving at this size`);
+        }
+        if (f.greyBlobs < 2) {
+          fail(`the rendered meter resolves ${f.greyBlobs} pale-grey regions — the insignia's eye patches are merging`);
+        }
       }
     }
 
@@ -474,7 +527,22 @@ async function run() {
       window.__ENGINE.emit('guardAlert', { id: 'g1', state: 'chase' });
       window.__ENGINE.emit('playerState', 'sneak');
       window.__ENGINE.emit('treasurePickup', { id: 't1', name: 'Scarab of Khepri', value: 1200 });
-      window.__ENGINE.emit('toast', { text: 'The vault is open - the Eye of Ra' });
+      /* The toast stack is the nearest persistent neighbour in this corner, so it is driven to
+         the width the STYLESHEET allows (max-width: 70vw) rather than to a typical line — a
+         clearance measured against a short toast is a claim about that toast (§442). */
+      window.__ENGINE.emit('toast', { text: 'The vault under the great hall is open and the Eye of Ra is sitting on its plinth waiting for a thief with the nerve to walk in and take it off the temple' });
+      /* And the one thing that can reach ANY corner: a world mark whose subject is off-screen is
+         CLAMPED to a margin inset (`HUD._project`), so a guard badge for someone behind the
+         camera parks itself in a corner. Driven at a point 60 m to the camera's right and 30 m
+         up, built from the camera's own basis so it is off-screen by construction rather than by
+         a guessed world coordinate. */
+      const cam = window.__ENGINE.camera, e = cam.matrixWorld.elements;
+      window.__ENGINE.emit('guardAlert', {
+        id: 'g-offscreen', state: 'chase', level: 1,
+        pos: { x: cam.position.x + e[0] * 60 + e[4] * 30,
+               y: cam.position.y + e[1] * 60 + e[5] * 30,
+               z: cam.position.z + e[2] * 60 + e[6] * 30 },
+      });
       for (let i = 0; i < 8; i++) window.__ENGINE.renderFrame(1 / 60);
     });
     await page.waitForTimeout(600);
@@ -488,7 +556,14 @@ async function run() {
     /* Every PERSISTENT element, not just the corner's own — a clearance quoted against a short
        list is a claim about that list (§442). `.sly-goal` is here because §743 kept it. */
     const NEIGH = ['.sly-tl', '.sly-coins', '.sly-threat', '.sly-carry',
-      '.sly-toasts', '.sly-prompt', '.sly-goal', '.sly-pocket'];
+      '.sly-toasts', '.sly-prompt', '.sly-goal', '.sly-pocket', '.sly-alert'];
+    /* World marks are PROJECTED, and `HUD._project` CLAMPS an off-screen subject to a margin
+       inset — so a guard badge or a goal pin whose subject is behind the camera parks in whatever
+       corner it was heading for, and can reach any of the four. That is a property of the mark
+       system, not of this corner: the objective card occupied the same rect and the same clamped
+       badge landed on it. So an intersection here is REPORTED with its number rather than failed,
+       and only the laid-out neighbours are a hard failure. */
+    const PROJECTED = new Set(['.sly-goal', '.sly-pocket', '.sly-alert']);
     let nearest = Infinity, nearestSel = '';
     for (const s of [...NEIGH, '.sly-hp']) {
       const r = wide[s];
@@ -505,11 +580,13 @@ async function run() {
       const gx = Math.max(r.x - hpW.right, hpW.x - r.right, 0);
       const gy = Math.max(r.y - hpW.bottom, hpW.y - r.bottom, 0);
       const gap = Math.hypot(gx, gy);
-      if (gap < nearest) { nearest = gap; nearestSel = s; }
-      report.clearances[s] = { overlap: area, gap: +gap.toFixed(1) };
-      console.log(`    ${s.padEnd(13)} overlap ${String(area).padStart(8)} px²   clearance ${gap.toFixed(1)} px`);
-      if (area > 0) fail(`.sly-hp INTERSECTS ${s} when everything is fully armed`);
+      if (gap < nearest && !PROJECTED.has(s)) { nearest = gap; nearestSel = s; }
+      report.clearances[s] = { overlap: area, gap: +gap.toFixed(1), projected: PROJECTED.has(s) };
+      console.log(`    ${s.padEnd(13)} overlap ${String(area).padStart(8)} px²   clearance ${gap.toFixed(1)} px${PROJECTED.has(s) ? '   (projected world mark — clamps into corners by design)' : ''}`);
+      if (area > 0 && !PROJECTED.has(s)) fail(`.sly-hp INTERSECTS ${s} when everything is fully armed`);
     }
+    /* The nearest LAID-OUT neighbour is the number this corner is judged on; a clamped mark is
+       reported separately above and would otherwise drag the headline to zero. */
     /* The viewport margins the offsets promise. With `transform-origin: right top` the tilt can no
        longer throw the painted box past either anchored edge, which is the claim §743 re-derived
        the origin on — so it is measured rather than argued. */
@@ -527,40 +604,78 @@ async function run() {
        this is measured and reported rather than used as a veto. Both states are read: with the
        optics down (nothing there) and up (the cluster standing down). */
     const BINOC = ['.bx-rec', '.bx-corner.tr'];
+    /* THE LOOP IS RESUMED FOR THIS ARM, and that is §731.0's trap 1 rather than caution: CSS
+       transitions DO NOT ADVANCE in a page whose rAF loop is stopped, so `getComputedStyle`
+       returns the START of a transition. The stand-down is a 0.16 s opacity transition, so read
+       with the loop stopped it reports 1 — which is what the first version of this arm reported,
+       on a build whose stand-down rule is untouched. The tool still injects nothing. */
     const binocDown = await page.evaluate(PROBE, BINOC);
-    await page.evaluate(() => {
-      window.__ENGINE.emit('binocucom', true);
-      for (let i = 0; i < 20; i++) window.__ENGINE.renderFrame(1 / 60);
-    });
-    await page.waitForTimeout(700);
+    await page.evaluate(() => { window.__ENGINE.resumeLoop(); });
+    await page.waitForTimeout(300);
+    await page.evaluate(() => { window.__ENGINE.emit('binocucom', true); });
+    await page.waitForTimeout(900);
     const binocUp = await page.evaluate(PROBE, [...BINOC, '.sly-hp', '.sly-shake']);
-    report.binoc = { down: binocDown, up: binocUp };
-    console.log('\n[hudvisible] the Binocucom neighbours in this corner (optics UP):');
-    for (const s of BINOC) {
-      const r = binocUp[s];
-      if (!r || !r.exists) { console.log(`    ${s.padEnd(15)} — absent`); continue; }
+    const binocFlag = await page.evaluate(() => document.getElementById('sly-hud')?.dataset.binoc);
+    report.binoc = { down: binocDown, up: binocUp, flag: binocFlag };
+    console.log('\n[hudvisible] the Binocucom neighbours in this corner (optics UP, loop running):');
+    console.log(`    #sly-hud data-binoc=${binocFlag}`);
+    if (binocFlag !== '1') fail(`the optics did not come up (data-binoc=${binocFlag}) — every number in this arm is about the wrong state`);
+    report.binocOverlap = {};
+    for (const s2 of BINOC) {
+      const r = binocUp[s2];
+      if (!r || !r.exists) { console.log(`    ${s2.padEnd(15)} — absent`); continue; }
       const ow = Math.min(hpW.right, r.right) - Math.max(hpW.x, r.x);
       const oh = Math.min(hpW.bottom, r.bottom) - Math.max(hpW.y, r.y);
       const area = (ow > 0 && oh > 0) ? +(ow * oh).toFixed(1) : 0;
-      console.log(`    ${s.padEnd(15)} ${String(r.x).padStart(7)},${String(r.y).padStart(6)}  ${String(r.w).padStart(6)} x ${String(r.h).padStart(5)}   overlap with .sly-hp ${area} px²`);
+      report.binocOverlap[s2] = area;
+      console.log(`    ${s2.padEnd(15)} ${String(r.x).padStart(7)},${String(r.y).padStart(6)}  ${String(r.w).padStart(6)} x ${String(r.h).padStart(5)}   overlap with .sly-hp's rect ${area} px²`);
     }
     const hpUp = binocUp['.sly-hp'];
-    console.log(`    .sly-hp with the optics up: effective opacity ${hpUp?.effectiveOpacity} (.sly-shake ${binocUp['.sly-shake']?.opacity})`);
-    if (hpUp && hpUp.effectiveOpacity > 0.02) {
-      fail(`.sly-hp is still at effective opacity ${hpUp.effectiveOpacity} with the optics up — it is not standing down with the cluster`);
-    }
-    await page.evaluate(() => {
-      window.__ENGINE.emit('binocucom', false);
-      for (let i = 0; i < 20; i++) window.__ENGINE.renderFrame(1 / 60);
+    console.log(`    .sly-hp with the optics up, as the running page reports it: effective opacity ${hpUp?.effectiveOpacity}  (.sly-shake computed opacity ${binocUp['.sly-shake']?.opacity})`);
+    /**
+     * AND THE SETTLED VALUE, read with the transition suppressed — §731.0's trap 1, which this
+     * arm walked into twice before reading it. A CSS transition DOES NOT ADVANCE in this headless
+     * page (resuming the rAF loop does not fix it), so `getComputedStyle` returns the START of the
+     * 0.16 s stand-down and reports 1 on a build whose rule is untouched. This is the ONE place
+     * this tool stages anything, it is labelled as such, and it is two-sided: the same suppressed
+     * read is taken with the optics DOWN, and the two must differ or the probe proves nothing.
+     */
+    const settledUp = await page.evaluate(() => {
+      const el = document.querySelector('.sly-shake');
+      const prev = el.style.transition;
+      el.style.setProperty('transition', 'none', 'important');
+      void el.offsetWidth;
+      const v = getComputedStyle(el).opacity;
+      el.style.transition = prev;
+      return v;
     });
-    await page.waitForTimeout(700);
+    await page.evaluate(() => { window.__ENGINE.emit('binocucom', false); });
+    await page.waitForTimeout(900);
+    const settledDown = await page.evaluate(() => {
+      const el = document.querySelector('.sly-shake');
+      const prev = el.style.transition;
+      el.style.setProperty('transition', 'none', 'important');
+      void el.offsetWidth;
+      const v = getComputedStyle(el).opacity;
+      el.style.transition = prev;
+      return v;
+    });
     const hpBack = (await page.evaluate(PROBE, ['.sly-hp']))['.sly-hp'];
-    console.log(`    .sly-hp with the optics back down: effective opacity ${hpBack?.effectiveOpacity}`);
-    /* CALIBRATION (§418.3): the probe must read a DIFFERENT number in the two states, or the
-       "it stands down" verdict above is a constant rather than a measurement. */
-    if (!(hpBack && hpBack.effectiveOpacity > 0.9)) {
-      fail(`CALIBRATION FAILED — .sly-hp did not come back (effective opacity ${hpBack?.effectiveOpacity}); the binocular probe reads the same value in both states and proves nothing`);
+    console.log(`    .sly-shake SETTLED opacity (transition suppressed): optics up ${settledUp}, optics down ${settledDown}`);
+    report.binocStandDown = { liveUp: hpUp?.effectiveOpacity, liveBack: hpBack?.effectiveOpacity,
+                              settledUp: +settledUp, settledDown: +settledDown };
+    /* CALIBRATION FIRST (§418.3): the probe must read DIFFERENT numbers in the two states, or
+       "it stands down" is a constant and not a measurement. Only then is the verdict read. */
+    if (!(+settledDown > 0.9)) {
+      fail(`CALIBRATION FAILED — .sly-shake settles to ${settledDown} with the optics DOWN; the probe cannot discriminate the two states and its verdict is worthless`);
+    } else if (!(+settledUp <= 0.02)) {
+      fail(`.sly-shake settles to ${settledUp} with the optics up — .sly-hp is not standing down with the cluster`);
+    } else {
+      console.log('    the ornament stands down with the cluster and comes back — measured in both directions');
     }
+    /* Back to a stopped loop: the grade captures below are frozen-frame measurements. */
+    await page.evaluate(() => { window.__ENGINE.stopLoop(); for (let i = 0; i < 3; i++) window.__ENGINE.renderFrame(1 / 60); });
+    await page.waitForTimeout(300);
 
     /* ---- 2d. what is behind it, at BOTH grades (§726) ------------------------------------- */
     report.grades = [];

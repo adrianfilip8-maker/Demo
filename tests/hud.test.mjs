@@ -242,10 +242,11 @@ test('M2: the colours asserted above are the colours the stylesheet actually shi
   assert.match(css, /\.sly-pobj-kick\s*\{[^}]*background:\s*var\(--lapis-d\)/,
     'the objective kicker must sit on --lapis-d — --lapis fails the contrast bar');
   /* And the card the kicker came off is GONE, not renamed around a surviving rule (§743).
-     Comments are stripped first: this file's own prose still explains where the card went, and a
-     probe that cannot tell a rule from a note about a rule is not measuring the stylesheet.
-     §418.3, both inputs named: it must PASS on the sheet as it ships and FAIL on `.sly-pobj`,
-     the replacement, which is asserted below with the same stripper so the probe is not blind. */
+     Comments are stripped first: the stylesheet's own prose still explains where the card went,
+     and a probe that cannot tell a rule from a note about a rule is not measuring the stylesheet.
+     §418.3, both inputs named: the stripped text must NOT contain `.sly-obj` (the sheet as it
+     ships) and MUST contain `.sly-pobj-kick` (a selector of exactly that shape that does ship) —
+     without the second half, a stripper that ate the rules too would pass the first. */
   const rules = css.replace(/\/\*[\s\S]*?\*\//g, '');
   assert.ok(!rules.includes('.sly-obj'),
     'a .sly-obj rule is back in the stylesheet — §743 removed the corner objective card');
