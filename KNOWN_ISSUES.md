@@ -64418,3 +64418,18 @@ made about it** — the proxy blocks `*.github.io`.
    table — props L 120.3 against architecture L 74.0 — chose `paving_courtyard` as the target
    because it is the surface the props stand on, and never asked whether the brightest stone in
    the room was the right thing to match. Every round since re-measured chroma.
+
+---
+
+## §742 — "Have coins physically pop out from behind the guard when they are pickpocketed": real coins on the real magnet, paid for exactly once
+
+*(Section claimed at this heading BEFORE its body was written — §700.9 / §742-claim discipline.
+Claim marker: **§742 CLAIM pocketpop-9c31**. Pickpocket-pop lane, replacing the §741 beat the
+owner removed. The body follows in later commits. Nothing below this line is carried from
+another section: the economy census, the instanced-mesh capacity figure and the settle census
+are all re-derived here, because a number quoted from another section is a claim about that
+section (§712.9's lesson, re-learned in §732.1).*
+
+*Note for the next reader: **§741 has no ledger body.** It shipped as commit `df8d8dc` with its
+reasoning in the commit message only, so the ledger jumps §740 → §742. That is not an
+off-by-one.)*
