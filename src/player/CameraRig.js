@@ -1444,10 +1444,11 @@ export class CameraRig {
    * fastest the instant its target changes. The step is `Δchannel × (1 − e^(−dt/τ))` — the
    * position stays continuous, the velocity does not, and a velocity step is what the eye calls
    * a jolt. Ranked over 53 real driven transitions, `air → dive` was **28.6 m/s of camera in one
-   * frame, 468 mm of boom**, 3.4× the next worst, because `Δdist` is 2.75 m against `tau` 0.09.
-   * (It was invisible before §442.1 collapsed the boom chain: the `zoomTime` stage used to
-   * absorb it, which is also why that section's p99-of-all-frames could not see it — two dive
-   * entries in 1852 frames sit above the 99th percentile by construction.)
+   * frame, 468 mm of boom**, 2.8× the next worst, because `Δdist` is 2.75 m against `tau` 0.09.
+   * (It was invisible before §442.1 collapsed the boom chain — the `zoomTime` stage used to
+   * absorb it — and it is invisible to that section's cost metric for a structural reason: two
+   * dive entries in 1852 frames sit above the 99th percentile by construction, and the p99 of
+   * |Δboom| on this census is 128 mm.)
    *
    * **RAISING `tau` WAS THE WRONG ANSWER AND THE TABLE ALREADY SAID SO.** `land` cannot reach
    * 47 % of itself, a jump-apex `dive` holds 8 frames against `tau` 0.09, `air` gets 7 frames on
@@ -1458,9 +1459,19 @@ export class CameraRig {
    * leaving at full speed, which is exactly the derivative the eye was reading.
    *
    * `frameBlendShape` 0.80 was chosen by sweep, not by taste. It is below 1.0 because a
-   * critically damped step is slower than an exponential early on, and 0.80 is the value at
-   * which **no framing's measured end-to-end delivery falls** while the worst step is cut hardest
-   * — see §744 for the sweep and `tests/camsmooth.test.mjs` for the arms that hold both halves.
+   * critically damped step is slower than an exponential early on, and 0.80 is the LARGEST value
+   * at which no framing's measured `boom` delivery falls — 0.85 is where `land` first loses
+   * (38 % → 37 %). Measured over 53 transitions on eight driven routes: the worst step
+   * 303.7 → 143.1, the mean 39.7 → 10.4, and every one of the seventeen pooled transitions
+   * falls. See §744 for the sweep and `tests/camsmooth.test.mjs` for the arms.
+   *
+   * **THE COST, IN THE CURRENCY §442.1 USED, BECAUSE IT IS THE SAME QUANTITY.** The camera now
+   * delivers more of each framing, so it travels slightly further in total: mean |Δboom|
+   * 20.19 → 21.67 mm/frame (+7 %) over the same 1852 frames, p99 128 → 138 mm, boom direction
+   * reversals **48 → 48**, and the largest single-frame boom move in the census unchanged at
+   * 2377 → 2366 mm — that one is an authored instantaneous occlusion pull-in (rule 3, "never
+   * clip, not even for a frame") and nothing here touches it. A step became a ramp; the ramp is
+   * a little longer than the step was.
    *
    * `?cam=hardblend` (or `globalThis.__CAMBLEND_AB = 'hard'`) restores the shipped first-order
    * ease bit-exact. Precedent: `?kk=`, `?react=`, `?pop=`, `?vault=`.

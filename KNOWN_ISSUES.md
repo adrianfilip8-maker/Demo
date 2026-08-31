@@ -65134,3 +65134,289 @@ that way deletes framings the owner currently gets. This lane measures the SCREE
 (§442: the output, not the authored input) across real driven state transitions, ranks them, and
 reports delivered-percentage before and after for every row it touches. Body lands in this
 lane's next pushes.)*
+
+### §744.1 The answer, first, so a redirect is cheap (§705)
+
+**The transitions were not too fast. They were entered with the camera's velocity STEPPING rather
+than ramping, and the fix is the blend's shape, not its duration.** `_blendFrame` ran a
+first-order `ease`, which is at its fastest the instant its target changes: the step is
+`Δchannel × (1 − e^(−dt/τ))`, so the position stayed continuous and the velocity did not, on every
+one of the sixteen framings. It is now critically damped at `smoothTime = tau × frameBlendShape`
+(0.80), with the per-channel blend velocity carried across the switch.
+
+**Not one authored `FRAMES.tau` moved**, and `tests/camsmooth.test.mjs` S4 pins all sixteen so a
+later lane cannot slide one in under this heading. Revert token **`?cam=hardblend`**, which is the
+shipped `ease` bit-exact rather than an approximation of it — verified by running one frame of the
+blend inside the production artifact, in both arms, against the two closed forms.
+
+### §744.2 The instrument, and the counterfactual that makes a number attributable
+
+`tools/camjerk.mjs`. The complaint is about the OUTPUT, so it never reads `FRAMES.tau`: it reads
+the camera's own pose — position, quaternion, FOV — over eight real driven routes (1860 frames,
+53 framing transitions, every state entered through the movement state machine by scripted input,
+§435.4) and asks one question of each transition:
+
+> How much of the camera's velocity appears in the single frame the framing switched on, that
+> would not have appeared if the framing had not switched?
+
+A state change usually coincides with a physical event — a touchdown, a launch, a wall — and the
+camera legitimately accelerates for those. So every transition is measured against a **pinned
+replay of the same recorded trajectory**, with `stateName` held at the state the player was in the
+frame BEFORE the switch. The two runs are bit-identical up to `k0−1` by construction, so the
+difference at `k0` is the framing switch and nothing else.
+
+**The first version of that was wrong and the check caught it.** Pinning from frame 0 instead of
+from the switch frame let the counterfactual diverge at every EARLIER transition on the route:
+pre-switch drift reached **2.52 m**, so a third of the "attributable" step was two states' worth of
+accumulated disagreement. Pinning from `k0` makes the drift **exactly 0.00e+0 on all 53**, and the
+tool reports that number on every run because a counterfactual you have not checked is a story.
+
+Three controls, run (`--controls`, and again in-arm as S1):
+
+```
+  idle -> roll   SHIPPED (tau 0.16)      7.681
+                 POSITIVE (tau 0.004)  278.954     36.3x  — a cut in all but name, ranks worst
+                 NEGATIVE (tau 6.0)      0.056    0.007x  — the blend barely starts
+                 NULL (roll := idle)     0.000             — the switch has nothing to move
+```
+
+The NULL is the one worth having, and it is a control on the **counterfactual** rather than on the
+ease: a framing whose channels are literally the framing it is entered from scores **exactly
+zero**, which is only possible if the pinned replay reproduces the unpinned run frame for frame.
+
+### §744.3 The ranking. One transition was out of family, and it was not close
+
+Switch-attributable velocity step, pooled by transition, worst first. `STEP` weights the three
+channels by the rig's own `deadzoneH` / `shakeRot` / `shakeFov`; the metres per second and the
+single-frame boom move beside it are the physical numbers and owe the weighting nothing.
+
+```
+  transition            n   lin m/s   ang rad/s  fov deg/s | boom mm |   STEP   ->  STEP after
+  air -> dive           2   28.5929      0.9372      1.760 |   468.2 | 303.67   ->   143.11
+  dive -> idle          2    8.8256      1.1181      0.842 |   104.0 | 108.92   ->    11.94
+  glide -> idle         1    7.3248      0.1661      0.000 |   119.1 |  76.27   ->    10.49
+  sneak -> air          2    6.8448      0.0391      0.822 |    42.2 |  69.49   ->    10.60
+  air -> sneak          2    6.5166      0.0429      0.960 |   101.6 |  66.33   ->     9.29
+  idle -> sneak         1    4.8967      0.0476      0.698 |    79.0 |  50.11   ->     7.08
+  air -> glide          1    4.5720      0.1533      0.211 |   101.2 |  48.59   ->     5.81
+  idle -> combat        5    4.2781      0.0887      0.435 |   112.7 |  44.57   ->    11.67
+  roll -> air           2    3.6997      0.0468      0.110 |    50.6 |  37.89   ->     6.66
+  combat -> idle        4    2.8872      0.0589      0.572 |    41.2 |  30.17   ->     3.59
+  idle -> roll          2    2.5488      0.0882      0.315 |    40.2 |  27.22   ->     7.68
+  air -> land           5    1.7484      0.0116      0.241 |    66.7 |  17.79   ->     5.80
+  air -> idle           6    1.6109      0.0070      0.125 |    20.6 |  16.29   ->     2.19
+  idle -> air           8    1.5709      0.0086      0.185 |    45.3 |  15.94   ->     3.23
+  air -> wall_run       3    0.3290      0.0759      0.128 |    30.2 |   4.72   ->     1.61
+  land -> idle          5    0.4393      0.0036      0.023 |    53.7 |   4.47   ->     0.06
+  wall_run -> air       2    0.2687      0.0573      0.102 |    92.4 |   3.77   ->     0.68
+```
+
+**`air → dive` moves the camera 0.477 m in one 16.7 ms frame** — 468 mm of it boom — and it is
+2.8× the next worst. The arithmetic is exact: `Δdist` is 2.75 m (air +0.55 to dive −2.20) against
+`tau` 0.09, so `1 − e^(−(1/60)/0.09)` = 16.9 % of it lands on frame one. **It reaches the screen
+only because §442.1 collapsed the boom chain** — the `zoomTime` stage used to absorb it — and it is
+invisible to that section's cost metric for a structural reason rather than an oversight: two dive
+entries in 1852 frames sit above the 99th percentile by construction, and the p99 of |Δboom| here
+is 128 mm.
+
+### §744.4 Why `tau` was the wrong lever, priced rather than argued
+
+The brief's warning is in the table's own commentary and it holds: `land` cannot reach 47 % of
+itself at any frame rate, a jump-apex `dive` holds 8 frames against `tau` 0.09, `air` gets 7 frames
+on a glide hinge. Every one gets worse if the duration grows. Measured on the same routes:
+
+```
+  variant                     | worst STEP  which      | dive STEP  boom mm | mean STEP | dive boom | land | idle
+  shipped (ease)              |     304.44  air->dive  |    304.44    468.2 |     39.69 |       87% |  38% |  64%
+  shape 0.80                  |     143.76  air->dive  |    143.76    221.7 |     10.36 |       93% |  39% |  68%
+  shape 0.80 + dive tau .11   |     101.54  air->dive  |    101.54    157.0 |      8.80 |       89% |  39% |  68%
+  shape 0.80 + dive tau .13   |      75.28  air->dive  |     75.28    117.2 |      7.85 |       85% |  39% |  67%
+  ease + dive tau .13         |     217.15  air->dive  |    217.15    334.2 |     36.33 |       81% |  38% |  63%
+  ease + dive tau .22         |     132.17  air->dive  |    132.17    203.9 |     32.68 |       71% |  38% |  61%
+```
+
+**The duration route buys the same smoothing and pays for it.** To bring the dive step down to the
+level the shape change reaches for free, `dive.tau` has to go 0.09 → 0.22 — and its boom delivery
+falls **87 % → 71 %**, while the mean step across the other 51 transitions barely moves (39.7 →
+32.7) because a `tau` fixes one row. The shape change reaches 143 on the dive, **10.4 on the mean**,
+and takes dive delivery **up** to 93 %. It strictly dominates, and that is why it was chosen; it was
+not chosen because it was more elegant.
+
+**The value 0.80 is a boundary, not a preference.** Sweeping the shape with everything else held:
+
+```
+  shape |  worst STEP | worst boom mm | mean STEP | mean PEAK | first boom row to FALL
+      0 |      304.44 |         468.2 |     39.69 |     78.35 | (the ease itself)
+    0.6 |      231.56 |         356.3 |     17.39 |    121.42 | none, but mean PEAK RISES
+    0.7 |      180.02 |         277.2 |     13.21 |    109.22 | none
+   0.80 |      143.76 |         221.7 |     10.36 |     72.01 | none          <- shipped
+   0.85 |      129.57 |         199.9 |      9.29 |     69.74 | land 38% -> 37%
+    0.9 |      117.37 |         181.2 |      8.36 |     67.86 | land 38% -> 35%
+   0.95 |      106.81 |         165.1 |      7.59 |     71.47 | land, air, idle
+```
+
+0.80 is the largest value at which no framing's `boom` delivery falls. 0.6 is rejected for a
+different reason and it is the reason `PEAK` is measured at all: below about 0.7 the blend stops
+smoothing and starts merely POSTPONING — the peak speed reached during the blend goes UP (111.8 →
+121.4) while the step goes down, which is motion relabelled rather than removed.
+
+### §744.5 Delivery before and after, every framing and every channel
+
+Scored by `camdrive.test.mjs` D6's scorer, unchanged, so the columns can be read against the
+published table. `asked` and `got` are printed because a percentage is a statement about a
+population as much as about a camera.
+
+```
+  channel  framing    ease -> soft | asked, ease -> soft | got, ease -> soft
+  boom     air          67% -> 69% |   12.28 -> 12.79    |  8.286 -> 8.798
+           combat       74% -> 79% |    3.32 ->  3.12    |  2.453 -> 2.471
+           dive         87% -> 93% |    5.71 ->  5.71    |  4.986 -> 5.294
+           glide       100% ->100% |    2.42 ->  2.45    |  2.416 -> 2.455
+           idle         64% -> 68% |   13.70 -> 14.26    |  8.762 -> 9.739
+           land         38% -> 39% |    2.95 ->  3.04    |  1.129 -> 1.197
+           roll         89% -> 96% |    0.97 ->  0.95    |  0.862 -> 0.920
+           sneak       100% ->100% |    2.16 ->  2.16    |  2.157 -> 2.158
+           wall_run      0% ->  3% |    2.08 ->  2.05    |  0.000 -> 0.062
+  fov      air 84->83  combat 32->32  dive 58->60  glide 99->100  idle 54->54  land 0->0  roll 48->51  sneak 100->100
+  pivY     air 101->101 dive 94->94 glide 112->116 idle 76->76 land 47->46 roll 76->76 sneak 33->34 wall_run 111->112
+  lead     air 64->66  idle 90->85  land 100->96  roll 36->49  sneak 100->100
+  side     air 102->102  land 80->78  wall_run 120->120
+  pitch    air 103->103 combat 67->70 dive 92->94 glide 107->107 idle 92->93 land 103->103 roll 93->99 sneak 100->100 wall_run 98->104
+```
+
+**Every one of the nine `boom` rows rises or holds.** Four ratios fall — `lead` on `idle` (90→85)
+and on `land` (100→96), `side` on `land` (80→78), `fov` on `air` (84→83) — and three of the four
+are the scorer's denominator moving, not the camera:
+
+* `lead` on `idle` reads −5 points while the DELIVERED lead goes **1.301 m → 1.357 m**. `asked`
+  grew faster than `got` because more visits cleared the `minSpan` gate.
+* `combat`'s `fov` is the sharpest instance and it runs the other way: `asked` falls 5.95° → 5.25°
+  and `got` falls with it, which an absolute bar reads as a 10.5 % regression. Per visit, the
+  spans go −1.381 / −0.770 / −0.402 / −0.558° to −1.111 / −0.544 / −0.316 / −0.436° — **the camera
+  enters each combat already nearer the combat framing**, because the previous exit delivered more.
+  Less was asked because more had already arrived.
+
+So the bar S3 actually holds is neither ratio nor `got`, but **`miss` — the closest the screen ever
+got to the authored framing during the visit**, measured from the target, ungated, against the
+arm-invariant pinned reference:
+
+```
+  boom, summed over nine framings:  miss 14.677 m -> 13.648 m      (the camera ends CLOSER)
+  40 of 51 framing x channel rows end closer; 11 end further
+  worst per-visit loss: 34.8e-3 deg of lens on wall_run.fov, against the scorer's own 0.30 deg resolution
+```
+
+Eleven rows do end marginally further away — `air`'s boom by 3.4 mm per visit, `air`'s lens by
+18 millidegrees, `land`'s pivot height by 15 mm. **Every one is below the threshold the published
+scorer itself uses to decide a framing asked for anything at all**, and S3's bar is exactly that:
+no row may lose more than one `minSpan` of approach per visit. Saying "nothing got worse" would
+have been the easier sentence and it is not what the measurement says.
+
+The failing input for that bar is run in-arm: at `frameBlendShape` 1.60 the same mechanism takes
+boom miss **14.677 → 19.545 m** and loses 304e-3 m per visit on `dive.boom` against a 0.05 bar.
+
+### §744.6 The cost, in the currency §442.1 used
+
+The camera delivers more of each framing, so it travels slightly further in total. Over the same
+1852 frames, `?cam=hardblend` against shipped:
+
+```
+  mean |Dboom|          20.19 -> 21.67 mm/frame  (+7%)      [§442.1's chain collapse was +35%]
+  p95 |Dboom|            75.2 ->  85.4 mm
+  p99 |Dboom|           127.7 -> 138.2 mm
+  boom direction reversals   48 -> 48             unchanged
+  largest single-frame boom move  2377 -> 2366 mm  unchanged
+```
+
+That largest move is an authored instantaneous occlusion pull-in — rule 3, *"never clip, not even
+for a frame"* — and nothing here touches it. **A step became a ramp, and the ramp is a little
+longer than the step was.** Stated as motion because motion is what a person on hardware judges.
+
+### §744.7 What is still out of family, and what closing it would cost
+
+After the change the ranking is a tight band of 0.06–11.9 with **one outlier: `air → dive` at
+143.1, twelve times the next.** It is still 222 mm of boom in one frame. That is the `dive` row
+doing what its comment says — *"snap in tight and fast, tip down. The shake does the rest"* — and
+it is 53 % smaller than it was.
+
+**Not closed further, deliberately, and the price is measured rather than guessed.** From the
+variants table: `dive.tau` 0.09 → 0.11 alongside the shape change takes the step to 101.5 with boom
+delivery 89 %, still above the shipped 87 %; 0.09 → 0.13 takes it to 75.3 at 85 %, which is **below**
+what the dive delivers today. So 0.11 is the largest dive `tau` that costs nothing, and it buys a
+further 29 %. It was left alone because the owner asked for *slightly*, because the row is authored
+as a snap, and because spending an authored constant's recorded intent is his call and not a
+lane's. The number is here so it is a decision rather than a rediscovery.
+
+### §744.8 What I got wrong
+
+1. **The first counterfactual was pinned from frame 0** and drifted 2.52 m before the switch it was
+   measuring. The instrument printed the drift, I read it, and the fix was one index. Had it not
+   printed the drift the whole ranking would have been a third noise and looked exactly the same.
+2. **I priced the change on `got` and got a 10.5 % regression that was an improvement.** `combat`'s
+   fov delivers less because it has less left to deliver. Two more statistics had to be tried
+   before one was invariant to where the previous blend left the camera, and the one that shipped
+   (`miss`) is the third. §442's shape again: the legible statistic and the felt one, diverging
+   inside one row.
+3. **I wrote "3.4x the next worst" into the source file from the run with the broken
+   counterfactual**, and corrected it to 2.8x only when re-reading the fixed table. A number copied
+   from a superseded run reads exactly like a number.
+4. **`node tools/prodboot.mjs --query cam=hardblend` silently ignored the flag** on its first run,
+   because the patch that added `--query` had failed its own uniqueness assertion and I ran the
+   command anyway. The output was a clean boot and looked like the revert arm passing. The tell was
+   in the tool's own first line — it printed the URL without the query — and the run is discarded
+   rather than quoted.
+5. **S5 was written with a control that could not fail.** `smoothDamp`'s last line clamps overshoot
+   unconditionally, so no injected velocity can ever make it ring: the arm asserted a tautology.
+   Its failing input is now a copy of the rig with that clamp removed, which rings 1.728 m on the
+   identical drive while the shipped arm reads exactly 0.
+
+### §744.9 Verification
+
+**Suites, quoted (§703.2).**
+
+```
+  before  node --test "tests/*.test.mjs"   1..1188   pass 1188  fail 0   519.4 s
+  after   node --test "tests/*.test.mjs"   1..1193   pass 1193  fail 0   503.8 s
+```
+
+The five new arms are `tests/camsmooth.test.mjs` S1–S5. No existing arm was relaxed, re-based or
+skipped; the camera suites alone (`tests/cam*.test.mjs` + `climbcam`) were run separately at
+42 pass / 0 fail before the file was added.
+
+**Production (§666/§695), on the ARTIFACT.**
+
+```
+  tools/prodboot.mjs                          ready=true, 17 modules, 149 requests, zero 4xx/5xx
+  tools/prodboot.mjs --query cam=hardblend    ready=true, 17 modules, 149 requests, zero 4xx/5xx
+  tools/camprodblend.mjs   one frame of the dive blend, read off dist/ in a real browser:
+      closed form, first-order ease    -0.371909 m
+      closed form, damped @ shape .80  -0.174708 m
+      (default)        -0.174708 m  ->  DAMPED (shape 0.80)   |delta| 0.0e+0
+      cam=hardblend    -0.371909 m  ->  first-order ease      |delta| 0.0e+0
+```
+
+The last of those is the one that matters, and it is a mechanism probe rather than a symptom
+(§439): it does not infer which branch shipped from the page looking right, it executes the branch
+and compares the number against both closed forms. **This verifies the artifact, NOT the live
+host** — the container's proxy blocks `*.github.io`, so nothing here was fetched from the deployed
+page.
+
+**No plate was taken and no visual claim is made (§466.5).** Every statement in this section is
+numeric and every number is a screen-side quantity — camera position, quaternion, FOV, boom length.
+A camera feel change is badly served by stills in any case: the thing that changed is a derivative,
+and no single frame contains one. The owner's eye is the instrument for whether 0.80 is the right
+amount of *slightly*, and `?cam=hardblend` puts the old feel back bit-exact for that comparison.
+
+### §744.10 How to revert
+
+**The soft start is the default; the ease is the revert.** One token either way:
+
+- `TUNE.frameBlendShape = 0.80` — the shipped default. Critically damped, `smoothTime = tau x 0.80`.
+- `TUNE.frameBlendShape = 0`, or **`?cam=hardblend`** at the URL (or `globalThis.__CAMBLEND_AB =
+  'hard'` from a test) — the first-order `ease` exactly as it was. No authored constant differs
+  between the arms, so the reverted arm is the old feel and not a reconstruction of it, and S4
+  asserts that by pinning all sixteen `FRAMES.tau` values.
+
+Deleting `tests/camsmooth.test.mjs`, `tools/camjerk.mjs` and `tools/camprodblend.mjs`, reverting
+the ~50 lines in `_blendFrame` and the `--query` flag in `tools/prodboot.mjs` removes the lane
+entirely.
