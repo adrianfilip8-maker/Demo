@@ -34,6 +34,106 @@ import { rng } from '../core/Rand.js';
  * All coordinates are §8.1 level space: +X east, +Y up, +Z south. Courtyard floor y = 0.
  */
 
+/* §748 revert token: `?sight=sky` (or `globalThis.__SIGHT_AB = 'sky'` from a test, for hosts
+   with no `location`) restores the pre-§748 sight exactly — a cone tested only in the
+   horizontal plane and therefore unbounded in Y, which is what let a player on a roof, and
+   most of all a player directly overhead, be seen. Read once at module scope, the same shape
+   `?react=` and `?kk=` use. */
+const SIGHT_AB = (() => {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('sight') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__SIGHT_AB != null) raw = String(globalThis.__SIGHT_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  const on = String(raw).trim().toLowerCase().split(',').map((s) => s.trim());
+  return { sky: on.includes('sky') };
+})();
+
+/**
+ * Is the vertical ceiling on sight in force? False only under `?sight=sky`, where every line
+ * below is arithmetically bypassed and the fill rate is bit-identical to the pre-§748 build.
+ */
+export const SIGHT_CEIL_ON = !SIGHT_AB.sky;
+
+/**
+ * §748 — how far ABOVE his own feet a guard can see, and how soft the boundary is.
+ *
+ * ── the defect this closes ──────────────────────────────────────────────────────────────────
+ * `Senses.evaluate` tests the cone **entirely in the horizontal plane**: it flattens the vector
+ * to the player, flattens the guard's forward, and compares bearings. There was no vertical term
+ * anywhere, so the sensed volume was not a cone at all — it was an infinite vertical wedge, and
+ * every point directly above the guard's forward line scored `angle 0`, the dead centre of the
+ * bright core, at any height inside `range`. Measured on the shipped build before this landed
+ * (`tools/sightceil.mjs --table`, temple, walking, moonlit, fill rate per second):
+ *
+ *     rise above his feet      overhead      2 m out      6 m out     12 m out
+ *        0.00 m (same floor)      1.577        1.456        1.118        0.604
+ *        4.00 m                   1.355        1.307        1.050        0.568
+ *        8.00 m                   1.011        0.988        0.826        0.430
+ *
+ * Standing eight metres straight up read 1.011 against 1.118 for a player standing six metres
+ * away on the guard's own floor and 0.604 for one standing twelve metres away — so height was
+ * costing the player almost nothing and distance was costing him everything. **Airborne it was
+ * worse than either**: `DETECT.airborneGain` 1.20 multiplies anyone who got up there by jumping,
+ * and the overhead column becomes 1.874 / 1.917 / 1.815 / 1.610 / 1.201 at rises 0 / 1 / 2 / 4 /
+ * 8 m — so a player eight metres over a guard's head, in the air, filled the meter FASTER (1.201)
+ * than one walking about six metres in front of him on his own floor (1.118).
+ *
+ * ── why a height and not a pitch ────────────────────────────────────────────────────────────
+ * A pitch limit is the more principled shape — it is what a cone actually is — and it is the
+ * wrong one here, for a reason that is decisive rather than aesthetic: **pitch is a function of
+ * distance and height is not.** A player standing on the second step of a staircase one metre
+ * in front of a guard is at 25° of elevation and a pitch limit blinds him; the same player on
+ * the same step twelve metres away is at 2° and is seen. That inverts the thing the player is
+ * being asked to learn. A ceiling parallel to the guard's own floor is flat over stairs, ramps
+ * and plinths at every distance, which is the property that keeps a slightly-raised surface
+ * readable. The owner offered the height version and it is also the better one.
+ *
+ * ── the number, and where it comes from ─────────────────────────────────────────────────────
+ * `ceiling` is **Carmelita's own drawn height** — the owner's ruling, one number for all three
+ * rosters rather than three per-type derivations. It is MEASURED, not quoted: `tools/sightceil.mjs
+ * --height` places her through the shipped `instantiateNative`, reads the scale off the node that
+ * instantiator writes it to, and takes a world `Box3` over the placed rig. Three independent
+ * expressions of it agree to 2.12e-6 m:
+ *
+ *     world Box3 over the placed rig            y [0.000000, 1.816286]  ->  1.81629 m
+ *     merged geometry box x the node scale      1.81628 m   (1.63875 unscaled x 1.108338)
+ *     the rebind arm over the same source file  1.81628 m
+ *
+ * with the head group at 17,469 triangles, because §704 records this character's head once
+ * measuring 99.4 % absent and a short box would otherwise pass as a measurement.
+ *
+ * **Why one number is right and three would have been wrong.** The obvious per-type derivation
+ * is each roster's own body height, and it fails on the scarab: `VISION.scarab.eyeHeight` is
+ * 0.26 m and `Guard.TUNE.headTop.scarab` is 0.34 m, so a beetle-height ceiling would blind it to
+ * a player standing on a kerb — and the comparison here is between the player's FEET and the
+ * guard's own base, so it must clear a standing player's whole world, not his ankles. 1.81628 m
+ * sits just above MOVEMENT's 1.80 m standing capsule, which means a player standing on a surface
+ * as high as he is tall is still at the boundary rather than past it.
+ *
+ * ── soft, not hard ──────────────────────────────────────────────────────────────────────────
+ * `soft` is the same argument the cone edge already carries three lines further down: a hard
+ * cutoff makes the player feel cheated when he clips the boundary. The last half-metre
+ * smoothsteps to zero, so stepping onto a plinth dims the guard's read of you instead of
+ * deleting it.
+ *
+ * ── what this deliberately does NOT do ──────────────────────────────────────────────────────
+ * **Hearing is untouched.** It is a sphere, it has no cone and no defect, and the owner's words
+ * were about sight. A player above the ceiling can still be HEARD if he is running, unsneaking,
+ * inside `hearRadius` — and `DETECT.hearCap` 0.66 is below `DETECT.chase` 1.00, so noise from
+ * above can make a guard suspicious and can never make him chase or catch you.
+ *
+ * **There is no floor.** A guard on the terrace still sees the courtyard below him to the full
+ * `range`. Nothing in the report was about being seen from below and inventing a limit there
+ * would be a second change hidden inside this one.
+ */
+export const SIGHT = {
+  /** Metres above the guard's own base. Measured; see above. */
+  ceiling: 1.81628,
+  /** Metres of smoothstep below `ceiling` over which sight fades to nothing. */
+  soft: 0.50,
+};
+
 /* ============================== TUNE ====================================== */
 
 /** Per-type senses. Ranges in metres, angles in radians. */
@@ -839,6 +939,14 @@ export class Senses {
    *   forward    THREE.Vector3 unit facing (horizontal)
    *   target     THREE.Vector3 player position (feet)
    *   targetTop  number  metres above `target` to aim the line-of-sight ray
+   *   baseY      number  the guard's OWN base height — the floor he is standing on. §748's
+   *                      ceiling is measured from here to the player's feet, and both ends of
+   *                      that comparison are deliberately soles rather than body centres: a
+   *                      scarab's eye is 0.26 m off the ground and a standing player's chest is
+   *                      not, so any head-to-head comparison blinds the beetle on level ground.
+   *                      Omitted by a caller with no guard body (the unit tests), which falls
+   *                      back to `eye.y - cfg.eyeHeight` — the same quantity to within the walk
+   *                      bob, since `Guard._eyePosition` rides the live head bone.
    *   collision  the COLLISION module, or null
    *   moving     0..1 normalised player speed
    *   sneaking / crouching / airborne  booleans
@@ -867,6 +975,19 @@ export class Senses {
 
     if (dist > cfg.range || dist < 1e-4) return this._settle(p.dt);
 
+    /* --- §748: the vertical ceiling. Above his own head he does not look. ---
+       Placed here deliberately: after hearing (a sphere, and not ceilinged) and before both the
+       cone maths and the line-of-sight ray, so a player on a roof costs one subtraction rather
+       than a raycast. `rise` is the player's FEET against the guard's OWN base — see `baseY`
+       above for why neither end is a body centre. */
+    let riseW = 1;
+    if (SIGHT_CEIL_ON) {
+      const baseY = p.baseY ?? (p.eye.y - cfg.eyeHeight);
+      const rise = p.target.y - baseY;
+      if (rise >= SIGHT.ceiling) return this._settle(p.dt);
+      riseW = 1 - THREE.MathUtils.smoothstep(rise, SIGHT.ceiling - SIGHT.soft, SIGHT.ceiling);
+    }
+
     _flat.copy(_to).setY(0);
     if (_flat.lengthSq() < 1e-6) _flat.copy(p.forward);
     _flat.normalize();
@@ -882,7 +1003,13 @@ export class Senses {
     const coreW = 1 - THREE.MathUtils.smoothstep(angle, core - DETECT.coreSoftness, core + DETECT.coreSoftness);
     const periW = 1 - THREE.MathUtils.smoothstep(angle, core, cfg.peripheral);
     const angleGain = coreW + (1 - coreW) * periW * DETECT.peripheralGain;
-    if (angleGain < 0.02) return this._settle(p.dt);
+    /* §748 folds `riseW` into this gate rather than only into the fill rate below, so that the
+       last centimetres under the ceiling stop counting as SEEING rather than as seeing at a
+       vanishing rate — `sawThisFrame` drives `timeSinceSeen`, `lastSeen` and the "you are lit
+       because another guard's beam is on you" flag, none of which should latch off a fill rate
+       of 0.001. In the `?sight=sky` arm `riseW` is exactly 1 and this is the same comparison it
+       has always been. */
+    if (angleGain * riseW < 0.02) return this._settle(p.dt);
 
     /* --- line of sight (§4.6). This is the raycast that makes pillars matter. --- */
     if (p.collision?.raycast) {
@@ -908,7 +1035,7 @@ export class Senses {
     this.lastSeen.copy(p.target);
     this.lastSeenValid = true;
     this.timeSinceSeen = 0;
-    this.gain = Math.max(this.gain, DETECT.fillBase * near * angleGain * move * stealth * light);
+    this.gain = Math.max(this.gain, DETECT.fillBase * near * angleGain * riseW * move * stealth * light);
     return this._settle(p.dt);
   }
 

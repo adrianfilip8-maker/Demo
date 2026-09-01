@@ -1083,6 +1083,12 @@ class Guard {
     sense.eye = this._eyePosition(_eye);
     sense.forward = this.forward;
     sense.alerted = this.alerted;
+    /* §748: the floor THIS guard is standing on, which is what his sight ceiling is measured
+       from. Per guard and not on the shared bag's initialiser, because nine guards stand on
+       four different levels of this temple and a ceiling measured from someone else's floor is
+       the §697 defect in another costume. `position` is his soles — `_step` assigns the ground
+       probe's height to it directly, and the pool is drawn from it. */
+    sense.baseY = this.position.y;
     if (this.state === STATE.KO || this.state === STATE.STUNNED) {
       this.senses.gain = 0;
       this.senses.timeSinceSeen += dt;
@@ -1775,7 +1781,7 @@ export class Guards {
 
     /* One sense-parameter bag, mutated in place — Senses.evaluate reads it and keeps nothing. */
     this._sense = {
-      eye: null, forward: null, target: this.playerPos, targetTop: 0.95,
+      eye: null, forward: null, target: this.playerPos, targetTop: 0.95, baseY: 0,
       collision: null, moving: 0, sneaking: false, crouching: false, airborne: false,
       light: 0.3, alerted: false, dt: 1 / 60,
     };
