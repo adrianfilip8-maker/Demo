@@ -1380,3 +1380,273 @@ test('the full ladder runs up and back down: patrol → suspicious → searching
   assert.ok(order.includes(STATE.CHASE), 'never escalated to chase');
   assert.equal(order[order.length - 1], STATE.PATROL, `ended in "${order[order.length - 1]}" — he never stood back down`);
 });
+
+/* ====================================================================== */
+/* §748 — the vertical ceiling on sight                                    */
+/* ====================================================================== */
+
+/**
+ * The cone used to be tested **entirely in the horizontal plane**: `evaluate` flattened both the
+ * vector to the player and the guard's forward and compared bearings, so there was no vertical
+ * term anywhere and the sensed volume was an infinite vertical wedge. A player eight metres
+ * straight up filled the meter faster than a player six metres away on the guard's own floor,
+ * and directly overhead the flattened vector collapsed under the 1e-6 guard and the code
+ * substituted `p.forward` — scoring him at angle 0, the dead centre of the bright core.
+ *
+ * `SIGHT.ceiling` closes that at Carmelita's own measured height above the guard's OWN base.
+ * Every test below runs BOTH arms from the same run, because a number from the shipped arm
+ * alone cannot say whether the ceiling did anything.
+ *
+ * **Why both ends of the comparison are soles.** The player's `target` is his feet and `baseY`
+ * is the guard's; comparing body centres or heads would blind the scarab, whose eye is 0.26 m
+ * off the ground, to a player standing on the same floor. V5 is that case, asserted rather
+ * than argued.
+ */
+
+/** A fresh `Patrol.js` with the A/B token set as the game reads it — once, at module scope. */
+async function patrolArm(arm) {
+  if (arm) globalThis.__SIGHT_AB = arm; else delete globalThis.__SIGHT_AB;
+  const mod = await import(`../src/ai/Patrol.js?sight=${arm || 'on'}`);
+  delete globalThis.__SIGHT_AB;
+  return mod;
+}
+
+/**
+ * One frame of sight. `rise` is the player's FEET above the guard's base; `fwd`/`lat` are the
+ * horizontal offsets along and across his facing. Returns the fill rate and whether he saw.
+ */
+function look(P, type, { rise = 0, fwd = 6, lat = 0, baseY = 0, moving = 0.36, airborne = false } = {}) {
+  const cfg = P.VISION[type];
+  const s = new P.Senses(type, 11);
+  const gain = s.evaluate({
+    eye: new THREE.Vector3(0, baseY + cfg.eyeHeight, 0),
+    forward: new THREE.Vector3(0, 0, 1),
+    target: new THREE.Vector3(lat, baseY + rise, fwd),
+    targetTop: 0.95, baseY, collision: null,
+    moving, sneaking: false, crouching: false, airborne,
+    light: 0.3, alerted: false, dt: 1 / 60,
+  });
+  return { gain, saw: s.sawThisFrame, heard: s.heardThisFrame };
+}
+
+const ROSTERS = ['temple', 'heavy', 'scarab'];
+
+test('V1 level ground is untouched — every roster, every distance, bit for bit', async () => {
+  /* §418.3 DOMAIN. Passes on: the shipped tree, where the ceiling cannot engage at rise 0.
+     Fails on: any ceiling measured from something other than the guard's own base — a limit
+     taken from `eyeHeight` puts the scarab's at 0.26 m and this test goes red on him first.
+     Does not discriminate: anything above the floor, which is V2/V3/V4's job. */
+  const sky = await patrolArm('sky');
+  const now = await patrolArm('');
+  let inspected = 0;
+  for (const type of ROSTERS) {
+    for (const fwd of [1, 2, 4, 6, 8, 12]) {
+      for (const lat of [0, 1, 3]) {
+        const a = look(sky, type, { rise: 0, fwd, lat });
+        const b = look(now, type, { rise: 0, fwd, lat });
+        assert.equal(b.gain, a.gain, `${type} at fwd ${fwd} lat ${lat}: ${b.gain} != ${a.gain}`);
+        assert.equal(b.saw, a.saw, `${type} at fwd ${fwd} lat ${lat}: sawThisFrame moved`);
+        inspected++;
+      }
+    }
+  }
+  console.log(`[V1] ${inspected} level-ground stimuli, identical in both arms`);
+  assert.ok(inspected === 54, `inspected ${inspected}`);
+});
+
+test('V2 straight overhead was the dead centre of the bright core, and now is nothing', async () => {
+  /* §418.3 DOMAIN. Passes on: the shipped tree. Fails on: the pre-§748 tree, which is the `sky`
+     arm here and is asserted to still show the defect — so this test cannot go green by the
+     instrument losing its subject. */
+  const sky = await patrolArm('sky');
+  const now = await patrolArm('');
+  let inspected = 0;
+  for (const type of ROSTERS) {
+    for (const rise of [2, 4, 8]) {
+      /* exactly overhead: `_flat` collapses under 1e-6 and `p.forward` is substituted */
+      const a0 = look(sky, type, { rise, fwd: 0 });
+      const b0 = look(now, type, { rise, fwd: 0 });
+      /* and half a metre in front of him, where the flattened bearing is a clean 0° at any
+         height — the collapse is only the degenerate case of a defect covering the whole wedge */
+      const a1 = look(sky, type, { rise, fwd: 0.5 });
+      const b1 = look(now, type, { rise, fwd: 0.5 });
+      assert.ok(a0.saw && a0.gain > 0.2, `[sky] ${type} overhead at ${rise} m read ${a0.gain} — the defect is gone from the control arm`);
+      assert.ok(a1.saw && a1.gain > 0.2, `[sky] ${type} 0.5 m out at ${rise} m read ${a1.gain}`);
+      assert.equal(b0.saw, false, `${type} still sees straight overhead at ${rise} m (gain ${b0.gain})`);
+      assert.equal(b1.saw, false, `${type} still sees 0.5 m out at ${rise} m (gain ${b1.gain})`);
+      inspected += 4;
+    }
+  }
+  console.log(`[V2] ${inspected} overhead stimuli; the sky arm still shows the defect on every one`);
+  assert.ok(inspected === 36, `inspected ${inspected}`);
+});
+
+test('V3 the ceiling is Carmelita\'s measured height, and it is soft rather than a wall', async () => {
+  /* §418.3 DOMAIN. Passes on: the shipped smoothstep. Fails on: a hard cutoff, which would put
+     a step in this ramp instead of a monotone fade, and on a ceiling moved by more than a
+     centimetre in either direction. */
+  const { SIGHT } = await import('../src/ai/Patrol.js');
+  assert.ok(Math.abs(SIGHT.ceiling - 1.81628) < 5e-5,
+    `SIGHT.ceiling is ${SIGHT.ceiling} — tools/sightceil.mjs --height measures 1.81628 m`);
+  assert.ok(SIGHT.soft >= 0.25, `a ${SIGHT.soft} m soft band is a hard cutoff in disguise`);
+
+  const now = await patrolArm('');
+  const base = look(now, 'temple', { rise: 0, fwd: 6 }).gain;
+  const ramp = [];
+  for (let r = SIGHT.ceiling - SIGHT.soft - 0.1; r <= SIGHT.ceiling + 0.1; r += 0.05) {
+    ramp.push({ r, g: look(now, 'temple', { rise: r, fwd: 6 }).gain / base });
+  }
+  /* monotone down, starts at full, ends at nothing, and takes more than one sample to do it */
+  let drops = 0;
+  for (let i = 1; i < ramp.length; i++) {
+    assert.ok(ramp[i].g <= ramp[i - 1].g + 1e-9, `not monotone at rise ${ramp[i].r.toFixed(2)}`);
+    if (ramp[i].g < ramp[i - 1].g - 1e-9) drops++;
+  }
+  assert.ok(ramp[0].g > 0.999, `the fade starts early: ${ramp[0].g} at rise ${ramp[0].r.toFixed(2)}`);
+  assert.equal(ramp[ramp.length - 1].g, 0, 'the ceiling is not closed at the top');
+  assert.ok(drops >= 5, `the boundary fell in ${drops} steps — that is a cutoff, not a fade`);
+  console.log(`[V3] ceiling ${SIGHT.ceiling} m, soft ${SIGHT.soft} m: ${ramp.length} samples, ${drops} descending steps`);
+});
+
+test('V4 a slightly-raised surface — a step, a ramp, a plinth edge — is still seen', async () => {
+  /* §418.3 DOMAIN. Passes on: the shipped ceiling, which sits above MOVEMENT's own 1.80 m
+     standing capsule. Fails on: any per-type derivation from the guard's eye or head — the
+     scarab's would be 0.26–0.34 m and a 0.4 m step would blind him. The heights below are the
+     ones `tools/sightceil.mjs --drive` reads off the shipped collision at real stations. */
+  const now = await patrolArm('');
+  let inspected = 0;
+  for (const type of ROSTERS) {
+    for (const rise of [0.10, 0.25, 0.398, 0.75, 1.00, 1.25]) {
+      const r = look(now, type, { rise, fwd: 5 });
+      assert.ok(r.saw, `${type} lost a player standing ${rise} m up, 5 m away`);
+      assert.ok(r.gain > 0.15, `${type} at rise ${rise}: gain fell to ${r.gain}`);
+      inspected++;
+    }
+  }
+  console.log(`[V4] ${inspected} raised-surface stimuli, all still seen`);
+  assert.ok(inspected === 18, `inspected ${inspected}`);
+});
+
+test('V5 the scarab is not blinded on level ground — the hazard a per-type limit would have hit', async () => {
+  /* §418.3 DOMAIN. Passes on: a ceiling measured feet-to-feet. Fails on: a ceiling measured
+     from the guard's eye or head — `VISION.scarab.eyeHeight` is 0.26 m and a standing player's
+     chest is 0.95 m up, so the beetle would stop seeing the floor it patrols. Asserted on the
+     scarab specifically because it is the only roster where the two rules disagree. */
+  const now = await patrolArm('');
+  const sky = await patrolArm('sky');
+  let inspected = 0;
+  for (const fwd of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    const a = look(sky, 'scarab', { rise: 0, fwd });
+    const b = look(now, 'scarab', { rise: 0, fwd });
+    assert.ok(b.saw, `the scarab lost a player standing ${fwd} m in front of it on its own floor`);
+    assert.equal(b.gain, a.gain, `the scarab's floor read moved at ${fwd} m: ${b.gain} vs ${a.gain}`);
+    inspected++;
+  }
+  console.log(`[V5] scarab, ${inspected} level-ground distances, unchanged`);
+  assert.ok(inspected === 8, `inspected ${inspected}`);
+});
+
+test('V6 a guard standing on the raised floor still sees a player on it — baseY is HIS', async () => {
+  /* §418.3 DOMAIN. Passes on: `baseY` taken per guard from his own `position.y`. Fails on: a
+     ceiling measured from world y = 0, which would blind every guard above the courtyard to
+     his own deck — and the shipped roster has guards standing at y = 2.00, 17.00 and −12.00. */
+  const now = await patrolArm('');
+  let inspected = 0;
+  for (const baseY of [2.0, 7.75, 17.0, -12.0]) {
+    for (const type of ROSTERS) {
+      const flat = look(now, type, { rise: 0, fwd: 5, baseY });
+      const zero = look(now, type, { rise: 0, fwd: 5, baseY: 0 });
+      assert.ok(flat.saw, `${type} on a floor at y=${baseY} lost a player standing beside him`);
+      assert.equal(flat.gain, zero.gain, `${type}'s read depends on his ABSOLUTE height (${flat.gain} vs ${zero.gain})`);
+      inspected++;
+    }
+  }
+  console.log(`[V6] ${inspected} guard-floor heights, every read identical to the courtyard's`);
+  assert.ok(inspected === 12, `inspected ${inspected}`);
+});
+
+test('V7 ?sight=sky restores the pre-§748 sight exactly, and it is the only thing that does', async () => {
+  /* §418.3 DOMAIN. Passes on: the token. Fails on: no token — the same sweep without it differs
+     on every above-ceiling row, which the second half asserts so the revert cannot pass by the
+     sweep being empty. */
+  const sky = await patrolArm('sky');
+  const now = await patrolArm('');
+  let same = 0, differ = 0;
+  for (const type of ROSTERS) {
+    for (const rise of [0, 0.5, 1.0, 1.5, 2, 3, 4, 6, 8]) {
+      for (const fwd of [0, 2, 6, 12]) {
+        const a = look(sky, type, { rise, fwd });
+        const b = look(now, type, { rise, fwd });
+        if (rise < 1.31) { assert.equal(b.gain, a.gain, `${type} rise ${rise} fwd ${fwd}`); same++; }
+        else if (a.gain > 0) { assert.ok(b.gain < a.gain, `${type} rise ${rise} fwd ${fwd}: ${b.gain} !< ${a.gain}`); differ++; }
+      }
+    }
+  }
+  console.log(`[V7] ${same} rows identical under the ceiling, ${differ} rows lowered above it`);
+  assert.ok(same >= 36, `only ${same} rows below the fade`);
+  assert.ok(differ >= 40, `only ${differ} rows above it — the sweep is not reaching the ceiling`);
+});
+
+test('V8 hearing is deliberately NOT ceilinged, and cannot reach chase from up there', async () => {
+  /* §418.3 DOMAIN. Passes on: the shipped tree, where the ceiling is applied after the hearing
+     block. Fails on: a ceiling applied before it, which would delete the noise term as well —
+     the owner's words were about sight, and a guard who cannot hear a runner overhead is a
+     second change hidden inside this one. */
+  const now = await patrolArm('');
+  const cfg = now.VISION.temple;
+  const s = new now.Senses('temple', 3);
+  const p = {
+    eye: new THREE.Vector3(0, cfg.eyeHeight, 0), forward: new THREE.Vector3(0, 0, 1),
+    target: new THREE.Vector3(0, 5, 2), targetTop: 0.95, baseY: 0, collision: null,
+    moving: 0.9, sneaking: false, crouching: false, airborne: false,
+    light: 0.3, alerted: false, dt: 1 / 60,
+  };
+  const gain = s.evaluate(p);
+  assert.equal(s.sawThisFrame, false, 'he SAW a player 5 m above him');
+  assert.equal(s.heardThisFrame, true, 'he stopped hearing a runner 5 m above him');
+  assert.ok(gain > 0, `hearing produced no gain (${gain})`);
+  let n = 0;
+  for (let t = 0; t < 60; t += 1 / 60) { s.evaluate(p); n++; }
+  console.log(`[V8] heard-not-seen from 5 m up: gain ${gain.toFixed(3)}, meter settles at ${s.suspicion.toFixed(3)} after ${n} frames`);
+  /* The cap is tested BEFORE the frame's gain is added, so it can overshoot by exactly one
+     frame of it — measured 0.663 against a 0.66 cap. That is the real bound and the earlier
+     draft of this line asserted the wrong one; it is not a tolerance, it is the arithmetic. */
+  assert.ok(s.suspicion <= now.DETECT.hearCap + gain * (1 / 60) + 1e-9,
+    `noise from above carried the meter to ${s.suspicion}, past hearCap ${now.DETECT.hearCap} + one frame`);
+  assert.ok(s.suspicion < now.DETECT.searching,
+    `noise from above reached ${s.suspicion}, past SEARCHING ${now.DETECT.searching}`);
+  assert.ok(s.suspicion < now.DETECT.chase, 'noise from above can reach CHASE');
+});
+
+test('V9 CALIBRATION: the three level-ground bars go red on the ceiling that was nearly shipped', async () => {
+  /* §418.3, in the form that costs nothing to run: V1, V4, V5 and V6 pass on BOTH trees, so
+     none of them is evidence about the ceiling until it has been seen to fail. The ceiling that
+     would have been shipped by the obvious per-type derivation — each roster's own eye or head
+     height — is set here and the same three reads are taken again. `SIGHT` is the tuning block
+     the game reads per frame, so this is the real value being bracketed and not a copy.
+     Restored in a `finally`, and V1..V6 run before this test in file order either way. */
+  const P = await import('../src/ai/Patrol.js');
+  const keep = P.SIGHT.ceiling;
+  const broken = [];
+  try {
+    const level = ROSTERS.map((t) => look(P, t, { rise: 0, fwd: 5 }).gain);
+    P.SIGHT.ceiling = 0.34;              // Guard.TUNE.headTop.scarab — the beetle's own height
+    ROSTERS.forEach((type, i) => {
+      /* V1 and V5 assert the level-ground read is IDENTICAL, not merely non-zero: a 0.34 m
+         ceiling leaves the fade band straddling the floor, so a player standing on it is dimmed
+         to 73 % rather than deleted. That is the failure those two bars actually catch. */
+      const r = look(P, type, { rise: 0, fwd: 5 });
+      if (r.gain !== level[i]) broken.push(`${type} level ground ${level[i].toFixed(3)}→${r.gain.toFixed(3)}`);
+      const step = look(P, type, { rise: 0.398, fwd: 5 });
+      if (!step.saw) broken.push(`${type} 0.4 m step BLIND`);
+    });
+  } finally {
+    P.SIGHT.ceiling = keep;
+  }
+  console.log(`[V9] at ceiling 0.34 m the bars break on: ${broken.join(', ')}`);
+  assert.ok(broken.length >= 4,
+    `a 0.34 m ceiling broke only ${broken.length} reads — V1/V4/V5 cannot discriminate`);
+  /* and everything is genuinely back */
+  assert.equal(P.SIGHT.ceiling, keep);
+  for (const type of ROSTERS) assert.ok(look(P, type, { rise: 0, fwd: 5 }).saw, `${type} not restored`);
+});
