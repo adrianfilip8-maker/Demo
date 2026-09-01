@@ -70,6 +70,31 @@ export const PILE_FADED = (() => {
  *                    still tinted. Kept reachable so the owner can A/B all three.
  *   ?props=tinted    the original double grade — every entry's shipped `color × map`.
  */
+/**
+ * §746's three-state token — same seam as `?pile=` / `?props=` above, read at module load,
+ * independent of every other lane's key.
+ *
+ *   (default)      the avenue sphinxes' base course reaches `Props.AVENUE_SKIRT` deeper, so
+ *                  its underside is below the sand at every point of every footprint. The
+ *                  animal does not move: only stone is added, all of it below the sand line
+ *                  except where the dune has fallen away underneath it.
+ *   ?sphinx=flat   the pre-§746 avenue exactly — base course −0.65…+0.04, and the 0.35–1.81 m
+ *                  wedge of daylight under the downhill edge of all sixteen.
+ *   ?sphinx=sink   the other repair the owner offered to take: no skirt, and the whole statue
+ *                  lowered by the same amount instead. Kept reachable because "which of these
+ *                  looks right" is his call, and because the cost of this one is visible only
+ *                  in the demo — it puts 0.49–1.45 m of the ANIMAL under sand at all sixteen.
+ */
+export const SPHINX_BASE = (() => {
+  let raw = '';
+  try {
+    if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('sphinx') || '';
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__SPHINX_AB != null) raw = String(globalThis.__SPHINX_AB);
+  } catch { /* plain-module hosts have no location; that is the test path */ }
+  const t = String(raw).trim().toLowerCase();
+  return t === 'flat' || t === 'sink' ? t : 'skirt';
+})();
+
 export const PROPS_MODE = (() => {
   let raw = '';
   try {
@@ -557,19 +582,58 @@ export class Props {
    */
   static AVENUE_PEDESTAL = 0.65;
 
+  /**
+   * §746 — how much further the base course reaches BELOW the sand line, in the sphinx's own
+   * local units. The owner: *"There is empty space below the bottom of the sphinx statues and
+   * above the ground."*
+   *
+   * **The number is measured, not chosen.** `tools/sphinxgap.mjs` raycasts the DRAWN terrain
+   * under all sixteen placed footprints — 13×9 nodes each, the placement intercepted at
+   * `_absorb` so it is the shipped geometry and not a re-derivation — and reports, per statue,
+   * how far the base underside floats above the sand at its worst point:
+   *
+   *     quality        low     med    high   ultra
+   *     worst skirt   1.821   1.818  1.816   1.815     (local units, at (7, 52.6))
+   *
+   * All four grades are swept because `Terrain.INNER_STEP` is 1.6 / 0.96 / 0.8 / 0.6 m, so the
+   * drawn dune is a different surface at each and a constant sized on one can be short on
+   * another. **2.00 is 1.821 plus 9.8 % headroom**, and refining the sweep 14× (49×33 nodes)
+   * moves the requirement by 0.000 m, so the coarse grid was not under-sampling it.
+   *
+   * Why a skirt rather than sinking the statue, which is what the owner offered to accept:
+   * both close the gap, and a sink of the same 2.00 puts the ANIMAL under sand at all sixteen
+   * — 0.49 m to 1.45 m of a 3.5 m body, every plinth gone entirely. The skirt closes the same
+   * gap and buries 0.00 m of animal, because the animal does not move. `?sphinx=sink` is the
+   * other arm, kept reachable so that is his judgement and not this file's.
+   *
+   * It is free. The course is one `chamferBox`: same triangles, same draw, same rng draws.
+   */
+  static AVENUE_SKIRT = 2.00;
+
   _sphinxAvenue() {
     const AVENUE_PEDESTAL = Props.AVENUE_PEDESTAL;
+    /* `flat` restores the pre-§746 avenue exactly; `sink` swaps the skirt for the equivalent
+       drop of the whole statue, which is the alternative the owner asked to be able to judge.
+       The drop is `× sc` because `matrixOf` composes T·R·S — the translation is in world
+       metres while the skirt is a local extent the scale multiplies, and a sink that ignored
+       that would not be the same displacement it is being compared against. */
+    const SKIRT = SPHINX_BASE === 'flat' || SPHINX_BASE === 'sink' ? 0 : Props.AVENUE_SKIRT;
+    const SINK = SPHINX_BASE === 'sink' ? Props.AVENUE_SKIRT : 0;
     const terrain = this.engine.get('terrain');
     const groundY = (x, z) => (terrain?.heightAt ? terrain.heightAt(x, z) : 0);
     for (let i = 0; i < L.sphinxZ.length; i++) {
       const z = L.sphinxZ[i];
       for (const sx of [-1, 1]) {
-        const bag = sphinx({ rng: this.rng, worn: 0.35 + i * 0.05, pedestal: AVENUE_PEDESTAL });
+        const bag = sphinx({ rng: this.rng, worn: 0.35 + i * 0.05, pedestal: AVENUE_PEDESTAL, skirt: SKIRT });
         const x = sx * L.sphinxX;
+        /* Drawn from the stream in the same order as before — `sphinx()` first, then this one
+           jitter — so every prop built after the avenue is bit-identical at the shipped seed.
+           It is hoisted out of the literal only because `y` now needs to read it. */
+        const sc = 1 + this.rng.jitter(0.04);
         bag.transform(matrixOf({
-          x, y: groundY(x, z) - 0.15 + AVENUE_PEDESTAL, z,
+          x, y: groundY(x, z) - 0.15 + AVENUE_PEDESTAL - SINK * sc, z,
           ry: sx > 0 ? -Math.PI / 2 : Math.PI / 2,
-          s: 1 + this.rng.jitter(0.04),
+          s: sc,
         }));
         this._absorb(bag);
       }

@@ -577,29 +577,33 @@ test('T3: the avenue is uniform BY DESIGN — measured, and not the rope-coil de
   assert.ok(worst <= 2, `${worstShot} sees ${worst} sphinxes of one silhouette; basketvary's bar for the same defect is 2`);
 });
 
-test('T3b: the avenue does not PASS `basketvary` A1 so much as GRAZE it, and the graze is the quantiser', () => {
-  /* T3 above transfers `basketvary`'s A1 — no camera sees more than two identical silhouettes —
-     and the shipped avenue scores exactly 2. Passing at the bar is not the same as passing, so
-     this arm asks what the 2 is made of. Three measurements, and all three say the bar is
-     reporting the 5 cm BUCKET rather than the avenue:
+test('T3b: the 5 cm bucket reads the base course, not the avenue — and after §746 a FINER bucket scores HIGHER', () => {
+  /* ── this arm was re-pointed by §746, and the re-point strengthens its finding ──────────────
+     It used to read: "T3's `worst <= 2` is grazed at exactly 2, and the 2 is the quantiser's,
+     not the art's." §746 made the avenue's base course 2.00 local units deeper so its underside
+     sits below the sand on a dune, and the arm went red on its own tripwire — "no frame reaches
+     2 any more". That is the arm working: the number moved, and it moved for a reason that has
+     nothing whatever to do with how alike the sphinxes are.
 
-       · the two sphinxes that collide are not identical. They differ by up to 3.8 cm and share a
-         bucket only because 5 cm is wider than that. At a 4 cm bucket the whole level scores 1.
-       · `sly-arm` sees THREE sphinxes and sorts them into two buckets, so "two in one bucket" is
-         forced by the pigeonhole and not by the art.
-       · the largest bucket globally holds FOUR of the sixteen. The bar holds only because those
-         four have never yet shared a frame, which is a fact about camera placement.
+     **The cause is pinned rather than asserted, in measurement 4 below.** The bag's x and z
+     extents are byte-identical across the `?sphinx=flat` / shipped pair — 5.0607 / 2.5199 and
+     the other fifteen, to four decimals — and only y moved, from ~4.05–4.25 m to ~6.00–6.30 m.
+     So the SAME ±2.5 % placement jitter now spans about 1.5x as many 5 cm buckets, and the
+     silhouettes separate. The animal did not change. The ruler's divisions did not change. The
+     thing being divided got taller.
 
-     None of that makes the avenue wrong — T3's finding stands, the uniformity is deliberate. It
-     makes the BAR the wrong instrument for this object, and the right response is to say so in
-     the arm rather than to keep a number that will go red for a reason nobody can act on. */
-  const S5 = (v) => Math.round(v / 0.05);
+     And the sweep now carries the cleanest possible proof of the original thesis: **at a 4 cm
+     bucket the avenue scores 2, at a 5 cm bucket it scores 1.** A finer quantiser scoring
+     HIGHER than a coarser one is impossible for anything that measures similarity — it can only
+     happen when the digits are landing either side of a rounding boundary. T3c's scale-free
+     measure moves by 0.06 pp across the same change (0.220 % -> 0.279 %), which is what a
+     measurement of the art rather than of the bucket looks like. */
   const sizeOf = (b) => { const s = new THREE.Vector3(); b.bb.getSize(s); return s; };
   const sigAt = (b, q) => { const s = sizeOf(b); return `${Math.round(s.x / q)}x${Math.round(s.y / q)}x${Math.round(s.z / q)}`; };
   assert.ok(SPHINX.length > 0, 'inspected 0 sphinxes');
 
-  /* 1. which frames sit at the bar, and which pair does it */
-  const atBar = [];
+  /* 1. what every frame now scores at the bar's own bucket width */
+  const perFrame = [];
   for (const [name, s] of Object.entries(SHOTS)) {
     const cam = camOf(s);
     const f = new THREE.Frustum().setFromProjectionMatrix(
@@ -611,27 +615,21 @@ test('T3b: the avenue does not PASS `basketvary` A1 so much as GRAZE it, and the
       seen++;
       (groups[sigAt(SPHINX[i], 0.05)] ||= []).push(i);
     }
-    const worst = Math.max(0, ...Object.values(groups).map((g) => g.length));
-    if (worst >= 2) atBar.push({ name, seen, buckets: Object.keys(groups).length, worst, groups });
+    if (seen) perFrame.push({ name, seen, buckets: Object.keys(groups).length, worst: Math.max(0, ...Object.values(groups).map((g) => g.length)) });
   }
-  console.log('  T3b: frames at the bar — ' + atBar.map((a) => `${a.name} (sees ${a.seen} in ${a.buckets} buckets, worst ${a.worst})`).join(' · '));
-  assert.ok(atBar.length > 0, 'no frame reaches 2 any more — T3\'s "worst 2" has moved and this arm with it');
-  assert.deepEqual(atBar.map((a) => a.name).sort(), ['dunes', 'sly-arm'],
-    'a different set of frames now sits at the bar; T3 names sly-arm and reports whichever it finds first');
+  console.log('  T3b: frames holding sphinxes — ' + perFrame.map((a) => `${a.name} (sees ${a.seen} in ${a.buckets} buckets, worst ${a.worst})`).join(' · '));
+  assert.ok(perFrame.length >= 2, `only ${perFrame.length} canonical frames hold a sphinx at all; this arm needs the avenue on screen somewhere`);
+  const framedWorst = Math.max(...perFrame.map((a) => a.worst));
+  assert.equal(framedWorst, 1,
+    `the worst frame now sorts ${framedWorst} sphinxes into one 5 cm bucket, not 1 — the separation `
+    + '§746 bought has gone, and T3 is back to grazing its bar rather than clearing it');
+  for (const a of perFrame) {
+    assert.equal(a.buckets, a.seen,
+      `${a.name} sees ${a.seen} sphinxes in ${a.buckets} buckets — the 5 cm quantiser has stopped `
+      + 'resolving every sphinx in frame, so the finding recorded here has moved');
+  }
 
-  /* 2. the colliding pair is CO-BUCKETED, not identical */
-  const arm = atBar.find((a) => a.name === 'sly-arm');
-  assert.equal(arm.seen, 3, `sly-arm sees ${arm.seen} sphinxes; with 3 into 2 buckets a pair is forced`);
-  const pair = Object.values(arm.groups).find((g) => g.length === 2);
-  const [a0, a1] = pair.map((i) => sizeOf(SPHINX[i]));
-  const delta = Math.max(Math.abs(a0.x - a1.x), Math.abs(a0.y - a1.y), Math.abs(a0.z - a1.z));
-  console.log(`  T3b: sly-arm's pair differs by ${(delta * 100).toFixed(2)} cm at worst — bucket width is 5 cm`);
-  assert.ok(delta > 0.005,
-    `the pair differs by ${(delta * 1000).toFixed(1)} mm; they have become genuinely identical, which is a `
-    + 'real clone family and a different finding from the one recorded here');
-  assert.ok(delta < 0.05, `the pair differs by ${(delta * 100).toFixed(1)} cm, so they no longer share a 5 cm bucket`);
-
-  /* 3. the bucket sweep: the number the bar reads is set by the bucket width */
+  /* 2. the bucket sweep, and the non-monotonicity that proves the number is the quantiser's */
   const worstAt = (q) => {
     let w = 0;
     for (const s of Object.values(SHOTS)) {
@@ -644,39 +642,53 @@ test('T3b: the avenue does not PASS `basketvary` A1 so much as GRAZE it, and the
     }
     return w;
   };
-  const sweep = [0.02, 0.03, 0.04, 0.05, 0.08, 0.10, 0.15].map((q) => ({ q, w: worstAt(q) }));
+  const sweep = [0.02, 0.03, 0.04, 0.05, 0.08, 0.10, 0.15, 0.20].map((q) => ({ q, w: worstAt(q) }));
   console.log('  T3b: bucket sweep — ' + sweep.map((s) => `${(s.q * 100).toFixed(0)}cm:${s.w}`).join(' '));
-  assert.equal(worstAt(0.04), 1,
-    'at a 4 cm bucket the avenue no longer scores 1, so the graze at 5 cm is not purely a rounding '
-    + 'artifact any more and the reading recorded here needs revisiting');
-  assert.ok(worstAt(0.10) >= 3, 'at a 10 cm bucket the avenue no longer exceeds the bar, so the '
+  assert.ok(worstAt(0.04) > worstAt(0.05),
+    `the 4 cm bucket scores ${worstAt(0.04)} and the 5 cm bucket ${worstAt(0.05)}; the sweep has become `
+    + 'monotonic again, so the rounding-boundary proof this arm rests on is gone and the 5 cm '
+    + 'reading may now be about the avenue after all — re-derive before trusting it');
+  assert.ok(worstAt(0.10) >= 3, `at a 10 cm bucket the avenue no longer exceeds T3's bar, so the `
     + 'sensitivity this arm records has gone');
 
-  /* 4. the fragility, stated as a distance rather than as an opinion: the largest bucket holds
-     four, and `dunes` — which already sees nine of the sixteen — has a fifth member of a full
-     bucket sitting just outside its frustum. A camera nudge, not an art change, turns T3 red. */
+  /* 3. no bucket globally holds enough to put a frame over T3's bar, and by how much */
   const glob = {};
   for (let i = 0; i < SPHINX.length; i++) (glob[sigAt(SPHINX[i], 0.05)] ||= []).push(i);
   const biggest = Math.max(...Object.values(glob).map((g) => g.length));
-  const dunes = atBar.find((a) => a.name === 'dunes');
-  const dunesCam = camOf(SHOTS.dunes);
-  let nearestOutside = Infinity;
-  for (const [k, g] of Object.entries(dunes.groups)) {
-    if (g.length < 2) continue;
-    for (const i of (glob[k] || [])) {
-      if (g.includes(i)) continue;
-      const n = SPHINX[i].bb.getCenter(new THREE.Vector3()).project(dunesCam);
-      nearestOutside = Math.min(nearestOutside, Math.max(Math.abs(n.x), Math.abs(n.y)) - 1);
-    }
-  }
-  console.log(`  T3b: largest 5 cm bucket holds ${biggest} of ${SPHINX.length}; the nearest sphinx that would `
-    + `take \`dunes\` to 3 is ${nearestOutside.toFixed(2)} NDC outside its frame`);
-  assert.ok(biggest >= 3,
-    `the largest 5 cm bucket now holds ${biggest}, so no frame could reach 3 however the cameras move — `
-    + 'the fragility this arm records is gone and T3\'s bar has become safe');
-  assert.ok(nearestOutside < 1.0,
-    `the nearest out-of-frame member of a full \`dunes\` bucket is ${nearestOutside.toFixed(2)} NDC out; `
-    + 'it was 0.35, and if it has moved far away the fragility recorded here no longer holds');
+  console.log(`  T3b: largest 5 cm bucket holds ${biggest} of ${SPHINX.length} (it held 4 before §746 deepened the base)`);
+  assert.ok(biggest >= 2, `the largest 5 cm bucket now holds ${biggest}; every sphinx is in a bucket of `
+    + 'its own and even a co-bucketed pair has become unreachable, so there is no fragility left to record');
+  assert.ok(biggest <= 3, `the largest 5 cm bucket holds ${biggest} — back at or above the pre-§746 four, so `
+    + 'the separation this arm attributes to the deeper base is not there');
+
+  /* 4. THE CAUSE, pinned: the skirt moves y and nothing else.
+     A mechanism probe rather than a symptom (§439). Two sphinxes off the same seed, one with the
+     shipped skirt and one without: `sphinx()` is called directly here — which this file's header
+     warns against for silhouette questions — precisely because this is NOT a silhouette question.
+     It is a one-parameter A/B, and an isolated pair is the only way to hold everything else. */
+  const bagBox = (opts) => {
+    const bag = STATUES.sphinx({ rng: rng(0x51117), worn: 0.5, ...opts });
+    const bb = new THREE.Box3();
+    for (const p of bag.parts) { p.geo.computeBoundingBox(); bb.union(p.geo.boundingBox); }
+    return bb;
+  };
+  const flat = bagBox({ pedestal: Props.AVENUE_PEDESTAL, skirt: 0 });
+  const deep = bagBox({ pedestal: Props.AVENUE_PEDESTAL, skirt: Props.AVENUE_SKIRT });
+  const fs = flat.getSize(new THREE.Vector3()), ds = deep.getSize(new THREE.Vector3());
+  console.log(`  T3b: skirt A/B — x ${fs.x.toFixed(4)}→${ds.x.toFixed(4)} · y ${fs.y.toFixed(4)}→${ds.y.toFixed(4)} `
+    + `· z ${fs.z.toFixed(4)}→${ds.z.toFixed(4)} · top ${flat.max.y.toFixed(4)}→${deep.max.y.toFixed(4)}`);
+  assert.ok(Math.abs(ds.x - fs.x) < 1e-9 && Math.abs(ds.z - fs.z) < 1e-9,
+    `the skirt moved the footprint (x ${(ds.x - fs.x).toFixed(6)}, z ${(ds.z - fs.z).toFixed(6)}); it is supposed `
+    + 'to add stone straight down, and a wider base would sit proud of the sand it is meant to hide in');
+  assert.ok(Math.abs(deep.max.y - flat.max.y) < 1e-9,
+    `the skirt moved the TOP of the piece by ${(deep.max.y - flat.max.y).toFixed(6)} m; it must grow downward `
+    + 'only, or the animal is riding on it and §746 has become the sink it deliberately is not');
+  /* 1e-5 rather than the 1e-9 the two assertions above use, and the difference is the vertex
+     format rather than slack: x, z and the top are the SAME float32 values in both arms and
+     compare bit-identical, but the base's bottom corners are `-0.65 + jitter` in one arm and
+     `-2.65 + jitter` in the other, so the same jitter rounds into a different float32 ulp.
+     10 microns is still an exact-equality claim about a quantity measured in metres. */
+  agrees(ds.y - fs.y, Props.AVENUE_SKIRT, 1e-5, 'the skirt grows the bag by exactly its own depth');
 });
 
 test('T3c: the 5 cm bucket is the wrong quantiser, and a scale-free one separates 28x', () => {

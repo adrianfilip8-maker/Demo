@@ -402,16 +402,28 @@ export function seatedColossus(opts = {}) {
  * foot, so the animal rides that much higher while the stone still meets the sand. The caller
  * must raise its placement by the same amount — see `Props._sphinxAvenue`, which is the only
  * user and which measured why it needs it.
+ *
+ * `skirt` extends that SAME course further down and the caller must NOT compensate for it.
+ * The two knobs are separate because they answer different questions and a single number
+ * cannot do both: `pedestal` is how high the animal rides, `skirt` is how far the stone
+ * reaches under the sand. §746 needed the second one because the avenue climbs a dune —
+ * a level base 2.52 m across the fall line on a 44° slope lifts its downhill edge 1.2 m into
+ * the air no matter what height it is placed at, and only a deeper footing closes that
+ * without dragging the animal down with it.
+ *
+ * It costs nothing to make it deep. `chunkAt` → `chunk` with `c > 0` is a `chamferBox`, whose
+ * topology and whose rng draw count are both fixed regardless of w/h/d — so a taller course is
+ * the same triangles at the same seed, and every prop built after it is bit-identical.
  */
 export function sphinx(opts = {}) {
-  const { rng, s = 1, worn = 0.5, pedestal = 0 } = opts;
+  const { rng, s = 1, worn = 0.5, pedestal = 0, skirt = 0 } = opts;
   const bag = new Bag();
   const R = rng;
 
   if (pedestal > 0.01) {
     /* Wider than the plinth by 13 cm a side so the two courses read as a step rather than as
        one tall block, and chipped harder: this is the course the sand actually attacks. */
-    bag.add('lime', chunkAt(-1.28, 1.28, -pedestal, 0.04, -2.68, 2.48,
+    bag.add('lime', chunkAt(-1.28, 1.28, -(pedestal + Math.max(0, skirt)), 0.04, -2.68, 2.48,
       { rng: R, jitter: 0.035, chip: worn * 0.2, c: 0.10 }));
   }
 
