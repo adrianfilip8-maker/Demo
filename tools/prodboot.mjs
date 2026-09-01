@@ -29,6 +29,7 @@
  *   node tools/prodboot.mjs --prefix /      serve at the root instead (the A/B: both must pass)
  *   node tools/prodboot.mjs --keep          leave the server up and print the URL
  *   node tools/prodboot.mjs --query cam=hardblend   boot with a revert token on (§744)
+ *   node tools/prodboot.mjs --probe 'return X'      read one quantity off the SHIPPED bundle (§746)
  */
 import { chromium } from 'playwright';
 import { acquire } from './lock.mjs';
@@ -48,6 +49,7 @@ const ARGS = ['--no-sandbox', '--disable-dev-shm-usage', '--use-gl=angle', '--us
 const argv = process.argv.slice(2);
 const arg = (n, d) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
 const PREFIX = (arg('--prefix', '/Demo/') || '/').replace(/\/*$/, '/');
+const PROBE = arg('--probe', '');
 const noBuild = argv.includes('--no-build');
 
 const MIME = {
@@ -179,6 +181,21 @@ try {
     };
   });
 
+  /* `--probe <expr>` — evaluate ONE expression in the booted PRODUCTION page and print what
+     comes back. §666's finding is that everything this project verifies, it verifies against the
+     dev server; the artifact is a different build with a different module graph and a different
+     bundler between the source and the pixel. Proving that it BOOTS is necessary and it is not
+     the same as proving the thing you changed survived the build. This is the seam for the
+     second half: a lane can read its own quantity off the shipped bundle without a second
+     harness, and the expression is printed alongside the answer so the record says what was
+     asked as well as what came back. Never gated — a probe reports, it does not fail the run. */
+  let probeOut = null;
+  if (PROBE) {
+    try {
+      probeOut = await page.evaluate(`(() => { ${PROBE} })()`);
+    } catch (err) { probeOut = { probeError: String(err?.message || err) }; }
+  }
+
   console.log(`\n── PRODUCTION BOOT from ${PREFIX} ──────────────────────────────`);
   console.log(`   ready             ${info.ready}   (${(bootMs / 1000).toFixed(1)} s)`);
   console.log(`   modules           ${info.moduleCount}`);
@@ -200,6 +217,12 @@ try {
   if (consoleErrors.length) {
     console.log(`\n── console errors (${consoleErrors.length}, first 12) ──`);
     for (const c of consoleErrors.slice(0, 12)) console.log(`   ${c}`);
+  }
+
+  if (PROBE) {
+    console.log(`\n── PROBE, evaluated in the production page ──`);
+    console.log(`   ${PROBE}`);
+    console.log(`   -> ${JSON.stringify(probeOut)}`);
   }
 
   console.log(`\n── VERDICT ──`);

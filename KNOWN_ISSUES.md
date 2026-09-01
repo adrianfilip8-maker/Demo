@@ -65688,3 +65688,379 @@ fix; a single aggregate number would hide the case that matters. Both the analyt
 query and the DRAWN surface are measured, because a fix tuned to `heightAt` alone would still
 show a gap if the render mesh disagrees between vertices. Revert token in the established
 style. Body follows in this lane's later commits.)*
+
+### §746.1 The answer, first, so a redirect is cheap (§705)
+
+**The avenue climbs a dune, and a level rectangle cannot sit flush on a slope.** The sixteen
+sphinxes stand from y 0.8 to y 18.6 on ground pitched between 6.5° and 44.2°; their base course
+is 2.52 m across the fall line; so its downhill edge hangs `half the footprint × tan θ` in the
+air — **0.35 m at the shallowest station and 1.805 m at the worst** — while its uphill edge is
+buried. All sixteen float somewhere. Nothing is wrong with the ground query.
+
+The repair is a **skirt**: the same base course, reaching `Props.AVENUE_SKIRT = 2.00` local units
+further down, with the placement unchanged so the animal does not move. It costs **zero
+triangles and zero draw calls** — the course is one `chamferBox`, whose topology and whose rng
+draw count are both independent of its size — and after it **0 of 64 base corners float**, at all
+four quality grades.
+
+The owner offered to accept the statues simply being lowered, and said to take whichever was
+easier. Lowering is the same one-line change and it is the wrong one: **a sink of the same
+2.00 puts the ANIMAL under sand at all sixteen, 0.63 m to 1.62 m of a 3.5 m body, with every
+plinth gone entirely.** The skirt closes the same gap and buries 0.000 m of animal. `?sphinx=sink`
+ships the other arm anyway, so that comparison is his to make in the demo rather than mine to
+make in prose.
+
+### §746.2 The instrument, and the two faults it had — both §697's, and both in the instrument
+
+`tools/sphinxgap.mjs`. It raycasts the **drawn** scene graph, which shares no geometry with the
+placement query: the render rings are built from `rawHeight` on their own 0.8 m lattice and
+`heightAt` is a 1 m cached bilinear, so `heightAt − drawn` is exactly "the number the placement
+used disagrees with the picture" and nothing else (§439/§440). Statues are never re-derived —
+`Props.init()` runs and `_absorb` is hooked, so every bag measured is the one the frame draws,
+at the shipped seed, with the shipped scale jitter and yaw (§435.4).
+
+Controls run in-arm on every run and the run prints VOID and exits 2 without them: a plate laid
+exactly on the drawn surface must read `0.000000`, the same plate lifted 0.5 m must read
+`0.500000`. Both are computed through the same `gapAt` the statues go through.
+
+**Fault 1 — the first-hit probe called a wall the ground.** At (7, 58.9) the sphinx's base tucks
+under a courtyard wall whose top is 2.0 m above the sand, and a ray cast from above reported that
+wall as the surface underneath, i.e. the statue as **2.101 m underground**. This is §697.1's
+second instrument fault verbatim, in a different file, eight months later. Fixed by taking the
+reference relative to the subject and naming anything above it as an overhang instead.
+
+**Fault 2 — it admitted an invisible collision proxy as "the picture".** `proxy:wall` sits 6 mm
+under `arch:court:sandstone_block`; a probe that hits it is reporting the collider's opinion while
+claiming to report the art's. Now excluded by `visible === false` rather than by name, so a proxy
+nobody thought to name is excluded too. 306 meshes are dropped that way and the surviving 60 are
+printed as a census, because an instrument that sees nothing reports "clear" exactly as
+confidently as one that sees everything.
+
+### §746.3 The four candidates, and the measurement that kills three of them
+
+| candidate | verdict |
+|---|---|
+| 1. the query answers about the WRONG SURFACE (§442/§697) | **NO.** All 16 stand on `sand_ring0` — no architecture, no proxy, no paving under any of them. The only non-sand surface anywhere near a footprint is a wall 2.0 m ABOVE one of them. |
+| 2. right at a point, wrong BETWEEN points (the 0.8 m render lattice vs the 1.0 m placement cache) | **REAL, and 30× too small.** `\|heightAt − drawn\|` at the sixteen centres: **mean 0.035 m, max 0.059 m** at `high`. It reaches 0.274 m at `low`, where the render lattice is 1.6 m — still an order of magnitude under the gap. |
+| 3. a FLAT base sampled at ONE point, on a SLOPE | **YES, and it is the whole of it.** |
+| 4. the constants are stale | **NO.** `− 0.15` buries the base 15 cm at the centre and does so correctly: the centre gap reads −0.084 to −0.219 m at all sixteen. The design works where it was measured and is simply an order of magnitude smaller than the lift. |
+
+The slope is not incidental, it is enormous. Terrain height **within one 2.52 m footprint** spans
+0.50 m to 2.89 m. The fall line runs along the avenue (|bearing| ≥ 161° from +z at eleven of the
+sixteen), which is the base's SHORT axis, so the whole lift is taken across 2.52 m rather than
+across the 5.16 m long axis — the worst possible orientation, and the reason the pairs at z 52.6
+are three times worse than the pairs at z 77.8.
+
+**Per statue, per base corner. Gap = base underside − drawn sand; + floats, − is buried.**
+`grid WORST` sweeps the whole rectangle at 13×9 rather than only the corners.
+
+```
+    x      z     x−z−    x−z+    x+z−    x+z+   centre | grid WORST  slope  fall→
+   -7   40.0   0.266   0.544   0.116   0.484  -0.084 |      0.544   12.3    -34
+    7   40.0  -0.028   0.152   0.239   0.350  -0.106 |      0.350    7.3     69
+   -7   46.3   0.584  -0.682   0.552  -0.678  -0.157 |      0.584   25.6   -177
+    7   46.3   0.479  -0.756   0.724  -0.395  -0.178 |      0.724   24.3    168
+   -7   52.6   1.549  -0.919   1.603  -0.839  -0.219 |      1.603   44.2   -177
+    7   52.6   1.273  -0.996   1.805  -0.437  -0.179 |      1.805   43.7    173
+   -7   58.9   0.862  -0.545   0.969  -0.456  -0.103 |      0.969   26.9   -177
+    7   58.9   0.728  -0.654   1.274  -0.169  -0.114 |      1.274   28.9    174
+   -7   65.2   0.763  -0.444   0.889  -0.370  -0.116 |      0.889   22.2   -174
+    7   65.2   0.680  -0.547   1.118  -0.165  -0.108 |      1.118   24.0    161
+   -7   71.5   0.611  -0.195   0.676  -0.143  -0.177 |      0.676   16.9   -174
+    7   71.5   0.591  -0.326   0.878  -0.116  -0.199 |      0.878   19.4    168
+   -7   77.8   0.311   1.024   0.299   0.575  -0.097 |      1.024    9.2    -26
+    7   77.8   0.289   0.001   0.414   0.047  -0.167 |      0.414    6.5    170
+   -7   84.0  -0.348   1.365  -0.800   0.877  -0.121 |      1.365   33.7    -11
+    7   84.0  -0.335   1.335  -0.743   0.917  -0.116 |      1.335   32.3      2
+
+38 of 64 corners float by more than 5 mm · 16 of 16 statues have at least one
+```
+
+**A single number for "the sphinxes" would have hidden the case that decides the fix.** The
+centre gap is negative at all sixteen — pooled, the avenue reads correctly seated. The defect
+lives entirely in the difference between corners of one statue, and that difference is what
+sizes the repair.
+
+### §746.4 After: 0 of 64, at every quality grade
+
+Same instrument, same run, `--arm=flat` versus shipped. Every terrain column — `heightAt`,
+`drawn`, slope, fall line, the footprint extents, and the whole uphill-burial table — is
+**byte-identical between the two arms**. Only the base underside moved.
+
+```
+    x      z     x−z−    x−z+    x+z−    x+z+   centre | grid WORST
+   -7   40.0  -1.685  -1.407  -1.835  -1.467  -2.035 |     -1.407
+    7   40.0  -2.015  -1.834  -1.748  -1.637  -2.093 |     -1.637
+   -7   46.3  -1.366  -2.631  -1.398  -2.628  -2.107 |     -1.366
+    7   46.3  -1.550  -2.785  -1.306  -2.424  -2.207 |     -1.306
+   -7   52.6  -0.498  -2.966  -0.444  -2.886  -2.266 |     -0.444
+    7   52.6  -0.699  -2.968  -0.167  -2.409  -2.151 |     -0.167   ← the worst statue
+   -7   58.9  -1.099  -2.506  -0.992  -2.417  -2.065 |     -0.992
+    7   58.9  -1.270  -2.652  -0.724  -2.166  -2.111 |     -0.724
+   -7   65.2  -1.218  -2.424  -1.091  -2.350  -2.096 |     -1.091
+    7   65.2  -1.335  -2.562  -0.897  -2.181  -2.123 |     -0.897
+   -7   71.5  -1.360  -2.165  -1.294  -2.114  -2.148 |     -1.294
+    7   71.5  -1.431  -2.347  -1.144  -2.137  -2.220 |     -1.144
+   -7   77.8  -1.636  -0.924  -1.648  -1.372  -2.044 |     -0.924
+    7   77.8  -1.722  -2.009  -1.597  -1.964  -2.178 |     -1.597
+   -7   84.0  -2.324  -0.611  -2.776  -1.099  -2.097 |     -0.611
+    7   84.0  -2.384  -0.715  -2.792  -1.133  -2.166 |     -0.715
+
+0 of 64 corners float · 0 of 16 statues · worst point in the level is 0.167 m BELOW the sand
+```
+
+| quality | inner render lattice | worst gap BEFORE | required skirt | worst gap AFTER |
+|---|---|---|---|---|
+| low | 1.6 m | 1.811 | **1.836** | −0.162 |
+| med | 0.96 m | 1.808 | 1.833 | −0.164 |
+| high | 0.8 m | 1.805 | 1.831 | −0.167 |
+| ultra | 0.6 m | 1.804 | 1.830 | −0.168 |
+
+**2.00 is 1.836 + 8.9 % headroom**, and the sweep is not under-sampled: refining the footprint
+grid 14× (49×33 = 1617 nodes per statue) moves the requirement by **0.000 m**, because the worst
+point on a plane is a corner.
+
+### §746.5 What the sink would have cost, per statue — the arm the owner asked about
+
+`?sphinx=sink` is the same 2.00, spent on lowering the statue instead of on deepening its base.
+It closes the gap identically (0 of 64) and this is the bill:
+
+```
+    x      z   ANIMAL buried   plinth buried        shipped skirt: animal buried
+   -7   40.0       0.673           1.492                     0.000
+    7   40.0       0.659           1.494                     0.000
+   -7   46.3       1.301           2.120                     0.000
+    7   46.3       1.335           2.187                     0.000
+   -7   52.6       1.624           2.484                     0.000
+    7   52.6       1.578           2.407                     0.000
+   -7   58.9       1.087           1.911                     0.000
+    7   58.9       1.197           2.036                     0.000
+   -7   65.2       1.046           1.878                     0.000
+    7   65.2       1.152           1.998                     0.000
+   -7   71.5       0.884           1.711                     0.000
+    7   71.5       0.914           1.763                     0.000
+   -7   77.8       0.628           1.446                     0.000
+    7   77.8       0.678           1.522                     0.000
+   -7   84.0       1.306           2.136                     0.000
+    7   84.0       1.256           2.117                     0.000
+```
+
+"ANIMAL" is everything above local y 0.84, which is the `y0` the lofted body's stations sit on:
+below it is plinth and base course, above it is the sphinx. The plinth is 0.84 m tall, so a
+1.45–2.48 m plinth burial means the stonework is gone entirely and the sand is up against the
+haunch. **A sink of 1.836 — the smallest that closes the gap — costs 1.451 m of animal at the
+worst statue.** There is no version of the sink that both closes the gap and keeps the sphinxes
+above the sand, because the two ends of a level base on a 44° slope are 2.4 m apart in height and
+the animal is only 3.5 m tall.
+
+The uphill end is where a sink is paid for, and the shipped skirt does not touch it: max plinth
+burial **0.439 m before, 0.423 m after** (the 16 mm is the quality grade, not the change — the
+two arms' burial tables are byte-identical at a fixed grade), max animal burial **0.000 m before
+and after**. The one place sand already stands against stone is (7, 52.6) and (−7, 52.6), which
+is `Terrain.sphinxDrift` doing its job.
+
+### §746.6 What it costs: nothing, and the three things that prove it
+
+1. **Triangles and draws: unchanged, exactly.** `tools/budgetattrib.mjs` output is **byte-identical**
+   between `?sphinx=flat` and shipped, across all 18 canonical frames and all three shadow
+   cascades — worst main view 94 draws / 0.706 M tris either way. `Props.stats` reads
+   `draws=13 tris=73616 decals=46` in both. A `chunkAt` with `c > 0` is a `chamferBox`: fixed
+   topology, and a corner-jitter loop that draws from the rng a fixed number of times whatever
+   the box's dimensions.
+2. **The rng stream is untouched**, so nothing downstream moved. A sha256 over every absorbed
+   bag's vertex count, triangle count and bounds — 59 bags — reads `01dfff4a89310cfd` for
+   `?sphinx=flat` and `01dfff4a89310cfd` for the pre-change tree at `d15f968`. **The revert token
+   is a bit-identical revert**, not an approximation of one.
+3. **No collider and no patrol route reads this geometry.** Props registers one `ground` collider
+   per merged material bucket, off the merged mesh, and the merge is unchanged in count and
+   triangle total. `Patrol.js` mentions `sphinx_avenue` twice and both are in comments about a
+   route that was **replaced** ("`sphinx_avenue` walked on nothing at all"). The avenue sphinxes
+   are also explicitly excluded from `ContactDecals` by `Props`'s own constructor docblock — for
+   this exact reason, which is worth quoting because it predicted this section: *"they sit on
+   `Terrain.heightAt` sand, and a flat decal on a slope either clips into the dune or floats off
+   it."*
+
+### §746.7 One interpenetration, and it is not this lane's
+
+The census casts 425 rays per footprint and reports every rendered non-sand surface inside the
+base block's own vertical span. Fifteen of the sixteen are clean in both arms. The sixteenth:
+
+```
+arm      statue        nodes        over                              area
+flat      7, 58.9     30 / 425   x 8.61…9.69, z 59.54…60.18     0.69 m² of 13.31
+skirt     7, 58.9     40 / 425   x 8.40…9.69, z 59.38…60.18     1.04 m² of 13.31
+```
+
+That sphinx's base corner is inside a courtyard wall, **before this lane and independently of
+it**. The skirt deepens the overlap by 0.35 m² of footprint, and every newly-overlapping node was
+checked individually: at all of them the sand stands at 10.69–10.83 m while the added volume
+spans 8.65–10.65 m, so **the increment is entirely below the sand line and none of it is
+visible**. The pre-existing overlap is recorded here rather than repaired — moving a statue is
+not what was asked for, and `Terrain.sphinxDrift` mounds are keyed to `L.sphinxZ`, so the station
+cannot move without the sand moving with it.
+
+**The skirt cannot poke out anywhere, and the reason is structural rather than lucky.** Its
+underside is at or below the lowest sand over its own footprint, so along the entire perimeter
+the sand is at or above the bottom face; anything looking at that face from downhill is looking
+through the sand ridge at the footprint edge. Overshoot is therefore free, which is why 8.9 %
+headroom cost nothing to buy.
+
+### §746.8 The shot set has never had this subject on screen, and that is most of the story
+
+Asked of all 18 canonical frames, twice, with two instruments that share no geometry:
+
+* frustum + `heightAt` ray-march: 2 frames contain any avenue base corner (`sly-arm` 2 of 16,
+  `dunes` 11 of 16); **0 corners unoccluded in either**.
+* frustum + raycast against the rendered scene graph: same two frames, **0 base samples clear**,
+  and it names the blocker — `sand_ring0` ×118 at `dunes`, ×17 at `sly-arm`.
+
+**The dune the sphinxes stand on hides their own feet from every camera this project
+photographs.** That is why sixteen floating statues survived every shot review the project has
+run, and it is why a plate of `dunes` would have been a picture with none of its subject in it —
+the exact hold this brief warned about, avoided by measuring before taking the lock rather than
+after.
+
+So the station was derived. `tools/sphinxplate.mjs` sweeps 216 stations × 2 fovs against the
+worst statue, scoring base-underside samples with a clear line of sight through terrain and
+architecture, and the pair it ships from puts the subject at 596×354 px and 347×198 px with the
+sand under it. The first station the sweep liked was **dropped** because it puts the base at
+1157×1117 px in a 1280×720 frame — the subject overflows the plate and the sand it is supposed to
+be meeting falls off the bottom edge. At the chosen station:
+
+    ?sphinx=flat   11 of 18 base-underside samples have a clear line of sight
+    shipped         1 of 18
+
+which is the fix stated at the eye rather than in metres.
+
+### §746.9 `decalstat` T3b went red on its own tripwire, and the re-point strengthens it
+
+T3b recorded that T3's transferred `basketvary` bar — no camera sees more than two identical
+silhouettes — was **grazed at exactly 2**, and that the 2 was the 5 cm quantiser's rather than the
+art's. The skirt made each bag's y extent grow from ~4.05–4.25 m to ~6.00–6.30 m, so the same
+±2.5 % placement jitter now spans about 1.5× as many buckets, the silhouettes separate, and the
+arm fired its own message: *"no frame reaches 2 any more — T3's 'worst 2' has moved and this arm
+with it."*
+
+That is the arm working, and the finding it records comes out stronger:
+
+| | pre-§746 | shipped |
+|---|---|---|
+| `dunes` | sees 9 in **7** buckets, worst 2 | sees 9 in **9** buckets, worst 1 |
+| `sly-arm` | sees 3 in **2** buckets, worst 2 | sees 3 in **3** buckets, worst 1 |
+| largest 5 cm bucket, level-wide | 4 of 16 | 2 of 16 |
+| bucket sweep, worst per frame | 4cm:1 **5cm:2** 8cm:2 10cm:3 | 4cm:**2** **5cm:1** 8cm:2 10cm:3 |
+| T3c's scale-free measure (closest pair) | 0.220 % | 0.279 % |
+
+**A 4 cm bucket now scores HIGHER than a 5 cm one.** Nothing that measures similarity can do
+that; it can only happen when the digits land either side of a rounding boundary. That is a
+cleaner proof of T3b's original thesis than the one it shipped with, and it is now the assertion
+the arm rests on. Meanwhile T3c's scale-free measure — a measurement of the art rather than of
+the ruler — moves 0.06 pp across the same change.
+
+The cause is **pinned rather than argued**, in a fourth measurement the arm did not have before: a
+one-parameter A/B off one seed, `skirt: 0` against `skirt: AVENUE_SKIRT`, asserting that x and z
+are bit-identical, that the TOP of the piece is bit-identical, and that y grows by exactly the
+skirt. The animal did not change; the thing the ruler divides got taller. `sphinx()` is called
+directly there — which this file's own header warns against for silhouette questions — because
+this is not a silhouette question but a controlled A/B, and that is stated in the arm.
+
+**The re-pointed arm discriminates, on inputs both seen (§418.3):** it passes on the shipped tree
+and fails on `?sphinx=flat` — `18/19 · not ok 14`, with the same file otherwise untouched.
+
+### §746.10 What I got wrong
+
+1. **I let the ray-cast probe call a courtyard wall "the ground", and it was reporting a statue as
+   2.101 m underground when I first read it.** §697.1 records the identical fault in
+   `guardfloat.mjs` and I had read that section an hour earlier. Reading a lesson is not having it.
+2. **I recovered the placement scale from the placed bag's bounding box and called it exact.** It
+   is not: the base carries ±0.035 m of corner jitter and a 0.10 m chamfer, so `dz / 2.56` misses
+   the true `s` by up to 1.8 %. Harmless while it multiplied a 0.65 m pedestal — 1 cm — and it grew
+   to 3.6 cm the moment the pedestal became 2.65 m. **The tell was that the plinth foot appeared to
+   MOVE between two arms in which it provably cannot**, and I nearly wrote that 16 mm into the
+   report as a real effect of the change. Fixed by hooking `Bag.transform` and decomposing the
+   matrix the placement actually used. It also moved the headline requirement, 1.816 → 1.831.
+3. **My first framing sweep never tested the avenue centreline**, which is where the player walks
+   and where the owner was standing. It swept x 5.1…16.1 around the statue and concluded the
+   wedge was invisible from everywhere; the centreline stations see it 11 of 18. A negative
+   result from an incomplete sweep is not a negative result.
+4. **My first candidate ranking led with the ground query** — §697's shape, and the one I had
+   just read — and the coordinator's relay of the owner's screenshot is what re-ranked it. The
+   query was innocent at 0.035 m mean. Availability is not evidence.
+
+### §746.11 The plates — two grades, one hold, subject verified in page before each shutter
+
+Four frames, `shots/sphinx746/`, from the derived station. The in-page pre-flight reproduced the
+offline framing **to the pixel** (`base box 331,265..927,619 (596x354 px)` predicted and measured),
+and its own two controls passed on every frame: the aim point lands within 1.5 px of frame centre,
+and a point 300 m behind the camera projects to null.
+
+* `close-day` / `close-night` — the worst statue at 596×354 px. The base course meets the sand
+  along its whole width in both grades: no wedge in the day key, no black band at night, which is
+  the reason §466.5 wants both (a gap is a lit sliver under one and a void under the other).
+* `row-day` / `row-night` — three sphinxes marching up the dune at 52° fov, each footing meeting
+  the sand, the exposed depth tapering along the row exactly as the slope does.
+
+**What these plates do NOT show, said plainly:** they are not a before/after pair. The `?sphinx=flat`
+arm was not photographed, because the before state is carried by numbers that are stronger than a
+picture (0.35–1.805 m at 64 corners, and 11 of 18 clear sight lines at this very station) and a
+second boot is a second hold. Nor do they say whether a 1.8 m footing is the right *look* — that
+judgement the owner reserved for himself and this lane is not going to pre-empt it in prose.
+
+### §746.12 Verification
+
+**Every suite run this lane made, in order, not only the green one (§703.2):**
+
+```
+node --test tests/decalstat.test.mjs   1..19   pass 18  fail 1   <- T3b, on its own tripwire:
+                                                                    "no frame reaches 2 any more"
+node --test tests/decalstat.test.mjs   1..19   pass 18  fail 1   <- the re-point's own first draft:
+                                                                    a 1e-9 tolerance on a float32 box
+node --test tests/decalstat.test.mjs   1..19   pass 19  fail 0
+node --test tests/decalstat.test.mjs   1..19   pass 18  fail 1   <- DELIBERATE: --import sets
+                                   (?sphinx=flat)                   __SPHINX_AB='flat'; T3b must
+                                                                    go red on the pre-§746 avenue
+npm test                             1..1198   pass 1198 fail 0   <- at e37ec2b, the code change
+npm test                             1..1198   pass 1198 fail 0   <- again at the final tree,
+                                                                    after the tools and --probe
+```
+
+**1198/1198 — the baseline exactly.** No arm was added and none was removed; one was re-pointed,
+and the count staying put is part of the evidence for that. No flaky arm fired: `framebudget` F3
+and `padrest` R1b both passed on the single full run, and `--test-name-pattern` was never used.
+
+**Budget.** `tools/budgetattrib.mjs` is **byte-identical** between `?sphinx=flat` and the shipped
+tree, across all 18 frames: worst main view 94 draws (38 % of 250) and 0.706 M tris (59 % of
+1.2 M), scene ceiling 94 meshes / 0.706 M. `Engine.stats.drawCalls` was not consulted; it is
+unusable in this harness.
+
+**Production, on the ARTIFACT** (§666/§695 — `vite build`, served under a `/Demo/`-shaped prefix;
+the proxy blocks `*.github.io`, so the live host is NOT claimed):
+
+- `tools/prodboot.mjs` — `ready=true` in 53.8 s, **17 modules**, 149 requests, **zero 4xx/5xx**,
+  boot completed past module 30 (audio).
+- and the change itself **read off the SHIPPED BUNDLE** rather than inferred from the dev server,
+  through a new `--probe` seam on that tool. It walks `props_lime`'s 31 764 merged vertices in
+  the production page and reports the lowest y in each avenue footprint:
+
+  ```
+  (7, 52.6)   lo 4.866      Node harness: 4.866
+  (7, 40)     lo −1.329     Node harness: −1.329
+  (−7, 84)    lo 12.789     Node harness: 12.789
+  ```
+
+  Three stations, three exact matches, on a build that went through vite rather than through
+  `import`. `ready=true` in 55.7 s, 17 modules, 149 requests, zero 4xx/5xx on that run too.
+
+### §746.13 How to revert
+
+- `?sphinx=flat` — the pre-§746 avenue. Proved a **bit-identical** revert, not an approximate one:
+  a sha256 over all 59 absorbed prop bags reads `01dfff4a89310cfd` in that arm and
+  `01dfff4a89310cfd` at `d15f968`, the commit before this lane.
+- `?sphinx=sink` — the alternative the owner offered to accept: no skirt, the whole statue lowered
+  by `AVENUE_SKIRT` instead. Closes the same gap; costs 0.63–1.62 m of animal at all sixteen.
+- `globalThis.__SPHINX_AB` takes the same value, for tests and tools with no `location`.
+
+Deleting `Props.AVENUE_SKIRT`, the `SPHINX_BASE` token, the `skirt` parameter in `Statues.sphinx`
+and the two lines in `_sphinxAvenue` removes the lane. `tools/sphinxgap.mjs` and
+`tools/sphinxplate.mjs` are new files and belong to it; `--probe` on `tools/prodboot.mjs` does
+not — it is a general seam and nothing else in the tool changed.
