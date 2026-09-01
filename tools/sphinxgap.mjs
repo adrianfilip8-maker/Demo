@@ -96,6 +96,11 @@ try {
   archOk = true;
 } catch (e) { archErr = e?.message || String(e); }
 
+/* KAYKIT and SMASHABLES are built when they can be, for one reason only: the deeper base
+   course is new solid volume, and "does it now intersect something" cannot be answered in a
+   world that does not contain the things it might intersect. `primeKayKitAssets` is the same
+   seam `tests/decalstat.test.mjs` uses. If either fails to boot the run says so and the
+   interpenetration census is reported as partial rather than as clean. */
 const { Props, SPHINX_BASE } = await import('../src/world/Props.js');
 const { Bag } = await import('../src/world/PropKit.js');
 const props = new Props(engine);
@@ -134,6 +139,23 @@ props._absorb = (bag) => {
   return origAbsorb(bag);
 };
 await props.init();
+modules.set('props', props);
+
+let extraOk = [], extraErr = [];
+for (const [key, mod, name] of [['kaykit', '../src/world/KayKit.js', 'KayKit'],
+                                ['smashables', '../src/world/Smashables.js', 'Smashables']]) {
+  try {
+    if (key === 'kaykit') {
+      const { primeKayKitAssets } = await import('../tests/_kaykitboot.mjs');
+      primeKayKitAssets();
+    }
+    const M = (await import(mod))[name];
+    const inst = new M(engine);
+    await inst.init();
+    modules.set(key, inst);
+    extraOk.push(key);
+  } catch (e) { extraErr.push(`${key}: ${e?.message || e}`); }
+}
 
 const L_X = 7, L_Z = [40, 46.3, 52.6, 58.9, 65.2, 71.5, 77.8, 84];
 const avenue = seen.filter((s) => {
@@ -212,7 +234,8 @@ const ctlNeg = gapAt(L_X, 65.2, surf.y);
 const ctlPos = gapAt(L_X, 65.2, surf.y + 0.5);
 const ctlOk = Math.abs(ctlNeg.gap) < 1e-6 && Math.abs(ctlPos.gap - 0.5) < 1e-6;
 
-console.log(`modules: terrain ok · architecture ${archOk ? 'ok' : `FAILED (${archErr})`} · props ok`);
+console.log(`modules: terrain ok · architecture ${archOk ? 'ok' : `FAILED (${archErr})`} · props ok`
+  + ` · ${extraOk.join(' ') || 'no extras'}${extraErr.length ? ` · FAILED ${extraErr.join('; ')}` : ''}`);
 console.log(`ray targets: ${targets.length} meshes (${propMeshes.size} PROPS + ${excludedProxy} invisible/proxy excluded), sand_ring0 ${hasGround ? 'PRESENT' : 'MISSING — VOID'}`);
 console.log(`  ${census.slice(0, 12).join(' ')}${census.length > 12 ? ` … +${census.length - 12}` : ''}`);
 console.log(`controls: flush ${ctlNeg.gap.toFixed(6)} (want 0) · lifted-0.5 ${ctlPos.gap.toFixed(6)} (want 0.5) → ${ctlOk ? 'OK' : 'FAILED — VOID'}`);
@@ -335,6 +358,49 @@ for (const r of rows) {
 }
 console.log(`max plinth burial ${Math.max(...rows.map((r) => Math.max(0, r.maxSand - r.plinthFoot))).toFixed(3)} m` +
   ` · max BODY burial ${Math.max(...rows.map((r) => Math.max(0, r.maxSand - r.bodyFoot))).toFixed(3)} m`);
+
+/* ── interpenetration: does the deeper course now sit INSIDE anything? (§732's shape) ────── */
+/* The deeper base is new solid volume, and the honest way to ask whether it collides with
+   something is to ask the scene, not the author. Every rendered surface hit inside the block's
+   own vertical span [bottom, top] over its own footprint is a candidate; sand is excluded only
+   because being inside the sand is the entire purpose. The census is per statue and it prints
+   the empty case explicitly, because "no output" and "nothing found" have to look different. */
+console.log('\n── interpenetration census: rendered NON-SAND surfaces inside each base block ──');
+let hitsTotal = 0;
+for (const r of rows) {
+  const s = avenue.find((a) => Math.sign((a.box.min.x + a.box.max.x) / 2) * L_X === r.x
+    && Math.abs((a.box.min.z + a.box.max.z) / 2 - r.z) < 1.2);
+  const top = r.placeY + 0.04 * r.scale;
+  const found = new Map();
+  let nodes = 0;
+  const ext = new THREE.Box3();
+  const NI = 25, NJ = 17;
+  for (let i = 0; i < NI; i++) {
+    for (let j = 0; j < NJ; j++) {
+      const wx = s.box.min.x + (s.box.max.x - s.box.min.x) * (i / (NI - 1));
+      const wz = s.box.min.z + (s.box.max.z - s.box.min.z) * (j / (NJ - 1));
+      let any = false;
+      for (const h of hitsAt(wx, wz)) {
+        if (/^sand_ring/.test(h.object.name)) continue;
+        if (h.point.y < r.bottom - 1e-4 || h.point.y > top + 1e-4) continue;
+        found.set(h.object.name || h.object.type, (found.get(h.object.name || h.object.type) || 0) + 1);
+        any = true;
+      }
+      if (any) { nodes++; ext.expandByPoint(new THREE.Vector3(wx, 0, wz)); }
+    }
+  }
+  hitsTotal += nodes;
+  if (found.size) {
+    console.log(`${r.x.toFixed(0).padStart(5)} ${r.z.toFixed(1).padStart(6)}  ${nodes}/${NI * NJ} nodes` +
+      `  over x ${ext.min.x.toFixed(2)}…${ext.max.x.toFixed(2)}, z ${ext.min.z.toFixed(2)}…${ext.max.z.toFixed(2)}` +
+      `  (${((ext.max.x - ext.min.x) * (ext.max.z - ext.min.z)).toFixed(2)} m² of ${((s.box.max.x - s.box.min.x) * (s.box.max.z - s.box.min.z)).toFixed(2)})` +
+      `  — ${[...found].map(([k, n]) => `${k} x${n}`).join(', ')}`);
+  }
+}
+console.log(hitsTotal === 0
+  ? `CLEAN — 0 of ${rows.length * 425} footprint nodes meet a non-sand surface inside a base block`
+  : `${hitsTotal} of ${rows.length * 425} footprint nodes meet one — see the rows above, and compare `
+    + `against \`--arm=flat\` before attributing any of it to the skirt`);
 
 const jsonArg = process.argv.find((v) => v.startsWith('--json='));
 if (jsonArg) {
