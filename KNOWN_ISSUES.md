@@ -66102,3 +66102,357 @@ are a node-vs-mesh identity miss (§709) and a scale recovered by dividing a bou
 (§746). The before/after detection table is the diagnosis and it carries the straight-overhead
 row explicitly, because that row is the defect's worst case and the instrument's positive
 control. Revert token in the established style. Body follows in this lane's later commits.)*
+
+The owner: *"For the guards, make it so that they cannot notice you if you are far above their
+vision. If it is easier, just put a limit on their sight so that it is just as high as the guard
+character height"* — and, on the ambiguity that raised, *"use the height of the Carmelita model"*:
+one number for all three rosters rather than three per-type derivations.
+
+### §748.1 The defect: the cone was tested entirely in the horizontal plane
+
+`Patrol.Senses.evaluate`'s vision block, unchanged since the file was written:
+
+```js
+    _flat.copy(_to).setY(0);
+    if (_flat.lengthSq() < 1e-6) _flat.copy(p.forward);
+    _flat.normalize();
+    _fwd.copy(p.forward).setY(0).normalize();
+    const angle = Math.acos(clamp(_fwd.dot(_flat), -1, 1));
+```
+
+Both vectors are flattened, so **height cannot enter the bearing at all**. The distance is
+range-tested in 3D and the bearing is horizontal, which makes the sensed volume not a cone but an
+**infinite vertical wedge** whose bright core is a vertical **half-plane** standing on the guard's
+forward line. `tools/sightceil.mjs --table` prints the code's own three lines back — temple, core
+half-angle 34.4°, `peripheral` 61.9°:
+
+```
+   rise above eye    fwd      lateral    angle scored   in cone?
+        0 m          6 m         0 m         0.00°       CORE
+        8 m          6 m         0 m         0.00°       CORE
+        0 m          6 m         6 m        45.00°       periph
+        8 m          6 m         6 m        45.00°       periph
+        0 m          2 m        12 m        80.54°       outside
+        8 m          2 m        12 m        80.54°       outside
+        8 m          0 m         0 m         0.00°       CORE   <- `_flat` collapsed; p.forward substituted
+```
+
+Every pair reads identically at rise 0 and rise 8. **The 1e-6 collapse is real** — inside a 1 mm
+radius of the vertical axis the flattened vector dies and the code substitutes the guard's own
+forward, scoring the player at angle 0 — **but it is only the degenerate case, and saying so is
+the point.** Half a metre in front of him and eight metres up the flattened bearing is a clean 0°
+with no collapse at all, and that is still the dead centre of the bright core. The defect is the
+whole wedge; a fix aimed at the `< 1e-6` branch would have repaired two millimetres of it.
+
+### §748.2 What that cost, measured before anything was changed
+
+`tools/sightceil.mjs --table`, both arms from one run. Fill rate per second; the player is
+STANDING on a surface at that height (not airborne), walking, moonlit, no collision so no
+line-of-sight ray can mask the geometry question. `·` = not seen.
+
+```
+  ── temple ──                                    ── heavy ──              ── scarab ──
+   rise   overhead   2 m    6 m   12 m         overhead  2 m   6 m      overhead  2 m   6 m
+   0.00     1.577   1.456  1.118  0.604          1.537  1.406 1.003       1.526  1.294 0.657
+   1.00     1.613   1.464  1.121  0.606          1.635  1.429 1.011       1.364  1.213 0.625
+   1.50     1.570   1.453  1.118  0.604          1.583  1.422 1.009       1.282  1.156 0.600
+   2.00     1.527   1.433  1.110  0.600          1.531  1.403 1.002       1.201  1.094 0.570
+   4.00     1.355   1.307  1.050  0.568          1.322  1.259 0.936       0.876  0.810 0.401
+   8.00     1.011   0.988  0.826  0.430          0.904  0.875 0.673       0.226  0.189    ·
+```
+
+Read the temple block down the 6 m column and across the rise-8 row: **eight metres of height
+cost the player 0.29 of fill rate; six metres of ground cost him 0.46, and twelve cost him 0.97.**
+Height was nearly free. `DETECT.airborneGain` 1.20 then compounds it for anyone who got up there
+by jumping — the overhead column airborne reads 1.874 / 1.917 / 1.815 / 1.610 / 1.201 at rises
+0 / 1 / 2 / 4 / 8 m, so **a player eight metres over a guard's head, in the air, filled the meter
+faster (1.201) than one walking six metres in front of him on his own floor (1.118).**
+
+**After**, same run, same table: rise 0.00 through 1.00 is **bit-identical in every cell for every
+roster**; rise 1.50 is inside the soft band and reads 1.090 / 1.009 / 0.776 / 0.419 for temple
+(0.69× of before); rise 2.00 and above is `·` everywhere, in all three rosters, at every distance
+including straight overhead.
+
+### §748.3 The ceiling: 1.81628 m, measured off the placed rig
+
+`tools/sightceil.mjs --height`. Three independent expressions, agreeing to **2.12e-6 m**:
+
+```
+  node scale written by instantiateNative : 1.108338 1.108338 1.108338   (MOUNT_SCALE 1.108338)
+  world Box3 over the placed rig          : y [-0.000000, 1.816286]  ->  1.81629 m
+  merged geometry box x the node scale    : 1.81628 m   (unscaled 1.63875)
+  rebind arm, same source file            : 1.81628 m
+  merged groups 2: body 14594 tris, head 17469 tris; splice ok, 32 -> 5000, fiducial worst 2.6e-7 m
+```
+
+Three cautions were on the record for this exact character and each is answered by construction
+rather than by care. **§709** — identity in glTF lives on the node: the scale is read off
+`rig.scale`, the node `instantiateNative` writes it to, and is never recovered by dividing a box.
+**§746** — a lane once recovered a placement scale from a jittered box and shipped a 1.8 %-stale
+figure: the height here is `bbox x nodeScale`, in that order, and cross-checked against a second
+import path over the same GLB. **§704** — her head once measured 99.4 % absent: the head group's
+triangle count is printed beside the height, so a short box cannot pass as a measurement.
+
+**One number, and why the per-type derivation I was originally asked for would have been wrong.**
+The obvious version is each roster's own body height, and it fails on the scarab:
+`VISION.scarab.eyeHeight` is 0.26 m and `Guard.TUNE.headTop.scarab` is 0.34 m. The comparison is
+between the player's **feet** and the guard's **own base** — it must, or a beetle whose eye is
+0.26 m off the ground stops seeing the floor it patrols — so a 0.34 m ceiling puts the fade band
+straddling the floor itself. Bracketed rather than argued, in `patrol.test.mjs` V9: at ceiling
+0.34 m a player standing on level ground in front of a temple guard drops from 1.204 to 0.913,
+heavy 1.106 to 0.839, scarab 0.818 to 0.620, **and a 0.398 m step goes blind on all three.**
+1.81628 m sits just above MOVEMENT's own 1.80 m standing capsule, so a player standing on a
+surface as tall as he is is still at the boundary rather than past it.
+
+### §748.4 Height, not pitch, and the reason is not aesthetic
+
+A pitch limit is the more principled shape — a cone is a pitch limit — and it is the wrong one
+here because **pitch is a function of distance and height is not.** A player on the second step of
+a staircase one metre in front of a guard is at 25° of elevation and a pitch limit blinds him; the
+same player on the same step twelve metres away is at 2° and is seen. That inverts the rule the
+player is being asked to learn, and it fails hardest exactly where the level puts its steps and
+ramps. A ceiling parallel to the guard's own floor is flat over a step at every distance. The
+owner offered the height version and it is also the better one.
+
+`SIGHT.soft` is 0.50 m of smoothstep below the ceiling, in the idiom the cone edge already uses
+three lines further down in the same function — *"a hard cutoff makes the player feel cheated when
+they clip the boundary"*, which is as true of a ceiling as of a rim. `riseW` is folded into the
+`angleGain` gate as well as into the fill rate, so the last centimetres under the ceiling stop
+counting as **seeing** rather than as seeing at 0.001 per second: `sawThisFrame` drives
+`timeSinceSeen`, `lastSeen` and the "you are lit because another guard's beam is on you" flag, and
+none of those should latch off a vanishing rate.
+
+### §748.5 Through the real movement path, on the shipped level (§435.4)
+
+`tools/sightceil.mjs --drive` builds the real Terrain / Architecture / Props / Collision, drives
+the real `Controller` with real input, and reads the player through `Guards._readPlayer` — the
+shipped contract-reader — before calling the shipped `Senses.evaluate`. Only the guard's pose is
+synthetic; it is the independent variable. Every station height is read out of the shipped
+collision rather than typed in.
+
+```
+  arm     station                      rise    temple          heavy           scarab
+  before  level courtyard, walking    0.000  1.870  90/90    1.823  90/90    1.806  90/90
+  after   level courtyard, walking    0.000  1.870  90/90    1.823  90/90    1.806  90/90
+  before  a 0.4 m step                0.398  0.504  90/90    0.437  90/90    0.224  90/90
+  after   a 0.4 m step                0.398  0.504  90/90    0.437  90/90    0.224  90/90
+  before  a 1.7 m plinth              1.721  0.566  90/90    0.516  90/90    0.316  90/90
+  after   a 1.7 m plinth              1.721  0.054  90/90    0.049  90/90    0.030  90/90
+  before  the stage-1 terrace deck    2.000  0.550  90/90    0.496  90/90    0.282  90/90
+  after   the stage-1 terrace deck    2.000  0.000   0/90    0.000   0/90    0.000   0/90
+  before  the stage-3 obelisk deck    5.750  0.537  90/90    0.489  90/90    0.201  90/90
+  after   the stage-3 obelisk deck    5.750  0.000   0/90    0.000   0/90    0.000   0/90
+  before  both on the stage-1 deck    0.000  0.638  90/90    0.598  90/90    0.484  90/90
+  after   both on the stage-1 deck    0.000  0.638  90/90    0.598  90/90    0.484  90/90
+  before  both on the stage-3 deck    0.000  0.638  90/90    0.598  90/90    0.484  90/90
+  after   both on the stage-3 deck    0.000  0.638  90/90    0.598  90/90    0.484  90/90
+```
+
+The last four rows are the reassurance the ceiling has to earn and they are bit-identical: **a
+guard whose own floor is the raised one still sees a player standing on it**, because `baseY` is
+his and not world zero. The shipped roster stands at y = 0.00, 2.00, 17.00 and −12.00.
+
+**The jump, which is the case a ceiling can turn into an invisibility exploit.** Driven, not
+computed — real input, real gravity, real state machine (`idle jump doubleJump fall land`):
+
+```
+  single jump   apex 2.376 m   airborne 0.82 s   blind 0.400 s   peak gain unchanged at 1.333
+  double jump   apex 4.251 m   airborne 1.32 s   blind 0.983 s   peak gain unchanged at 1.333
+                                                 DETECT.drainDelay = 0.85 s
+```
+
+A full single jump's blind window is **0.400 s, less than half `drainDelay`** — so a filling meter
+does not drain by a single unit while the player is over the guard's head, and the peak fill rate
+on the frames either side is unchanged. The double jump overruns `drainDelay` by 0.133 s, which
+costs `0.34 × 0.133 = 0.045` meter units out of a 1.00 threshold. Jumping in front of a guard
+pauses his read for a beat; it does not hide you.
+
+**End to end, one child process per arm** (`Guard.js` binds `Patrol.js` at module scope, so a
+token written after the first import cannot reach a live `Guards`): nine guards on their authored
+routes, the real Controller walking the courtyard, `Guards.update` doing all of it.
+
+```
+  before  courtyard  peakGain 1.684  peakSuspicion 1.450  sawFrames 338  guardAlert 3
+  after   courtyard  peakGain 1.684  peakSuspicion 1.450  sawFrames 338  guardAlert 3
+  before  terrace    peakGain 0.128  peakSuspicion 0.231  sawFrames 149  seen by temple_south_gate
+  after   terrace    peakGain 0.000  peakSuspicion 0.000  sawFrames   0  seen by (nobody)
+```
+
+### §748.6 The drawn cone: what agrees, what does not, and why it is not being clipped
+
+The sensed volume moved and the drawn cone did not, so the disagreement is sized rather than
+asserted (`tools/sightceil.mjs --cone`, pure arithmetic over the shipped constants — no renderer,
+no visual claim).
+
+**The pool now agrees where it did not before, and it is the part that matters.** The pool is the
+beam's footprint laid flat at `g.position.y + 0.035` — the guard's **own floor** — at the true
+half-angle, and `Guard.js` already names it *"the honest telegraph"*. It is the only drawn part
+that marks GROUND as dangerous. With the ceiling in place the sensed volume is exactly the band
+standing on that floor. Before §748 a player could stand on a roof with no pool anywhere near his
+feet and be detected at full rate: **the pool was under-drawing the danger, which is the dangerous
+sign of the error.** That is gone.
+
+**The worst-signed lie in the game is gone with it.** Straight overhead sits `90° + conePitch` =
+**96.6° off the drawn beam's axis**, against drawn half-angles of 34.4° / 29.8° / 63.0° — outside
+the drawn beam by 62.2° / 66.8° / 33.6° for temple / heavy / scarab. So the place that was scored
+at angle 0, dead centre of the bright core, **was never drawn at all**.
+
+**The beam still extends above the ceiling, it always did, and clipping it would gut it.** The
+beam is additive air haze, not a floor marking. Its upper rim above the guard's base:
+
+```
+  temple, apex at the muzzle (0.685 m), throw 15 m, rim radius 10.26 m
+     t      dist along   top rim   beam weight
+    0.10       1.50 m     1.53 m      0.748
+    0.20       3.00 m     2.38 m      0.915
+    0.56       8.40 m     5.43 m      0.366
+    1.00      15.00 m     9.16 m      0.000
+  first reaches the ceiling at t = 0.134 (2.01 m out), where the beam's weight is 0.966 of peak
+  temple, apex at the eye  : first reaches the ceiling at t = 0.0095 (0.14 m out), weight 0.012
+  heavy,  apex at the muzzle: t = 0.1995 (2.49 m out), weight 0.916
+  scarab, apex at the muzzle: t = 0.0770 (0.62 m out), weight 0.530
+```
+
+A horizontal cut at the ceiling would remove the top of the beam **from 0.14–2.5 m of the apex
+onward** — that is, along essentially its whole length, at close to its brightest — and leave a
+flat-topped slab. That is not a fix, it is deleting the effect. The residual disagreement it would
+buy is in the SAFE direction: the beam over-draws (shows haze where no detection lives) rather
+than under-draws (hides a threat that is real), and it over-drew in exactly the same places
+before this lane. **This is stated as an accepted residual, not as agreement.** The honest summary
+is: the pool went from wrong to right, the overhead lie went from maximal to none, and the beam's
+pre-existing over-draw is unchanged.
+
+Draw calls, triangles and instance counts are untouched — no geometry, no material, no uniform and
+no instance attribute changed — so `tools/budgetattrib.mjs` has nothing to weigh. `src/ai/Guard.test.mjs`'s
+six cone tests (beam origin/aim/half-angle, pool footprint, finiteness, clipping, colour ramp,
+brightness-tracks-gain) pass unchanged.
+
+### §748.7 Arms: nine of them, four of which pass on both trees on purpose
+
+`tests/patrol.test.mjs` V1–V9. Each carries its §418.3 DOMAIN block.
+
+```
+  V1  level ground identical in both arms, 54 stimuli x 3 rosters
+  V2  straight overhead: the sky arm still shows the defect on all 36; the shipped arm sees none
+  V3  the ceiling is 1.81628 m and the boundary falls in 12 descending steps, not one
+  V4  18 raised-surface stimuli (0.10-1.25 m) all still seen
+  V5  the scarab, 8 level-ground distances, unchanged  <- the per-type hazard, asserted
+  V6  4 guard-floor heights (2.00 / 7.75 / 17.0 / -12.0): every read identical to the courtyard's
+  V7  36 rows identical under the ceiling, 65 lowered above it, under `?sight=sky`
+  V8  hearing is NOT ceilinged: heard-not-seen from 5 m up settles at 0.663, under `searching` 0.72
+  V9  CALIBRATION: at ceiling 0.34 m, V1/V4/V5's own reads break
+```
+
+**Calibrated against the pre-fix tree before being trusted.** Running V1–V9 with `src/ai/Patrol.js`
+and `src/ai/Guard.js` checked out at `eef1a7c`: **V2, V3, V7 and V8 go red, V1, V4, V5 and V6 stay
+green.** The four that stay green are the controls — they assert things that were already true —
+and a control nobody has seen fail is not a control, which is what V9 is for: it sets
+`SIGHT.ceiling` to the scarab's own 0.34 m body height, the ceiling the obvious per-type
+derivation would have shipped, and records that the same reads then break on all three rosters.
+No arm was deleted, retargeted or loosened anywhere in this lane. One assertion inside V8 was
+**wrong on its first draft and was corrected against the arithmetic rather than to a tolerance**:
+the hearing cap is tested *before* the frame's gain is added, so the meter legitimately overshoots
+`hearCap` 0.66 by exactly one frame of gain (measured 0.663), and the bar now names that.
+
+### §748.8 Suite, both figures, and the production check
+
+```
+  BEFORE, at eef1a7c   # tests 1198   # pass 1198   # fail 0   # duration_ms 350180.4
+  AFTER                # tests 1207   # pass 1207   # fail 0   # duration_ms 350482.9
+```
+
+`+9` is exactly V1–V9. In the AFTER run both known flaky arms came up green — `ok 355 - F3 GC` and
+`ok 722 - R1b instrument`. **I cannot say the same about the BEFORE run, because I piped it through
+`tail -40`**, which is §735.1's own instrument fault repeated in this lane: only the summary
+survived, so its 1198/1198 is a true count with no per-arm record behind it. Neither run was
+repeated. Both figures are therefore one sample each and are quoted as such (§703.2) — a single
+green suite says this tree can pass, never that a particular explanation is right.
+
+**On the artifact** (§666/§695), `tools/prodboot.mjs` against the production build under `/Demo/`,
+with the probe evaluated inside the shipped page. `ready=true` in 43.0 s, 17 modules, 149 requests,
+**zero 4xx/5xx**:
+
+```
+                     shipped        ?sight=sky      Node harness (sky)
+  level, 6 m out     1.1184         1.1184          1.118
+  level, 2 m out     1.4556         1.4556          1.456
+  a 0.398 m step     1.1213         1.1213          1.121
+  1.5 m up           0.7758         1.1176          1.118
+  2 m up             unseen 0       1.1103          1.110
+  4 m up             unseen 0       1.0495          1.050
+  8 m up             unseen 0       0.8260          0.826
+  2 m straight over  unseen 0       1.5272          1.527
+  8 m straight over  unseen 0       1.0111          1.011
+  `Guards._sense.baseY` is a number in BOTH arms — the Guard.js wiring reached production
+```
+
+The revert token is exercised **as a URL on the artifact**, not through `globalThis`: `/Demo/?sight=sky`,
+`ready=true` in 43.3 s, 17 modules, 149 requests, zero 4xx/5xx. Nine of nine probe values in the
+`sky` arm match the Node harness to four decimals, which is the same bundle-versus-harness
+agreement §746.12 asked for.
+
+### §748.9 Bounds — what this does NOT do, and what it costs
+
+- **Hearing is untouched, deliberately.** It is a sphere with no cone and no defect, and the
+  owner's words were about sight. A running, unsneaking player above the ceiling and inside
+  `hearRadius` is still heard — measured, that settles the meter at 0.663, above `suspicious` 0.34
+  and below `searching` 0.72, so noise from overhead can make a guard curious and can never make
+  him chase or catch you. If the owner wants overhead silence too, that is one multiply and a
+  second decision, and it should be his.
+- **There is no floor.** A guard on the terrace still sees the courtyard below him to full `range`.
+  Nothing reported was about being seen from below.
+- **Contact events are untouched.** `bounce()` sets suspicion to `DETECT.ceiling` and the
+  pickpocket beat raises it to `DETECT.pickpocketSuspicion`, both without consulting sight, so
+  dropping on a guard from above still alerts him and still stuns him. `_checkBounce` itself is a
+  velocity-and-proximity test that never reads `Senses` — measured window: player feet between
+  `headY − 0.35` and `headY + 1.1`, which for a temple guard is 1.60–3.05 m up, entirely above
+  the new ceiling. **The dive onto a guard's head now arrives unseen, which is the move working.**
+- **The real cost, said plainly.** A player standing on the stage-1 terrace deck, 2.00 m above the
+  courtyard, is now invisible to a guard standing on the courtyard — 0.550 to 0.000 for temple. A
+  player on the 1.721 m plinth at (0, 20) is dimmed to 9.5 % rather than blinded (0.566 → 0.054),
+  because that height is inside the soft band. Whether 2 m of height should hide you is the
+  owner's call and he has effectively made it; the number is here so he can move `SIGHT.ceiling`
+  with one edit if it is not what he pictured. Guards whose own route is on the raised deck are
+  unaffected, and the shipped roster has one at y = 2.00.
+- **Nothing in §697's territory was touched.** `TUNE.groundProbe` and `TUNE.groundSlopeMax` are
+  unchanged; this lane reads `Guard.position.y` and writes nothing.
+
+### §748.10 What I got wrong
+
+1. **My first end-to-end A/B was two runs of the same code, and it printed different numbers.**
+   `Guard.js` binds `Patrol.js` at module scope, so setting `globalThis.__SIGHT_AB` after the
+   first import cannot reach a live `Guards` — both arms were the shipped tree. They still read
+   0.194/42 against 0.000/0, because the nine guards had walked on down their routes between the
+   two runs. **A difference produced entirely by route phase, presented as an A/B**, and the only
+   reason it was caught is that the shipped arm's zero was too clean to believe. It is now a child
+   process per arm, and the arm has a discriminating input (the terrace) beside its passing one.
+2. **My first table quoted airborne numbers under a standing label.** The first version of the
+   instrument set `airborne = rise > 0.05`, which conflates the ceiling's effect with
+   `DETECT.airborneGain` 1.20; the docblock in `Patrol.js` carried those figures for one commit
+   before the instrument was changed under them. That is precisely §746's own defect — figures
+   quoted from before the instrument was fixed — and it is corrected here rather than left.
+3. **My first V9 could not fail.** It asserted that a 0.34 m ceiling would make the level-ground
+   reads go *unseen*; it does not, because the soft band merely straddles the floor and dims it to
+   73 %. The bar now checks the quantity V1 and V5 actually assert — that the read is IDENTICAL —
+   and finds six broken reads instead of three.
+4. **I piped the baseline suite through `tail -40`.** §735.1 records that exact mistake — `tail`
+   emits nothing until EOF and destroys everything but the last lines — and the brief for this
+   lane named it. The count survived and is quoted; the per-arm record of the two known flakes did
+   not, so the baseline's freedom from flakes is unverifiable and is not claimed above.
+5. **My first drive stations walked off their own surfaces.** The 0.4 m step read a rise band of
+   0.398‥1.956 m because the player was driven forward for 90 frames and left the step; the row
+   was about two surfaces. The raised stations now stand.
+
+### §748.11 How to revert
+
+- `?sight=sky` — the pre-§748 sight, unbounded in Y. Proved on the artifact as a URL, not merely
+  through `globalThis`: nine probe values, all matching the Node harness, `ready=true`, zero
+  4xx/5xx. `SIGHT_CEIL_ON` is false in that arm and every added line is bypassed, so the fill rate
+  is the arithmetic it always was.
+- `globalThis.__SIGHT_AB = 'sky'` takes the same value, for tests and tools with no `location`.
+- Moving the ceiling instead of removing it is one number: `SIGHT.ceiling` in `src/ai/Patrol.js`.
+  `SIGHT.soft` is the width of the fade.
+
+Deleting `SIGHT`, `SIGHT_AB`/`SIGHT_CEIL_ON`, the `riseW` block in `Senses.evaluate`, the `riseW`
+factor in the two lines below it, and `sense.baseY` in `Guard.update` removes the lane.
+`tools/sightceil.mjs` and `patrol.test.mjs`'s V1–V9 belong to it.
