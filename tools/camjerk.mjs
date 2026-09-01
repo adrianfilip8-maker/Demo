@@ -659,7 +659,7 @@ async function main() {
     const HOOK = '  hook_swing: { dist:  2.30, height:  0.55, lead: 1.60, fov:  1.0, pitch: -3.0 * DEG, side: 0.85, stiff: 1.50, tau: 0.30, vtip: 0.00 },';
     /* BEFORE is the shipped module with `?cam=swingtip` on, so the two arms differ in exactly the
        one number the token names and nothing else — a before/after rather than a reconstruction. */
-    const arms = [['BEFORE (?cam=swingtip)', null, 1], ['SHIPPED §745', null, null]];
+    const arms = [['BEFORE (both tokens)', null, 1], ['SHIPPED §745', null, null]];
     for (const spec of (SWING || '').split(',').filter(Boolean)) {
       const [kind, val] = spec.split('=');
       if (kind === 'vtip') arms.push([`vtip ${val}`, null, Number(val)]);
@@ -672,12 +672,15 @@ async function main() {
     for (const [label, edits, vt] of arms) {
       const ARM = edits ? await armWith(edits, `sw${tag++}`) : null;
       const T = ARM ? ARM.TUNE : TUNE;
-      const keepVT = T.swingVTip;
-      T.swingVTip = vt;
+      const keepVT = T.swingVTip, keepTK = T.swingTrack;
+      /* BEFORE means BOTH §745 levers reverted. Setting only `swingVTip` published a "before"
+         that already had the tracking change in it — caught by its own path column reading
+         10.89 m where the five-swing census says the pre-§745 camera travels 20.14. */
+      T.swingVTip = vt; T.swingTrack = vt;
       try {
         const A = replay(t.samples, t.collision, null, ARM);
         rows.push([label, residency(t.samples, A, 'hook_swing', SKIP), residency(t.samples, A, 'hook_swing', 0)]);
-      } finally { T.swingVTip = keepVT; }
+      } finally { T.swingVTip = keepVT; T.swingTrack = keepTK; }
     }
     console.log(`\n[camjerk] RING SWING RESIDENCY — hook_swing, skipping the first ${SKIP} frames (the tau 0.30 blend in)`);
     console.log('  arm                    frames |  FLOW rad/s  peak |  PATH m  rel  vs plyr |  mean m/s  peak m/s | angPath  peakAng |  rmsAcc   peakAcc | boom  fov | rev | ndcPath ndcMax behind');

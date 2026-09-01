@@ -65440,3 +65440,234 @@ different quantities that do not scale together, so this lane DEFINES the one it
 halves anything and reports the other three beside it. §744's numbers — mean STEP 10.4 over 53
 transitions, the nine boom delivery ratios, air->dive 143.1 — are re-run before and after and
 quoted either way. Body lands in this lane's next pushes.)*
+
+### §745.1 The answer, first, so a redirect is cheap (§705)
+
+**The camera travels half as far over a ring swing, on the metric the owner chose — total camera
+path length, entry to exit — and the capsule's own path over the identical window is unchanged to
+the digit.** Pooled over five real driven swings: **99.19 m → 49.27 m, ×0.497** against a target of
+0.500. Rotation is reported separately and **also falls** (angular path 5.80 → 3.33 rad, ×0.575);
+it was not traded away to buy the translation.
+
+Two numbers ship, both on the `hook_swing` row, and they do two different jobs — measured, not
+assumed:
+
+```
+  hook_swing.vtip  0.00   the fraction of the velocity-driven orbit tip (fallPitch + climbPitch)
+                          this framing uses.   ALONE: path x0.861, rms accel x0.393
+  hook_swing.track 0.20   the fraction of the pivot goal's own excursion the rig chases, the rest
+                          going to a gated low-pass at `trackTau` 1.00 s.
+                                               ALONE: path x0.650, rms accel x0.977
+                          TOGETHER:            path x0.497, rms accel x0.333
+```
+
+`track` owns the PATH; `vtip` owns the JERK; neither does the other's job. Every other framing is
+1.0 on both. `?cam=swingtip` and `?cam=swingtrack` revert them **separately** (§720/§723's
+pattern), and `?cam=hardblend` still reverts §744 independently of both.
+
+**GAMEPLAY WAS NOT TOUCHED.** `MAG` in `EgyptLevel.js` and `HookSwing` in `Moveset.js` are
+byte-identical; the capsule path column is the proof that reads at a glance — 98.43 m in every arm
+of every table below.
+
+### §745.2 The metric, and what it excludes
+
+The owner chose **total path length of the camera position over one swing**, integrated across the
+`hook_swing` residency from entry to exit. Settled explicitly, because each of these changes the
+figure:
+
+* **Position only.** Quaternion travel is never folded into the same scalar. It is reported in its
+  own column, in radians, and it falls independently rather than absorbing what the translation
+  gave up.
+* **The window is the state's own residency and it is held fixed by construction.** Each swing is
+  recorded ONCE from the real `Controller` and replayed under every arm, so the frame span is
+  identical arm to arm — `tests/camswing.test.mjs` W3 asserts frame-count equality per swing
+  rather than trusting it, because a change that shortened the window would cut the path without
+  calming anything. Per-second figures are printed beside the totals; the residency lengths are
+  225 / 229 / 239 / 221 / 233 frames and do not move.
+* **Five swings, not one.** Swing amplitude is a function of entry speed and height, so one sample
+  cannot tell a calmer camera from a smaller swing. The five span **87–109°** of pendulum
+  deviation and 9.5–11.6 m/s of capsule speed, all entered by the auto-grab out of freefall.
+* **The capsule's path over the same window is the paired control.** If it moved too, the arms
+  measured different swings rather than different cameras.
+
+### §745.3 The result, per swing and pooled
+
+```
+  swing     frames | camera path, m          | capsule path, m  | angular path, rad | peak accel m/s2
+                   |  before   after   ratio |  before / after  |  before / after   |  before / after
+  A slow      225  |   20.14    9.72   0.483 |  19.78 /  19.78  |  1.16  /  0.64    |   727 /  321
+  C low       229  |   18.72    9.25   0.494 |  18.15 /  18.15  |  1.05  /  0.60    |   512 /  176
+  D drop      239  |   22.46   11.95   0.532 |  22.33 /  22.33  |  1.18 /   0.58    |   852 /   98
+  E side      221  |   19.94    9.40   0.472 |  20.35 /  20.35  |  1.41 /   0.94    |   853 /  462
+  F gentle    233  |   17.92    8.95   0.499 |  17.82 /  17.82  |  0.99 /   0.57    |   542 /  133
+  POOLED           |   99.19   49.27  x0.497 |  98.43 /  98.43  |  5.80 /   3.33    |   853 /  462
+```
+
+Distribution 0.472–0.532 across the five, mean 0.497. **The capsule path is identical to four
+decimals in every arm**, so the reduction is the camera and not the swing.
+
+Rotation, jerk and composition, pooled:
+
+```
+  angular path        5.80 -> 3.33 rad     x0.575     falls alongside, not traded
+  rms camera accel                         x0.333     the request's second sentence
+  worst peak accel     853 -> 462 m/s2                (on 'E side'; three of five fall past x0.4)
+  subject screen path                      x0.947     Sly is held slightly BETTER, not worse
+  worst NDC radius   0.690 -> 0.704                   +0.014, and 0 frames behind the lens
+```
+
+### §745.4 Why `stiff` cannot do this, measured rather than argued
+
+The brief listed `stiff` first and it is a dead end, for a reason this file already documents from
+the other side. **The lead floor in `_pivotGoal` raises the goal's look-ahead to
+`followTimeH × f.stiff × v` precisely so the spring's own trail is cancelled** — so softening the
+spring pushes the GOAL further ahead by exactly as much as the pivot then lags, and the pair is
+wired to hold the pivot ON the capsule at any stiffness. Driven, one swing:
+
+```
+  stiff  1.5   camPath 17.20   pivPath 18.98   goal z travel   20.31 m
+  stiff  6     camPath 16.35   pivPath 17.00   goal z travel     ...
+  stiff 12     camPath 14.27   pivPath 13.97
+  stiff 40     camPath 18.34   pivPath 12.19   goal z travel  361.01 m, goal z RANGE 102 m
+```
+
+At `stiff` 40 the goal is being thrown a hundred metres to compensate a 6.4 s trail, and the camera
+path is **worse than at 1.5**. `lead` is deader still: deleting `hook_swing`'s authored 1.60
+outright moves the swing's motion by **0.1 %**, exactly as the `leadMax` census predicted — the cap
+binds first and no value of `f.lead` reaches the screen. The full ablation, each term removed in
+turn on one swing, as a fraction of the pre-§745 camera:
+
+```
+  velocity orbit tip removed   flow 0.556   peakAng 0.331   rmsAcc 0.370   peakAcc 0.271
+  climbLift + fallLead         0.976        1.000           0.988          1.003
+  speed dolly                  0.995        1.001           0.979          0.985
+  side 0.85 -> 0               0.960        1.000           1.001          1.000
+  fov speed gain               1.000        1.000           1.000          1.000
+  lead 1.60 -> 0               1.001        1.000           0.995          1.000
+  stiff 1.50 -> 3.0            0.939        1.000           0.975          0.992
+```
+
+One term owns the jerk and the other six are noise. It is an ORBIT pitch on a 7.8 m boom, and a
+pendulum drives both its halves through their whole range twice a cycle — the channel sweeps
+0.780 rad over a residency, which is 6.1 m of camera arc against the pivot's own 2.61 m. Its own
+comment says *"tip down so the landing is on screen before you reach it"*; **a pendulum has no
+landing**, and at the bottom of the arc, where the term is hardest on, there is nothing below to
+show.
+
+### §745.5 The tracking filter, and the two versions of it that were wrong
+
+`FRAMES.track` gives part of the pivot goal to a low-passed copy of itself. The naive form is one
+line and it is **wrong in a way the suite caught inside one run**:
+
+1. **Pure low-pass.** Path ×0.508, composition ×0.999 — and on anything travelling in ONE
+   direction the copy trails by `trackTau × v`, so the look-at settles
+   `(1 − track) × trackTau × v` behind the player. Measured **−3.375 m** on a straight 8 m/s
+   swing. That is exactly the defect the lead floor exists to prevent, and `camdrive` D9 and
+   `camlead` L1 both went red on it.
+2. **Subtract the deviation's own mean at the same τ.** Lead arms green. Swing effect mostly gone:
+   path ×0.737, because a filter at the swing's own period cannot separate a deviation from its
+   mean.
+3. **Add `smoothedVelocity × trackTau` back as lag compensation.** Lead arms green. Worse still:
+   path ×0.886, because a 0.65 s smoother of a 1.4 s pendulum's velocity is nothing like zero.
+
+What ships is the fourth, and the discriminator is the one thing that actually differs between the
+two cases: **whether the CALMED GOAL is itself going anywhere.** On a pendulum it holds the swing's
+centre and barely moves; in steady travel it moves at the player's own speed. So the filter's
+authority is `1 − calmSpeed / playerSpeed`, both smoothed at `trackTau` — 1 on a pendulum, 0 once a
+straight line settles, and a ratio of two window-averaged speeds rather than an instantaneous test,
+so it does not flicker off at the ends of the arc where the player's speed passes through zero.
+L1 and D9 are green with it, on the shipped constants, unmodified.
+
+`trackTau` 1.00 s was swept against the owner's metric over the five swings: 0.65 s leaves the
+camera at 0.62 of its path, 1.00 s reaches 0.50, 1.40 s overshoots to 0.39. At 1.00 s the calmer
+passes 22 % of the arc's amplitude, so what survives is the swing's centre.
+
+### §745.6 §744 is not paid for
+
+`vtip` and `track` are two more blended channels and `_effectivePitch` now multiplies by one of
+them. On every row but `hook_swing` both are 1.0, and none of §744's eight routes enters
+`hook_swing`, so the published numbers must be identical rather than close. Measured on the shipped
+tree, and asserted against the literals in `tests/camswing.test.mjs` W4:
+
+```
+  boom delivery   air 69  combat 79  dive 93  glide 100  idle 68  land 39  roll 96  sneak 100  wall_run 3
+  worst step      air -> dive  143.11   (published 143.1)
+  mean step       10.36 over 53 transitions   (published 10.4)
+```
+
+Every figure equal to the published one. W4's control reverts §744 and shows **7 of the 9 ratios
+move**, so the equality is a measurement rather than a bar anything would pass.
+
+### §745.7 What was NOT touched, and why
+
+* **`MAG` in `EgyptLevel.js` (§720) and `HookSwing` in `Moveset.js` (§723).** Untouched, and the
+  capsule path column proves it arm by arm. The camera never needed a gameplay change: the swing
+  is correct and it was the rig's reaction to it that was loud.
+* **`hook_swing.stiff` 1.50, `side` 0.85, `lead` 1.60.** All three were measured (§745.4) and all
+  three are worth 6 % or less. Spending an authored constant for 6 % when one mechanism is worth
+  50 % would be a retune dressed as a fix.
+* **`FRAMES.tau` on any row, and `TUNE.frameBlendShape`.** §744's whole claim is that no duration
+  moved; this lane keeps that true.
+
+### §745.8 What I got wrong
+
+1. **The instrument leaked between routes, and it was silent.** `realWorld()` mints a fresh
+   `Controller` but hands back the SAME engine, and MOVEMENT is camera-relative — so the swing's
+   drive script, which aims the engine camera exactly as `tests/swingpin.test.mjs` does, left that
+   aim behind for every route recorded after it. Recording the swing before §744's eight routes
+   changed their trajectories: 53 transitions became 54 and every delivery ratio moved. It looked
+   like a §744 regression. `trace` now snapshots and restores the camera.
+2. **The first tracking filter shipped a −3.375 m lag** into a framing, and I only found it because
+   two arms in another lane assert an invariant I had not thought to check. Three mechanisms and
+   two suite runs later the shipped one passes both. §418.3's real lesson: the bar you did not
+   write is the one that catches you.
+3. **The `--swing` mode published a "BEFORE" that was not before.** Its revert arm set only
+   `swingVTip`, so once `track` shipped, the tool's own baseline already contained half the change
+   — its path column read 10.89 m where the five-swing census says the pre-§745 camera travels
+   20.14 m on that swing. Corrected to set both.
+4. **The production probe read the wrong row.** It left `_frameKey` on `dive` and then reported the
+   ring swing's fractions as 1.0/1.0 in both arms, which looks exactly like two tokens being
+   ignored. The tell was that the REVERTED arm also read 1.0 and "passed".
+5. **A regex that matched `vtrack` when it meant `track`**, so W5 reported `wall_run` and `climb`
+   as carrying a §745 tracking fraction they do not have.
+
+### §745.9 Verification
+
+**Suites, quoted (§703.2).**
+
+```
+  baseline (§744 shipped)   1..1193   pass 1193  fail 0
+  intermediate              1..1198   pass 1196  fail 2   <- D9 and L1, the -3.375 m lag, §745.8.2
+  shipped                   1..1198   pass 1198  fail 0   282.3 s
+```
+
+The five new arms are `tests/camswing.test.mjs` W1–W5. No existing arm was relaxed, re-based or
+skipped — D9 and L1 are green on their own unmodified bars.
+
+**Production (§666/§695), on the ARTIFACT.**
+
+```
+  tools/prodboot.mjs --no-build                                   ready=true, 17 modules, 149 requests, zero 4xx/5xx
+  tools/prodboot.mjs --no-build --query cam=swingtip,swingtrack   ready=true, 17 modules, 149 requests, zero 4xx/5xx
+  tools/camprodblend.mjs — the live rig inside dist/, both arms:
+      default        dive blend -0.174708 m = DAMPED (§744) · settled hook_swing vtip 0.0000, track 0.2000
+      all 3 tokens   dive blend -0.371909 m = first-order ease · settled hook_swing vtip 1.0000, track 1.0000
+```
+
+A mechanism probe rather than a symptom (§439): it executes the blend inside the shipped bundle and
+reads the two §745 fractions off the live rig. **This verifies the artifact, NOT the live host** —
+the proxy blocks `*.github.io`.
+
+**No plate was taken and no visual claim is made (§466.5).** Every number here is a screen-side
+quantity — camera position, quaternion, FOV, and the subject's NDC. Whether ×0.497 is the right
+amount of "half" is the owner's eye to judge, and three independent tokens put any part of it back.
+
+### §745.10 How to revert
+
+- `?cam=swingtip` — `hook_swing.vtip` back to 1.0. The velocity orbit tip returns; the jerk with it.
+- `?cam=swingtrack` — `hook_swing.track` back to 1.0. The pivot follows the pendulum 1:1 again.
+- `?cam=swingtip,swingtrack` — all of §745. `?cam=hardblend` on top reverts §744 as well.
+- `globalThis.__CAMBLEND_AB` takes the same comma list, for tests with no `location`.
+
+Deleting `tests/camswing.test.mjs`, the `--swing`/`SWING_STARTS`/`residency` additions in
+`tools/camjerk.mjs`, `_calmGoal`, the `vtip`/`track` channels and `TUNE.trackTau` removes the lane.

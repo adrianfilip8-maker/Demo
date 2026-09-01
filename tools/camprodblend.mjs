@@ -80,10 +80,19 @@ const PROBE = `(() => {
     rig._frame.dist = 0;
     if (rig._frameVel) rig._frameVel.dist = 0;
     rig._blendFrame(1 / 60);
-    return { d1: rig._frame.dist, hasVel: !!rig._frameVel };
+    const d1 = rig._frame.dist;
+    /* §745: settle the RING SWING framing and read the two fractions it ships. The key has to
+       move first: the probe above left it on the dive row, and reading the fractions there returned
+       1.0/1.0 for both arms, which looked like the tokens being ignored and was the probe
+       settling the wrong row. */
+    rig._frameKey = 'hook_swing';
+    for (let i = 0; i < 900; i++) rig._blendFrame(1 / 60);
+    return { d1, hasVel: !!rig._frameVel,
+      vtip: rig._frame.vtip, track: rig._frame.track, trackTau: null };
   } finally {
     rig._frameKey = keep.key; rig._frame.dist = keep.dist;
     if (rig._frameVel && keep.vel !== null) rig._frameVel.dist = keep.vel;
+    if (rig.snap) rig.snap(false);   // put the framing channels back where play left them
   }
 })()`;
 
@@ -102,7 +111,7 @@ const srv = await serve(port);
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || CHROME.find((p) => existsSync(p)), args: ARGS });
 const out = [];
 try {
-  for (const q of ['', 'cam=hardblend']) {
+  for (const q of ['', 'cam=hardblend,swingtip,swingtrack']) {
     const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
     const url = `http://127.0.0.1:${port}${PREFIX}${q ? `?${q}` : ''}`;
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
@@ -127,6 +136,12 @@ for (const r of out) {
     + `   (|Δ| ease ${dEase.toExponential(1)}, damped ${dDamp.toExponential(1)}, _frameVel present ${r.hasVel})`);
   const want = r.q === '(default)' ? 'DAMPED (shape 0.80)' : 'first-order ease';
   if (verdict !== want) { console.log(`      EXPECTED ${want}`); bad++; }
+  /* §745, on the same live rig: the two ring-swing fractions, settled. */
+  const wantV = r.q === '(default)' ? 0 : 1, wantT = r.q === '(default)' ? 0.2 : 1;
+  const okV = Math.abs(r.vtip - wantV) < 1e-6, okT = Math.abs(r.track - wantT) < 1e-6;
+  console.log(`   ${''.padEnd(14)} settled hook_swing vtip ${r.vtip.toFixed(4)} (want ${wantV}) ${okV ? 'ok' : 'WRONG'}`
+    + `, track ${r.track.toFixed(4)} (want ${wantT}) ${okT ? 'ok' : 'WRONG'}`);
+  if (!okV || !okT) bad++;
 }
-console.log(bad ? `\n   VERDICT: ${bad} arm(s) wrong` : '\n   VERDICT: the artifact runs the damped blend, and ?cam=hardblend really restores the ease');
+console.log(bad ? `\n   VERDICT: ${bad} check(s) wrong` : '\n   VERDICT: the artifact runs the §744 damped blend and the §745 ring-swing fractions, and the tokens restore all three');
 process.exit(bad ? 1 : 0);
