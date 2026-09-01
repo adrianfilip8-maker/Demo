@@ -66081,3 +66081,24 @@ Deleting `Props.AVENUE_SKIRT`, the `SPHINX_BASE` token, the `skirt` parameter in
 and the two lines in `_sphinxAvenue` removes the lane. `tools/sphinxgap.mjs` and
 `tools/sphinxplate.mjs` are new files and belong to it; `--probe` on `tools/prodboot.mjs` does
 not — it is a general seam and nothing else in the tool changed.
+
+
+---
+
+## §748 — "They cannot notice you if you are far above their vision": the cone was tested entirely in the horizontal plane, and straight overhead scored dead centre
+
+*(Heading committed BEFORE its body to hold the number — §700.9. Claim marker, worded to be
+unlike any other lane's (§717): §748 CLAIM guard-sight-vertical-ceiling-7fd42b — the
+GUARD-SIGHT-CEILING lane. Scope: `Patrol.Senses.evaluate`'s vision block, the `VISION`/`DETECT`
+tuning blocks it reads, and the one line in `Guard.update` that hands the guard his own base
+height. It touches NOTHING in `Guard._step`, nothing in `TUNE.groundProbe` or
+`TUNE.groundSlopeMax` (§697, settled), nothing in the routes, and nothing in the cone's
+geometry or shaders. The owner's words are quoted in the heading; he offered the simple version
+— "just put a limit on their sight so that it is just as high as the guard character height" —
+and then ruled the limit to be the height of the Carmelita model, one number for all three
+rosters rather than three per-type derivations. That height is MEASURED off the placed rig
+rather than read out of a constant, because the two cautions on record for this exact character
+are a node-vs-mesh identity miss (§709) and a scale recovered by dividing a bounding box
+(§746). The before/after detection table is the diagnosis and it carries the straight-overhead
+row explicitly, because that row is the defect's worst case and the instrument's positive
+control. Revert token in the established style. Body follows in this lane's later commits.)*
