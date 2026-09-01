@@ -66020,8 +66020,9 @@ node --test tests/decalstat.test.mjs   1..19   pass 18  fail 1   <- DELIBERATE: 
                                    (?sphinx=flat)                   __SPHINX_AB='flat'; T3b must
                                                                     go red on the pre-§746 avenue
 npm test                             1..1198   pass 1198 fail 0   <- at e37ec2b, the code change
-npm test                             1..1198   pass 1198 fail 0   <- again at the final tree,
-                                                                    after the tools and --probe
+npm test                             1..1198   pass 1198 fail 0   <- again after the tools and --probe
+npm test                             1..1198   pass 1198 fail 0   <- and again at the final tree,
+                                                                    after the docblock correction
 ```
 
 **1198/1198 — the baseline exactly.** No arm was added and none was removed; one was re-pointed,
@@ -66050,6 +66051,22 @@ the proxy blocks `*.github.io`, so the live host is NOT claimed):
 
   Three stations, three exact matches, on a build that went through vite rather than through
   `import`. `ready=true` in 55.7 s, 17 modules, 149 requests, zero 4xx/5xx on that run too.
+- **and the revert token exercised as a URL, on the artifact**, because a token that has only
+  ever been set through `globalThis` is a claim about `globalThis` — which is `prodboot`'s own
+  stated reason for having `--query` at all. `/Demo/?sphinx=flat`, same probe, `ready=true` in
+  53.4 s, zero 4xx/5xx:
+
+  ```
+                shipped      ?sphinx=flat     Node harness (flat)
+  (7, 52.6)     lo  4.866    lo  6.838        6.838
+  (7, 40)       lo −1.329    lo  0.658        0.658
+  (−7, 84)      lo 12.789    lo 14.765        14.765
+  the TOP       hi 10.549    hi 10.549   ← identical in both arms, at all three stations
+  ```
+
+  The last row is the whole design in one line: the base underside drops by exactly
+  `AVENUE_SKIRT × s` (1.972, 1.987, 1.976 m at those three scales) and **the animal does not
+  move at all**, measured on the shipped bundle rather than argued from the source.
 
 ### §746.13 How to revert
 

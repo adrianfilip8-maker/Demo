@@ -593,16 +593,22 @@ export class Props {
    * how far the base underside floats above the sand at its worst point:
    *
    *     quality        low     med    high   ultra
-   *     worst skirt   1.821   1.818  1.816   1.815     (local units, at (7, 52.6))
+   *     worst skirt   1.836   1.833  1.831   1.830     (local units, at (7, 52.6))
    *
    * All four grades are swept because `Terrain.INNER_STEP` is 1.6 / 0.96 / 0.8 / 0.6 m, so the
    * drawn dune is a different surface at each and a constant sized on one can be short on
-   * another. **2.00 is 1.821 plus 9.8 % headroom**, and refining the sweep 14× (49×33 nodes)
+   * another. **2.00 is 1.836 plus 8.9 % headroom**, and refining the sweep 14× (49×33 nodes)
    * moves the requirement by 0.000 m, so the coarse grid was not under-sampling it.
+   *
+   * (Those four figures read 1.821 / 1.818 / 1.816 / 1.815 for an hour, off an instrument that
+   * recovered each statue's scale from its own jittered bounding box — 1.8 % out, which is 1 cm
+   * against a 0.65 m pedestal and 3.6 cm against a 2.65 m one. They are now read from the
+   * matrix `Bag.transform` actually applied. Recorded because the stale trio is the sort of
+   * number that gets quoted forward, and §746.10 is where it is written down.)
    *
    * Why a skirt rather than sinking the statue, which is what the owner offered to accept:
    * both close the gap, and a sink of the same 2.00 puts the ANIMAL under sand at all sixteen
-   * — 0.49 m to 1.45 m of a 3.5 m body, every plinth gone entirely. The skirt closes the same
+   * — 0.63 m to 1.62 m of a 3.5 m body, every plinth gone entirely. The skirt closes the same
    * gap and buries 0.00 m of animal, because the animal does not move. `?sphinx=sink` is the
    * other arm, kept reachable so that is his judgement and not this file's.
    *
