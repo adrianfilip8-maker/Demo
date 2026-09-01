@@ -65671,3 +65671,20 @@ amount of "half" is the owner's eye to judge, and three independent tokens put a
 
 Deleting `tests/camswing.test.mjs`, the `--swing`/`SWING_STARTS`/`residency` additions in
 `tools/camjerk.mjs`, `_calmGoal`, the `vtip`/`track` channels and `TUNE.trackTau` removes the lane.
+
+
+---
+
+## §746 — "There is empty space below the bottom of the sphinx statues and above the ground": the avenue sphinxes stand on a DUNE, and a flat base sampled at one point cannot sit flush on a slope
+
+*(Heading committed BEFORE its body to hold the number — §700.9. Claim marker, worded to be
+unlike any other lane's (§717): §746 CLAIM sphinx-avenue-base-gap-lane-3ac91e — the
+SPHINX-AVENUE-BASE lane. Scope: `Props._sphinxAvenue` and the `pedestal` course in
+`Statues.sphinx()` ONLY. It touches nothing in `Terrain.js`, nothing in `Patrol.js`, nothing
+in the collider registration. The owner's words are quoted in the heading and he offered
+either fix — "place blocks underneath or extend the base of the statues lower" — explicitly
+taking the easier one. The per-statue, per-CORNER gap table is the diagnosis and it sizes the
+fix; a single aggregate number would hide the case that matters. Both the analytic placement
+query and the DRAWN surface are measured, because a fix tuned to `heightAt` alone would still
+show a gap if the render mesh disagrees between vertices. Revert token in the established
+style. Body follows in this lane's later commits.)*
